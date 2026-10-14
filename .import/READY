@@ -1,0 +1,1 @@
+Validation-only rerun: test visible Dolphin OpenGL capture through the normal GUI path (without --batch). Source tree is already imported; no extraction payload is included.
