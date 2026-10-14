@@ -44,9 +44,26 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  host-race-logic-tests:
+    name: Host tests for racing physics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Compile portable race logic tests with warnings as errors
+        run: |
+          set -euo pipefail
+          cc -std=c99 -Wall -Wextra -Werror \
+            -I gamecube/source \
+            gamecube/tests/race_logic_test.c \
+            gamecube/source/race_logic.c \
+            -lm -o /tmp/race_logic_test
+          /tmp/race_logic_test
+
   dolphin-runtime-smoke:
     name: Headless Dolphin process smoke test
-    needs: build-smoke-test
+    needs: [build-smoke-test, host-race-logic-tests]
     runs-on: ubuntu-latest
     container:
       image: ubuntu:26.04
