@@ -126,10 +126,21 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
         }
     }
 
-    /* Rivals use deterministic target speeds so tests and races are repeatable. */
+    /*
+     * Rivals use deterministic target speeds and smooth, bounded lane changes.
+     * The small sinusoidal sway makes their movement less static without
+     * random behavior, so a race remains reproducible in tests and replays.
+     */
     for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
         float target_speed = RACE_OPPONENT_TARGET_SPEEDS[i];
-        float radius = RACE_TRACK_RADIUS + state->opponent_lanes[i];
+        float lane_phase = state->opponent_angles[i] * 0.65f +
+                           (float)i * 2.1f;
+        float radius;
+
+        state->opponent_lanes[i] = clamp(
+            RACE_OPPONENT_INITIAL_LANES[i] + 0.42f * sinf(lane_phase),
+            -2.4f, 2.4f);
+        radius = RACE_TRACK_RADIUS + state->opponent_lanes[i];
 
         if (state->opponent_speeds[i] < target_speed) {
             state->opponent_speeds[i] += 0.09f * frame_scale;
