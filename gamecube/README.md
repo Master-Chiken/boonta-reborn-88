@@ -8,7 +8,7 @@ This folder contains a **clean-room, original procedural 3D driving prototype** 
 - Original low-poly pod model with twin engine shapes and boost flames.
 - Chase camera and a simple speed/boost/lap HUD.
 - Acceleration, braking, boost energy and heat, lateral lane adjustment, pause, and restart.
-- Three simple procedural rival racers and a player-position HUD (1st–4th).
+- Three procedural rival racers with deterministic, smooth lane changes and a player-position HUD (1st–4th).
 - Three-lap finish condition.
 
 ## Controls
