@@ -35,8 +35,10 @@ The import workflow succeeded:
 - Host regression scripts and the source-only asset policy check — passed.
 - Native devkitPPC/libogc build — passed; produced a non-empty `swe1r_gc_port.dol` reported as approximately 301 KiB.
 - Headless Dolphin process smoke test — passed: Dolphin accepted the DOL and remained active until a 12-second timeout.
-- Experimental visible OpenGL/Xvfb preview — **not verified**. It captured almost completely black frames; the image-content check failed. This may be an emulator/frontend/software-renderer environment issue or a real graphics/startup issue, so the screenshot is not proof of correct rendering and not enough to diagnose a game defect.
-- [Experimental preview frames and log](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432/artifacts/11924449397) — retained temporarily as a diagnostic artifact.
+- Experimental visible Dolphin/Xvfb preview — **not verified**. Multiple 1280×720 captures are nearly pure black (two unique pixel colors, mean RGB around 0.02); the image-content check fails.
+- A diagnostic run with GDB caught `SIGBUS` in Dolphin's `Emuthread - Sta`; the current distro binary has no useful symbols in that stack frame, so this does not yet prove whether the cause is a host graphics/frontend issue or a graphics command/runtime defect in the DOL.
+- [Latest diagnostic preview frames, GDB log, and screenshot](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38631056369/artifacts/11925279126) — retained for seven days.
+- [Successful host/build/runtime checks](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38630233714) — host regressions, native devkitPPC build, and 12-second null-video Dolphin process smoke test passed. The visible frame job is a separate failing/inconclusive diagnostic.
 - [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11926156448) — `swe1r-gc-step102-source-only`, retained for 7 days.
 
 The build explicitly uses `make USE_IMPORTED_SPLINE=0`, so it compiles against the bundled demo/procedural fallback track rather than the excluded PC-mod course centerlines. Compatibility shims in the importer update three API spellings/types for the current devkitPPC/libogc headers and corresponding host mocks: `CARDFileInfo` to `card_file`, `GX_TEXCOORD_NULL` to `GX_TEXCOORDNULL`, and `PAD_BUTTON_Z` to `PAD_TRIGGER_Z`.
@@ -53,7 +55,7 @@ The workflow applies a checksum-pinned importer, rejects unsafe archive paths, b
 
 Remaining work:
 1. Review the complete diff and confirm the imported files' authorship/licensing.
-2. Diagnose why the automated Xvfb/OpenGL preview captures nearly black frames, then run Dolphin with visible video output and verify a playable image, GameCube controller input, steering, acceleration/braking/boost, race progression, and resets; record results separately from this headless smoke test.
+2. Diagnose the Dolphin `SIGBUS` under Xvfb with a useful host stack trace and/or a local interactive emulator test. Current captures are nearly black, so visible graphics and gameplay remain unverified. Then verify controller input, steering, acceleration/braking/boost, race progression, and resets; record results separately from the headless smoke test.
 3. Fix any observed runtime issues without weakening tests.
 4. Confirm authorship/licensing for imported source files before public redistribution.
 5. Keep PR #17 in draft until licensing and visual/runtime review are complete. It must not be merged automatically.
