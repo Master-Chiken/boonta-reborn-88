@@ -1,55 +1,59 @@
-# Prerequisites
-*.d
-
-# Object files
+# Build output
+/build/
+/build-*/
+/dist/
+/out/
+/bin/
+/obj/
+/.cache/
+/.tmp/
 *.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
 *.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
 *.so
-*.so.*
 *.dylib
-
-# Executables
+*.dll
 *.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+*.elf
+*.dol
+*.map
+*.d
+*.log
+*.tmp
+*.bak
+*.orig
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# IDE / local workspace
+.vscode/
+.idea/
+*.code-workspace
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# Toolchain and package caches
+.devenv/
+.venv/
+venv/
+__pycache__/
+node_modules/
+.cache/
 
-# debug information files
-*.dwo
+# Game dumps, disc images, and emulator images: never commit these to this public repository
+*.iso
+*.gcm
+*.wbfs
+*.nkit.iso
+*.rvz
+*.z64
+*.v64
+*.n64
+*.wad
+
+# Local proprietary data / extracted assets (keep outside Git)
+roms/
+game-dumps/
+disc-images/
+private-assets/
+original-assets/
+extracted-game-data/
