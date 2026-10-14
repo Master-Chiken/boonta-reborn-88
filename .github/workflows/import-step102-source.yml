@@ -1,0 +1,42 @@
+name: Import Step 102 native source
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    if: github.ref == 'refs/heads/work/step102-import-gate'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the selected working branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+
+      - name: Validate and import the source-only bundle
+        run: |
+          set -euo pipefail
+          test -s source-bundle/step102-source-only-import.b64
+          python3 tools/import_step102_bundle.py
+          rm source-bundle/step102-source-only-import.b64
+          rmdir source-bundle
+
+      - name: Run host regression suite before committing
+        run: bash tools/release_check.sh
+
+      - name: Commit extracted source into the PR branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- Makefile STEP102_IMPORT_README.md data source tests tools source-bundle/step102-source-only-import.b64
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "Import Step 102 native GameCube/Wii source baseline"
+          git push origin "HEAD:work/step102-import-gate"
