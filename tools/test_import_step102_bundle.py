@@ -36,6 +36,12 @@ class ValidateMemberTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             importer.validate_member("source/SomeAsset.PNG")
 
+    def test_rejects_case_insensitive_duplicate_archive_members(self):
+        seen = set()
+        importer.validate_unique_member("source/Main.c", seen)
+        with self.assertRaisesRegex(ValueError, "case-insensitive"):
+            importer.validate_unique_member("SOURCE/main.C", seen)
+
     def test_allows_normal_source_path(self):
         self.assertEqual(importer.validate_member("source/main.c"), "source/main.c")
 
