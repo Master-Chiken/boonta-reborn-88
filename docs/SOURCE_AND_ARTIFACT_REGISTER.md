@@ -29,11 +29,11 @@ Keep the CSV private for the file-by-file review until a deliberate decision is 
 
 ## Upstream research links
 
-These links connect the uploaded snapshots and earlier research to their original project context. They are research references, not an approval to copy code or data.
+These links connect the uploaded snapshots and earlier research to their original project context. They are research references, not an approval to copy code or data. SW_RACER_RE is now the top-priority external reference, but is still Windows-PC research and is not automatically reusable source or asset content.
 
 | Upstream project | Connection to this project | Rule before reuse |
 |---|---|---|
-| [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) | Research/reimplementation focused on the Windows PC edition; may help understand engine behavior and data structures. | Confirm the current license, specific file origins, and platform relevance. It is not a GameCube/Wii port. |
+| [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) | **Tier 1 PC behavior/reverse-engineering reference** for race state, splines, model/object/rendering systems, resource loading, controls, camera, and symbol/function research. Reviewed master at commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab` (2026-10-05). | GitHub reports AGPL-3.0. Use links and summarized observations by default; do not import or adapt code without a deliberate license review. Treat assets and mod dependencies separately. Not a GameCube/Wii port. See [study plan](SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md). |
 | [OpenSWE1R](https://github.com/OpenSWE1R/openswe1r) | PC-side open reimplementation useful for architecture and subsystem research. | Review its GPL-2.0 obligations and dependencies before copying or creating a derivative. |
 | [swe1r-assets](https://github.com/akopetsch/swe1r-assets) | PC asset-block parsing, editing, and reserialization tools. | Confirm the data format matches the target version and review code/data licenses separately. |
 | [SWE1R-Mods](https://github.com/louriccia/SWE1R-Mods) | PC-version mod/data research. | Do not assume extracted content is redistributable. |
