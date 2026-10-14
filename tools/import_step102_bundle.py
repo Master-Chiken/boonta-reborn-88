@@ -93,6 +93,20 @@ def main() -> int:
                         f"CARDFileInfo declarations, found {occurrences}"
                     )
                 content = content.replace(old_type, b"card_file")
+            elif name == "source/main.c":
+                # Align older symbol spellings with the current libogc headers.
+                replacements = (
+                    (b"GX_TEXCOORD_NULL", b"GX_TEXCOORDNULL"),
+                    (b"PAD_BUTTON_Z", b"PAD_TRIGGER_Z"),
+                )
+                for old_symbol, new_symbol in replacements:
+                    occurrences = content.count(old_symbol)
+                    if occurrences != 1:
+                        raise SystemExit(
+                            f"main.c compatibility check expected one {old_symbol!r}, "
+                            f"found {occurrences}"
+                        )
+                    content = content.replace(old_symbol, new_symbol)
             elif name == "tests/mockogc/ogc/card.h":
                 # Keep the host-only libogc stub compatible with the current
                 # card_file type while retaining its legacy CARDFileInfo API
@@ -106,6 +120,20 @@ def main() -> int:
                     )
                 content = content.replace(
                     marker, marker + b"typedef CARDFileInfo card_file;\n"
+                )
+            elif name == "tests/mockogc/ogc/gx.h":
+                marker = b"#define GX_TEXCOORD_NULL 0\n"
+                if content.count(marker) != 1:
+                    raise SystemExit("mockogc gx.h expected the legacy texture-coordinate marker")
+                content = content.replace(
+                    marker, marker + b"#define GX_TEXCOORDNULL GX_TEXCOORD_NULL\n"
+                )
+            elif name == "tests/mockogc/ogc/pad.h":
+                marker = b"#define PAD_BUTTON_Z 0x0010\n"
+                if content.count(marker) != 1:
+                    raise SystemExit("mockogc pad.h expected the legacy Z-button marker")
+                content = content.replace(
+                    marker, marker + b"#define PAD_TRIGGER_Z PAD_BUTTON_Z\n"
                 )
             planned.append((name, content))
 
