@@ -40,6 +40,10 @@ The Dreamcast test branch is separate and is not a substitute for these mileston
 
 The repository includes a Codespaces dev-container for working in the browser with the devkitPPC/GameCube toolchain. See [Cloud development workflow](docs/CLOUD_DEV_WORKFLOW.md). Codespaces has usage quotas on free personal plans; stop or delete the cloud workspace when finished.
 
+## Free development tools
+
+The project is intended to stay at **€0**: see [Free tooling and setup requirements](docs/FREE_TOOLING.md) for GitHub Actions, the Codespaces quota, the optional Gemini agent, and the actions that still require the owner. Do not enable paid billing.
+
 ## Optional AI-assisted workflow
 
 A GitHub-hosted Gemini agent can review the repository and help prepare code changes from GitHub comments. Setup and safety rules: [AI automation guide](docs/AI_AUTOMATION_SETUP.md). It only sees files committed to this repository; ChatGPT uploads of the original PC/N64 games are not automatically available to it.
