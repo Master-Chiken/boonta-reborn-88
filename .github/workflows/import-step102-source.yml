@@ -150,11 +150,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p preview /tmp/dolphin-visible-user
+          mkdir -p preview /tmp/dolphin-visible-user /tmp/dolphin-visible-home/.config /tmp/dolphin-visible-home/.local/share
+          chmod 700 /tmp/dolphin-visible-home
           export PATH="/usr/games:$PATH"
           export LIBGL_ALWAYS_SOFTWARE=1
           xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" bash -euo pipefail -c '
             export PATH="/usr/games:$PATH"
+            export HOME=/tmp/dolphin-visible-home
+            export XDG_CONFIG_HOME="$HOME/.config"
+            export XDG_DATA_HOME="$HOME/.local/share"
             export LIBGL_ALWAYS_SOFTWARE=1
             export QT_QPA_PLATFORM=xcb
             dolphin-emu --batch --video_backend=OGL \
