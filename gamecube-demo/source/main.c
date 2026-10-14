@@ -164,9 +164,9 @@ static void add_road(void)
                  (Point3){ c1 - w - 0.28f, ROAD_Y + 0.52f, z1 },
                  (Point3){ c1 - w - 0.28f, ROAD_Y + 0.02f, z1 }, rail);
         quad_add((Point3){ c0 + w + 0.28f, ROAD_Y + 0.02f, z0 },
-                 (Point3){ c0 + w + 0.28f, ROAD_Y + 0.02f, z0 },
+                 (Point3){ c0 + w + 0.28f, ROAD_Y + 0.52f, z0 },
                  (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 },
-                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 }, rail);
+                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.02f, z1 }, rail);
 
         if ((i % 2U) == 0U) {
             const float mark_z0 = z0 - 0.35f;
@@ -380,7 +380,7 @@ int main(int argc, char **argv)
     initialise_video_and_gx();
 
     for (;;) {
-        const u32 buttons_down;
+        u32 buttons_down;
         u32 buttons_held;
         s8 stick_x;
         float steering;
