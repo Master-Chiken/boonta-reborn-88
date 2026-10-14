@@ -313,10 +313,22 @@ static void draw_hud(void)
     float screen_h = (float)video_mode->efbHeight;
     float speed_fraction = race.speed / MAX_SPEED;
     elapsed_tenths = (unsigned int)(race.race_seconds * 10.0f);
+    lap_tenths = (unsigned int)(race.current_lap_seconds * 10.0f);
+    best_tenths = (unsigned int)(race.best_lap_seconds * 10.0f);
     snprintf(time_text, sizeof(time_text), "TIME %02u:%02u.%u",
              elapsed_tenths / 600U,
              (elapsed_tenths / 10U) % 60U,
              elapsed_tenths % 10U);
+    snprintf(lap_text, sizeof(lap_text), "LAP  %02u:%02u.%u",
+             lap_tenths / 600U, (lap_tenths / 10U) % 60U,
+             lap_tenths % 10U);
+    if (race.best_lap_seconds > 0.0f) {
+        snprintf(best_text, sizeof(best_text), "BEST %02u:%02u.%u",
+                 best_tenths / 600U, (best_tenths / 10U) % 60U,
+                 best_tenths % 10U);
+    } else {
+        snprintf(best_text, sizeof(best_text), "BEST --:--.-");
+    }
 
     guOrtho(ortho, 0.0f, screen_h, 0.0f, screen_w, 0.0f, 1.0f);
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
