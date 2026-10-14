@@ -57,3 +57,7 @@ disc-images/
 private-assets/
 original-assets/
 extracted-game-data/
+
+# Gemini CLI runtime files and local Google credentials
+.gemini/
+gha-creds-*.json

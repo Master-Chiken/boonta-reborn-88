@@ -34,3 +34,8 @@ The native-build workflow is prepared to run when `Makefile`, `source/`, `includ
 6. Only after that slice works, expand assets, progression, presentation, and packaging.
 
 The Dreamcast test branch is separate and is not a substitute for these milestones.
+
+
+## Optional AI-assisted workflow
+
+A GitHub-hosted Gemini agent can review the repository and help prepare code changes from GitHub comments. Setup and safety rules: [AI automation guide](docs/AI_AUTOMATION_SETUP.md). It only sees files committed to this repository; ChatGPT uploads of the original PC/N64 games are not automatically available to it.

@@ -1,0 +1,85 @@
+name: Gemini on-demand coding assistant
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  dispatch:
+    if: >-
+      ${{
+        github.event.sender.type == 'User' &&
+        startsWith(github.event.comment.body || github.event.review.body || '', '@gemini-cli') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association || '')
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    outputs:
+      command: ${{ steps.extract.outputs.command }}
+      additional_context: ${{ steps.extract.outputs.additional_context }}
+    steps:
+      - name: Extract command
+        id: extract
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # pinned GitHub Script v7
+        env:
+          REQUEST: ${{ github.event.comment.body || github.event.review.body || '' }}
+        with:
+          script: |
+            const request = process.env.REQUEST || '';
+            let command = 'fallthrough';
+            if (request.startsWith('@gemini-cli /approve')) {
+              command = 'approve';
+            } else if (request.startsWith('@gemini-cli')) {
+              command = 'invoke';
+            }
+            core.setOutput('command', command);
+            core.setOutput('additional_context', request.replace(/^@gemini-cli/, '').trim());
+
+      - name: Acknowledge request
+        if: steps.extract.outputs.command == 'invoke'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "Gemini received your request. For substantial code changes it will post a plan first; no write task should run until you approve that plan with @gemini-cli /approve."
+
+  invoke:
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'invoke'
+    uses: ./.github/workflows/gemini-invoke.yml
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+      pull-requests: write
+    with:
+      additional_context: ${{ needs.dispatch.outputs.additional_context }}
+    secrets: inherit
+
+  plan-execute:
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'approve'
+    uses: ./.github/workflows/gemini-plan-execute.yml
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+    with:
+      additional_context: ${{ needs.dispatch.outputs.additional_context }}
+    secrets: inherit
