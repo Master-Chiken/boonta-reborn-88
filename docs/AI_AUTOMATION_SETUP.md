@@ -38,6 +38,12 @@ Sans cette variable, Gemini peut répondre aux demandes de lecture et proposer u
 
 L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne doit jamais pousser vers `main), fusionner une PR ou activer l'auto-merge.** Lis toujours les modifications, les tests, le diff et les limites avant toute décision humaine de fusion.
 
+## Ajouter une deuxième IA gratuite pour la relecture
+
+Le workflow facultatif [OpenRouter Free PR review](OPENROUTER_FREE_REVIEW.md) utilise seulement le routeur `openrouter/free`, qui choisit parmi les modèles affichés comme gratuits. Il ne fait jamais de changement de code : il poste uniquement un commentaire de relecture sur une PR. Il exige un autre secret, `OPENROUTER_API_KEY`, configuré séparément dans GitHub. Ne crédite pas le compte et n'ajoute aucune carte. Si la route gratuite n'est pas disponible, le workflow doit échouer plutôt que d'essayer un modèle payant.
+
+OpenRouter n'est pas Claude : sa route gratuite choisit des modèles gratuits disponibles, qui changent dans le temps. Claude reste exclu de l'automatisation API directe, car son API est facturée à l'usage.
+
 ## Premier test conseillé
 
 Sur la PR #13, après avoir configuré le secret, écris un commentaire en lecture seule, par exemple :
