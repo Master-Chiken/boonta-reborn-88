@@ -41,6 +41,9 @@ void race_reset(RaceState *state);
 void race_update(RaceState *state, const RaceInput *input);
 /* delta_seconds is measured wall time and is clamped to protect lap logic from stalls. */
 void race_update_dt(RaceState *state, const RaceInput *input, float delta_seconds);
+/* Track-aware variant: track_length is the sampled centerline length in world units. */
+void race_update_track_dt(RaceState *state, const RaceInput *input,
+                          float delta_seconds, float track_length);
 int race_position(const RaceState *state);
 
 #endif
