@@ -1,52 +1,44 @@
 # AI agent workflow
 
-This repository is designed for AI-assisted development with human approval at important checkpoints.
+This repository uses GitHub-hosted Gemini for on-demand analysis and code assistance. The primary engineering goal is the native GameCube/Wii prototype; the original PC and Nintendo 64 releases are separate reference targets, and the Dreamcast/KallistiOS sample is a separate experiment.
 
 ## Current automation
 
-- GitHub Actions builds the Dreamcast KallistiOS starter when relevant files change and on manual dispatch.
-- The workflow uploads the ELF as an artifact only when compilation succeeds.
-- Build success proves compilation only; it does not prove the ELF runs in an emulator or on hardware.
-- Repository-specific coding guidance lives in `.github/copilot-instructions.md`.
+- `@gemini-cli` comments on an issue or pull request trigger a GitHub Actions job.
+- The workflow uses the `GEMINI_API_KEY` repository secret and currently selects `gemini-3.5-flash-lite` for the free-tier trial configuration.
+- The Gemini response is published back to the triggering issue/PR. If no response is available, the workflow posts a diagnostic link to the Actions log.
+- The reusable workflows keep general shell commands disabled; only the limited tools needed for context and repository reading are enabled in the invoke workflow. The plan-execute workflow has a separately scoped GitHub MCP tool set for file changes and PR creation.
+- A successful Gemini workflow means only that the automation ran successfully. It does not prove a game build or runtime test succeeded.
 
-## Recommended agent loop
+## How to request work
 
-1. **Planner** — select one small task from `docs/PROJECT_PLAN.md` and define acceptance criteria.
-2. **Coding agent** — implement the task in a branch and open a pull request. Prefer GitHub Copilot coding agent if it is enabled for this account/repository; another coding agent may be used if it can work directly with the GitHub repo.
-3. **CI** — let GitHub Actions build the changed Dreamcast code.
-4. **Reviewer** — inspect the diff, build logs, API choices, scope, and license/provenance risks.
-5. **Human approval** — merge only after reviewing the pull request and the checks. Do not grant an agent permission to merge its own changes.
-6. **Next task** — update the project plan and issue only after the previous task has evidence-backed results.
+Comment on an issue or pull request starting with `@gemini-cli`. Ask for one well-scoped task and tell the agent which files or behavior to investigate.
 
-## First task
+For substantial code changes, the intended sequence is:
+1. Ask for a plan and acceptance criteria.
+2. Review the plan in the GitHub discussion.
+3. Approve only the intended work with `@gemini-cli /approve`.
+4. Review the proposed diff, test results, provenance risks and any PR before merging.
 
-Use the existing issue: [Dreamcast: add a visible video-mode smoke test](https://github.com/Master-Chiken/boonta-reborn-88/issues/4).
+Never ask the agent to merge its own code or bypass required tests. Start with read-only investigation until the source tree is imported.
 
-If GitHub Copilot coding agent is enabled:
-1. Open the issue.
-2. Use the issue's **Assignees** control to select **Copilot** (the exact label may vary by GitHub UI).
-3. Start the agent task and allow it to open a pull request.
-4. Review the pull request and CI result before merging.
+## Primary engineering blocker
 
-If Copilot is not offered in the Assignees control, it is not currently available to this repository/account or requires setup. Do not create personal access tokens or paste secrets into an issue to work around this.
+The repository currently contains the Dreamcast starter but does **not** contain the Step 102 GameCube/Wii source tree. The existing native workflow checks for `Makefile` and `source/` and stops if they are missing. Gemini cannot inspect an archive that exists only in ChatGPT's file library; the required files have to be made available to the repository or to a controlled import process first.
 
-## Agent safety rules
+## Safe source-import procedure
 
-- Never commit ROMs, disc images, BIOS files, extracted proprietary assets, or copyrighted game data.
-- Never claim emulator or hardware support without actual runtime evidence.
-- Never disable or weaken CI just to get a green result.
-- Keep changes small and reviewable; prefer a pull request over direct commits to `main`.
-- Do not expose secrets in logs, prompts, issue comments, or commits.
-- Do not automatically merge agent-generated pull requests.
-- If toolchain APIs are uncertain, inspect the existing code and official KallistiOS documentation before implementing.
+1. Keep the original PC archive, Nintendo 64 ROM, and commercial disc images outside the public repository.
+2. Inventory the Step 102 archive by file path, type, license/provenance and whether the data is original, generated, placeholder, or copied from a commercial game.
+3. Review the route-centerline dataset, sample model/material files, audio samples and any generated data separately. Do not import unclear commercial content merely because it is bundled with source code.
+4. Import only cleared source code, headers, Makefile, tests and documentation to a review branch.
+5. Run the host tests in CI, then the devkitPPC/libogc build. Keep compile success separate from Dolphin/hardware runtime validation.
+6. If code has an incompatible license or source provenance cannot be established, leave it out and record the blocker instead.
 
-## Later automation options
+## Safety and quality rules
 
-After the first agent-produced pull request has been reviewed successfully, consider adding:
-- automatic issue triage and labels;
-- CI summaries on pull requests;
-- dependency and secret scanning;
-- scheduled project-status summaries;
-- a second review agent that comments on pull requests.
-
-Do not add an autonomous workflow that executes arbitrary code from untrusted issues or merges changes without review.
+- Never commit or publish ROMs, disc images, BIOS files or unclear commercial assets (models, textures, audio or extracted data).
+- Never claim to have inspected a file unless its contents were actually accessible.
+- Never invent compiler or test results. Report commands, outcomes and evidence.
+- Never disable or weaken tests to obtain a green CI run.
+- Prefer small branches and pull requests with an explicit human review before merge.
