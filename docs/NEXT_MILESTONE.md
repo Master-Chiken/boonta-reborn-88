@@ -21,6 +21,14 @@ The clean-room race logic now gives each of the three procedural rivals a smooth
 
 A new host test checks that rival lane movement is bounded, smooth between frames, repeatable for identical inputs, and does not let rivals cross lanes. The expected host test output is now `race_logic_test: 11 suites passed`. Confirm the GitHub Actions result before treating the change as validated.
 
+## Platform decision update — GameCube vs Wii remains open
+
+The N64 edition running through Wii64/Cube64 is a **reference/testing option**, not the final remaster. It may help compare the N64 game's course layouts, handling, rivals and progression, but compatibility for this specific game must be tested. Emulation does not provide the source code or automatically create an HD remaster.
+
+Do not choose the final native target by assumption. Keep GameCube and Wii open until the same minimal native vertical slice has evidence for boot, rendering, controller input, one complete race, frame pacing and memory/performance. Record emulator/version/settings separately from real-hardware results. Keep any ROM/disc image and proprietary extracted assets out of the public repository.
+
+The intended order remains: faithful original-game baseline first; then the best graphics upgrades feasible within native console limits; then original bonus content. “HD” must distinguish higher-quality assets and enhanced rendering from native 720p/1080p output, which should not be promised for GameCube/Wii.
+
 ## Work sequence toward the actual end goal
 
 1. Keep the build/safety/static-analysis checks green, but do not mistake the procedural `gamecube/` demo for the intended game.
@@ -28,9 +36,10 @@ A new host test checks that rival lane movement is bounded, smooth between frame
 3. Import the cleared GameCube/Wii-oriented source candidate to a review branch, preserving the tests and build infrastructure. Exclude uncleared track centerlines, models, audio, ROMs and disc images.
 4. Reproduce the archive's reported host test suite in GitHub Actions, then build the full candidate with devkitPPC/libogc.
 5. Test the full candidate in Dolphin: boot, rendering, controller input, race start/finish, tracks, vehicles, modes, saves, stability and performance. Fix real blockers from evidence.
-6. Create the PC/Dreamcast/N64 comparison matrix and verify each important gameplay/system claim against documentation or a lawful local run of the relevant edition.
-7. Implement missing original-game systems and content until a faithful playable baseline exists.
-8. Only after that baseline is stable, work on improved graphics, bonus content, new modes and quality-of-life improvements.
+6. Run a small platform comparison: GameCube-target DOL and Wii-target build where supported, using the same scene and test checklist. Separately test whether Wii64/Cube64 can run the N64 edition as a reference; record its compatibility without treating it as the port.
+7. Create the PC/Dreamcast/N64 comparison matrix and verify each important gameplay/system claim against documentation or a lawful local run of the relevant edition.
+8. Implement missing original-game systems and content until a faithful playable baseline exists.
+9. Only after that baseline is stable, work on improved graphics, bonus content, new modes and quality-of-life improvements.
 
 ## Owner-only actions
 
