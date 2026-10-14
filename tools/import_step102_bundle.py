@@ -54,10 +54,24 @@ def validate_member(name: str) -> str:
 
 
 def main() -> int:
+    parts = sorted(BUNDLE_DIR.glob(PART_GLOB))
+    source_tree_present = (ROOT / "Makefile").is_file() and (ROOT / "source" / "main.c").is_file()
+
+    # The first successful workflow removes its transfer payload after commit.
+    # Permit a validation/build rerun from the already-imported source tree.
+    if not parts and source_tree_present:
+        if READY.is_file():
+            READY.unlink()
+        try:
+            BUNDLE_DIR.rmdir()
+        except OSError:
+            pass
+        print("Source tree already imported; no transport payload remains. Skipping extraction.")
+        return 0
+
     if not READY.is_file():
         print("Import bundle not marked ready; refusing to unpack.", file=sys.stderr)
         return 2
-    parts = sorted(BUNDLE_DIR.glob(PART_GLOB))
     if not parts:
         print("No numbered import bundle parts were found.", file=sys.stderr)
         return 2
