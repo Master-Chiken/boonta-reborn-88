@@ -304,7 +304,11 @@ static void draw_hud(void)
     Mtx ortho;
     char number[8];
     char time_text[20];
+    char lap_text[20];
+    char best_text[20];
     unsigned int elapsed_tenths;
+    unsigned int lap_tenths;
+    unsigned int best_tenths;
     float screen_w = (float)video_mode->fbWidth;
     float screen_h = (float)video_mode->efbHeight;
     float speed_fraction = race.speed / MAX_SPEED;
