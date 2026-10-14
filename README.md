@@ -20,11 +20,13 @@ Latest completed validation on October 14, 2026:
 - Native devkitPPC/libogc cross-build: **passed**.
 - Non-empty `swe1r_gc_port.dol`: generated, about 301 KiB.
 - Headless Dolphin process smoke test: **passed**; Dolphin accepted the DOL and remained active through a 12-second timeout using the null video backend.
-- [Latest CI run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235).
+- [Latest CI run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432).
 
 The import build uses `make USE_IMPORTED_SPLINE=0` and a bundled demo/procedural track. It excludes the identified PC-mod-derived route centerlines and manifests, imported centerline headers, generated mesh/boundary exports, audio, model/texture exports, ROMs, disc images, extracted commercial data, and related reverse-engineering helpers.
 
-**Still outstanding:** a visible Dolphin or real-console test for picture output, controller input, steering, acceleration/braking/boost, race progression, reset/pause behavior, performance, and stability.
+An experimental Xvfb/OpenGL preview also ran, but its captures were almost completely black and failed the image-content check. That result does not establish whether the issue is the headless graphics environment or the game's renderer, so it is not treated as proof either way.
+
+**Still outstanding:** a reliable visible Dolphin or real-console test for picture output, controller input, steering, acceleration/braking/boost, race progression, reset/pause behavior, performance, and stability.
 
 ## Provenance and redistribution boundary
 
