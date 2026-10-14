@@ -32,7 +32,7 @@ The intended order remains: faithful original-game baseline first; then the best
 ## Work sequence toward the actual end goal
 
 1. Keep the build/safety/static-analysis checks green, but do not mistake the procedural `gamecube/` demo for the intended game.
-2. Finish the Step 102 path-by-path manifest review. The manifest already classifies source/tests/tools/docs separately from assets and PC-mod-derived route data; resolve authorship and licensing for each source group before import.
+2. Complete the [Step 102 path-by-path clearance register](STEP102_PATH_REVIEW_REGISTER.md). Treat every path as held until authorship, origin and redistribution terms are evidenced; resolve licensing before import.
 3. Import the cleared GameCube/Wii-oriented source candidate to a review branch, preserving the tests and build infrastructure. Exclude uncleared track centerlines, models, audio, ROMs and disc images.
 4. Reproduce the archive's reported host test suite in GitHub Actions, then build the full candidate with devkitPPC/libogc.
 5. Test the full candidate in Dolphin: boot, rendering, controller input, race start/finish, tracks, vehicles, modes, saves, stability and performance. Fix real blockers from evidence.
