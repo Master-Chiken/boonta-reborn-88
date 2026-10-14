@@ -4,11 +4,17 @@ on:
   push:
     branches: [main]
     paths:
-      - "gamecube-demo/**"
+      - "gamecube-demo/Makefile"
+      - "gamecube-demo/source/**"
+      - "gamecube-demo/include/**"
+      - "gamecube-demo/data/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
-      - "gamecube-demo/**"
+      - "gamecube-demo/Makefile"
+      - "gamecube-demo/source/**"
+      - "gamecube-demo/include/**"
+      - "gamecube-demo/data/**"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
 
@@ -22,7 +28,7 @@ jobs:
       image: devkitpro/devkitppc:latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Verify toolchain and project inputs
         shell: bash
@@ -43,6 +49,7 @@ jobs:
           test -s boonta_gc_demo.elf
 
       - name: Upload build outputs and compiler log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: boonta-reborn-gamecube-first-render
@@ -50,5 +57,5 @@ jobs:
             gamecube-demo/boonta_gc_demo.dol
             gamecube-demo/boonta_gc_demo.elf
             gamecube-demo/build.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
