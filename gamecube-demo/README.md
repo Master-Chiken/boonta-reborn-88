@@ -35,7 +35,7 @@ The expected files are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`. GitHub Act
 
 ## Latest native build
 
-The first successful devkitPPC/libogc build completed in [GitHub Actions run 38633619707](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38633619707). It produced a non-empty DOL and ELF artifact. This confirms compilation/linking only; **Dolphin/console runtime testing is still pending**. See the [build status report](../docs/GAMECUBE_FIRST_RENDER_STATUS.md) for artifact sizes, hashes, and runtime checklist.
+The first successful devkitPPC/libogc build completed in [GitHub Actions run 38633619707](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634127716). It produced a non-empty DOL and ELF artifact. This confirms compilation/linking only; **Dolphin/console runtime testing is still pending**. See the [build status report](../docs/GAMECUBE_FIRST_RENDER_STATUS.md) for artifact sizes, hashes, and runtime checklist.
 
 ## Runtime validation
 
