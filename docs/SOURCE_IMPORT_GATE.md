@@ -8,6 +8,11 @@ This checklist governs the import of `Star_Wars_Racer_GameCube_Step102.zip` into
 
 See [`STEP102_BUNDLE_AUDIT.md`](STEP102_BUNDLE_AUDIT.md) for a concrete exclusion mismatch: the source-only bundle includes `source/track_centerline.generated.h` even though its import README says imported centerline headers are excluded. That generated header remains on HOLD until its inputs and provenance are verified. The bundle also contains generated Python bytecode under `tests/__pycache__/`; do not import it.
 
+## Related audit reports
+
+- [`STEP102_BUNDLE_AUDIT.md`](STEP102_BUNDLE_AUDIT.md): generated centerline header and Python bytecode exclusion mismatch.
+- [`STEP102_SOURCE_PROVENANCE.md`](STEP102_SOURCE_PROVENANCE.md): no top-level license file was found in the supplied bundle; source origin and redistribution terms still need confirmation.
+
 ## Why the import is gated
 
 The manifest identifies a mixture of candidate source/build/test files, documentation, generated or reference data, 3D geometry, and audio. It specifically flags PC-mod/ROM-derived audit data and spline/model catalog material for provenance review. File names, hashes, and successful tests do not establish authorship, originality, or redistribution rights.
