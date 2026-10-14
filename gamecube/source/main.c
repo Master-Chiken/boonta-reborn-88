@@ -35,6 +35,7 @@ static void *gx_fifo;
 static RaceState race;
 static TrackVec3 track_points[TRACK_SEGMENTS];
 static TrackPath track_path = {track_points, TRACK_SEGMENTS, 1};
+static float track_length;
 
 static const u8 font5x7[128][7] = {
     ['0'] = {14,17,19,21,25,17,14},
@@ -181,6 +182,7 @@ static void init_track_geometry(void)
         track_points[i].y = 0.0f;
         track_points[i].z = radius * sinf(angle);
     }
+    track_length = track_path_length(&track_path);
 }
 
 static void draw_track_strip(float inner_offset, float outer_offset,
@@ -491,7 +493,7 @@ static void update_race(u32 held, u32 down, float delta_seconds)
     input.right = (held & PAD_BUTTON_RIGHT) != 0;
     input.pause_pressed = (down & PAD_BUTTON_START) != 0;
     input.reset_pressed = (down & PAD_BUTTON_Y) != 0;
-    race_update_dt(&race, &input, delta_seconds);
+    race_update_track_dt(&race, &input, delta_seconds, track_length);
 }
 
 static void init_video_and_gx(void)
