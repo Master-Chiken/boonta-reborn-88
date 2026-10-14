@@ -7,7 +7,7 @@ The Step 102 source-only subset now lives on draft PR #17 (branch import/step102
 - a devkitPPC/libogc cross-build that produced a non-empty swe1r_gc_port.dol of approximately 301 KiB;
 - a 12-second headless Dolphin process smoke test using the null video backend.
 
-[Latest validation run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351).
+[Latest validation run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235).
 
 Nothing from this import has been merged into main. Do not call this a finished or playable port yet: visible rendering, controller response and gameplay remain unverified.
 
