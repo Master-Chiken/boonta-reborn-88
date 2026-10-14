@@ -10,6 +10,8 @@ An unofficial research and homebrew project aiming toward an enhanced, playable 
 - [Source and artifact register](docs/SOURCE_AND_ARTIFACT_REGISTER.md) — previously supplied inputs, upstream research links, and rules for safe import.
 - [Project plan](docs/PROJECT_PLAN.md) — phases, decisions, and acceptance criteria.
 - [Technical research](docs/TECHNICAL_RESEARCH.md) — external research and platform trade-offs.
+- [SW_RACER_RE study plan](docs/SW_RACER_RE_STUDY_PLAN.md) — why the PC decompilation is a priority research reference, with platform and license boundaries.
+- [SW_RACER_RE behavior matrix](docs/SW_RACER_RE_BEHAVIOR_MATRIX.md) — evidence template mapping race flow, pod physics and spline/track research to Step 102 and future console tests.
 - [Next milestone](docs/NEXT_MILESTONE.md) — the path from source audit to a playable vertical slice.
 - [Build guide](docs/BUILD_GUIDE.md) — target-specific build evidence and known limits.
 - [AI automation setup](docs/AI_AUTOMATION_SETUP.md) — free-only/tool safety and setup requirements.
