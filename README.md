@@ -1,12 +1,13 @@
 # Boonta Reborn 88 — enhanced GameCube/Wii reconstruction
 
-An unofficial reverse-engineering and homebrew project aiming to reconstruct the original *Star Wars: Episode I – Racer* (1999) as faithfully as possible, using documented PC research and comparisons with the PC, Dreamcast, and Nintendo 64 editions. The target is an enhanced, genuinely playable native GameCube/Wii release, with improved graphics and additional bonus content. This is the destination, not the current completion status.
+An unofficial reverse-engineering and homebrew project aiming to reconstruct the original *Star Wars: Episode I – Racer* (1999) as faithfully as possible, using documented PC research and comparisons with the PC, Dreamcast, and Nintendo 64 editions. The ambition is the best visual quality achievable with modern techniques while remaining playable natively on GameCube/Wii, plus bonus content. This is the destination, not the current completion status.
 
 This is **not yet a finished remaster or verified port of the original game**. A separate clean-room GameCube prototype now compiles to a DOL in GitHub Actions. The full Step 102 racing prototype has not been imported, and the new DOL has not yet been runtime-tested in Dolphin or on hardware.
 
 ## Actual end goal
 
-- **Final goal:** a faithful reconstruction of the original game's core experience, adapted to run natively on GameCube/Wii, then enhanced with improved graphics, extras and bonus content.
+- **Final goal:** a faithful reconstruction of the original game's core experience, then the highest-quality visual remaster feasible on GameCube/Wii, using modern rendering/asset-production techniques adapted to the consoles' real limits, plus original extras and bonus content.
+- **Important hardware distinction:** native GameCube/Wii output is standard-definition (typically up to 480p), not native 720p/1080p HD. The goal is therefore HD-inspired asset quality and the best possible rendering within console budgets—not a promise of true HD output or PC-class modern effects. A literal 720p/1080p build would require a different target platform or external upscaling.
 - **Research inputs:** existing PC reverse-engineering documentation/code, the PC edition, and lawful local analysis of Dreamcast and Nintendo 64 editions. Compare versions to identify gameplay rules, data formats, track/vehicle differences and platform-specific behavior; do not assume one edition's formats match another.
 - **Current source candidate:** `Star_Wars_Racer_GameCube_Step102.zip`, audited separately from this repository. It is the strongest existing GameCube/Wii-oriented prototype candidate, but its provenance and assets still require review. It contains C gameplay/rendering code, a GameCube Makefile, research/build tools, documentation, and host-side tests.
 - **Prototype scope described by its README:** 25-course catalog, 23 vehicle presets/variants, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, single race, championship, time trial, Mirror Cup, HUD, and save/progression scaffolding.
