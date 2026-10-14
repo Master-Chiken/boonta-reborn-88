@@ -42,6 +42,8 @@ These links connect the uploaded snapshots and earlier research to their origina
 
 ## Audit record still needed for Step 102
 
+PR #13's handoff notes that a 359-row metadata triage CSV was prepared separately for owner review. It is not committed in this public repository and must not be treated as a clearance decision. Reconcile any private copy against the archive checksum above before relying on it.
+
 Create or complete a dedicated path-by-path manifest before importing:
 - archive path and file type;
 - origin/source and license evidence;
