@@ -25,10 +25,10 @@ class ValidateMemberTests(unittest.TestCase):
     def test_rejects_exact_blocked_paths_case_insensitively(self):
         for path in (
             "DATA/REFERENCE/PC_TRACK_IMPORT_MANIFEST.JSON",
-            "Source/Track_Centerlines_PC.Generated.H",
-            "SOURCE/TRACK_CENTERLINE.IMPORTED.H",
-            "SOURCE/TRACK_MESH.GENERATED.H",
-            "SOURCE/TRACK_BOUNDARIES.GENERATED.H",
+            "source/Track_Centerlines_PC.Generated.H",
+            "source/TRACK_CENTERLINE.IMPORTED.H",
+            "source/TRACK_MESH.GENERATED.H",
+            "source/TRACK_BOUNDARIES.GENERATED.H",
         ):
             with self.subTest(path=path):
                 with self.assertRaises(ValueError):
