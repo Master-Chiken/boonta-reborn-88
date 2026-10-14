@@ -2,7 +2,7 @@
 
 ## Objective
 
-Build toward a playable enhanced racing prototype inspired by *Star Wars: Episode I — Racer*, with native GameCube/Wii homebrew as the primary target. This is a staged engineering project, not a claim that a full remaster is already available.
+Reconstruct *Star Wars: Episode I — Racer* as faithfully as possible, using existing PC reverse-engineering work and comparative study of the PC, Dreamcast, and Nintendo 64 editions, then deliver an enhanced, genuinely playable native GameCube/Wii version with improved graphics and bonus content. This is a staged engineering project; the full reconstruction is not yet available.
 
 ## Confirmed inputs and findings
 
@@ -16,7 +16,7 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 
 ## Guiding decisions
 
-1. **Use the right source of truth.** Work from the Step 102 GameCube/Wii prototype, not from the Dreamcast smoke-test branch.
+1. **Use the right source of truth.** Treat the Step 102 GameCube/Wii prototype as the strongest existing port candidate, and use the PC, Dreamcast and Nintendo 64 editions plus documented PC reverse-engineering research as comparison/reference inputs. The small `gamecube/` procedural demo is only a toolchain/learning slice, not the final foundation.
 2. **Audit before publishing.** Check code provenance, license compatibility, asset rights, and generated data before importing files into a public repository.
 3. **Cloud-first build.** Prefer GitHub Actions/devkitPro containers to avoid requiring local toolchain installation or large downloads on the user's computer.
 4. **Test evidence matters.** Record exact commands and results. Never label a host test as a native build or a successful compile as a working game.
@@ -64,7 +64,7 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 
 **Exit criterion:** a repeatable boot and input test. Compilation alone is not sufficient.
 
-### Phase 5 — Playable vertical slice
+### Phase 5 — Faithful original-game vertical slice
 - [ ] Load one course with a consistent route, visible road, and collision.
 - [ ] Control one pod with a follow camera.
 - [ ] Validate acceleration, braking, steering, collision, lap timing, and frame pacing.
@@ -72,8 +72,8 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 
 **Exit criterion:** a short repeatable playable race on the target environment.
 
-### Phase 6 — Expand and enhance
-Only after the vertical slice is stable:
+### Phase 6 — Improve and expand beyond the original
+Only after the faithful gameplay baseline is stable:
 - improve original/cleared textures, materials, lighting, and effects;
 - add course-specific scenery and additional vehicles;
 - finish audio, progression, and bonus features;
@@ -86,6 +86,10 @@ Define what “HD” means for each target before promising it: native console r
 - [ ] Determine lawful homebrew executable and packaging formats.
 - [ ] Validate any image conversion separately; a DOL build does not automatically produce a valid NKit ISO or WBFS.
 - [ ] Publish only code and assets that can be redistributed.
+
+## Required version-comparison matrix
+
+Maintain a living matrix for PC, Dreamcast and Nintendo 64, with the GameCube/Wii target as the implementation column. Track at least: physics and handling, acceleration/boost/heat/damage, vehicle statistics, rival AI, track layout and route data, pickups/hazards, race modes, menus/HUD, progression/save behavior, audio, graphics/resource formats, and platform limitations. Each row must identify its evidence source and confidence (confirmed by execution, documented by a source, inferred, or unknown). Do not silently treat PC data as console data.
 
 ## Definition of done for each task
 
