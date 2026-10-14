@@ -182,7 +182,7 @@ int track_path_project(const TrackPath *path, TrackVec3 point,
             best_t = t;
             best_point = candidate;
         }
-        traversed += sqrtf(length_squared);
+        (void)length_squared;
     }
 
     if (best_segment < 0) return 0;
