@@ -275,7 +275,7 @@ static void draw_pod(float px, float pz, float tx, float tz, float rx, float rz)
             pz - rz * 0.2f - tz * 0.7f, 29, 143, 211);
     GX_End();
 
-    if (boost_active && speed_value > 2.0f) {
+    if (race.boost_active && race.speed > 2.0f) {
         GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
         vertex3(bx, 0.72f, bz, 255, 216, 86);
         vertex3(bx - tx * 1.1f + rx * 0.24f, 0.55f,
@@ -298,7 +298,7 @@ static void draw_hud(void)
     char number[8];
     float screen_w = (float)video_mode->fbWidth;
     float screen_h = (float)video_mode->efbHeight;
-    float speed_fraction = speed_value / MAX_SPEED;
+    float speed_fraction = race.speed / MAX_SPEED;
 
     guOrtho(ortho, 0.0f, screen_h, 0.0f, screen_w, 0.0f, 1.0f);
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
@@ -309,7 +309,7 @@ static void draw_hud(void)
 
     draw_rect(12.0f, 12.0f, 234.0f, 101.0f, 7, 17, 29);
     draw_text("SPEED", 22.0f, 22.0f, 1.5f, 196, 237, 255);
-    snprintf(number, sizeof(number), "%02d", (int)(speed_value * 2.0f));
+    snprintf(number, sizeof(number), "%02d", (int)(race.speed * 2.0f));
     draw_text(number, 105.0f, 20.0f, 2.0f, 255, 255, 255);
     draw_rect(22.0f, 42.0f, 220.0f, 50.0f, 27, 47, 61);
     draw_rect(22.0f, 42.0f, 22.0f + 198.0f * speed_fraction, 50.0f,
@@ -317,20 +317,20 @@ static void draw_hud(void)
 
     draw_text("BOOST", 22.0f, 61.0f, 1.0f, 196, 237, 255);
     draw_rect(79.0f, 61.0f, 220.0f, 69.0f, 27, 47, 61);
-    draw_rect(79.0f, 61.0f, 79.0f + 141.0f * boost_energy, 69.0f,
-              engine_heat > 0.7f ? 255 : 68,
-              engine_heat > 0.7f ? 90 : 211,
-              engine_heat > 0.7f ? 45 : 255);
+    draw_rect(79.0f, 61.0f, 79.0f + 141.0f * race.boost_energy, 69.0f,
+              race.engine_heat > 0.7f ? 255 : 68,
+              race.engine_heat > 0.7f ? 90 : 211,
+              race.engine_heat > 0.7f ? 45 : 255);
 
     draw_rect(screen_w - 112.0f, 12.0f, screen_w - 12.0f, 58.0f,
               7, 17, 29);
-    if (race_finished) {
+    if (race.finished) {
         draw_text("FINISH", screen_w - 100.0f, 28.0f, 1.5f,
                   255, 219, 110);
     } else {
         draw_text("LAP", screen_w - 101.0f, 21.0f, 1.5f,
                   196, 237, 255);
-        snprintf(number, sizeof(number), "%d", completed_laps + 1);
+        snprintf(number, sizeof(number), "%d", race.completed_laps + 1);
         draw_text(number, screen_w - 57.0f, 20.0f, 2.0f,
                   255, 255, 255);
         draw_text("/3", screen_w - 43.0f, 30.0f, 1.0f,
@@ -342,14 +342,14 @@ static void draw_hud(void)
     draw_text("A ACCEL  B BRAKE  X BOOST  L/R LANE  Y RESET  START PAUSE",
               20.0f, screen_h - 20.0f, 1.0f, 196, 237, 255);
 
-    if (paused && !race_finished) {
+    if (race.paused && !race.finished) {
         draw_rect(screen_w * 0.5f - 65.0f, screen_h * 0.5f - 20.0f,
                   screen_w * 0.5f + 65.0f, screen_h * 0.5f + 20.0f,
                   7, 17, 29);
         draw_text("PAUSED", screen_w * 0.5f - 40.0f,
                   screen_h * 0.5f - 5.0f, 2.0f, 255, 255, 255);
     }
-    if (race_finished) {
+    if (race.finished) {
         draw_rect(screen_w * 0.5f - 88.0f, screen_h * 0.5f - 10.0f,
                   screen_w * 0.5f + 88.0f, screen_h * 0.5f + 13.0f,
                   7, 17, 29);
@@ -445,11 +445,11 @@ static void render_frame(void)
     guVector camera;
     guVector up = {0.0f, 1.0f, 0.0f};
     guVector target;
-    float radius = TRACK_RADIUS + lane_offset;
-    float px = radius * cosf(angle_value);
-    float pz = radius * sinf(angle_value);
-    float tx = -sinf(angle_value);
-    float tz =  cosf(angle_value);
+    float radius = TRACK_RADIUS + race.lane_offset;
+    float px = radius * cosf(race.angle);
+    float pz = radius * sinf(race.angle);
+    float tx = -sinf(race.angle);
+    float tz =  cosf(race.angle);
 
     camera.x = px - tx * 8.0f;
     camera.y = 7.5f;
@@ -475,7 +475,7 @@ static void render_frame(void)
     draw_ring(TRACK_RADIUS - 4.25f, TRACK_RADIUS - 3.85f, 0.09f, 1);
     draw_center_dashes();
     draw_finish_line();
-    draw_pod(px, pz, tx, tz, cosf(angle_value), sinf(angle_value));
+    draw_pod(px, pz, tx, tz, cosf(race.angle), sinf(race.angle));
     draw_hud();
 
     GX_DrawDone();
