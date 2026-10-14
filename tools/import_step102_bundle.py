@@ -81,7 +81,19 @@ def main() -> int:
             src = archive.extractfile(member)
             if src is None:
                 raise SystemExit(f"Could not read archive member: {name}")
-            planned.append((name, src.read()))
+            content = src.read()
+            if name == "source/career_save.c":
+                # Current devkitPPC/libogc uses card_file; the archive uses the
+                # older CARDFileInfo name for the same GameCube memory-card type.
+                old_type = b"CARDFileInfo"
+                occurrences = content.count(old_type)
+                if occurrences != 2:
+                    raise SystemExit(
+                        "career_save.c compatibility check expected exactly two "
+                        f"CARDFileInfo declarations, found {occurrences}"
+                    )
+                content = content.replace(old_type, b"card_file")
+            planned.append((name, content))
 
     if not planned:
         raise SystemExit("The import bundle is empty.")
