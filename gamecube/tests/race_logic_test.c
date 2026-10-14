@@ -169,6 +169,50 @@ static void test_opponents_progress_and_position(void)
     assert(race_position(NULL) == 0);
 }
 
+static void test_opponent_lane_changes_are_smooth_and_bounded(void)
+{
+    RaceState first;
+    RaceState second;
+    RaceInput input = neutral_input();
+    float initial_lanes[RACE_OPPONENT_COUNT];
+    int any_lane_changed = 0;
+
+    race_reset(&first);
+    race_reset(&second);
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        initial_lanes[i] = first.opponent_lanes[i];
+    }
+
+    /* The same inputs must produce the same rival movement every time. */
+    for (int frame = 0; frame < 300; ++frame) {
+        float previous_lanes[RACE_OPPONENT_COUNT];
+        for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+            previous_lanes[i] = first.opponent_lanes[i];
+        }
+
+        race_update(&first, &input);
+        race_update(&second, &input);
+
+        for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+            assert(first.opponent_lanes[i] >= -2.4f);
+            assert(first.opponent_lanes[i] <= 2.4f);
+            assert(fabsf(first.opponent_lanes[i] -
+                         second.opponent_lanes[i]) < 0.0001f);
+            assert(fabsf(first.opponent_lanes[i] -
+                         previous_lanes[i]) < 0.02f);
+            if (fabsf(first.opponent_lanes[i] - initial_lanes[i]) > 0.05f) {
+                any_lane_changed = 1;
+            }
+        }
+
+        /* Keep rivals in their original lane order rather than crossing. */
+        assert(first.opponent_lanes[1] - first.opponent_lanes[0] > 0.9f);
+        assert(first.opponent_lanes[2] - first.opponent_lanes[1] > 0.9f);
+    }
+
+    assert(any_lane_changed);
+}
+
 static void test_three_lap_finish(void)
 {
     RaceState state;
@@ -300,10 +344,11 @@ int main(void)
     test_boost_heat_and_recharge();
     test_pause_freezes_motion_and_reset_unpauses();
     test_opponents_progress_and_position();
+    test_opponent_lane_changes_are_smooth_and_bounded();
     test_three_lap_finish();
     test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 10 suites passed");
+    puts("race_logic_test: 11 suites passed");
     return 0;
 }
