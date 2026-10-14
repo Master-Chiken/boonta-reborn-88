@@ -79,8 +79,9 @@ jobs:
           set -euo pipefail
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            dolphin-emu xvfb xauth imagemagick python3-pil libgl1-mesa-dri qt6-qpa-plugins
+            dolphin-emu xvfb xauth imagemagick python3-pil libgl1-mesa-dri libxcb-cursor0 qt6-qpa-plugins
           export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
           command -v dolphin-emu
           command -v xvfb-run
           command -v import
