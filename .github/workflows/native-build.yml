@@ -149,7 +149,7 @@ jobs:
       - name: Install Dolphin, virtual display, and screenshot utility
         run: |
           sudo apt-get update
-          sudo apt-get install -y dolphin-emu xvfb imagemagick xdotool x11-utils
+          sudo apt-get install -y dolphin-emu xvfb imagemagick xdotool x11-utils dbus-daemon
 
       - name: Try rendering the DOL and capture the first frame
         shell: bash
@@ -161,7 +161,7 @@ jobs:
           export SCREEN="$PWD/dolphin-frame.png"
           export WINDOWS="$PWD/dolphin-window-tree.txt"
           set +e
-          xvfb-run -a bash -c '
+          dbus-run-session -- xvfb-run -a bash -c '
             set +e
             export QT_QPA_PLATFORM=xcb
             export QT_DEBUG_PLUGINS=1
