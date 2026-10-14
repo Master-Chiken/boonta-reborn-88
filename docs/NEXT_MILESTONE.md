@@ -7,19 +7,19 @@
 - The latest confirmed native cross-build is the [GameCube prototype workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-smoke.yml).
 - Repository safety and CodeQL have also passed on a recent branch revision.
 - **Not verified yet:** booting the DOL, graphics, controller input, complete race behavior, or performance in Dolphin/console.
-- The Step 102 source archive remains outside the repo pending its separate code/asset provenance review.
+- The Step 102 source archive remains subject to file-group and asset provenance review. PR #17 contains a selective source-only candidate on a separate branch; it remains a draft and has not been merged into `main`.
 
 ## Latest gameplay increment — rival contact and impact feedback
 
 The prototype now detects simple player/rival contact when racers are close both around the circuit and across the track. Contact applies a speed penalty, a small lateral displacement, and a short cooldown to avoid applying the penalty on every frame. The HUD displays the impact count. This is a deliberately simple first gameplay rule; it is not realistic collision physics.
 
-The portable logic tests now include collision penalty, cooldown, reset, and lateral-separation checks. The expected suite count is 13, but these new changes must pass GitHub Actions before being considered validated. Visual HUD layout and the actual feel of collisions still need interactive Dolphin testing.
+The portable logic tests now include collision penalty, cooldown, reset, and lateral-separation checks. Treat the latest successful GitHub Actions run—not a hard-coded suite count in this document—as the source of truth for validation. Visual HUD layout and the actual feel of collisions still need interactive Dolphin testing.
 
 ## Latest gameplay increment — deterministic rival lane movement
 
 The clean-room race logic now gives each of the three procedural rivals a smooth, bounded lane sway. The motion is deterministic (no random-number state), keeps rivals in their original lane order, and remains within the track's lateral limits. This is a small gameplay improvement, not original-game AI or a substitute for interactive playtesting.
 
-A new host test checks that rival lane movement is bounded, smooth between frames, repeatable for identical inputs, and does not let rivals cross lanes. The expected host test output is now `race_logic_test: 11 suites passed`. Confirm the GitHub Actions result before treating the change as validated.
+A new host test checks that rival lane movement is bounded, smooth between frames, repeatable for identical inputs, and does not let rivals cross lanes. Confirm the latest GitHub Actions result before treating the change as validated; test-suite counts can change as coverage grows.
 
 ## Platform decision update — GameCube vs Wii remains open
 
