@@ -2,7 +2,9 @@
 
 ## Objective
 
-Reconstruct *Star Wars: Episode I — Racer* as faithfully as possible, using existing PC reverse-engineering work and comparative study of the PC, Dreamcast, and Nintendo 64 editions, then deliver an enhanced, genuinely playable native GameCube/Wii version with improved graphics and bonus content. This is a staged engineering project; the full reconstruction is not yet available.
+Reconstruct *Star Wars: Episode I — Racer* as faithfully as possible, using existing PC reverse-engineering work and comparative study of the PC, Dreamcast, and Nintendo 64 editions, then deliver the highest-quality visual remaster feasible on native GameCube/Wii, with bonus content. Use modern techniques for asset creation, rendering, optimization and tooling, adapted to the consoles' limits. This is a staged engineering project; the full reconstruction is not yet available.
+
+**Resolution reality:** GameCube and Wii are standard-definition platforms (typically up to 480p). This project can target HD-inspired assets and significantly improved image quality within their hardware budgets, but should not promise native 720p/1080p output or effects beyond their GPU/CPU/memory capabilities. If true HD output becomes a strict requirement, revisit the platform target or consider external upscaling/a separate modern-platform version.
 
 ## Confirmed inputs and findings
 
@@ -72,8 +74,12 @@ Reconstruct *Star Wars: Episode I — Racer* as faithfully as possible, using ex
 
 **Exit criterion:** a short repeatable playable race on the target environment.
 
-### Phase 6 — Improve and expand beyond the original
+### Phase 6 — Maximum-quality visual remaster and bonus content
 Only after the faithful gameplay baseline is stable:
+- Improve geometry, texture quality, lighting, materials, particles, effects, camera and animation as far as GameCube/Wii budgets allow.
+- Use modern asset-production and optimization tools, but measure real hardware limits rather than assuming modern PC rendering features can run natively.
+- Profile frame pacing, memory, texture/geometry budgets and visual clarity; prefer stable gameplay over effects that compromise playability.
+- Add clearly identified original bonus content and quality-of-life improvements without losing the original game's identity.
 - improve original/cleared textures, materials, lighting, and effects;
 - add course-specific scenery and additional vehicles;
 - finish audio, progression, and bonus features;
