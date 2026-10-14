@@ -1,44 +1,39 @@
 # AI agent workflow
 
-This repository uses GitHub-hosted Gemini for on-demand analysis and code assistance. The primary engineering goal is the native GameCube/Wii prototype; the original PC and Nintendo 64 releases are separate reference targets, and the Dreamcast/KallistiOS sample is a separate experiment.
+This repository has a native GameCube/Wii goal, a separately maintained Dreamcast starter, and on-demand AI review helpers. AI output is advisory; a successful workflow is not proof that game code compiles or works at runtime.
 
-## Current automation
+## Current automation status
 
-- `@gemini-cli` comments on an issue or pull request trigger a GitHub Actions job.
-- The workflow uses the `GEMINI_API_KEY` repository secret and currently selects `gemini-3.5-flash-lite` for the free-tier trial configuration.
-- The Gemini response is published back to the triggering issue/PR. If no response is available, the workflow posts a diagnostic link to the Actions log.
-- The reusable workflows keep general shell commands disabled; only the limited tools needed for context and repository reading are enabled in the invoke workflow. The plan-execute workflow has a separately scoped GitHub MCP tool set for file changes and PR creation.
-- A successful Gemini workflow means only that the automation ran successfully. It does not prove a game build or runtime test succeeded.
-
-## How to request work
-
-Comment on an issue or pull request starting with `@gemini-cli`. Ask for one well-scoped task and tell the agent which files or behavior to investigate.
-
-For substantial code changes, the intended sequence is:
-1. Ask for a plan and acceptance criteria.
-2. Review the plan in the GitHub discussion.
-3. Approve only the intended work with `@gemini-cli /approve`.
-4. Review the proposed diff, test results, provenance risks and any PR before merging.
-
-Never ask the agent to merge its own code or bypass required tests. Start with read-only investigation until the source tree is imported.
+- **OpenRouter Free reviewer:** merged on main through [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14). It is triggered manually from GitHub Actions for an open PR targeting main, sends a capped public diff through the openrouter/free route, and posts a review comment. It is comment-only and never writes code or merges. The repository secret OPENROUTER_API_KEY is required to run it; do not add billing or a payment method. Review [its setup guide](OPENROUTER_FREE_REVIEW.md) before sending any diff to an external model provider.
+- **Gemini Actions workflows:** workflow files are present on main, but the proposed safety-hardening changes in [PR #15](https://github.com/Master-Chiken/boonta-reborn-88/pull/15) remain a draft. Do not assume the draft's write gate or other proposed controls are active until it is merged.
+- **No paid fallback:** free service quota/availability can change. If a provider asks for payment, stop instead of enabling billing or a paid endpoint.
 
 ## Primary engineering blocker
 
-The repository currently contains the Dreamcast starter but does **not** contain the Step 102 GameCube/Wii source tree. The existing native workflow checks for `Makefile` and `source/` and stops if they are missing. Gemini cannot inspect an archive that exists only in ChatGPT's file library; the required files have to be made available to the repository or to a controlled import process first.
+The Step 102 GameCube/Wii source prototype is a separate supplied archive; it has not been imported to main. The clean-room procedural demo in [PR #13](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) is a different workstream and does not replace or compile the Step 102 source. GitHub-hosted agents cannot read a ChatGPT attachment unless the relevant material is separately and safely made available to them.
 
-## Safe source-import procedure
+## Safe workflow for substantial changes
 
-1. Keep the original PC archive, Nintendo 64 ROM, and commercial disc images outside the public repository.
-2. Inventory the Step 102 archive by file path, type, license/provenance and whether the data is original, generated, placeholder, or copied from a commercial game.
-3. Review the route-centerline dataset, sample model/material files, audio samples and any generated data separately. Do not import unclear commercial content merely because it is bundled with source code.
-4. Import only cleared source code, headers, Makefile, tests and documentation to a review branch.
-5. Run the host tests in CI, then the devkitPPC/libogc build. Keep compile success separate from Dolphin/hardware runtime validation.
-6. If code has an incompatible license or source provenance cannot be established, leave it out and record the blocker instead.
+1. Ask for a read-only assessment and a concrete plan with acceptance criteria.
+2. Review the proposed plan and check whether it concerns main, the Step 102 source, the GameCube demo PR, or the Dreamcast experiment.
+3. Keep work in a dedicated branch and reviewable pull request; never write directly to main or allow an agent to merge its own changes.
+4. Inspect the diff, tests, dependency changes, and source/asset provenance before approval.
+5. Confirm actual test/build evidence from the linked Actions run. Do not rely only on a natural-language report from an agent.
+6. Keep commercial ROMs, disc images, BIOS files, private game archives, extracted proprietary assets, API keys, and personal data out of prompts and repository changes.
 
-## Safety and quality rules
+## Safe Step 102 import process
 
-- Never commit or publish ROMs, disc images, BIOS files or unclear commercial assets (models, textures, audio or extracted data).
-- Never claim to have inspected a file unless its contents were actually accessible.
-- Never invent compiler or test results. Report commands, outcomes and evidence.
+1. Inventory every archive path with file type, origin, license evidence, and redistribution decision.
+2. Review generated route data and sample models/materials/audio separately; do not treat inclusion in a source ZIP as proof of permission.
+3. Import only cleared source code, headers, build scripts, tests, and documentation.
+4. Run host tests first, then the native devkitPPC/libogc build.
+5. Test the resulting DOL interactively and record visual, controller, and gameplay results separately.
+6. Exclude files with unclear provenance or incompatible licenses and document what is missing.
+
+## Quality and security rules
+
+- Never claim to have inspected an attachment unless its contents were accessible.
+- Never invent compiler/test results or claim that a build is playable without runtime evidence.
 - Never disable or weaken tests to obtain a green CI run.
-- Prefer small branches and pull requests with an explicit human review before merge.
+- Never publish commercial game payloads or undocumented third-party assets.
+- Never expose secrets in issues, logs, PR diffs, or AI prompts.
