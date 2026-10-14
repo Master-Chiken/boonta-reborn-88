@@ -331,6 +331,9 @@ static void test_frame_rate_independence(void)
     race_reset(&ntsc);
     pal.speed = 10.0f;
     ntsc.speed = 10.0f;
+    /* Keep both simulations away from rivals to isolate time-step behavior. */
+    pal.angle = 2.0f;
+    ntsc.angle = 2.0f;
     input.accelerate = 1;
     input.boost = 1;
     input.left = 1;
