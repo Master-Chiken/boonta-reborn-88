@@ -1,0 +1,109 @@
+name: Validate and import Step 102 source-only bundle
+
+on:
+  push:
+    branches:
+      - import/step102-source-only
+    paths:
+      - ".import/step102-source-only.tar.gz.b64"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: step102-source-only-import
+  cancel-in-progress: false
+
+jobs:
+  host-validation:
+    name: Unpack and run host regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Apply the checksummed source-only bundle
+        run: python3 tools/import_step102_bundle.py
+      - name: Run path and asset safety checks
+        run: python3 tools/check_source_import_policy.py
+      - name: Run portable C regressions and source checks
+        run: bash tools/release_check.sh
+      - name: Upload the validated source tree for the native build
+        uses: actions/upload-artifact@v4
+        with:
+          name: step102-source-tree
+          path: |
+            Makefile
+            STEP102_IMPORT_README.md
+            data/**
+            source/**
+            tests/**
+            tools/**
+          if-no-files-found: error
+          retention-days: 2
+
+  native-build:
+    name: Cross-build Step 102 for GameCube
+    needs: host-validation
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - name: Check out branch for action metadata
+        uses: actions/checkout@v4
+      - name: Download the validated source tree
+        uses: actions/download-artifact@v4
+        with:
+          name: step102-source-tree
+          path: .
+          merge-multiple: true
+      - name: Build with the procedural fallback track only
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITPPC="$DEVKITPRO/devkitPPC"
+          test ! -e source/track_centerlines_pc.generated.h
+          test ! -e source/track_centerline.imported.h
+          make clean
+          make USE_IMPORTED_SPLINE=0
+          test -s swe1r_gc_port.dol
+          ls -lh swe1r_gc_port.dol
+      - name: Upload native build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: swe1r-gc-step102-source-only
+          path: |
+            swe1r_gc_port.dol
+            swe1r_gc_port.elf
+            swe1r_gc_port.elf.map
+          if-no-files-found: error
+          retention-days: 7
+
+  commit-reviewed-source:
+    name: Commit only after host tests and native build pass
+    needs: [host-validation, native-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out import branch
+        uses: actions/checkout@v4
+        with:
+          ref: import/step102-source-only
+      - name: Apply source-only bundle and remove its temporary transport file
+        run: python3 tools/import_step102_bundle.py
+      - name: Commit reviewed sources to the draft PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No import changes to commit."
+            exit 0
+          fi
+          git commit -m "feat: import Step 102 source-only GameCube prototype"
+          git push origin HEAD:import/step102-source-only
