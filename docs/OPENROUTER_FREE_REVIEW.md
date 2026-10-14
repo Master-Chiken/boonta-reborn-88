@@ -24,6 +24,8 @@ La clé `OPENROUTER_API_KEY` reste dans les secrets GitHub et ne fait pas partie
 
 ## Activer la connexion
 
+**Important :** le workflow est actuellement dans la PR #13, qui est encore en brouillon et n'est pas fusionnée. GitHub exige que le fichier `workflow_dispatch` soit présent sur la branche par défaut avant de pouvoir lancer le workflow manuellement. Tu devras donc d'abord examiner et valider explicitement la PR qui contient ce fichier ; aucune fusion n'a été effectuée. Référence : [documentation GitHub sur l'exécution manuelle](https://docs.github.com/fr/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+
 1. Ouvre [OpenRouter — clés API](https://openrouter.ai/keys), crée un compte/une clé pour l'offre Free, et n'ajoute **aucun crédit**, aucune carte bancaire et aucun moyen de paiement. La page des plans Free indique actuellement qu'aucun mode de paiement n'est disponible pour cette offre.
 2. Dans GitHub, ouvre **Settings → Secrets and variables → Actions → New repository secret**.
 3. Nom exact : `OPENROUTER_API_KEY`. Colle la clé uniquement dans la valeur du secret et enregistre.

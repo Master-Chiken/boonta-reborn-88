@@ -36,7 +36,7 @@ Après avoir protégé `main` et ajouté `GEMINI_API_KEY` :
 
 Sans cette variable, Gemini peut répondre aux demandes de lecture et proposer un plan, mais `@gemini-cli /approve` n'exécute pas de tâche modifiant le dépôt. À la place, le workflow publie un commentaire expliquant que l'écriture est verrouillée.
 
-L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne doit jamais pousser vers `main), fusionner une PR ou activer l'auto-merge.** Lis toujours les modifications, les tests, le diff et les limites avant toute décision humaine de fusion.
+L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne doit jamais pousser vers `main`, fusionner une PR ou activer l'auto-merge.** Lis toujours les modifications, les tests, le diff et les limites avant toute décision humaine de fusion.
 
 ## Ajouter une deuxième IA gratuite pour la relecture
 

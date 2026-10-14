@@ -43,7 +43,7 @@ La configuration a un verrou : tant que la variable n'est pas exactement `true`,
 - Offre Free annoncée actuellement : 25+ modèles gratuits et 50 requêtes par jour ; ces limites et les modèles disponibles peuvent changer.
 - Données : la requête envoie le diff de la PR à OpenRouter, puis à un fournisseur de modèle qui peut changer. Les pratiques de conservation/entraînement varient selon le fournisseur ; n'utilise pas ce workflow avec une PR contenant des secrets, informations privées ou du contenu que tu ne souhaites pas transmettre à un fournisseur externe.
 - Configuration : crée une clé API dans [OpenRouter](https://openrouter.ai/keys), sans ajouter de crédit ni moyen de paiement, puis ajoute-la dans GitHub sous **Settings → Secrets and variables → Actions → New repository secret** avec le nom exact `OPENROUTER_API_KEY`.
-- Lancement : ouvre le workflow [OpenRouter free-model PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), clique **Run workflow** et saisis le numéro de la PR. Il ne se déclenche pas automatiquement.
+- Lancement : le workflow est présent dans la PR #13, qui est encore en brouillon. GitHub ne permet pas de déclencher un workflow `workflow_dispatch` tant que son fichier n'est pas sur la branche par défaut. Après validation manuelle et fusion explicite de la PR qui le contient, ouvre [OpenRouter free-model PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), clique **Run workflow** et saisis le numéro de la PR. Il ne se déclenche pas automatiquement.
 
 Guide complet : [OpenRouter Free PR review](OPENROUTER_FREE_REVIEW.md).
 
