@@ -1,4 +1,4 @@
-name: GameCube toolchain smoke test
+name: GameCube procedural driving prototype
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build clean-room GameCube smoke test
+      - name: Build clean-room GameCube driving prototype
         working-directory: gamecube
         shell: bash
         run: |
@@ -33,13 +33,13 @@ jobs:
           export DEVKITPPC="$DEVKITPRO/devkitPPC"
           make clean
           make
-          test -s boonta_smoke.dol
-          ls -lh boonta_smoke.dol
+          test -s boonta_demo.dol
+          ls -lh boonta_demo.dol
 
       - name: Upload smoke-test DOL
         uses: actions/upload-artifact@v4
         with:
-          name: boonta-gamecube-smoke-dol
-          path: gamecube/boonta_smoke.dol
+          name: boonta-gamecube-demo-dol
+          path: gamecube/boonta_demo.dol
           if-no-files-found: error
           retention-days: 7
