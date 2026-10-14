@@ -36,6 +36,10 @@ The full Step 102 source prototype has **not yet been imported**. A separate cle
 The Dreamcast test branch is separate and is not a substitute for these milestones.
 
 
+## Cloud development (no local installation)
+
+The repository includes a Codespaces dev-container for working in the browser with the devkitPPC/GameCube toolchain. See [Cloud development workflow](docs/CLOUD_DEV_WORKFLOW.md). Codespaces has usage quotas on free personal plans; stop or delete the cloud workspace when finished.
+
 ## Optional AI-assisted workflow
 
 A GitHub-hosted Gemini agent can review the repository and help prepare code changes from GitHub comments. Setup and safety rules: [AI automation guide](docs/AI_AUTOMATION_SETUP.md). It only sees files committed to this repository; ChatGPT uploads of the original PC/N64 games are not automatically available to it.
