@@ -9,6 +9,12 @@
 - **Not verified yet:** booting the DOL, graphics, controller input, complete race behavior, or performance in Dolphin/console.
 - The Step 102 source archive remains outside the repo pending its separate code/asset provenance review.
 
+## Latest gameplay increment — rival contact and impact feedback
+
+The prototype now detects simple player/rival contact when racers are close both around the circuit and across the track. Contact applies a speed penalty, a small lateral displacement, and a short cooldown to avoid applying the penalty on every frame. The HUD displays the impact count. This is a deliberately simple first gameplay rule; it is not realistic collision physics.
+
+The portable logic tests now include collision penalty, cooldown, reset, and lateral-separation checks. The expected suite count is 13, but these new changes must pass GitHub Actions before being considered validated. Visual HUD layout and the actual feel of collisions still need interactive Dolphin testing.
+
 ## Latest gameplay increment — deterministic rival lane movement
 
 The clean-room race logic now gives each of the three procedural rivals a smooth, bounded lane sway. The motion is deterministic (no random-number state), keeps rivals in their original lane order, and remains within the track's lateral limits. This is a small gameplay improvement, not original-game AI or a substitute for interactive playtesting.
