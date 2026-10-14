@@ -57,3 +57,11 @@
 - [GitHub Actions : utilisation gratuite des runners standard pour les dépôts publics](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 - [GitHub Codespaces : quotas inclus des comptes personnels](https://docs.github.com/en/codespaces/keeping-your-codespaces-lean/managing-the-cost-of-codespaces).
 - [Gemini API : offre gratuite et tarifs](https://ai.google.dev/gemini-api/docs/pricing).
+
+
+### CodeQL — analyse statique du C/C++
+- État : workflow ajouté; première exécution en cours/vérification.
+- Usage : repérer certaines classes de vulnérabilités et problèmes de code sans exécuter le jeu.
+- Coût : gratuit pour les dépôts publics GitHub.
+- Limite : l'analyse sans build est moins précise que l'analyse sur la compilation réelle; elle ne prouve ni la compilation native ni le bon fonctionnement du jeu.
+- Référence : [CodeQL sur les langages compilés](https://docs.github.com/en/code-security/reference/code-scanning/codeql/build-options-for-compiled-languages).
