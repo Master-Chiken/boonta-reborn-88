@@ -16,12 +16,14 @@
 #include <malloc.h>
 #include <stdio.h>
 #include "race_logic.h"
+#include "track_path.h"
 #include <string.h>
 
 #define FIFO_SIZE (256 * 1024)
 #define TRACK_SEGMENTS 96
 #define TRACK_RADIUS 22.0f
 #define TRACK_HALF_WIDTH 4.5f
+#define TRACK_KERB_WIDTH 0.72f
 #define MAX_SPEED 48.0f
 #define RACE_LAPS 3
 #define PI_F 3.14159265358979323846f
@@ -31,6 +33,8 @@ static void *framebuffer;
 static GXRModeObj *video_mode;
 static void *gx_fifo;
 static RaceState race;
+static TrackVec3 track_points[TRACK_SEGMENTS];
+static TrackPath track_path = {track_points, TRACK_SEGMENTS, 1};
 
 static const u8 font5x7[128][7] = {
     ['0'] = {14,17,19,21,25,17,14},
@@ -151,57 +155,106 @@ static void draw_ground(void)
     GX_End();
 }
 
-static void draw_ring(float inner_radius, float outer_radius, float y, int style)
+static TrackVec3 track_normal(const TrackPathSample *sample)
+{
+    TrackVec3 normal = {sample->tangent.z, 0.0f, -sample->tangent.x};
+    return normal;
+}
+
+static TrackVec3 track_offset_point(TrackVec3 point, TrackVec3 normal,
+                                    float lateral, float y)
+{
+    TrackVec3 result = {point.x + normal.x * lateral, y,
+                        point.z + normal.z * lateral};
+    return result;
+}
+
+static void init_track_geometry(void)
+{
+    for (int i = 0; i < TRACK_SEGMENTS; ++i) {
+        float angle = TWO_PI_F * (float)i / (float)TRACK_SEGMENTS;
+        float radius = TRACK_RADIUS +
+            3.0f * sinf(2.0f * angle + 0.35f) +
+            1.65f * sinf(3.0f * angle - 0.7f) +
+            0.75f * sinf(5.0f * angle + 0.2f);
+        track_points[i].x = radius * cosf(angle);
+        track_points[i].y = 0.0f;
+        track_points[i].z = radius * sinf(angle);
+    }
+}
+
+static void draw_track_strip(float inner_offset, float outer_offset,
+                             float y, int style)
 {
     GX_Begin(GX_QUADS, GX_VTXFMT0, TRACK_SEGMENTS * 4);
     for (int i = 0; i < TRACK_SEGMENTS; ++i) {
-        float a0 = TWO_PI_F * (float)i / (float)TRACK_SEGMENTS;
-        float a1 = TWO_PI_F * (float)(i + 1) / (float)TRACK_SEGMENTS;
-        float c0 = cosf(a0), s0 = sinf(a0);
-        float c1 = cosf(a1), s1 = sinf(a1);
-        u8 r, g, b;
+        TrackPathSample a, b;
+        TrackVec3 na, nb;
+        TrackVec3 p0, p1, p2, p3;
+        u8 r, g, blue;
+        float p0_progress = (float)i / (float)TRACK_SEGMENTS;
+        float p1_progress = (float)(i + 1) / (float)TRACK_SEGMENTS;
+        if (!track_path_sample_progress(&track_path, p0_progress, &a) ||
+            !track_path_sample_progress(&track_path, p1_progress, &b)) {
+            continue;
+        }
+        na = track_normal(&a);
+        nb = track_normal(&b);
+        p0 = track_offset_point(a.position, na, outer_offset, y);
+        p1 = track_offset_point(b.position, nb, outer_offset, y);
+        p2 = track_offset_point(b.position, nb, inner_offset, y);
+        p3 = track_offset_point(a.position, na, inner_offset, y);
 
         if (style == 0) {
             if ((i / 6) % 2 == 0) {
-                r = 52; g = 65; b = 78;
+                r = 52; g = 65; blue = 78;
             } else {
-                r = 43; g = 55; b = 68;
+                r = 43; g = 55; blue = 68;
             }
         } else if (style == 1) {
             if ((i / 4) % 2 == 0) {
-                r = 238; g = 197; b = 75;
+                r = 238; g = 197; blue = 75;
             } else {
-                r = 216; g = 227; b = 235;
+                r = 216; g = 227; blue = 235;
             }
         } else {
             if ((i / 4) % 2 == 0) {
-                r = 48; g = 210; b = 255;
+                r = 48; g = 210; blue = 255;
             } else {
-                r = 28; g = 94; b = 133;
+                r = 28; g = 94; blue = 133;
             }
         }
-
-        vertex3(outer_radius * c0, y, outer_radius * s0, r, g, b);
-        vertex3(outer_radius * c1, y, outer_radius * s1, r, g, b);
-        vertex3(inner_radius * c1, y, inner_radius * s1, r, g, b);
-        vertex3(inner_radius * c0, y, inner_radius * s0, r, g, b);
+        vertex3(p0.x, p0.y, p0.z, r, g, blue);
+        vertex3(p1.x, p1.y, p1.z, r, g, blue);
+        vertex3(p2.x, p2.y, p2.z, r, g, blue);
+        vertex3(p3.x, p3.y, p3.z, r, g, blue);
     }
     GX_End();
 }
 
 static void draw_center_dashes(void)
 {
-    const int dash_count = TRACK_SEGMENTS / 2;
-    GX_Begin(GX_QUADS, GX_VTXFMT0, dash_count * 4);
+    GX_Begin(GX_QUADS, GX_VTXFMT0, (TRACK_SEGMENTS / 2) * 4);
     for (int i = 0; i < TRACK_SEGMENTS; i += 2) {
-        float a0 = TWO_PI_F * (float)i / (float)TRACK_SEGMENTS;
-        float a1 = TWO_PI_F * (float)(i + 1) / (float)TRACK_SEGMENTS;
-        float ri = TRACK_RADIUS - 0.09f;
-        float ro = TRACK_RADIUS + 0.09f;
-        vertex3(ro * cosf(a0), 0.08f, ro * sinf(a0), 50, 221, 255);
-        vertex3(ro * cosf(a1), 0.08f, ro * sinf(a1), 50, 221, 255);
-        vertex3(ri * cosf(a1), 0.08f, ri * sinf(a1), 50, 221, 255);
-        vertex3(ri * cosf(a0), 0.08f, ri * sinf(a0), 50, 221, 255);
+        TrackPathSample a, b;
+        TrackVec3 na, nb;
+        TrackVec3 p0, p1, p2, p3;
+        if (!track_path_sample_progress(&track_path,
+                (float)i / (float)TRACK_SEGMENTS, &a) ||
+            !track_path_sample_progress(&track_path,
+                (float)(i + 1) / (float)TRACK_SEGMENTS, &b)) {
+            continue;
+        }
+        na = track_normal(&a);
+        nb = track_normal(&b);
+        p0 = track_offset_point(a.position, na, 0.10f, 0.08f);
+        p1 = track_offset_point(b.position, nb, 0.10f, 0.08f);
+        p2 = track_offset_point(b.position, nb, -0.10f, 0.08f);
+        p3 = track_offset_point(a.position, na, -0.10f, 0.08f);
+        vertex3(p0.x, p0.y, p0.z, 50, 221, 255);
+        vertex3(p1.x, p1.y, p1.z, 50, 221, 255);
+        vertex3(p2.x, p2.y, p2.z, 50, 221, 255);
+        vertex3(p3.x, p3.y, p3.z, 50, 221, 255);
     }
     GX_End();
 }
@@ -209,17 +262,25 @@ static void draw_center_dashes(void)
 static void draw_finish_line(void)
 {
     const int tiles = 8;
+    TrackPathSample sample;
+    TrackVec3 normal;
+    if (!track_path_sample_progress(&track_path, 0.0f, &sample)) return;
+    normal = track_normal(&sample);
     GX_Begin(GX_QUADS, GX_VTXFMT0, tiles * 4);
     for (int i = 0; i < tiles; ++i) {
-        float x0 = TRACK_RADIUS - TRACK_HALF_WIDTH +
-                   (2.0f * TRACK_HALF_WIDTH * (float)i / (float)tiles);
-        float x1 = TRACK_RADIUS - TRACK_HALF_WIDTH +
-                   (2.0f * TRACK_HALF_WIDTH * (float)(i + 1) / (float)tiles);
+        float a = -TRACK_HALF_WIDTH +
+            (2.0f * TRACK_HALF_WIDTH * (float)i / (float)tiles);
+        float b = -TRACK_HALF_WIDTH +
+            (2.0f * TRACK_HALF_WIDTH * (float)(i + 1) / (float)tiles);
+        TrackVec3 p0 = track_offset_point(sample.position, normal, a, 0.10f);
+        TrackVec3 p1 = track_offset_point(sample.position, normal, b, 0.10f);
+        TrackVec3 t = {sample.tangent.x * 0.38f, 0.0f,
+                       sample.tangent.z * 0.38f};
         u8 c = (i % 2 == 0) ? 235 : 18;
-        vertex3(x0, 0.10f, -0.38f, c, c, c);
-        vertex3(x1, 0.10f, -0.38f, c, c, c);
-        vertex3(x1, 0.10f,  0.38f, c, c, c);
-        vertex3(x0, 0.10f,  0.38f, c, c, c);
+        vertex3(p0.x - t.x, p0.y, p0.z - t.z, c, c, c);
+        vertex3(p1.x - t.x, p1.y, p1.z - t.z, c, c, c);
+        vertex3(p1.x + t.x, p1.y, p1.z + t.z, c, c, c);
+        vertex3(p0.x + t.x, p0.y, p0.z + t.z, c, c, c);
     }
     GX_End();
 }
@@ -229,18 +290,25 @@ static void draw_pylons(void)
     const int count = 16;
     GX_Begin(GX_QUADS, GX_VTXFMT0, count * 4);
     for (int i = 0; i < count; ++i) {
-        float a = TWO_PI_F * (float)i / (float)count;
-        float cx = 28.0f * cosf(a);
-        float cz = 28.0f * sinf(a);
-        float tx = -sinf(a) * 0.42f;
-        float tz =  cosf(a) * 0.42f;
-        u8 r = (i % 2 == 0) ? 55 : 255;
-        u8 g = (i % 2 == 0) ? 205 : 112;
-        u8 b = (i % 2 == 0) ? 255 : 62;
-        vertex3(cx - tx, 0.0f, cz - tz, r, g, b);
-        vertex3(cx + tx, 0.0f, cz + tz, r, g, b);
-        vertex3(cx + tx, 3.0f, cz + tz, r, g, b);
-        vertex3(cx - tx, 3.0f, cz - tz, r, g, b);
+        TrackPathSample sample;
+        TrackVec3 normal;
+        TrackVec3 base;
+        float progress = (float)i / (float)count;
+        if (!track_path_sample_progress(&track_path, progress, &sample)) continue;
+        normal = track_normal(&sample);
+        base = track_offset_point(sample.position, normal,
+                                  TRACK_HALF_WIDTH + 2.0f, 0.0f);
+        {
+            float tx = sample.tangent.x * 0.42f;
+            float tz = sample.tangent.z * 0.42f;
+            u8 r = (i % 2 == 0) ? 55 : 255;
+            u8 g = (i % 2 == 0) ? 205 : 112;
+            u8 blue = (i % 2 == 0) ? 255 : 62;
+            vertex3(base.x - tx, 0.0f, base.z - tz, r, g, blue);
+            vertex3(base.x + tx, 0.0f, base.z + tz, r, g, blue);
+            vertex3(base.x + tx, 3.0f, base.z + tz, r, g, blue);
+            vertex3(base.x - tx, 3.0f, base.z - tz, r, g, blue);
+        }
     }
     GX_End();
 }
@@ -494,11 +562,22 @@ static void render_frame(void)
     guVector camera;
     guVector up = {0.0f, 1.0f, 0.0f};
     guVector target;
-    float radius = TRACK_RADIUS + race.lane_offset;
-    float px = radius * cosf(race.angle);
-    float pz = radius * sinf(race.angle);
-    float tx = -sinf(race.angle);
-    float tz =  cosf(race.angle);
+    TrackPathSample player_sample;
+    TrackVec3 player_normal;
+    TrackVec3 player_position;
+    float progress = race.angle / TWO_PI_F;
+    float px, pz, tx, tz;
+
+    if (!track_path_sample_progress(&track_path, progress, &player_sample)) {
+        return;
+    }
+    player_normal = track_normal(&player_sample);
+    player_position = track_offset_point(player_sample.position, player_normal,
+                                         race.lane_offset, 0.0f);
+    px = player_position.x;
+    pz = player_position.z;
+    tx = player_sample.tangent.x;
+    tz = player_sample.tangent.z;
 
     camera.x = px - tx * 8.0f;
     camera.y = 7.5f;
@@ -517,20 +596,29 @@ static void render_frame(void)
     GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
 
     draw_ground();
-    draw_pylons();
-    draw_ring(TRACK_RADIUS - TRACK_HALF_WIDTH,
-              TRACK_RADIUS + TRACK_HALF_WIDTH, 0.0f, 0);
-    draw_ring(TRACK_RADIUS + 3.85f, TRACK_RADIUS + 4.25f, 0.09f, 1);
-    draw_ring(TRACK_RADIUS - 4.25f, TRACK_RADIUS - 3.85f, 0.09f, 1);
+    draw_track_strip(-TRACK_HALF_WIDTH, TRACK_HALF_WIDTH, 0.0f, 0);
+    draw_track_strip(TRACK_HALF_WIDTH, TRACK_HALF_WIDTH + TRACK_KERB_WIDTH,
+                     0.09f, 1);
+    draw_track_strip(-TRACK_HALF_WIDTH - TRACK_KERB_WIDTH,
+                     -TRACK_HALF_WIDTH, 0.09f, 1);
     draw_center_dashes();
     draw_finish_line();
+    draw_pylons();
 
     /* Original procedural rival pods; no commercial models or textures. */
     for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
         float rival_angle = race.opponent_angles[i];
-        float rival_radius = TRACK_RADIUS + race.opponent_lanes[i];
-        float rival_x = rival_radius * cosf(rival_angle);
-        float rival_z = rival_radius * sinf(rival_angle);
+        TrackPathSample rival_sample;
+        TrackVec3 rival_normal;
+        TrackVec3 rival_position;
+        float rival_x, rival_z;
+        if (!track_path_sample_progress(&track_path,
+                rival_angle / TWO_PI_F, &rival_sample)) continue;
+        rival_normal = track_normal(&rival_sample);
+        rival_position = track_offset_point(rival_sample.position, rival_normal,
+                                            race.opponent_lanes[i], 0.0f);
+        rival_x = rival_position.x;
+        rival_z = rival_position.z;
         u8 rival_r = 255, rival_g = 105, rival_b = 78;
 
         if (i == 1) {
@@ -539,8 +627,9 @@ static void render_frame(void)
             rival_r = 190; rival_g = 120; rival_b = 255;
         }
 
-        draw_pod(rival_x, rival_z, -sinf(rival_angle), cosf(rival_angle),
-                 cosf(rival_angle), sinf(rival_angle), 0,
+        draw_pod(rival_x, rival_z,
+                 rival_sample.tangent.x, rival_sample.tangent.z,
+                 rival_normal.x, rival_normal.z, 0,
                  rival_r, rival_g, rival_b);
     }
     draw_pod(px, pz, tx, tz, cosf(race.angle), sinf(race.angle),
