@@ -141,8 +141,8 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
      */
     for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
         float target_speed = RACE_OPPONENT_TARGET_SPEEDS[i];
-        float lane_phase = state->opponent_angles[i] * 0.65f +
-                           (float)i * 2.1f;
+        float lane_phase =
+            (state->opponent_angles[i] - 0.035f * (float)(i + 1)) * 0.65f;
         float radius;
 
         state->opponent_lanes[i] = clamp(
