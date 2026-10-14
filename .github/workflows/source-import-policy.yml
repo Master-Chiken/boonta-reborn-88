@@ -6,6 +6,17 @@ on:
   push:
     branches:
       - import/step102-source-only
+    paths:
+      - "source/**"
+      - "include/**"
+      - "data/**"
+      - "tools/**"
+      - "tests/**"
+      - "Makefile"
+      - "STEP102_IMPORT_README.md"
+      - "docs/**"
+      - ".github/workflows/**"
+      - "!.import/**"
   workflow_dispatch:
 
 permissions:
