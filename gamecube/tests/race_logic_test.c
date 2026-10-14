@@ -28,6 +28,10 @@ static void test_reset(void)
     assert(state.speed == 0.0f);
     assert(state.lane_offset == 0.0f);
     assert(state.angle == 0.0f);
+    assert(state.race_seconds == 0.0f);
+    assert(state.current_lap_seconds == 0.0f);
+    assert(state.last_lap_seconds == 0.0f);
+    assert(state.best_lap_seconds == 0.0f);
     assert(state.boost_energy == 1.0f);
     assert(state.engine_heat == 0.0f);
     assert(state.completed_laps == 0);
@@ -191,6 +195,41 @@ static void test_three_lap_finish(void)
 }
 
 
+
+static void test_race_clock_lap_times_and_pause(void)
+{
+    RaceState state;
+    RaceInput input = neutral_input();
+    race_reset(&state);
+
+    for (int i = 0; i < 25; ++i) {
+        race_update_dt(&state, &input, 0.02f);
+    }
+    assert(fabsf(state.race_seconds - 0.5f) < 0.001f);
+    assert(fabsf(state.current_lap_seconds - 0.5f) < 0.001f);
+
+    input.pause_pressed = 1;
+    race_update_dt(&state, &input, 0.02f);
+    assert(state.paused == 1);
+    float paused_race_time = state.race_seconds;
+    float paused_lap_time = state.current_lap_seconds;
+
+    input.pause_pressed = 0;
+    race_update_dt(&state, &input, 0.02f);
+    assert(fabsf(state.race_seconds - paused_race_time) < 0.0001f);
+    assert(fabsf(state.current_lap_seconds - paused_lap_time) < 0.0001f);
+
+    race_reset(&state);
+    state.speed = 20.0f;
+    state.angle = 6.282f;
+    race_update_dt(&state, &input, 0.02f);
+    assert(state.completed_laps == 1);
+    assert(state.last_lap_seconds > 0.0f);
+    assert(fabsf(state.best_lap_seconds - state.last_lap_seconds) < 0.001f);
+    assert(state.current_lap_seconds == 0.0f);
+    assert(state.race_seconds >= state.last_lap_seconds);
+}
+
 static void test_frame_rate_independence(void)
 {
     RaceState pal;
@@ -218,6 +257,8 @@ static void test_frame_rate_independence(void)
     assert(fabsf(pal.boost_energy - ntsc.boost_energy) < 0.002f);
     assert(fabsf(pal.engine_heat - ntsc.engine_heat) < 0.002f);
     assert(fabsf(pal.angle - ntsc.angle) < 0.01f);
+    assert(fabsf(pal.race_seconds - ntsc.race_seconds) < 0.001f);
+    assert(fabsf(pal.current_lap_seconds - ntsc.current_lap_seconds) < 0.001f);
 }
 
 static void test_invalid_and_long_frame_deltas_are_safe(void)
@@ -260,8 +301,9 @@ int main(void)
     test_pause_freezes_motion_and_reset_unpauses();
     test_opponents_progress_and_position();
     test_three_lap_finish();
+    test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 9 suites passed");
+    puts("race_logic_test: 10 suites passed");
     return 0;
 }

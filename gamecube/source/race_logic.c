@@ -30,6 +30,10 @@ void race_reset(RaceState *state)
     state->speed = 0.0f;
     state->lane_offset = 0.0f;
     state->angle = 0.0f;
+    state->race_seconds = 0.0f;
+    state->current_lap_seconds = 0.0f;
+    state->last_lap_seconds = 0.0f;
+    state->best_lap_seconds = 0.0f;
     state->boost_energy = 1.0f;
     state->engine_heat = 0.0f;
     state->completed_laps = 0;
@@ -71,6 +75,9 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
         return;
     }
 
+    state->race_seconds += delta_seconds;
+    state->current_lap_seconds += delta_seconds;
+
     /*
      * At the start-line angle, the pod faces +Z and positive radial X projects
      * to screen-left with this camera. Keep lane controls consistent with that.
@@ -107,6 +114,12 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
     if (state->angle >= RACE_TWO_PI) {
         state->angle -= RACE_TWO_PI;
         ++state->completed_laps;
+        state->last_lap_seconds = state->current_lap_seconds;
+        if (state->best_lap_seconds <= 0.0f ||
+            state->last_lap_seconds < state->best_lap_seconds) {
+            state->best_lap_seconds = state->last_lap_seconds;
+        }
+        state->current_lap_seconds = 0.0f;
         if (state->completed_laps >= RACE_LAPS) {
             state->finished = 1;
             state->speed = 0.0f;

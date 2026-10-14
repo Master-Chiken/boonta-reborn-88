@@ -302,9 +302,16 @@ static void draw_hud(void)
     Mtx identity;
     Mtx ortho;
     char number[8];
+    char time_text[20];
+    unsigned int elapsed_tenths;
     float screen_w = (float)video_mode->fbWidth;
     float screen_h = (float)video_mode->efbHeight;
     float speed_fraction = race.speed / MAX_SPEED;
+    elapsed_tenths = (unsigned int)(race.race_seconds * 10.0f);
+    snprintf(time_text, sizeof(time_text), "TIME %02u:%02u.%u",
+             elapsed_tenths / 600U,
+             (elapsed_tenths / 10U) % 60U,
+             elapsed_tenths % 10U);
 
     guOrtho(ortho, 0.0f, screen_h, 0.0f, screen_w, 0.0f, 1.0f);
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
@@ -327,6 +334,11 @@ static void draw_hud(void)
               race.engine_heat > 0.7f ? 255 : 68,
               race.engine_heat > 0.7f ? 90 : 211,
               race.engine_heat > 0.7f ? 45 : 255);
+
+    draw_rect(screen_w * 0.5f - 70.0f, 12.0f,
+              screen_w * 0.5f + 70.0f, 42.0f, 7, 17, 29);
+    draw_text(time_text, screen_w * 0.5f - 42.0f, 22.0f,
+              1.0f, 196, 237, 255);
 
     draw_rect(screen_w - 112.0f, 12.0f, screen_w - 12.0f, 84.0f,
               7, 17, 29);

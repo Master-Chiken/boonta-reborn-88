@@ -7,6 +7,10 @@ typedef struct RaceState {
     float speed;
     float lane_offset;
     float angle;
+    float race_seconds;
+    float current_lap_seconds;
+    float last_lap_seconds;
+    float best_lap_seconds;
     float boost_energy;
     float engine_heat;
     int completed_laps;
