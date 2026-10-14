@@ -165,13 +165,21 @@ jobs:
             set +e
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
             pid=$!
-            sleep 12
+            window=""
+            for attempt in $(seq 1 30); do
+              window=$(xdotool search --onlyvisible --name "Dolphin" 2>/dev/null | head -n1 || true)
+              if [[ -n "$window" ]]; then break; fi
+              sleep 1
+            done
             xwininfo -root -tree > "$WINDOWS" 2>&1
-            window=$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | head -n1)
             if [[ -n "$window" ]]; then
+              echo "Found visible Dolphin window: $window" >> "$LOG"
+              sleep 2
               import -window "$window" "$SCREEN"
             else
+              echo "No visible Dolphin window appeared within 30 seconds." >> "$LOG"
               import -window root "$SCREEN"
+              exit 1
             fi
             capture_status=$?
             find "$DOLPHIN_USER" -maxdepth 5 -type f -name "*.log" -print -exec cat {} \; >> "$LOG" 2>/dev/null || true
