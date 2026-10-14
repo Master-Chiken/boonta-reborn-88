@@ -9,6 +9,12 @@
 - **Not verified yet:** booting the DOL, graphics, controller input, complete race behavior, or performance in Dolphin/console.
 - The Step 102 source archive remains outside the repo pending its separate code/asset provenance review.
 
+## Latest gameplay increment — deterministic rival lane movement
+
+The clean-room race logic now gives each of the three procedural rivals a smooth, bounded lane sway. The motion is deterministic (no random-number state), keeps rivals in their original lane order, and remains within the track's lateral limits. This is a small gameplay improvement, not original-game AI or a substitute for interactive playtesting.
+
+A new host test checks that rival lane movement is bounded, smooth between frames, repeatable for identical inputs, and does not let rivals cross lanes. The expected host test output is now `race_logic_test: 11 suites passed`. Confirm the GitHub Actions result before treating the change as validated.
+
 ## Work sequence
 
 1. Keep the build/safety/static-analysis checks green.
