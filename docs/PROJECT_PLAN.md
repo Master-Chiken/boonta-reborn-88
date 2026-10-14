@@ -41,21 +41,30 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 
 **Exit criterion:** the source tree exists in GitHub and the host test suite passes in CI.
 
-### Phase 2 — First native build
-- [ ] Build with devkitPPC/libogc in GitHub Actions.
-- [ ] Archive the DOL/ELF and compiler log.
-- [ ] Fix actual cross-compiler errors.
+### Phase 2 — Clean-room prototype build
+- [x] Add original procedural 3D ring-track/pod driving prototype in `gamecube/`.
+- [x] Build a non-empty `boonta_demo.dol` using devkitPPC/libogc in GitHub Actions.
+- [x] Add repository safety CI and CodeQL static analysis; recent branch runs passed.
+- [ ] Test the DOL in Dolphin and record actual boot/render/input results.
 
-**Exit criterion:** a non-empty `swe1r_gc_port.dol` is produced by the native toolchain.
+**Exit criterion:** a repeatable build plus a recorded runtime boot/input test. Compile success alone is not runtime proof.
 
-### Phase 3 — First runtime validation
+### Phase 3 — Import and test the full Step 102 source prototype
+- [ ] Prepare a path-by-path import manifest and complete provenance review.
+- [ ] Import only source, tests, tools, and documentation whose redistribution is approved; exclude uncleared assets and derived PC mod data.
+- [ ] Run host regression tests in CI.
+- [ ] Build the full native source prototype.
+
+**Exit criterion:** reviewed source tree exists in GitHub and its actual host/native build checks run in CI.
+
+### Phase 4 — First runtime validation
 - [ ] Run the DOL in Dolphin or on suitable hardware.
 - [ ] Record whether it boots, draws a frame, reads controller input, and starts a race.
 - [ ] Fix the first runtime blocker.
 
 **Exit criterion:** a repeatable boot and input test. Compilation alone is not sufficient.
 
-### Phase 4 — Playable vertical slice
+### Phase 5 — Playable vertical slice
 - [ ] Load one course with a consistent route, visible road, and collision.
 - [ ] Control one pod with a follow camera.
 - [ ] Validate acceleration, braking, steering, collision, lap timing, and frame pacing.
@@ -63,7 +72,7 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 
 **Exit criterion:** a short repeatable playable race on the target environment.
 
-### Phase 5 — Expand and enhance
+### Phase 6 — Expand and enhance
 Only after the vertical slice is stable:
 - improve original/cleared textures, materials, lighting, and effects;
 - add course-specific scenery and additional vehicles;
@@ -72,7 +81,7 @@ Only after the vertical slice is stable:
 
 Define what “HD” means for each target before promising it: native console resolution, replacement assets, rendering changes, or emulator upscaling are different outcomes.
 
-### Phase 6 — Packaging
+### Phase 7 — Packaging
 - [ ] Build and validate GameCube and Wii targets separately.
 - [ ] Determine lawful homebrew executable and packaging formats.
 - [ ] Validate any image conversion separately; a DOL build does not automatically produce a valid NKit ISO or WBFS.
