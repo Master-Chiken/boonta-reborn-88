@@ -27,6 +27,8 @@ class ValidateMemberTests(unittest.TestCase):
             "DATA/REFERENCE/PC_TRACK_IMPORT_MANIFEST.JSON",
             "Source/Track_Centerlines_PC.Generated.H",
             "SOURCE/TRACK_CENTERLINE.IMPORTED.H",
+            "SOURCE/TRACK_MESH.GENERATED.H",
+            "SOURCE/TRACK_BOUNDARIES.GENERATED.H",
         ):
             with self.subTest(path=path):
                 with self.assertRaises(ValueError):
