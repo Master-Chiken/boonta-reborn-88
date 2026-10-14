@@ -38,3 +38,8 @@ This environment has no `DEVKITPPC` variable and no `powerpc-eabi-gcc` executabl
 5. Record visible rendering, controls, frame pacing, and gameplay separately from compilation success.
 
 These results establish that the supplied source-only bundle passes its available host checks in this environment. They do **not** establish that the full game builds natively or is playable.
+
+
+## CI preparation
+
+A repository workflow now exists at `.github/workflows/gamecube-host-tests.yml`. It is designed to run the source bundle's `*_host.sh` scripts and Python unit tests once the approved `tests/` directory is imported. Until that directory exists in the repository, the workflow emits an explicit notice and skips the source tests; a skipped run is not a passing test run. This workflow does not compile a native DOL and does not replace devkitPPC/libogc or Dolphin validation.
