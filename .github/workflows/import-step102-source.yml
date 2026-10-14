@@ -5,7 +5,7 @@ on:
     branches:
       - import/step102-source-only
     paths:
-      - ".import/step102-source-only.tar.gz.b64"
+      - .import/READY
 
 permissions:
   contents: write
