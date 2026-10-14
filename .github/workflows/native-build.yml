@@ -113,7 +113,7 @@ jobs:
             export LIBGL_ALWAYS_SOFTWARE=1
             export QT_QPA_PLATFORM=xcb
             mkdir -p artifacts dolphin-user
-            dolphin-emu --batch --video_backend=OGL --exec=dist/swe1r_gc_port.dol --user="$PWD/dolphin-user" > artifacts/dolphin-visible.log 2>&1 &
+            dolphin-emu --batch --video_backend="Software Renderer" --exec=dist/swe1r_gc_port.dol --user="$PWD/dolphin-user" > artifacts/dolphin-visible.log 2>&1 &
             dolphin_pid=$!
             cleanup() {
               kill -TERM "$dolphin_pid" 2>/dev/null || true
@@ -121,10 +121,23 @@ jobs:
             }
             trap cleanup EXIT
             sleep 8
-            kill -0 "$dolphin_pid"
+            alive=0
+            if ! kill -0 "$dolphin_pid" 2>/dev/null; then alive=1; fi
+            set +e
             import -window root artifacts/dolphin-preview.png
+            capture_status=$?
+            set -e
+            cat artifacts/dolphin-visible.log || true
+            if [[ "$capture_status" -ne 0 ]]; then
+              echo "Screenshot capture failed; see Dolphin log above."
+              exit 1
+            fi
             identify -format "Captured frame: %wx%h, %[channels], %b\\n" artifacts/dolphin-preview.png
             test -s artifacts/dolphin-preview.png
+            if [[ "$alive" -ne 0 ]]; then
+              echo "Dolphin exited before screenshot capture; see runtime log above."
+              exit 1
+            fi
           '
       - name: Upload screenshot and runtime log
         if: always()
