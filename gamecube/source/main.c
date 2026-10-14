@@ -651,6 +651,7 @@ int main(int argc, char **argv)
     (void)argv;
 
     init_video_and_gx();
+    init_track_geometry();
     reset_race();
     previous_tick = gettime();
 
