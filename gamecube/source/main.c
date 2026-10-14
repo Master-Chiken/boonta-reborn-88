@@ -488,7 +488,7 @@ static void init_video_and_gx(void)
     GX_SetNumTexGens(0);
     GX_SetNumTevStages(1);
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
-    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL,
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL,
                    GX_TEXMAP_NULL, GX_COLOR0A0);
     GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_VTX,
                    GX_LIGHTNULL, GX_DF_NONE, GX_AF_NONE);
