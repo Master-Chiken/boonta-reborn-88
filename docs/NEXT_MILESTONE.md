@@ -1,37 +1,37 @@
-# Next milestone: visible Dreamcast test scene
+# Next milestone: restore the native GameCube/Wii prototype in CI
 
 ## Goal
 
-Turn the existing clean-room Dreamcast starter into a small, visible technical demo before attempting any game-specific features. This is a prototype milestone, not a claim that the original commercial game has been ported.
+Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The next milestone is not another Dreamcast screen: it is a reviewed source-only import, automated host tests, and the first native GameCube cross-build.
 
-## Current verified baseline
+## Audit findings
 
-- The repository README reports that the KallistiOS starter has compiled in CI.
-- The current starter is described as printing a console message and polling controller input.
-- Emulator or real-hardware behavior has not yet been verified.
-- The browser prototype is a separate track and must not be confused with the Dreamcast build.
+- The source archive `Star_Wars_Racer_GameCube_Step102.zip` is available in the project history/library and has been inspected.
+- It contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, docs, and host tests.
+- The archive README describes 25 course entries, 23 pod presets/variants, physics, drift/boost/heat/damage, rival AI, pickups/hazards, several race modes, HUD, and save/progression scaffolding.
+- The host release suite passed in a clean temporary environment: host shell checks and 91 Python unit tests passed. This is not a native target build.
+- The archive README explicitly says that a real devkitPPC/libogc `.dol` build and Dolphin/console runtime test remain pending.
+- The source prototype has not yet been imported into this GitHub repository. The existing native workflow intentionally stops until its source tree is present.
+- The separate Dreamcast starter and its CI artifact do not validate the GameCube/Wii prototype.
 
 ## Work sequence
 
-1. **Inspect the current build** — review `dreamcast/main.c`, `dreamcast/Makefile`, and the existing GitHub Actions workflow before changing code.
-2. **Add a visible screen** — draw an original title screen with a simple background, a project label, and a controller-input indicator using APIs supported by the installed KallistiOS version.
-3. **Show controller state** — display whether a controller is connected and which buttons are pressed, without assuming hardware has been tested.
-4. **Build in CI** — use the existing workflow and check the build log. Fix compile errors before adding more features.
-5. **Test the artifact** — run the generated ELF in a compatible Dreamcast emulator if one is available. Record emulator name/version and results; otherwise mark runtime testing as pending.
-6. **Start an original 3D scene** — only after the visible screen is verified, add a simple original track-like scene using placeholder geometry.
+1. Review the source archive's provenance, license, generated route data, and assets.
+2. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
+3. Run the host test suite in GitHub Actions.
+4. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
+5. Inspect the first compiler failure if any and fix it without disabling tests.
+6. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
+7. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
 
 ## Acceptance criteria
 
-- The existing CI build passes.
-- The screen-drawing code is based on documented APIs available in the project's KallistiOS environment.
-- Controller feedback is visible or its limitation is documented.
-- Build success and runtime testing are reported separately.
-- No commercial ROMs, disc images, BIOS files, or extracted proprietary assets are committed.
+- Source provenance and redistribution boundaries are documented.
+- Host tests pass in GitHub Actions.
+- Native GameCube cross-build produces a non-empty DOL.
+- Compile success and emulator/hardware testing are reported separately.
+- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
 
 ## What the project owner needs to do now
 
-No local download is required for this planning step. Open the [repository Actions page](../actions) and check the latest `Dreamcast build` workflow run. If it is green, the next coding task is the visible test screen. If it is red, open the failed run and share the error text so the build can be fixed first.
-
-## Legal and scope note
-
-This is an unofficial research and original-code project. A technical prototype inspired by a racing game is not the same as a remaster of the original game. Use only original or appropriately licensed code and assets, and do not distribute copyrighted game data.
+Nothing needs to be installed locally for this planning step. Keep the source archive available in the ChatGPT Library. The work can continue in GitHub with cloud CI; an actual emulator/console run may still require a separate runtime environment.
