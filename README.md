@@ -15,7 +15,7 @@ This is **not yet a finished remaster or verified native port**. The main blocke
 
 ## Current repository limitation
 
-The native-build workflow is prepared to run when `Makefile`, `source/`, `include/`, `data/`, `tools/`, and `tests/` from the source prototype are present. They have **not yet been imported into this repository**, so the GameCube workflow cannot produce the game's DOL yet.
+The full Step 102 source prototype has **not yet been imported**. A separate clean-room smoke test now lives in `gamecube/`; its GitHub Actions workflow attempts to build a small diagnostic DOL with devkitPPC/libogc. That checks the toolchain only and is not the racing game. See [`gamecube/README.md`](gamecube/README.md).
 
 ## Legal and asset policy
 
