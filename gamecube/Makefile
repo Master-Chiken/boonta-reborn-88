@@ -3,7 +3,7 @@
 
 .SUFFIXES:
 
-TARGET := boonta_smoke
+TARGET := boonta_demo
 BUILD := build
 SOURCES := source
 OUTPUT := $(TARGET)
