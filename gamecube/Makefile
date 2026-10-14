@@ -18,6 +18,9 @@ LDFLAGS = $(MACHDEP)
 
 include $(DEVKITPPC)/gamecube_rules
 
+# Use the cross-compiler driver for linking so GameCube CPU flags are handled correctly.
+LD := $(CC)
+
 LIBPATHS := -L$(LIBOGC_LIB)
 LIBS := -logc -lm
 
