@@ -8,6 +8,7 @@ on:
       - "gamecube-demo/source/**"
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
+      - "gamecube-demo/tools/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - "gamecube-demo/source/**"
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
+      - "gamecube-demo/tools/**"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
 
@@ -47,6 +49,9 @@ jobs:
           make 2>&1 | tee build.log
           test -s boonta_gc_demo.dol
           test -s boonta_gc_demo.elf
+
+      - name: Validate native artifact structure
+        run: python3 gamecube-demo/tools/validate_artifacts.py gamecube-demo/boonta_gc_demo.dol gamecube-demo/boonta_gc_demo.elf
 
       - name: Upload build outputs and compiler log
         if: always()
