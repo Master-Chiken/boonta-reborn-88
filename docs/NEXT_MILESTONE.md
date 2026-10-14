@@ -55,3 +55,12 @@ The original Windows PC game and existing community reverse-engineering/modding 
 ## Free-only policy
 
 Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas can change; stop if a quota is unavailable or exhausted.
+
+
+## New portable subsystem — sampled track path primitives
+
+- Added `gamecube/source/track_path.h` and `track_path.c`: clean-room polyline path utilities for open/closed centerlines, total arc length, distance/progress sampling, unit tangent, and nearest-segment projection.
+- Added `gamecube/tests/track_path_test.c` with synthetic-only fixtures covering open endpoints, closed-loop wrapping, negative progress, nearest projection, and invalid/degenerate inputs.
+- Added a strict `-std=c99 -Wall -Wextra -Werror` host-test step to `.github/workflows/gamecube-smoke.yml`.
+- **Integration status:** the renderer and `race_logic.c` still use the existing circular-track model. The new path module is not yet connected to player movement, AI, lap counting, or rendering. This is the first reusable geometry foundation, not yet a gameplay change.
+- **Validation status:** commits were fetched back from GitHub to verify file contents and workflow insertion. Await the new CI run before claiming the strict tests or native DOL build pass for this revision.
