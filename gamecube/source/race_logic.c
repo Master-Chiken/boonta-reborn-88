@@ -5,6 +5,13 @@
 #define RACE_LAPS 3
 #define RACE_TWO_PI 6.28318530717958647692f
 
+static const float RACE_OPPONENT_TARGET_SPEEDS[RACE_OPPONENT_COUNT] = {
+    28.0f, 32.0f, 30.0f
+};
+static const float RACE_OPPONENT_INITIAL_LANES[RACE_OPPONENT_COUNT] = {
+    -1.8f, 0.0f, 1.8f
+};
+
 static float clamp(float value, float low, float high)
 {
     if (value < low) return low;
@@ -25,6 +32,14 @@ void race_reset(RaceState *state)
     state->paused = 0;
     state->finished = 0;
     state->boost_active = 0;
+
+    /* Line up three original, lightweight rival racers just ahead of the player. */
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        state->opponent_angles[i] = 0.035f * (float)(i + 1);
+        state->opponent_lanes[i] = RACE_OPPONENT_INITIAL_LANES[i];
+        state->opponent_speeds[i] = 0.0f;
+        state->opponent_laps[i] = 0;
+    }
 }
 
 void race_update(RaceState *state, const RaceInput *input)
@@ -82,4 +97,45 @@ void race_update(RaceState *state, const RaceInput *input)
             state->speed = 0.0f;
         }
     }
+
+    /* Rivals use deterministic target speeds so tests and races are repeatable. */
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        float target_speed = RACE_OPPONENT_TARGET_SPEEDS[i];
+        float radius = RACE_TRACK_RADIUS + state->opponent_lanes[i];
+
+        if (state->opponent_speeds[i] < target_speed) {
+            state->opponent_speeds[i] += 0.09f;
+            if (state->opponent_speeds[i] > target_speed) {
+                state->opponent_speeds[i] = target_speed;
+            }
+        }
+
+        state->opponent_angles[i] +=
+            state->opponent_speeds[i] * 0.016f / radius;
+        if (state->opponent_angles[i] >= RACE_TWO_PI) {
+            state->opponent_angles[i] -= RACE_TWO_PI;
+            ++state->opponent_laps[i];
+        }
+    }
+}
+
+int race_position(const RaceState *state)
+{
+    float player_progress;
+    int position = 1;
+
+    if (state == 0) return 0;
+
+    player_progress = (float)state->completed_laps * RACE_TWO_PI +
+                      state->angle;
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        float opponent_progress =
+            (float)state->opponent_laps[i] * RACE_TWO_PI +
+            state->opponent_angles[i];
+        if (opponent_progress > player_progress) {
+            ++position;
+        }
+    }
+
+    return position;
 }
