@@ -22,6 +22,7 @@ This document is a navigation index, not a claim that every item listed is alrea
 ### Canonical planning and research
 - [Project plan](PROJECT_PLAN.md) — phases, constraints, and acceptance criteria.
 - [Technical research](TECHNICAL_RESEARCH.md) — external code research and platform options.
+- [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) — Tier 1 PC research reference, subsystem study order, evidence capture, Step 102 mapping, and console-validation requirements.
 - [Next milestone](NEXT_MILESTONE.md) — source review, host tests, native build, and runtime validation.
 - [Build guide](BUILD_GUIDE.md) — record actual target-specific build/test evidence.
 - [Source and artifact register](SOURCE_AND_ARTIFACT_REGISTER.md) — inventory of previously supplied inputs and their permitted use.
@@ -41,7 +42,8 @@ This document is a navigation index, not a claim that every item listed is alrea
 2. **PR #13 demo → native-toolchain proof of concept.** Its gamecube/ code is newly written, clean-room procedural demo code. The CI result proves the shown C tests and demo build ran on that branch. It does not prove Step 102 compiles, because it does not import Step 102. The GameCube README and PR description were updated on the draft branch to document the three procedural rivals, the nine host test cases, and the limits of the headless smoke test. The demo remains separate from Step 102 and still needs interactive visual/input validation.
 3. **Main-branch native workflow → future Step 102 CI.** The existing native workflow and its expected source layout must be matched to the actual Step 102 source tree after the import list is approved. Do not report its source-build status using the separate PR #13 demo result.
 4. **Dreamcast → separate experiment.** The dreamcast/ directory and its ELF artifact demonstrate a separate KallistiOS starter only. They do not replace the GameCube/Wii milestone.
-5. **External research → reference, not an automatic dependency.** The PC-focused reimplementation and asset-tool repositories listed in technical research can inform architecture and file-format research. Their code, data, and licenses are not automatically cleared for reuse.
+5. **SW_RACER_RE → priority PC behavior research, not a console source tree.** Its race, spline, model, renderer, asset-loading, and control research must be mapped to Step 102 and tested separately on GameCube/Wii. GitHub reports AGPL-3.0; keep code and assets out of the repo by default. Follow the [study plan](SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md).
+6. **Other external research → reference, not an automatic dependency.** The other reimplementation and asset-tool repositories listed in technical research can inform architecture and file-format research. Their code, data, and licenses are not automatically cleared for reuse.
 6. **Private game archives/ROM → controlled local reference only.** User-provided commercial game files must stay out of the public repository and must not be supplied to automated reviewers. GitHub Actions can read repository content, not the user's ChatGPT uploads.
 
 ## Validation language to use
@@ -57,9 +59,10 @@ This document is a navigation index, not a claim that every item listed is alrea
 
 1. Merge this documentation/continuity map only after reviewing this PR.
 2. Review PR #13 and align its claims/docs with its actual clean-room demo; keep it separate from Step 102.
-3. Complete the Step 102 path-by-path provenance and redistribution audit, then publish only files that have been cleared.
-4. Connect the cleared Step 102 tree to host CI and the real GameCube/Wii build workflow.
-5. Validate the generated executable interactively; record visual and controller results separately from compilation.
-6. Build the first playable vertical slice before expanding features or claiming an HD remaster.
+3. Start the SW_RACER_RE behavior matrix with race/lap flow, pod physics/control, and spline/track format; record the exact upstream files and confidence of each finding.
+4. Complete the Step 102 path-by-path provenance and redistribution audit, mapping the cleared source and existing tests to the PC research findings without copying AGPL code/assets by default.
+5. Connect the cleared Step 102 tree to host CI and the real GameCube/Wii build workflow.
+6. Validate the generated executable interactively; record visual and controller results separately from compilation.
+7. Build the first playable vertical slice before expanding features or claiming an HD remaster.
 
 No local toolchain installation is required for documentation and source review. Do not add billing or a payment method to keep an automation working; stop if a free quota or free endpoint is unavailable.
