@@ -170,9 +170,22 @@ def main() -> int:
     # Preflight every destination before writing anything. Otherwise an existing
     # file late in the list could cause a partial import after earlier writes.
     destinations: list[tuple[Path, str, bytes]] = []
+    root_resolved = ROOT.resolve()
     for relative, content in planned:
         destination = ROOT / relative
-        if destination.exists():
+        # Reject symlinked parent directories so a seemingly safe relative
+        # archive path cannot write outside the checkout.
+        parent = ROOT
+        for component in PurePosixPath(relative).parts[:-1]:
+            parent = parent / component
+            if parent.is_symlink():
+                raise SystemExit(
+                    f"Refusing to write through a symlinked directory: {parent}"
+                )
+        resolved_destination = destination.resolve(strict=False)
+        if not resolved_destination.is_relative_to(root_resolved):
+            raise SystemExit(f"Destination escapes repository root: {relative}")
+        if destination.exists() or destination.is_symlink():
             raise SystemExit(f"Refusing to overwrite an existing repository file: {relative}")
         destinations.append((destination, relative, content))
 
