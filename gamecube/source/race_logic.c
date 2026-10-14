@@ -52,7 +52,8 @@ void race_reset(RaceState *state)
     }
 }
 
-void race_update_dt(RaceState *state, const RaceInput *input, float delta_seconds)
+static void race_update_dt_internal(RaceState *state, const RaceInput *input,
+                                    float delta_seconds, float track_length)
 {
     float frame_scale;
 
@@ -117,8 +118,14 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
     state->boost_energy = clamp(state->boost_energy, 0.0f, 1.0f);
     state->engine_heat = clamp(state->engine_heat, 0.0f, 1.0f);
 
-    state->angle += state->speed * delta_seconds /
-                    (RACE_TRACK_RADIUS + state->lane_offset);
+    if (isfinite(track_length) && track_length > 0.001f) {
+        /* Speed is world units/second, so progress follows centerline arc length. */
+        state->angle += state->speed * delta_seconds * RACE_TWO_PI /
+                        track_length;
+    } else {
+        state->angle += state->speed * delta_seconds /
+                        (RACE_TRACK_RADIUS + state->lane_offset);
+    }
     if (state->angle >= RACE_TWO_PI) {
         state->angle -= RACE_TWO_PI;
         ++state->completed_laps;
@@ -160,8 +167,13 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
             }
         }
 
-        state->opponent_angles[i] +=
-            state->opponent_speeds[i] * delta_seconds / radius;
+        if (isfinite(track_length) && track_length > 0.001f) {
+            state->opponent_angles[i] += state->opponent_speeds[i] *
+                delta_seconds * RACE_TWO_PI / track_length;
+        } else {
+            state->opponent_angles[i] +=
+                state->opponent_speeds[i] * delta_seconds / radius;
+        }
         if (state->opponent_angles[i] >= RACE_TWO_PI) {
             state->opponent_angles[i] -= RACE_TWO_PI;
             ++state->opponent_laps[i];
@@ -193,6 +205,18 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
             }
         }
     }
+}
+
+void race_update_dt(RaceState *state, const RaceInput *input,
+                    float delta_seconds)
+{
+    race_update_dt_internal(state, input, delta_seconds, 0.0f);
+}
+
+void race_update_track_dt(RaceState *state, const RaceInput *input,
+                          float delta_seconds, float track_length)
+{
+    race_update_dt_internal(state, input, delta_seconds, track_length);
 }
 
 void race_update(RaceState *state, const RaceInput *input)
