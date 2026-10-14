@@ -21,7 +21,7 @@
 #define GX_AF_NONE 0
 #define GX_TEVSTAGE0 0
 #define GX_PASSCLR 0
-#define GX_TEXCOORD_NULL 0
+#define GX_TEXCOORDNULL 0
 #define GX_TEXMAP_NULL 0
 #define GX_CULL_NONE 0
 #define GX_VA_POS 0

@@ -219,7 +219,7 @@ static void initialise_video_and_gx(void)
     GX_SetNumTexGens(0);
     GX_SetNumTevStages(1);
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
-    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD_NULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
     GX_ClearVtxDesc();
     GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
     GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
@@ -1260,7 +1260,7 @@ int main(int argc, char **argv)
                 (void)snprintf(g_garage_notice, sizeof(g_garage_notice), "SELECTED %s", garage_part_name(g_garage_part));
                 g_garage_notice_timer = 2.5f;
             }
-            if (down & PAD_BUTTON_Z) {
+            if (down & PAD_TRIGGER_Z) {
                 if (garage_buy_upgrade(&g_career_profile, g_garage_part)) {
                     (void)snprintf(g_garage_notice, sizeof(g_garage_notice), "%s UPGRADED", garage_part_name(g_garage_part));
                     g_card_save_available = career_card_store(&g_career_profile);
