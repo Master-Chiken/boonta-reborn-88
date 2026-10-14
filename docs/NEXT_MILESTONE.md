@@ -8,6 +8,7 @@
 - Repository safety and CodeQL have also passed on a recent branch revision.
 - **Not verified yet:** booting the DOL, graphics, controller input, complete race behavior, or performance in Dolphin/console.
 - The Step 102 source archive remains subject to file-group and asset provenance review. PR #17 contains a selective source-only candidate on a separate branch; it remains a draft and has not been merged into `main`.
+- Latest inspected Step 102 CI evidence: host regression, source-policy check, and native DOL build passed; visible Dolphin preview failed because Dolphin exited before a valid frame was captured. See [the dated diagnostic record](STEP102_IMPORT_AUDIT.md#latest-ci-evidence-reviewed-2026-10-14).
 
 ## Latest gameplay increment — rival contact and impact feedback
 
@@ -35,7 +36,7 @@ The intended order remains: faithful original-game baseline first; then the best
 2. Complete the [Step 102 path-by-path clearance register](STEP102_PATH_REVIEW_REGISTER.md). Treat every path as held until authorship, origin and redistribution terms are evidenced; resolve licensing before import.
 3. Import the cleared GameCube/Wii-oriented source candidate to a review branch, preserving the tests and build infrastructure. Exclude uncleared track centerlines, models, audio, ROMs and disc images.
 4. Reproduce the archive's reported host test suite in GitHub Actions, then build the full candidate with devkitPPC/libogc.
-5. Test the full candidate in Dolphin: boot, rendering, controller input, race start/finish, tracks, vehicles, modes, saves, stability and performance. Fix real blockers from evidence.
+5. Diagnose the failed visible-preview run from its [CI log and artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634953318), then test the candidate in Dolphin: boot, rendering, controller input, race start/finish, tracks, vehicles, modes, saves, stability and performance. Fix real blockers from evidence.
 6. Run a small platform comparison: GameCube-target DOL and Wii-target build where supported, using the same scene and test checklist. Separately test whether Wii64/Cube64 can run the N64 edition as a reference; record its compatibility without treating it as the port.
 7. Create the PC/Dreamcast/N64 comparison matrix and verify each important gameplay/system claim against documentation or a lawful local run of the relevant edition.
 8. Implement missing original-game systems and content until a faithful playable baseline exists.
