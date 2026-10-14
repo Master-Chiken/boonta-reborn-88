@@ -66,3 +66,9 @@ Early help is most useful in platform research, documenting exact hardware/versi
 ## Disclaimer
 
 This is an independent, non-commercial research project. It does not include or provide copyrighted game content. No compatibility, performance, or finished remaster is promised at this stage.
+
+## Dreamcast track (new investigation)
+
+The project also has a separate exploratory Sega Dreamcast track in [`dreamcast/`](dreamcast/README.md), targeting the open-source [KallistiOS SDK](https://github.com/KallistiOS/KallistiOS). A GitHub Actions workflow attempts to compile this clean-room starter and, if successful, publishes the ELF as a workflow artifact: [Dreamcast build workflow](.github/workflows/dreamcast-build.yml).
+
+**This is only a starter, not a port of the commercial game.** The Dreamcast build has not been confirmed successful until the workflow completes and produces the artifact. Keep the Dreamcast and GameCube/Wii tracks separate. Never upload the commercial disc image or extracted proprietary assets.
