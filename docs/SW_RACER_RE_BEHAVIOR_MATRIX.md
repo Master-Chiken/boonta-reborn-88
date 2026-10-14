@@ -5,6 +5,18 @@ This is an evidence-tracking document, not an assertion that the PC version and 
 **Reference snapshot:** SW_RACER_RE branch master at commit a9863edd4caaa573f89ff634fa7d1cd6d41738ab (reviewed 2026-10-14).  
 **Status legend:** NOT STARTED · PC EVIDENCE RECORDED · STEP102 MAPPED · CONSOLE HYPOTHESIS · IMPLEMENTED · TESTED.
 
+## Initial source observations from the reviewed PC revision
+
+These are real source reads, not assumptions about the console versions. They are intentionally short behavioral/structural notes; no upstream code is copied into the project.
+
+| Finding | Evidence and observation | What it does not prove |
+|---|---|---|
+| **SWR-001 — spline data and traversal are first-class systems** | [swrSpline.c, spline loading](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L14-L78) shows the code opening a spline block, checking an indexed spline range, loading the selected block into an asset buffer, byte-swapping header/control-point values, and setting a runtime control-point pointer. [Interpolation and cursor routines](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L86-L315) cover progress lookup, interpolation, cursor stepping/evaluation, and transform construction. | This documents the PC project's reconstructed format/behavior only. It does not establish that GameCube uses the same block layout, endianness, coordinate system, or exact spline data. It does not clear any PC-derived track data for redistribution. |
+| **SWR-002 — at least one turning update is time-scaled** | [swrRace_UpdateTurn](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c#L1714-L1744) moves a turn rate toward a target using delta-seconds and integrates turn-rate/input into heading, wrapping heading to [-180, 180] degrees. This is a useful behavior reference for steering/turn smoothing. | One function using delta time does not prove the entire simulation is frame-rate independent. The PC mod release notes warn of frame-rate-sensitive physics. Boonta must test timing behavior on its actual target rather than assume PC timing or constants transfer. |
+| **SWR-003 — parts of the reverse-engineered source remain unfinished** | [swrControl_ProcessInputs](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Main/swrControl.c#L20-L24) is still marked TODO; [spline stubs](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L522-L539) include TODO functions. Other modules also contain TODO/HANG sections. | The upstream percentage is analysis coverage, not proof that all functions, input logic, or systems are implemented. Treat unfinished functions as gaps to research, not as an API ready to copy or call. |
+
+Follow up by mapping each finding to Step 102's source and tests, then add GameCube-specific evidence when available.
+
 ## First vertical-slice research
 
 | Subsystem | PC reference entry point | Step 102 candidate | Evidence to record | GameCube/Wii test needed | Status |
