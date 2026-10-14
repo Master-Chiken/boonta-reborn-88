@@ -167,11 +167,16 @@ def main() -> int:
     if not planned:
         raise SystemExit("The import bundle is empty.")
 
-    # Validate the full member list before writing any file.
+    # Preflight every destination before writing anything. Otherwise an existing
+    # file late in the list could cause a partial import after earlier writes.
+    destinations: list[tuple[Path, str, bytes]] = []
     for relative, content in planned:
         destination = ROOT / relative
         if destination.exists():
             raise SystemExit(f"Refusing to overwrite an existing repository file: {relative}")
+        destinations.append((destination, relative, content))
+
+    for destination, relative, content in destinations:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
 
