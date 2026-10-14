@@ -39,3 +39,33 @@ The source is a mixture of original-function hooks, reconstructed logic, declara
 ## Porting consequence
 
 The next engineering milestone should be a portable, testable spline/track representation and race-state model based on verified PC semantics. The existing procedural console demo is not a substitute for these systems. No original game data or extracted commercial assets should be committed as test fixtures.
+
+
+## Second pass: concrete physics and progression entry points
+
+The reviewed SW_RACER_RE header exposes the following original Windows function addresses. These are **navigation leads**, not a guarantee that every function has a faithful open-source replacement body:
+
+| Subsystem | Function/address from swrRace.h | Suggested trace order |
+|---|---|---|
+| AI | swrRace_AI — 0x0046b670 | Determine how AI input/control feeds the same vehicle update path as the player. |
+| Steering target | swrRace_CalcTargetTurnRate — 0x0046cf00; swrRace_UpdateTurn — 0x0044ae40; swrRace_UpdateTurn2 — 0x00477c30 | Trace input/AI intent → target turn rate → orientation integrator. |
+| Speed and boost | swrRace_UpdateSpeed — 0x004783e0; swrRace_ApplyBoost — 0x004787f0; swrRace_BoostCharge — 0x0046bd20; swrRace_UpdateHeat — 0x004788c0 | Establish order, dt usage, boost energy/heat, and whether player/AI paths differ. |
+| Traction and motion | swrRace_ApplyTraction — 0x00478a70; swrRace_IntegrateMotion — 0x00478d80 | Identify friction/traction state and integration variables; turn into host-side deterministic tests. |
+| Terrain and gravity | swrRace_UpdateGroundContact — 0x00479e10; swrRace_ApplyGravity — 0x004774f0; swrRace_AlignToSurface — 0x004764e0 | Trace spline/track mesh queries, hover height, surface alignment and vertical velocity. |
+| Collision and damage | swrRace_CollideBlockMove — 0x0044abc0; swrRace_CollideTrack — 0x0044acb0; swrRace_TakeDamage — 0x00474cd0; swrRace_Repair — 0x0046ab10 | Separate geometry collision, vehicle collision, damage accumulation and repair rules. |
+| Track progress and cursor | swrSpline_CursorStep — 0x0044eaa0; swrSpline_CursorEvaluate — 0x0044ec40; swrSpline_TraceProgress — 0x0047f060; swrSpline_BuildProgressTable — 0x0047f470; swrSpline_ProjectPoint — 0x0047eb60 | Understand cursor/branch movement, lap progress, progress normalization and recovery to the spline. |
+| Menus/results/save | swrRace_MainMenu — 0x004368a0; swrRace_CourseSelectionMenu — 0x0043b240; swrRace_ResultsMenu — 0x00439ce0; swrRace_GenerateDefaultDataSAV — 0x0043ea00 | Trace the full campaign loop from selecting a course to saving the result. |
+
+Source header: [swrRace.h at reviewed snapshot](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/Swr/swrRace.h). Spline header: [swrSpline.h at reviewed snapshot](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/Swr/swrSpline.h).
+
+### Why this changes the implementation order
+
+We now have a concrete list of the original PC systems to trace instead of inventing generic racing logic. The best first faithful slice is:
+
+1. Parse and represent spline nodes and branch links using independently tested synthetic data.
+2. Implement cursor stepping/interpolation and track progress with explicit units and deterministic tests.
+3. Reconstruct vehicle update order around speed, boost/heat, steering, traction, motion, terrain contact and collision.
+4. Add player/rival control, lap/race state, finish results and save/progression.
+5. Connect that portable logic to a console renderer only after the host tests and the PC comparison checklist agree.
+
+Do not copy Windows pointers, DirectX types, memory layouts or PC-specific runtime hooks into the GameCube/Wii layer. Translate observed behavior into portable data structures and tests.
