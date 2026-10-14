@@ -81,3 +81,10 @@ Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas 
 - The GameCube prototype caches `track_path_length(&track_path)` after generating its clean-room centerline and now calls the track-aware update each frame.
 - Regression coverage includes track-length-based progress and the legacy fallback. GitHub Actions host tests passed: `race_logic_test: 15 suites passed` and `track_path_test: 6 suites passed`.
 - Native GameCube build and Dolphin runtime checks for the newest revision were still running at the last check. This is still a procedural prototype; rival collision thresholds remain approximate and are not original-game physics.
+
+
+## Latest validation checkpoint — 2026-10-14
+
+- Commit `524469ec154299d138e360b2c3d1d714d31837f2`: host regression jobs passed with `race_logic_test: 15 suites passed` and `track_path_test: 6 suites passed`.
+- The same revision's GameCube build job completed successfully and uploaded a non-empty DOL.
+- The null-video Dolphin process smoke test had passed on the prior geometry revision; the OpenGL frame-capture diagnostic failed because Dolphin exited before the script could capture a frame. Therefore **actual visible gameplay is not yet verified**; the OpenGL failure is a tooling/runtime-validation blocker, not evidence that the image rendered correctly.
