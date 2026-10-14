@@ -34,7 +34,7 @@ jobs:
           make clean
           make
           test -s boonta_smoke.dol
-          file boonta_smoke.dol
+          ls -lh boonta_smoke.dol
 
       - name: Upload smoke-test DOL
         uses: actions/upload-artifact@v4
