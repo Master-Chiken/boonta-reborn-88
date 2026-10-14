@@ -40,6 +40,8 @@ void race_reset(RaceState *state)
     state->paused = 0;
     state->finished = 0;
     state->boost_active = 0;
+    state->collision_cooldown_seconds = 0.0f;
+    state->collision_count = 0;
 
     /* Line up three original, lightweight rival racers just ahead of the player. */
     for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
@@ -77,6 +79,12 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
 
     state->race_seconds += delta_seconds;
     state->current_lap_seconds += delta_seconds;
+    if (state->collision_cooldown_seconds > 0.0f) {
+        state->collision_cooldown_seconds -= delta_seconds;
+        if (state->collision_cooldown_seconds < 0.0f) {
+            state->collision_cooldown_seconds = 0.0f;
+        }
+    }
 
     /*
      * At the start-line angle, the pod faces +Z and positive radial X projects
@@ -154,6 +162,32 @@ void race_update_dt(RaceState *state, const RaceInput *input, float delta_second
         if (state->opponent_angles[i] >= RACE_TWO_PI) {
             state->opponent_angles[i] -= RACE_TWO_PI;
             ++state->opponent_laps[i];
+        }
+    }
+
+    /*
+     * Simple contact model: close angular and lateral proximity triggers one
+     * impact, with a short cooldown so the same pair cannot drain speed every
+     * frame. This is intentionally lightweight for the GameCube prototype.
+     */
+    if (state->collision_cooldown_seconds <= 0.0f && state->speed > 4.0f) {
+        for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+            float angle_delta = fabsf(state->angle - state->opponent_angles[i]);
+            float lane_delta = fabsf(state->lane_offset - state->opponent_lanes[i]);
+            if (angle_delta > RACE_TWO_PI - angle_delta) {
+                angle_delta = RACE_TWO_PI - angle_delta;
+            }
+
+            if (angle_delta < 0.12f && lane_delta < 0.85f) {
+                state->speed *= 0.68f;
+                state->lane_offset = clamp(
+                    state->lane_offset +
+                    (state->lane_offset <= state->opponent_lanes[i] ? -0.35f : 0.35f),
+                    -2.7f, 2.7f);
+                state->collision_cooldown_seconds = 0.85f;
+                ++state->collision_count;
+                break;
+            }
         }
     }
 }
