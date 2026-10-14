@@ -37,6 +37,10 @@ Never commit commercial ROMs, disc images, BIOS files, proprietary assets, priva
 3. Fix any demonstrated rendering/gameplay issues and add regression coverage.
 4. Keep the PR in draft until the rights review and visible runtime check are complete. It is not merged; `main` remains unchanged.
 
+## Related research
+
+The PC decompilation/modding project [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) is useful as a reference, but it is not a GameCube/Wii port and declares AGPL-3.0. We do not bulk-import its source or game-derived assets. See [reference-project integration notes](docs/REFERENCE_PROJECTS.md).
+
 ## Cloud-only workflow
 
 Host tests and native builds run in GitHub Actions so a local devkitPro installation and large local downloads are not required for this stage. The CI workflows do not use paid AI APIs or require billing. Build artifacts expire according to the retention displayed by the GitHub Actions run.
