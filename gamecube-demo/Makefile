@@ -15,14 +15,11 @@ SOURCES  := source
 DATA     := data
 INCLUDES := include
 
-CFLAGS   := -g -O2 -Wall -Wextra -std=gnu99 $(MACHDEP) $(INCLUDE)
-CXXFLAGS := $(CFLAGS)
-LDFLAGS  := -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
+CFLAGS   = -g -O2 -Wall -Wextra -std=gnu99 $(MACHDEP) $(INCLUDE)
+CXXFLAGS = $(CFLAGS)
+LDFLAGS  = -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LIBS     := -logc -lm
 LIBDIRS  :=
-
-.PHONY: all clean
-all: $(TARGET).dol
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT  := $(CURDIR)/$(TARGET)
@@ -45,7 +42,9 @@ export OFILES := $(OFILES_SOURCES)
 export INCLUDE := $(foreach dir,$(INCLUDES),-iquote $(CURDIR)/$(dir)) -I$(CURDIR)/$(BUILD) -I$(LIBOGC_INC)
 export LIBPATHS := -L$(LIBOGC_LIB) $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: $(BUILD) clean
+.PHONY: all $(BUILD) clean
+all: $(BUILD)
+
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
@@ -55,6 +54,9 @@ clean:
 	@rm -fr $(BUILD) $(OUTPUT).elf $(OUTPUT).dol $(OUTPUT).elf.map
 
 else
+.PHONY: all
+all: $(OUTPUT).dol
+
 DEPENDS := $(OFILES:.o=.d)
 
 $(OUTPUT).dol: $(OUTPUT).elf
