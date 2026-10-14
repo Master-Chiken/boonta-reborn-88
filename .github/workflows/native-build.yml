@@ -2,6 +2,16 @@ name: GameCube native build
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "source/**"
+      - "include/**"
+      - "data/**"
+      - "tools/**"
+      - "tests/**"
+      - "Makefile"
+      - ".github/workflows/native-build.yml"
   push:
     branches: [main]
     paths:
