@@ -45,6 +45,10 @@ jobs:
             exit 2
           fi
 
+      - name: Static native project preflight
+        shell: bash
+        run: python3 tools/check_native_project.py
+
       - name: Run complete host regression suite
         shell: bash
         run: bash tools/release_check.sh
