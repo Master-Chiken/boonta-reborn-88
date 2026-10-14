@@ -4,8 +4,8 @@
 
 ## Verified CI path
 
-- [Latest completed validation run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235)
-- Build artifact: [swe1r-gc-step102-source-only](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924766751)
+- [Latest completed validation run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432)
+- Build artifact: [swe1r-gc-step102-source-only](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432/artifacts/11926156448)
 - Output: swe1r_gc_port.dol, approximately 301 KiB.
 - Toolchain environment: devkitpro/devkitppc:latest in a GitHub Actions container.
 - Track mode: USE_IMPORTED_SPLINE=0, which uses the bundled demo/procedural track and does not enable the excluded PC-mod-derived centerline dataset.
@@ -39,7 +39,7 @@ A successful build should create a non-empty swe1r_gc_port.dol. Do not set USE_I
 
 ## Runtime validation still required
 
-The headless Dolphin job uses a null video backend. It does **not** prove visible output or playability. Before describing the game as playable, launch the DOL in Dolphin with video enabled or on hardware and test:
+The headless Dolphin job uses a null video backend. It does **not** prove visible output or playability. An experimental Xvfb/OpenGL job captured almost-black screenshots and failed its image-content check; the result is inconclusive because it may reflect the headless UI/graphics environment or a real startup/rendering issue. Before describing the game as playable, launch the DOL in Dolphin with video enabled or on hardware and test:
 
 - visible picture, track, pod, scenery and readable HUD;
 - controller detection, selection menus, acceleration, braking, steering and boost;
