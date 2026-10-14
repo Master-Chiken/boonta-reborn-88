@@ -380,6 +380,11 @@ static void draw_hud(void)
     snprintf(number, sizeof(number), "%d/4", race_position(&race));
     draw_text(number, screen_w - 64.0f, 52.0f, 1.0f,
               255, 255, 255);
+    draw_text("HIT", screen_w - 101.0f, 69.0f, 1.0f,
+              255, 150, 110);
+    snprintf(number, sizeof(number), "%d", race.collision_count);
+    draw_text(number, screen_w - 58.0f, 69.0f, 1.0f,
+              255, 255, 255);
 
     draw_rect(12.0f, screen_h - 25.0f, screen_w - 12.0f,
               screen_h - 8.0f, 7, 17, 29);
