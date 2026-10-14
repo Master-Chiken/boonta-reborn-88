@@ -61,11 +61,11 @@ void race_update(RaceState *state, const RaceInput *input)
     }
 
     /*
-     * At angle zero the pod travels toward +Z; its left side points toward
-     * the inside of the ring (-X). Keep left/right consistent with that basis.
+     * At the start-line angle, the pod faces +Z and positive radial X projects
+     * to screen-left with this camera. Keep lane controls consistent with that.
      */
-    if (input->left) state->lane_offset -= 0.055f;
-    if (input->right) state->lane_offset += 0.055f;
+    if (input->left) state->lane_offset += 0.055f;
+    if (input->right) state->lane_offset -= 0.055f;
     state->lane_offset = clamp(state->lane_offset, -2.7f, 2.7f);
 
     if (input->accelerate) {
