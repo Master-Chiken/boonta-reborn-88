@@ -31,14 +31,15 @@ The archive contains `docs/third_party/SWE1R_ASSETS_MIT_LICENSE.txt` naming Alex
 
 The import workflow succeeded:
 
-- [Host checks and source-only import workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38625862331) — passed.
+- [Latest validation workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351) — **success**.
 - Host regression scripts and the source-only asset policy check — passed.
 - Native devkitPPC/libogc build — passed; produced a non-empty `swe1r_gc_port.dol` reported as approximately 301 KiB.
-- [Build workflow and artifacts](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38625862331) — artifact `swe1r-gc-step102-source-only` is available while GitHub retains the run artifacts (7 days).
+- Headless Dolphin process smoke test — passed: Dolphin accepted the DOL and remained active until a 12-second timeout.
+- [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924213870) — `swe1r-gc-step102-source-only`, retained for 7 days.
 
 The build explicitly uses `make USE_IMPORTED_SPLINE=0`, so it compiles against the bundled demo/procedural fallback track rather than the excluded PC-mod course centerlines. Compatibility shims in the importer update three API spellings/types for the current devkitPPC/libogc headers and corresponding host mocks: `CARDFileInfo` to `card_file`, `GX_TEXCOORD_NULL` to `GX_TEXCOORDNULL`, and `PAD_BUTTON_Z` to `PAD_TRIGGER_Z`.
 
-**Compile success is not runtime success.** This workflow has not yet verified visible rendering, responsive controller input, race flow, performance, or stability in Dolphin or on hardware.
+**The headless Dolphin result is only a process smoke test.** It does not verify visible rendering, responsive controller input, race flow, performance, or stability in Dolphin or on hardware.
 
 ## Licensing boundary
 
@@ -50,9 +51,10 @@ The workflow applies a checksum-pinned importer, rejects unsafe archive paths, b
 
 Remaining work:
 1. Review the complete diff and confirm the imported files' authorship/licensing.
-2. Test the DOL with visible video output and a GameCube controller in Dolphin or on hardware.
+2. Run Dolphin with visible video output and verify a playable image, GameCube controller input, steering, acceleration/braking/boost, race progression, and resets; record results separately from this headless smoke test.
 3. Fix any observed runtime issues without weakening tests.
-4. Keep PR #17 in draft until licensing and runtime review are complete. It must not be merged automatically.
+4. Confirm authorship/licensing for imported source files before public redistribution.
+5. Keep PR #17 in draft until licensing and visual/runtime review are complete. It must not be merged automatically.
 
 Run the local path guard with:
 
