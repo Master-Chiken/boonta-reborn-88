@@ -32,7 +32,7 @@ The intended order remains: faithful original-game baseline first; then the best
 
 ## PC-first research direction
 
-The original Windows PC game and existing community reverse-engineering/modding work are the primary research starting point. Use the [PC-first research and reuse plan](PC_FIRST_RESEARCH_PLAN.md) and the detailed [PC technical map and external research inventory](PC_TECHNICAL_MAP.md) before implementing systems from scratch. The technical map records existing tools, subsystem questions, evidence levels, and a prioritized research workflow. It distinguishes code/tool licenses from rights to the game's proprietary content; no ROMs, executables or extracted commercial assets should be committed.
+The original Windows PC game and existing community reverse-engineering/modding work are the primary research starting point. Use the [PC-first research and reuse plan](PC_FIRST_RESEARCH_PLAN.md), the detailed [PC technical map and external research inventory](PC_TECHNICAL_MAP.md), and the first [code-level findings from SW_RACER_RE](PC_SOURCE_FINDINGS.md) before implementing systems from scratch. The technical map records existing tools, subsystem questions, evidence levels, and a prioritized research workflow. The source findings already identify spline loading/traversal, track progress, ground contact, vehicle state, AI flags, progression/menu functions, and the PC replacement-renderer boundary. They distinguish direct code evidence from assumptions that still require runtime checks. No ROMs, executables or extracted commercial assets should be committed.
 
 ## Work sequence toward the actual end goal
 
