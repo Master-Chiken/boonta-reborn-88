@@ -148,7 +148,7 @@ static int card_mount(void)
 
 int career_card_load(CareerProfile *p)
 {
-    CARDFileInfo file;
+    card_file file;
     s32 result;
     int ok = 0;
     if (p == NULL || !card_mount()) return 0;
@@ -171,7 +171,7 @@ int career_card_load(CareerProfile *p)
 
 int career_card_store(const CareerProfile *p)
 {
-    CARDFileInfo file;
+    card_file file;
     s32 result;
     int ok = 0;
     if (p == NULL || !card_mount()) return 0;
