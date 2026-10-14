@@ -64,3 +64,12 @@ Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas 
 - Added a strict `-std=c99 -Wall -Wextra -Werror` host-test step to `.github/workflows/gamecube-smoke.yml`.
 - **Integration status:** the renderer and `race_logic.c` still use the existing circular-track model. The new path module is not yet connected to player movement, AI, lap counting, or rendering. This is the first reusable geometry foundation, not yet a gameplay change.
 - **Validation status:** commits were fetched back from GitHub to verify file contents and workflow insertion. Await the new CI run before claiming the strict tests or native DOL build pass for this revision.
+
+
+## Sampled-track rendering milestone (in progress)
+
+- `gamecube/source/main.c` now initializes a clean-room, 96-point closed centerline with gentle radius variation and uses the shared `TrackPath` sampler to place the player and rivals.
+- Road surface, contrasting kerbs, center markers, finish line, pylons, pod orientation, and chase camera now derive from the sampled path instead of drawing only a perfect circular ring.
+- Rendering uses direct indexed centerline samples for repeated road vertices to avoid recalculating the full path length for every vertex. Vehicle placement still uses the generic path sampler.
+- **Gameplay limitation:** race progress, lap detection, opponent AI, and collision checks still use the old angular/circular approximation. This milestone changes prototype geometry and placement, not yet the full physics model.
+- **Validation:** the CI run for commit `17f29af471a85d125b2787232f55658c9c46860b` built a non-empty GameCube DOL and passed both host test jobs. Dolphin visual-frame and process checks were still running at last inspection. A subsequent rendering optimization commit is awaiting its own CI result.
