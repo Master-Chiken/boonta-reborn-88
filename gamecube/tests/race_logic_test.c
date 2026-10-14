@@ -92,6 +92,8 @@ static void test_boost_heat_and_recharge(void)
     RaceInput input = neutral_input();
     race_reset(&state);
     state.speed = 10.0f;
+    /* Keep this test away from rivals so it isolates boost behavior. */
+    state.angle = 2.0f;
     input.boost = 1;
 
     race_update(&state, &input);
