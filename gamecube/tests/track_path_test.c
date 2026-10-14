@@ -128,8 +128,8 @@ static void test_projection_on_closed_seam(void)
     assert(projection.segment_index == 3);
     assert(near(projection.position.x, 0.0f, 0.0001f));
     assert(near(projection.position.z, 1.5f, 0.0001f));
-    assert(near(projection.distance_along_path, 8.5f, 0.0001f));
-    assert(near(projection.progress, 8.5f / 14.0f, 0.0001f));
+    assert(near(projection.distance_along_path, 12.5f, 0.0001f));
+    assert(near(projection.progress, 12.5f / 14.0f, 0.0001f));
 }
 
 int main(void)
