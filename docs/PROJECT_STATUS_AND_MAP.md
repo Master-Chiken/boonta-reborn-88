@@ -30,7 +30,7 @@ This document is a navigation index, not a claim that every item listed is alrea
 
 ### Pull requests and CI evidence
 - [PR #13 — clean-room GameCube driving prototype](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) — draft proposal; review its source, documentation, and test claims together before merging.
-- [PR #13 CI run 53](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38613665560) — succeeded on the PR branch for portable C tests, a devkitPPC/libogc demo build, artifact upload, and a headless Dolphin process smoke test. This is not visual gameplay proof.
+- [PR #13 CI run 54](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38615309738) — succeeded on the PR branch for portable C tests, a devkitPPC/libogc demo build, artifact upload, and a headless Dolphin process smoke test. This is not visual gameplay proof.
 - [PR #14 — OpenRouter Free reviewer](https://github.com/Master-Chiken/boonta-reborn-88/pull/14) — merged. Manual trigger only, free route only, and comment-only permissions.
 - [PR #15 — Gemini safety gates](https://github.com/Master-Chiken/boonta-reborn-88/pull/15) — draft; the proposed changes are not active on main until reviewed and merged.
 - [Dreamcast build evidence](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38567436312) — successful KallistiOS ELF build for the separate starter, not a GameCube build or a bootable Dreamcast disc.
