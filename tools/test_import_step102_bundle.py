@@ -42,6 +42,34 @@ class ValidateMemberTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "case-insensitive"):
             importer.validate_unique_member("SOURCE/main.C", seen)
 
+    def test_preflight_rejects_existing_file_before_writing(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "already.txt").write_text("keep")
+            planned = [("newdir/new.txt", b"new"), ("already.txt", b"overwrite")]
+            with self.assertRaisesRegex(ValueError, "overwrite"):
+                importer.preflight_destinations(planned, root)
+            self.assertFalse((root / "newdir").exists())
+            self.assertEqual((root / "already.txt").read_text(), "keep")
+
+    def test_preflight_rejects_symlink_escape(self):
+        import os
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp, TemporaryDirectory() as outside:
+            root = Path(tmp)
+            try:
+                os.symlink(outside, root / "source")
+            except (OSError, NotImplementedError):
+                self.skipTest("Symlinks are not available on this platform")
+            with self.assertRaisesRegex(ValueError, "symlinked directory"):
+                importer.preflight_destinations([("source/escape.c", b"no")], root)
+            self.assertEqual(list(Path(outside).iterdir()), [])
+
     def test_allows_normal_source_path(self):
         self.assertEqual(importer.validate_member("source/main.c"), "source/main.c")
 
