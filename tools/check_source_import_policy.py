@@ -30,7 +30,7 @@ SUFFIX_EXCLUDES = {
 def excluded(relative: str) -> bool:
     path = relative.replace("\\", "/")
     lower = path.lower()
-    if path in EXACT_EXCLUDES:
+    if lower in EXACT_EXCLUDES:
         return True
     if any(lower.startswith(prefix) for prefix in PREFIX_EXCLUDES):
         return True
