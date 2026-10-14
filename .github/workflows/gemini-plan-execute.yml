@@ -140,3 +140,31 @@ jobs:
               }
             }
           prompt: '/gemini-plan-execute'
+
+      - name: 'Publish Gemini response to the issue or PR'
+        if: always() && steps.run_gemini.outcome != 'skipped'
+        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # pinned GitHub Script v7
+        env:
+          GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+        with:
+          script: |
+            const summary = (process.env.GEMINI_SUMMARY || '').trim();
+            const maxLength = 60000;
+            let body;
+            if (summary) {
+              const safeSummary = summary.length > maxLength
+                ? `${summary.slice(0, maxLength - 140)}\n\n[Report shortened to fit GitHub's comment limit.]`
+                : summary;
+              body = `## Gemini report\n\n${safeSummary}\n\n---\n[Open GitHub Actions logs](${process.env.RUN_URL})`;
+            } else {
+              body = `## Gemini report unavailable\n\nThe Gemini CLI workflow finished without a readable text summary. No code change is confirmed by this run. [Open GitHub Actions logs](${process.env.RUN_URL}) to inspect the empty response or failure.`;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.ISSUE_NUMBER),
+              body,
+            });
+
