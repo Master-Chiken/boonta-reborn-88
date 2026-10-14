@@ -36,6 +36,12 @@ Examples of useful upstream areas include:
 
 Use these paths as reading entry points, not as permission to copy files. The exact module-to-feature mapping still needs to be checked against the relevant function bodies, notes, and tests.
 
+### First source-level findings (reviewed revision only)
+
+- The PC spline loader and traversal code is substantial: it opens a spline block, validates the requested index, loads its data into an asset buffer, transforms encoded values for runtime use, and exposes control-point interpolation/cursor routines. See [swrSpline.c loading](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L14-L78) and [interpolation/cursor routines](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L86-L315). This is useful format/behavior research, but it does not prove the same binary layout or data is used by GameCube.
+- The PC turning routine [swrRace_UpdateTurn](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c#L1714-L1744) time-scales its turn-rate update and heading integration. That is a concrete behavior lead, not a conclusion that all physics is frame-rate independent.
+- Some functions remain TODO/stubs, including [swrControl_ProcessInputs](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Main/swrControl.c#L20-L24) and [spline helper stubs](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c#L522-L539). Read the actual function before assuming an area is fully understood. These findings are recorded in the [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md).
+
 ## Critical platform distinction
 
 This repository primarily studies the **Windows PC executable**. Its hook is a 32-bit Windows \`dinput.dll\` built with a MinGW/Clang toolchain; the PC project uses Windows-oriented APIs and replacement-renderer technology.
