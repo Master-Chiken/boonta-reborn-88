@@ -88,3 +88,23 @@ Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas 
 - Commit `524469ec154299d138e360b2c3d1d714d31837f2`: host regression jobs passed with `race_logic_test: 15 suites passed` and `track_path_test: 6 suites passed`.
 - The same revision's GameCube build job completed successfully and uploaded a non-empty DOL.
 - The null-video Dolphin process smoke test had passed on the prior geometry revision; the OpenGL frame-capture diagnostic failed because Dolphin exited before the script could capture a frame. Therefore **actual visible gameplay is not yet verified**; the OpenGL failure is a tooling/runtime-validation blocker, not evidence that the image rendered correctly.
+
+
+## Cross-platform source material supplied for research — 2026-10-15
+
+Use the user's existing local reference material before reinventing track/game systems:
+
+- `Game SW Racer 1999.zip` — the supplied PC-game archive (kept as a local reference; do not commit its executable or extracted commercial assets).
+- `SW Racer 1999- (US).z64` — the supplied N64 ROM (local-only reference; never add the ROM to GitHub or CI).
+- `Star_Wars_Racer_GameCube_Step102.zip` — 359-file source/research archive, about 2.65 MB uncompressed. Its accompanying inventory classifies 171 source/tool/test files for license review, 152 documentation files for review, and 25 files as hold-for-provenance. **No file in that inventory is marked cleared for redistribution.**
+- The PC reverse-engineering repositories and tool findings documented in `PC_TECHNICAL_MAP.md` and `PC_SOURCE_FINDINGS.md` remain the best starting point for understanding the game. Reuse ideas and independently verified formats; do not assume a PC function, track coordinate system, or asset layout transfers unchanged to N64, GameCube/Wii, or Dreamcast.
+- A separate Dreamcast archive/image is not confirmed in the currently visible Library inventory. Dreamcast stays in the comparison plan, but no Dreamcast-specific extraction result should be claimed until its supplied source is identified and examined.
+
+The workflow is: keep originals local; inspect the archive's own notes/tools; record which edition each finding belongs to; verify results against synthetic tests and, where lawful, a local run; then port only clean-room logic or files with clear redistribution permission. Never push a ROM, disc image, proprietary executable, or unreviewed extracted models, textures, audio, or track data.
+
+## Latest gameplay increment — track-length-aware contact threshold
+
+- Collision distance now scales with the known centerline length: the prototype converts a fixed 2.5 world-unit contact radius into normalized lap-angle space. The legacy 0.12-radian threshold remains for callers without a valid track length.
+- Added a regression test that compares near and far contact at two different track lengths. This prevents longer courses from making the collision window arbitrarily wide in world space.
+- Verified the latest PR-triggered CI host run: `race_logic_test: 16 suites passed`, `track_path_test: 6 suites passed`, native GameCube DOL build passed, repository safety passed. The optional Dolphin OpenGL frame-capture diagnostic still failed because Dolphin exited before a frame could be captured; visible gameplay remains unverified.
+- Source/test commits: `905a5e7a483a7b624c58501a09dfcbba0b345847` and `0789eadcde8875cf32e0fe5069726318d83b5048`. The changes are on `audit/step102-import-gate`; `main` remains untouched.
