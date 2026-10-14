@@ -1,23 +1,23 @@
 # Step 102 source import gate
 
-**Status:** audit completed; source import is not yet authorized by the evidence currently recorded here.
+**Status:** the actual source-only archive has now been recovered and re-tested in an isolated workspace. Import into the public repository remains gated on provenance and redistribution terms; the source has not been copied into GitHub yet.
 
 ## Why this gate exists
 
-The Step 102 archive is the most promising starting point for the GameCube/Wii target, but a passing host test suite is not evidence that the native game builds or runs on hardware. The archive must be reviewed before its files are copied into this public repository.
+The Step 102 archive is the most promising starting point for the GameCube/Wii target, but passing host tests is not evidence that the native game builds or runs. The archive must be reviewed before its files are copied into this public repository.
 
 ## Audit recorded on 2026-10-14
 
-The source-only bundle was unpacked into an isolated temporary directory and checked without importing it into the repository.
+The actual source-only bundle was recovered from the conversation attachment, decoded, and unpacked into an isolated temporary directory. It was checked without importing its source files into the repository.
 
-- Archive inventory: 123 entries.
-- Reported host checks: 32 shell checks and 5 Python policy tests passed in the available environment.
-- The release-check script's GameCube mode reran host checks, then stopped because `DEVKITPPC` / the devkitPPC GameCube toolchain was not configured.
+- Archive inventory: 123 entries; one entry is a Python bytecode cache and should not be imported.
+- Reproducible host result: all 32 `tests/*_host.sh` scripts and all 5 Python policy tests passed using `bash tools/release_check.sh`.
+- The GameCube build path was not validated because `DEVKITPPC` / the devkitPPC GameCube toolchain is not configured in this environment.
 - No native `.dol` was produced; no Dolphin or physical-console runtime test was performed.
-- The bundle README excludes several categories from import, including PC-mod-derived track centerlines, generated/imported asset headers, voice audio, OBJ/MTL assets, commercial disc images, and reverse-engineering/extraction helpers.
-- The source bundle has no root license file. The repository's MIT license does not automatically grant rights to third-party material included in a separate archive.
+- The bundle README says PC-mod-derived centerlines/manifests, imported centerline headers, generated mesh/boundary headers, voice audio, OBJ/MTL assets, ROM/disc images, extracted data, and PC/N64 extraction/reverse-engineering helpers were excluded. Keep the default `USE_IMPORTED_SPLINE=0` procedural/demo track path.
+- The source bundle has no root license file. The repository's MIT license does not automatically grant rights to third-party material in a separate archive.
 
-These results describe this source bundle and local audit only; they are not a claim that a native build or playable game exists.
+These results describe the source bundle and isolated host tests only. They do not establish native-build success, runtime success, or permission to redistribute every file publicly.
 
 ## Required gates before import
 
@@ -25,7 +25,7 @@ These results describe this source bundle and local audit only; they are not a c
 2. **Review file manifest.** Classify every file as original project code, third-party code/tool, generated data, or game-derived asset. Do not publish files with unknown ownership.
 3. **Exclude game payloads.** Never commit commercial ROM/disc images, BIOS files, proprietary extracted textures/models/audio, or other uncleared copyrighted payloads.
 4. **Preserve attribution and licenses.** Keep third-party notices with their files and ensure the intended distribution complies with each license. Do not assume that the repository-level MIT license overrides other licenses.
-5. **Import on this branch first.** Bring in only cleared source, docs, and tests. Keep uncertain assets and datasets out.
+5. **Import on a working branch first.** Bring in only cleared source, docs, and tests; omit `__pycache__` and unclear assets/datasets.
 6. **Run reproducible host checks.** Record the exact command, environment, and test counts in CI.
 7. **Build natively.** Use devkitPPC/libogc and archive the build log and `.dol` artifact. Treat compile success as separate from runtime success.
 8. **Test in Dolphin.** Record whether it boots, renders, reads controls, and can complete a race. Do not claim gameplay based only on a successful compile.
