@@ -5,8 +5,8 @@
 ## Déjà prêts dans le dépôt
 
 ### GitHub Actions — compilation et sécurité
-- État : configuré et utilisé.
-- Usage : compiler le diagnostic GameCube, sauvegarder le fichier DOL en artefact temporaire, contrôler les extensions de ROM/disques interdites.
+- État : configuré et utilisé; le prototype GameCube procédural compile avec succès en un DOL non vide.
+- Usage : compiler le prototype, sauvegarder le DOL comme artefact temporaire, contrôler les extensions ROM/disque interdites et lancer CodeQL sur le C/C++.
 - Coût : les runners standard GitHub-hosted sont gratuits et illimités pour les dépôts publics, selon la documentation GitHub. Les artefacts de compilation sont conservés seulement 7 jours pour limiter le stockage.
 - Ouvrir : [Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions).
 
