@@ -1,56 +1,63 @@
 # Step 102 source-import audit
 
-## Purpose
+## Current status
 
-Prepare a safe, reviewable path for bringing the user's GameCube/Wii prototype into this repository without publishing commercial game dumps or unverified third-party assets. This document is an audit gate, not a claim that the archive has already been imported.
+A reviewed source-only subset of the supplied Step 102 GameCube/Wii prototype has been imported on the draft branch `import/step102-source-only`. It remains in **PR #17, draft, not merged**. No source from this import has been added to `main`.
+
+The import contains 123 selected source/build/test/tool files, plus this repository's separate review and CI scaffolding. The transport payload was deleted from the branch after verification; no `.import/` files remain in the resulting tree.
 
 ## Archive inspected
 
-The supplied `Star_Wars_Racer_GameCube_Step102.zip` contains a native C prototype, a GameCube Makefile, host tests, tools and extensive milestone documentation. Its README says the project is still a prototype; the native devkitPPC/libogc build and in-emulator/console runtime validation were still pending in the archive itself.
+The supplied `Star_Wars_Racer_GameCube_Step102.zip` contains a native C prototype, a GameCube Makefile, host tests, tools and extensive milestone documentation. Its original README says the overall project is still a prototype; native build and runtime validation had been pending in the archive itself.
 
-The archive's host-side checks were run in a temporary workspace: the release shell checks and 91 Python tests passed after restoring executable bits described by the archive. Those results do not prove a native build or gameplay correctness.
+The archive's host-side checks were run in a temporary workspace. For the selected import, GitHub Actions also ran `bash tools/release_check.sh`, passed the source-only path checker and ran five source-bundle policy unit tests. Those results are host-test evidence, not a claim of full gameplay correctness.
 
 ## Provenance and exclusions
 
-The archive README explicitly says its 25 runtime course entries use centerlines derived from the `SWE1R-Mods / SizeMattersNot / RontoSized` PC mod variant, not a verified clean retail PC dump. The archive also includes media/model files whose redistribution provenance is not established by the archive's root-level licensing information.
+The archive README explicitly says its 25 runtime course entries use centerlines derived from the `SWE1R-Mods / SizeMattersNot / RontoSized` PC mod variant. Redistribution rights and provenance for that dataset have not been established.
 
-For the first public import, keep these items out unless their redistribution rights and source provenance are separately verified:
+These paths were excluded from the import:
 
 - `data/reference/pc_track_import_manifest.json`
 - `source/track_centerlines_pc.generated.h`
 - `source/track_centerline.imported.h`
-- `assets/voice_en/` and other audio/media files
-- `assets/geometry/*.obj`, `*.mtl`, and other model/texture exports
-- ROMs, disc images, extracted commercial data, binary dumps, generated files derived from them, and local private data
+- `source/track_mesh.generated.h` and `source/track_boundaries.generated.h`
+- `assets/voice_en/`, audio, image and model files
+- ROMs, disc images, extracted game data, binary dumps and PC/N64 extraction/reverse-engineering helpers
 
-The archive contains `docs/third_party/SWE1R_ASSETS_MIT_LICENSE.txt` naming Alexander Kopetsch. That license is not, by itself, proof that every file in the archive is covered by it. Preserve third-party notices only for the specific files that can be shown to be covered.
+The archive contains `docs/third_party/SWE1R_ASSETS_MIT_LICENSE.txt` naming Alexander Kopetsch. That notice is not evidence that every file in the archive is covered by it. The associated asset/data files were excluded.
 
-## Safe import scope
+## Current build result
 
-A future source-only import may include original C source and headers, Makefile/build scripts, host tests, generic developer tools, and technical documentation once their authorship and dependencies are reviewed. Do not enable imported PC centerlines by default. Retain a procedural test track until a clean, independently authored track dataset is available.
+The import workflow succeeded:
 
-## Current repository status
+- [Host checks and source-only import workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38625862331) — passed.
+- Host regression scripts and the source-only asset policy check — passed.
+- Native devkitPPC/libogc build — passed; produced a non-empty `swe1r_gc_port.dol` reported as approximately 301 KiB.
+- [Build workflow and artifacts](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38625862331) — artifact `swe1r-gc-step102-source-only` is available while GitHub retains the run artifacts (7 days).
 
-- The small clean-room prototype is tracked separately in PR #13; it is not the Step 102 port.
-- The existing native build workflow expects a top-level `Makefile` and `source/` tree, and intentionally fails until they are actually present.
-- This audit branch does not copy the archive or its source files into the repository.
-- No change in this branch is merged into `main`.
+The build explicitly uses `make USE_IMPORTED_SPLINE=0`, so it compiles against the bundled demo/procedural fallback track rather than the excluded PC-mod course centerlines. Compatibility shims in the importer update three API spellings/types for the current devkitPPC/libogc headers and corresponding host mocks: `CARDFileInfo` to `card_file`, `GX_TEXCOORD_NULL` to `GX_TEXCOORDNULL`, and `PAD_BUTTON_Z` to `PAD_TRIGGER_Z`.
 
-## Next gates
+**Compile success is not runtime success.** This workflow has not yet verified visible rendering, responsive controller input, race flow, performance, or stability in Dolphin or on hardware.
 
-1. Confirm the source files intended for import are original project code or have clear compatible licenses.
-2. Import only reviewed text source, build configuration, tests, and documentation.
-3. Run host tests in GitHub Actions.
-4. Build a non-empty GameCube `.dol` with devkitPPC/libogc.
-5. Test actual visible rendering and controller input in Dolphin or on hardware; report this separately from a successful compile.
-6. Keep all actions free-only: GitHub-hosted public-repository CI, no paid API fallback, no billing activation.
+## Licensing boundary
 
-## Reproducible local audit
+The ZIP has no root or nested `LICENSE`, `COPYING`, or `NOTICE` covering the source tree as a whole. This repository has a root MIT license, so before merging PR #17 publicly, the repository owner should confirm that the imported source files are original/owned by the project or may lawfully be distributed under the repository's license. The presence of source code in the supplied archive alone is not a license grant. This is an engineering/provenance warning, not legal advice.
 
-Run:
+## Import guard and remaining gates
+
+The workflow applies a checksum-pinned importer, rejects unsafe archive paths, blocks the identified third-party-derived source/assets, runs host checks, compiles the DOL, and only then commits to the draft PR branch.
+
+Remaining work:
+1. Review the complete diff and confirm the imported files' authorship/licensing.
+2. Test the DOL with visible video output and a GameCube controller in Dolphin or on hardware.
+3. Fix any observed runtime issues without weakening tests.
+4. Keep PR #17 in draft until licensing and runtime review are complete. It must not be merged automatically.
+
+Run the local path guard with:
 
 ```sh
 python3 tools/check_source_import_policy.py
 ```
 
-The checker rejects known excluded paths and risky binary/media extensions. It is a guardrail, not a license scanner or a substitute for human provenance review.
+The checker is a guardrail, not a license scanner or a substitute for human provenance review.
