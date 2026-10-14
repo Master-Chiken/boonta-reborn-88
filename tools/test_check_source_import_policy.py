@@ -25,6 +25,15 @@ class ExcludedPathTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(policy.excluded(path))
 
+    def test_prefix_and_suffix_exclusions_ignore_case(self):
+        for path in (
+            "ASSETS/VOICE_EN/COMMENTARY.WAV",
+            "ROMS/BOOT.DOL",
+            "PRIVATE-ASSETS/MODEL.OBJ",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(policy.excluded(path))
+
     def test_exact_exclusions_normalize_windows_separators(self):
         self.assertTrue(
             policy.excluded("SOURCE\\TRACK_CENTERLINE.IMPORTED.H")
