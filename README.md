@@ -2,7 +2,7 @@
 
 An unofficial reverse-engineering and homebrew project aiming to reconstruct the original *Star Wars: Episode I – Racer* (1999) as faithfully as possible, using documented PC research and comparisons with the PC, Dreamcast, and Nintendo 64 editions. The ambition is the best visual quality achievable with modern techniques while remaining playable natively on GameCube/Wii, plus bonus content. This is the destination, not the current completion status.
 
-This is **not yet a finished remaster or verified port of the original game**. A separate clean-room GameCube prototype now compiles to a DOL in GitHub Actions. The full Step 102 racing prototype has not been imported, and the new DOL has not yet been runtime-tested in Dolphin or on hardware.
+This is **not yet a finished remaster or verified port of the original game**. A separate clean-room GameCube prototype compiles to a DOL in GitHub Actions. A selective 123-file Step 102 source-only candidate exists on the separate `import/step102-source-only` branch in draft PR #17; it is not merged into `main`, and its source licensing/provenance and visible runtime behavior remain unresolved.
 
 ## Actual end goal
 
@@ -17,7 +17,7 @@ This is **not yet a finished remaster or verified port of the original game**. A
 
 ## Current repository limitation
 
-The current repository is still far short of the final goal: the full Step 102 source prototype has **not yet been imported**. The separate clean-room prototype in `gamecube/` now contains a procedural 3D loop track, original pod, chase camera, HUD, acceleration/braking/boost, lane adjustment, pause, and a three-lap finish condition. CI confirms a DOL is produced; actual runtime validation remains outstanding. See [`gamecube/README.md`](gamecube/README.md).
+The current `audit/step102-import-gate` branch is still far short of the final goal. The selective Step 102 candidate lives on the separate `import/step102-source-only` branch and remains under review in [draft PR #17](https://github.com/Master-Chiken/boonta-reborn-88/pull/17). Its archive has no license covering the whole source tree, and visible Dolphin rendering/playability has not been proven. The clean-room prototype in `gamecube/` remains a toolchain demo, not the final foundation. See [`gamecube/README.md`](gamecube/README.md).
 
 ## Legal and asset policy
 
@@ -28,11 +28,11 @@ The current repository is still far short of the final goal: the full Step 102 s
 
 ## Reverse-engineering workbench
 
-The [PC/Dreamcast/Nintendo 64 comparison matrix](docs/VERSION_COMPARISON_MATRIX.md) tracks the systems that must be measured or documented before implementation: physics, vehicles, tracks, AI, items, modes, UI, graphics, audio, progression, and performance. The [platform decision note](docs/PLATFORM_DECISION.md) explains why GameCube versus Wii remains open and how the N64-on-Wii emulator can serve as a reference without being mistaken for the remaster itself. The goal is faithful reconstruction first, visual improvements and bonus content second.
+The [PC/Dreamcast/Nintendo 64 comparison matrix](docs/VERSION_COMPARISON_MATRIX.md) tracks the systems that must be measured or documented before implementation: physics, vehicles, tracks, AI, items, modes, UI, graphics, audio, progression, and performance. The [Step 102 path-review register](docs/STEP102_PATH_REVIEW_REGISTER.md) tracks provenance and redistribution clearance; all unreviewed paths remain on hold. The [platform decision note](docs/PLATFORM_DECISION.md) explains why GameCube versus Wii remains open and how the N64-on-Wii emulator can serve as a reference without being mistaken for the remaster itself. The goal is faithful reconstruction first, visual improvements and bonus content second.
 
 ## Next milestones toward the real goal
 
-1. Complete a path-by-path provenance review of the Step 102 source archive and select the code/tools/docs that can be safely used.
+1. Complete the [path-by-path provenance review](docs/STEP102_PATH_REVIEW_REGISTER.md) of the Step 102 source archive and select only code/tools/docs with documented clearance.
 2. Build the actual full GameCube/Wii-oriented prototype from that source, not treat the tiny procedural demo as the final foundation.
 3. Reproduce the host tests, compile with devkitPPC/libogc, and validate boot/render/controller input in Dolphin.
 4. Create a version-comparison matrix for PC, Dreamcast and Nintendo 64: physics, tracks, vehicle stats, AI, items, menus, modes, progression, and file formats. Mark each claim as measured, documented, or still unknown.
