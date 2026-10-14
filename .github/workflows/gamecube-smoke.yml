@@ -61,8 +61,9 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth qt6-qpa-plugins
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu qt6-qpa-plugins
           export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
           command -v dolphin-emu
           dolphin-emu --version
 
@@ -71,9 +72,10 @@ jobs:
         run: |
           set -uo pipefail
           export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
           mkdir -p /tmp/dolphin-user
           set +e
-          timeout 12s xvfb-run -a dolphin-emu --batch --video_backend=Null --exec=dist/boonta_demo.dol --user=/tmp/dolphin-user
+          timeout 12s dolphin-emu --batch --video_backend=Null --exec=dist/boonta_demo.dol --user=/tmp/dolphin-user
           status=$?
           set -e
           if [ "$status" -eq 124 ]; then
