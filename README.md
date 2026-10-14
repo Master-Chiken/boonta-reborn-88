@@ -28,7 +28,7 @@ The current repository is still far short of the final goal: the full Step 102 s
 
 ## Reverse-engineering workbench
 
-The [PC/Dreamcast/Nintendo 64 comparison matrix](docs/VERSION_COMPARISON_MATRIX.md) tracks the systems that must be measured or documented before implementation: physics, vehicles, tracks, AI, items, modes, UI, graphics, audio, progression, and performance. The goal is faithful reconstruction first, visual improvements and bonus content second.
+The [PC/Dreamcast/Nintendo 64 comparison matrix](docs/VERSION_COMPARISON_MATRIX.md) tracks the systems that must be measured or documented before implementation: physics, vehicles, tracks, AI, items, modes, UI, graphics, audio, progression, and performance. The [platform decision note](docs/PLATFORM_DECISION.md) explains why GameCube versus Wii remains open and how the N64-on-Wii emulator can serve as a reference without being mistaken for the remaster itself. The goal is faithful reconstruction first, visual improvements and bonus content second.
 
 ## Next milestones toward the real goal
 
