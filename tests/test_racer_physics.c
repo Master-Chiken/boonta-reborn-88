@@ -283,6 +283,44 @@ int main(void)
     CHECK(damaged_state.speed < clean_state.speed);
     CHECK(damaged_state.speed < 50.0f);
 
+
+    /* Regression: oversized frame deltas are clamped to 50 ms. This keeps
+       acceleration and race timers deterministic after a pause/debugger stall
+       instead of allowing a single frame to teleport the pod or skip gates. */
+    {
+        RacerState clamped_state, reference_state;
+        RacerInput throttle_input = {0.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+        racer_init(&clamped_state, track, 80U);
+        racer_init(&reference_state, track, 80U);
+        racer_update(&clamped_state, track, 80U, &throttle_input, 1.0f);
+        racer_update(&reference_state, track, 80U, &throttle_input, 0.05f);
+        CHECK(fabsf(clamped_state.speed - reference_state.speed) < 0.0001f);
+        CHECK(fabsf(clamped_state.race_time - reference_state.race_time) < 0.0001f);
+    }
+
+    /* PC reverse-engineering notes define acceleration with inverse semantics
+       (lower denominator = faster). The native model intentionally uses a
+       direct multiplier (higher value = faster); guard that distinction so a
+       future parameter-map change cannot silently reverse the pod tuning. */
+    {
+        RacerVehicleSpec slower = {"DIRECT ACCEL LOW", 52.0f, 10.0f, 1.0f, 1.0f,
+                                   24.0f, 30.0f, 19.0f, 13.0f, 1.0f, 190, 52, 35};
+        RacerVehicleSpec faster = {"DIRECT ACCEL HIGH", 52.0f, 22.0f, 1.0f, 1.0f,
+                                   24.0f, 30.0f, 19.0f, 13.0f, 1.0f, 190, 52, 35};
+        RacerState slow_state, fast_state;
+        RacerInput throttle_input = {0.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+        make_circle_radius(boost_track, 80U, 200.0f);
+        racer_init(&slow_state, boost_track, 80U);
+        racer_init(&fast_state, boost_track, 80U);
+        for (i = 0U; i < 60U; ++i) {
+            racer_update_vehicle(&slow_state, boost_track, 80U, &throttle_input,
+                                 &slower, 1.0f/60.0f);
+            racer_update_vehicle(&fast_state, boost_track, 80U, &throttle_input,
+                                 &faster, 1.0f/60.0f);
+        }
+        CHECK(fast_state.speed > slow_state.speed + 1.0f);
+    }
+
     projection = racer_project_to_track(track[12].x, track[12].z, track, 80U);
     CHECK(projection.distance_sq < 0.01f);
     CHECK(projection.total_length > 100.0f);
