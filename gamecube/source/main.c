@@ -11,6 +11,7 @@
 #include <ogc/video.h>
 #include <ogc/gu.h>
 #include <ogc/gx.h>
+#include <ogc/lwp_watchdog.h>
 #include <math.h>
 #include <malloc.h>
 #include <stdio.h>
@@ -374,7 +375,7 @@ static void reset_race(void)
     race_reset(&race);
 }
 
-static void update_race(u32 held, u32 down)
+static void update_race(u32 held, u32 down, float delta_seconds)
 {
     RaceInput input;
     input.accelerate = (held & PAD_BUTTON_A) != 0;
@@ -384,7 +385,7 @@ static void update_race(u32 held, u32 down)
     input.right = (held & PAD_BUTTON_RIGHT) != 0;
     input.pause_pressed = (down & PAD_BUTTON_START) != 0;
     input.reset_pressed = (down & PAD_BUTTON_Y) != 0;
-    race_update(&race, &input);
+    race_update_dt(&race, &input, delta_seconds);
 }
 
 static void init_video_and_gx(void)
@@ -518,15 +519,22 @@ static void render_frame(void)
 
 int main(int argc, char **argv)
 {
+    u64 previous_tick;
     (void)argc;
     (void)argv;
 
     init_video_and_gx();
     reset_race();
+    previous_tick = gettime();
 
     while (SYS_MainLoop()) {
+        u64 frame_tick;
+        float delta_seconds;
         PAD_ScanPads();
-        update_race(PAD_ButtonsHeld(0), PAD_ButtonsDown(0));
+        frame_tick = gettime();
+        delta_seconds = (float)diff_usec(previous_tick, frame_tick) * 0.000001f;
+        previous_tick = frame_tick;
+        update_race(PAD_ButtonsHeld(0), PAD_ButtonsDown(0), delta_seconds);
         render_frame();
     }
 
