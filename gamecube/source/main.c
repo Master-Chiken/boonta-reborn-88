@@ -156,6 +156,32 @@ static void draw_ground(void)
     GX_End();
 }
 
+static TrackPathSample track_sample_at_index(int index)
+{
+    TrackPathSample sample;
+    int previous = (index + TRACK_SEGMENTS - 1) % TRACK_SEGMENTS;
+    int current = index % TRACK_SEGMENTS;
+    int next = (index + 1) % TRACK_SEGMENTS;
+    float dx = track_points[next].x - track_points[previous].x;
+    float dz = track_points[next].z - track_points[previous].z;
+    float length = sqrtf(dx * dx + dz * dz);
+
+    sample.position = track_points[current];
+    sample.distance = 0.0f;
+    sample.progress = (float)current / (float)TRACK_SEGMENTS;
+    sample.segment_index = current;
+    if (length > 0.000001f) {
+        sample.tangent.x = dx / length;
+        sample.tangent.y = 0.0f;
+        sample.tangent.z = dz / length;
+    } else {
+        sample.tangent.x = 0.0f;
+        sample.tangent.y = 0.0f;
+        sample.tangent.z = 1.0f;
+    }
+    return sample;
+}
+
 static TrackVec3 track_normal(const TrackPathSample *sample)
 {
     TrackVec3 normal = {sample->tangent.z, 0.0f, -sample->tangent.x};
@@ -190,16 +216,11 @@ static void draw_track_strip(float inner_offset, float outer_offset,
 {
     GX_Begin(GX_QUADS, GX_VTXFMT0, TRACK_SEGMENTS * 4);
     for (int i = 0; i < TRACK_SEGMENTS; ++i) {
-        TrackPathSample a, b;
+        TrackPathSample a = track_sample_at_index(i);
+        TrackPathSample b = track_sample_at_index((i + 1) % TRACK_SEGMENTS);
         TrackVec3 na, nb;
         TrackVec3 p0, p1, p2, p3;
         u8 r, g, blue;
-        float p0_progress = (float)i / (float)TRACK_SEGMENTS;
-        float p1_progress = (float)(i + 1) / (float)TRACK_SEGMENTS;
-        if (!track_path_sample_progress(&track_path, p0_progress, &a) ||
-            !track_path_sample_progress(&track_path, p1_progress, &b)) {
-            continue;
-        }
         na = track_normal(&a);
         nb = track_normal(&b);
         p0 = track_offset_point(a.position, na, outer_offset, y);
@@ -238,15 +259,10 @@ static void draw_center_dashes(void)
 {
     GX_Begin(GX_QUADS, GX_VTXFMT0, (TRACK_SEGMENTS / 2) * 4);
     for (int i = 0; i < TRACK_SEGMENTS; i += 2) {
-        TrackPathSample a, b;
+        TrackPathSample a = track_sample_at_index(i);
+        TrackPathSample b = track_sample_at_index((i + 1) % TRACK_SEGMENTS);
         TrackVec3 na, nb;
         TrackVec3 p0, p1, p2, p3;
-        if (!track_path_sample_progress(&track_path,
-                (float)i / (float)TRACK_SEGMENTS, &a) ||
-            !track_path_sample_progress(&track_path,
-                (float)(i + 1) / (float)TRACK_SEGMENTS, &b)) {
-            continue;
-        }
         na = track_normal(&a);
         nb = track_normal(&b);
         p0 = track_offset_point(a.position, na, 0.10f, 0.08f);
@@ -264,10 +280,8 @@ static void draw_center_dashes(void)
 static void draw_finish_line(void)
 {
     const int tiles = 8;
-    TrackPathSample sample;
-    TrackVec3 normal;
-    if (!track_path_sample_progress(&track_path, 0.0f, &sample)) return;
-    normal = track_normal(&sample);
+    TrackPathSample sample = track_sample_at_index(0);
+    TrackVec3 normal = track_normal(&sample);
     GX_Begin(GX_QUADS, GX_VTXFMT0, tiles * 4);
     for (int i = 0; i < tiles; ++i) {
         float a = -TRACK_HALF_WIDTH +
@@ -292,12 +306,10 @@ static void draw_pylons(void)
     const int count = 16;
     GX_Begin(GX_QUADS, GX_VTXFMT0, count * 4);
     for (int i = 0; i < count; ++i) {
-        TrackPathSample sample;
-        TrackVec3 normal;
+        int sample_index = (i * TRACK_SEGMENTS) / count;
+        TrackPathSample sample = track_sample_at_index(sample_index);
+        TrackVec3 normal = track_normal(&sample);
         TrackVec3 base;
-        float progress = (float)i / (float)count;
-        if (!track_path_sample_progress(&track_path, progress, &sample)) continue;
-        normal = track_normal(&sample);
         base = track_offset_point(sample.position, normal,
                                   TRACK_HALF_WIDTH + 2.0f, 0.0f);
         {
