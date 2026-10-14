@@ -31,15 +31,17 @@ The archive contains `docs/third_party/SWE1R_ASSETS_MIT_LICENSE.txt` naming Alex
 
 The import workflow succeeded:
 
-- [Latest validation workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235) — **success**.
+- [Latest validation workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432) — **success**.
 - Host regression scripts and the source-only asset policy check — passed.
 - Native devkitPPC/libogc build — passed; produced a non-empty `swe1r_gc_port.dol` reported as approximately 301 KiB.
 - Headless Dolphin process smoke test — passed: Dolphin accepted the DOL and remained active until a 12-second timeout.
-- [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924766751) — `swe1r-gc-step102-source-only`, retained for 7 days.
+- Experimental visible OpenGL/Xvfb preview — **not verified**. It captured almost completely black frames; the image-content check failed. This may be an emulator/frontend/software-renderer environment issue or a real graphics/startup issue, so the screenshot is not proof of correct rendering and not enough to diagnose a game defect.
+- [Experimental preview frames and log](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432/artifacts/11924449397) — retained temporarily as a diagnostic artifact.
+- [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11926156448) — `swe1r-gc-step102-source-only`, retained for 7 days.
 
 The build explicitly uses `make USE_IMPORTED_SPLINE=0`, so it compiles against the bundled demo/procedural fallback track rather than the excluded PC-mod course centerlines. Compatibility shims in the importer update three API spellings/types for the current devkitPPC/libogc headers and corresponding host mocks: `CARDFileInfo` to `card_file`, `GX_TEXCOORD_NULL` to `GX_TEXCOORDNULL`, and `PAD_BUTTON_Z` to `PAD_TRIGGER_Z`.
 
-**The headless Dolphin result is only a process smoke test.** It does not verify visible rendering, responsive controller input, race flow, performance, or stability in Dolphin or on hardware.
+**The headless Dolphin result is only a process smoke test.** The experimental visible preview remained almost black and failed its image-content check. As a result, visible rendering, responsive controller input, race flow, performance, and stability in Dolphin or on hardware remain unverified.
 
 ## Licensing boundary
 
@@ -51,7 +53,7 @@ The workflow applies a checksum-pinned importer, rejects unsafe archive paths, b
 
 Remaining work:
 1. Review the complete diff and confirm the imported files' authorship/licensing.
-2. Run Dolphin with visible video output and verify a playable image, GameCube controller input, steering, acceleration/braking/boost, race progression, and resets; record results separately from this headless smoke test.
+2. Diagnose why the automated Xvfb/OpenGL preview captures nearly black frames, then run Dolphin with visible video output and verify a playable image, GameCube controller input, steering, acceleration/braking/boost, race progression, and resets; record results separately from this headless smoke test.
 3. Fix any observed runtime issues without weakening tests.
 4. Confirm authorship/licensing for imported source files before public redistribution.
 5. Keep PR #17 in draft until licensing and visual/runtime review are complete. It must not be merged automatically.
