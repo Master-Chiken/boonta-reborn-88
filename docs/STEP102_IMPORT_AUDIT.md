@@ -92,3 +92,23 @@ The root contains many step-by-step Markdown logs. Those may be useful for proje
 - **Do not add:** commercial ROMs, disc images, BIOS data, extracted proprietary models/textures/audio, or data that is known to derive from an external mod without redistribution clearance.
 
 This section records the path-level hold list and archive checksum. A separate 359-row metadata triage manifest has now been generated for owner review. It includes each archive-relative path, file size, SHA-256, CRC32, ZIP mode, category, initial action, and reason. It is delivered separately to the owner rather than committed to the public repository before the path list has been reviewed. No row is marked approved for redistribution. The CSV is an inventory aid, not a legal determination.
+
+## Latest CI evidence reviewed (2026-10-14)
+
+For the Step 102 candidate workflow run [38634953318](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634953318):
+
+- **Host gameplay regression suite:** passed.
+- **Source import policy:** passed in the associated run [38634953374](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634953374).
+- **Native GameCube DOL build:** passed and uploaded the DOL/build map.
+- **Visible Dolphin preview:** failed. The log reports a captured 1280×720 image of only 250 bytes, Dolphin exited before capture, and the job includes a GDB backtrace. This does **not** establish whether the underlying cause is the DOL startup/rendering path, Dolphin's GUI/software-rendering environment, or a combination.
+- **Interpretation:** this is not a successful playable-runtime test. Keep the preview result visible as a failed diagnostic and preserve its log/artifact. Do not label the source candidate playable until a real visible render and controller-driven race are demonstrated.
+
+### Next runtime-debugging actions
+
+1. Inspect the uploaded [visible-preview artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634953318/artifacts/11926799572) and the Dolphin log/backtrace before changing game code.
+2. Separate emulator GUI startup from DOL execution: first prove a stable Dolphin window under the CI display, then load the DOL and capture multiple frames.
+3. Add a timeout and explicit process-exit reporting; distinguish emulator crash, no-window/screenshot failure, and blank rendered content as separate failure categories.
+4. Keep the visible preview diagnostic non-authoritative for playability. A CI screenshot is useful evidence, but an interactive Dolphin test with controller input and a complete race remains required.
+5. Re-run the workflow after any diagnostic change; link the exact run and artifact rather than relying on historical results.
+
+The host checks and native compilation are meaningful progress, but they do not override the failed visible-render diagnostic or the unresolved source-license gate.
