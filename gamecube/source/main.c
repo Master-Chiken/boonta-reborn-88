@@ -14,6 +14,7 @@
 #include <math.h>
 #include <malloc.h>
 #include <stdio.h>
+#include "race_logic.h"
 #include <string.h>
 
 #define FIFO_SIZE (256 * 1024)
@@ -28,15 +29,7 @@
 static void *framebuffer;
 static GXRModeObj *video_mode;
 static void *gx_fifo;
-static float speed_value;
-static float lane_offset;
-static float angle_value;
-static float boost_energy = 1.0f;
-static float engine_heat;
-static int completed_laps;
-static int paused;
-static int race_finished;
-static int boost_active;
+static RaceState race;
 
 static const u8 font5x7[128][7] = {
     ['0'] = {14,17,19,21,25,17,14},
@@ -368,76 +361,20 @@ static void draw_hud(void)
 
 static void reset_race(void)
 {
-    speed_value = 0.0f;
-    lane_offset = 0.0f;
-    angle_value = 0.0f;
-    boost_energy = 1.0f;
-    engine_heat = 0.0f;
-    completed_laps = 0;
-    paused = 0;
-    race_finished = 0;
-    boost_active = 0;
+    race_reset(&race);
 }
 
 static void update_race(u32 held, u32 down)
 {
-    boost_active = 0;
-
-    if (down & PAD_BUTTON_Y) {
-        reset_race();
-        return;
-    }
-    if ((down & PAD_BUTTON_START) && !race_finished) {
-        paused = !paused;
-    }
-    if (paused || race_finished) {
-        return;
-    }
-
-    if (held & PAD_BUTTON_LEFT) {
-        lane_offset += 0.055f;
-    }
-    if (held & PAD_BUTTON_RIGHT) {
-        lane_offset -= 0.055f;
-    }
-    if (lane_offset > 2.7f) lane_offset = 2.7f;
-    if (lane_offset < -2.7f) lane_offset = -2.7f;
-
-    if (held & PAD_BUTTON_A) {
-        speed_value += 0.20f;
-    } else {
-        speed_value -= 0.018f;
-    }
-    if (held & PAD_BUTTON_B) {
-        speed_value -= 0.42f;
-    }
-
-    if ((held & PAD_BUTTON_X) && boost_energy > 0.01f && engine_heat < 0.98f &&
-        speed_value > 2.0f) {
-        boost_active = 1;
-        speed_value += 0.24f;
-        boost_energy -= 0.0048f;
-        engine_heat += 0.0065f;
-    } else {
-        boost_energy += 0.0022f;
-        engine_heat -= 0.0045f;
-    }
-    if (speed_value < 0.0f) speed_value = 0.0f;
-    if (speed_value > MAX_SPEED) speed_value = MAX_SPEED;
-    if (boost_energy < 0.0f) boost_energy = 0.0f;
-    if (boost_energy > 1.0f) boost_energy = 1.0f;
-    if (engine_heat < 0.0f) engine_heat = 0.0f;
-    if (engine_heat > 1.0f) engine_heat = 1.0f;
-
-    angle_value += speed_value * 0.016f / (TRACK_RADIUS + lane_offset);
-    if (angle_value >= TWO_PI_F) {
-        angle_value -= TWO_PI_F;
-        ++completed_laps;
-        if (completed_laps >= RACE_LAPS) {
-            race_finished = 1;
-            speed_value = 0.0f;
-        }
-    }
+    RaceInput input;
+    input.accelerate = (held & PAD_BUTTON_A) != 0;
+    input.brake = (held & PAD_BUTTON_B) != 0;
+    input.boost = (held & PAD_BUTTON_X) != 0;
+    input.left = (held & PAD_BUTTON_LEFT) != 0;
+    input.right = (held & PAD_BUTTON_RIGHT) != 0;
+    input.pause_pressed = (down & PAD_BUTTON_START) != 0;
+    input.reset_pressed = (down & PAD_BUTTON_Y) != 0;
+    race_update(&race, &input);
 }
 
 static void init_video_and_gx(void)
