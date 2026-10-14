@@ -75,6 +75,7 @@ jobs:
           path: dist
 
       - name: Install free Dolphin OpenGL renderer and virtual display
+        shell: bash
         run: |
           set -euo pipefail
           apt-get update
