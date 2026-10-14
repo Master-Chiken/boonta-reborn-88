@@ -2,6 +2,12 @@
 
 These notes summarize public starting points. They are not proof that any project or asset format works with the GameCube or Wii edition.
 
+## Research strategy for faithful reconstruction
+
+The target is not merely a game inspired by the original: the target is to reconstruct its gameplay and content faithfully, then improve graphics and add bonus content on GameCube/Wii. Use the PC reverse-engineering repository as a source of documented functions and hypotheses; compare those hypotheses against the actual PC, Dreamcast and Nintendo 64 editions where available. Keep an evidence log that distinguishes observed behavior from assumptions. Console editions may use different engines, data formats, track representations, timing, rendering and controls; never assume that a PC format or extracted dataset is directly usable on GameCube/Wii.
+
+The Step 102 GameCube/Wii-oriented source archive is currently the strongest existing implementation candidate, but its missing license and the flagged PC-mod-derived course data mean it is not cleared for wholesale import. Review source code, tools, generated data, and assets separately.
+
 ## Existing Star Wars: Episode I — Racer research
 
 ### SW_RACER_RE
@@ -52,6 +58,6 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 1. What is inside the existing Step102 prototype archive, and what is its source/license?
 2. Is that archive source code, a prebuilt executable, documentation, or a mixture?
 3. Which target should be used for the first build: Wii homebrew, GameCube homebrew, or a PC research build?
-4. Is the quickest goal simply to run the original N64 version, or is a native enhanced port the non-negotiable destination?
+4. **Resolved:** the non-negotiable destination is a faithful, enhanced native GameCube/Wii reconstruction; simply running the N64 edition through an emulator is not the final solution.
 5. Which assets/data formats are actually present in the relevant console version?
 6. Which open-source components can be used without incompatible license or branding obligations?
