@@ -35,17 +35,17 @@ Les workflows sont présents, mais l'agent ne doit pas être considéré comme a
 
 La configuration a un verrou : tant que la variable n'est pas exactement `true`, `@gemini-cli /approve` n'exécute pas la tâche modifiant le dépôt et publie un message expliquant comment l'écriture reste verrouillée. L'agent doit créer une nouvelle branche et une PR. Aucun workflow n'a le droit de fusionner.
 
-### OpenRouter Free — deuxième IA de relecture, prête à activer
+### OpenRouter Free — deuxième IA de relecture (PR indépendante #14)
 
-- Statut : workflow ajouté, mais il attend le secret privé `OPENROUTER_API_KEY`.
+- Statut : workflow et guide proposés dans [la PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14), en brouillon. Le workflow n'est pas encore disponible sur la branche par défaut et ne peut pas encore être lancé.
 - Usage : relecture technique manuelle d'une PR ouverte qui cible `main`. Le modèle reçoit uniquement le diff public de la PR et renvoie un commentaire d'audit. Il ne possède aucun outil d'écriture dans le dépôt, ne pousse pas de commit et ne peut pas fusionner.
 - Route : `openrouter/free`, qui sélectionne un modèle de la liste gratuite. Le routeur annonce un coût de 0 $ pour les requêtes. Si aucune capacité gratuite n'est disponible, la requête doit échouer : ne passe pas à une route payante.
 - Offre Free annoncée actuellement : 25+ modèles gratuits et 50 requêtes par jour ; ces limites et les modèles disponibles peuvent changer.
 - Données : la requête envoie le diff de la PR à OpenRouter, puis à un fournisseur de modèle qui peut changer. Les pratiques de conservation/entraînement varient selon le fournisseur ; n'utilise pas ce workflow avec une PR contenant des secrets, informations privées ou du contenu que tu ne souhaites pas transmettre à un fournisseur externe.
-- Configuration : crée une clé API dans [OpenRouter](https://openrouter.ai/keys), sans ajouter de crédit ni moyen de paiement, puis ajoute-la dans GitHub sous **Settings → Secrets and variables → Actions → New repository secret** avec le nom exact `OPENROUTER_API_KEY`.
-- Lancement : le workflow est présent dans la PR #13, qui est encore en brouillon. GitHub ne permet pas de déclencher un workflow `workflow_dispatch` tant que son fichier n'est pas sur la branche par défaut. Après validation manuelle et fusion explicite de la PR qui le contient, ouvre [OpenRouter free-model PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), clique **Run workflow** et saisis le numéro de la PR. Il ne se déclenche pas automatiquement.
+- Une fois la PR #14 approuvée explicitement et fusionnée, crée une clé API dans [OpenRouter](https://openrouter.ai/keys), sans ajouter de crédit ni moyen de paiement, puis ajoute-la dans GitHub sous **Settings → Secrets and variables → Actions → New repository secret** avec le nom exact `OPENROUTER_API_KEY`.
+- Ensuite, ouvre [OpenRouter free-model PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), clique **Run workflow** et saisis le numéro de la PR. Il ne se déclenche pas automatiquement.
 
-Guide complet : [OpenRouter Free PR review](OPENROUTER_FREE_REVIEW.md).
+Guide complet : [guide OpenRouter dans la branche de proposition](https://github.com/Master-Chiken/boonta-reborn-88/blob/ai/openrouter-free-pr-review/docs/OPENROUTER_FREE_REVIEW.md).
 
 ## Outils non retenus pour cette configuration
 

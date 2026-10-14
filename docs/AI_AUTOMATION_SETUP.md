@@ -40,7 +40,7 @@ L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne do
 
 ## Ajouter une deuxième IA gratuite pour la relecture
 
-Le workflow facultatif [OpenRouter Free PR review](OPENROUTER_FREE_REVIEW.md) utilise seulement le routeur `openrouter/free`, qui choisit parmi les modèles affichés comme gratuits. Il ne fait jamais de changement de code : il poste uniquement un commentaire de relecture sur une PR. Il exige un autre secret, `OPENROUTER_API_KEY`, configuré séparément dans GitHub. Ne crédite pas le compte et n'ajoute aucune carte. Si la route gratuite n'est pas disponible, le workflow doit échouer plutôt que d'essayer un modèle payant.
+Le workflow facultatif [OpenRouter Free PR review est proposé séparément dans la PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14). Il utilise seulement le routeur `openrouter/free` et poste un commentaire de relecture ; il ne modifie aucun code. Il exige un secret séparé, `OPENROUTER_API_KEY`. Le workflow ne pourra être lancé manuellement qu'après avoir été explicitement approuvé et fusionné dans la branche par défaut. Ne crédite pas le compte et n'ajoute aucune carte ; si la route gratuite est indisponible, il doit échouer plutôt que d'essayer un modèle payant.
 
 OpenRouter n'est pas Claude : sa route gratuite choisit des modèles gratuits disponibles, qui changent dans le temps. Claude reste exclu de l'automatisation API directe, car son API est facturée à l'usage.
 
