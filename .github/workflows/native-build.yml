@@ -116,8 +116,11 @@ jobs:
             export PATH="/usr/games:$PATH"
             export LIBGL_ALWAYS_SOFTWARE=1
             export QT_QPA_PLATFORM=xcb
-            mkdir -p artifacts dolphin-user
-            dolphin-emu --batch --video_backend="Software Renderer" --exec=dist/swe1r_gc_port.dol --user="$PWD/dolphin-user" > artifacts/dolphin-visible.log 2>&1 &
+            mkdir -p artifacts /tmp/dolphin-user
+            export HOME=/tmp/dolphin-user
+            export XDG_CONFIG_HOME=/tmp/dolphin-user/.config
+            export XDG_DATA_HOME=/tmp/dolphin-user/.local/share
+            dolphin-emu --video_backend="Software Renderer" --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-user > artifacts/dolphin-visible.log 2>&1 &
             dolphin_pid=$!
             cleanup() {
               kill -TERM "$dolphin_pid" 2>/dev/null || true
