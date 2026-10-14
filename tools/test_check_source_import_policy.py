@@ -15,6 +15,16 @@ class ExcludedPathTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(policy.excluded(path))
 
+    def test_generated_mesh_and_boundary_files_are_excluded(self):
+        for path in (
+            "source/track_mesh.generated.h",
+            "SOURCE/TRACK_MESH.GENERATED.H",
+            "source/track_boundaries.generated.h",
+            "SOURCE/TRACK_BOUNDARIES.GENERATED.H",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(policy.excluded(path))
+
     def test_exact_exclusions_normalize_windows_separators(self):
         self.assertTrue(
             policy.excluded("SOURCE\\TRACK_CENTERLINE.IMPORTED.H")
