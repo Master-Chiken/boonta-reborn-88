@@ -349,7 +349,7 @@ static void draw_hud(void)
 
     draw_rect(12.0f, screen_h - 25.0f, screen_w - 12.0f,
               screen_h - 8.0f, 7, 17, 29);
-    draw_text("A ACCEL  B BRAKE  X BOOST  L/R LANE  Y RESET  START PAUSE",
+    draw_text("A ACCEL  B BRAKE  X BOOST  D-PAD L/R  Y RESET  START PAUSE",
               20.0f, screen_h - 20.0f, 1.0f, 196, 237, 255);
 
     if (race.paused && !race.finished) {
