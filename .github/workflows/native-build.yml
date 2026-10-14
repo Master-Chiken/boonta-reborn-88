@@ -163,7 +163,9 @@ jobs:
           set +e
           xvfb-run -a bash -c '
             set +e
-            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
+            export QT_QPA_PLATFORM=xcb
+            export QT_DEBUG_PLUGINS=1
+            dolphin-emu --platform xcb --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
             pid=$!
             window=""
             for attempt in $(seq 1 30); do
