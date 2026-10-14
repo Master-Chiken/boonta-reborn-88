@@ -24,6 +24,18 @@ Ne mets jamais la clé dans un fichier, une issue, un commentaire ou cette conve
 
 Google indique que le contenu de l'offre API gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure le code et les prompts du dépôt. Ne fournis jamais de secrets, données privées ou contenus que tu n'as pas le droit de transmettre.
 
+## Contrôle automatique de la configuration
+
+Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml) se lance à chaque mise à jour de cette branche de sécurité. Il vérifie localement que le verrou d'écriture, le mode lecture seule et les interdictions de routes Google Cloud/Vertex sont toujours présents.
+
+Ce contrôle :
+- n'appelle aucune API d'IA et n'utilise aucune clé ;
+- ne consomme aucun quota Gemini ou OpenRouter ;
+- ne modifie pas le dépôt et ne fusionne rien ;
+- vérifie seulement la configuration écrite, pas la disponibilité du quota gratuit auprès du fournisseur.
+
+Un test réussi ne remplace pas la revue humaine de la pull request.
+
 ## Premier test : lecture seule
 
 Après validation et fusion explicite de cette PR de sécurité, et après l'ajout du secret, ouvre la [PR #13](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) et écris ce commentaire :
