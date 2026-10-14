@@ -1,30 +1,41 @@
-# GameCube smoke test
+# Boonta Reborn 88 — first GameCube driving prototype
 
-This folder contains a small clean-room diagnostic program for the GameCube/Wii homebrew toolchain. It is intentionally independent of the Step 102 game prototype.
+This folder contains a **clean-room, original procedural 3D driving prototype** for the GameCube/Wii homebrew toolchain. It does not reuse commercial game code, models, textures, audio, or route data.
 
-## What it proves
+## Features implemented in code
 
-A successful GitHub Actions run proves that devkitPPC/libogc can compile this minimal program into a non-empty `boonta_smoke.dol`. If the artifact is downloaded and run in Dolphin, it can also test video output and controller input.
+- Procedural ring circuit with colored curbs, center markers, pylons, and a checkerboard finish marker.
+- Original low-poly pod model with twin engine shapes and boost flames.
+- Chase camera and a simple speed/boost/lap HUD.
+- Acceleration, braking, boost energy and heat, lateral lane adjustment, pause, and restart.
+- Three-lap finish condition.
 
-It does **not** prove that the full racing prototype builds, runs, or is playable.
+## Controls
 
-## Build locally
+| Button | Action |
+|---|---|
+| A | Accelerate |
+| B | Brake |
+| X | Boost |
+| D-pad Left / Right | Adjust lane position |
+| START | Pause / resume |
+| Y | Reset race or restart after finish |
 
-With devkitPro's GameCube/Wii toolchain installed:
+## What has been verified
 
-```sh
-export DEVKITPRO=/opt/devkitpro
-export DEVKITPPC="$DEVKITPRO/devkitPPC"
-make
-```
+The GitHub Actions workflow compiles the C program with devkitPPC/libogc into a non-empty `boonta_demo.dol` and uploads it as a short-lived build artifact. This is a **compile result only**. The DOL has not yet been confirmed to boot in Dolphin or on physical hardware, and the visual/gameplay behavior must still be tested.
 
-The expected output is `boonta_smoke.dol`.
+The current build run is linked from the [repository Actions page](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-smoke.yml).
 
-## Next steps
+## Build in the cloud
 
-1. Get a green CI build for this smoke test.
-2. Download the artifact from the GitHub Actions run and boot it in Dolphin.
-3. Separately review the Step 102 archive and import only source/code/assets with acceptable provenance.
-4. Run the prototype's host tests, then attempt the full GameCube build.
+The repository contains a Codespaces dev-container configuration and a [cloud-development guide](../docs/CLOUD_DEV_WORKFLOW.md). No local toolchain needs to be installed. Codespaces usage is limited on free personal plans; stop it when idle and never enable paid billing for this project.
 
-No commercial ROM, disc image, or extracted game asset belongs in this folder.
+## Important limitations
+
+- This is a first gameplay experiment, not the complete Step 102 prototype, and not a remaster.
+- There are no rival racers, imported original tracks, menus, championship/save system, or final art/audio yet.
+- The full Step 102 archive remains outside the repository while code licensing, third-party provenance, and asset redistribution rights are reviewed.
+- The DOL needs an actual emulator/hardware runtime test before we call the prototype playable.
+
+No commercial ROM, disc image, or extracted commercial game asset belongs in this directory.
