@@ -1,37 +1,30 @@
-# Next milestone: restore the native GameCube/Wii prototype in CI
+# Next milestone: runtime-test the clean-room GameCube driving prototype
 
-## Goal
+## Current confirmed progress
 
-Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The next milestone is not another Dreamcast screen: it is a reviewed source-only import, automated host tests, and the first native GameCube cross-build.
-
-## Audit findings
-
-- The source archive `Star_Wars_Racer_GameCube_Step102.zip` is available in the project history/library and has been inspected.
-- It contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, docs, and host tests.
-- The archive README describes 25 course entries, 23 pod presets/variants, physics, drift/boost/heat/damage, rival AI, pickups/hazards, several race modes, HUD, and save/progression scaffolding.
-- The host release suite passed in a clean temporary environment: host shell checks and 91 Python unit tests passed. This is not a native target build.
-- The archive README explicitly says that a real devkitPPC/libogc `.dol` build and Dolphin/console runtime test remain pending.
-- The source prototype has not yet been imported into this GitHub repository. The existing native workflow intentionally stops until its source tree is present.
-- The separate Dreamcast starter and its CI artifact do not validate the GameCube/Wii prototype.
+- The separate clean-room C prototype in `gamecube/source/main.c` now builds into a non-empty `boonta_demo.dol` through GitHub Actions.
+- The prototype draws a procedural ring track, pylons, finish marker, original low-poly pod, chase camera, and HUD, with acceleration, braking, boost/heat, lateral movement, pause/reset, and a three-lap finish state implemented in code.
+- The latest confirmed native cross-build is the [GameCube prototype workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-smoke.yml).
+- Repository safety and CodeQL have also passed on a recent branch revision.
+- **Not verified yet:** booting the DOL, graphics, controller input, complete race behavior, or performance in Dolphin/console.
+- The Step 102 source archive remains outside the repo pending its separate code/asset provenance review.
 
 ## Work sequence
 
-1. Review the source archive's provenance, license, generated route data, and assets.
-2. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
-3. Run the host test suite in GitHub Actions.
-4. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
-5. Inspect the first compiler failure if any and fix it without disabling tests.
-6. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
-7. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
+1. Keep the build/safety/static-analysis checks green.
+2. Download the `boonta-gamecube-demo-dol` artifact from the Actions run while it is retained (seven days) and test it in Dolphin.
+3. Record whether it boots, whether the image is rendered, and whether the controller responds. Do not infer gameplay success from a successful compile.
+4. Prepare a path-by-path source import manifest for Step 102; classify original code candidates, tests/tools/docs, and files that must be held for provenance/license review.
+5. Confirm whether the user-authored/source archive code can be redistributed under the intended project license. Keep PC mod centerlines, uncertain sample audio/models, ROMs, and extracted commercial files excluded.
+6. Import only the cleared source files on a separate review branch; run host tests and build the real prototype.
+7. Extend the first vertical slice based on observed runtime issues, not guesses.
 
-## Acceptance criteria
+## Owner-only actions
 
-- Source provenance and redistribution boundaries are documented.
-- Host tests pass in GitHub Actions.
-- Native GameCube cross-build produces a non-empty DOL.
-- Compile success and emulator/hardware testing are reported separately.
-- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
+- To use the optional Gemini GitHub agent, create a free Gemini API key and add it as the repository secret `GEMINI_API_KEY`. Do not enable billing. See [AI automation setup](AI_AUTOMATION_SETUP.md).
+- To test interactively without local installs, create a Codespace on `audit/step102-import-gate`; stop/delete it afterward to respect free quotas. See [cloud guide](CLOUD_DEV_WORKFLOW.md).
+- For Dolphin runtime proof, a person must open/download the artifact and run it in Dolphin on an appropriate environment. The automated compile cannot substitute for this visual check.
 
-## What the project owner needs to do now
+## Free-only policy
 
-Nothing needs to be installed locally for this planning step. Keep the source archive available in the ChatGPT Library. The work can continue in GitHub with cloud CI; an actual emulator/console run may still require a separate runtime environment.
+Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas can change; stop if a quota is unavailable or exhausted.
