@@ -190,6 +190,67 @@ static void test_three_lap_finish(void)
     assert(state.angle == angle);
 }
 
+
+static void test_frame_rate_independence(void)
+{
+    RaceState pal;
+    RaceState ntsc;
+    RaceInput input = neutral_input();
+
+    race_reset(&pal);
+    race_reset(&ntsc);
+    pal.speed = 10.0f;
+    ntsc.speed = 10.0f;
+    input.accelerate = 1;
+    input.boost = 1;
+    input.left = 1;
+
+    /* Simulate the same half-second at 50 Hz (PAL) and 60 Hz (NTSC). */
+    for (int i = 0; i < 25; ++i) {
+        race_update_dt(&pal, &input, 0.02f);
+    }
+    for (int i = 0; i < 30; ++i) {
+        race_update_dt(&ntsc, &input, 1.0f / 60.0f);
+    }
+
+    assert(fabsf(pal.speed - ntsc.speed) < 0.01f);
+    assert(fabsf(pal.lane_offset - ntsc.lane_offset) < 0.001f);
+    assert(fabsf(pal.boost_energy - ntsc.boost_energy) < 0.002f);
+    assert(fabsf(pal.engine_heat - ntsc.engine_heat) < 0.002f);
+    assert(fabsf(pal.angle - ntsc.angle) < 0.01f);
+}
+
+static void test_invalid_and_long_frame_deltas_are_safe(void)
+{
+    RaceState reference;
+    RaceState invalid_delta;
+    RaceState long_delta;
+    RaceInput input = neutral_input();
+
+    race_reset(&reference);
+    race_reset(&invalid_delta);
+    reference.speed = 8.0f;
+    invalid_delta.speed = 8.0f;
+    reference.angle = 1.0f;
+    invalid_delta.angle = 1.0f;
+    input.accelerate = 1;
+    input.left = 1;
+
+    race_update(&reference, &input);
+    race_update_dt(&invalid_delta, &input, NAN);
+    assert(fabsf(reference.speed - invalid_delta.speed) < 0.0001f);
+    assert(fabsf(reference.angle - invalid_delta.angle) < 0.0001f);
+    assert(fabsf(reference.lane_offset - invalid_delta.lane_offset) < 0.0001f);
+
+    race_reset(&long_delta);
+    long_delta.speed = 48.0f;
+    race_update_dt(&long_delta, &input, 1000.0f);
+    assert(long_delta.angle > 0.0f);
+    assert(long_delta.angle < 0.2f);
+    assert(long_delta.completed_laps == 0);
+}
+
+
 int main(void)
 {
     test_reset();
@@ -199,6 +260,8 @@ int main(void)
     test_pause_freezes_motion_and_reset_unpauses();
     test_opponents_progress_and_position();
     test_three_lap_finish();
-    puts("race_logic_test: 7 suites passed");
+    test_frame_rate_independence();
+    test_invalid_and_long_frame_deltas_are_safe();
+    puts("race_logic_test: 9 suites passed");
     return 0;
 }
