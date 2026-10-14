@@ -46,11 +46,53 @@ def validate_member(name: str) -> str:
     if path.parts[0] not in ALLOWED_TOP:
         raise ValueError(f"Unexpected top-level path: {name}")
     low = normalized.lower()
-    if normalized in BLOCKED_EXACT or any(low.startswith(p) for p in BLOCKED_PREFIXES):
+    # Exact blocked paths must be case-insensitive just like prefixes/suffixes.
+    if low in {item.lower() for item in BLOCKED_EXACT} or any(
+        low.startswith(p.lower()) for p in BLOCKED_PREFIXES
+    ):
         raise ValueError(f"Blocked provenance path: {name}")
     if low.endswith(BLOCKED_SUFFIXES):
         raise ValueError(f"Blocked binary/media suffix: {name}")
     return normalized
+
+
+def validate_unique_member(name: str, seen: set[str]) -> str:
+    """Reject duplicate archive paths even when their case differs."""
+    key = name.casefold()
+    if key in seen:
+        raise ValueError(f"Duplicate archive member rejected (case-insensitive): {name}")
+    seen.add(key)
+    return name
+
+
+def preflight_destinations(
+    planned: list[tuple[str, bytes]], root: Path = ROOT
+) -> list[tuple[Path, str, bytes]]:
+    """Validate every output path before writing any imported file."""
+    destinations: list[tuple[Path, str, bytes]] = []
+    root_resolved = root.resolve()
+    for relative, content in planned:
+        relative_path = PurePosixPath(relative)
+        if (
+            relative_path.is_absolute()
+            or relative_path.as_posix() != relative
+            or not relative_path.parts
+            or ".." in relative_path.parts
+        ):
+            raise ValueError(f"Unsafe destination path: {relative!r}")
+        destination = root.joinpath(*relative_path.parts)
+        parent = root
+        for component in relative_path.parts[:-1]:
+            parent = parent / component
+            if parent.is_symlink():
+                raise ValueError(f"Refusing to write through a symlinked directory: {parent}")
+        resolved_destination = destination.resolve(strict=False)
+        if not resolved_destination.is_relative_to(root_resolved):
+            raise ValueError(f"Destination escapes repository root: {relative}")
+        if destination.exists() or destination.is_symlink():
+            raise ValueError(f"Refusing to overwrite an existing repository file: {relative}")
+        destinations.append((destination, relative, content))
+    return destinations
 
 
 def main() -> int:
@@ -89,9 +131,10 @@ def main() -> int:
             if not member.isfile():
                 raise SystemExit(f"Non-regular archive member rejected: {member.name}")
             name = validate_member(member.name)
-            if name in seen:
-                raise SystemExit(f"Duplicate archive member rejected: {name}")
-            seen.add(name)
+            try:
+                validate_unique_member(name, seen)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
             src = archive.extractfile(member)
             if src is None:
                 raise SystemExit(f"Could not read archive member: {name}")
@@ -154,11 +197,13 @@ def main() -> int:
     if not planned:
         raise SystemExit("The import bundle is empty.")
 
-    # Validate the full member list before writing any file.
-    for relative, content in planned:
-        destination = ROOT / relative
-        if destination.exists():
-            raise SystemExit(f"Refusing to overwrite an existing repository file: {relative}")
+    # Validate every destination before writing any file to avoid partial imports.
+    try:
+        destinations = preflight_destinations(planned)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    for destination, relative, content in destinations:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
 
