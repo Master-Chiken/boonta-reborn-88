@@ -81,6 +81,7 @@ jobs:
   dolphin-smoke:
     needs: build
     runs-on: ubuntu-26.04
+    timeout-minutes: 3
     steps:
       - name: Download the freshly built DOL
         uses: actions/download-artifact@v4
@@ -131,5 +132,65 @@ jobs:
         with:
           name: dolphin-smoke-evidence
           path: dolphin-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  dolphin-visual:
+    needs: [build, dolphin-smoke]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 3
+    steps:
+      - name: Download the freshly built DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-build-evidence
+          path: build-artifact
+
+      - name: Install Dolphin, virtual display, and screenshot utility
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dolphin-emu xvfb imagemagick
+
+      - name: Try rendering the DOL and capture the first frame
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DOL="$PWD/build-artifact/swe1r_gc_port.dol"
+          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-visual-user"
+          export LOG="$PWD/dolphin-visual.log"
+          export SCREEN="$PWD/dolphin-frame.png"
+          set +e
+          xvfb-run -a bash -c '
+            set +e
+            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
+            pid=$!
+            sleep 8
+            import -window root "$SCREEN"
+            capture_status=$?
+            kill -TERM "$pid" 2>/dev/null || true
+            sleep 1
+            kill -KILL "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            exit "$capture_status"
+          '
+          status=$?
+          set -e
+          cat dolphin-visual.log
+          if [[ "$status" -ne 0 ]]; then
+            echo "::error::Could not capture a Dolphin software-renderer frame (status $status)."
+            exit "$status"
+          fi
+          test -s dolphin-frame.png
+          identify dolphin-frame.png
+          echo "Frame captured for visual inspection; this does not prove controller input or a completed race."
+
+      - name: Upload Dolphin visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-visual-evidence
+          path: |
+            dolphin-visual.log
+            dolphin-frame.png
           if-no-files-found: warn
           retention-days: 7
