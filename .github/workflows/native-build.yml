@@ -79,3 +79,76 @@ jobs:
             swe1r_gc_port.elf.map
           if-no-files-found: error
           retention-days: 7
+
+  dolphin-visible-preview:
+    name: Capture a rendered Dolphin frame
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Download the compiled DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-step102-source-only
+          path: dist
+      - name: Install free Dolphin, Xvfb, OpenGL software renderer, and screenshot tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri
+          rm -rf /var/lib/apt/lists/*
+          export PATH="/usr/games:$PATH"
+          dolphin-emu --version
+      - name: Launch with graphics enabled and capture the desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts dolphin-user
+          export PATH="/usr/games:$PATH"
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24" bash -lc '
+            set -euo pipefail
+            export PATH="/usr/games:$PATH"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export QT_QPA_PLATFORM=xcb
+            ./dist/swe1r_gc_port.dol >/dev/null 2>&1 || true
+          '
+        # The DOL must be opened by Dolphin, not executed as a Linux binary.
+        # Run Dolphin separately so the virtual desktop can be captured.
+      - name: Capture Dolphin window output
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/games:$PATH"
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24" bash -lc '
+            set -euo pipefail
+            export PATH="/usr/games:$PATH"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export QT_QPA_PLATFORM=xcb
+            mkdir -p artifacts dolphin-user
+            dolphin-emu --batch --video_backend=OGL --exec=dist/swe1r_gc_port.dol --user="$PWD/dolphin-user" > artifacts/dolphin-visible.log 2>&1 &
+            dolphin_pid=$!
+            cleanup() {
+              kill -TERM "$dolphin_pid" 2>/dev/null || true
+              wait "$dolphin_pid" 2>/dev/null || true
+            }
+            trap cleanup EXIT
+            sleep 8
+            kill -0 "$dolphin_pid"
+            import -window root artifacts/dolphin-preview.png
+            identify -format "Captured frame: %wx%h, %[channels], %b\\n" artifacts/dolphin-preview.png
+            test -s artifacts/dolphin-preview.png
+          '
+      - name: Upload screenshot and runtime log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-visible-frame-preview
+          path: |
+            artifacts/dolphin-preview.png
+            artifacts/dolphin-visible.log
+          if-no-files-found: warn
+          retention-days: 7
