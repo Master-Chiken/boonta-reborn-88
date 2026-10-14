@@ -36,3 +36,8 @@ L'agent peut alors préparer les changements via les outils GitHub disponibles. 
 ## Référence technique
 
 L'action s'appuie sur le projet officiel [google-github-actions/run-gemini-cli](https://github.com/google-github-actions/run-gemini-cli). Le workflow est déclenché à la demande, et non sur chaque push. Si un run échoue, consulte l'onglet **Actions** du dépôt et ne partage jamais la clé API dans les logs ou commentaires.
+
+
+## Keep the setup on the free tier
+
+The workflows are configured to request `gemini-3.8-flash`, which the current official Gemini API pricing page lists with free-tier input/output pricing. This does not mean unlimited usage: rate limits apply and Google may change model availability, quotas, or prices. To avoid paid usage, do not link a billing account or upgrade the project to a paid tier. If the free quota is unavailable or exhausted, a run may fail with a quota/rate-limit error; do not enable billing just to clear that error without checking the current pricing first. See the [official pricing page](https://ai.google.dev/gemini-api/docs/pricing) and [rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits).
