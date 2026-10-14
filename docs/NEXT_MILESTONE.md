@@ -30,6 +30,10 @@ Do not choose the final native target by assumption. Keep GameCube and Wii open 
 
 The intended order remains: faithful original-game baseline first; then the best graphics upgrades feasible within native console limits; then original bonus content. “HD” must distinguish higher-quality assets and enhanced rendering from native 720p/1080p output, which should not be promised for GameCube/Wii.
 
+## PC-first research direction
+
+The original Windows PC game and existing community reverse-engineering/modding work are now the primary research starting point. Follow the [PC-first research and reuse plan](PC_FIRST_RESEARCH_PLAN.md) before implementing systems from scratch. This research plan distinguishes code/tool licenses from rights to the game's proprietary content; no ROMs, executables or extracted commercial assets should be committed.
+
 ## Work sequence toward the actual end goal
 
 1. Keep the build/safety/static-analysis checks green, but do not mistake the procedural `gamecube/` demo for the intended game.
