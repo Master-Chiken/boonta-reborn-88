@@ -178,13 +178,16 @@ jobs:
               echo "Found visible Dolphin window: $window" >> "$LOG"
               sleep 2
               import -window "$window" "$SCREEN"
+              capture_status=$?
             else
               echo "No visible Dolphin window appeared within 30 seconds." >> "$LOG"
+              echo "--- Dolphin process state ---" >> "$LOG"
+              ps -eo pid,ppid,stat,etime,args | grep -E "[d]olphin-emu|[d]olphin" >> "$LOG" || true
               import -window root "$SCREEN"
-              exit 1
+              capture_status=1
             fi
-            capture_status=$?
-            find "$DOLPHIN_USER" -maxdepth 5 -type f -name "*.log" -print -exec cat {} \; >> "$LOG" 2>/dev/null || true
+            echo "--- Dolphin user logs ---" >> "$LOG"
+            find "$DOLPHIN_USER" -maxdepth 6 -type f \( -name "*.log" -o -name "*.txt" \) -print -exec tail -n 200 {} \; >> "$LOG" 2>/dev/null || true
             kill -TERM "$pid" 2>/dev/null || true
             sleep 1
             kill -KILL "$pid" 2>/dev/null || true
