@@ -1,6 +1,5 @@
 # Standalone clean-room GameCube build smoke test.
 # This is deliberately separate from the full Step 102 prototype.
-include $(DEVKITPPC)/gamecube_rules
 
 TARGET := boonta_smoke
 BUILD := build
