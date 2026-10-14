@@ -17,6 +17,8 @@ typedef struct RaceState {
     int paused;
     int finished;
     int boost_active;
+    int collision_flash_frames;
+    float opponent_bump_cooldowns[RACE_OPPONENT_COUNT];
     float opponent_angles[RACE_OPPONENT_COUNT];
     float opponent_lanes[RACE_OPPONENT_COUNT];
     float opponent_speeds[RACE_OPPONENT_COUNT];
