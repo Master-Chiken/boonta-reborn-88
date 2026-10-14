@@ -65,20 +65,21 @@ static void test_acceleration_braking_and_speed_limit(void)
     assert(state.speed <= 48.0f);
 }
 
-static void test_lane_clamping(void)
+static void test_lane_clamping_and_steering_direction(void)
 {
     RaceState state;
     RaceInput input = neutral_input();
     race_reset(&state);
 
+    /* Left is toward the inside of the ring when facing forward at angle zero. */
     input.left = 1;
     for (int i = 0; i < 100; ++i) race_update(&state, &input);
-    assert(fabsf(state.lane_offset - 2.7f) < 0.001f);
+    assert(fabsf(state.lane_offset + 2.7f) < 0.001f);
 
     input.left = 0;
     input.right = 1;
     for (int i = 0; i < 200; ++i) race_update(&state, &input);
-    assert(fabsf(state.lane_offset + 2.7f) < 0.001f);
+    assert(fabsf(state.lane_offset - 2.7f) < 0.001f);
 }
 
 static void test_boost_heat_and_recharge(void)
@@ -193,7 +194,7 @@ int main(void)
 {
     test_reset();
     test_acceleration_braking_and_speed_limit();
-    test_lane_clamping();
+    test_lane_clamping_and_steering_direction();
     test_boost_heat_and_recharge();
     test_pause_freezes_motion_and_reset_unpauses();
     test_opponents_progress_and_position();
