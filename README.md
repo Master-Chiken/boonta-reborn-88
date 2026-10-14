@@ -2,20 +2,20 @@
 
 An unofficial research and homebrew project aiming toward an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), with GameCube/Wii as the primary native targets.
 
-This is **not yet a finished remaster or verified native port**. The main blocker is to bring the existing Step 102 source prototype into this GitHub repository, run its host-side regression suite in CI, and obtain the first real devkitPPC/libogc GameCube build.
+This is **not yet a finished remaster or verified native port**. The source-only Step 102 prototype is now imported on the open draft PR branch. The immediate blocker is obtaining a clean devkitPPC/libogc GameCube build, then validating the DOL in Dolphin.
 
 ## Project direction
 
 - **Primary target:** native GameCube/Wii homebrew prototype.
-- **Existing source of truth:** `Star_Wars_Racer_GameCube_Step102.zip`, audited separately from this repository. It contains C gameplay/rendering code, a GameCube Makefile, research/build tools, documentation, and host-side tests.
+- **Imported source baseline:** Step 102 native C gameplay/rendering code, the GameCube Makefile, tools, and host-side tests now live in `source/`, `data/`, `tools/`, `tests/`, and the root `Makefile` on PR #22's working branch.
 - **Prototype scope described by its README:** 25-course catalog, 23 vehicle presets/variants, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, single race, championship, time trial, Mirror Cup, HUD, and save/progression scaffolding.
-- **Host tests:** I ran the archive's host release suite in a clean temporary environment. All host shell checks and 91 Python unit tests passed after restoring the executable bits encoded in the ZIP. This is not a native GameCube build and is not a runtime test.
+- **Host tests:** the source-import GitHub Actions workflow passed all 32 host shell checks and 5 Python policy tests. The native-build workflow also passed its static source preflight; the first compiler attempt exposed outdated libogc constants, which are being corrected. Host tests are not runtime proof.
 - **Native executable:** no verified `.dol` is currently present in this GitHub repository. A real devkitPPC/libogc cross-build and Dolphin/console boot test remain outstanding.
 - **Separate exploratory track:** `dreamcast/` is a small clean-room KallistiOS starter. It is not the main game prototype and must not be confused with the GameCube/Wii code.
 
 ## Current repository limitation
 
-The native-build workflow is prepared to run when `Makefile`, `source/`, `include/`, `data/`, `tools/`, and `tests/` from the source prototype are present. They have **not yet been imported into this repository**, so the GameCube workflow cannot produce the game's DOL yet.
+The native-build workflow now checks the imported source, runs the static preflight and host suite, then attempts the devkitPPC/libogc build. A non-empty `.dol` and a Dolphin/console smoke test are still unverified.
 
 ## Legal and asset policy
 
