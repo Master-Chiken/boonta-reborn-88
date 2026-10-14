@@ -60,8 +60,12 @@ void race_update(RaceState *state, const RaceInput *input)
         return;
     }
 
-    if (input->left) state->lane_offset += 0.055f;
-    if (input->right) state->lane_offset -= 0.055f;
+    /*
+     * At angle zero the pod travels toward +Z; its left side points toward
+     * the inside of the ring (-X). Keep left/right consistent with that basis.
+     */
+    if (input->left) state->lane_offset -= 0.055f;
+    if (input->right) state->lane_offset += 0.055f;
     state->lane_offset = clamp(state->lane_offset, -2.7f, 2.7f);
 
     if (input->accelerate) {
