@@ -46,7 +46,10 @@ def validate_member(name: str) -> str:
     if path.parts[0] not in ALLOWED_TOP:
         raise ValueError(f"Unexpected top-level path: {name}")
     low = normalized.lower()
-    if normalized in BLOCKED_EXACT or any(low.startswith(p) for p in BLOCKED_PREFIXES):
+    # Exact blocked paths must be case-insensitive just like prefixes/suffixes.
+    if low in {item.lower() for item in BLOCKED_EXACT} or any(
+        low.startswith(p.lower()) for p in BLOCKED_PREFIXES
+    ):
         raise ValueError(f"Blocked provenance path: {name}")
     if low.endswith(BLOCKED_SUFFIXES):
         raise ValueError(f"Blocked binary/media suffix: {name}")
