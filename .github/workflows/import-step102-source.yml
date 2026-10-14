@@ -8,7 +8,7 @@ on:
       - .import/READY
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: step102-source-only-import
@@ -128,6 +128,8 @@ jobs:
     name: Commit after host tests, native build, and smoke test
     needs: [host-validation, native-build, dolphin-smoke]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Check out import branch
         uses: actions/checkout@v4
