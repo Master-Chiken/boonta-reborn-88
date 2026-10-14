@@ -406,10 +406,38 @@ static void test_track_length_controls_world_speed_progress(void)
     assert(fabsf(state.angle - (10.6f * 0.05f / 22.0f)) < 0.0001f);
 }
 
+
+static void test_track_length_scales_opponent_progress(void)
+{
+    RaceState short_track;
+    RaceState long_track;
+    RaceInput input = neutral_input();
+
+    race_reset(&short_track);
+    race_reset(&long_track);
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        short_track.opponent_angles[i] = 2.0f;
+        long_track.opponent_angles[i] = 2.0f;
+        short_track.opponent_speeds[i] = 10.0f;
+        long_track.opponent_speeds[i] = 10.0f;
+    }
+
+    race_update_track_dt(&short_track, &input, 0.05f, 100.0f);
+    race_update_track_dt(&long_track, &input, 0.05f, 200.0f);
+
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        float short_delta = short_track.opponent_angles[i] - 2.0f;
+        float long_delta = long_track.opponent_angles[i] - 2.0f;
+        assert(short_delta > 0.0f);
+        assert(fabsf(short_delta - 2.0f * long_delta) < 0.0001f);
+    }
+}
+
 int main(void)
 {
     test_reset();
     test_track_length_controls_world_speed_progress();
+    test_track_length_scales_opponent_progress();
     test_acceleration_braking_and_speed_limit();
     test_lane_clamping_and_steering_direction();
     test_boost_heat_and_recharge();
@@ -422,6 +450,6 @@ int main(void)
     test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 14 suites passed");
+    puts("race_logic_test: 15 suites passed");
     return 0;
 }
