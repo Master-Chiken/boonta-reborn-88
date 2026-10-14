@@ -61,6 +61,16 @@ jobs:
             -lm -o /tmp/race_logic_test
           /tmp/race_logic_test
 
+      - name: Compile portable track path tests with warnings as errors
+        run: |
+          set -euo pipefail
+          cc -std=c99 -Wall -Wextra -Werror \
+            -I gamecube/source \
+            gamecube/tests/track_path_test.c \
+            gamecube/source/track_path.c \
+            -lm -o /tmp/track_path_test
+          /tmp/track_path_test
+
   dolphin-runtime-smoke:
     name: Headless Dolphin process smoke test (null video backend)
     needs: [build-smoke-test, host-race-logic-tests]
