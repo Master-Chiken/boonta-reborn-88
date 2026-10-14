@@ -1,6 +1,6 @@
 # Step 102 vs. PC decompilation: physics comparison
 
-**Scope:** this review compares the recovered Step 102 source-only bundle with the public `SW_RACER_RE` PC research tree. It is a source-level comparison, not a claim of original-game numerical equivalence. The Step 102 source remains on the review branch/workspace until its import is completed.
+**Scope:** this review compares the recovered Step 102 source-only bundle with the public `SW_RACER_RE` PC research tree. It is a source-level comparison, not a claim of original-game numerical equivalence. The Step 102 source is imported on the `work/step102-import-gate` branch in PR #22; this remains a source-level comparison, not a claim of original-game numerical equivalence.
 
 ## What the Step 102 code currently does
 
@@ -35,15 +35,15 @@ The Step 102 field is named `boost_heat`: 0 is cool, 100 is overheated, and the 
 
 ## Existing regression coverage
 
-The recovered `tests/test_racer_physics.c` already checks acceleration/braking/steering, drift charging and slip recovery, boost energy, overheat/cooling, temporary over-speed and smooth release, damage penalties, lap crossing and road-edge penalties. Those tests protect the Step 102 model; they do **not** by themselves prove parity with the original PC game.
+The `tests/test_racer_physics.c` suite checks acceleration/braking/steering, drift charging and slip recovery, boost energy, overheat/cooling, temporary over-speed and smooth release, damage penalties, lap crossing and road-edge penalties. Two additional regression checks were committed on 2026-10-14: (1) `dt=1.0 s` is clamped to the same physics result as `dt=0.05 s`, and (2) larger Step 102 direct-acceleration values accelerate more strongly than smaller values, guarding against accidentally copying the PC research tree's inverse-denominator semantics. GitHub Actions run 38648123079 reports the host regression suite and native GameCube build successful; the separate visual runtime check is still pending. These tests protect the Step 102 model; they do **not** by themselves prove parity with the original PC game.
 
 ## Next evidence-driven tasks
 
-1. Import the project-authored Step 102 source and host tests to the repository branch, excluding the archive cache and any uncleared derived assets/data.
-2. Add parameterized tests for acceleration and coast-down curves across multiple pods; record output values so later reference captures can be compared.
-3. Add tests for time-to-overheat and cooldown hysteresis at several `dt` values, including the 0.05 s clamp.
-4. Inspect the exact PC source statements and symbols for the named parameters, then record each observed equation and confidence level. Do not infer an equation solely from a variable name.
-5. Build with devkitPPC/libogc and test in Dolphin before describing any of these systems as a working GameCube game.
+1. Add parameterized tests for acceleration and coast-down curves across multiple pods; record output values so later reference captures can be compared.
+2. Add tests for time-to-overheat and cooldown hysteresis at several `dt` values, including the 0.05 s clamp.
+3. Inspect the exact PC source statements and symbols for the named parameters, then record each observed equation and confidence level. Do not infer an equation solely from a variable name.
+4. Diagnose the queued Dolphin visual job; inspect the captured frame and fix any real initialization/rendering defect without weakening the all-black-frame guard.
+5. Verify controller navigation and whether a race can be completed before describing the native build as playable.
 
 ## References
 
