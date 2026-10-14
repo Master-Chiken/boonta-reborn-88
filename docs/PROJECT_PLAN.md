@@ -2,82 +2,85 @@
 
 ## Objective
 
-Investigate a realistic path toward an enhanced Star Wars: Episode I — Racer experience on GameCube and Wii, without assuming that PC reverse-engineering work is directly portable to those consoles.
+Build toward a playable enhanced racing prototype inspired by *Star Wars: Episode I — Racer*, with native GameCube/Wii homebrew as the primary target. This is a staged engineering project, not a claim that a full remaster is already available.
+
+## Confirmed inputs and findings
+
+- The source archive `Star_Wars_Racer_GameCube_Step102.zip` has been inspected.
+- It contains C source modules, a GameCube Makefile, tests, research tools, documentation, and prototype assets.
+- The archive describes a source prototype with 25 course entries, 23 vehicle/pod presets and variants, physics, rival AI, items, race modes, UI, and progression scaffolding.
+- Its host release suite passed in a temporary environment: host shell checks and 91 Python unit tests passed. This does not establish a native cross-build.
+- The archive itself says the real devkitPPC/libogc `.dol` build and Dolphin/console runtime test are still pending.
+- The source archive has not yet been imported into this GitHub repository. The existing native workflow checks for the source tree and fails early until it is present.
+- The Dreamcast/KallistiOS starter is a separate experiment, not the main target.
 
 ## Guiding decisions
 
-1. **Audit before implementation.** Check the prototype archive, its provenance, source code, dependencies, licenses, and existing build scripts before trusting or importing it.
-2. **Use a small proof of concept.** First prove the chosen toolchain and target environment with a minimal homebrew executable; do not start by promising a full remaster.
-3. **Keep two tracks distinct.**
-   - Track A: quick baseline using existing N64 emulation on Wii/Cube-compatible homebrew, if compatible with the user's own game copy.
-   - Track B: native port or reimplementation for GameCube/Wii, which requires separate engine, asset-format, input, audio, graphics, storage, and performance work.
-4. **Test evidence matters.** Record exact versions, commands, expected outputs, and actual results. Never label a build as working without a build/test result.
-5. **Keep copyrighted game content out of the public repository.** No ROMs, disc images, extracted proprietary assets, or copied code of unclear origin.
+1. **Use the right source of truth.** Work from the Step 102 GameCube/Wii prototype, not from the Dreamcast smoke-test branch.
+2. **Audit before publishing.** Check code provenance, license compatibility, asset rights, and generated data before importing files into a public repository.
+3. **Cloud-first build.** Prefer GitHub Actions/devkitPro containers to avoid requiring local toolchain installation or large downloads on the user's computer.
+4. **Test evidence matters.** Record exact commands and results. Never label a host test as a native build or a successful compile as a working game.
+5. **Keep copyrighted content out of the public repository.** No ROMs, disc images, BIOS files, or unclear extracted commercial payloads.
 
 ## Phases and acceptance criteria
 
-### Phase 0 — Repository and prototype audit
-- [x] Create public repository with README, .gitignore, and license.
-- [x] Add initial project plan, research notes, and build guide.
-- [ ] Inspect the existing prototype archive without modifying the only copy.
-- [ ] Identify language, source files, dependencies, licenses, and target platform.
-- [ ] Decide whether any part is safe and useful to import.
+### Phase 0 — Prototype audit
+- [x] Create public repository and initial documentation.
+- [x] Inspect the Step 102 source archive.
+- [x] Identify source modules, build scripts, tests, target, and limitations.
+- [ ] Finish code/license/provenance review of external dependencies and generated route data.
+- [ ] Select the exact source/assets subset safe to publish.
 
-**Exit criterion:** a file inventory and a concise assessment that distinguishes verified contents from assumptions.
+**Exit criterion:** a reviewed source-only import list and clear provenance notes.
 
-### Phase 1 — Select the technical baseline
-- [ ] Confirm what executable/source material actually exists.
-- [ ] Compare a Wii N64-emulator baseline with a native homebrew baseline.
-- [ ] Establish the exact development toolchain and a minimal build procedure.
-- [ ] Review relevant third-party licenses before reusing code or tooling.
+### Phase 1 — Import and automated host tests
+- [ ] Import cleared GameCube/Wii source, headers, Makefile, tests, tools, and build docs.
+- [ ] Run host checks in GitHub Actions.
+- [ ] Fix CI failures without disabling or weakening tests.
 
-**Exit criterion:** a documented architecture decision based on inspected files and a reproducible minimal build.
+**Exit criterion:** the source tree exists in GitHub and the host test suite passes in CI.
 
-### Phase 2 — First bootable test
-- [ ] Create the smallest homebrew test that can be launched on the selected target or emulator.
-- [ ] Record target, hardware/emulator version, build command, and result.
-- [ ] Keep generated binaries and images out of Git; attach only lawful logs or screenshots if needed.
+### Phase 2 — First native build
+- [ ] Build with devkitPPC/libogc in GitHub Actions.
+- [ ] Archive the DOL/ELF and compiler log.
+- [ ] Fix actual cross-compiler errors.
 
-**Exit criterion:** a reproducible test with documented evidence. A test app is not a game port.
+**Exit criterion:** a non-empty `swe1r_gc_port.dol` is produced by the native toolchain.
 
-### Phase 3 — Feasibility of the game
-- [ ] Identify which game version and data formats are being studied.
-- [ ] Verify whether PC-oriented asset tools can parse any relevant console-format data; do not assume they can.
-- [ ] Map high-level subsystems: rendering, track geometry, vehicles/physics, controls, audio, menus, save data, and resource loading.
-- [ ] Estimate what must be reimplemented versus what could be reused lawfully.
+### Phase 3 — First runtime validation
+- [ ] Run the DOL in Dolphin or on suitable hardware.
+- [ ] Record whether it boots, draws a frame, reads controller input, and starts a race.
+- [ ] Fix the first runtime blocker.
 
-**Exit criterion:** subsystem inventory and an evidence-backed feasibility assessment.
+**Exit criterion:** a repeatable boot and input test. Compilation alone is not sufficient.
 
-### Phase 4 — Vertical slice
-Only after a viable architecture is selected:
-- [ ] Load one small test scene or track.
-- [ ] Display one vehicle and accept basic input.
-- [ ] Test stable frame timing and memory use.
-- [ ] Document known limitations before expanding scope.
+### Phase 4 — Playable vertical slice
+- [ ] Load one course with a consistent route, visible road, and collision.
+- [ ] Control one pod with a follow camera.
+- [ ] Validate acceleration, braking, steering, collision, lap timing, and frame pacing.
+- [ ] Record memory and performance limits.
 
-**Exit criterion:** a repeatable, narrowly scoped playable slice.
+**Exit criterion:** a short repeatable playable race on the target environment.
 
-### Phase 5 — Enhanced presentation and bonus features
-Potential later work, only once the base is stable:
-- improved textures/materials and rendering;
-- optional visual effects and quality settings;
-- additional time trials, unlockables, or challenge modes;
-- per-platform configuration and packaging.
+### Phase 5 — Expand and enhance
+Only after the vertical slice is stable:
+- improve original/cleared textures, materials, lighting, and effects;
+- add course-specific scenery and additional vehicles;
+- finish audio, progression, and bonus features;
+- measure performance on GameCube and Wii separately.
 
-Every feature must have a defined implementation and test plan. “HD” should be specified precisely (render resolution, assets, filtering, or emulator upscaling) rather than used as a vague label.
+Define what “HD” means for each target before promising it: native console resolution, replacement assets, rendering changes, or emulator upscaling are different outcomes.
 
-### Phase 6 — Packaging and release
-- [ ] Build and validate each platform target separately.
-- [ ] Determine whether a homebrew executable, installable app, or disc image is appropriate.
-- [ ] Treat Wii WBFS packaging and GameCube image packaging as separate tasks.
-- [ ] Test output in an emulator and, where available, on real hardware.
-- [ ] Publish only original code and material that the project is allowed to redistribute.
+### Phase 6 — Packaging
+- [ ] Build and validate GameCube and Wii targets separately.
+- [ ] Determine lawful homebrew executable and packaging formats.
+- [ ] Validate any image conversion separately; a DOL build does not automatically produce a valid NKit ISO or WBFS.
+- [ ] Publish only code and assets that can be redistributed.
 
 ## Definition of done for each task
 
-A task is complete only when:
-- the changed files are committed;
-- the toolchain/command and target are recorded;
-- build/test results are reported truthfully;
-- third-party code/assets have provenance and license notes;
-- generated game images and copyrighted game content remain outside this repository.
+- Changed files are committed in a reviewable branch/PR.
+- Relevant tests and toolchain versions are recorded.
+- Build and runtime results are reported truthfully.
+- Third-party code/assets have provenance and license notes.
+- ROMs, disc images, BIOS files, and uncleared commercial payloads remain outside the repository.
