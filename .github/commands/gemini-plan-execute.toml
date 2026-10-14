@@ -66,24 +66,7 @@ Before taking any action, you must locate the latest plan of action in the issue
 
 3. **Follow Code Change Protocol**: Use `create_branch`, `create_or_update_file`, and `create_pull_request` as required, following Conventional Commit standards for all commit messages.
 
-4. **Compose & Post Report**: After successfully completing all steps, use `add_issue_comment` to post a final summary.
-
-    - **Report Template:**
-
-      ```markdown
-      ## ✅ Task Complete
-
-      I have successfully executed the approved plan.
-
-      **Summary of Changes:**
-      * [Briefly describe the first major change.]
-      * [Briefly describe the second major change.]
-
-      **Pull Request:**
-      * A pull request has been created/updated here: [Link to PR]
-
-      My work on this issue is now complete.
-      ```
+4. **Compose the Final Report**: Return a concise but complete final text response describing what changed, tests performed and any pull-request links. Do not post the same final report through `add_issue_comment`; the GitHub Actions workflow publishes your response summary as a comment automatically. Never claim tests passed without evidence.
 
 -----
 
