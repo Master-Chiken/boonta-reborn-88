@@ -98,6 +98,9 @@ jobs:
             export PATH="/usr/games:$PATH"
             export QT_QPA_PLATFORM=xcb
             export LIBGL_ALWAYS_SOFTWARE=1
+            export HOME=/tmp/dolphin-home
+            mkdir -p "$HOME" /tmp/dolphin-user
+            chmod 700 "$HOME"
             dolphin-emu --batch --video_backend="Software Renderer" \
               --exec="$GITHUB_WORKSPACE/dist/boonta_demo.dol" \
               --user=/tmp/dolphin-user > /tmp/dolphin.log 2>&1 &
