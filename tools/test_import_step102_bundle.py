@@ -44,6 +44,17 @@ class ValidateMemberTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "case-insensitive"):
             importer.validate_unique_member("SOURCE/main.C", seen)
 
+    def test_preflight_rejects_unsafe_relative_paths(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for path in ("../escape.c", "/tmp/escape.c", "source/../escape.c"):
+                with self.subTest(path=path):
+                    with self.assertRaisesRegex(ValueError, "Unsafe destination path"):
+                        importer.preflight_destinations([(path, b"no")], root)
+
     def test_preflight_rejects_existing_file_before_writing(self):
         from pathlib import Path
         from tempfile import TemporaryDirectory
