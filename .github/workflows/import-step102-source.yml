@@ -102,6 +102,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu qt6-qpa-plugins
           export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
           command -v dolphin-emu
           dolphin-emu --version
       - name: Launch the DOL headlessly for 12 seconds
