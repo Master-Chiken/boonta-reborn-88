@@ -93,6 +93,20 @@ def main() -> int:
                         f"CARDFileInfo declarations, found {occurrences}"
                     )
                 content = content.replace(old_type, b"card_file")
+            elif name == "tests/mockogc/ogc/card.h":
+                # Keep the host-only libogc stub compatible with the current
+                # card_file type while retaining its legacy CARDFileInfo API
+                # signatures for the existing syntax test.
+                marker = b"} CARDFileInfo;\\n"
+                occurrences = content.count(marker)
+                if occurrences != 1:
+                    raise SystemExit(
+                        "mockogc card header compatibility check expected one "
+                        f"CARDFileInfo typedef, found {occurrences}"
+                    )
+                content = content.replace(
+                    marker, marker + b"typedef CARDFileInfo card_file;\\n"
+                )
             planned.append((name, content))
 
     if not planned:
