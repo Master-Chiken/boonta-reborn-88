@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Safely unpack the pre-reviewed Step 102 source-only bundle.
 
-This imports plain source, selected tests and build tools only. It rejects
-paths/assets that have unclear redistribution provenance before writing files.
+The base64 transport is split across numbered parts to fit GitHub's text-file
+API. The importer runs only once .import/READY appears after every part is
+uploaded. No network requests or model/API calls are made.
 """
 from __future__ import annotations
 
@@ -14,7 +15,9 @@ import tarfile
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-PAYLOAD = ROOT / ".import" / "step102-source-only.tar.gz.b64"
+BUNDLE_DIR = ROOT / ".import"
+READY = BUNDLE_DIR / "READY"
+PART_GLOB = "step102-part-*.b64part"
 EXPECTED_SHA256 = "35f25fe160c70990768e3b407101b657dfda2ee7a8fac30d0bca743936b1e29b"
 ALLOWED_TOP = {"Makefile", "STEP102_IMPORT_README.md", "data", "source", "tests", "tools"}
 BLOCKED_EXACT = {
@@ -51,11 +54,15 @@ def validate_member(name: str) -> str:
 
 
 def main() -> int:
-    if not PAYLOAD.is_file():
-        print(f"Required import bundle not found: {PAYLOAD}", file=sys.stderr)
+    if not READY.is_file():
+        print("Import bundle not marked ready; refusing to unpack.", file=sys.stderr)
+        return 2
+    parts = sorted(BUNDLE_DIR.glob(PART_GLOB))
+    if not parts:
+        print("No numbered import bundle parts were found.", file=sys.stderr)
         return 2
 
-    encoded = PAYLOAD.read_bytes().strip()
+    encoded = b"".join(part.read_bytes().strip() for part in parts)
     raw = base64.b64decode(encoded, validate=True)
     digest = hashlib.sha256(raw).hexdigest()
     if digest != EXPECTED_SHA256:
@@ -87,9 +94,11 @@ def main() -> int:
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
 
-    PAYLOAD.unlink()
+    for part in parts:
+        part.unlink()
+    READY.unlink()
     try:
-        PAYLOAD.parent.rmdir()
+        BUNDLE_DIR.rmdir()
     except OSError:
         pass
     print(f"Imported {len(planned)} reviewed source-only files from bundle {digest}.")
