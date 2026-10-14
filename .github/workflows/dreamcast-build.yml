@@ -1,0 +1,40 @@
+name: Dreamcast KallistiOS build
+
+on:
+  push:
+    paths:
+      - "dreamcast/**"
+      - ".github/workflows/dreamcast-build.yml"
+  pull_request:
+    paths:
+      - "dreamcast/**"
+      - ".github/workflows/dreamcast-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-dreamcast:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build with KallistiOS container
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE/dreamcast:/project" \
+            -w /project \
+            ghcr.io/kallistiosunchained/dc-kos-toolchain:14.2-stable \
+            make
+
+      - name: Verify ELF output
+        run: test -s dreamcast/boonta_dc.elf
+
+      - name: Upload Dreamcast ELF
+        uses: actions/upload-artifact@v4
+        with:
+          name: boonta-reborn-dreamcast-elf
+          path: dreamcast/boonta_dc.elf
+          if-no-files-found: error
