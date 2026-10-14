@@ -97,7 +97,7 @@ def main() -> int:
                 # Keep the host-only libogc stub compatible with the current
                 # card_file type while retaining its legacy CARDFileInfo API
                 # signatures for the existing syntax test.
-                marker = b"} CARDFileInfo;\\n"
+                marker = b"} CARDFileInfo;\n"
                 occurrences = content.count(marker)
                 if occurrences != 1:
                     raise SystemExit(
@@ -105,7 +105,7 @@ def main() -> int:
                         f"CARDFileInfo typedef, found {occurrences}"
                     )
                 content = content.replace(
-                    marker, marker + b"typedef CARDFileInfo card_file;\\n"
+                    marker, marker + b"typedef CARDFileInfo card_file;\n"
                 )
             planned.append((name, content))
 
