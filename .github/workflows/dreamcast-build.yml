@@ -26,7 +26,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE/dreamcast:/project" \
             -w /project \
-            ghcr.io/kallistios/dc-kos-toolchain:14.2-stable \
+            ghcr.io/kallistiosunchained/dc-kos-toolchain:14.2-stable \
             make
 
       - name: Verify ELF output
