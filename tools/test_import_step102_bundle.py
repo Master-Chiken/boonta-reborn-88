@@ -24,7 +24,7 @@ class ValidateMemberTests(unittest.TestCase):
 
     def test_rejects_exact_blocked_paths_case_insensitively(self):
         for path in (
-            "DATA/REFERENCE/PC_TRACK_IMPORT_MANIFEST.JSON",
+            "data/REFERENCE/PC_TRACK_IMPORT_MANIFEST.JSON",
             "source/Track_Centerlines_PC.Generated.H",
             "source/TRACK_CENTERLINE.IMPORTED.H",
             "source/TRACK_MESH.GENERATED.H",
