@@ -52,3 +52,43 @@ These counts describe the supplied ZIP, not the current GitHub repository.
 **Do not bulk-copy the archive into the public repository yet.** The safest next action is a provenance-cleared source-only import, starting with the build/test infrastructure and original code whose ownership can be established. Keep the generated track-centerline data and unclear assets excluded until reviewed.
 
 This is a technical repository hygiene review, not legal advice or a definitive copyright determination.
+
+
+## Reproducible inventory snapshot
+
+- Archive SHA-256: `85a1a1d82426399e48ac5a7e41bd7e9e45fda82e832284e573c358641df24b12`
+- Total: 359 file entries; 2,645,491 uncompressed bytes.
+- Top-level counts (including everything nested under each directory): root 105; `tests/` 95; `docs/` 62; `source/` 49; `tools/` 29; `assets/` 11; `data/` 5; `jalon1/` 2; `include/` 1.
+- These counts and the checksum describe the exact ZIP available during this audit. They are a reproducible snapshot, not a grant of permission to redistribute the contents.
+
+### Explicit hold/review paths
+
+| Path inside archive | Why it is held |
+|---|---|
+| `source/track_centerlines_pc.generated.h` | Generated centerlines declared to derive from a modded PC spline dataset; rights/provenance unresolved |
+| `data/reference/pc_track_import_manifest.json` | Manifest of the same external PC-track import |
+| `data/reference/pc_model_catalog.csv` | PC model catalog/reference data; establish origin and whether it encodes extracted commercial data |
+| `data/reference/pc_spline_catalog.csv` | PC spline catalog; establish origin and redistribution rights |
+| `docs/pc_mod_modelblock_audit_step87.json` | Audit data relating to a modded PC model block |
+| `docs/pc_spline_audit_step87.json` | Audit data relating to PC spline extraction/import |
+| `docs/ROM_TRACK_TRANSFORM_AUDIT_STEP81.json` | ROM-derived track-transform audit metadata; review before publishing |
+| `docs/ROM_TRACK_BLOCK_AUDIT_STEP80.json` | ROM-derived track-block audit metadata; review before publishing |
+| `docs/ROM_TRACK_COLLISION_AUDIT_STEP82.json` | ROM-derived collision audit metadata; review before publishing |
+| `docs/N64_ROM_TRACK_INVENTORY.md` | Documentation about N64 ROM extraction; review content before public import |
+| `assets/voice_en/*.wav` (8 audio files) | Voice/audio assets; origin and redistribution permission not established |
+| `assets/geometry/prototype_pod.obj`, `assets/geometry/prototype_pod.mtl` | Model/material source may be prototype-authored, but authorship/origin must be confirmed |
+| `docs/pod_model_preview.png`, `docs/track_mesh_preview.png` | Preview images may depict data derived from assets/geometry held above |
+| `source/track_mesh.generated.h` | Generated mesh data; source route and regeneration provenance need review |
+| `source/track_centerline.imported.h` | Imported centerline header; establish exact source before publishing |
+| `source/track_centerline.generated.h`, `source/track_boundaries.generated.h` | Generated route/boundary data; verify generator and inputs before importing |
+| `tools/extract_rom_assets.py`, `tools/export_n64_track.py`, `tools/scan_pc_assets.py` | Tools are code, not game payloads, but review their scope and documentation before making them part of the public baseline |
+
+The root contains many step-by-step Markdown logs. Those may be useful for project history, but do not need to be imported wholesale into the runtime target. A smaller set of source/build/test documentation should be selected after the ownership/license question is settled.
+
+### Import decision at this point
+
+- **Candidates, not yet licensed for public redistribution:** original-looking C modules, headers, host test harnesses, build scripts, and project documentation.
+- **Held pending specific review:** the paths listed above and any other files whose contents or origin cannot be established.
+- **Do not add:** commercial ROMs, disc images, BIOS data, extracted proprietary models/textures/audio, or data that is known to derive from an external mod without redistribution clearance.
+
+This section adds an explicit path-level hold list and a checksum. It is not yet the promised all-359-row CSV; the final import manifest remains an open task.
