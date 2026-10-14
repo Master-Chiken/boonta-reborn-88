@@ -1,0 +1,59 @@
+name: GameCube/Wii host regression tests
+
+on:
+  push:
+    paths:
+      - "Makefile"
+      - "source/**"
+      - "include/**"
+      - "tests/**"
+      - ".github/workflows/gamecube-host-tests.yml"
+  pull_request:
+    paths:
+      - "Makefile"
+      - "source/**"
+      - "include/**"
+      - "tests/**"
+      - ".github/workflows/gamecube-host-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Detect imported source test suite
+        id: detect
+        shell: bash
+        run: |
+          if [[ -d tests ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Step 102 source/test suite is not imported yet; host regression tests are skipped."
+          fi
+
+      - name: Run host shell regression scripts
+        if: steps.detect.outputs.available == 'true'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          scripts=(tests/*_host.sh)
+          if (( ${#scripts[@]} == 0 )); then
+            echo "::error::tests/ exists but contains no *_host.sh regression scripts."
+            exit 1
+          fi
+          for script in "${scripts[@]}"; do
+            echo "::group::${script}"
+            bash "$script"
+            echo "::endgroup::"
+          done
+
+      - name: Run Python unit tests
+        if: steps.detect.outputs.available == 'true'
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
