@@ -352,10 +352,14 @@ static void draw_hud(void)
               race.engine_heat > 0.7f ? 90 : 211,
               race.engine_heat > 0.7f ? 45 : 255);
 
-    draw_rect(screen_w * 0.5f - 70.0f, 12.0f,
-              screen_w * 0.5f + 70.0f, 42.0f, 7, 17, 29);
-    draw_text(time_text, screen_w * 0.5f - 42.0f, 22.0f,
+    draw_rect(screen_w * 0.5f - 78.0f, 10.0f,
+              screen_w * 0.5f + 78.0f, 55.0f, 7, 17, 29);
+    draw_text(time_text, screen_w * 0.5f - 35.0f, 15.0f,
               1.0f, 196, 237, 255);
+    draw_text(lap_text, screen_w * 0.5f - 35.0f, 28.0f,
+              1.0f, 196, 237, 255);
+    draw_text(best_text, screen_w * 0.5f - 35.0f, 41.0f,
+              1.0f, 255, 219, 110);
 
     draw_rect(screen_w - 112.0f, 12.0f, screen_w - 12.0f, 84.0f,
               7, 17, 29);
