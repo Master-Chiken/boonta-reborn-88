@@ -25,6 +25,10 @@ The current repository is still far short of the final goal: the full Step 102 s
 - Review the license and provenance of external reverse-engineering projects before reusing their code.
 - Keep any lawful user-owned game images local. The repository should contain original code, documentation, tools, tests, and assets that are cleared for redistribution only.
 
+## Reverse-engineering workbench
+
+The [PC/Dreamcast/Nintendo 64 comparison matrix](docs/VERSION_COMPARISON_MATRIX.md) tracks the systems that must be measured or documented before implementation: physics, vehicles, tracks, AI, items, modes, UI, graphics, audio, progression, and performance. The goal is faithful reconstruction first, visual improvements and bonus content second.
+
 ## Next milestones toward the real goal
 
 1. Complete a path-by-path provenance review of the Step 102 source archive and select the code/tools/docs that can be safely used.
