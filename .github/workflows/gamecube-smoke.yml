@@ -61,13 +61,16 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth qt6-qpa-plugins
+          export PATH="/usr/games:$PATH"
+          command -v dolphin-emu
           dolphin-emu --version
 
       - name: Launch the DOL headlessly for 12 seconds
         shell: bash
         run: |
           set -uo pipefail
+          export PATH="/usr/games:$PATH"
           mkdir -p /tmp/dolphin-user
           set +e
           timeout 12s xvfb-run -a dolphin-emu --batch --video_backend=Null --exec=dist/boonta_demo.dol --user=/tmp/dolphin-user
