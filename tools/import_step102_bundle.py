@@ -56,6 +56,15 @@ def validate_member(name: str) -> str:
     return normalized
 
 
+def validate_unique_member(name: str, seen: set[str]) -> str:
+    """Reject duplicate archive paths even when their case differs."""
+    key = name.casefold()
+    if key in seen:
+        raise ValueError(f"Duplicate archive member rejected (case-insensitive): {name}")
+    seen.add(key)
+    return name
+
+
 def main() -> int:
     parts = sorted(BUNDLE_DIR.glob(PART_GLOB))
     source_tree_present = (ROOT / "Makefile").is_file() and (ROOT / "source" / "main.c").is_file()
@@ -92,9 +101,10 @@ def main() -> int:
             if not member.isfile():
                 raise SystemExit(f"Non-regular archive member rejected: {member.name}")
             name = validate_member(member.name)
-            if name in seen:
-                raise SystemExit(f"Duplicate archive member rejected: {name}")
-            seen.add(name)
+            try:
+                validate_unique_member(name, seen)
+            except ValueError as exc:
+                raise SystemExit(str(exc)) from exc
             src = archive.extractfile(member)
             if src is None:
                 raise SystemExit(f"Could not read archive member: {name}")
