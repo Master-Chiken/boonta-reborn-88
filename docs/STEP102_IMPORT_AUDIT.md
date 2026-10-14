@@ -91,4 +91,4 @@ The root contains many step-by-step Markdown logs. Those may be useful for proje
 - **Held pending specific review:** the paths listed above and any other files whose contents or origin cannot be established.
 - **Do not add:** commercial ROMs, disc images, BIOS data, extracted proprietary models/textures/audio, or data that is known to derive from an external mod without redistribution clearance.
 
-This section adds an explicit path-level hold list and a checksum. It is not yet the promised all-359-row CSV; the final import manifest remains an open task.
+This section records the path-level hold list and archive checksum. A separate 359-row metadata triage manifest has now been generated for owner review. It includes each archive-relative path, file size, SHA-256, CRC32, ZIP mode, category, initial action, and reason. It is delivered separately to the owner rather than committed to the public repository before the path list has been reviewed. No row is marked approved for redistribution. The CSV is an inventory aid, not a legal determination.
