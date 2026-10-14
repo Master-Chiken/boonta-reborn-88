@@ -4,6 +4,10 @@ Status: **HOLD — provenance and redistribution review required**
 
 This checklist governs the import of `Star_Wars_Racer_GameCube_Step102.zip` into this public repository. The archive has been catalogued in a separate file manifest; the manifest is an audit aid, not permission to redistribute its contents.
 
+## Latest audit finding
+
+See [`STEP102_BUNDLE_AUDIT.md`](STEP102_BUNDLE_AUDIT.md) for a concrete exclusion mismatch: the source-only bundle includes `source/track_centerline.generated.h` even though its import README says imported centerline headers are excluded. That generated header remains on HOLD until its inputs and provenance are verified. The bundle also contains generated Python bytecode under `tests/__pycache__/`; do not import it.
+
 ## Why the import is gated
 
 The manifest identifies a mixture of candidate source/build/test files, documentation, generated or reference data, 3D geometry, and audio. It specifically flags PC-mod/ROM-derived audit data and spline/model catalog material for provenance review. File names, hashes, and successful tests do not establish authorship, originality, or redistribution rights.
