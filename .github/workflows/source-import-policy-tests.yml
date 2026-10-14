@@ -36,5 +36,7 @@ jobs:
           python-version: "3.x"
       - name: Run source import policy regression tests
         run: python3 -m unittest discover -s tools -p 'test_check_source_import_policy.py' -v
+      - name: Run Python bytecode syntax checks
+        run: python3 -m py_compile tools/check_source_import_policy.py tools/import_step102_bundle.py tools/test_check_source_import_policy.py tools/test_import_step102_bundle.py
       - name: Run archive member validation regression tests
         run: python3 -m unittest discover -s tools -p 'test_import_step102_bundle.py' -v
