@@ -77,7 +77,7 @@ for required_phrase in (
     "matching, explicitly approved plan",
     "Never push to the default branch",
     "merge a PR",
-    "open a pull request",
+    "Open a pull request",
 ):
     if required_phrase not in execute_prompt:
         errors.append(f"Plan-execute prompt is missing required safeguard: {required_phrase!r}")
@@ -85,7 +85,7 @@ for required_phrase in (
 # Project-level instructions must retain the owner’s €0 condition.
 if "€0" not in instructions:
     errors.append("GEMINI.md must preserve the strict €0 budget requirement")
-if "GEMINI_WRITE_ENABLED=true" not in instructions:
+if "GEMINI_WRITE_ENABLED" not in instructions or "exactly true" not in instructions:
     errors.append("GEMINI.md must document the exact write-enable gate")
 if "payment method" not in instructions.lower():
     errors.append("GEMINI.md must forbid adding a payment method")
