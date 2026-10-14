@@ -7,9 +7,13 @@ These notes summarize public starting points. They are not proof that any projec
 ### SW_RACER_RE
 Repository: https://github.com/tim-tim707/SW_RACER_RE
 
-The project documents and reimplements selected functions from the **Windows** version to support research and modding. Its README reported 71.2% of analyzed functions on 12 June 2026. That figure is a dated status from the upstream project, not a measure of console-port completion. It is not a complete decompilation and is not itself a GameCube/Wii port.
+The project documents and reimplements selected functions from the **Windows PC** version to support research and modding. Its README reported 71.2% of functions analyzed (1,518 of 2,132) on 12 June 2026. This is a dated upstream figure, not a measure of console-port completion or a statement that every analyzed function is fully reimplemented. The README explicitly says it is not aiming at matching compilation or a complete decompilation. The upstream branch reviewed on 2026-10-14 pointed to commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab` (2026-10-05). GitHub reports the repository license as AGPL-3.0.
 
-**Potential use:** learn game logic, symbols, resource handling, and research methodology. Before reusing any code, inspect the current license and file-level provenance, and confirm whether it is suitable for this project's intended license and targets.
+**Project decision:** treat this as a **Tier 1 research reference** for the original PC game's behavior and resource-format research, and map its findings to the Step 102 source before making major gameplay or track decisions. Do not mistake it for GameCube source or directly portable console code. Its PC hook is a 32-bit Windows `dinput.dll` using a MinGW/Clang build; Windows function addresses, calling conventions, APIs, and DirectX/rendering paths are not portable to PowerPC/libogc/GX by assumption.
+
+Useful starting points include `src/Swr/swrRace.c`, `swrSpline.c`, `swrModel.c`, `swrRender.c`, `swrAssetBuffer.c`, `swrLoader.c`, `src/Main/swrControl.c`, `src/Engine/rdCamera.c`, `src/Primitives/rdMatrix.c`, `data_symbols.syms`, and `dinput_hook/game_deltas/`. These paths are research entry points and must be studied in context; they are not a cleared import list.
+
+Follow [the SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) for the subsystem map, platform boundaries, license and asset rules, and the first three research priorities. No source code, binaries, models, textures, sounds, custom tracks, or extracted data should be copied into Boonta Reborn just because they are visible upstream.
 
 ### OpenSWE1R
 Repository: https://github.com/OpenSWE1R/openswe1r
