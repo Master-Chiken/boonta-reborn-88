@@ -128,7 +128,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": []
+                "core": ["run_shell_command(echo)"]
               }
             }
           prompt: '/gemini-invoke'
