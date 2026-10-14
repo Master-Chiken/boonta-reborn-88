@@ -22,6 +22,8 @@ Si l'interface ne te permet pas d'enregistrer ces règles, garde `GEMINI_WRITE_E
 
 Le modèle configuré est `gemini-3.5-flash-lite`, qui est listé par Google dans l'offre gratuite actuelle de l'API. Les quotas peuvent changer ou être indisponibles. Au quota épuisé, le workflow doit échouer sans mise à niveau payante.
 
+Les deux workflows sont configurés en mode API-key uniquement : aucun chemin Vertex AI/Google Cloud/Code Assist ni clé Google secondaire n'est utilisé. N'ajoute pas ces options ou leurs secrets, car le projet reste strictement à 0 €.
+
 **Données :** Google indique que le contenu envoyé via l'offre gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure du code et du texte du dépôt fournis au modèle. Tu as choisi d'accepter ces conditions ; n'envoie malgré tout aucun secret, mot de passe, donnée personnelle privée ou fichier commercial non autorisé.
 
 ## Déverrouiller l'écriture de l'agent
