@@ -10,7 +10,7 @@ The import contains 123 selected source/build/test/tool files, plus this reposit
 
 The supplied `Star_Wars_Racer_GameCube_Step102.zip` contains a native C prototype, a GameCube Makefile, host tests, tools and extensive milestone documentation. Its original README says the overall project is still a prototype; native build and runtime validation had been pending in the archive itself.
 
-The archive's host-side checks were run in a temporary workspace. For the selected import, GitHub Actions also ran `bash tools/release_check.sh`, passed the source-only path checker and ran five source-bundle policy unit tests. Those results are host-test evidence, not a claim of full gameplay correctness.
+The archive's host-side checks were run in a temporary workspace. For the selected import, GitHub Actions also ran `bash tools/release_check.sh`, passed the source-only path checker and ran six source-bundle policy unit tests. Those results are host-test evidence, not a claim of full gameplay correctness.
 
 ## Provenance and exclusions
 
@@ -31,11 +31,11 @@ The archive contains `docs/third_party/SWE1R_ASSETS_MIT_LICENSE.txt` naming Alex
 
 The import workflow succeeded:
 
-- [Latest validation workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351) — **success**.
+- [Latest validation workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235) — **success**.
 - Host regression scripts and the source-only asset policy check — passed.
 - Native devkitPPC/libogc build — passed; produced a non-empty `swe1r_gc_port.dol` reported as approximately 301 KiB.
 - Headless Dolphin process smoke test — passed: Dolphin accepted the DOL and remained active until a 12-second timeout.
-- [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924213870) — `swe1r-gc-step102-source-only`, retained for 7 days.
+- [Download/browse native build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924766751) — `swe1r-gc-step102-source-only`, retained for 7 days.
 
 The build explicitly uses `make USE_IMPORTED_SPLINE=0`, so it compiles against the bundled demo/procedural fallback track rather than the excluded PC-mod course centerlines. Compatibility shims in the importer update three API spellings/types for the current devkitPPC/libogc headers and corresponding host mocks: `CARDFileInfo` to `card_file`, `GX_TEXCOORD_NULL` to `GX_TEXCOORDNULL`, and `PAD_BUTTON_Z` to `PAD_TRIGGER_Z`.
 
