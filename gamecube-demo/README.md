@@ -32,6 +32,11 @@ make
 
 The expected files are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`. GitHub Actions runs the same build in the `devkitpro/devkitppc` container and keeps successful outputs as a short-retention artifact.
 
+
+## Latest native build
+
+The first successful devkitPPC/libogc build completed in [GitHub Actions run 38633619707](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38633619707). It produced a non-empty DOL and ELF artifact. This confirms compilation/linking only; **Dolphin/console runtime testing is still pending**. See the [build status report](../docs/GAMECUBE_FIRST_RENDER_STATUS.md) for artifact sizes, hashes, and runtime checklist.
+
 ## Runtime validation
 
 A successful compiler exit proves only that the code compiled. Load the DOL in Dolphin or suitable hardware and confirm: visible road/pod, steering response, throttle/brake response, no obvious GX crash, and reset behavior. No runtime result is claimed by this README until such a test is performed.
