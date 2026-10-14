@@ -1,9 +1,13 @@
 #include "race_logic.h"
 
+#include <math.h>
+
 #define RACE_MAX_SPEED 48.0f
 #define RACE_TRACK_RADIUS 22.0f
 #define RACE_LAPS 3
 #define RACE_TWO_PI 6.28318530717958647692f
+#define RACE_REFERENCE_DT (1.0f / 60.0f)
+#define RACE_MAX_DT 0.05f
 
 static const float RACE_OPPONENT_TARGET_SPEEDS[RACE_OPPONENT_COUNT] = {
     28.0f, 32.0f, 30.0f
@@ -42,9 +46,16 @@ void race_reset(RaceState *state)
     }
 }
 
-void race_update(RaceState *state, const RaceInput *input)
+void race_update_dt(RaceState *state, const RaceInput *input, float delta_seconds)
 {
+    float frame_scale;
+
     if (state == 0 || input == 0) return;
+    if (!isfinite(delta_seconds) || delta_seconds <= 0.0f) {
+        delta_seconds = RACE_REFERENCE_DT;
+    }
+    if (delta_seconds > RACE_MAX_DT) delta_seconds = RACE_MAX_DT;
+    frame_scale = delta_seconds * 60.0f;
 
     state->boost_active = 0;
 
@@ -64,34 +75,34 @@ void race_update(RaceState *state, const RaceInput *input)
      * At the start-line angle, the pod faces +Z and positive radial X projects
      * to screen-left with this camera. Keep lane controls consistent with that.
      */
-    if (input->left) state->lane_offset += 0.055f;
-    if (input->right) state->lane_offset -= 0.055f;
+    if (input->left) state->lane_offset += 0.055f * frame_scale;
+    if (input->right) state->lane_offset -= 0.055f * frame_scale;
     state->lane_offset = clamp(state->lane_offset, -2.7f, 2.7f);
 
     if (input->accelerate) {
-        state->speed += 0.20f;
+        state->speed += 0.20f * frame_scale;
     } else {
-        state->speed -= 0.018f;
+        state->speed -= 0.018f * frame_scale;
     }
-    if (input->brake) state->speed -= 0.42f;
+    if (input->brake) state->speed -= 0.42f * frame_scale;
     state->speed = clamp(state->speed, 0.0f, RACE_MAX_SPEED);
 
     if (input->boost && state->boost_energy > 0.01f &&
         state->engine_heat < 0.98f && state->speed > 2.0f) {
         state->boost_active = 1;
-        state->speed += 0.24f;
-        state->boost_energy -= 0.0048f;
-        state->engine_heat += 0.0065f;
+        state->speed += 0.24f * frame_scale;
+        state->boost_energy -= 0.0048f * frame_scale;
+        state->engine_heat += 0.0065f * frame_scale;
     } else {
-        state->boost_energy += 0.0022f;
-        state->engine_heat -= 0.0045f;
+        state->boost_energy += 0.0022f * frame_scale;
+        state->engine_heat -= 0.0045f * frame_scale;
     }
 
     state->speed = clamp(state->speed, 0.0f, RACE_MAX_SPEED);
     state->boost_energy = clamp(state->boost_energy, 0.0f, 1.0f);
     state->engine_heat = clamp(state->engine_heat, 0.0f, 1.0f);
 
-    state->angle += state->speed * 0.016f /
+    state->angle += state->speed * delta_seconds /
                     (RACE_TRACK_RADIUS + state->lane_offset);
     if (state->angle >= RACE_TWO_PI) {
         state->angle -= RACE_TWO_PI;
@@ -108,19 +119,24 @@ void race_update(RaceState *state, const RaceInput *input)
         float radius = RACE_TRACK_RADIUS + state->opponent_lanes[i];
 
         if (state->opponent_speeds[i] < target_speed) {
-            state->opponent_speeds[i] += 0.09f;
+            state->opponent_speeds[i] += 0.09f * frame_scale;
             if (state->opponent_speeds[i] > target_speed) {
                 state->opponent_speeds[i] = target_speed;
             }
         }
 
         state->opponent_angles[i] +=
-            state->opponent_speeds[i] * 0.016f / radius;
+            state->opponent_speeds[i] * delta_seconds / radius;
         if (state->opponent_angles[i] >= RACE_TWO_PI) {
             state->opponent_angles[i] -= RACE_TWO_PI;
             ++state->opponent_laps[i];
         }
     }
+}
+
+void race_update(RaceState *state, const RaceInput *input)
+{
+    race_update_dt(state, input, RACE_REFERENCE_DT);
 }
 
 int race_position(const RaceState *state)
