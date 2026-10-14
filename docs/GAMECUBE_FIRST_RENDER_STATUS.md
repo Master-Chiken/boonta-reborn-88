@@ -4,9 +4,10 @@ Date: 2026-10-14
 
 ## Verified by GitHub Actions
 
-- Workflow: [GameCube first-render prototype build](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38633619707)
-- Source commit: `d1125bfd0ce6c2045de30901611db0b05f3a4bdc`
+- Workflow: [GameCube first-render prototype build](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634127716)
+- Source commit: `e24446ecc454473ce4557502e471ba5ed4065abb`
 - Build result: **success**
+- Automated artifact validation: **success** (`gamecube-demo/tools/validate_artifacts.py` checked DOL section ranges/entry point and ELF32 big-endian PowerPC identity).
 - Toolchain: `devkitpro/devkitppc:latest` using libogc/GameCube rules
 - Artifacts: `boonta_gc_demo.dol`, `boonta_gc_demo.elf`, and `build.log`
 - Artifact size: 445,475 bytes (ZIP); DOL 135,180 bytes; ELF 876,488 bytes.
@@ -19,9 +20,9 @@ ELF SHA-256: `a42cf06c5b7b9e8b93e1e5336d60bad93cfbde87d440409651251ed78116bf56`
 
 ## What this does and does not prove
 
-This is the first confirmed native GameCube DOL build in this repository's new clean-room demonstration path. It verifies that the sample can compile and link with devkitPPC/libogc and that a non-empty DOL/ELF is produced.
+This is the first confirmed native GameCube DOL build in this repository's new clean-room demonstration path. It verifies that the sample can compile and link with devkitPPC/libogc, that a non-empty DOL/ELF is produced, and that the basic DOL/ELF structures satisfy the repository's artifact validator.
 
-It does **not** verify that Dolphin or a console boots the DOL, that GX output is visible, or that controller behavior works in runtime. No Dolphin executable was available in the build-inspection environment, so runtime testing remains **NOT RUN**.
+It does **not** verify that Dolphin or a console boots the DOL, that GX output is visible, or that controller behavior works in runtime. No Dolphin executable was available in the build-inspection environment, so runtime testing remains **NOT RUN**. The successful GitHub artifact is available until 2026-10-21 (seven-day retention).
 
 ## Runtime smoke-test checklist
 
