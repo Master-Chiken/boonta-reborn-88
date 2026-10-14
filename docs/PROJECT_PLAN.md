@@ -28,7 +28,8 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 - [x] Create public repository and initial documentation.
 - [x] Inspect the Step 102 source archive.
 - [x] Identify source modules, build scripts, tests, target, and limitations.
-- [ ] Finish code/license/provenance review of external dependencies and generated route data.
+- [ ] Create a path-by-path source import manifest for the Step 102 archive.
+- [ ] Finish code/license/provenance review of external dependencies, generated route data, sample model/material files and audio.
 - [ ] Select the exact source/assets subset safe to publish.
 
 **Exit criterion:** a reviewed source-only import list and clear provenance notes.
