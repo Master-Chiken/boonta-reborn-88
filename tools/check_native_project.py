@@ -38,6 +38,11 @@ def audit(root: Path) -> dict:
             # uses the generated centerline and must remain buildable without it.
             if include == "track_centerline.imported.h" and "SWE1R_USE_IMPORTED_CENTERLINE" in text:
                 continue
+            # The PC-derived centerline header is deliberately excluded from the public source bundle.
+            # Its include is guarded by SWE1R_USE_IMPORTED_CENTERLINE; the default build uses
+            # source/track_centerline.generated.h and must not require the excluded header.
+            if include == "track_centerlines_pc.generated.h" and "SWE1R_USE_IMPORTED_CENTERLINE" in text:
+                continue
             # Generated headers are allowed only when their checked-in output exists.
             if include.endswith(".generated.h") and (source_dir / include).is_file():
                 continue
