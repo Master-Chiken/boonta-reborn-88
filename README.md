@@ -6,6 +6,8 @@ An unofficial research and homebrew project aiming toward a playable racing prot
 
 ## Current implementation
 
+See the [platform behavior and test matrix](docs/PLATFORM_BEHAVIOR_MATRIX.md) for a map from game modules to automated checks and the remaining runtime work.
+
 The draft [PR #17 — Step 102 source-only import](https://github.com/Master-Chiken/boonta-reborn-88/pull/17) now contains a selective source-only subset of the supplied Step 102 prototype: C gameplay/rendering modules, build configuration, selected host tests, mocks, and developer tools.
 
 The source describes 25 named course entries, 23 pod presets/variants, arcade vehicle physics, rival AI, track pickups and hazards, multiple race modes, HUD, and save/progression scaffolding. These are prototype features, not a claim of parity with the commercial game.
