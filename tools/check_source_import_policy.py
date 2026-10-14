@@ -9,6 +9,8 @@ EXACT_EXCLUDES = {
     "data/reference/pc_track_import_manifest.json",
     "source/track_centerlines_pc.generated.h",
     "source/track_centerline.imported.h",
+    "source/track_mesh.generated.h",
+    "source/track_boundaries.generated.h",
 }
 PREFIX_EXCLUDES = (
     "assets/voice_en/",
