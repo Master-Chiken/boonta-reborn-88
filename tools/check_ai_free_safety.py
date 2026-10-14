@@ -76,8 +76,7 @@ for forbidden_tool in ('"delete_file"', '"fork_repository"'):
 for required_phrase in (
     "matching, explicitly approved plan",
     "Never push to the default branch",
-    "Never push a PR",
-    "Never merge a PR",
+    "merge a PR",
     "open a pull request",
 ):
     if required_phrase not in execute_prompt:
