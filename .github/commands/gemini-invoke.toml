@@ -79,7 +79,7 @@ Begin every task by building a complete picture of the situation.
       Please review this plan. To approve, comment `@gemini-cli /approve` on this issue. To make changes, comment changes needed.
       ```
 
-3. **Post the Plan**: You MUST use `add_issue_comment` to post your plan. The workflow should end only after this tool call has been successfully formulated.
+3. **Publish the Plan**: Return the plan as the CLI's final text response. Do not post a duplicate plan with `add_issue_comment`; the GitHub Actions workflow publishes your response summary as a comment automatically. For substantial code changes, explicitly state that the plan will not execute until a maintainer approves it with `@gemini-cli /approve`.
 
 -----
 
