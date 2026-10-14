@@ -62,7 +62,7 @@ jobs:
           /tmp/race_logic_test
 
   dolphin-render-smoke:
-    name: Dolphin software-rendered frame smoke test
+    name: Dolphin OpenGL frame smoke test (Mesa software rendering)
     needs: [build-smoke-test, host-race-logic-tests]
     runs-on: ubuntu-latest
     container:
@@ -74,7 +74,7 @@ jobs:
           name: boonta-gamecube-demo-dol
           path: dist
 
-      - name: Install free Dolphin software renderer and virtual display
+      - name: Install free Dolphin OpenGL renderer and virtual display
         run: |
           set -euo pipefail
           apt-get update
@@ -101,7 +101,7 @@ jobs:
             export HOME=/tmp/dolphin-home
             mkdir -p "$HOME" /tmp/dolphin-user
             chmod 700 "$HOME"
-            dolphin-emu --batch --video_backend="Software Renderer" \
+            dolphin-emu --batch --video_backend=OGL \
               --exec="$GITHUB_WORKSPACE/dist/boonta_demo.dol" \
               --user=/tmp/dolphin-user > /tmp/dolphin.log 2>&1 &
             dolphin_pid=$!
