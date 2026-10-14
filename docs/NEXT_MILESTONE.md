@@ -1,4 +1,4 @@
-# Next milestone: runtime-test the clean-room GameCube driving prototype
+# Next milestone: move from toolchain demo toward the faithful GameCube/Wii reconstruction
 
 ## Current confirmed progress
 
@@ -21,15 +21,16 @@ The clean-room race logic now gives each of the three procedural rivals a smooth
 
 A new host test checks that rival lane movement is bounded, smooth between frames, repeatable for identical inputs, and does not let rivals cross lanes. The expected host test output is now `race_logic_test: 11 suites passed`. Confirm the GitHub Actions result before treating the change as validated.
 
-## Work sequence
+## Work sequence toward the actual end goal
 
-1. Keep the build/safety/static-analysis checks green.
-2. Download the `boonta-gamecube-demo-dol` artifact from the Actions run while it is retained (seven days) and test it in Dolphin.
-3. Record whether it boots, whether the image is rendered, and whether the controller responds. Do not infer gameplay success from a successful compile.
-4. Prepare a path-by-path source import manifest for Step 102; classify original code candidates, tests/tools/docs, and files that must be held for provenance/license review.
-5. Confirm whether the user-authored/source archive code can be redistributed under the intended project license. Keep PC mod centerlines, uncertain sample audio/models, ROMs, and extracted commercial files excluded.
-6. Import only the cleared source files on a separate review branch; run host tests and build the real prototype.
-7. Extend the first vertical slice based on observed runtime issues, not guesses.
+1. Keep the build/safety/static-analysis checks green, but do not mistake the procedural `gamecube/` demo for the intended game.
+2. Finish the Step 102 path-by-path manifest review. The manifest already classifies source/tests/tools/docs separately from assets and PC-mod-derived route data; resolve authorship and licensing for each source group before import.
+3. Import the cleared GameCube/Wii-oriented source candidate to a review branch, preserving the tests and build infrastructure. Exclude uncleared track centerlines, models, audio, ROMs and disc images.
+4. Reproduce the archive's reported host test suite in GitHub Actions, then build the full candidate with devkitPPC/libogc.
+5. Test the full candidate in Dolphin: boot, rendering, controller input, race start/finish, tracks, vehicles, modes, saves, stability and performance. Fix real blockers from evidence.
+6. Create the PC/Dreamcast/N64 comparison matrix and verify each important gameplay/system claim against documentation or a lawful local run of the relevant edition.
+7. Implement missing original-game systems and content until a faithful playable baseline exists.
+8. Only after that baseline is stable, work on improved graphics, bonus content, new modes and quality-of-life improvements.
 
 ## Owner-only actions
 
