@@ -8,6 +8,7 @@
 #define RACE_TWO_PI 6.28318530717958647692f
 #define RACE_REFERENCE_DT (1.0f / 60.0f)
 #define RACE_MAX_DT 0.05f
+#define RACE_COLLISION_DISTANCE 2.5f
 
 static const float RACE_OPPONENT_TARGET_SPEEDS[RACE_OPPONENT_COUNT] = {
     28.0f, 32.0f, 30.0f
@@ -193,7 +194,19 @@ static void race_update_dt_internal(RaceState *state, const RaceInput *input,
                 angle_delta = RACE_TWO_PI - angle_delta;
             }
 
-            if (angle_delta < 0.12f && lane_delta < 0.85f) {
+            /*
+             * On a real sampled path, angular progress is normalized by total
+             * track length. Convert the contact radius back to that same
+             * normalized space so collisions represent a consistent world
+             * distance on short and long courses. Preserve the legacy angle
+             * threshold for callers that do not supply a track length.
+             */
+            float collision_angle_threshold =
+                (isfinite(track_length) && track_length > 0.001f)
+                    ? RACE_COLLISION_DISTANCE * RACE_TWO_PI / track_length
+                    : 0.12f;
+
+            if (angle_delta < collision_angle_threshold && lane_delta < 0.85f) {
                 state->speed *= 0.68f;
                 state->lane_offset = clamp(
                     state->lane_offset +
