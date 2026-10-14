@@ -386,9 +386,29 @@ static void test_invalid_and_long_frame_deltas_are_safe(void)
 }
 
 
+static void test_track_length_controls_world_speed_progress(void)
+{
+    RaceState state;
+    RaceInput input = neutral_input();
+    race_reset(&state);
+    state.speed = 10.0f;
+    state.angle = 0.0f;
+
+    race_update_track_dt(&state, &input, 0.05f, 100.0f);
+    assert(fabsf(state.angle - (10.0f * 0.05f * 6.28318530717958647692f /
+                                100.0f)) < 0.0001f);
+
+    /* Invalid length preserves the legacy circular model for callers without a path. */
+    race_reset(&state);
+    state.speed = 10.0f;
+    race_update_track_dt(&state, &input, 0.05f, 0.0f);
+    assert(fabsf(state.angle - (10.0f * 0.05f / 22.0f)) < 0.0001f);
+}
+
 int main(void)
 {
     test_reset();
+    test_track_length_controls_world_speed_progress();
     test_acceleration_braking_and_speed_limit();
     test_lane_clamping_and_steering_direction();
     test_boost_heat_and_recharge();
