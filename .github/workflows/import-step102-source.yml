@@ -83,9 +83,49 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  dolphin-smoke:
+    name: Headless Dolphin process smoke test
+    needs: native-build
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Download the compiled GameCube DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-step102-source-only
+          path: dist
+      - name: Install free Dolphin emulator and virtual display dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu qt6-qpa-plugins
+          export PATH="/usr/games:$PATH"
+          command -v dolphin-emu
+          dolphin-emu --version
+      - name: Launch the DOL headlessly for 12 seconds
+        shell: bash
+        run: |
+          set -uo pipefail
+          export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
+          mkdir -p /tmp/dolphin-user
+          set +e
+          timeout 12s dolphin-emu --batch --video_backend=Null --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-user
+          status=$?
+          set -e
+          if [[ "$status" -eq 124 ]]; then
+            echo "Dolphin remained active until the 12-second timeout."
+            echo "Process smoke test only: visible rendering, controller input, and gameplay are not verified."
+            exit 0
+          fi
+          echo "Dolphin exited before the expected timeout (status $status)."
+          exit 1
+
   commit-reviewed-source:
-    name: Commit only after host tests and native build pass
-    needs: [host-validation, native-build]
+    name: Commit after host tests, native build, and smoke test
+    needs: [host-validation, native-build, dolphin-smoke]
     runs-on: ubuntu-latest
     steps:
       - name: Check out import branch
