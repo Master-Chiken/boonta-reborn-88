@@ -97,25 +97,31 @@ jobs:
         shell: bash
         run: |
           set +e
-          timeout --signal=INT --kill-after=5s 20s xvfb-run -a dolphin-emu \
+          started=$(date +%s)
+          timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
             --batch --video_backend=Null \
             --exec="$PWD/build-artifact/swe1r_gc_port.dol" \
             --user="$RUNNER_TEMP/dolphin-user" > dolphin-smoke.log 2>&1
           status=$?
+          elapsed=$(( $(date +%s) - started ))
           set -e
+          find "$RUNNER_TEMP/dolphin-user" -maxdepth 5 -type f -name '*.log' -print -exec cat {} \; >> dolphin-smoke.log 2>/dev/null || true
           cat dolphin-smoke.log
-          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 130 ]]; then
-            echo "::error::Dolphin exited with unexpected status $status."
+          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
+            echo "::error::Dolphin exited with unexpected status $status after ${elapsed}s."
             exit "$status"
           fi
           if grep -Eiq "failed to load executable|could not boot|fatal error|assertion failed" dolphin-smoke.log; then
             echo "::error::Dolphin reported a boot or fatal error."
             exit 1
           fi
-          if [[ "$status" -eq 124 || "$status" -eq 130 ]]; then
-            echo "Dolphin remained active for the 20-second smoke window."
-          else
+          if [[ "$status" -eq 124 || "$status" -eq 143 || ( "$status" -eq 137 && "$elapsed" -ge 18 ) ]]; then
+            echo "Dolphin remained active through the 20-second smoke window (elapsed: ${elapsed}s)."
+          elif [[ "$status" -eq 0 ]]; then
             echo "Dolphin exited normally during the smoke window."
+          else
+            echo "::error::Dolphin was terminated unexpectedly after only ${elapsed}s."
+            exit 1
           fi
           echo "This smoke test does not verify visible rendering, controller input, or race completion."
 
