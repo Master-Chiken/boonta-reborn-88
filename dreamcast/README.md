@@ -1,26 +1,33 @@
 # Dreamcast starter — Boonta Reborn 88
 
-This directory is a **separate, clean-room Dreamcast homebrew starter**. It is not a port of the existing GameCube/Wii executable, and it contains no commercial game image or extracted proprietary assets.
+This directory contains a **separate, clean-room Dreamcast homebrew starter**. It is not a port of the existing GameCube/Wii executable and contains no commercial game image or extracted proprietary assets.
+
+## Build status
+
+The GitHub Actions workflow successfully compiled this starter with the KallistiOS toolchain and uploaded an ELF artifact in [workflow run 38568111117](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38568111117).
+
+This is compile-only validation. The binary has not yet been confirmed running in an emulator or on a physical Dreamcast.
+
+## What it currently does
+
+- Starts with KallistiOS.
+- Prints a short status message through the configured KOS console output.
+- Polls the first Maple controller and reports pressed-button values to the console.
+
+It does **not** yet render a visible game scene, race track, vehicle, audio, or gameplay.
 
 ## Build environment
 
-Install and configure [KallistiOS (KOS)](https://github.com/KallistiOS/KallistiOS) for the Sega Dreamcast, then set `KOS_BASE` to the KOS installation directory and load the KOS environment as described by its documentation.
+The automated workflow uses the KallistiOS toolchain container configured in [the Dreamcast workflow](../.github/workflows/dreamcast-build.yml). You do not need to install this toolchain to see the CI build result.
 
-From this directory, run:
+To build locally, install and configure [KallistiOS](https://github.com/KallistiOS/KallistiOS), set `KOS_BASE`, load the KOS environment, and run `make` from this directory.
 
-```sh
-make
-```
+## Next milestone
 
-The exact output files depend on the installed KOS version and toolchain configuration. This starter has **not yet been compiled in CI**, so do not treat it as a validated binary.
-
-## First milestone
-
-- Build a minimal Dreamcast ELF with KOS.
-- Print a startup message and poll the first controller.
-- Add video output only after the KOS toolchain is confirmed.
-- Keep gameplay logic separate from platform-specific input, video, audio and storage.
+1. Render a visible original test screen.
+2. Verify controller input and display the state on screen.
+3. Establish a basic 3D scene before adding racing physics.
 
 ## Legal / asset boundary
 
-Use only original code and assets you have the right to use. Do not commit a commercial disc image, BIOS, or extracted copyrighted game assets to this repository. Any testing with a game dump should remain local and comply with applicable law.
+Use only original code and assets you have the right to use. Do not commit a commercial disc image, BIOS, or extracted copyrighted game assets to this repository.
