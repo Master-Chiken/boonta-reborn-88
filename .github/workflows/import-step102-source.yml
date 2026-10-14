@@ -124,6 +124,82 @@ jobs:
           echo "Dolphin exited before the expected timeout (status $status)."
           exit 1
 
+  dolphin-visible-preview:
+    name: Experimental visible OpenGL preview
+    needs: native-build
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Download the compiled GameCube DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-step102-source-only
+          path: dist
+      - name: Install Dolphin, Xvfb, software OpenGL and screenshot tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            dolphin-emu xvfb xauth ffmpeg python3-pil libxcb-cursor0
+          command -v xvfb-run
+          command -v ffmpeg
+      - name: Capture visible Dolphin frames (best-effort)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p preview /tmp/dolphin-visible-user
+          export PATH="/usr/games:$PATH"
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24 +extension GLX" bash -euo pipefail -c '
+            export PATH="/usr/games:$PATH"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export QT_QPA_PLATFORM=xcb
+            dolphin-emu --batch --video_backend=OGL \
+              --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-visible-user \
+              > preview/dolphin-visible.log 2>&1 &
+            pid=$!
+            trap "kill -TERM $pid 2>/dev/null || true; wait $pid 2>/dev/null || true" EXIT
+            sleep 7
+            ffmpeg -hide_banner -loglevel error -y -f x11grab \
+              -video_size 1280x720 -i "$DISPLAY" -frames:v 1 preview/frame-07s.png
+            sleep 4
+            ffmpeg -hide_banner -loglevel error -y -f x11grab \
+              -video_size 1280x720 -i "$DISPLAY" -frames:v 1 preview/frame-11s.png
+            kill -TERM "$pid" 2>/dev/null || true
+            wait "$pid" 2>/dev/null || true
+            trap - EXIT
+          '
+      - name: Measure captured frames for non-trivial image content
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageStat
+
+          for name in ("frame-07s.png", "frame-11s.png"):
+              path = Path("preview") / name
+              if not path.is_file() or path.stat().st_size < 1000:
+                  raise SystemExit(f"Missing or suspiciously small screenshot: {path}")
+              image = Image.open(path).convert("RGB")
+              colors = image.getcolors(maxcolors=2_000_000)
+              color_count = len(colors) if colors is not None else 2_000_001
+              means = ImageStat.Stat(image).mean
+              print(f"{name}: size={image.size}, unique_colors={color_count}, mean_rgb={[round(v, 2) for v in means]}")
+              if color_count < 20 or max(means) < 3.0:
+                  raise SystemExit(f"Screenshot looks blank or nearly uniform: {path}")
+          PY
+      - name: Upload visible preview and Dolphin log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: swe1r-gc-dolphin-visible-preview
+          path: preview/
+          if-no-files-found: warn
+          retention-days: 7
+
   commit-reviewed-source:
     name: Commit after host tests, native build, and smoke test
     needs: [host-validation, native-build, dolphin-smoke]
