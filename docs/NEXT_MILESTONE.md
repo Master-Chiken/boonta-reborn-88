@@ -72,12 +72,12 @@ Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas 
 - Road surface, contrasting kerbs, center markers, finish line, pylons, pod orientation, and chase camera now derive from the sampled path instead of drawing only a perfect circular ring.
 - Rendering uses direct indexed centerline samples for repeated road vertices to avoid recalculating the full path length for every vertex. Vehicle placement still uses the generic path sampler.
 - **Gameplay limitation:** race progress, lap detection, opponent AI, and collision checks still use the old angular/circular approximation. This milestone changes prototype geometry and placement, not yet the full physics model.
-- **Validation:** the CI run for commit `17f29af471a85d125b2787232f55658c9c46860b` built a non-empty GameCube DOL and passed both host test jobs. Dolphin visual-frame and process checks were still running at last inspection. A subsequent rendering optimization commit is awaiting its own CI result.
+- **Validation:** the CI run for commit `17f29af471a85d125b2787232f55658c9c46860b` built a non-empty GameCube DOL and passed both host test jobs. Dolphin visual-frame and process checks were still running at last inspection. The rendering optimization is included in the current branch; the newest host tests pass. Native build and Dolphin visual/process checks are tracked separately.
 
 
 ## Track-aware race progression (implemented; host tests green)
 
 - `race_update_track_dt(..., track_length)` advances player and rival progress using the sampled centerline length, converting world-units-per-second to normalized lap progress. Legacy `race_update_dt` remains available for circular callers without a path.
 - The GameCube prototype caches `track_path_length(&track_path)` after generating its clean-room centerline and now calls the track-aware update each frame.
-- Regression coverage includes track-length-based progress and the legacy fallback. GitHub Actions host tests passed: `race_logic_test: 14 suites passed` and `track_path_test: 4 suites passed in the previous run; 2 added suites await CI`.
+- Regression coverage includes track-length-based progress and the legacy fallback. GitHub Actions host tests passed: `race_logic_test: 14 suites passed` and `track_path_test: 6 suites passed in CI`.
 - Native GameCube build and Dolphin runtime checks for the newest revision were still running at the last check. This is still a procedural prototype; rival collision thresholds remain approximate and are not original-game physics.
