@@ -43,3 +43,40 @@ jobs:
           path: gamecube/boonta_demo.dol
           if-no-files-found: error
           retention-days: 7
+
+  dolphin-runtime-smoke:
+    name: Headless Dolphin process smoke test
+    needs: build-smoke-test
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Download GameCube prototype DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: boonta-gamecube-demo-dol
+          path: dist
+
+      - name: Install free Dolphin emulator and virtual display
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth
+          dolphin-emu --version
+
+      - name: Launch the DOL headlessly for 12 seconds
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p /tmp/dolphin-user
+          set +e
+          timeout 12s xvfb-run -a dolphin-emu --batch --video_backend=Null --exec=dist/boonta_demo.dol --user=/tmp/dolphin-user
+          status=$?
+          set -e
+          if [ "$status" -eq 124 ]; then
+            echo "Dolphin remained active until the 12-second timeout."
+            echo "This is a process smoke test only; graphics, input, and gameplay were not verified."
+            exit 0
+          fi
+          echo "Dolphin exited before the expected timeout (status $status)."
+          exit 1
