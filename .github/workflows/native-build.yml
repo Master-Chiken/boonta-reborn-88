@@ -77,3 +77,53 @@ jobs:
             swe1r_gc_port.elf.map
           if-no-files-found: warn
           retention-days: 7
+
+  dolphin-smoke:
+    needs: build
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Download the freshly built DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-build-evidence
+          path: build-artifact
+
+      - name: Install Dolphin and virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dolphin-emu xvfb
+
+      - name: Launch DOL in Dolphin batch mode
+        shell: bash
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=5s 20s xvfb-run -a dolphin-emu \
+            --batch --video_backend=Null \
+            --exec="$PWD/build-artifact/swe1r_gc_port.dol" \
+            --user="$RUNNER_TEMP/dolphin-user" > dolphin-smoke.log 2>&1
+          status=$?
+          set -e
+          cat dolphin-smoke.log
+          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 130 ]]; then
+            echo "::error::Dolphin exited with unexpected status $status."
+            exit "$status"
+          fi
+          if grep -Eiq "failed to load executable|could not boot|fatal error|assertion failed" dolphin-smoke.log; then
+            echo "::error::Dolphin reported a boot or fatal error."
+            exit 1
+          fi
+          if [[ "$status" -eq 124 || "$status" -eq 130 ]]; then
+            echo "Dolphin remained active for the 20-second smoke window."
+          else
+            echo "Dolphin exited normally during the smoke window."
+          fi
+          echo "This smoke test does not verify visible rendering, controller input, or race completion."
+
+      - name: Upload Dolphin smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-smoke-evidence
+          path: dolphin-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
