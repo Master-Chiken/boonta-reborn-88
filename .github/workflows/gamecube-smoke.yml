@@ -1,0 +1,45 @@
+name: GameCube toolchain smoke test
+
+on:
+  pull_request:
+    paths:
+      - "gamecube/**"
+      - ".github/workflows/gamecube-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "gamecube/**"
+      - ".github/workflows/gamecube-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-smoke-test:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build clean-room GameCube smoke test
+        working-directory: gamecube
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITPPC="$DEVKITPRO/devkitPPC"
+          make clean
+          make
+          test -s boonta_smoke.dol
+          file boonta_smoke.dol
+
+      - name: Upload smoke-test DOL
+        uses: actions/upload-artifact@v4
+        with:
+          name: boonta-gamecube-smoke-dol
+          path: gamecube/boonta_smoke.dol
+          if-no-files-found: error
+          retention-days: 7
