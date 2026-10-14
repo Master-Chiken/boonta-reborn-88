@@ -9,13 +9,13 @@ This is **not yet a finished remaster or verified native port**. The main blocke
 - **Primary target:** native GameCube/Wii homebrew prototype.
 - **Existing source of truth:** `Star_Wars_Racer_GameCube_Step102.zip`, audited separately from this repository. It contains C gameplay/rendering code, a GameCube Makefile, research/build tools, documentation, and host-side tests.
 - **Prototype scope described by its README:** 25-course catalog, 23 vehicle presets/variants, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, single race, championship, time trial, Mirror Cup, HUD, and save/progression scaffolding.
-- **Host tests:** I ran the archive's host release suite in a clean temporary environment. All host shell checks and 91 Python unit tests passed after restoring the executable bits encoded in the ZIP. This is not a native GameCube build and is not a runtime test.
+- **Host tests:** The full Step 102 archive previously passed its host release suite, including 91 Python unit tests, in a clean temporary environment. Separately, the 123-file source-only bundle passed 32 shell regression checks and 5 Python policy tests (see [`docs/STEP102_HOST_VALIDATION.md`](docs/STEP102_HOST_VALIDATION.md)). These are host-side checks, not GitHub Actions results, a native GameCube build, or a runtime test.
 - **Native executable:** no verified `.dol` is currently present in this GitHub repository. A real devkitPPC/libogc cross-build and Dolphin/console boot test remain outstanding.
 - **Separate exploratory track:** `dreamcast/` is a small clean-room KallistiOS starter. It is not the main game prototype and must not be confused with the GameCube/Wii code.
 
 ## Current repository limitation
 
-The native-build workflow is prepared to run when `Makefile`, `source/`, `include/`, `data/`, `tools/`, and `tests/` from the source prototype are present. They have **not yet been imported into this repository**, so the GameCube workflow cannot produce the game's DOL yet.
+The source-only bundle is still being reviewed separately. Its files have **not yet been imported into this repository**; source provenance and redistribution permissions must be reviewed before import. See [`docs/SOURCE_IMPORT_GATE.md`](docs/SOURCE_IMPORT_GATE.md). Until an approved source subset is imported, this repository cannot produce the game's DOL.
 
 ## Legal and asset policy
 
