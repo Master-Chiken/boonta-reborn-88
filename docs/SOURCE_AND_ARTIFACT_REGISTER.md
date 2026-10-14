@@ -16,6 +16,17 @@ The files in the first table were supplied in the ChatGPT conversation. They are
 | swe1r-assets-main.zip | 12,616,153 bytes | Snapshot associated with SWE1R asset tooling/research. Verify its exact contents, upstream revision, dependencies, and license before adapting it. Asset parsers are not the same thing as permission to redistribute extracted game assets. |
 | Star Wars - Episode I - Racer (USA).7z | 328,559,989 bytes | Compressed game archive whose exact internal contents should be verified before it is used. Treat it as private commercial game material unless proven otherwise; keep it out of this public repository and automated review prompts. |
 
+## Existing owner-side Step 102 audit files
+
+Two generated metadata files already exist in the owner's ChatGPT Library; neither is tracked by GitHub:
+
+- **boonta_step102_file_manifest.csv** — 101,245 bytes; 359 archive-file rows plus a header. It records paths, sizes, per-file hashes, ZIP modes, categories, and cautious initial review decisions.
+- **boonta_step102_inventory_summary.txt** — 891 bytes; archive totals and category/extension/action counts.
+
+The manifest matches the audited ZIP identified by SHA-256 85a1a1d82426399e48ac5a7e41bd7e9e45fda82e832284e573c358641df24b12. Its current triage actions are: 25 HOLD_PROVENANCE, 4 REVIEW_DATA_PROVENANCE, 152 REVIEW_DOCUMENTATION, 7 REVIEW_INDIVIDUALLY, and 171 REVIEW_SOURCE_LICENSE. **No row is marked cleared for redistribution.** This is a metadata triage, not legal advice or license clearance.
+
+Keep the CSV private for the file-by-file review until a deliberate decision is made about publishing any of its path/hash metadata. GitHub Actions and GitHub-hosted agents cannot read the ChatGPT Library file automatically. Do not treat the mere existence of the manifest as permission to import the archive.
+
 ## Upstream research links
 
 These links connect the uploaded snapshots and earlier research to their original project context. They are research references, not an approval to copy code or data.
