@@ -21,6 +21,7 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 3. **Cloud-first build.** Prefer GitHub Actions/devkitPro containers to avoid requiring local toolchain installation or large downloads on the user's computer.
 4. **Test evidence matters.** Record exact commands and results. Never label a host test as a native build or a successful compile as a working game.
 5. **Keep copyrighted content out of the public repository.** No ROMs, disc images, BIOS files, or unclear extracted commercial payloads.
+6. **Use PC reverse engineering as evidence, not as console source code.** Prioritize SW_RACER_RE for PC behavior research, then map findings to Step 102 and explicitly test any GameCube/Wii differences. Its upstream code is AGPL-3.0; do not copy or adapt it into this repository unless license compatibility and resulting obligations are deliberately reviewed.
 
 ## Phases and acceptance criteria
 
@@ -31,8 +32,10 @@ Build toward a playable enhanced racing prototype inspired by *Star Wars: Episod
 - [ ] Create a path-by-path source import manifest for the Step 102 archive.
 - [ ] Finish code/license/provenance review of external dependencies, generated route data, sample model/material files and audio.
 - [ ] Select the exact source/assets subset safe to publish.
+- [ ] Establish a behavior-reference matrix linking SW_RACER_RE research to Step 102 modules/tests for race/laps, pod physics/control, and spline/track format.
+- [ ] Keep verified PC behavior separate from unverified GameCube/Wii assumptions.
 
-**Exit criterion:** a reviewed source-only import list and clear provenance notes.
+**Exit criterion:** a reviewed source-only import list, clear provenance notes, and an evidence-linked reference matrix for the first gameplay slice.
 
 ### Phase 1 — Import and automated host tests
 - [ ] Import cleared GameCube/Wii source, headers, Makefile, tests, tools, and build docs.
@@ -77,6 +80,10 @@ Define what “HD” means for each target before promising it: native console r
 - [ ] Determine lawful homebrew executable and packaging formats.
 - [ ] Validate any image conversion separately; a DOL build does not automatically produce a valid NKit ISO or WBFS.
 - [ ] Publish only code and assets that can be redistributed.
+
+## Priority reverse-engineering reference
+
+SW_RACER_RE is a Tier 1 research source for the PC version, not the GameCube source of truth. Start with race/lap behavior, pod physics and input, and route/spline formats. Maintain citations to the exact upstream file/commit, note confidence and platform, map findings to Step 102 code/tests, then write independent console-target code. See [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md).
 
 ## Definition of done for each task
 
