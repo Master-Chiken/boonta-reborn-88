@@ -16,13 +16,15 @@ Use the existing Step 102 GameCube/Wii source prototype as the primary project b
 
 ## Work sequence
 
-1. Review the source archive's provenance, license, generated route data, and assets.
-2. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
-3. Run the host test suite in GitHub Actions.
-4. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
-5. Inspect the first compiler failure if any and fix it without disabling tests.
-6. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
-7. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
+1. Begin with [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md). Record PC evidence for race/lap flow, pod physics/control, and spline/track format, with exact upstream URLs and confidence labels. Do not treat PC behavior as GameCube truth.
+2. Review the Step 102 source archive's provenance, license, generated route data, and assets.
+3. Map the cleared Step 102 modules and existing tests to the research findings; keep PC reference code/assets and unresolved route-centerline files out by default.
+4. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
+5. Run the host test suite in GitHub Actions.
+6. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
+7. Inspect the first compiler failure if any and fix it without disabling tests.
+8. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
+9. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
 
 ## Acceptance criteria
 
