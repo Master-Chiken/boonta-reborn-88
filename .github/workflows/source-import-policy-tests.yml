@@ -7,6 +7,8 @@ on:
     paths:
       - "tools/check_source_import_policy.py"
       - "tools/test_check_source_import_policy.py"
+      - "tools/import_step102_bundle.py"
+      - "tools/test_import_step102_bundle.py"
       - ".github/workflows/source-import-policy-tests.yml"
   pull_request:
     branches:
@@ -14,6 +16,8 @@ on:
     paths:
       - "tools/check_source_import_policy.py"
       - "tools/test_check_source_import_policy.py"
+      - "tools/import_step102_bundle.py"
+      - "tools/test_import_step102_bundle.py"
       - ".github/workflows/source-import-policy-tests.yml"
 
 permissions:
@@ -21,7 +25,7 @@ permissions:
 
 jobs:
   policy-tests:
-    name: Python path-policy regression tests
+    name: Python source-import safety tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -30,5 +34,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-      - name: Run path-policy regression tests
+      - name: Run source import policy regression tests
         run: python3 -m unittest discover -s tools -p 'test_check_source_import_policy.py' -v
+      - name: Run archive member validation regression tests
+        run: python3 -m unittest discover -s tools -p 'test_import_step102_bundle.py' -v
