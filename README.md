@@ -18,7 +18,7 @@ Latest completed validation on October 14, 2026:
 - Native devkitPPC/libogc cross-build: **passed**.
 - Non-empty `swe1r_gc_port.dol`: generated, about 301 KiB.
 - Headless Dolphin process smoke test: **passed**; Dolphin accepted the DOL and remained active through a 12-second timeout using the null video backend.
-- [Latest CI run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351).
+- [Latest CI run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235).
 
 The import build uses `make USE_IMPORTED_SPLINE=0` and a bundled demo/procedural track. It excludes the identified PC-mod-derived route centerlines and manifests, imported centerline headers, generated mesh/boundary exports, audio, model/texture exports, ROMs, disc images, extracted commercial data, and related reverse-engineering helpers.
 
