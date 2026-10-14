@@ -149,7 +149,7 @@ jobs:
       - name: Install Dolphin, virtual display, and screenshot utility
         run: |
           sudo apt-get update
-          sudo apt-get install -y dolphin-emu xvfb imagemagick
+          sudo apt-get install -y dolphin-emu xvfb imagemagick xdotool x11-utils
 
       - name: Try rendering the DOL and capture the first frame
         shell: bash
@@ -159,14 +159,22 @@ jobs:
           export DOLPHIN_USER="$RUNNER_TEMP/dolphin-visual-user"
           export LOG="$PWD/dolphin-visual.log"
           export SCREEN="$PWD/dolphin-frame.png"
+          export WINDOWS="$PWD/dolphin-window-tree.txt"
           set +e
           xvfb-run -a bash -c '
             set +e
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
             pid=$!
-            sleep 8
-            import -window root "$SCREEN"
+            sleep 12
+            xwininfo -root -tree > "$WINDOWS" 2>&1
+            window=$(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null | head -n1)
+            if [[ -n "$window" ]]; then
+              import -window "$window" "$SCREEN"
+            else
+              import -window root "$SCREEN"
+            fi
             capture_status=$?
+            find "$DOLPHIN_USER" -maxdepth 5 -type f -name "*.log" -print -exec cat {} \; >> "$LOG" 2>/dev/null || true
             kill -TERM "$pid" 2>/dev/null || true
             sleep 1
             kill -KILL "$pid" 2>/dev/null || true
@@ -176,13 +184,20 @@ jobs:
           status=$?
           set -e
           cat dolphin-visual.log
+          cat dolphin-window-tree.txt
           if [[ "$status" -ne 0 ]]; then
             echo "::error::Could not capture a Dolphin software-renderer frame (status $status)."
             exit "$status"
           fi
           test -s dolphin-frame.png
           identify dolphin-frame.png
-          echo "Frame captured for visual inspection; this does not prove controller input or a completed race."
+          mean=$(identify -format '%[fx:mean]' dolphin-frame.png)
+          echo "Captured frame mean pixel intensity: $mean"
+          if awk "BEGIN { exit !($mean < 0.001) }"; then
+            echo "::error::Captured frame is entirely black; visible game rendering is not verified."
+            exit 1
+          fi
+          echo "Non-black frame captured. Controller input and race completion are still unverified."
 
       - name: Upload Dolphin visual evidence
         if: always()
