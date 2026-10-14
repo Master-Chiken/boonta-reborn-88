@@ -71,15 +71,15 @@ static void test_lane_clamping_and_steering_direction(void)
     RaceInput input = neutral_input();
     race_reset(&state);
 
-    /* Left is toward the inside of the ring when facing forward at angle zero. */
+    /* At the start-line angle, left moves outward and right moves inward. */
     input.left = 1;
     for (int i = 0; i < 100; ++i) race_update(&state, &input);
-    assert(fabsf(state.lane_offset + 2.7f) < 0.001f);
+    assert(fabsf(state.lane_offset - 2.7f) < 0.001f);
 
     input.left = 0;
     input.right = 1;
     for (int i = 0; i < 200; ++i) race_update(&state, &input);
-    assert(fabsf(state.lane_offset - 2.7f) < 0.001f);
+    assert(fabsf(state.lane_offset + 2.7f) < 0.001f);
 }
 
 static void test_boost_heat_and_recharge(void)
