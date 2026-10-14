@@ -136,6 +136,34 @@ static void test_pause_freezes_motion_and_reset_unpauses(void)
     assert(state.speed == 0.0f);
 }
 
+static void test_opponents_progress_and_position(void)
+{
+    RaceState state;
+    RaceInput input = neutral_input();
+    float initial_angles[RACE_OPPONENT_COUNT];
+
+    race_reset(&state);
+    assert(race_position(&state) == 4);
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        initial_angles[i] = state.opponent_angles[i];
+    }
+
+    for (int frame = 0; frame < 100; ++frame) {
+        race_update(&state, &input);
+    }
+
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        assert(state.opponent_angles[i] != initial_angles[i]);
+        assert(state.opponent_speeds[i] > 0.0f);
+        assert(state.opponent_speeds[i] <= 32.0f);
+    }
+
+    /* Moving the player beyond the rivals on the course updates race position. */
+    state.angle = 1.0f;
+    assert(race_position(&state) == 1);
+    assert(race_position(NULL) == 0);
+}
+
 static void test_three_lap_finish(void)
 {
     RaceState state;
@@ -168,7 +196,8 @@ int main(void)
     test_lane_clamping();
     test_boost_heat_and_recharge();
     test_pause_freezes_motion_and_reset_unpauses();
+    test_opponents_progress_and_position();
     test_three_lap_finish();
-    puts("race_logic_test: 6 suites passed");
+    puts("race_logic_test: 7 suites passed");
     return 0;
 }
