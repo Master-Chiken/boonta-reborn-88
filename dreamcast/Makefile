@@ -1,13 +1,18 @@
-# KallistiOS Dreamcast application.
+# KallistiOS Dreamcast application. Follows the upstream KOS hello/maple examples.
 TARGET = boonta_dc.elf
 OBJS = main.o
 
-all: $(TARGET)
+all: rm-elf $(TARGET)
 
 include $(KOS_BASE)/Makefile.rules
-include $(KOS_BASE)/Makefile.prefab
 
-clean:
-	-rm -f $(OBJS) $(TARGET) boonta_dc.bin boonta_dc.map
+$(TARGET): $(OBJS)
+	kos-cc -o $(TARGET) $(OBJS)
 
-.PHONY: all clean
+rm-elf:
+	-rm -f $(TARGET)
+
+clean: rm-elf
+	-rm -f $(OBJS)
+
+.PHONY: all clean rm-elf
