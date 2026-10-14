@@ -8,7 +8,7 @@ This folder contains a **clean-room, original procedural 3D driving prototype** 
 - Original low-poly pod model with twin engine shapes and boost flames.
 - Chase camera and a simple speed/boost/lap HUD.
 - Acceleration, braking, boost energy and heat, lateral lane adjustment, pause, and restart.
-- Three procedural rival racers with deterministic, smooth lane changes and a player-position HUD (1st–4th).
+- Three procedural rival racers with deterministic, smooth lane changes, simple contact penalties, an impact cooldown, and a player-position / impact-count HUD (1st–4th).
 - Three-lap finish condition.
 
 ## Controls
@@ -36,6 +36,7 @@ The repository contains a Codespaces dev-container configuration and a [cloud-de
 
 - This is a first gameplay experiment, not the complete Step 102 prototype and not a remaster.
 - The rivals are simple procedural placeholders; they are not the original game's opponent AI.
+- Contact is currently a lightweight prototype rule based on angular and lateral proximity; it is not yet full collision physics or advanced rival AI.
 - There are no imported original tracks, menus, championship/save system, final art, or final audio.
 - The full Step 102 archive remains outside the repository while code licensing, third-party provenance, and asset redistribution rights are reviewed.
 - The DOL needs actual interactive emulator/hardware validation before we call the prototype playable.
