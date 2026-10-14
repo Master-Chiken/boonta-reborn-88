@@ -1,23 +1,31 @@
 # Dreamcast port investigation — Star Wars: Episode I – Racer
 
-## Status
+## Status (updated 2026-10-14)
 
-**Target platform under investigation: Sega Dreamcast.** The user supplied an archive named `Star Wars - Episode I - Racer (USA).7z` (about 314 MiB). The filename and size are consistent with known Dreamcast releases of this title, but the archive's internal file listing has not yet been verified in this environment. Treat the platform identification as probable, not confirmed, until the archive is inspected.
+**Target platform under investigation: Sega Dreamcast.** The supplied archive has not been inspected internally in this environment, so its exact contents are not confirmed.
 
-## Important separation from the existing prototype
+A separate, clean-room Dreamcast homebrew starter now exists in `dreamcast/`. The GitHub Actions workflow successfully compiled it with KallistiOS and uploaded the ELF artifact in run [38568111117](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38568111117). This confirms the toolchain and starter compile; it does **not** confirm gameplay, on-console operation, or a port of the commercial game.
 
-The current `Star_Wars_Racer_GameCube_Step102` prototype is aimed at GameCube/Wii and its build workflow expects a GameCube/Wii toolchain and output such as a `.dol`. That code is **not a Dreamcast executable** and should not be presented as one. Dreamcast is a different architecture and SDK/toolchain target; a Dreamcast build typically uses KallistiOS (KOS) and produces a Dreamcast-compatible `.bin`/disc image rather than a GameCube `.dol`.
+## Keep the tracks separate
 
-Keep the current GameCube/Wii prototype intact while investigating Dreamcast. Do not overwrite or relabel it as a Dreamcast port.
+The existing GameCube/Wii prototype is not a Dreamcast executable. Dreamcast is a different architecture and toolchain. Keep the GameCube/Wii research and Dreamcast starter separate; do not overwrite or relabel one as the other.
 
 ## Next technical steps
 
-1. Inspect the supplied 7z archive's file list and confirm whether it contains a `.gdi`, `.cdi`, `.bin`, `.cue`, or other disc-image components. Do not commit the commercial game disc image or extracted proprietary game assets to this repository.
-2. If it is a Dreamcast disc image, record only non-sensitive technical metadata and hashes locally; do not upload the image to GitHub.
-3. Establish a clean Dreamcast homebrew skeleton in a separate directory (for example `dreamcast/`) using a documented KallistiOS setup. Start with a legally original test screen and controller input, not copied game code or proprietary assets.
-4. Audit whether any existing prototype logic can be ported as platform-independent original code. Keep platform-specific graphics, audio, storage, and input behind separate interfaces.
-5. Add a Dreamcast CI job only after a reproducible KOS build environment and a minimal clean-room source tree exist.
+1. Add a simple video mode and visible original test screen using documented KallistiOS APIs.
+2. Read controller input reliably and display changing input state on screen.
+3. Add an original, minimal 3D scene and camera only after the video/input smoke test is stable.
+4. Keep platform-independent gameplay logic separate from platform-specific graphics, audio, storage, and input.
+5. Test on an emulator or real Dreamcast when available; until then, label CI compilation as compile-only validation.
+6. Inspect the supplied archive locally only if needed to confirm its format. Do not upload it to GitHub.
 
-## Constraints and current blocker
+## Legal and asset boundary
 
-The archive is present in the conversation runtime, but this environment currently lacks a 7z listing/extraction utility and cannot install one from the network. Therefore the archive's internal format and contents have not yet been confirmed. No Dreamcast binary has been built.
+Use original code and assets you have the right to use. Do not commit a commercial disc image, BIOS, or extracted proprietary game assets to this repository. Keep any legally obtained game image local and comply with applicable law.
+
+## Current limitations
+
+- CI compiles the clean-room starter to an ELF and stores it as an artifact.
+- The starter currently prints a message through KOS console output and polls the first controller.
+- No video scene, race track, vehicle physics, audio, or commercial game assets are implemented.
+- No successful emulator or real-hardware test has been recorded.
