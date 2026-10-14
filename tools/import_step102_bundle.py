@@ -72,9 +72,17 @@ def preflight_destinations(
     destinations: list[tuple[Path, str, bytes]] = []
     root_resolved = root.resolve()
     for relative, content in planned:
-        destination = root / relative
+        relative_path = PurePosixPath(relative)
+        if (
+            relative_path.is_absolute()
+            or relative_path.as_posix() != relative
+            or not relative_path.parts
+            or ".." in relative_path.parts
+        ):
+            raise ValueError(f"Unsafe destination path: {relative!r}")
+        destination = root.joinpath(*relative_path.parts)
         parent = root
-        for component in PurePosixPath(relative).parts[:-1]:
+        for component in relative_path.parts[:-1]:
             parent = parent / component
             if parent.is_symlink():
                 raise ValueError(f"Refusing to write through a symlinked directory: {parent}")
