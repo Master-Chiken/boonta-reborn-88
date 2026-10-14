@@ -260,6 +260,46 @@ static void test_racer_collision_requires_close_lateral_alignment(void)
     assert(state.speed > 19.0f);
 }
 
+static void test_track_collision_threshold_uses_world_distance(void)
+{
+    RaceState short_near;
+    RaceState long_near;
+    RaceState short_far;
+    RaceState long_far;
+    RaceInput input = neutral_input();
+
+    race_reset(&short_near);
+    race_reset(&long_near);
+    race_reset(&short_far);
+    race_reset(&long_far);
+
+    /* Equal world-space gaps should behave alike on different track lengths. */
+    short_near.speed = 20.0f;
+    long_near.speed = 20.0f;
+    short_near.angle = 1.0f;
+    long_near.angle = 1.0f;
+    short_near.opponent_angles[1] = 1.10f; /* ~1.59 units on a 100-unit track */
+    long_near.opponent_angles[1] = 1.05f;  /* ~1.59 units on a 200-unit track */
+
+    race_update_track_dt(&short_near, &input, 0.001f, 100.0f);
+    race_update_track_dt(&long_near, &input, 0.001f, 200.0f);
+    assert(short_near.collision_count == 1);
+    assert(long_near.collision_count == 1);
+
+    /* A gap beyond the same world-space contact radius must not collide. */
+    short_far.speed = 20.0f;
+    long_far.speed = 20.0f;
+    short_far.angle = 1.0f;
+    long_far.angle = 1.0f;
+    short_far.opponent_angles[1] = 1.20f; /* ~3.18 units */
+    long_far.opponent_angles[1] = 1.10f;  /* ~3.18 units */
+
+    race_update_track_dt(&short_far, &input, 0.001f, 100.0f);
+    race_update_track_dt(&long_far, &input, 0.001f, 200.0f);
+    assert(short_far.collision_count == 0);
+    assert(long_far.collision_count == 0);
+}
+
 static void test_three_lap_finish(void)
 {
     RaceState state;
@@ -446,10 +486,11 @@ int main(void)
     test_opponent_lane_changes_are_smooth_and_bounded();
     test_racer_collision_penalty_and_cooldown();
     test_racer_collision_requires_close_lateral_alignment();
+    test_track_collision_threshold_uses_world_distance();
     test_three_lap_finish();
     test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 15 suites passed");
+    puts("race_logic_test: 16 suites passed");
     return 0;
 }
