@@ -97,10 +97,10 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0
           rm -rf /var/lib/apt/lists/*
           export PATH="/usr/games:$PATH"
-          dolphin-emu --version
+          QT_QPA_PLATFORM=offscreen dolphin-emu --version
       - name: Capture Dolphin window output
         shell: bash
         run: |
