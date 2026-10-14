@@ -161,7 +161,9 @@ jobs:
             export XDG_DATA_HOME="$HOME/.local/share"
             export LIBGL_ALWAYS_SOFTWARE=1
             export QT_QPA_PLATFORM=xcb
-            dolphin-emu --batch --video_backend=OGL \
+            # Do not pass --batch here: it suppresses the normal GUI path and
+            # can leave Xvfb capturing only a black root window.
+            dolphin-emu --video_backend=OGL \
               --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-visible-user \
               > preview/dolphin-visible.log 2>&1 &
             pid=$!
