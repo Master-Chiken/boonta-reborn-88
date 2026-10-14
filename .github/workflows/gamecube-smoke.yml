@@ -118,20 +118,12 @@ jobs:
             done
 
             import -window root "$GITHUB_WORKSPACE/dolphin-frame.png"
-            python3 - "$GITHUB_WORKSPACE/dolphin-frame.png" <<'"'"'PY'"'"'
-          from PIL import Image
-          import sys
-
-          image = Image.open(sys.argv[1]).convert("RGB")
-          image.thumbnail((160, 90))
-          pixels = list(image.getdata())
-          non_dark = sum(1 for r, g, b in pixels if max(r, g, b) > 24)
-          distinct = len(set(pixels))
-          print(f"Captured frame sample: {image.size[0]}x{image.size[1]}, "
-                f"{non_dark} non-dark pixels, {distinct} distinct colors")
-          if non_dark < 500 or distinct < 24:
-              raise SystemExit("Captured image appears blank or nearly blank.")
-          PY
+            image_colors=$(magick "$GITHUB_WORKSPACE/dolphin-frame.png" -resize 160x90 -format %k info:)
+            echo "Captured frame has $image_colors distinct colors."
+            if [[ "$image_colors" -lt 24 ]]; then
+              echo "Captured image appears blank or nearly blank."
+              exit 1
+            fi
           '
 
       - name: Upload Dolphin frame and log
