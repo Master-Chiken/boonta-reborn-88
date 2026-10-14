@@ -243,7 +243,8 @@ static void draw_pylons(void)
     GX_End();
 }
 
-static void draw_pod(float px, float pz, float tx, float tz, float rx, float rz)
+static void draw_pod(float px, float pz, float tx, float tz, float rx, float rz,
+                     int boost_active, u8 body_r, u8 body_g, u8 body_b)
 {
     float nx = px + tx * 2.1f;
     float nz = pz + tz * 2.1f;
@@ -256,26 +257,30 @@ static void draw_pod(float px, float pz, float tx, float tz, float rx, float rz)
 
     /* Main wedge-shaped pod body. */
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 3);
-    vertex3(nx, 1.0f, nz, 58, 211, 255);
-    vertex3(lx, 0.68f, lz, 20, 90, 155);
-    vertex3(rxp, 0.68f, rzp, 20, 90, 155);
+    vertex3(nx, 1.0f, nz, body_r, body_g, body_b);
+    vertex3(lx, 0.68f, lz,
+            (u8)(body_r / 3), (u8)(body_g / 2), (u8)(body_b / 2));
+    vertex3(rxp, 0.68f, rzp,
+            (u8)(body_r / 3), (u8)(body_g / 2), (u8)(body_b / 2));
     GX_End();
 
     /* Two original engine nacelles. */
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
-    vertex3(px + rx * 0.48f, 0.88f, pz + rz * 0.48f, 122, 232, 255);
+    vertex3(px + rx * 0.48f, 0.88f, pz + rz * 0.48f,
+            body_r, body_g, body_b);
     vertex3(px + rx * 1.05f - tx * 0.55f, 0.64f,
             pz + rz * 1.05f - tz * 0.55f, 29, 143, 211);
     vertex3(px + rx * 0.2f - tx * 0.7f, 0.72f,
             pz + rz * 0.2f - tz * 0.7f, 29, 143, 211);
-    vertex3(px - rx * 0.48f, 0.88f, pz - rz * 0.48f, 122, 232, 255);
+    vertex3(px - rx * 0.48f, 0.88f, pz - rz * 0.48f,
+            body_r, body_g, body_b);
     vertex3(px - rx * 1.05f - tx * 0.55f, 0.64f,
             pz - rz * 1.05f - tz * 0.55f, 29, 143, 211);
     vertex3(px - rx * 0.2f - tx * 0.7f, 0.72f,
             pz - rz * 0.2f - tz * 0.7f, 29, 143, 211);
     GX_End();
 
-    if (race.boost_active && race.speed > 2.0f) {
+    if (boost_active) {
         GX_Begin(GX_TRIANGLES, GX_VTXFMT0, 6);
         vertex3(bx, 0.72f, bz, 255, 216, 86);
         vertex3(bx - tx * 1.1f + rx * 0.24f, 0.55f,
@@ -322,7 +327,7 @@ static void draw_hud(void)
               race.engine_heat > 0.7f ? 90 : 211,
               race.engine_heat > 0.7f ? 45 : 255);
 
-    draw_rect(screen_w - 112.0f, 12.0f, screen_w - 12.0f, 58.0f,
+    draw_rect(screen_w - 112.0f, 12.0f, screen_w - 12.0f, 84.0f,
               7, 17, 29);
     if (race.finished) {
         draw_text("FINISH", screen_w - 100.0f, 28.0f, 1.5f,
@@ -336,6 +341,11 @@ static void draw_hud(void)
         draw_text("/3", screen_w - 43.0f, 30.0f, 1.0f,
                   196, 237, 255);
     }
+    draw_text("POS", screen_w - 101.0f, 53.0f, 1.0f,
+              196, 237, 255);
+    snprintf(number, sizeof(number), "%d/4", race_position(&race));
+    draw_text(number, screen_w - 64.0f, 52.0f, 1.0f,
+              255, 255, 255);
 
     draw_rect(12.0f, screen_h - 25.0f, screen_w - 12.0f,
               screen_h - 8.0f, 7, 17, 29);
@@ -475,7 +485,27 @@ static void render_frame(void)
     draw_ring(TRACK_RADIUS - 4.25f, TRACK_RADIUS - 3.85f, 0.09f, 1);
     draw_center_dashes();
     draw_finish_line();
-    draw_pod(px, pz, tx, tz, cosf(race.angle), sinf(race.angle));
+
+    /* Original procedural rival pods; no commercial models or textures. */
+    for (int i = 0; i < RACE_OPPONENT_COUNT; ++i) {
+        float rival_angle = race.opponent_angles[i];
+        float rival_radius = TRACK_RADIUS + race.opponent_lanes[i];
+        float rival_x = rival_radius * cosf(rival_angle);
+        float rival_z = rival_radius * sinf(rival_angle);
+        u8 rival_r = 255, rival_g = 105, rival_b = 78;
+
+        if (i == 1) {
+            rival_r = 255; rival_g = 205; rival_b = 70;
+        } else if (i == 2) {
+            rival_r = 190; rival_g = 120; rival_b = 255;
+        }
+
+        draw_pod(rival_x, rival_z, -sinf(rival_angle), cosf(rival_angle),
+                 cosf(rival_angle), sinf(rival_angle), 0,
+                 rival_r, rival_g, rival_b);
+    }
+    draw_pod(px, pz, tx, tz, cosf(race.angle), sinf(race.angle),
+             race.boost_active && race.speed > 2.0f, 58, 211, 255);
     draw_hud();
 
     GX_DrawDone();
