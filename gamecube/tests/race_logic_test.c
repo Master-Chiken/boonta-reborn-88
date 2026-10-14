@@ -393,16 +393,17 @@ static void test_track_length_controls_world_speed_progress(void)
     race_reset(&state);
     state.speed = 10.0f;
     state.angle = 0.0f;
+    input.accelerate = 1;
 
     race_update_track_dt(&state, &input, 0.05f, 100.0f);
-    assert(fabsf(state.angle - (10.0f * 0.05f * 6.28318530717958647692f /
+    assert(fabsf(state.angle - (10.6f * 0.05f * 6.28318530717958647692f /
                                 100.0f)) < 0.0001f);
 
     /* Invalid length preserves the legacy circular model for callers without a path. */
     race_reset(&state);
     state.speed = 10.0f;
     race_update_track_dt(&state, &input, 0.05f, 0.0f);
-    assert(fabsf(state.angle - (10.0f * 0.05f / 22.0f)) < 0.0001f);
+    assert(fabsf(state.angle - (10.6f * 0.05f / 22.0f)) < 0.0001f);
 }
 
 int main(void)
@@ -421,6 +422,6 @@ int main(void)
     test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 13 suites passed");
+    puts("race_logic_test: 14 suites passed");
     return 0;
 }
