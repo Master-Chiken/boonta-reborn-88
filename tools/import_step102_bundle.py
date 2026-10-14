@@ -13,15 +13,15 @@ ALLOWED_ROOTS = {"Makefile", "STEP102_IMPORT_README.md", "data", "source", "test
 
 
 def main() -> int:
-    encoded = BUNDLE.read_bytes()
+    # The conversation attachment was wrapped as base64 text with line breaks.
+    encoded = b"".join(BUNDLE.read_bytes().split())
     raw = base64.b64decode(encoded, validate=True)
     imported = 0
     skipped = 0
     seen: set[str] = set()
 
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as archive:
-        members = archive.getmembers()
-        for member in members:
+        for member in archive.getmembers():
             name = member.name
             while name.startswith("./"):
                 name = name[2:]
