@@ -79,5 +79,5 @@ Do not add a payment method, enable billing, or use paid APIs. Free-tier quotas 
 
 - `race_update_track_dt(..., track_length)` advances player and rival progress using the sampled centerline length, converting world-units-per-second to normalized lap progress. Legacy `race_update_dt` remains available for circular callers without a path.
 - The GameCube prototype caches `track_path_length(&track_path)` after generating its clean-room centerline and now calls the track-aware update each frame.
-- Regression coverage includes track-length-based progress and the legacy fallback. GitHub Actions host tests passed: `race_logic_test: 14 suites passed` and `track_path_test: 6 suites passed in CI`.
+- Regression coverage includes track-length-based progress and the legacy fallback. GitHub Actions host tests passed: `race_logic_test: 15 suites passed` and `track_path_test: 6 suites passed`.
 - Native GameCube build and Dolphin runtime checks for the newest revision were still running at the last check. This is still a procedural prototype; rival collision thresholds remain approximate and are not original-game physics.
