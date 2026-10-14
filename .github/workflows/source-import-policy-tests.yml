@@ -1,0 +1,34 @@
+name: Source import policy unit tests
+
+on:
+  push:
+    branches:
+      - fix/source-import-policy-casefold
+    paths:
+      - "tools/check_source_import_policy.py"
+      - "tools/test_check_source_import_policy.py"
+      - ".github/workflows/source-import-policy-tests.yml"
+  pull_request:
+    branches:
+      - import/step102-source-only
+    paths:
+      - "tools/check_source_import_policy.py"
+      - "tools/test_check_source_import_policy.py"
+      - ".github/workflows/source-import-policy-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  policy-tests:
+    name: Python path-policy regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Run path-policy regression tests
+        run: python3 -m unittest discover -s tools -p 'test_check_source_import_policy.py' -v
