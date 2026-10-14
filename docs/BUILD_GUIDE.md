@@ -1,39 +1,38 @@
-# Build guide (initial)
+# Guide de compilation — GameCube/Wii
 
-**Status:** no project build has been verified yet. This document intentionally does not invent a build command before the repository's source tree and target toolchain are known.
+## État actuel
 
-## Prerequisites decision
+Le dépôt possède un premier prototype procédural clean-room dans `gamecube/`. La compilation native de ce petit échantillon est vérifiée dans GitHub Actions ; cela ne signifie pas que le port complet Step 102 est compilé ou que le jeu est jouable.
 
-We will first inspect the prototype archive and select one of these directions:
+- Exécutable produit : `gamecube/boonta_demo.dol`.
+- Chaîne de compilation : devkitPPC/libogc dans un conteneur GitHub Actions, sans installation locale.
+- Tests hôtes : six suites de tests C portant sur la remise à zéro, l'accélération/freinage/plafond de vitesse, les limites de voie, le boost/chaleur/recharge, la pause/remise à zéro et la fin après trois tours.
+- Smoke test Dolphin : le workflow a lancé le DOL en mode sans interface pendant 12 secondes et le processus est resté actif jusqu'au délai d'arrêt. C'est un contrôle de processus seulement, pas une validation de rendu, de commandes ou de gameplay.
+- Rétention de l'artefact : 7 jours.
 
-### Route A — N64 playback smoke test on Wii
-Use a compatible, existing Wii homebrew N64 emulator with a game copy the user is legally entitled to use.
+## Lancer les vérifications sans installer d'outils
 
-This is only a compatibility test. It is not a native port, not an HD remaster, and not a custom WBFS build of this project.
+Ouvre la page [GitHub Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions), puis le workflow **GameCube procedural driving prototype**. Le workflow compile le DOL, exécute les tests hôtes et effectue le smoke test Dolphin. Les runners standard du dépôt public sont gratuits selon les conditions actuelles de GitHub.
 
-### Route B — Native GameCube/Wii homebrew
-Choose the development toolchain based on the actual code and dependencies found in the prototype. A minimal app should be built and launched before game code is adapted. Toolchain setup should prefer a reproducible container or cloud CI route where practical, especially if local storage is constrained.
+Les binaires de compilation ne sont pas commités dans Git : télécharge le DOL depuis l'artefact Actions si tu dois le tester dans un émulateur ou sur du matériel compatible. Aucun espace disque local supplémentaire n'est nécessaire pour la compilation automatique.
 
-## Build policy
+## Tests enregistrés
 
-- Don't upload ROMs, original game disc images, proprietary game data, or user-private dumps.
-- Don't check in generated disc images or large binaries. .gitignore excludes common image and build-output extensions, but every proposed commit still needs review.
-- Keep tool versions and commands in this file once actually tested.
-- Record actual compiler errors and fixes; don't claim success based on an unexecuted command.
-- Review licenses before copying external code into this repository.
+| Validation | Preuve actuelle | Ce que cela établit | Ce que cela n'établit pas |
+|---|---|---|---|
+| Compilation GameCube | [GitHub Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-smoke.yml) | Un DOL non vide est produit par devkitPPC/libogc | Pas le fonctionnement complet du jeu |
+| Logique de course hôte | Même workflow | Les six suites compilent avec `-Wall -Wextra -Werror` et passent | Pas le rendu GX ni l'exécution sur console |
+| Smoke test Dolphin | Même workflow | Dolphin accepte le DOL et reste actif 12 secondes en mode sans interface | Pas de preuve visuelle, de contrôles ou de partie jouable |
+| Sécurité du dépôt | [Repository safety](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/repository-safety.yml) | Les extensions courantes de ROM/images disque interdites sont rejetées | Pas une détection parfaite de tout payload possible |
+| CodeQL C/C++ | [CodeQL](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/codeql.yml) | Analyse statique C/C++ sans compilation | N'est pas un test runtime |
 
-## Test record
+## Port complet Step 102 — toujours bloqué
 
-| Date | Target | Revision / tool versions | Command | Result |
-|---|---|---|---|---|
-| Not yet tested | — | — | — | No build evidence yet |
+Le workflow racine `.github/workflows/native-build.yml` vise le prototype complet et attend une structure `source/` et un `Makefile` racine. Cette structure n'a pas encore été importée comme source de port complet. N'importe pas le ZIP entier dans le dépôt public sur la seule base de la déclaration générale de provenance : l'audit du ZIP identifie des données de piste dérivées d'un mod PC et aucune licence explicite. Résous la provenance de chaque fichier concerné et garde les assets commerciaux/incertains hors du dépôt.
 
-## First reproducible test checklist
+## Politique de compilation
 
-- [ ] Inventory all source files in the prototype archive.
-- [ ] Verify archive provenance and license.
-- [ ] Select one target/toolchain.
-- [ ] Add the smallest source file and build configuration needed for that target.
-- [ ] Build it in a documented environment.
-- [ ] Launch in a supported emulator or real hardware, if available.
-- [ ] Record logs and actual result in this guide.
+- Aucun ROM, ISO, WBFS, BIOS ou payload commercial dans GitHub.
+- Pas d'outil local requis pour les contrôles CI.
+- Le projet reste à 0 € : ne configure jamais une facturation ou une méthode de paiement pour continuer.
+- Distingue toujours compilation, tests hôtes, lancement Dolphin, rendu/commandes et gameplay complet.

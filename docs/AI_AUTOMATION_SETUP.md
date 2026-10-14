@@ -1,48 +1,54 @@
-# Activer l'agent IA Gemini dans GitHub
+# Configurer l'agent Gemini sur GitHub Actions
 
-Cette intégration permet de demander à Gemini d'inspecter le dépôt, proposer un plan, puis préparer des changements depuis GitHub Actions. Elle ne nécessite aucune installation sur ton ordinateur et ne se lance que lorsqu'un collaborateur autorisé écrit un commentaire commençant par `@gemini-cli`.
+Cette intégration est facultative et déclenchée uniquement par des commentaires GitHub autorisés commençant par `@gemini-cli`. Elle n'exige aucune installation locale. La clé ne doit jamais être envoyée dans une issue, un commentaire, un commit ou cette conversation.
 
-## 1. Préparer la clé API
+## Sécurité avant activation de l'écriture
 
-1. Ouvre [Google AI Studio — clés API](https://aistudio.google.com/apikey) et crée une clé pour Gemini.
-2. Dans le dépôt GitHub, ouvre **Settings → Secrets and variables → Actions → New repository secret**.
-3. Nom du secret : `GEMINI_API_KEY`. Colle la clé dans la valeur, puis enregistre.
+**Ne définis pas encore `GEMINI_WRITE_ENABLED=true` tant que la branche `main` n'est pas protégée.** C'est une protection supplémentaire : GitHub Actions n'est pas autorisé à écrire via le workflow d'exécution tant que cette variable n'est pas exactement `true`.
 
-**Ne publie jamais la clé dans un fichier, une issue, un commentaire GitHub ou cette conversation.** Google AI Studio propose des quotas gratuits selon le modèle et le compte, mais ils sont limités et peuvent évoluer. Vérifie les quotas et la facturation affichés par Google; l'utilisation au-delà des limites gratuites peut nécessiter une facturation. Cette intégration n'exécute pas de tâches IA à chaque commit: elle attend une demande explicite.
+1. Ouvre [les règles du dépôt](https://github.com/Master-Chiken/boonta-reborn-88/settings/rules).
+2. Crée un nouveau *branch ruleset* appliqué à `main`.
+3. Active au minimum **Require a pull request before merging**, **Block force pushes** et **Restrict deletions**. Ne configure aucun contournement pour le bot. Enregistre et vérifie que la règle est active.
+4. N'active pas l'auto-merge. Aucun workflow du projet ne doit fusionner une PR ; la décision finale reste manuelle.
 
-## 2. Utilisation
+Si l'interface ne te permet pas d'enregistrer ces règles, garde `GEMINI_WRITE_ENABLED` absent ou différent de `true` et demande-moi d'adapter les possibilités sans ouvrir l'écriture de Gemini.
 
-Après que les fichiers de workflow de cette proposition sont intégrés à la branche par défaut `main`, écris un commentaire sur une issue ou une pull request. Le commentaire doit commencer par `@gemini-cli`. Exemple:
+## Ajouter la clé de l'API gratuite
+
+1. Ouvre [Google AI Studio — clés API](https://aistudio.google.com/apikey) et crée une clé pour l'API Gemini.
+2. Vérifie que le projet utilise seulement l'offre gratuite et **qu'aucun compte de facturation n'est rattaché**. Ne saisis pas de moyen de paiement et n'active pas de facturation. Si Google exige une facturation pour créer/utiliser la clé dans ton compte, arrête-toi et ne continue pas avec cette méthode.
+3. Dans le dépôt, ouvre **Settings → Secrets and variables → Actions → New repository secret**.
+4. Nom exact : `GEMINI_API_KEY`. Colle la clé uniquement dans la valeur du secret et enregistre.
+
+Le modèle configuré est `gemini-3.5-flash-lite`, qui est listé par Google dans l'offre gratuite actuelle de l'API. Les quotas peuvent changer ou être indisponibles. Au quota épuisé, le workflow doit échouer sans mise à niveau payante.
+
+**Données :** Google indique que le contenu envoyé via l'offre gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure du code et du texte du dépôt fournis au modèle. Tu as choisi d'accepter ces conditions ; n'envoie malgré tout aucun secret, mot de passe, donnée personnelle privée ou fichier commercial non autorisé.
+
+## Déverrouiller l'écriture de l'agent
+
+Après avoir protégé `main` et ajouté `GEMINI_API_KEY` :
+
+1. Ouvre **Settings → Secrets and variables → Actions → Variables → New repository variable**.
+2. Nom exact : `GEMINI_WRITE_ENABLED`.
+3. Valeur exacte : `true`.
+
+Sans cette variable, Gemini peut répondre aux demandes de lecture et proposer un plan, mais `@gemini-cli /approve` n'exécute pas de tâche modifiant le dépôt. À la place, le workflow publie un commentaire expliquant que l'écriture est verrouillée.
+
+L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne doit jamais pousser vers `main), fusionner une PR ou activer l'auto-merge.** Lis toujours les modifications, les tests, le diff et les limites avant toute décision humaine de fusion.
+
+## Premier test conseillé
+
+Sur la PR #13, après avoir configuré le secret, écris un commentaire en lecture seule, par exemple :
 
 ```text
-@gemini-cli Inspecte le dépôt tel qu'il existe. Distingue le prototype GameCube/Wii, le jeu PC original et la version N64. Dresse la liste des sources réellement présentes et absentes; propose un plan sûr pour avancer. Ne modifie aucun fichier et n'affirme pas avoir accès aux archives PC/N64 partagées dans ChatGPT.
+@gemini-cli Fais un audit en lecture seule de l'état actuel de Boonta Reborn 88. Résume les workflows actifs, les résultats CI disponibles, les fichiers Step 102 réellement présents dans le dépôt, les blocages de provenance et les prochaines étapes. Ne modifie aucun fichier et ne crée aucune PR.
 ```
 
-Pour une tâche de code, l'agent doit publier un plan. Lis-le. Pour l'autoriser à exécuter ce plan, réponds ensuite par:
+Vérifie le résultat dans l'onglet [Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions). Ne poste jamais la valeur de la clé. Pour une vraie modification, demande d'abord un plan et n'approuve que le plan que tu as lu.
 
-```text
-@gemini-cli /approve
-```
+## Limites
 
-L'agent peut alors préparer les changements via les outils GitHub disponibles. Contrôle les commits et les pull requests qu'il crée avant de les intégrer. Seuls le propriétaire, les membres et les collaborateurs reconnus du dépôt peuvent déclencher cet agent avec un commentaire autorisé.
-
-## 3. Limites importantes pour Boonta Reborn 88
-
-- L'agent s'exécute dans GitHub Actions et ne voit que le dépôt et le contexte GitHub associé. Il ne peut pas lire automatiquement les fichiers de la bibliothèque ChatGPT.
-- La source Step 102 n'est pas encore importée dans le dépôt au moment de la rédaction de ce guide. Tant qu'elle est absente, Gemini peut travailler sur la documentation, les outils et le pipeline, mais il ne peut pas construire honnêtement le prototype natif manquant.
-- Le jeu PC original et le fichier N64 `.z64` restent des références séparées. Ne pousse jamais les ROM, ISO, WBFS, BIOS, modèles, textures ou sons commerciaux dans le dépôt public. Vérifie la provenance et les droits avant de partager des données extraites.
-- Un test Python côté hôte ne prouve pas qu'un exécutable GameCube/Wii fonctionne. Exige des logs de CI et une validation Dolphin réelle avant de déclarer le build ou le jeu fonctionnel.
-
-## Référence technique
-
-L'action s'appuie sur le projet officiel [google-github-actions/run-gemini-cli](https://github.com/google-github-actions/run-gemini-cli). Le workflow est déclenché à la demande, et non sur chaque push. Si un run échoue, consulte l'onglet **Actions** du dépôt et ne partage jamais la clé API dans les logs ou commentaires.
-
-
-## Keep the setup on the free tier
-
-The workflows are configured to request `gemini-3.5-flash-lite`, which Google's current official model and pricing pages list as a stable model with free-tier input and output. Free access has quotas and rate limits, and Google can change availability or pricing. The prior `gemini-3.8-flash` and `gemini-3.6-flash` test runs both returned HTTP 503 high-demand errors, so this repository falls back to the lightweight `gemini-3.5-flash-lite` for low-cost repository audits. To avoid paid usage, do not link a billing account or upgrade the project. If the free quota is unavailable or exhausted, a run may fail rather than charge for usage. Check the [official pricing page](https://ai.google.dev/gemini-api/docs/pricing) and [model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) before changing models or billing settings.
-
-
-## Response delivery
-
-The reusable invoke and plan-execute workflows publish the Gemini CLI text output as a comment on the triggering issue or pull request. If the CLI returns no readable text summary, the workflow posts a diagnostic comment with a link to the Actions logs rather than silently finishing without a visible response. The prompt files are configured not to post duplicate plan/final-response comments themselves.
+- Gemini ne voit que les fichiers du dépôt et le contexte des issues/PR accessibles via GitHub. Il ne voit pas automatiquement les pièces jointes de ChatGPT.
+- Le petit prototype original de `gamecube/` compile en DOL via Actions. Il n'est ni le port complet Step 102 ni une preuve que le jeu est jouable.
+- Aucun workflow ne réalise la fusion pour toi. Le propriétaire décide après examen.
+- Les outils/quotas gratuits peuvent changer. Si le service demande une carte, de la facturation ou un forfait, n'active pas ce service et reste sur les vérifications GitHub Actions gratuites.

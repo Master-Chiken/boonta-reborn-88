@@ -1,30 +1,21 @@
-# Cloud development (no local toolchain required)
+# Développement cloud — option non retenue actuellement
 
-This repository includes a GitHub Codespaces dev-container configuration for the GameCube smoke test. It uses the same devkitPro/devkitPPC toolchain image as the GitHub Actions build, so the compiler does not need to be installed on your computer.
+Le dépôt conserve une configuration de Codespaces pour un éventuel développement dans le navigateur. Pour ce projet, le propriétaire a choisi **GitHub Actions uniquement** : ne crée pas de Codespace, ne démarre pas de machine cloud interactive et n'installe rien localement pour compiler.
 
-## Open the cloud workspace
+## Outil actif
 
-1. Open the repository in GitHub.
-2. Select the `audit/step102-import-gate` branch.
-3. Open **Code → Codespaces → Create codespace on audit/step102-import-gate**.
-4. Wait for the remote editor to finish loading.
-5. In the integrated terminal, run:
+Utilise plutôt [GitHub Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions). Le workflow **GameCube procedural driving prototype** compile `gamecube/boonta_demo.dol`, exécute les six suites de tests hôtes et fait une tentative de lancement Dolphin sans interface pendant 12 secondes. L'artefact est conservé sept jours.
 
-   ```sh
-   cd gamecube
-   make clean
-   make
-   ```
+## Si le choix change plus tard
 
-The expected output is `gamecube/boonta_smoke.dol`. This is only a toolchain smoke test, not the racing game.
+La configuration `.devcontainer/devcontainer.json` est un point de départ, pas un service actuellement activé. Codespaces a des quotas mensuels limités sur les comptes personnels gratuits. Ne l'utilise pas sans décision explicite et sans vérifier le quota restant. Ne relie jamais de facturation ni n'ajoute de moyen de paiement pour ce projet.
 
-## Cost and storage note
+Un build local optionnel dans cet environnement suivrait :
 
-GitHub Codespaces has a limited free monthly quota on eligible personal plans. Stop the codespace when you finish, and delete it when you no longer need it, so it does not keep consuming the quota. Do not store ROMs, disc images, or extracted commercial assets in the repository or codespace.
+```sh
+cd gamecube
+make clean
+make
+```
 
-## Current scope
-
-- The cloud workspace is intended for code edits and building.
-- GitHub Actions remains the automated build check.
-- The full Step 102 prototype is not imported yet.
-- A successful build does not prove the program has been tested in Dolphin or on hardware.
+Le fichier attendu est `boonta_demo.dol`, pas `boonta_smoke.dol`. Un build réussi ne valide pas le rendu, les commandes ni la jouabilité.

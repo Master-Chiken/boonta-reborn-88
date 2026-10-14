@@ -122,8 +122,6 @@ jobs:
                     "search_pull_requests",
                     "create_branch",
                     "create_or_update_file",
-                    "delete_file",
-                    "fork_repository",
                     "get_commit",
                     "get_file_contents",
                     "list_commits",
@@ -167,4 +165,3 @@ jobs:
               issue_number: Number(process.env.ISSUE_NUMBER),
               body,
             });
-
