@@ -2,7 +2,7 @@
 
 An unofficial research and homebrew project aiming toward an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), with GameCube/Wii as the primary native targets.
 
-This is **not yet a finished remaster or verified native port**. The source-only Step 102 prototype is now imported on the open draft PR branch. The first devkitPPC/libogc build now succeeds in GitHub Actions and produces a 307,428-byte `swe1r_gc_port.dol`. The remaining validation gate is booting it in Dolphin or on hardware.
+This is **not yet a finished remaster or verified native port**. The source-only Step 102 prototype is now imported on the open draft PR branch. The devkitPPC/libogc build succeeds and produces a 307,428-byte `swe1r_gc_port.dol`. A headless Dolphin smoke test also passed: the emulator remained active for 20 seconds without a detected fatal error. Visible rendering and actual gameplay still need verification.
 
 ## Project direction
 
@@ -10,12 +10,12 @@ This is **not yet a finished remaster or verified native port**. The source-only
 - **Imported source baseline:** Step 102 native C gameplay/rendering code, the GameCube Makefile, tools, and host-side tests now live in `source/`, `data/`, `tools/`, `tests/`, and the root `Makefile` on PR #22's working branch.
 - **Prototype scope described by its README:** 25-course catalog, 23 vehicle presets/variants, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, single race, championship, time trial, Mirror Cup, HUD, and save/progression scaffolding.
 - **Host tests:** the source-import GitHub Actions workflow passed all 32 host shell checks and 5 Python policy tests. The native-build workflow also passed its static source preflight; the first compiler attempt exposed outdated libogc constants, which are being corrected. Host tests are not runtime proof.
-- **Native executable:** GitHub Actions successfully produced a non-empty `swe1r_gc_port.dol` (307,428 bytes) and `swe1r_gc_port.elf` (~1.5 MB), available in the build artifact. The DOL is not committed to the source tree, and boot/render/controller behavior has not yet been verified in Dolphin or on hardware.
+- **Native executable:** GitHub Actions produced a non-empty `swe1r_gc_port.dol` (307,428 bytes) and `swe1r_gc_port.elf` (~1.5 MB), available in the build artifact. The headless Dolphin smoke test kept the emulator active for 20 seconds with no detected fatal error. This does **not** prove visible rendering, controller input, or a completed race.
 - **Separate exploratory track:** `dreamcast/` is a small clean-room KallistiOS starter. It is not the main game prototype and must not be confused with the GameCube/Wii code.
 
 ## Current repository limitation
 
-The native-build workflow passes the source check, static preflight, and host regression suite, then successfully builds the DOL. Next: run it in Dolphin and record boot, rendering, controller input, and whether a race can be completed.
+The native-build workflow passes the source check, static preflight, host regression suite, and native build. The headless Dolphin smoke test also passes. Next: capture/inspect the rendered scene and verify controller input and a complete race.
 
 ## Legal and asset policy
 
