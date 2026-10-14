@@ -2,7 +2,7 @@
 
 ## Goal
 
-Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The source-only import and host-test gate are now complete on PR #22. The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (307,428 bytes). A headless Dolphin smoke test passed for 20 seconds without a detected fatal error. The active milestone is visual/runtime validation. The first visual CI attempt failed because no visible Dolphin window was found and the screenshot fallback captured a black Xvfb root window; that is a capture/launch failure, not proof that the game itself renders black. The workflow now waits up to 30 seconds for a visible Dolphin window before capturing, and the rerun is in progress.
+Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The source-only import and host-test gate are now complete on PR #22. The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (307,428 bytes). A headless Dolphin smoke test passed for 20 seconds without a detected fatal error. The active milestone is visual/runtime validation. The first visual CI attempt failed because no visible Dolphin window was found and the screenshot fallback captured a black Xvfb root window; that is a capture/launch failure, not proof that the game itself renders black. The workflow now waits up to 30 seconds for a visible Dolphin window before capturing. The next run also starts the GUI probe inside a dedicated D-Bus session: the latest diagnostics showed the Dolphin process remained alive but exposed only Qt's 3×3 selection-owner window, with no main window and no Dolphin profile logs. This points to a GUI/session startup issue, but the cause is not confirmed.
 
 ## Audit findings
 
@@ -18,7 +18,7 @@ Use the existing Step 102 GameCube/Wii source prototype as the primary project b
 
 1. Keep provenance and redistribution boundaries explicit; do not add ROMs/disc images or unclear proprietary payloads.
 2. Keep the host regression suite green as source changes land.
-3. Capture the actual Dolphin game window (not the Xvfb root window) and verify the course/HUD are visible. The updated workflow waits for a visible Dolphin window; if none appears, it fails with a specific diagnostic.
+3. Capture the actual Dolphin game window (not the Xvfb root window) and verify the course/HUD are visible. The updated workflow waits for a visible Dolphin window, starts under a D-Bus session, and records process/profile logs if none appears.
 4. Verify controller navigation and whether a race can be completed; fix runtime issues without weakening host tests. The vertical slice target remains one course, one controllable pod, camera follow, track collision, and stable frame timing.
 
 ## Acceptance criteria
@@ -26,7 +26,7 @@ Use the existing Step 102 GameCube/Wii source prototype as the primary project b
 - Source provenance and redistribution boundaries are documented.
 - Host tests pass in GitHub Actions.
 - Native GameCube cross-build produces a non-empty DOL. **PASS** in GitHub Actions.
-- Compile success and emulator/hardware testing are reported separately. **Headless emulator smoke: PASS; visual/gameplay test: pending.** The initial visual job failed to find a visible Dolphin window, so its black root-window screenshot is not valid evidence about game rendering.
+- Compile success and emulator/hardware testing are reported separately. **Headless emulator smoke: PASS; visual/gameplay test: pending.** The visual job still fails to find a visible Dolphin window; the root-window screenshot is not valid evidence about game rendering. Diagnostics show Dolphin alive with only a Qt selection-owner window. D-Bus session startup is the next isolated hypothesis to test.
 - No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
 
 ## What the project owner needs to do now
