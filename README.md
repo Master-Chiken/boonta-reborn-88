@@ -1,13 +1,14 @@
-# Boonta Reborn 88 — GameCube/Wii prototype
+# Boonta Reborn 88 — enhanced GameCube/Wii reconstruction
 
-An unofficial research and homebrew project aiming toward an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), with GameCube/Wii as the primary native targets.
+An unofficial reverse-engineering and homebrew project aiming to reconstruct the original *Star Wars: Episode I – Racer* (1999) as faithfully as possible, using documented PC research and comparisons with the PC, Dreamcast, and Nintendo 64 editions. The target is an enhanced, genuinely playable native GameCube/Wii release, with improved graphics and additional bonus content. This is the destination, not the current completion status.
 
 This is **not yet a finished remaster or verified port of the original game**. A separate clean-room GameCube prototype now compiles to a DOL in GitHub Actions. The full Step 102 racing prototype has not been imported, and the new DOL has not yet been runtime-tested in Dolphin or on hardware.
 
-## Project direction
+## Actual end goal
 
-- **Primary target:** native GameCube/Wii homebrew prototype.
-- **Existing source of truth:** `Star_Wars_Racer_GameCube_Step102.zip`, audited separately from this repository. It contains C gameplay/rendering code, a GameCube Makefile, research/build tools, documentation, and host-side tests.
+- **Final goal:** a faithful reconstruction of the original game's core experience, adapted to run natively on GameCube/Wii, then enhanced with improved graphics, extras and bonus content.
+- **Research inputs:** existing PC reverse-engineering documentation/code, the PC edition, and lawful local analysis of Dreamcast and Nintendo 64 editions. Compare versions to identify gameplay rules, data formats, track/vehicle differences and platform-specific behavior; do not assume one edition's formats match another.
+- **Current source candidate:** `Star_Wars_Racer_GameCube_Step102.zip`, audited separately from this repository. It is the strongest existing GameCube/Wii-oriented prototype candidate, but its provenance and assets still require review. It contains C gameplay/rendering code, a GameCube Makefile, research/build tools, documentation, and host-side tests.
 - **Prototype scope described by its README:** 25-course catalog, 23 vehicle presets/variants, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, single race, championship, time trial, Mirror Cup, HUD, and save/progression scaffolding.
 - **Host tests:** I ran the archive's host release suite in a clean temporary environment. All host shell checks and 91 Python unit tests passed after restoring the executable bits encoded in the ZIP. This is not a native GameCube build and is not a runtime test.
 - **First native DOL:** `gamecube/boonta_demo.dol` is built by CI from original procedural code. This verifies the toolchain and compilation only, not emulator boot or playability.
@@ -15,7 +16,7 @@ This is **not yet a finished remaster or verified port of the original game**. A
 
 ## Current repository limitation
 
-The full Step 102 source prototype has **not yet been imported**. The separate clean-room prototype in `gamecube/` now contains a procedural 3D loop track, original pod, chase camera, HUD, acceleration/braking/boost, lane adjustment, pause, and a three-lap finish condition. CI confirms a DOL is produced; actual runtime validation remains outstanding. See [`gamecube/README.md`](gamecube/README.md).
+The current repository is still far short of the final goal: the full Step 102 source prototype has **not yet been imported**. The separate clean-room prototype in `gamecube/` now contains a procedural 3D loop track, original pod, chase camera, HUD, acceleration/braking/boost, lane adjustment, pause, and a three-lap finish condition. CI confirms a DOL is produced; actual runtime validation remains outstanding. See [`gamecube/README.md`](gamecube/README.md).
 
 ## Legal and asset policy
 
@@ -24,14 +25,15 @@ The full Step 102 source prototype has **not yet been imported**. The separate c
 - Review the license and provenance of external reverse-engineering projects before reusing their code.
 - Keep any lawful user-owned game images local. The repository should contain original code, documentation, tools, tests, and assets that are cleared for redistribution only.
 
-## Next milestones
+## Next milestones toward the real goal
 
-1. Test the current `boonta_demo.dol` in Dolphin and record boot, graphics, controller input, and any crash/log evidence.
-2. Complete the Step 102 source/asset provenance audit and create a safe import list.
-3. Import only cleared source code, headers, tests, build tools, and documentation; keep uncertain route data and commercial assets out.
-4. Run the source prototype's host regression suite in GitHub Actions.
-5. Build the full source prototype with devkitPPC/libogc only after import and host tests are ready.
-6. Improve the playable slice and expand content only after runtime validation.
+1. Complete a path-by-path provenance review of the Step 102 source archive and select the code/tools/docs that can be safely used.
+2. Build the actual full GameCube/Wii-oriented prototype from that source, not treat the tiny procedural demo as the final foundation.
+3. Reproduce the host tests, compile with devkitPPC/libogc, and validate boot/render/controller input in Dolphin.
+4. Create a version-comparison matrix for PC, Dreamcast and Nintendo 64: physics, tracks, vehicle stats, AI, items, menus, modes, progression, and file formats. Mark each claim as measured, documented, or still unknown.
+5. Reconstruct and validate original gameplay systems and content using documented reverse-engineering findings; keep proprietary ROMs/disc images and unclear extracted assets outside the public repository.
+6. Once the faithful playable baseline works, improve graphics within GameCube/Wii limits, add original bonus content, and measure performance on both targets.
+7. Package and document GameCube and Wii builds separately.
 
 The Dreamcast test branch is separate and is not a substitute for these milestones.
 
