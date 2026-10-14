@@ -31,6 +31,8 @@ typedef struct RaceInput {
 
 void race_reset(RaceState *state);
 void race_update(RaceState *state, const RaceInput *input);
+/* delta_seconds is measured wall time and is clamped to protect lap logic from stalls. */
+void race_update_dt(RaceState *state, const RaceInput *input, float delta_seconds);
 int race_position(const RaceState *state);
 
 #endif
