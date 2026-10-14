@@ -1,6 +1,7 @@
 # Standalone clean-room GameCube renderer / driving-input smoke test.
 # Build with the official devkitPro devkitPPC + libogc environment.
 .SUFFIXES:
+.DEFAULT_GOAL := all
 
 ifeq ($(strip $(DEVKITPPC)),)
 $(error "DEVKITPPC is not set. Use the devkitpro/devkitppc container or install devkitPro.")
@@ -19,6 +20,9 @@ CXXFLAGS := $(CFLAGS)
 LDFLAGS  := -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 LIBS     := -logc -lm
 LIBDIRS  :=
+
+.PHONY: all clean
+all: $(TARGET).dol
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 export OUTPUT  := $(CURDIR)/$(TARGET)
