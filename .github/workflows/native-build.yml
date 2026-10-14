@@ -35,26 +35,31 @@ jobs:
             exit 2
           fi
 
-      - name: Run Python tests
+      - name: Run complete host regression suite
         shell: bash
-        run: python3 -m unittest discover -s tests -v
+        run: bash tools/release_check.sh
 
       - name: Build GameCube DOL
         shell: bash
         run: |
+          set -o pipefail
           export DEVKITPRO=/opt/devkitpro
           export DEVKITPPC="$DEVKITPRO/devkitPPC"
-          make clean
-          make
-          test -s swe1r_gc_port.dol
+          {
+            make clean
+            make
+            test -s swe1r_gc_port.dol
+          } 2>&1 | tee build.log
 
-      - name: Upload DOL and build log
+      - name: Upload native build evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: swe1r-gc-build
+          name: swe1r-gc-build-evidence
           path: |
+            build.log
             swe1r_gc_port.dol
             swe1r_gc_port.elf
             swe1r_gc_port.elf.map
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
