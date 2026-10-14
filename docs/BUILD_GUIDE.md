@@ -4,8 +4,8 @@
 
 ## Verified CI path
 
-- [Latest completed validation run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351)
-- Build artifact: [swe1r-gc-step102-source-only](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924213870)
+- [Latest completed validation run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38628014235)
+- Build artifact: [swe1r-gc-step102-source-only](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38626905351/artifacts/11924766751)
 - Output: swe1r_gc_port.dol, approximately 301 KiB.
 - Toolchain environment: devkitpro/devkitppc:latest in a GitHub Actions container.
 - Track mode: USE_IMPORTED_SPLINE=0, which uses the bundled demo/procedural track and does not enable the excluded PC-mod-derived centerline dataset.
