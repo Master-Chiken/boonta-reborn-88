@@ -1,0 +1,54 @@
+name: GameCube first-render prototype build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "gamecube-demo/**"
+      - ".github/workflows/gamecube-demo-build.yml"
+  pull_request:
+    paths:
+      - "gamecube-demo/**"
+      - ".github/workflows/gamecube-demo-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-gamecube-demo:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitppc:latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify toolchain and project inputs
+        shell: bash
+        run: |
+          test -n "${DEVKITPPC:-}"
+          test -f "$DEVKITPPC/gamecube_rules"
+          test -s gamecube-demo/Makefile
+          test -s gamecube-demo/source/main.c
+
+      - name: Build GameCube DOL and ELF
+        shell: bash
+        run: |
+          cd gamecube-demo
+          make clean
+          set -o pipefail
+          make 2>&1 | tee build.log
+          test -s boonta_gc_demo.dol
+          test -s boonta_gc_demo.elf
+
+      - name: Upload build outputs and compiler log
+        uses: actions/upload-artifact@v4
+        with:
+          name: boonta-reborn-gamecube-first-render
+          path: |
+            gamecube-demo/boonta_gc_demo.dol
+            gamecube-demo/boonta_gc_demo.elf
+            gamecube-demo/build.log
+          if-no-files-found: error
+          retention-days: 7
