@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0 gdb
           rm -rf /var/lib/apt/lists/*
           export PATH="/usr/games:$PATH"
           QT_QPA_PLATFORM=offscreen dolphin-emu --version
@@ -120,16 +120,22 @@ jobs:
             export HOME=/tmp/dolphin-user
             export XDG_CONFIG_HOME=/tmp/dolphin-user/.config
             export XDG_DATA_HOME=/tmp/dolphin-user/.local/share
-            dolphin-emu --video_backend="Software Renderer" --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-user > artifacts/dolphin-visible.log 2>&1 &
-            dolphin_pid=$!
+            gdb --quiet --batch \
+              -ex "set pagination off" \
+              -ex run \
+              -ex "thread apply all bt full" \
+              --args dolphin-emu --video_backend="Software Renderer" \
+                --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-user \
+              > artifacts/dolphin-visible.log 2>&1 &
+            debugger_pid=$!
             cleanup() {
-              kill -TERM "$dolphin_pid" 2>/dev/null || true
-              wait "$dolphin_pid" 2>/dev/null || true
+              kill -TERM "$debugger_pid" 2>/dev/null || true
+              wait "$debugger_pid" 2>/dev/null || true
             }
             trap cleanup EXIT
             sleep 8
             alive=0
-            if ! kill -0 "$dolphin_pid" 2>/dev/null; then alive=1; fi
+            if ! kill -0 "$debugger_pid" 2>/dev/null; then alive=1; fi
             set +e
             import -window root artifacts/dolphin-preview.png
             capture_status=$?
@@ -142,7 +148,7 @@ jobs:
             identify -format "Captured frame: %wx%h, %[channels], %b\\n" artifacts/dolphin-preview.png
             test -s artifacts/dolphin-preview.png
             if [[ "$alive" -ne 0 ]]; then
-              echo "Dolphin exited before screenshot capture; see runtime log above."
+              echo "Dolphin exited before screenshot capture; GDB backtrace is included in the runtime log."
               exit 1
             fi
           '
