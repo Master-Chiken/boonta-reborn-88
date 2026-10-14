@@ -213,6 +213,51 @@ static void test_opponent_lane_changes_are_smooth_and_bounded(void)
     assert(any_lane_changed);
 }
 
+static void test_racer_collision_penalty_and_cooldown(void)
+{
+    RaceState state;
+    RaceInput input = neutral_input();
+    race_reset(&state);
+
+    state.speed = 20.0f;
+    state.angle = 1.0f;
+    /* The middle rival's deterministic lane sway is close to the player lane. */
+    state.opponent_angles[1] = 1.0f;
+    race_update(&state, &input);
+
+    assert(state.collision_count == 1);
+    assert(state.collision_cooldown_seconds > 0.8f);
+    assert(state.speed < 14.0f);
+
+    /* Remaining alongside the same rival must not repeatedly apply damage. */
+    for (int frame = 0; frame < 10; ++frame) {
+        race_update(&state, &input);
+    }
+    assert(state.collision_count == 1);
+    assert(state.collision_cooldown_seconds > 0.0f);
+
+    input.reset_pressed = 1;
+    race_update(&state, &input);
+    assert(state.collision_count == 0);
+    assert(state.collision_cooldown_seconds == 0.0f);
+}
+
+static void test_racer_collision_requires_close_lateral_alignment(void)
+{
+    RaceState state;
+    RaceInput input = neutral_input();
+    race_reset(&state);
+
+    state.speed = 20.0f;
+    state.angle = 1.0f;
+    state.lane_offset = 2.7f;
+    state.opponent_angles[1] = 1.0f;
+    race_update(&state, &input);
+
+    assert(state.collision_count == 0);
+    assert(state.speed > 19.0f);
+}
+
 static void test_three_lap_finish(void)
 {
     RaceState state;
@@ -345,10 +390,12 @@ int main(void)
     test_pause_freezes_motion_and_reset_unpauses();
     test_opponents_progress_and_position();
     test_opponent_lane_changes_are_smooth_and_bounded();
+    test_racer_collision_penalty_and_cooldown();
+    test_racer_collision_requires_close_lateral_alignment();
     test_three_lap_finish();
     test_race_clock_lap_times_and_pause();
     test_frame_rate_independence();
     test_invalid_and_long_frame_deltas_are_safe();
-    puts("race_logic_test: 11 suites passed");
+    puts("race_logic_test: 13 suites passed");
     return 0;
 }
