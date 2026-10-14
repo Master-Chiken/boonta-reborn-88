@@ -101,22 +101,6 @@ jobs:
           rm -rf /var/lib/apt/lists/*
           export PATH="/usr/games:$PATH"
           dolphin-emu --version
-      - name: Launch with graphics enabled and capture the desktop
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts dolphin-user
-          export PATH="/usr/games:$PATH"
-          export LIBGL_ALWAYS_SOFTWARE=1
-          xvfb-run -a -s "-screen 0 1280x720x24" bash -lc '
-            set -euo pipefail
-            export PATH="/usr/games:$PATH"
-            export LIBGL_ALWAYS_SOFTWARE=1
-            export QT_QPA_PLATFORM=xcb
-            ./dist/swe1r_gc_port.dol >/dev/null 2>&1 || true
-          '
-        # The DOL must be opened by Dolphin, not executed as a Linux binary.
-        # Run Dolphin separately so the virtual desktop can be captured.
       - name: Capture Dolphin window output
         shell: bash
         run: |
