@@ -41,3 +41,8 @@ L'action s'appuie sur le projet officiel [google-github-actions/run-gemini-cli](
 ## Keep the setup on the free tier
 
 The workflows are configured to request `gemini-3.5-flash-lite`, which Google's current official model and pricing pages list as a stable model with free-tier input and output. Free access has quotas and rate limits, and Google can change availability or pricing. The prior `gemini-3.8-flash` and `gemini-3.6-flash` test runs both returned HTTP 503 high-demand errors, so this repository falls back to the lightweight `gemini-3.5-flash-lite` for low-cost repository audits. To avoid paid usage, do not link a billing account or upgrade the project. If the free quota is unavailable or exhausted, a run may fail rather than charge for usage. Check the [official pricing page](https://ai.google.dev/gemini-api/docs/pricing) and [model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite) before changing models or billing settings.
+
+
+## Response delivery
+
+The reusable invoke and plan-execute workflows publish the Gemini CLI text output as a comment on the triggering issue or pull request. If the CLI returns no readable text summary, the workflow posts a diagnostic comment with a link to the Actions logs rather than silently finishing without a visible response. The prompt files are configured not to post duplicate plan/final-response comments themselves.
