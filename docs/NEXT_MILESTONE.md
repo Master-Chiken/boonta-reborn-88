@@ -6,10 +6,10 @@
 - The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (about 307 KB).
 - The host regression suite and static project preflight pass.
 - The headless Dolphin smoke test remains alive for its 20-second window without a detected fatal boot error.
-- **Visible rendering is still unverified.** The latest frame job produced no image. Its log shows Dolphin created `Config/GFX.ini`, but the workflow had only supplied graphics options through command-line overrides; no evidence showed those options had been applied.
-- The workflow now writes `GFX.ini` explicitly under the isolated Dolphin user profile, enables frame dumping and EFB/XFB capture in the `[Settings]` section, and archives the effective config plus file listing. This is a diagnostic correction, not a confirmed capture fix.
-- Latest completed CI run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348
-- The updated workflow will run on the new commit; do not call visual validation passed until the job captures a non-black image.
+- **Visible rendering is still unverified.** The latest frame job produced no image. Inspection of Dolphin's current configuration source revealed that actual frame-dump activation is the main `[Movie]` key `DumpFrames`; `GFX.ini`'s `DumpFramesAsImages` only controls image output format, and is not itself the runtime dump toggle.
+- The workflow now writes both `Config/Dolphin.ini` (`[Movie] DumpFrames=True`, `[General] DumpPath`) and `Config/GFX.ini` (`[Settings] DumpFramesAsImages=True`, EFB/XFB diagnostics) before startup, then archives both configs and the file listing. This is a targeted fix based on Dolphin's config schema; the next CI result must confirm whether it works.
+- Latest completed diagnostic run before the corrected Movie setting: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38705925288
+- The revised workflow triggers a fresh run. Do not call visual validation passed until the job captures a non-black image.
 
 ## Audit findings
 
