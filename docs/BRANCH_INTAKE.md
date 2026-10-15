@@ -40,3 +40,7 @@ The workflow uses GitHub-hosted Actions and the repository token; it requires no
 
 The first live queue run may report that GitHub Actions is not permitted to create pull requests, even though the workflow declares `pull-requests: write`. This is a separate repository setting. A repository admin must open **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**, and save. The queue uses this permission only to open draft PRs and has no automated merge, approval, direct-push, force-push, or branch-deletion step. The workflow now stops at the first permission-denied response and explains this setting instead of repeating failed create attempts for every candidate.
 
+## Freshness gate
+
+The intake queue automatically defers any candidate branch more than **10 commits behind `main`**. This prevents a tiny merge-base diff from making a very old implementation look safe when current files have evolved substantially. These branches are **not deleted or modified**; their unique changes should be reviewed against current `main` and cherry-picked or reconciled in a focused PR. Branches within the freshness window still pass the patch-equivalence, final-tree, overlap, size, and source-provenance checks before a draft PR is created.
+

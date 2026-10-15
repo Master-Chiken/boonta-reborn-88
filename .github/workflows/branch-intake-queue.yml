@@ -222,6 +222,7 @@ jobs:
           candidates = []
           deferred = []
           skips = Counter()
+          stale_base_deferred = 0
           seen_shas = set()
 
           # Comparison requests dominate intake time. Fetch each unique eligible tip
@@ -324,6 +325,13 @@ jobs:
                   continue
               paths = effective_paths
 
+              # Small merge-base diffs on very stale branches can still contain
+              # obsolete implementations around files changed repeatedly in main.
+              # Keep those branches intact, but require an explicit rebase/cherry-pick review.
+              if behind > 10:
+                  stale_base_deferred += 1
+                  deferred.append((name, f"stale base: {behind} commits behind main (>10); rebase or cherry-pick manually"))
+                  continue
               if ahead > 10 or len(paths) > 20:
                   deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} effective paths)"))
                   continue
@@ -456,6 +464,7 @@ jobs:
               f"- Open-PR serial-equivalent request wait: {open_pr_paths_request_seconds:.2f}s",
               f"- Estimated open-PR inventory speedup: {open_pr_paths_request_seconds / max(open_pr_paths_wall_seconds, 0.001):.1f}x",
               f"- Branches with a small, distinct diff identified: {len(candidates)}",
+              f"- Candidates deferred for stale base (>10 commits behind main): {stale_base_deferred}",
               f"- Unique tip comparisons attempted: {len(comparison_shas)}",
               f"- Comparison phase wall time: {comparison_wall_seconds:.2f}s",
               f"- Serial-equivalent request wait: {comparison_request_seconds:.2f}s",
