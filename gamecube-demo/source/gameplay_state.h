@@ -54,6 +54,8 @@ static inline int boonta_boost_should_activate(int x_held, int a_held, float boo
 }
 static inline float boonta_boost_after_frame_scaled(float boost, int active, float frame_scale)
 {
+    /* Recover corrupted resource state before arithmetic. */
+    if (!isfinite(boost)) boost = 0.0f;
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     if (active) boost -= 0.0055f * frame_scale;
     else boost += 0.0015f * frame_scale;
@@ -70,6 +72,8 @@ static inline float boonta_boost_after_frame(float boost, int active)
 static inline float boonta_engine_heat_after_frame_scaled(float heat, int active,
                                                            float frame_scale)
 {
+    /* Heat follows the same finite-state contract as boost and speed. */
+    if (!isfinite(heat)) heat = 0.0f;
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     if (active) heat += 0.0065f * frame_scale;
     else heat -= 0.0045f * frame_scale;
