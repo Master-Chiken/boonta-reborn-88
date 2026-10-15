@@ -2,6 +2,8 @@
 #define BOONTA_REBORN_GAMEPLAY_STATE_H
 
 #include <math.h>
+
+#define BOONTA_RIVAL_COUNT 3U
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 static inline float boonta_speed_after_input(float speed, int accelerating, int braking)
 {
@@ -130,6 +132,18 @@ enum {
     BOONTA_RIVAL_EVENT_COLLISION = 1,
     BOONTA_RIVAL_EVENT_OVERTAKE = 2
 };
+
+/* Three procedural opponents use staggered spacing in the scrolling-course demo. */
+static inline float boonta_rival_initial_z(unsigned int rival_index)
+{
+    return -18.0f - (float)rival_index * 16.0f;
+}
+
+static inline float boonta_rival_respawn_z(unsigned int rival_index, int collision)
+{
+    const float respawn_base = collision ? -20.0f : -22.0f;
+    return respawn_base - (float)rival_index * 12.0f;
+}
 
 static inline int boonta_rival_event(float rival_z,
                                      float player_lateral,
