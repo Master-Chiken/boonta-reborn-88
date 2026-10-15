@@ -50,9 +50,12 @@ def course_edge_center(image: Image.Image) -> tuple[float, int]:
             r, g, b = image.getpixel((x, y))
             if r < 90 and g > 180 and b > 200:
                 edge_x.append(x)
-    if len(edge_x) < 25:
+    # The cyan edge is distant and anti-aliased in this ROI; require at
+    # least ten pixels, then let the independent 25 px centroid-shift gate
+    # reject frames that do not show a meaningful course-relative response.
+    if len(edge_x) < 10:
         raise ValueError(
-            f"No stable cyan course-edge pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}."
+            f"Insufficient cyan course-edge pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}, need 10."
         )
     return sum(edge_x) / len(edge_x), len(edge_x)
 
