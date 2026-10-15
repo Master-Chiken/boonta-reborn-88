@@ -1,0 +1,128 @@
+name: Proof-based branch cleanup
+
+on:
+  # This runs once when the reviewed workflow first lands on main, and can be
+  # re-run manually. It is not scheduled and never discovers extra targets.
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/proof-based-branch-cleanup.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: proof-based-branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  delete-only-proven-redundant-branches:
+    name: Delete only branches proven contained in main
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Verify and delete the eight audited branch refs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          default_branch="$(gh api "repos/$GH_REPO" --jq '.default_branch')"
+          if [ "$default_branch" != "main" ]; then
+            echo "::error::Expected default branch main, found $default_branch. Refusing to delete."
+            exit 1
+          fi
+
+          workdir="$RUNNER_TEMP/branch-cleanup"
+          git clone --quiet --no-tags "https://github.com/$GH_REPO.git" "$workdir"
+          git -C "$workdir" fetch --quiet origin "$default_branch"
+          main_ref="refs/remotes/origin/$default_branch"
+
+          inventory() {
+            gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches.json"
+            gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs.json"
+          }
+
+          {
+            echo "# Proof-based branch cleanup"
+            echo
+            echo "- Default branch: `$default_branch`"
+            echo "- Rule: only delete a listed branch if its exact tip is reachable from `main`, it has no open PR, and GitHub reports it unprotected."
+            echo "- Maximum targets: 8. No other branches are in scope."
+            echo
+            echo "| Branch | Expected tip SHA | Evidence / result |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          deleted=0
+          skipped=0
+          while read -r name expected_sha; do
+            [ -n "$name" ] || continue
+            inventory
+
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].protected // empty' "$RUNNER_TEMP/branches.json")"
+            if [ -z "$current_sha" ]; then
+              echo "| `$name` | `$expected_sha` | Already absent; no action |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$current_sha" != "$expected_sha" ]; then
+              echo "| `$name` | `$expected_sha` | PRESERVED: tip changed to `$current_sha` |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$protected" != "false" ]; then
+              echo "| `$name` | `$expected_sha` | PRESERVED: protected or protection status unknown |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "| `$name` | `$expected_sha` | PRESERVED: an open PR uses this branch |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if ! git -C "$workdir" merge-base --is-ancestor "$expected_sha" "$main_ref"; then
+              echo "| `$name` | `$expected_sha` | PRESERVED: tip is not provably reachable from main |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            # Recheck tip, protection and open PR status immediately before deletion.
+            inventory
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].protected // empty' "$RUNNER_TEMP/branches.json")"
+            if [ "$current_sha" != "$expected_sha" ] || [ "$protected" != "false" ] || jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "| `$name` | `$expected_sha` | PRESERVED: final safety check failed |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            if gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$name"; then
+              echo "| `$name` | `$expected_sha` | DELETED: exact tip is in main; unprotected; no open PR |" >> "$GITHUB_STEP_SUMMARY"
+              deleted=$((deleted + 1))
+            else
+              echo "| `$name` | `$expected_sha` | NOT DELETED: GitHub rejected deletion |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+            fi
+          done <<'CANDIDATES'
+          ci/wii64-tool-tests e7969c4f72ab803f5f6a8c2248317cdb5f4df0de
+          docs/branch-consolidation-plan 431db6000d083636341343d2a783d8696431e8b4
+          docs/wii64-test-log-template 3add41a3589964baaaf725871517828a2564e9d7
+          docs/wii64-tooling-guide ea1fb3014caffc744fd651d8fb4bcca1e5290f65
+          test/use-gameplay-helpers-in-runtime 750fabe7330d8a50aa1089ad79bf2189376509bc
+          tools/wii64-archive-verifier-v2 fe0d53bfa325ba597290f01872bd677190b75586
+          tools/wii64-rice-profile-diff 7f3342beb8bd3fdb6af9c95dd0f88feeb7e9d7f7
+          tools/wii64-rice-profile-inspector afc8f1d6b24064482ab53ba5f4e6bb92d55d66a1
+          CANDIDATES
+
+          {
+            echo
+            echo "**Summary:** $deleted deleted; $skipped preserved or already absent."
+            echo
+            echo "Only the eight hard-coded, previously audited refs can be deleted by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
