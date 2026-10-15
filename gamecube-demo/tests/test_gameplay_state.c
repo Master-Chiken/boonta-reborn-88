@@ -241,6 +241,49 @@ static void pitch_tradeoff_tests(void) {
 }
 
 
+
+static void track_scroll_tests(void) {
+ const float road_length = 2.8f;
+ const float wall_length = 10.0f;
+
+ assert(nearf(boonta_track_scroll_offset(0.0f, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(2.7f, road_length), 2.7f));
+ assert(nearf(boonta_track_scroll_offset(2.8f, road_length), 0.0f));
+ assert(boonta_track_section_index(2.799f, road_length) == 0U);
+ assert(boonta_track_section_index(2.8f, road_length) == 1U);
+ assert(boonta_track_section_index(9.999f, wall_length) == 0U);
+ assert(boonta_track_section_index(10.0f, wall_length) == 1U);
+
+ /* The world-space phase of adjacent segments is continuous at scroll wrap. */
+ {
+  const float before_distance = 2.799f;
+  const float before_scroll = boonta_track_scroll_offset(before_distance, road_length);
+  const float before_z = 4.0f + before_scroll - road_length;
+  const float before_phase = boonta_track_phase(before_distance, before_z);
+  const float after_distance = road_length;
+  const float after_z = 4.0f + boonta_track_scroll_offset(after_distance, road_length);
+  const float after_phase = boonta_track_phase(after_distance, after_z);
+  assert(nearf(before_phase, after_phase));
+
+  const float before_wall_distance = 9.999f;
+  const float before_wall_z = -10.0f +
+      boonta_track_scroll_offset(before_wall_distance, wall_length) - wall_length;
+  const float before_wall_phase = boonta_track_phase(before_wall_distance, before_wall_z);
+  const float after_wall_phase = boonta_track_phase(
+      wall_length, -10.0f + boonta_track_scroll_offset(wall_length, wall_length));
+  assert(nearf(before_wall_phase, after_wall_phase));
+ }
+
+ /* Bad distance, segment length or coordinates must not propagate non-finite data. */
+ assert(nearf(boonta_track_scroll_offset(-1.0f, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(NAN, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(1.0f, 0.0f), 0.0f));
+ assert(boonta_track_section_index(INFINITY, road_length) == 0U);
+ assert(boonta_track_section_index(1.0f, NAN) == 0U);
+ assert(nearf(boonta_track_phase(NAN, 2.0f), 0.0f));
+ assert(nearf(boonta_track_phase(2.0f, INFINITY), 0.0f));
+}
+
 static void slide_drift_tests(void) {
  const float regular_turn = boonta_lateral_velocity_after_steering_scaled(
      0.0f, 1.0f, 1.0f, 1.0f);
@@ -592,6 +635,7 @@ int main(void) {
  lap_tests();
  three_lap_finish_tests();
  distance_progression_tests();
+ track_scroll_tests();
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
