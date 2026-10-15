@@ -162,9 +162,7 @@ jobs:
     name: Experimental Dolphin software-renderer frame diagnostic (non-blocking)
     continue-on-error: true
     needs: [build-gamecube-demo, host-pause-state-tests]
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:24.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     permissions:
       contents: read
