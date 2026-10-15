@@ -330,6 +330,7 @@ jobs:
               }
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
+              echo "Running camera-follow diagnostic: confirm pod framing, leftward road-edge response, and independent HUD input state; this is not full-playability verification."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
@@ -345,7 +346,7 @@ jobs:
                 echo "Captured frame contains a Dolphin boot/core error dialog."
                 exit 1
               fi
-              echo "Neutral and right-steered frames both rendered; the steering-state marker moved right by the required amount."
+              echo "Scripted camera-follow smoke passed: pod stayed visible, course edge shifted left, and HUD response was detected. Full gameplay remains unverified."
             '
           status=$?
           set -e
@@ -362,7 +363,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional software-renderer steering comparison failed. Native build and headless smoke remain separate results."
+            echo "::warning::The optional scripted camera-follow/course-edge diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 

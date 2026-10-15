@@ -584,9 +584,10 @@ static void draw_frame(void)
 {
     const float center_near = road_center_at(5.5f, g_distance);
     const float center_ahead = road_center_at(-14.0f, g_distance);
-    guVector camera = { center_near, 1.65f, 7.0f };
+    /* Follow the pod laterally; steering moves the course relative to the camera. */
+    guVector camera = { center_near + g_player_lateral, 1.65f, 7.0f };
     guVector up = { 0.0f, 1.0f, 0.0f };
-    guVector target = { center_ahead, -0.85f, -15.0f };
+    guVector target = { center_ahead + g_player_lateral, -0.85f, -15.0f };
     Mtx view;
     Mtx44 projection;
 
