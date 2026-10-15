@@ -44,6 +44,7 @@ jobs:
           pr_heads = {p["head"]["ref"] for p in prs}
           active, inactive = [], []
           unknown_dates = 0
+          date_by_sha = {}
           for b in branches:
               name = b["name"]
               sha = b.get("commit", {}).get("sha")
