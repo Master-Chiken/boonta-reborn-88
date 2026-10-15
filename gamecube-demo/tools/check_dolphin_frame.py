@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure scripted-input pod displacement and HUD response; not full playability."""
+"""Measure camera-follow response and HUD input state; not full playability."""
 from __future__ import annotations
 
 import argparse
@@ -38,24 +38,24 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
 
 
 def course_edge_center(image: Image.Image) -> tuple[float, int]:
-    """Track the bright cyan road-edge strip in the upper/mid viewport."""
+    """Track the bright cyan road-edge strip relative to the camera-following pod."""
     image = image.convert("RGB")
     edge_x = []
-    # C_EDGE_R = (50, 225, 246). Keep the ROI above the player pod so the
-    # moving road/edge, rather than the pod itself, is measured.
+    # C_EDGE_R = (50, 225, 246). Scan farther down the road in the Software
+    # Renderer; narrow hue bounds distinguish this edge from the cyan pod accent.
     y_start = int(image.height * 0.35)
-    y_end = int(image.height * 0.65)
+    y_end = int(image.height * 0.82)
     for y in range(y_start, y_end):
         for x in range(image.width):
             r, g, b = image.getpixel((x, y))
-            if r < 90 and g > 180 and b > 200:
+            if r < 65 and 205 < g < 245 and b > 225:
                 edge_x.append(x)
     # The cyan edge is distant and anti-aliased in this ROI; require at
     # least ten pixels, then let the independent 25 px centroid-shift gate
     # reject frames that do not show a meaningful course-relative response.
     if len(edge_x) < 10:
         raise ValueError(
-            f"Insufficient cyan course-edge pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}, need 10."
+            f"Insufficient C_EDGE_R-like course pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}, need 10."
         )
     return sum(edge_x) / len(edge_x), len(edge_x)
 
