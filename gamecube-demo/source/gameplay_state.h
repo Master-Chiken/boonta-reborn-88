@@ -32,6 +32,12 @@ static inline float boonta_lateral_velocity_after_steering(float lateral_velocit
     return lateral_velocity;
 }
 
+/* Shared distance integration used by both the native loop and host simulation. */
+static inline float boonta_distance_after_frame(float distance, float speed, int boost_active)
+{
+    return distance + speed * (boost_active ? 0.22f : 0.14f);
+}
+
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
 {
     if (lap_distance <= 0.0f || previous_distance < 0.0f || current_distance < previous_distance) return 0;
