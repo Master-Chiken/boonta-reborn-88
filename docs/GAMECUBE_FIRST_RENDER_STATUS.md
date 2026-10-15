@@ -2,18 +2,16 @@
 
 Last updated: 2026-10-15
 
-## Latest CI runtime verification (2026-10-15)
+## Latest CI visible-render verification (2026-10-15)
 
-- Workflow: [GameCube first-render prototype build #66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044)
-- Merged change: [PR #53](https://github.com/Master-Chiken/boonta-reborn-88/pull/53), merge commit `0ea50271e330dca51bf1caa8d9bd6f951593c86f`.
-- Host gameplay, pause/reset, and DOL-padding/artifact utility tests: **success**.
-- Native devkitPPC/libogc build and DOL/ELF structural validation: **success**.
-- DOL post-processing: **success**; file grew from 139,932 to 139,936 bytes so the final section has the trailing bytes required for 32-byte-rounded reads.
-- Dolphin Null-video process smoke: **success**; the DOL process stayed active for the 12-second window.
-- Dolphin Software Renderer diagnostic capture: **success**; the [uploaded frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044/artifacts/11968079385) are available through 2026-10-22.
-- Visual review of that image: it shows the prototype's dark-blue background/horizon, light course surface and placeholder pod silhouette; it no longer shows the earlier “Failed to init core” dialog.
+- Native build and visible-render evidence: [GameCube first-render prototype run #68](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698).
+- Relevant merged fixes: [PR #53 — DOL 32-byte section padding and Dolphin diagnostic](https://github.com/Master-Chiken/boonta-reborn-88/pull/53) and [PR #60 — GX per-vertex color pipeline](https://github.com/Master-Chiken/boonta-reborn-88/pull/60).
+- Host gameplay/pause tests, DOL-padding tests, GX color-pipeline regression tests, native devkitPPC/libogc build, DOL/ELF structure validation and the 12-second Dolphin Null-backend process smoke: **success**.
+- The [Software Renderer/Xvfb frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698/artifacts/11969630454) show the curved procedural road, alternating road sections, cyan/orange edge rails, center markers, blue/orange player pod and rival pod.
+- The DOL post-processing pads the final section from 139,932 to 139,936 bytes, satisfying Dolphin's 32-byte-rounded section reads.
+- The color issue was caused by selecting a material register color rather than the per-vertex color stream. The current GX configuration uses `GX_SRC_VTX` for material color while keeping lighting disabled. A host regression test checks the expected color-channel/vertex-descriptor/TEV configuration.
 
-This is the first CI-confirmed visible frame from the clean-room DOL. It is a primitive procedural scene, not a finished racing game. The screenshot proves visible output in this Dolphin/Software Renderer CI environment; it does **not** establish controller response, consistent frame pacing over a long session, rival interactions during a live race, or a successfully completed three-lap run. No hardware test has yet been recorded.
+This validates startup and a visible scene in Dolphin's Software Renderer CI environment. It does **not** prove controller response, long-session frame pacing, a completed race, or behavior on physical GameCube/Wii hardware. The [current quality-gate work](https://github.com/Master-Chiken/boonta-reborn-88/pull/61) adds a check to reject screenshots where the lower game viewport is predominantly near-white.
 
 ## Verified by GitHub Actions
 
@@ -52,12 +50,12 @@ This smoke test establishes only that the built DOL can be launched and its Dolp
 
 In Dolphin or compatible hardware, verify and record:
 
-- [ ] DOL boots without hanging or crashing.
-- [ ] The procedural road and placeholder craft are visible.
-- [ ] Control Stick or D-pad steers left/right.
-- [ ] A accelerates and B brakes.
-- [ ] Y resets the demo's distance, steering, and speed.
-- [ ] No sustained graphical corruption or severe frame pacing issue.
+- [x] DOL boots in Dolphin without a core-init error.
+- [x] The procedural road and placeholder craft are visible in a captured frame.
+- [ ] Control Stick or D-pad steers left/right (requires interactive input testing).
+- [ ] A accelerates and B brakes (requires interactive input testing).
+- [ ] Y resets the demo's distance, steering, and speed (requires interactive input testing).
+- [ ] No sustained graphical corruption or severe frame pacing issue (requires a longer session).
 
 Record emulator version, video backend, console/video mode, and any error log when the test is performed. Do not label compile success as a playable full racer.
 
