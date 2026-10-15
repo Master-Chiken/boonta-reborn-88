@@ -8,7 +8,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A procedural scrolling curved road with edge strips and barrier rails.
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering, throttle and brake.
-- A basic speed bar and steering-position tick.
+- A basic speed bar, steering-position tick, and rechargeable boost-energy meter.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
 This is a first-render/input smoke test, not the completed racer and not a port of the commercial game. It does not yet have collision, lap counting, AI opponents, audio, saves or a title menu.
@@ -18,6 +18,7 @@ This is a first-render/input smoke test, not the completed racer and not a port 
 - Control Stick left/right (or D-pad): steer.
 - A: accelerate.
 - B: brake.
+- Hold X + A: engage boost while accelerating; the energy meter drains and recharges when boost is released.
 - Y: reset the demo run.
 - Start: currently zeros the speed; a pause/menu is not implemented yet.
 
