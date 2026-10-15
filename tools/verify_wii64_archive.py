@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import sys
 import zipfile
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,7 +43,15 @@ def inspect_archive(path: Path) -> list[Check]:
     """Hash the ZIP and known boot.dol members without extracting the archive."""
     checks = [Check("archive", EXPECTED_ARCHIVE_SHA256, sha256_bytes(path.read_bytes()))]
     with zipfile.ZipFile(path) as archive:
-        names = set(archive.namelist())
+        member_names = archive.namelist()
+        counts = Counter(member_names)
+        duplicated = sorted(name for name in EXPECTED_FILES if counts[name] > 1)
+        if duplicated:
+            raise ValueError(
+                "duplicate archive member(s) make verification ambiguous: "
+                + ", ".join(duplicated)
+            )
+        names = set(member_names)
         for member, expected in EXPECTED_FILES.items():
             actual = sha256_bytes(archive.read(member)) if member in names else None
             checks.append(Check(member, expected, actual))
@@ -55,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         checks = inspect_archive(args.archive)
-    except (OSError, zipfile.BadZipFile, KeyError) as exc:
+    except (OSError, zipfile.BadZipFile, KeyError, ValueError) as exc:
         print(f"ERROR: cannot inspect archive: {exc}", file=sys.stderr)
         return 2
 
