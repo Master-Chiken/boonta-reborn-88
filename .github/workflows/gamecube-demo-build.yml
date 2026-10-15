@@ -30,7 +30,7 @@ jobs:
       image: devkitpro/devkitppc:latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Verify toolchain and project inputs
         shell: bash

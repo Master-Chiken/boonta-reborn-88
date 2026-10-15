@@ -23,7 +23,7 @@ jobs:
       image: devkitpro/devkitppc:latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Verify source archive was imported
         shell: bash
