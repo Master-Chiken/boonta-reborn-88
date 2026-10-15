@@ -33,7 +33,7 @@ jobs:
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
           python3 - <<'PY'
-          import datetime, json, os, subprocess
+          import datetime, json, os, subprocess, time
           from concurrent.futures import ThreadPoolExecutor
           from pathlib import Path
           branches = json.loads(Path("/tmp/branches.json").read_text())
@@ -56,7 +56,11 @@ jobs:
               if b.get("commit", {}).get("sha")
           })
 
+          date_lookup_started = time.monotonic()
+          date_lookup_request_seconds = 0.0
+
           def resolve_tip_date(sha):
+              request_started = time.monotonic()
               try:
                   date = subprocess.check_output(
                       ["gh", "api", f"repos/{repo}/commits/{sha}",
@@ -64,10 +68,13 @@ jobs:
                       text=True, stderr=subprocess.DEVNULL).strip() or None
               except subprocess.CalledProcessError:
                   date = None
-              return sha, date
+              return sha, date, time.monotonic() - request_started
 
-          with ThreadPoolExecutor(max_workers=min(8, max(1, len(tip_shas)))) as pool:
-              date_by_sha = dict(pool.map(resolve_tip_date, tip_shas))
+          with ThreadPoolExecutor(max_workers=min(10, max(1, len(tip_shas)))) as pool:
+              tip_date_results = list(pool.map(resolve_tip_date, tip_shas))
+          date_lookup_wall_seconds = time.monotonic() - date_lookup_started
+          date_lookup_request_seconds = sum(elapsed for _, _, elapsed in tip_date_results)
+          date_by_sha = {sha: date for sha, date, _ in tip_date_results}
 
           for b in branches:
               name = b["name"]
@@ -94,6 +101,10 @@ jobs:
               f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target 30",
               f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
+              f"- Unique tip dates requested: {len(tip_shas)}",
+              f"- Tip-date lookup wall time: {date_lookup_wall_seconds:.2f}s",
+              f"- Serial-equivalent request wait: {date_lookup_request_seconds:.2f}s",
+              f"- Estimated lookup-stage speedup: {date_lookup_request_seconds / max(date_lookup_wall_seconds, 0.001):.1f}x",
               f"- **Default branch:** `{default_branch}`",
               "- **Automatic deletion:** disabled by project policy.", "", "## Active branches", ""]
           lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active, key=lambda x: x["name"])]
