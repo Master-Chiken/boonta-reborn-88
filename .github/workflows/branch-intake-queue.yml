@@ -488,6 +488,29 @@ jobs:
                         for name, url, ahead, behind, files, validation in created]
           else:
               lines.append("No eligible candidate was promoted to a draft PR on this run.")
+
+          # Always report the intended small batch, even if GitHub settings deny PR creation.
+          # This lets maintainers review the specific branches the queue selected.
+          shortlist = []
+          shortlist_paths = set()
+          for candidate in candidates:
+              if set(candidate["paths"]) & shortlist_paths:
+                  continue
+              shortlist.append(candidate)
+              shortlist_paths.update(candidate["paths"])
+              if len(shortlist) >= max_prs:
+                  break
+          lines += ["", "## Candidate shortlist (priority order)", ""]
+          if shortlist:
+              lines += [
+                  f"- `{item['name']}` — {item['ahead']} ahead / {item['behind']} behind; "
+                  f"{len(item['paths'])} paths: {', '.join(item['paths'][:3])}"
+                  for item in shortlist
+              ]
+              if len(candidates) > len(shortlist):
+                  lines.append(f"- ... plus {len(candidates) - len(shortlist)} more eligible candidates")
+          else:
+              lines.append("No branch cleared all intake gates.")
           if permission_blocked:
               lines += [
                   "",
