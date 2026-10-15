@@ -20,14 +20,23 @@ def scene_signatures(image: Image.Image) -> dict[str, int]:
 def player_pod_center(image: Image.Image) -> float:
     image = image.convert("RGB")
     player_x = []
-    # Ignore the road-edge strip and look for orange thrusters in the lower view.
-    for y in range(int(image.height * 0.72), image.height - 20):
-        for x in range(int(image.width * 0.25), int(image.width * 0.90)):
+    # The craft is in the lower-middle gameplay area (about 60-68% of image
+    # height). The orange track-edge strips are lower and left of the craft;
+    # including them makes a steering response look like zero or noise.
+    x_start = int(image.width * 0.50)
+    x_end = int(image.width * 0.85)
+    y_start = int(image.height * 0.58)
+    y_end = int(image.height * 0.70)
+    for y in range(y_start, y_end):
+        for x in range(x_start, x_end):
             r, g, b = image.getpixel((x, y))
             if r > 220 and 80 < g < 185 and b < 110:
                 player_x.append(x)
-    if not player_x:
-        raise ValueError("No player-pod orange pixels found in the lower game viewport.")
+    if len(player_x) < 20:
+        raise ValueError(
+            f"No stable player-pod orange cluster in ROI x=[{x_start},{x_end}), "
+            f"y=[{y_start},{y_end}); found {len(player_x)} pixels."
+        )
     return sum(player_x) / len(player_x)
 
 
