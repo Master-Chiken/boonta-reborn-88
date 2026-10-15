@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build:
@@ -141,6 +142,69 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y dolphin-emu xvfb imagemagick
+      - name: Download the earlier minimal GX renderer as a control
+        uses: actions/download-artifact@v4
+        with:
+          name: boonta-reborn-gamecube-first-render
+          repository: Master-Chiken/boonta-reborn-88
+          run-id: 38634127716
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: control-artifact
+
+      - name: Probe Dolphin frame capture with the minimal GX control
+        id: control_capture
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          DOL="$PWD/control-artifact/boonta_gc_demo.dol"
+          DOLPHIN_USER="$RUNNER_TEMP/dolphin-control-user"
+          FRAME_DIR="$PWD/control-frames"
+          mkdir -p "$FRAME_DIR" "$DOLPHIN_USER/Config"
+          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
+          [General]
+          DumpPath = $FRAME_DIR
+
+          [Movie]
+          DumpFrames = True
+          DumpFramesSilent = True
+          EOF
+          cat > "$DOLPHIN_USER/Config/GFX.ini" <<EOF
+          [Settings]
+          DumpEFBTarget = True
+          DumpXFBTarget = True
+          DumpFramesAsImages = True
+          DumpPath = $FRAME_DIR
+          EOF
+          set +e
+          timeout --signal=TERM --kill-after=5s 15s xvfb-run -a dolphin-emu \
+            --batch --video_backend="Software Renderer" \
+            --exec="$DOL" --user="$DOLPHIN_USER" > control-frame-dump.log 2>&1
+          status=$?
+          set -e
+          cat control-frame-dump.log
+          cat "$DOLPHIN_USER/Config/Dolphin.ini"
+          cat "$DOLPHIN_USER/Config/GFX.ini"
+          find "$DOLPHIN_USER" "$FRAME_DIR" -maxdepth 7 -type f -print | tee control-files.txt
+          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
+            echo "::error::The control DOL exited unexpectedly with status $status."
+            exit "$status"
+          fi
+          frames=$(find "$DOLPHIN_USER" "$FRAME_DIR" -type f \( -iname '*.png' -o -iname '*.bmp' \) -size +0c | head -n 1 || true)
+          if [[ -z "$frames" ]]; then
+            echo "::error::Reference GX DOL also produced no frame; the problem is likely in the Dolphin/CI capture path rather than only in the new game code."
+            exit 1
+          fi
+          cp "$frames" control-frame.png
+          identify control-frame.png
+          mean=$(identify -format '%[fx:mean]' control-frame.png)
+          echo "Control capture mean pixel intensity: $mean"
+          if awk "BEGIN { exit !($mean < 0.001) }"; then
+            echo "::error::Reference GX DOL produced an entirely black frame."
+            exit 1
+          fi
+          echo "Control GX DOL capture succeeded with non-black pixels."
+
       - name: Configure and capture emulator frames
         shell: bash
         run: |
@@ -202,6 +266,12 @@ jobs:
         with:
           name: dolphin-visual-evidence
           path: |
+            control-frame-dump.log
+            control-files.txt
+            control-frame.png
+            control-frames/**
+            ${{ runner.temp }}/dolphin-control-user/Config/GFX.ini
+            ${{ runner.temp }}/dolphin-control-user/Config/Dolphin.ini
             dolphin-frame-dump.log
             dolphin-files.txt
             dolphin-frame.png
