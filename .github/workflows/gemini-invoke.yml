@@ -128,7 +128,7 @@ jobs:
 
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
-        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v7
+        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
