@@ -23,11 +23,12 @@ from make_dolphin_dtm import (
 # the lightweight host DTM protocol tests.
 try:
     from PIL import Image, ImageDraw
-    from check_dolphin_frame import finish_banner_visible, road_center_from_asphalt
+    from check_dolphin_frame import finish_banner_visible, player_pod_bounds, road_center_from_asphalt
 except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
+    player_pod_bounds = None
     road_center_from_asphalt = None
 
 
@@ -138,6 +139,38 @@ class DolphinDtmTests(unittest.TestCase):
         shifted_center, shifted_rows = road_center_from_asphalt(shifted)
         self.assertAlmostEqual(shifted_center, 360.0)
         self.assertGreaterEqual(shifted_rows, 10)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or player_pod_bounds is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_pod_bounds_ignore_sparse_color_outliers_but_reject_real_clipping(self) -> None:
+        cyan = (33, 164, 220)
+        image = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((310, 350, 370, 400), fill=cyan)
+        draw.rectangle((470, 350, 540, 400), fill=cyan)
+        # A couple of unrelated background pixels should not make the pod look
+        # clipped, but their color is intentionally identical to the pod mask.
+        image.putpixel((116, 350), cyan)
+        image.putpixel((799, 350), cyan)
+
+        center, left, right, pixel_count = player_pod_bounds(image)
+        self.assertGreater(center, 400.0)
+        self.assertLess(center, 450.0)
+        self.assertGreater(left, 300)
+        self.assertLess(left, 325)
+        self.assertGreater(right, 525)
+        self.assertLess(right, 550)
+        self.assertGreater(pixel_count, 6000)
+
+        clipped = Image.new("RGB", (800, 480), (105, 170, 225))
+        clipped_draw = ImageDraw.Draw(clipped)
+        clipped_draw.rectangle((310, 350, 370, 400), fill=cyan)
+        clipped_draw.rectangle((470, 350, 540, 400), fill=cyan)
+        clipped_draw.rectangle((0, 350, 40, 400), fill=cyan)
+        with self.assertRaises(ValueError):
+            player_pod_bounds(clipped)
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or finish_banner_visible is None,
