@@ -52,7 +52,7 @@ jobs:
             echo
             echo "- Default branch: `$default_branch`"
             echo "- Rule: only delete a listed branch if its exact tip is reachable from `main`, it has no open PR, and GitHub reports it unprotected."
-            echo "- Fixed target lists: 8 ancestry-proven refs plus up to 12 exact-head merged-PR refs (20 maximum deletions in this cleanup sequence)."
+            echo "- Fixed scope: 20 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
             echo
             echo "| Branch | Expected tip SHA | Evidence / result |"
             echo "|---|---|---|"
@@ -190,9 +190,108 @@ jobs:
           docs/refresh-repository-audit ceaae89303ea81e29e0dbc1864f781b55a4d8beb 57
           MERGED_CANDIDATES
 
+          final_deleted=0
+          while read -r name expected_sha pr_number; do
+            [ -n "$name" ] || continue
+            inventory
+
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            if [ -z "$current_sha" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | Already absent; no action (merged PR #$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$current_sha" != "$expected_sha" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: exact head changed (merged PR #$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$protected" != "false" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: protected or protection state unknown |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: open PR exists |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            merged_pr="$(gh api "repos/$GH_REPO/pulls/$pr_number")"
+            if ! printf '%s' "$merged_pr" | jq -e --arg name "$name" --arg sha "$expected_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: no matching merged-PR proof (#$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            inventory
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            merged_pr="$(gh api "repos/$GH_REPO/pulls/$pr_number")"
+            if [ "$current_sha" != "$expected_sha" ] || [ "$protected" != "false" ] || jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null || ! printf '%s' "$merged_pr" | jq -e --arg name "$name" --arg sha "$expected_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: final safety check failed |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            if gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$name"; then
+              echo "| \`$name\` | \`$expected_sha\` | DELETED: exact unchanged head of merged PR #$pr_number |" >> "$GITHUB_STEP_SUMMARY"
+              deleted=$((deleted + 1))
+              final_deleted=$((final_deleted + 1))
+            else
+              echo "| \`$name\` | \`$expected_sha\` | NOT DELETED: GitHub rejected deletion |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+            fi
+          done <<'FINAL_CANDIDATES'
+          maintenance/proof-based-cleanup-batch-2 7aaeafa99ca741cc0fffe908fa8b536df498f09c 140
+          docs/restore-gamecube-wii-focus 463d80d2826039c1e1cd8e6dd5161058a9811ecd 6
+          feat/gamecube-three-lap-finish f6862b7a5cf702ca210bbca388911e81576697d4 51
+          FINAL_CANDIDATES
+
+          # The workflow's own source branch is also temporary. Delete it only if
+          # its merged PR still has the exact current head and its complete Git tree
+          # is byte-for-byte identical to main.
+          self_branch="maintenance/proof-based-cleanup-final"
+          self_pr_number=141
+          inventory
+          self_sha="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+          self_protected="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+          self_pr="$(gh api "repos/$GH_REPO/pulls/$self_pr_number")"
+          if [ -n "$self_sha" ] && [ "$self_protected" = "false" ] &&
+             ! jq -e --arg name "$self_branch" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null &&
+             printf '%s' "$self_pr" | jq -e --arg name "$self_branch" --arg sha "$self_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+            git -C "$workdir" fetch --quiet origin "$default_branch"
+            git -C "$workdir" fetch --quiet origin "refs/heads/$self_branch:refs/remotes/origin/self-cleanup"
+            main_tree="$(git -C "$workdir" rev-parse "$main_ref^{tree}")"
+            self_tree="$(git -C "$workdir" rev-parse "refs/remotes/origin/self-cleanup^{tree}")"
+            inventory
+            self_sha_again="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            self_protected_again="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            self_pr="$(gh api "repos/$GH_REPO/pulls/$self_pr_number")"
+            if [ "$self_sha_again" = "$self_sha" ] && [ "$self_protected_again" = "false" ] &&
+               ! jq -e --arg name "$self_branch" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null &&
+               [ "$self_tree" = "$main_tree" ] &&
+               printf '%s' "$self_pr" | jq -e --arg name "$self_branch" --arg sha "$self_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+              if gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$self_branch"; then
+                echo "| \`$self_branch\` | \`$self_sha\` | DELETED: merged PR #$self_pr_number and full tree identical to main |" >> "$GITHUB_STEP_SUMMARY"
+                deleted=$((deleted + 1))
+              else
+                echo "| \`$self_branch\` | \`$self_sha\` | NOT DELETED: GitHub rejected deletion |" >> "$GITHUB_STEP_SUMMARY"
+                skipped=$((skipped + 1))
+              fi
+            else
+              echo "| \`$self_branch\` | \`$self_sha\` | PRESERVED: final exact-head or tree-equality check failed |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+            fi
+          else
+            echo "| \`$self_branch\` | \`$self_sha\` | Preserved or already absent: no exact merged-PR proof |" >> "$GITHUB_STEP_SUMMARY"
+            skipped=$((skipped + 1))
+          fi
+
           {
             echo
             echo "**Summary:** $deleted deleted; $skipped preserved or already absent."
             echo
-            echo "Only the two fixed candidate lists can be deleted: eight tips already reachable from main and twelve unchanged heads of explicitly merged PRs."
+            echo "Deletion scope is finite: the eight ancestor-proven refs, twelve exact heads of merged PRs, three finalization refs with matching merged PRs, and the helper source branch only if its full tree equals main."
           } >> "$GITHUB_STEP_SUMMARY"
