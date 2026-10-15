@@ -25,7 +25,7 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
-#define RACE_LAP_DISTANCE   120.0f
+#define RACE_LAP_DISTANCE   180.6f /* approximate arc length of generated oval */
 #define RACE_LAP_LIMIT       3U
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
 #define ROAD_Y             (-1.05f)
@@ -122,21 +122,26 @@ static float clampf_local(float value, float low, float high)
  */
 static float track_center_x_at(float travelled)
 {
-    float segment_lengths[BOONTA_TRACK_POINT_COUNT];
-    float total_length = 0.0f;
+    /* Cache arc lengths: road_center_at is sampled many times per frame. */
+    static float segment_lengths[BOONTA_TRACK_POINT_COUNT];
+    static float total_length;
+    static int lengths_ready;
     unsigned int i;
     float target;
 
-    for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
-        const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
-        const float dx = boonta_track_points_original_test_oval[next].x -
-                         boonta_track_points_original_test_oval[i].x;
-        const float dy = boonta_track_points_original_test_oval[next].y -
-                         boonta_track_points_original_test_oval[i].y;
-        const float dz = boonta_track_points_original_test_oval[next].z -
-                         boonta_track_points_original_test_oval[i].z;
-        segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
-        total_length += segment_lengths[i];
+    if (!lengths_ready) {
+        for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+            const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
+            const float dx = boonta_track_points_original_test_oval[next].x -
+                             boonta_track_points_original_test_oval[i].x;
+            const float dy = boonta_track_points_original_test_oval[next].y -
+                             boonta_track_points_original_test_oval[i].y;
+            const float dz = boonta_track_points_original_test_oval[next].z -
+                             boonta_track_points_original_test_oval[i].z;
+            segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
+            total_length += segment_lengths[i];
+        }
+        lengths_ready = 1;
     }
 
     if (total_length <= 0.001f) return 0.0f;
@@ -150,13 +155,13 @@ static float track_center_x_at(float travelled)
             const float t = length > 0.001f ? clampf_local(target / length, 0.0f, 1.0f) : 0.0f;
             const float x0 = boonta_track_points_original_test_oval[i].x;
             const float x1 = boonta_track_points_original_test_oval[next].x;
-            return x0 + (x1 - x0) * t;
+            /* Map authoring units into the current renderer's narrow road scale. */
+            return (x0 + (x1 - x0) * t) * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
         }
         target -= length;
     }
     return 0.0f;
 }
-
 static float road_center_at(float z, float distance)
 {
     /* z is camera-relative; sample a stable point ahead along the oval. */
