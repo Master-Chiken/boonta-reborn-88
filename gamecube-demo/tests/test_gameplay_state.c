@@ -432,6 +432,48 @@ static void simulated_three_lap_run_tests(void) {
  assert(nearf(speed, 0.0f));
 }
 
+static void non_finite_physics_state_tests(void) {
+ /* Steering inputs and residual state must recover without propagating NaN. */
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(NAN, 1.0f, 0.5f, 1.0f),
+              boonta_lateral_velocity_after_steering_scaled(0.0f, 1.0f, 0.5f, 1.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.0f, NAN, 0.5f, 1.0f),
+              boonta_lateral_velocity_after_steering_scaled(0.0f, 0.0f, 0.5f, 1.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.0f, 1.0f, INFINITY, 1.0f),
+              boonta_lateral_velocity_after_steering_scaled(0.0f, 1.0f, 0.0f, 1.0f)));
+ assert(nearf(boonta_lateral_position_after_frame(NAN, 0.04f, 1.0f), 0.04f));
+ assert(nearf(boonta_lateral_position_after_frame(1.0f, NAN, 1.0f), 1.0f));
+ assert(nearf(boonta_lateral_position_after_frame(INFINITY, 0.04f, 1.0f), 0.04f));
+
+ /* Distance and rival movement recover from corrupt inputs deterministically. */
+ assert(nearf(boonta_distance_after_frame_scaled(NAN, 0.5f, 0, 1.0f), 0.07f));
+ assert(nearf(boonta_distance_after_frame_scaled(10.0f, NAN, 0, 1.0f), 10.0f));
+ assert(nearf(boonta_distance_after_frame_scaled(INFINITY, 0.5f, 0, 1.0f), 0.07f));
+ assert(nearf(boonta_rival_z_after_frame(NAN, 0.5f, 1.0f),
+              boonta_rival_z_after_frame(-18.0f, 0.5f, 1.0f)));
+ assert(nearf(boonta_rival_z_after_frame(-18.0f, NAN, 1.0f),
+              boonta_rival_z_after_frame(-18.0f, 0.0f, 1.0f)));
+ assert(boonta_rival_event(NAN, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(0.0f, NAN, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(0.0f, 0.0f, INFINITY) == BOONTA_RIVAL_EVENT_NONE);
+ assert(nearf(boonta_speed_after_rival_contact(NAN), 0.0f));
+ assert(nearf(boonta_speed_after_rival_contact(INFINITY), 0.0f));
+ assert(nearf(boonta_rival_contact_nudge(NAN, 0.0f), 0.0f));
+
+ /* Off-road and rail helpers must not feed invalid values back into the loop. */
+ assert(nearf(boonta_speed_after_offroad_scaled(NAN, 0.0f, 1.0f), 0.0f));
+ assert(nearf(boonta_speed_after_offroad_scaled(0.5f, NAN, 1.0f), 0.5f));
+ assert(nearf(boonta_abs_float(NAN), 0.0f));
+ assert(!boonta_is_past_rail(NAN));
+ assert(nearf(boonta_lateral_after_rail_contact(NAN), 0.0f));
+ assert(nearf(boonta_lateral_after_rail_contact(INFINITY), 0.0f));
+ assert(nearf(boonta_lateral_velocity_after_rail_contact(NAN), 0.0f));
+ assert(nearf(boonta_lateral_velocity_after_rail_contact(INFINITY), 0.0f));
+
+ /* A corrupted boost/heat value must not briefly enable boost for one frame. */
+ assert(!boonta_boost_should_activate(1, 1, INFINITY));
+ assert(!boonta_boost_should_activate_with_heat(1, 1, 0.5f, NAN, 0));
+}
+
 static void invalid_scaled_frame_tests(void) {
  const float invalid_scales[] = { NAN, INFINITY, -INFINITY, -1.0f };
  unsigned int i;
@@ -451,6 +493,7 @@ static void invalid_scaled_frame_tests(void) {
 }
 
 int main(void) {
+ non_finite_physics_state_tests();
  finite_clamp_tests();
  frame_scale_tests();
  invalid_scaled_frame_tests();
