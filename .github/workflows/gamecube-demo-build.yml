@@ -73,6 +73,10 @@ jobs:
           make clean
           set -o pipefail
           make 2>&1 | tee build.log
+          if grep -nE 'warning:' build.log; then
+            echo "::error::The native GameCube build emitted compiler warnings; resolve them before publishing the artifact."
+            exit 1
+          fi
           # libogc's DOL output may omit the final bytes required for
           # 32-byte-aligned section reads. Dolphin rejects such a DOL at boot.
           python3 tools/pad_dol.py boonta_gc_demo.dol
