@@ -96,11 +96,71 @@ def validate_scene(image: Image.Image, label: str) -> None:
         raise SystemExit(f"{label} frame is missing expected scene/craft color signatures; DOL may not have booted.")
 
 
+def finish_banner_visible(image: Image.Image) -> bool:
+    """Detect the demo's centered 4x3 finish-flag checkerboard.
+
+    Dolphin-window captures may include a toolbar, while direct framebuffer
+    captures do not. Search both likely vertical centers and small scale/offset
+    ranges; the alternating pattern distinguishes the finish banner from pause.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    pixels = image.load()
+
+    def white_fraction(x0: float, y0: float, x1: float, y1: float) -> float:
+        left = max(0, int(x0))
+        top = max(0, int(y0))
+        right = min(width, int(x1))
+        bottom = min(height, int(y1))
+        hit = total = 0
+        for y in range(top, bottom):
+            for x in range(left, right):
+                r, g, b = pixels[x, y]
+                total += 1
+                if r > 205 and g > 215 and b > 220:
+                    hit += 1
+        return hit / max(total, 1)
+
+    center_x = width / 2.0
+    center_y_candidates = (height / 2.0, height * 0.5833333333)
+    for tile_width in range(12, 25):
+        for tile_height in range(8, 18):
+            for x_offset in (-6, -3, 0, 3, 6):
+                for center_y_base in center_y_candidates:
+                    for y_offset in (-6, -3, 0, 3, 6):
+                        cx = center_x + x_offset
+                        cy = center_y_base + y_offset
+                        left = cx - 2 * tile_width
+                        top = cy - 1.5 * tile_height
+                        matched = True
+                        for row in range(3):
+                            for col in range(4):
+                                x0 = left + col * tile_width + tile_width * 0.15
+                                x1 = left + (col + 1) * tile_width - tile_width * 0.15
+                                y0 = top + row * tile_height + tile_height * 0.15
+                                y1 = top + (row + 1) * tile_height - tile_height * 0.15
+                                bright = white_fraction(x0, y0, x1, y1)
+                                if (row + col) % 2 == 0:
+                                    if bright < 0.35:
+                                        matched = False
+                                        break
+                                elif bright > 0.15:
+                                    matched = False
+                                    break
+                            if not matched:
+                                break
+                        if matched:
+                            return True
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
-    parser.add_argument("--baseline", required=True, type=Path,
+    parser.add_argument("--baseline", type=Path,
                         help="matching frame rendered with --steering none")
+    parser.add_argument("--expect-finish", action="store_true",
+                        help="check for the three-lap finish flag instead of comparing steering frames")
     parser.add_argument("--min-shift", type=float, default=2.0,
                         help="minimum rightward HUD-marker shift for scripted-input smoke")
     parser.add_argument("--max-pod-drift", type=float, default=80.0,
@@ -110,6 +170,15 @@ def main() -> int:
     args = parser.parse_args()
 
     image = Image.open(args.frame).convert("RGB")
+    if args.expect_finish:
+        if args.baseline is not None:
+            parser.error("--expect-finish cannot be combined with --baseline")
+        if not finish_banner_visible(image):
+            raise SystemExit("The centered three-lap finish checkerboard was not detected in the Dolphin capture.")
+        print("Three-lap finish banner detected in the visible Dolphin frame.")
+        return 0
+    if args.baseline is None:
+        parser.error("--baseline is required unless --expect-finish is set")
     baseline = Image.open(args.baseline).convert("RGB")
     if image.size != baseline.size:
         raise SystemExit(f"Frame dimensions differ: steered={image.size}, baseline={baseline.size}")
