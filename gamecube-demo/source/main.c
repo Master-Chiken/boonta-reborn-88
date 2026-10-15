@@ -54,6 +54,7 @@ static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
 static float g_vertex_y_offset;
+static int g_track_world_transform_enabled;
 static float g_distance;
 static unsigned int g_lap_count;
 static float g_race_seconds;
@@ -122,9 +123,9 @@ static float clampf_local(float value, float low, float high)
 }
 
 /*
- * Sample the original authored oval by travelled arc length. The current GX
- * renderer still uses a forward-depth projection, but lateral shape, width and
- * elevation now come from the same generated closed-loop data as lap distance.
+ * Sample the authored closed-loop spline by travelled arc length. Runtime track
+ * points remain in world coordinates; existing scene meshes are built in a local
+ * forward plane and mapped into the actual course frame vertex by vertex.
  */
 static float catmull_rom_component(float p0, float p1, float p2, float p3, float t)
 {
@@ -138,7 +139,7 @@ static float catmull_rom_component(float p0, float p1, float p2, float p3, float
 }
 
 static void track_sample_at(float travelled, float *x_out, float *y_out,
-                            float *width_out)
+                            float *z_out, float *width_out)
 {
     /* Segment lengths are cached because many road vertices sample each frame. */
     static float segment_lengths[BOONTA_TRACK_POINT_COUNT];
@@ -149,6 +150,7 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
 
     if (x_out != NULL) *x_out = 0.0f;
     if (y_out != NULL) *y_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
     if (width_out != NULL) *width_out = ROAD_HALF_WIDTH;
 
     if (!lengths_ready) {
@@ -185,19 +187,14 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
             const BoontaTrackPoint *p3 = &boonta_track_points_original_test_oval[following];
             const float smooth_x = catmull_rom_component(p0->x, p1->x, p2->x, p3->x, t);
             const float smooth_y = catmull_rom_component(p0->y, p1->y, p2->y, p3->y, t);
+            const float smooth_z = catmull_rom_component(p0->z, p1->z, p2->z, p3->z, t);
             const float smooth_width = catmull_rom_component(
                 p0->half_width, p1->half_width, p2->half_width, p3->half_width, t);
 
-            /* Lateral authoring coordinates are compressed for the prototype camera. */
-            if (x_out != NULL) {
-                *x_out = smooth_x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
-            }
-            if (y_out != NULL) {
-                *y_out = clampf_local(smooth_y, -3.0f, 3.0f);
-            }
-            if (width_out != NULL) {
-                *width_out = clampf_local(smooth_width, 2.2f, 4.8f);
-            }
+            if (x_out != NULL) *x_out = smooth_x;
+            if (y_out != NULL) *y_out = clampf_local(smooth_y, -3.0f, 3.0f);
+            if (z_out != NULL) *z_out = smooth_z;
+            if (width_out != NULL) *width_out = clampf_local(smooth_width, 2.2f, 4.8f);
             return;
         }
         target -= length;
@@ -207,27 +204,26 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
 static float track_center_x_at(float travelled)
 {
     float x = 0.0f;
-    track_sample_at(travelled, &x, NULL, NULL);
-    return x;
+    track_sample_at(travelled, &x, NULL, NULL, NULL);
+    return x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
 }
 
 static float track_half_width_at(float travelled)
 {
     float width = ROAD_HALF_WIDTH;
-    track_sample_at(travelled, NULL, NULL, &width);
+    track_sample_at(travelled, NULL, NULL, NULL, &width);
     return width;
 }
 
 static float track_elevation_at(float travelled)
 {
     float elevation = 0.0f;
-    track_sample_at(travelled, NULL, &elevation, NULL);
+    track_sample_at(travelled, NULL, &elevation, NULL, NULL);
     return elevation;
 }
 
 static float road_center_at(float z, float distance)
 {
-    /* z is camera-relative; sample a stable point ahead along the oval. */
     return track_center_x_at(distance + (4.0f - z));
 }
 
@@ -238,17 +234,63 @@ static float road_half_width_at(float z, float distance)
 
 static float road_height_at(float z, float distance)
 {
-    /* Keep the small authored elevation readable without exaggerating perspective. */
     return ROAD_Y + track_elevation_at(distance + (4.0f - z)) * 0.45f;
+}
+
+/* Map a distance/lateral/elevation triple into the authored world-space track. */
+static void track_world_point_at(float travelled, float lateral, float height,
+                                 Point3 *out)
+{
+    float center_x = 0.0f, center_y = 0.0f, center_z = 0.0f;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float tangent_x, tangent_z, tangent_length, right_x, right_z;
+
+    track_sample_at(travelled, &center_x, &center_y, &center_z, NULL);
+    track_sample_at(travelled - 0.25f, &before_x, &before_y, &before_z, NULL);
+    track_sample_at(travelled + 0.25f, &after_x, &after_y, &after_z, NULL);
+    tangent_x = after_x - before_x;
+    tangent_z = after_z - before_z;
+    tangent_length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+    if (tangent_length > 0.001f) {
+        right_x = tangent_z / tangent_length;
+        right_z = -tangent_x / tangent_length;
+    } else {
+        right_x = 1.0f;
+        right_z = 0.0f;
+    }
+
+    out->x = center_x + right_x * lateral;
+    out->y = center_y + height;
+    out->z = center_z + right_z * lateral;
+}
+
+/* Existing meshes use a forward-facing local plane; bend each vertex into the track frame. */
+static Point3 track_local_to_world(Point3 local_point)
+{
+    const float travelled = g_distance + (4.0f - local_point.z);
+    float center_y = 0.0f;
+    const float lateral = local_point.x - track_center_x_at(travelled);
+    float height;
+    Point3 world_point;
+
+    track_sample_at(travelled, NULL, &center_y, NULL, NULL);
+    height = local_point.y - (ROAD_Y + center_y * 0.45f);
+    track_world_point_at(travelled, lateral, height, &world_point);
+    return world_point;
 }
 
 static void vertex_add(Point3 point, GXColor color)
 {
     SceneVertex *v;
     if (g_vertex_count >= VERTEX_CAPACITY) return;
+    point.y += g_vertex_y_offset;
+    if (g_track_world_transform_enabled) {
+        point = track_local_to_world(point);
+    }
     v = &g_vertices[g_vertex_count++];
     v->x = point.x;
-    v->y = point.y + g_vertex_y_offset;
+    v->y = point.y;
     v->z = point.z;
     v->r = color.r;
     v->g = color.g;
@@ -304,11 +346,13 @@ static void add_road(void)
     const float segment_length = 2.8f;
     const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
-    const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
-    const Point3 ground_d = { -100.0f, ROAD_Y - 0.24f, -110.0f };
+    const Point3 ground_a = { -150.0f, -0.65f, 180.0f };
+    const Point3 ground_b = {  150.0f, -0.65f, 180.0f };
+    const Point3 ground_c = {  150.0f, -0.65f, -100.0f };
+    const Point3 ground_d = { -150.0f, -0.65f, -100.0f };
+    g_track_world_transform_enabled = 0;
     quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
+    g_track_world_transform_enabled = 1;
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
@@ -379,7 +423,9 @@ static void add_road(void)
                      (Point3){ c1 - w1, y1, finish_z - 0.55f }, stripe);
         }
     }
+    g_track_world_transform_enabled = 0;
 }
+
 
 /*
  * Original low-poly canyon walls give the test road a readable world silhouette.
@@ -389,6 +435,7 @@ static void add_road(void)
 static void add_canyon_scenery(void)
 {
     const float wall_margin = 5.0f;
+    g_track_world_transform_enabled = 1;
     const float wall_length = 10.0f;
     const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
@@ -443,6 +490,7 @@ static void add_canyon_scenery(void)
             triangle_add(base_near, top_far, base_far, facet);
         }
     }
+    g_track_world_transform_enabled = 0;
 }
 static void add_player_pod(void)
 {
@@ -856,36 +904,38 @@ static void initialise_video_and_gx(void)
 
 static void draw_frame(void)
 {
-    const float center_near = road_center_at(5.5f, g_distance);
-    const float center_ahead = road_center_at(-14.0f, g_distance);
-    const float height_near = road_height_at(5.5f, g_distance) - ROAD_Y;
-    const float height_ahead = road_height_at(-14.0f, g_distance) - ROAD_Y;
-    /* Follow the spline laterally and vertically; steering moves the course relative to camera. */
-    /* The two centerline samples provide a forward tangent estimate for this projection. */
-    guVector camera = { center_near + g_player_lateral,
-                        1.65f - 0.20f * g_pitch_down + height_near, 7.0f };
+    Point3 camera_point;
+    Point3 target_point;
+    /* Position and aim are sampled from the same world-space spline as the mesh. */
+    track_world_point_at(g_distance - 3.0f, g_player_lateral,
+                         1.65f - 0.20f * g_pitch_down, &camera_point);
+    track_world_point_at(g_distance + 19.0f, g_player_lateral,
+                         0.20f - 0.45f * g_pitch_down, &target_point);
+    guVector camera = { camera_point.x, camera_point.y, camera_point.z };
     guVector up = { 0.0f, 1.0f, 0.0f };
-    guVector target = { center_ahead + g_player_lateral,
-                        -0.85f - 0.45f * g_pitch_down + height_ahead, -15.0f };
+    guVector target = { target_point.x, target_point.y, target_point.z };
     Mtx view;
     Mtx44 projection;
 
     g_vertex_count = 0;
     g_vertex_y_offset = 0.0f;
+    g_track_world_transform_enabled = 0;
     add_road();
     add_canyon_scenery();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-            /* Rival pods ride the same authored elevation as their projected road point. */
+            g_track_world_transform_enabled = 1;
             g_vertex_y_offset = road_height_at(g_rival_z[rival_index], g_distance) - ROAD_Y;
             add_rival_pod(g_rival_z[rival_index], g_rival_lateral[rival_index], rival_index);
         }
+        g_track_world_transform_enabled = 0;
         g_vertex_y_offset = 0.0f;
     }
-    /* Keep the player's craft attached to the current track grade, including boost flames. */
+    g_track_world_transform_enabled = 1;
     g_vertex_y_offset = road_height_at(1.0f, g_distance) - ROAD_Y;
     add_player_pod();
+    g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
