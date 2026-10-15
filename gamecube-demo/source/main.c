@@ -14,6 +14,7 @@
 
 #include "pause_state.h"
 #include "gameplay_state.h"
+#include "generated_track.h"
 
 #include <math.h>
 #include <malloc.h>
@@ -112,15 +113,54 @@ static float clampf_local(float value, float low, float high)
     return boonta_clamp_finite_float(value, low, high);
 }
 
+/*
+ * Sample the original authored oval by travelled arc length. The GX prototype
+ * currently uses a forward-depth road projection, so this supplies a stable
+ * lateral centerline profile while the full 3D tangent/camera transform is
+ * developed. Unlike the old unrelated sine waves, the profile comes from the
+ * same bounded, closed-loop points used by the track authoring format.
+ */
+static float track_center_x_at(float travelled)
+{
+    float segment_lengths[BOONTA_TRACK_POINT_COUNT];
+    float total_length = 0.0f;
+    unsigned int i;
+    float target;
+
+    for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+        const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
+        const float dx = boonta_track_points_original_test_oval[next].x -
+                         boonta_track_points_original_test_oval[i].x;
+        const float dy = boonta_track_points_original_test_oval[next].y -
+                         boonta_track_points_original_test_oval[i].y;
+        const float dz = boonta_track_points_original_test_oval[next].z -
+                         boonta_track_points_original_test_oval[i].z;
+        segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
+        total_length += segment_lengths[i];
+    }
+
+    if (total_length <= 0.001f) return 0.0f;
+    target = fmodf(travelled, total_length);
+    if (target < 0.0f) target += total_length;
+
+    for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+        const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
+        const float length = segment_lengths[i];
+        if (target <= length || i + 1U == BOONTA_TRACK_POINT_COUNT) {
+            const float t = length > 0.001f ? clampf_local(target / length, 0.0f, 1.0f) : 0.0f;
+            const float x0 = boonta_track_points_original_test_oval[i].x;
+            const float x1 = boonta_track_points_original_test_oval[next].x;
+            return x0 + (x1 - x0) * t;
+        }
+        target -= length;
+    }
+    return 0.0f;
+}
+
 static float road_center_at(float z, float distance)
 {
-    /*
-     * z is camera-relative (negative ahead of the pod). Converting it to a
-     * progressing track coordinate keeps a given piece of road stable while
-     * it advances toward the camera instead of deforming in place.
-     */
-    const float phase = boonta_track_phase(distance, z);
-    return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
+    /* z is camera-relative; sample a stable point ahead along the oval. */
+    return track_center_x_at(distance + (4.0f - z));
 }
 
 static void vertex_add(Point3 point, GXColor color)
