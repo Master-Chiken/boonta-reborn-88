@@ -2,6 +2,19 @@
 
 Last updated: 2026-10-15
 
+## Latest CI color/render verification (2026-10-15)
+
+- Workflow: [GameCube first-render prototype build #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531)
+- Merged change: [PR #60](https://github.com/Master-Chiken/boonta-reborn-88/pull/60), commit `0f21478bf624232fa9667a5bd94892cbd11b9207`.
+- Host gameplay/pause/padding/GX-color regression tests: **success**.
+- Native DOL/ELF build and structural validation: **success**.
+- Dolphin Null-video process smoke (12-second bounded run): **success**.
+- Software Renderer capture: **success**; [frame and logs artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471).
+- Captured root image had **1,523 distinct colors**. Visual inspection confirms alternating dark road sections, cyan and orange side strips/rails, green ground, a blue/orange player pod, and a rival silhouette.
+- Root cause: `GX_SetChanCtrl(GX_COLOR0A0, ... GX_SRC_REG, GX_SRC_REG, ...)` selected the register/material color rather than the vertex color. The source is now `GX_SRC_VTX`; host tests lock down the channel source, vertex color descriptor/format and TEV pass-through.
+
+This establishes that per-vertex color reaches the visible frame in this Dolphin Software Renderer CI session. The scene is still a primitive procedural prototype. Controller behavior, completed interactive three-lap racing, long-session stability and console hardware remain unverified.
+
 ## Latest CI runtime verification (2026-10-15)
 
 - Workflow: [GameCube first-render prototype build #66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044)
