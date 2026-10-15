@@ -186,7 +186,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon tesseract-ocr
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
@@ -237,13 +237,36 @@ jobs:
                 echo "Dolphin exited before the software-renderer capture."
                 exit 1
               fi
-              import -window root "$CAPTURE"
+              window=""
+              for attempt in $(seq 1 15); do
+                for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                  title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+                  geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                  width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                  height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                  if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && ( "$title" == "Dolphin" || "$title" == *" - Dolphin" || "$title" == Dolphin\ * ) ]]; then
+                    window="$id"
+                    break
+                  fi
+                done
+                [[ -n "$window" ]] && break
+                sleep 1
+              done
+              if [[ -z "$window" ]]; then
+                echo "No visible Dolphin main window of at least 300x200 was found."
+                xwininfo -root -tree || true
+                exit 1
+              fi
+              echo "Capturing Dolphin window id=$window title=$(xdotool getwindowname "$window")"
+              xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
+              sleep 2
+              import -window "$window" "$CAPTURE"
               test -s "$CAPTURE"
               identify "$CAPTURE"
               colors=$(convert "$CAPTURE" -resize 160x90 -format %k info:)
-              echo "Software-renderer root capture has $colors distinct colors."
+              echo "Dolphin-window capture has $colors distinct colors."
               if [[ "$colors" -lt 24 ]]; then
-                echo "Capture appears blank or nearly blank; visual rendering remains unverified."
+                echo "Dolphin window capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
               ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
