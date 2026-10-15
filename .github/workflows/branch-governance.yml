@@ -50,15 +50,19 @@ jobs:
               sha = b.get("commit", {}).get("sha")
               date = None
               if sha:
-                  try:
-                      # The /branches endpoint returns only a commit SHA/URL,
-                      # not the nested commit timestamp; fetch the actual tip.
-                      date = subprocess.check_output(
-                          ["gh", "api", f"repos/{repo}/commits/{sha}",
-                           "--jq", ".commit.committer.date // .commit.author.date // empty"],
-                          text=True, stderr=subprocess.DEVNULL).strip() or None
-                  except subprocess.CalledProcessError:
-                      date = None
+                  if sha in date_by_sha:
+                      date = date_by_sha[sha]
+                  else:
+                      try:
+                          # The /branches endpoint returns only a commit SHA/URL,
+                          # not the nested commit timestamp; fetch the actual tip.
+                          date = subprocess.check_output(
+                              ["gh", "api", f"repos/{repo}/commits/{sha}",
+                               "--jq", ".commit.committer.date // .commit.author.date // empty"],
+                              text=True, stderr=subprocess.DEVNULL).strip() or None
+                      except subprocess.CalledProcessError:
+                          date = None
+                      date_by_sha[sha] = date
               recent = False
               if date:
                   try:
