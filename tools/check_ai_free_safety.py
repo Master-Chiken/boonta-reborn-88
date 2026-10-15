@@ -34,8 +34,20 @@ if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 
     errors.append("Missing locked/write-disabled approval gate in gemini-dispatch.yml")
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 'true'" not in dispatch:
     errors.append("Missing exact-true write gate in gemini-dispatch.yml")
+if "command = association === 'OWNER' ? 'approve' : 'approve-denied';" not in dispatch:
+    errors.append("Only the repository owner may issue the /approve command")
+if "approval-denied:" not in dispatch or "The /approve command is restricted to the repository owner" not in dispatch:
+    errors.append("Unauthorized approval attempts must be explicitly rejected")
 if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
     errors.append("Setup documentation must require branch protection before enabling writes")
+
+# Workflow files must not reference OpenRouter; the secret may remain unused until audited.
+workflow_text = "\n".join(
+    path.read_text(encoding="utf-8")
+    for path in (ROOT / ".github" / "workflows").glob("*.yml")
+)
+if "openrouter_api_key" in workflow_text.lower() or "openrouter.ai" in workflow_text.lower():
+    errors.append("GitHub Actions workflows must not use OpenRouter in the €0-only setup")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -118,8 +130,9 @@ if errors:
     sys.exit(1)
 
 print("AI free-tier safety checks passed.")
-print("- Gemini write path is explicitly gated by GEMINI_WRITE_ENABLED=true.")
-print("- Legacy Google Cloud / paid-auth configuration is absent.")
+print("- Only the repository owner can authorize the Gemini write workflow.")
+print("- Gemini write path remains gated by GEMINI_WRITE_ENABLED=true.")
+print("- OpenRouter and legacy Google Cloud / paid-auth routes are absent from workflows.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
 print("- Project instructions retain the strict €0 requirement.")
