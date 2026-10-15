@@ -226,7 +226,14 @@ jobs:
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
             if grep -Eiq "title=Error([[:space:]]|$)" "$WINDOW_LIST"; then
-              error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
+              error_window=""
+              for candidate in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                candidate_title=$(xdotool getwindowname "$candidate" 2>/dev/null || true)
+                if [[ "$candidate_title" == "Error" ]]; then
+                  error_window="$candidate"
+                  break
+                fi
+              done
               if [[ -n "$error_window" ]]; then
                 import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
                 identify "$PWD/dolphin-error-dialog.png" 2>/dev/null || true
@@ -321,7 +328,14 @@ jobs:
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
             if grep -Eiq "title=Error([[:space:]]|$)" "$WINDOW_LIST"; then
-              error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
+              error_window=""
+              for candidate in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                candidate_title=$(xdotool getwindowname "$candidate" 2>/dev/null || true)
+                if [[ "$candidate_title" == "Error" ]]; then
+                  error_window="$candidate"
+                  break
+                fi
+              done
               if [[ -n "$error_window" ]]; then
                 import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
                 identify "$PWD/dolphin-error-dialog.png" 2>/dev/null || true
