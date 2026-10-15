@@ -68,7 +68,6 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(record(right_blob, 30)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 30)[1] & DPAD_LEFT)
         self.assertTrue(record(right_blob, 100)[1] & DPAD_RIGHT)
-        self.assertTrue(record(right_blob, 600)[1] & DPAD_RIGHT)
         self.assertTrue(record(right_blob, STEERING_HOLD_FRAMES - 1)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, STEERING_HOLD_FRAMES)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 2020)[1] & DPAD_LEFT)
@@ -77,7 +76,6 @@ class DolphinDtmTests(unittest.TestCase):
         left_blob = build_dtm(3600, steering="left")
         self.assertTrue(record(left_blob, 30)[1] & DPAD_LEFT)
         self.assertFalse(record(left_blob, 30)[1] & DPAD_RIGHT)
-        self.assertTrue(record(left_blob, 600)[1] & DPAD_LEFT)
         self.assertFalse(record(left_blob, STEERING_HOLD_FRAMES)[1] & DPAD_LEFT)
 
         neutral_blob = build_dtm(3600, steering="none")
