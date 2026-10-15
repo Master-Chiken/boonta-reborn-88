@@ -114,6 +114,22 @@ static void steering_inertia_tests(void) {
  assert(nearf(boonta_lateral_velocity_after_steering(-0.2f, -1.0f, 1.0f), -0.085f));
 }
 
+static void lap_clock_tests(void) {
+ assert(nearf(boonta_elapsed_after_frame(12.0f, 0.5f, 1), 12.5f));
+ assert(nearf(boonta_elapsed_after_frame(12.0f, 0.5f, 0), 12.0f));
+ assert(nearf(boonta_elapsed_after_frame(12.0f, 0.0f, 1), 12.0f));
+ assert(nearf(boonta_elapsed_after_frame(12.0f, -0.1f, 1), 12.0f));
+ assert(nearf(boonta_elapsed_after_frame(12.0f, NAN, 1), 12.0f));
+ assert(nearf(boonta_elapsed_after_frame(NAN, 0.1f, 1), 0.1f));
+ assert(nearf(boonta_elapsed_after_frame(12.0f, 2.0f, 1), 13.0f));
+
+ assert(nearf(boonta_best_lap_after_finish(0.0f, 21.5f), 21.5f));
+ assert(nearf(boonta_best_lap_after_finish(21.5f, 22.0f), 21.5f));
+ assert(nearf(boonta_best_lap_after_finish(21.5f, 18.25f), 18.25f));
+ assert(nearf(boonta_best_lap_after_finish(21.5f, 0.0f), 21.5f));
+ assert(nearf(boonta_best_lap_after_finish(21.5f, NAN), 21.5f));
+}
+
 static void lap_tests(void) {
  assert(boonta_lap_was_crossed(0.0f,119.99f,120.0f)==0);
  assert(boonta_lap_was_crossed(119.99f,120.01f,120.0f)==1);
@@ -221,6 +237,9 @@ static void simulated_three_lap_run_tests(void) {
  float speed = 0.0f;
  float boost = 1.0f;
  float heat = 0.0f;
+ float race_seconds = 0.0f;
+ float lap_seconds = 0.0f;
+ float best_lap_seconds = 0.0f;
  unsigned int laps = 0U;
  unsigned int frames = 0U;
  int overheated = 0;
@@ -229,12 +248,19 @@ static void simulated_three_lap_run_tests(void) {
  while (!finished && frames < 5000U) {
   const int boost_active = boonta_boost_should_activate_with_heat(1, 1, boost, heat, overheated);
   const float previous_distance = distance;
+  const unsigned int previous_laps = laps;
+  race_seconds = boonta_elapsed_after_frame(race_seconds, 1.0f / 60.0f, 1);
+  lap_seconds = boonta_elapsed_after_frame(lap_seconds, 1.0f / 60.0f, 1);
   boost = boonta_boost_after_frame(boost, boost_active);
   heat = boonta_engine_heat_after_frame(heat, boost_active);
   overheated = boonta_boost_overheated_after_frame(overheated, heat);
   speed = boonta_speed_after_input(speed, 1, 0);
   distance = boonta_distance_after_frame(distance, speed, boost_active);
   laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
+  if (laps > previous_laps) {
+   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, lap_seconds);
+   lap_seconds = 0.0f;
+  }
   finished = boonta_race_is_finished(laps, 3U);
   if (finished) speed = 0.0f;
   ++frames;
@@ -244,6 +270,9 @@ static void simulated_three_lap_run_tests(void) {
  assert(finished == 1);
  assert(laps == 3U);
  assert(distance >= 360.0f);
+ assert(race_seconds > 0.0f);
+ assert(best_lap_seconds > 0.0f);
+ assert(lap_seconds >= 0.0f);
  assert(nearf(speed, 0.0f));
 }
 
@@ -251,6 +280,7 @@ int main(void) {
  speed_tests();
  boost_tests();
  boost_overheat_tests();
+ lap_clock_tests();
  steering_input_tests();
  steering_inertia_tests();
  lap_tests();
