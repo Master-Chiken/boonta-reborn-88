@@ -127,9 +127,9 @@ jobs:
           mkdir -p "$HOME"
           chmod 700 "$HOME"
           {
-            printf '%s\\n' '### apt-installed Dolphin version'
+            printf '%s\n' '### apt-installed Dolphin version'
             dolphin-emu --version 2>&1 || true
-            printf '%s\\n' '### apt-installed Dolphin CLI help'
+            printf '%s\n' '### apt-installed Dolphin CLI help'
             dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
 
@@ -211,9 +211,9 @@ jobs:
           # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
           flatpak info --user org.DolphinEmu.dolphin-emu
           {
-            printf '%s\\n' '### Flatpak Dolphin version'
+            printf '%s\n' '### Flatpak Dolphin version'
             flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
-            printf '%s\\n' '### Flatpak Dolphin CLI help'
+            printf '%s\n' '### Flatpak Dolphin CLI help'
             flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
