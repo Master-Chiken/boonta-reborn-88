@@ -64,10 +64,12 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_steering_direction_changes_are_deterministic(self) -> None:
         blob = build_dtm(3600)
-        self.assertTrue(record(blob, 1500)[1] & DPAD_RIGHT)
-        self.assertFalse(record(blob, 1500)[1] & DPAD_LEFT)
-        self.assertTrue(record(blob, 2200)[1] & DPAD_LEFT)
-        self.assertFalse(record(blob, 2200)[1] & DPAD_RIGHT)
+        self.assertTrue(record(blob, 30)[1] & DPAD_RIGHT)
+        self.assertFalse(record(blob, 30)[1] & DPAD_LEFT)
+        self.assertFalse(record(blob, 100)[1] & DPAD_LEFT)
+        self.assertFalse(record(blob, 100)[1] & DPAD_RIGHT)
+        self.assertTrue(record(blob, 2020)[1] & DPAD_LEFT)
+        self.assertFalse(record(blob, 2020)[1] & DPAD_RIGHT)
         self.assertFalse(record(blob, 3000)[1] & DPAD_LEFT)
         self.assertFalse(record(blob, 3000)[1] & DPAD_RIGHT)
 
