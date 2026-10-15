@@ -1,44 +1,37 @@
-# AI agent workflow
+# Gemini coding agent — safe operating procedure
 
-This repository uses GitHub-hosted Gemini for on-demand analysis and code assistance. The primary engineering goal is the native GameCube/Wii prototype; the original PC and Nintendo 64 releases are separate reference targets, and the Dreamcast/KallistiOS sample is a separate experiment.
+## What the agent can do
+- Read the current repository checkout and the issue/PR context.
+- Respond to an `@gemini-cli` comment with an audit or plan.
+- After explicit plan approval and owner-only setup, propose source changes on a separate branch and open a PR.
+- It must never merge code or push directly to `main`.
 
-## Current automation
+## Activation gates
+1. This security-hardening PR must be reviewed and explicitly merged into the default branch.
+2. The owner must create a Gemini API key under Google's free tier without linking billing, then store it as the GitHub Actions repository secret `GEMINI_API_KEY`.
+3. The owner must protect `main` against direct pushes, force pushes, and deletion.
+4. Only after those protections above are confirmed should the owner set the repository Actions variable `GEMINI_WRITE_ENABLED=true`.
+5. If a free quota is unavailable, stop; never activate paid billing or a paid fallback.
 
-- `@gemini-cli` comments on an issue or pull request trigger a GitHub Actions job.
-- The workflow uses the `GEMINI_API_KEY` repository secret and currently selects `gemini-3.5-flash-lite` for the free-tier trial configuration.
-- The Gemini response is published back to the triggering issue/PR. If no response is available, the workflow posts a diagnostic link to the Actions log.
-- The reusable workflows keep general shell commands disabled; only the limited tools needed for context and repository reading are enabled in the invoke workflow. The plan-execute workflow has a separately scoped GitHub MCP tool set for file changes and PR creation.
-- A successful Gemini workflow means only that the automation ran successfully. It does not prove a game build or runtime test succeeded.
+The write workflow checks `GEMINI_WRITE_ENABLED` in the dispatcher. Without it, `@gemini-cli /approve` does not execute file changes and posts a note that writing remains locked.
 
-## How to request work
+## Start read-only
+After the hardened workflows are on the default branch and the secret exists, comment on a repository issue or PR with a focused read-only request beginning with `@gemini-cli`. For example:
 
-Comment on an issue or pull request starting with `@gemini-cli`. Ask for one well-scoped task and tell the agent which files or behavior to investigate.
+```text
+@gemini-cli Fais un audit en lecture seule. Lis l'arborescence réellement présente, résume les workflows et résultats CI, signale les chemins Step 102 absents et propose les 3 prochaines tâches avec critères d'acceptation. Ne modifie aucun fichier et ne crée aucune PR.
+```
 
-For substantial code changes, the intended sequence is:
-1. Ask for a plan and acceptance criteria.
-2. Review the plan in the GitHub discussion.
-3. Approve only the intended work with `@gemini-cli /approve`.
-4. Review the proposed diff, test results, provenance risks and any PR before merging.
+## Project context and boundaries
+- Main engineering target: GameCube/Wii using C, devkitPPC and libogc.
+- The Step 102 archive uploaded to ChatGPT is not automatically visible to Gemini in GitHub Actions.
+- Inspect the actual checked-out branch; do not claim files from unmerged PRs are present.
+- Do not commit ROMs, disc images, BIOS files or assets of unclear provenance.
+- The archive audit records no explicit LICENSE/COPYING/NOTICE file and identifies PC-mod-derived centerline data plus voice/model/assets needing separate provenance review.
+- Report what was actually tested. A host test is not proof of a native build; a Dolphin headless process test is not proof of rendering or gameplay.
 
-Never ask the agent to merge its own code or bypass required tests. Start with read-only investigation until the source tree is imported.
+## Free-only requirement
+Google currently offers a free tier for some Gemini API models, with quotas and data-use terms. Verify the current pricing page before activation:
+https://ai.google.dev/gemini-api/docs/pricing
 
-## Primary engineering blocker
-
-The repository currently contains the Dreamcast starter but does **not** contain the Step 102 GameCube/Wii source tree. The existing native workflow checks for `Makefile` and `source/` and stops if they are missing. Gemini cannot inspect an archive that exists only in ChatGPT's file library; the required files have to be made available to the repository or to a controlled import process first.
-
-## Safe source-import procedure
-
-1. Keep the original PC archive, Nintendo 64 ROM, and commercial disc images outside the public repository.
-2. Inventory the Step 102 archive by file path, type, license/provenance and whether the data is original, generated, placeholder, or copied from a commercial game.
-3. Review the route-centerline dataset, sample model/material files, audio samples and any generated data separately. Do not import unclear commercial content merely because it is bundled with source code.
-4. Import only cleared source code, headers, Makefile, tests and documentation to a review branch.
-5. Run the host tests in CI, then the devkitPPC/libogc build. Keep compile success separate from Dolphin/hardware runtime validation.
-6. If code has an incompatible license or source provenance cannot be established, leave it out and record the blocker instead.
-
-## Safety and quality rules
-
-- Never commit or publish ROMs, disc images, BIOS files or unclear commercial assets (models, textures, audio or extracted data).
-- Never claim to have inspected a file unless its contents were actually accessible.
-- Never invent compiler or test results. Report commands, outcomes and evidence.
-- Never disable or weaken tests to obtain a green CI run.
-- Prefer small branches and pull requests with an explicit human review before merge.
+Do not attach billing, enter a payment method, or switch to a paid tier. Free-tier Google API content may be used to improve Google products. Never send secrets or private personal information.
