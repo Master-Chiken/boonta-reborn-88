@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Dolphin scene signatures and compare the visible steering-state indicator."""
+"""Validate scene signatures and scripted input's HUD marker; not pod physics."""
 from __future__ import annotations
 
 import argparse
@@ -21,9 +21,10 @@ def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
     marker_x = []
     # The prototype draws a bright 4-pixel steering-state tick near the bottom
-    # of the HUD at x = screen_center + g_player_lateral * 18. This tracks the
-    # actual steering state and remains detectable even when the tiny 3D pod's
-    # thruster color changes or the curved road occupies different screen areas.
+    # of the HUD at x = screen_center + g_player_lateral * 18. This is a HUD/state
+    # signal useful for a deterministic scripted-input smoke test. It is NOT a
+    # measurement of player-pod displacement, world motion, steering physics, or
+    # gameplay feel; those require a separate interactive acceptance test.
     x_start = int(image.width * 0.35)
     x_end = int(image.width * 0.70)
     y_start = int(image.height * 0.89)
@@ -58,7 +59,7 @@ def main() -> int:
     parser.add_argument("--baseline", required=True, type=Path,
                         help="matching frame rendered with --steering none")
     parser.add_argument("--min-shift", type=float, default=2.0,
-                        help="minimum rightward steering-state marker displacement in pixels")
+                        help="minimum HUD-marker shift for input-path smoke only; not proof of pod/world steering")
     args = parser.parse_args()
 
     image = Image.open(args.frame).convert("RGB")
@@ -70,11 +71,12 @@ def main() -> int:
     baseline_x = steering_indicator_center(baseline)
     steered_x = steering_indicator_center(image)
     delta_x = steered_x - baseline_x
-    print(f"Neutral steering-state marker center x={baseline_x:.1f}")
-    print(f"Right-steered state marker center x={steered_x:.1f}")
-    print(f"Visible rightward steering-state response delta_x={delta_x:.1f}px (minimum {args.min_shift:.1f}px)")
+    print(f"Input-path smoke only: neutral HUD marker center x={baseline_x:.1f}")
+    print(f"Input-path smoke only: right-input HUD marker center x={steered_x:.1f}")
+    print(f"HUD marker delta_x={delta_x:.1f}px (minimum {args.min_shift:.1f}px)")
+    print("This diagnostic does not measure player-pod displacement, world motion, steering physics, or gameplay feel.")
     if delta_x < args.min_shift:
-        raise SystemExit("DTM playback did not move the visible steering-state indicator sufficiently rightward relative to a neutral-input baseline.")
+        raise SystemExit("Scripted input did not move the HUD steering-state marker; this says nothing conclusive about pod/world steering.")
     return 0
 
 
