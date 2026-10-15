@@ -47,6 +47,9 @@ static float g_player_lateral;
 static float g_lateral_velocity;
 static float g_boost = 1.0f;
 static int g_boost_active;
+static float g_rival_z = -18.0f;
+static float g_rival_lateral;
+static unsigned int g_overtake_count;
 
 static const GXColor C_GROUND = { 23, 48, 40, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
@@ -237,9 +240,8 @@ static void add_player_pod(void)
 static void add_rival_pod(void)
 {
     /* A lightweight procedural rival ahead of the player; no external assets. */
-    const float z = -13.0f;
-    const float center = road_center_at(z, g_distance) +
-                         1.15f * sinf(g_distance * 0.018f + 1.2f);
+    const float z = g_rival_z;
+    const float center = road_center_at(z, g_distance) + g_rival_lateral;
     const GXColor rival_top = { 220, 82, 62, 255 };
     const GXColor rival_side = { 120, 39, 70, 255 };
     const GXColor rival_glow = { 255, 184, 92, 255 };
@@ -298,6 +300,7 @@ static void draw_hud(void)
     const GXColor boost_fill = { 255, 157, 61, 255 };
     const GXColor progress_fill = { 137, 241, 154, 255 };
     const GXColor lap_done = { 137, 241, 154, 255 };
+    const GXColor rival_mark = { 255, 128, 88, 255 };
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
@@ -343,6 +346,20 @@ static void draw_hud(void)
             append_screen_quad(left, bar_bottom - 58.0f,
                                left + marker_width, bar_bottom - 50.0f,
                                0.3f, marker);
+        }
+    }
+
+    /* Each completed overtake lights a compact marker in the upper-right. */
+    {
+        unsigned int i;
+        const unsigned int visible_overtakes = (g_overtake_count > 8U) ? 8U : g_overtake_count;
+        const float marker_width = 9.0f;
+        const float marker_gap = 4.0f;
+        const float right = w - 20.0f;
+        for (i = 0; i < 8U; ++i) {
+            const float left = right - (marker_width + marker_gap) * (float)(i + 1U);
+            const GXColor marker = (i < visible_overtakes) ? rival_mark : empty;
+            append_screen_quad(left, 22.0f, left + marker_width, 30.0f, 0.3f, marker);
         }
     }
 
@@ -485,6 +502,9 @@ int main(int argc, char **argv)
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
+            g_rival_z = -18.0f;
+            g_rival_lateral = 0.0f;
+            g_overtake_count = 0U;
         }
 
         g_boost_active = ((buttons_held & PAD_BUTTON_X) != 0U &&
@@ -525,6 +545,25 @@ int main(int argc, char **argv)
                 (unsigned int)(previous_distance / RACE_LAP_DISTANCE)) {
                 ++g_lap_count;
             }
+        }
+
+        /* The rival approaches in camera space and gently changes lanes. */
+        g_rival_lateral = 1.10f * sinf(g_distance * 0.022f + 1.2f);
+        g_rival_z += 0.035f + g_speed * 0.045f;
+        if (g_rival_z > -1.0f && g_rival_z < 1.8f) {
+            const float lateral_gap = fabsf(g_player_lateral - g_rival_lateral);
+            if (lateral_gap < 0.92f) {
+                /* Contact costs speed and nudges the player away from the rival. */
+                g_speed = clampf_local(g_speed - 0.28f, 0.0f, 1.0f);
+                g_lateral_velocity += (g_player_lateral <= g_rival_lateral) ? -0.035f : 0.035f;
+                g_rival_z = -20.0f;
+            } else {
+                ++g_overtake_count;
+                g_rival_z = -22.0f;
+            }
+        } else if (g_rival_z >= 1.8f) {
+            ++g_overtake_count;
+            g_rival_z = -22.0f;
         }
 
         draw_frame();
