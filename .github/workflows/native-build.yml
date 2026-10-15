@@ -161,8 +161,8 @@ jobs:
           set +e
           timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
             --batch --video_backend="Software Renderer" \
-            --config="Core.Movie.DumpFrames=True" \
-            --config="Graphics.Settings.DumpFramesAsImages=True" \
+            --config="Graphics.Settings.DumpEFBTarget=True" \
+            --config="Graphics.Settings.DumpXFBTarget=True" \
             --config="Graphics.Settings.DumpPath=$PWD/dolphin-frames" \
             --exec="$DOL" --user="$DOLPHIN_USER" > dolphin-frame-dump.log 2>&1
           status=$?
@@ -173,20 +173,20 @@ jobs:
             exit "$status"
           fi
           find "$DOLPHIN_USER" "$PWD/dolphin-frames" -maxdepth 6 -type f -print
-          frames=$(find "$DOLPHIN_USER" "$PWD/dolphin-frames" -type f -iname '*.png' | head -n 1 || true)
+          frames=$(find "$DOLPHIN_USER" "$PWD/dolphin-frames" -type f \( -iname '*.png' -o -iname '*.bmp' \) | head -n 1 || true)
           if [[ -z "$frames" ]]; then
-            echo "::error::Dolphin did not produce a PNG frame dump; rendering is not yet verified."
+            echo "::error::Dolphin did not produce an EFB/XFB dump; rendering is not yet verified."
             exit 1
           fi
           cp "$frames" dolphin-frame.png
           identify dolphin-frame.png
           mean=$(identify -format '%[fx:mean]' dolphin-frame.png)
-          echo "Captured emulator frame mean pixel intensity: $mean"
+          echo "Captured emulator buffer mean pixel intensity: $mean"
           if awk "BEGIN { exit !($mean < 0.001) }"; then
-            echo "::error::Captured emulator frame is entirely black."
+            echo "::error::Captured emulator buffer is entirely black."
             exit 1
           fi
-          echo "Non-black frame dumped by Dolphin. Controller input and race completion remain unverified."
+          echo "Non-black emulator buffer captured. Controller input and race completion remain unverified."
 
       - name: Upload Dolphin visual evidence
         if: always()
