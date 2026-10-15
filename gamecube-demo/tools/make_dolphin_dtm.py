@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate a small, deterministic Dolphin DTM movie for the clean-room GameCube demo.
+"""Generate a deterministic Dolphin DTM movie for the clean-room GameCube demo.
 
-The file follows Dolphin's 256-byte DTMHeader and its packed 8-byte GameCube
-ControllerState records. It contains only synthetic button inputs; no game
-assets or proprietary data are embedded.
+Uses Dolphin's 256-byte DTMHeader and packed 8-byte GameCube ControllerState
+records. Only synthetic controller inputs are stored; no game assets or
+proprietary data are embedded.
 """
 from __future__ import annotations
 
@@ -15,33 +15,33 @@ HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
+DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
-# Dolphin's packed Movie::ControllerState: first-byte buttons.
+# First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
 START = 1 << 0
 A = 1 << 1
 B = 1 << 2
 X = 1 << 3
 Y = 1 << 4
 
-# Second byte controller state flags / D-pad directions.
+# Second byte: D-pad left/right, L/R, disc, reset, connected, origin.
 DPAD_LEFT = 1 << 0
 DPAD_RIGHT = 1 << 1
 IS_CONNECTED = 1 << 6
+CENTER_AXIS = 128
 
 
 def _controller_state(frame: int) -> bytes:
-    """Return one packed state matching Dolphin's current 8-byte GC record."""
-    buttons = A
+    """Return one packed controller poll with neutral analog axes."""
+    buttons = A  # Hold accelerator for the whole run.
     if frame == 0:
-        # Reset the prototype to a known start state.
-        buttons |= Y
+        buttons |= Y  # Reset to a deterministic starting position.
     if 1 <= frame < 80:
-        buttons |= X
+        buttons |= X  # Boost near the start.
     if 100 <= frame < 140:
-        buttons |= B
+        buttons |= B  # Brake pulse.
     if frame in (220, 280):
-        # Toggle pause, then resume. Each press lasts exactly one poll.
-        buttons |= START
+        buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
     if frame < 2000:
@@ -49,28 +49,33 @@ def _controller_state(frame: int) -> bytes:
     elif frame < 2800:
         flags |= DPAD_LEFT
 
-    # Trigger and analog axes are neutral. The D-pad provides the deterministic
-    # left/right steering signal, avoiding host-controller calibration issues.
-    return bytes((buttons, flags, 0, 0, 0, 0, 0, 0))
+    # The DTM stores raw unsigned axis values; 128, not 0, is the neutral
+    # center for both sticks. D-pad direction supplies deterministic steering.
+    return bytes((buttons, flags, 0, 0, CENTER_AXIS, CENTER_AXIS,
+                  CENTER_AXIS, CENTER_AXIS))
 
 
-def build_dtm(frame_count: int = DEFAULT_FRAMES) -> bytes:
-    """Build a boot-from-DOL movie with one GameCube controller input per frame."""
+def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID) -> bytes:
+    """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
     if frame_count < 1 or frame_count > MAX_FRAMES:
         raise ValueError(f"frame_count must be between 1 and {MAX_FRAMES}")
+    if not isinstance(game_id, str) or len(game_id.encode("ascii", errors="strict")) != 6:
+        raise ValueError("game_id must be exactly six ASCII bytes")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
-    # This clean-room demo boots from a .dol, not a retail disc; its game ID
-    # and disc hash are intentionally empty. bWii=0, port 1 connected, no savestate.
-    header[0x0B] = 0x01
+    header[4:10] = game_id.encode("ascii")
+    header[0x0A] = 0  # bWii=False (GameCube demo).
+    header[0x0B] = 0x01  # controller port 1 is a GameCube pad.
+    header[0x0C] = 0  # bFromSaveState=False; starts from boot.
     struct.pack_into("<QQQQ", header, 0x0D, frame_count, frame_count, 0, 0)
-    struct.pack_into("<I", header, 0x2D, 0)
-    header[0x31:0x31 + len(b"Boonta CI")] = b"Boonta CI"
-    # bSaveConfig remains false, so this synthetic movie cannot override the
-    # runner's display, input or emulator settings.
+    struct.pack_into("<I", header, 0x2D, 0)  # numRerecords
+    author = b"Boonta CI"
+    header[0x31:0x31 + len(author)] = author
+    header[0x89] = 0  # bSaveConfig=False; do not override emulator settings.
+
     data = bytearray(header)
     for frame in range(frame_count):
         data.extend(_controller_state(frame))
@@ -81,12 +86,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path, help="destination .dtm path")
     parser.add_argument("--frames", type=int, default=DEFAULT_FRAMES,
-                        help=f"movie input polls (1..{MAX_FRAMES}; default {DEFAULT_FRAMES})")
+                        help=f"controller polls (1..{MAX_FRAMES}; default {DEFAULT_FRAMES})")
+    parser.add_argument("--game-id", default=DEFAULT_GAME_ID,
+                        help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     args = parser.parse_args()
-    payload = build_dtm(args.frames)
+    payload = build_dtm(args.frames, args.game_id)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
-    print(f"Wrote {args.output}: {args.frames} controller polls, {len(payload)} bytes")
+    print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, {len(payload)} bytes")
     return 0
 
 
