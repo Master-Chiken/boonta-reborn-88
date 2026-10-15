@@ -50,6 +50,7 @@ static int g_boost_active;
 static float g_rival_z = -18.0f;
 static float g_rival_lateral;
 static unsigned int g_overtake_count;
+static int g_paused;
 
 static const GXColor C_GROUND = { 23, 48, 40, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
@@ -363,6 +364,16 @@ static void draw_hud(void)
         }
     }
 
+    /* Pause icon: a framed pair of bars remains visible without font assets. */
+    if (g_paused) {
+        const float cx = w * 0.5f;
+        const float cy = h * 0.5f;
+        const GXColor pause_panel = { 8, 18, 30, 235 };
+        append_screen_quad(cx - 32.0f, cy - 30.0f, cx + 32.0f, cy + 30.0f, 0.6f, pause_panel);
+        append_screen_quad(cx - 13.0f, cy - 18.0f, cx - 4.0f, cy + 18.0f, 0.2f, white);
+        append_screen_quad(cx + 4.0f, cy - 18.0f, cx + 13.0f, cy + 18.0f, 0.2f, white);
+    }
+
     /* A centered steering tick gives immediate visual feedback without text. */
     {
         const float cx = w * 0.5f + g_player_lateral * 18.0f;
@@ -492,8 +503,7 @@ int main(int argc, char **argv)
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
         if ((buttons_down & PAD_BUTTON_START) != 0U) {
-            /* Start is reserved for a future pause/menu screen. */
-            g_speed = 0.0f;
+            g_paused = !g_paused;
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
@@ -505,6 +515,13 @@ int main(int argc, char **argv)
             g_rival_z = -18.0f;
             g_rival_lateral = 0.0f;
             g_overtake_count = 0U;
+            g_paused = 0;
+        }
+
+        if (g_paused) {
+            g_boost_active = 0;
+            draw_frame();
+            continue;
         }
 
         g_boost_active = ((buttons_held & PAD_BUTTON_X) != 0U &&
