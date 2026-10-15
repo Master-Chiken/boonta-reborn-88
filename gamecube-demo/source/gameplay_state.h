@@ -50,7 +50,7 @@ static inline float boonta_speed_after_input(float speed, int accelerating, int 
 }
 static inline int boonta_boost_should_activate(int x_held, int a_held, float boost)
 {
-    return x_held && a_held && boost > 0.01f;
+    return isfinite(boost) && x_held && a_held && boost > 0.01f;
 }
 static inline float boonta_boost_after_frame_scaled(float boost, int active, float frame_scale)
 {
@@ -98,7 +98,7 @@ static inline int boonta_boost_should_activate_with_heat(int x_held, int a_held,
                                                            float boost, float heat,
                                                            int overheated)
 {
-    return !overheated && heat < 0.98f &&
+    return isfinite(heat) && !overheated && heat < 0.98f &&
            boonta_boost_should_activate(x_held, a_held, boost);
 }
 /* Wall-clock elapsed time updates only while race simulation is active.
@@ -147,9 +147,13 @@ static inline float boonta_lateral_velocity_after_steering_scaled(float lateral_
                                                                     float speed,
                                                                     float frame_scale)
 {
+    if (!isfinite(lateral_velocity)) lateral_velocity = 0.0f;
+    if (!isfinite(steering)) steering = 0.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     lateral_velocity += steering * (0.0018f + speed * 0.0030f) * frame_scale;
     lateral_velocity *= powf(0.92f, frame_scale);
+    if (!isfinite(lateral_velocity)) return 0.0f;
     if (lateral_velocity < -0.085f) return -0.085f;
     if (lateral_velocity > 0.085f) return 0.085f;
     return lateral_velocity;
@@ -167,16 +171,26 @@ static inline float boonta_lateral_position_after_frame(float lateral_position,
                                                          float lateral_velocity,
                                                          float frame_scale)
 {
+    if (!isfinite(lateral_position)) lateral_position = 0.0f;
+    if (!isfinite(lateral_velocity)) lateral_velocity = 0.0f;
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
-    return lateral_position + lateral_velocity * frame_scale;
+    {
+        const float next_position = lateral_position + lateral_velocity * frame_scale;
+        return isfinite(next_position) ? next_position : lateral_position;
+    }
 }
 
 /* Shared distance integration used by both the native loop and host simulation. */
 static inline float boonta_distance_after_frame_scaled(float distance, float speed,
                                                         int boost_active, float frame_scale)
 {
+    if (!isfinite(distance) || distance < 0.0f) distance = 0.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
-    return distance + speed * (boost_active ? 0.22f : 0.14f) * frame_scale;
+    {
+        const float next_distance = distance + speed * (boost_active ? 0.22f : 0.14f) * frame_scale;
+        return isfinite(next_distance) && next_distance >= 0.0f ? next_distance : 0.0f;
+    }
 }
 
 static inline float boonta_distance_after_frame(float distance, float speed, int boost_active)
@@ -243,14 +257,22 @@ static inline float boonta_rival_respawn_z(unsigned int rival_index, int collisi
 
 static inline float boonta_rival_z_after_frame(float rival_z, float speed, float frame_scale)
 {
+    if (!isfinite(rival_z)) rival_z = -18.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
-    return rival_z + (0.035f + speed * 0.045f) * frame_scale;
+    {
+        const float next_z = rival_z + (0.035f + speed * 0.045f) * frame_scale;
+        return isfinite(next_z) ? next_z : -18.0f;
+    }
 }
 
 static inline int boonta_rival_event(float rival_z,
                                      float player_lateral,
                                      float rival_lateral)
 {
+    if (!isfinite(rival_z) || !isfinite(player_lateral) || !isfinite(rival_lateral)) {
+        return BOONTA_RIVAL_EVENT_NONE;
+    }
     if (rival_z > -1.0f && rival_z < 1.8f) {
         float lateral_gap = player_lateral - rival_lateral;
         if (lateral_gap < 0.0f) lateral_gap = -lateral_gap;
@@ -264,6 +286,7 @@ static inline int boonta_rival_event(float rival_z,
 
 static inline float boonta_speed_after_rival_contact(float speed)
 {
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
     speed -= 0.28f;
     if (speed < 0.0f) return 0.0f;
     if (speed > 1.0f) return 1.0f;
@@ -273,6 +296,7 @@ static inline float boonta_speed_after_rival_contact(float speed)
 static inline float boonta_rival_contact_nudge(float player_lateral,
                                                 float rival_lateral)
 {
+    if (!isfinite(player_lateral) || !isfinite(rival_lateral)) return 0.0f;
     return player_lateral <= rival_lateral ? -0.035f : 0.035f;
 }
 
@@ -294,12 +318,15 @@ static inline float boonta_lateral_velocity_after_rival_contact(float lateral_ve
 /* Keep the demo's existing off-road and rail-edge response independently testable. */
 static inline float boonta_abs_float(float value)
 {
+    if (!isfinite(value)) return 0.0f;
     return value < 0.0f ? -value : value;
 }
 
 static inline float boonta_speed_after_offroad_scaled(float speed, float player_lateral,
                                                        float frame_scale)
 {
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
+    if (!isfinite(player_lateral)) player_lateral = 0.0f;
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     const float distance_from_center = boonta_abs_float(player_lateral);
     if (distance_from_center > 3.15f) {
@@ -318,11 +345,12 @@ static inline float boonta_speed_after_offroad(float speed, float player_lateral
 
 static inline int boonta_is_past_rail(float player_lateral)
 {
-    return boonta_abs_float(player_lateral) > 3.85f;
+    return isfinite(player_lateral) && boonta_abs_float(player_lateral) > 3.85f;
 }
 
 static inline float boonta_lateral_after_rail_contact(float player_lateral)
 {
+    if (!isfinite(player_lateral)) return 0.0f;
     if (player_lateral > 3.85f) return 3.85f;
     if (player_lateral < -3.85f) return -3.85f;
     return player_lateral;
@@ -330,7 +358,8 @@ static inline float boonta_lateral_after_rail_contact(float player_lateral)
 
 static inline float boonta_lateral_velocity_after_rail_contact(float lateral_velocity)
 {
-    return lateral_velocity * -0.35f;
+    if (!isfinite(lateral_velocity)) return 0.0f;
+    return boonta_clamp_finite_float(lateral_velocity * -0.35f, -0.085f, 0.085f);
 }
 
 #endif
