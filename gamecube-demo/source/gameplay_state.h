@@ -20,7 +20,6 @@ static inline float boonta_boost_after_frame(float boost, int active)
     if (boost > 1.0f) return 1.0f;
     return boost;
 }
-/* Match the native loop's inertia, damping and lateral-speed bounds. */
 /* Normalize the GameCube analog stick and D-pad into bounded steering input. */
 static inline float boonta_steering_input(float stick_x,
                                           int left_held,
@@ -34,6 +33,7 @@ static inline float boonta_steering_input(float stick_x,
     return steering;
 }
 
+/* Match the native loop's inertia, damping and lateral-speed bounds. */
 static inline float boonta_lateral_velocity_after_steering(float lateral_velocity,
                                                             float steering,
                                                             float speed)
