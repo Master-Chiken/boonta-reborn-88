@@ -190,14 +190,14 @@ jobs:
             trap cleanup EXIT
             window=""
             fallback_window=""
-            for i in $(seq 1 15); do
+            for i in $(seq 1 20); do
               for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
                 title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                 geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
                 width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
                 height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                 if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
-                  if [[ "$title" == "Dolphin" ]]; then
+                  if [[ "$title" =~ ^(.* - )?Dolphin$ || "$title" =~ ^Dolphin[[:space:]] ]]; then
                     window="$id"
                     break
                   fi
@@ -209,12 +209,9 @@ jobs:
               [[ -n "$window" ]] && break
               sleep 1
             done
-            if [[ -z "$window" && -n "$fallback_window" ]]; then
-              window="$fallback_window"
-            fi
             if [[ -z "$window" ]]; then
               xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
-              echo "No visible Dolphin window >= 300x200 was found."
+              echo "No visible Dolphin game/render window >= 300x200 was found; refusing to capture the library window as game evidence."
               exit 1
             fi
             xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
@@ -283,14 +280,14 @@ jobs:
             trap cleanup EXIT
             window=""
             fallback_window=""
-            for i in $(seq 1 15); do
+            for i in $(seq 1 20); do
               for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
                 title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                 geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
                 width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
                 height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                 if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
-                  if [[ "$title" == "Dolphin" ]]; then
+                  if [[ "$title" =~ ^(.* - )?Dolphin$ || "$title" =~ ^Dolphin[[:space:]] ]]; then
                     window="$id"
                     break
                   fi
@@ -302,12 +299,9 @@ jobs:
               [[ -n "$window" ]] && break
               sleep 1
             done
-            if [[ -z "$window" && -n "$fallback_window" ]]; then
-              window="$fallback_window"
-            fi
             if [[ -z "$window" ]]; then
               xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
-              echo "No visible Dolphin window >= 300x200 was found."
+              echo "No visible Dolphin game/render window >= 300x200 was found; refusing to capture the library window as game evidence."
               exit 1
             fi
             xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
