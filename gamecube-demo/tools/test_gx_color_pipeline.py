@@ -48,6 +48,14 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertLess(matrix_bind, projection_load)
         self.assertLess(projection_load, hud_draw)
 
+    def test_hud_screen_quads_use_negative_orthographic_depth(self) -> None:
+        helper = SOURCE.split("static void append_screen_quad", 1)[1].split(
+            "static void append_text", 1
+        )[0]
+        self.assertIn("const float clip_z = -z;", helper)
+        self.assertEqual(helper.count("clip_z }"), 4)
+
+
 
 if __name__ == "__main__":
     unittest.main()
