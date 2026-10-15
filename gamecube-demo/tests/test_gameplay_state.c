@@ -146,6 +146,9 @@ static void lap_tests(void) {
  assert(boonta_lap_was_crossed(INFINITY,INFINITY,120.0f)==0);
  /* A finite but enormous distance must not overflow an unsigned lap index. */
  assert(boonta_lap_was_crossed(0.0f,3.0e38f,120.0f)==1);
+ /* Finite inputs can still overflow the floating-point division itself. */
+ assert(boonta_lap_was_crossed(1.0e30f,2.0e30f,1.0e-10f)==1);
+ assert(boonta_lap_was_crossed(2.0e30f,2.0e30f,1.0e-10f)==0);
  /* Exact boundary crossings count once; a stationary frame never counts. */
  assert(boonta_lap_was_crossed(119.0f,120.0f,120.0f)==1);
  assert(boonta_lap_was_crossed(120.0f,120.0f,120.0f)==0);
