@@ -16,6 +16,13 @@
 #include "gameplay_state.h"
 #include "generated_track.h"
 
+#if !BOONTA_TRACK_CLOSED_LOOP
+#error "The scrolling GameCube race runtime currently requires a closed-loop track."
+#endif
+#if BOONTA_TRACK_POINT_COUNT < 4U
+#error "Closed-loop Catmull-Rom runtime tracks require at least four points."
+#endif
+
 #include <math.h>
 #include <malloc.h>
 #include <stdio.h>
