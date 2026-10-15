@@ -268,7 +268,7 @@ jobs:
                   for path in paths
               )
               if not head_matches:
-                  body += "\\n\\n**Intake race note:** the branch tip changed while this PR was being created. Re-review the current diff; no automatic validation was dispatched."
+                  body += "\n\n**Intake race note:** the branch tip changed while this PR was being created. Re-review the current diff; no automatic validation was dispatched."
                   subprocess.run(
                       ["gh", "pr", "edit", url, "--repo", repo, "--body", body],
                       text=True, capture_output=True
