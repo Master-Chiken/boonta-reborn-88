@@ -2,6 +2,19 @@
 
 Last updated: 2026-10-15
 
+## Latest CI runtime verification (2026-10-15)
+
+- Workflow: [GameCube first-render prototype build #66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044)
+- Merged change: [PR #53](https://github.com/Master-Chiken/boonta-reborn-88/pull/53), merge commit `0ea50271e330dca51bf1caa8d9bd6f951593c86f`.
+- Host gameplay, pause/reset, and DOL-padding/artifact utility tests: **success**.
+- Native devkitPPC/libogc build and DOL/ELF structural validation: **success**.
+- DOL post-processing: **success**; file grew from 139,932 to 139,936 bytes so the final section has the trailing bytes required for 32-byte-rounded reads.
+- Dolphin Null-video process smoke: **success**; the DOL process stayed active for the 12-second window.
+- Dolphin Software Renderer diagnostic capture: **success**; the [uploaded frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044/artifacts/11968079385) are available through 2026-10-22.
+- Visual review of that image: it shows the prototype's dark-blue background/horizon, light course surface and placeholder pod silhouette; it no longer shows the earlier “Failed to init core” dialog.
+
+This is the first CI-confirmed visible frame from the clean-room DOL. It is a primitive procedural scene, not a finished racing game. The screenshot proves visible output in this Dolphin/Software Renderer CI environment; it does **not** establish controller response, consistent frame pacing over a long session, rival interactions during a live race, or a successfully completed three-lap run. No hardware test has yet been recorded.
+
 ## Verified by GitHub Actions
 
 - Workflow: [GameCube first-render prototype build](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634127716)
@@ -20,9 +33,7 @@ ELF SHA-256: `a42cf06c5b7b9e8b93e1e5336d60bad93cfbde87d440409651251ed78116bf56`
 
 ## What this does and does not prove
 
-This is the first confirmed native GameCube DOL build in this repository's new clean-room demonstration path. It verifies that the sample can compile and link with devkitPPC/libogc, that a non-empty DOL/ELF is produced, and that the basic DOL/ELF structures satisfy the repository's artifact validator.
-
-It does **not** verify that Dolphin or a console boots the DOL, that GX output is visible, or that controller behavior works in runtime. No Dolphin executable was available in the build-inspection environment, so runtime testing remains **NOT RUN**. The successful GitHub artifact is available until 2026-10-21 (seven-day retention).
+This earlier run is the first confirmed native GameCube DOL build in the clean-room demonstration path. It verifies compilation/linking and basic artifact structure only. The latest CI runtime evidence is recorded above; it supersedes the historical statement below about Dolphin runtime testing not having been run. The remaining gaps are live controller validation, completed race validation, and hardware behavior.
 
 ## Latest headless Dolphin smoke test (2026-10-15)
 
