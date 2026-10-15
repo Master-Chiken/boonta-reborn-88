@@ -21,9 +21,8 @@ This is a gameplay prototype, not the completed racer and not a port of the comm
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; the energy meter drains and recharges when boost is released.
-- Y: reset the demo run, lap counter, rival, and overtake indicators.
 - Start: toggle pause/resume; the pause icon appears in the center of the HUD.
-- Y: reset the run and resume play, even if currently paused.
+- Y: reset the run, lap counter, rival, overtake indicators, and pause state.
 
 ## Build
 
@@ -35,7 +34,6 @@ make
 ```
 
 The expected files are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`. GitHub Actions runs the same build in the `devkitpro/devkitppc` container and keeps successful outputs as a short-retention artifact.
-
 
 ## Latest native build
 
