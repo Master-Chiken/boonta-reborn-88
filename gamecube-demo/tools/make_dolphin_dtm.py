@@ -28,7 +28,7 @@ Y = 1 << 4
 DPAD_LEFT = 1 << 0
 DPAD_RIGHT = 1 << 1
 IS_CONNECTED = 1 << 6
-CENTER_AXIS = 128
+NEUTRAL_AXIS = 0
 
 
 def _controller_state(frame: int) -> bytes:
@@ -51,10 +51,11 @@ def _controller_state(frame: int) -> bytes:
     elif 2000 <= frame < 2060:
         flags |= DPAD_LEFT
 
-    # The DTM stores raw unsigned axis values; 128, not 0, is the neutral
-    # center for both sticks. D-pad direction supplies deterministic steering.
-    return bytes((buttons, flags, 0, 0, CENTER_AXIS, CENTER_AXIS,
-                  CENTER_AXIS, CENTER_AXIS))
+    # Dolphin assigns the stored axis bytes directly to signed s8 pad fields.
+    # Thus 0 is neutral; 128 would decode to -128 (full-left/full-down).
+    # D-pad direction supplies the deterministic steering signal.
+    return bytes((buttons, flags, 0, 0, NEUTRAL_AXIS, NEUTRAL_AXIS,
+                  NEUTRAL_AXIS, NEUTRAL_AXIS))
 
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID) -> bytes:
