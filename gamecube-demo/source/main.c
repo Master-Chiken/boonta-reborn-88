@@ -24,6 +24,9 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
+#define CANYON_BASE_OFFSET (ROAD_HALF_WIDTH + 4.2f)
+#define GROUND_SEGMENTS    40U
+#define GROUND_SEGMENT_LENGTH 2.8f
 #define RACE_LAP_DISTANCE   120.0f
 #define RACE_LAP_LIMIT       3U
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
@@ -184,11 +187,25 @@ static void add_road(void)
     const float segment_length = 2.8f;
     const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
-    const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
-    const Point3 ground_d = { -100.0f, ROAD_Y - 0.24f, -110.0f };
-    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
+
+    /*
+     * Keep the desert floor inside the canyon walls. A giant x=+/-100 plane
+     * extended behind the walls and, from this low camera angle, visually hid
+     * most of their faces. The bounded strip makes the wall bases meet the
+     * ground edge instead of showing as detached peaks above a broad brown plane.
+     */
+    for (i = 0U; i < GROUND_SEGMENTS; ++i) {
+        const float z0 = 4.0f + road_scroll - (float)i * GROUND_SEGMENT_LENGTH;
+        const float z1 = z0 - GROUND_SEGMENT_LENGTH;
+        const float c0 = road_center_at(z0, g_distance);
+        const float c1 = road_center_at(z1, g_distance);
+        const float half = CANYON_BASE_OFFSET;
+        const float floor_y = ROAD_Y - 0.24f;
+        quad_add((Point3){ c0 - half, floor_y, z0 },
+                 (Point3){ c0 + half, floor_y, z0 },
+                 (Point3){ c1 + half, floor_y, z1 },
+                 (Point3){ c1 - half, floor_y, z1 }, C_GROUND);
+    }
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
@@ -262,8 +279,8 @@ static void add_road(void)
  */
 static void add_canyon_scenery(void)
 {
-    const float base_y = ROAD_Y - 0.11f;
-    const float base_offset = ROAD_HALF_WIDTH + 4.2f;
+    const float base_y = ROAD_Y - 0.24f;
+    const float base_offset = CANYON_BASE_OFFSET;
     const float wall_length = 6.0f;
     const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
