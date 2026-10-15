@@ -16,6 +16,10 @@ static void speed_tests(void) {
  assert(nearf(boonta_speed_after_input(0.0f,0,1),0.0f));
  assert(nearf(boonta_speed_after_input(-0.5f,0,0),0.0f));
  assert(nearf(boonta_speed_after_input(1.5f,0,0),1.0f));
+ /* Invalid simulation state must recover to a finite, bounded speed. */
+ assert(nearf(boonta_speed_after_input(NAN,1,0),0.012f));
+ assert(nearf(boonta_speed_after_input(INFINITY,0,0),0.0f));
+ assert(nearf(boonta_speed_after_input(-INFINITY,1,0),0.012f));
 }
 
 static void boost_tests(void) {
