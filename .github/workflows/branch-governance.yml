@@ -33,7 +33,8 @@ jobs:
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
           python3 - <<'PY'
-          import datetime, json, os, subprocess, time
+          import datetime, json, os, subprocess
+          from concurrent.futures import ThreadPoolExecutor
           from pathlib import Path
           branches = json.loads(Path("/tmp/branches.json").read_text())
           prs = json.loads(Path("/tmp/open-prs.json").read_text())
@@ -44,25 +45,34 @@ jobs:
           pr_heads = {p["head"]["ref"] for p in prs}
           active, inactive = [], []
           unknown_dates = 0
-          date_by_sha = {}
+
+          # Resolve each unique tip SHA once, concurrently. The previous loop
+          # waited on each GitHub API request serially; a bounded pool reduces
+          # audit latency without increasing the number of requests or losing
+          # the conservative "unknown date means active" behavior.
+          tip_shas = sorted({
+              b.get("commit", {}).get("sha")
+              for b in branches
+              if b.get("commit", {}).get("sha")
+          })
+
+          def resolve_tip_date(sha):
+              try:
+                  date = subprocess.check_output(
+                      ["gh", "api", f"repos/{repo}/commits/{sha}",
+                       "--jq", ".commit.committer.date // .commit.author.date // empty"],
+                      text=True, stderr=subprocess.DEVNULL).strip() or None
+              except subprocess.CalledProcessError:
+                  date = None
+              return sha, date
+
+          with ThreadPoolExecutor(max_workers=min(8, max(1, len(tip_shas)))) as pool:
+              date_by_sha = dict(pool.map(resolve_tip_date, tip_shas))
+
           for b in branches:
               name = b["name"]
               sha = b.get("commit", {}).get("sha")
-              date = None
-              if sha:
-                  if sha in date_by_sha:
-                      date = date_by_sha[sha]
-                  else:
-                      try:
-                          # The /branches endpoint returns only a commit SHA/URL,
-                          # not the nested commit timestamp; fetch the actual tip.
-                          date = subprocess.check_output(
-                              ["gh", "api", f"repos/{repo}/commits/{sha}",
-                               "--jq", ".commit.committer.date // .commit.author.date // empty"],
-                              text=True, stderr=subprocess.DEVNULL).strip() or None
-                      except subprocess.CalledProcessError:
-                          date = None
-                      date_by_sha[sha] = date
+              date = date_by_sha.get(sha) if sha else None
               recent = False
               if date:
                   try:
@@ -78,7 +88,6 @@ jobs:
               item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
                       "unknown_date": unknown}
               (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
-              time.sleep(0.05)
           lines = ["# Branch governance audit", "",
               f"- **Total branches:** {len(branches)}",
               f"- **Hard cap:** 105 branches; status: {'EXCEEDED' if len(branches) > 105 else ('AT LIMIT' if len(branches) == 105 else 'within limit')}",
