@@ -4,14 +4,14 @@ An unofficial research and homebrew project aiming toward an enhanced, playable 
 
 This repository contains two distinct tracks that must not be confused:
 
-- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, including steering, throttle/brake, rechargeable boost, lap-progress cues, and a three-lap prototype run with a symbolic checkered finish marker. Rival collision/overtake thresholds have host tests. Its DOL/ELF build, artifact validation, 12-second Dolphin process smoke test, and a first visible frame captured with Dolphin's Software Renderer now pass in CI. The scene is still primitive; interactive controller behavior and completing a three-lap run are not yet verified.
+- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, including steering, throttle/brake, rechargeable boost, lap-progress cues, and a three-lap prototype run with a symbolic checkered finish marker. Rival collision/overtake thresholds have host tests. Its DOL/ELF build, artifact validation, 12-second Dolphin process smoke test, and a visible color-corrected frame captured with Dolphin's Software Renderer pass in CI. The scene is still primitive; interactive controller behavior and completing a three-lap run are not yet verified.
 - **Step 102 source prototype**: a separate source archive investigated for a fuller reconstruction. It is not automatically part of `main`; its provenance, license, generated course data, and any assets must be reviewed before importing or redistributing it.
 
 ## Project direction
 
 - **Primary target:** native GameCube/Wii homebrew.
 - **Current verified technical milestone:** `gamecube-demo/` produces a non-empty `boonta_gc_demo.dol` and `boonta_gc_demo.elf` with devkitPPC/libogc. See [the build status report](docs/GAMECUBE_FIRST_RENDER_STATUS.md).
-- **Runtime status:** CI run [#66](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044) passes the host tests, native build, artifact validation and 12-second Dolphin Null-backend smoke test. Its [software-renderer frame artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727099044/artifacts/11968079385) shows the procedural scene after the DOL received the required trailing 32-byte section padding. This verifies a visible frame in CI, but not controller response, stable gameplay over time, or a completed three-lap run.
+- **Runtime status:** CI run [#69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531) passes host tests, native build/validation and the 12-second Dolphin Null-backend smoke. The [software-renderer frame artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471) shows colored track edges, alternating road segments and the blue/orange placeholder pod after switching GX material color to per-vertex color. This verifies visible color output in CI, but not controller response, stable gameplay over time or a completed three-lap run.
 - **Fuller gameplay baseline:** the Step 102 archive describes course/pod presets, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, race modes, HUD, and save/progression scaffolding. Treat those as archive-described scope, not as features verified in the clean-room demo.
 
 ## Current next milestones
