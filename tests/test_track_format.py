@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "track_format"))
 
 from validate_track import TrackValidationError, load_track, validate_track  # noqa: E402
+from export_track_header import render_header  # noqa: E402
 
 
 EXAMPLE_PATH = ROOT / "tools" / "track_format" / "example_track.json"
@@ -73,6 +74,19 @@ class TrackFormatTests(unittest.TestCase):
         data["points"] = data["points"] * 513
         with self.assertRaises(TrackValidationError):
             validate_track(data)
+
+    def test_header_export_contains_all_points_and_closed_loop_flag(self):
+        track = load_track(EXAMPLE_PATH)
+        header = render_header(track, "original test oval")
+        self.assertIn("#define BOONTA_TRACK_CLOSED_LOOP 1", header)
+        self.assertIn("#define BOONTA_TRACK_POINT_COUNT 8U", header)
+        self.assertIn("boonta_track_points_original_test_oval", header)
+        self.assertEqual(header.count("{ "), 8)
+
+    def test_header_export_sanitizes_leading_digit(self):
+        track = load_track(EXAMPLE_PATH)
+        header = render_header(track, "88 oval")
+        self.assertIn("BOONTA_GENERATED_TRACK_TRACK_88_OVAL_H", header)
 
     def test_cli_accepts_example(self):
         result = subprocess.run(
