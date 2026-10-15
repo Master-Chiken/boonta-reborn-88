@@ -2,6 +2,17 @@
 
 These notes summarize public starting points. They are not proof that any project or asset format works with the GameCube or Wii edition.
 
+## Current implementation baseline (2026-10-15)
+
+The clean-room GameCube prototype under `gamecube-demo/` is now part of `main` through [PR #134](https://github.com/Master-Chiken/boonta-reborn-88/pull/134). It provides a procedural desert course, arcade-style pod handling, pitch/slide controls, rival racers, boost/heat, lap/finish state, and automated regression and Dolphin diagnostics.
+
+The next test milestones passed after the latest gameplay-test additions in [PR #146](https://github.com/Master-Chiken/boonta-reborn-88/pull/146): native DOL/ELF build, host gameplay and pause/resume tests, Dolphin headless smoke, and the optional software-renderer diagnostic succeeded in [CI run 38812373296](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38812373296). The subsequent mainline commit `29740df` only refreshes the bounded branch-cleanup allowlist; it does not change game source.
+
+These checks validate only the clean-room prototype and the specific test paths that ran. They do not prove subjective handling quality, a complete interactive race, parity with the commercial game, or a native build of the separate Step 102 archive. Actual controller playtesting remains outstanding, and the Step 102 source import stays on hold until provenance and redistribution decisions are documented file by file.
+
+Use the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) to map pinned PC observations to testable hypotheses without treating PC behavior or data as confirmed GameCube behavior.
+
+
 ## Existing Star Wars: Episode I — Racer research
 
 ### SW_RACER_RE
@@ -51,9 +62,8 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 
 ## Open questions to resolve
 
-1. What is inside the existing Step102 prototype archive, and what is its source/license?
-2. Is that archive source code, a prebuilt executable, documentation, or a mixture?
-3. Which target should be used for the first build: Wii homebrew, GameCube homebrew, or a PC research build?
-4. Is the quickest goal simply to run the original N64 version, or is a native enhanced port the non-negotiable destination?
-5. Which assets/data formats are actually present in the relevant console version?
-6. Which open-source components can be used without incompatible license or branding obligations?
+1. Which Step 102 files have verified authorship, license evidence, and a documented redistribution decision? Keep the source import blocked until each included file is cleared.
+2. Which PC-derived behavior observations can be mapped to Step 102 without copying upstream implementation code or data?
+3. What repeatable controller-driven race test proves steering, pitch/slide, rival interaction, lap completion, reset, and stable frame pacing in the current clean-room GameCube demo?
+4. Which console-specific resource formats and visual behaviors are confirmed from lawful GameCube/N64 evidence, rather than inferred from Windows PC research?
+5. Which assets or tools have file-level provenance and license terms suitable for the intended public project?
