@@ -68,8 +68,8 @@ jobs:
               out.write(f"total={len(branches)}\nactive={len(active)}\nover_target={'true' if len(active) > 30 else 'false'}\n")
           PY
 
-      - name: Open a consolidation tracking issue when needed
-        if: steps.inventory.outputs.over_target == 'true' || steps.inventory.outputs.total > 30
+      - name: Open a consolidation tracking issue when active branches exceed 30
+        if: steps.inventory.outputs.over_target == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -82,9 +82,9 @@ jobs:
           existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\"" --json number,title --jq '.[0].number // empty')"
           if [ -z "$existing" ]; then
             {
-              echo "## Branch inventory requires review"
+              echo "## Active branch target exceeded"
               echo
-              echo "- Total branches: **$TOTAL**"
+              echo "- Total branches: **$TOTAL** (historical/inactive branches may remain)"
               echo "- Active branches (30-day/open-PR heuristic): **$ACTIVE**"
               echo "- Target: **30 active branches or fewer**"
               echo
