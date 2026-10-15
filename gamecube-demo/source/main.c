@@ -11,6 +11,8 @@
 #include <ogc/gx.h>
 #include <ogc/system.h>
 
+#include "pause_state.h"
+
 #include <math.h>
 #include <malloc.h>
 #include <stdio.h>
@@ -503,7 +505,7 @@ int main(int argc, char **argv)
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
         if ((buttons_down & PAD_BUTTON_START) != 0U) {
-            g_paused = !g_paused;
+            g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
@@ -515,7 +517,7 @@ int main(int argc, char **argv)
             g_rival_z = -18.0f;
             g_rival_lateral = 0.0f;
             g_overtake_count = 0U;
-            g_paused = 0;
+            g_paused = boonta_pause_state_next(g_paused, 0, 1);
         }
 
         if (g_paused) {
