@@ -43,13 +43,33 @@ if "approval-denied:" not in dispatch or "The /approve command is restricted to 
 if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
     errors.append("Setup documentation must require branch protection before enabling writes")
 
-# Workflow files must not reference OpenRouter; the secret may remain unused until audited.
-workflow_text = "\n".join(
-    path.read_text(encoding="utf-8")
-    for path in (ROOT / ".github" / "workflows").glob("*.yml")
-)
-if "openrouter_api_key" in workflow_text.lower() or "openrouter.ai" in workflow_text.lower():
-    errors.append("GitHub Actions workflows must not use OpenRouter in the €0-only setup")
+# OpenRouter is allowed only in the dedicated manual, read-only free-model reviewer.
+workflow_dir = ROOT / ".github" / "workflows"
+openrouter_workflows = [
+    path for path in workflow_dir.glob("*.yml")
+    if "openrouter_api_key" in path.read_text(encoding="utf-8").lower()
+    or "openrouter.ai" in path.read_text(encoding="utf-8").lower()
+]
+allowed_openrouter_path = workflow_dir / "openrouter-free-review.yml"
+for path in openrouter_workflows:
+    if path != allowed_openrouter_path:
+        errors.append(f"OpenRouter reference is not allowed outside the dedicated free reviewer: {path.name}")
+
+if allowed_openrouter_path.is_file():
+    openrouter = allowed_openrouter_path.read_text(encoding="utf-8")
+    required_free_review_markers = (
+        "workflow_dispatch:",
+        'model: "openrouter/free"',
+        "No paid fallback will be attempted",
+        "pull-requests: read",
+        "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+        "The diff resembles a credential or private key",
+    )
+    for marker in required_free_review_markers:
+        if marker not in openrouter:
+            errors.append(f"Free OpenRouter reviewer is missing safety marker: {marker!r}")
+    if "contents: write" in openrouter or "pull-requests: write" in openrouter:
+        errors.append("The OpenRouter reviewer must not have code or pull-request write permissions")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -134,7 +154,7 @@ if errors:
 print("AI free-tier safety checks passed.")
 print("- Only the repository owner can authorize the Gemini write workflow.")
 print("- Gemini write path remains gated by GEMINI_WRITE_ENABLED=true.")
-print("- OpenRouter and legacy Google Cloud / paid-auth routes are absent from workflows.")
+print("- OpenRouter is restricted to the dedicated manual free-model reviewer with read-only code permissions.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
 print("- Project instructions retain the strict €0 requirement.")
