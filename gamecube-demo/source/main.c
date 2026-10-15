@@ -559,10 +559,10 @@ int main(int argc, char **argv)
             g_boost);
         g_boost = boonta_boost_after_frame(g_boost, g_boost_active);
 
-        steering = (float)stick_x / 128.0f;
-        if ((buttons_held & PAD_BUTTON_LEFT) != 0U) steering -= 0.7f;
-        if ((buttons_held & PAD_BUTTON_RIGHT) != 0U) steering += 0.7f;
-        steering = clampf_local(steering, -1.0f, 1.0f);
+        steering = boonta_steering_input(
+            (float)stick_x,
+            (buttons_held & PAD_BUTTON_LEFT) != 0U,
+            (buttons_held & PAD_BUTTON_RIGHT) != 0U);
 
         g_speed = boonta_speed_after_input(
             g_speed,
