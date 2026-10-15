@@ -230,6 +230,10 @@ jobs:
           } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
           grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
+      - name: Test DTM protocol and finish-banner detector with Pillow
+        shell: bash
+        run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_dolphin_dtm.py' -v
+
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
           RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || false }}
