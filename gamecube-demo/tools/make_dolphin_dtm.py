@@ -15,7 +15,7 @@ HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
-STEERING_HOLD_FRAMES = 1800  # Keep direction held throughout the variable-time screenshot window.
+STEERING_HOLD_FRAMES = 600  # Keep within the visually validated capture window.
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
@@ -29,7 +29,7 @@ Y = 1 << 4
 DPAD_LEFT = 1 << 0
 DPAD_RIGHT = 1 << 1
 IS_CONNECTED = 1 << 6
-NEUTRAL_AXIS = 0
+NEUTRAL_AXIS = 128
 
 
 def _controller_state(frame: int, steering: str = "right") -> bytes:
@@ -52,9 +52,9 @@ def _controller_state(frame: int, steering: str = "right") -> bytes:
     elif steering == "left" and frame < STEERING_HOLD_FRAMES:
         flags |= DPAD_LEFT
 
-    # Dolphin assigns the stored axis bytes directly to signed s8 pad fields.
-    # Thus 0 is neutral; 128 would decode to -128 (full-left/full-down).
-    # D-pad direction supplies the deterministic steering signal.
+    # DTM stores Dolphin's controller axes as unsigned bytes (0..255), centered at
+    # 128. The emulated controller layer converts that center to libogc's signed 0;
+    # writing 0 here would encode full-left/full-down, not a neutral baseline.
     return bytes((buttons, flags, 0, 0, NEUTRAL_AXIS, NEUTRAL_AXIS,
                   NEUTRAL_AXIS, NEUTRAL_AXIS))
 
