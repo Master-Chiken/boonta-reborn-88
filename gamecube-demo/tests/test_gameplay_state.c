@@ -240,6 +240,7 @@ static void simulated_three_lap_run_tests(void) {
  float race_seconds = 0.0f;
  float lap_seconds = 0.0f;
  float best_lap_seconds = 0.0f;
+ float last_lap_seconds = 0.0f;
  unsigned int laps = 0U;
  unsigned int frames = 0U;
  int overheated = 0;
@@ -258,11 +259,15 @@ static void simulated_three_lap_run_tests(void) {
   distance = boonta_distance_after_frame(distance, speed, boost_active);
   laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
   if (laps > previous_laps) {
-   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, lap_seconds);
+   last_lap_seconds = lap_seconds;
+   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, last_lap_seconds);
    lap_seconds = 0.0f;
   }
   finished = boonta_race_is_finished(laps, 3U);
-  if (finished) speed = 0.0f;
+  if (finished) {
+   speed = 0.0f;
+   lap_seconds = last_lap_seconds;
+  }
   ++frames;
  }
 
@@ -272,7 +277,8 @@ static void simulated_three_lap_run_tests(void) {
  assert(distance >= 360.0f);
  assert(race_seconds > 0.0f);
  assert(best_lap_seconds > 0.0f);
- assert(lap_seconds >= 0.0f);
+ assert(last_lap_seconds > 0.0f);
+ assert(nearf(lap_seconds, last_lap_seconds));
  assert(nearf(speed, 0.0f));
 }
 
