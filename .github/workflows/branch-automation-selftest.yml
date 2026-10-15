@@ -64,3 +64,45 @@ jobs:
                   print(f"Python syntax OK: {path} block {index}")
           print(f"Validated {checked} embedded Python block(s).")
           PY
+
+      - name: Verify Git patch-equivalence detection with a local fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          git init -q "$tmp/repo"
+          git -C "$tmp/repo" config user.name "Branch intake self-test"
+          git -C "$tmp/repo" config user.email "branch-intake-selftest@example.invalid"
+
+          git -C "$tmp/repo" checkout -q -b main
+          printf 'base\n' > "$tmp/repo/example.txt"
+          git -C "$tmp/repo" add example.txt
+          git -C "$tmp/repo" commit -qm "base"
+          git -C "$tmp/repo" checkout -q -b candidate
+
+          printf 'base\npatch-equivalent change\n' > "$tmp/repo/example.txt"
+          git -C "$tmp/repo" commit -qam "candidate implementation"
+          equivalent_sha="$(git -C "$tmp/repo" rev-parse HEAD)"
+
+          # Advance main on an unrelated path first, so cherry-pick cannot fast-forward
+          # directly to the candidate SHA. The resulting commit must have a new SHA.
+          git -C "$tmp/repo" checkout -q main
+          printf 'main only\\n' > "$tmp/repo/main-only.txt"
+          git -C "$tmp/repo" add main-only.txt
+          git -C "$tmp/repo" commit -qm "main advances independently"
+          git -C "$tmp/repo" cherry-pick "$equivalent_sha" >/dev/null
+          test "$(git -C "$tmp/repo" rev-parse HEAD)" != "$equivalent_sha"
+          equivalent_result="$(git -C "$tmp/repo" cherry main candidate)"
+          printf '%s\n' "$equivalent_result"
+          grep -F -- "- $equivalent_sha" <<< "$equivalent_result"
+
+          # A genuinely new patch must still be counted as unique.
+          git -C "$tmp/repo" checkout -q candidate
+          printf 'base\npatch-equivalent change\nnew unique change\n' > "$tmp/repo/example.txt"
+          git -C "$tmp/repo" commit -qam "additional unique implementation"
+          mixed_result="$(git -C "$tmp/repo" cherry main candidate)"
+          printf '%s\n' "$mixed_result"
+          unique_count="$(awk '$1 == "+" { count++ } END { print count + 0 }' <<< "$mixed_result")"
+          test "$unique_count" -eq 1
+          echo "Patch-equivalent commit skipped; one genuinely new commit detected."

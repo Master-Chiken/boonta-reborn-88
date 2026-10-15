@@ -1,6 +1,12 @@
 name: Branch intake queue
 
 on:
+  # Run once after this workflow definition changes on main so new intake logic
+  # is exercised against the live branch inventory. Output remains draft PRs only.
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/branch-intake-queue.yml"
   workflow_dispatch:
     inputs:
       max_prs:
@@ -45,6 +51,9 @@ jobs:
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          # Mirror public Git history without checking out or executing branch code.
+          # git cherry uses patch IDs to detect changes already applied under new SHAs.
+          GIT_TERMINAL_PROMPT=0 git clone --mirror --quiet "https://github.com/${GH_REPO}.git" /tmp/racer-intake.git
           python3 - <<'PY'
           import json
           import os
@@ -67,6 +76,85 @@ jobs:
               return json.loads(subprocess.check_output(
                   ["gh", "api", endpoint], text=True, stderr=subprocess.PIPE
               ))
+
+          def branch_unique_patch_count(branch_name, expected_sha):
+              """Return count of patch-unique non-merge commits vs main, or fail closed."""
+              branch_ref = f"refs/heads/{branch_name}"
+              main_ref = f"refs/heads/{default_branch}"
+              actual = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", branch_ref],
+                  text=True, capture_output=True
+              )
+              if actual.returncode != 0:
+                  raise RuntimeError("branch did not exist in the history mirror snapshot")
+              if actual.stdout.strip() != expected_sha:
+                  raise RuntimeError("branch tip moved between inventory and history mirror")
+              mirrored_main = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", main_ref],
+                  text=True, capture_output=True
+              )
+              if mirrored_main.returncode != 0 or mirrored_main.stdout.strip() != main_sha:
+                  raise RuntimeError("main moved between inventory and history mirror")
+              merge_count = int(subprocess.check_output(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-list", "--count", "--merges",
+                   f"{main_ref}..{branch_ref}"], text=True
+              ).strip())
+              if merge_count:
+                  raise RuntimeError(
+                      f"branch has {merge_count} merge commit(s); requires explicit review"
+                  )
+              result = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "cherry", main_ref, branch_ref],
+                  text=True, capture_output=True
+              )
+              if result.returncode != 0:
+                  raise RuntimeError((result.stderr or result.stdout).strip()[:120])
+              return sum(1 for line in result.stdout.splitlines() if line.startswith("+ "))
+
+
+          # Compare final Git trees, not only merge-base file lists. A stale branch
+          # can be "ahead" while every change it advertises has already landed in main.
+          # Such branches should be reported as superseded instead of opening duplicate PRs.
+          tree_cache = {}
+
+          def tree_blobs_for_commit(commit_sha):
+              if commit_sha in tree_cache:
+                  return tree_cache[commit_sha]
+              commit_obj = api_json(f"repos/{repo}/commits/{commit_sha}")
+              tree_sha = commit_obj.get("commit", {}).get("tree", {}).get("sha")
+              if not tree_sha:
+                  raise RuntimeError(f"commit {commit_sha} has no readable tree SHA")
+              tree_obj = api_json(f"repos/{repo}/git/trees/{tree_sha}?recursive=1")
+              if tree_obj.get("truncated"):
+                  raise RuntimeError(f"tree for commit {commit_sha} is truncated")
+              blobs = {
+                  item["path"]: (item.get("sha"), item.get("mode"), item.get("type"))
+                  for item in tree_obj.get("tree", [])
+                  if item.get("type") == "blob" and item.get("path")
+              }
+              tree_cache[commit_sha] = blobs
+              return blobs
+
+          try:
+              main_commit = api_json(f"repos/{repo}/commits/{default_branch}")
+              main_sha = main_commit.get("sha")
+              main_tree_sha = main_commit.get("commit", {}).get("tree", {}).get("sha")
+              if not main_sha or not main_tree_sha:
+                  raise RuntimeError("default branch commit/tree metadata is incomplete")
+              main_tree_obj = api_json(f"repos/{repo}/git/trees/{main_tree_sha}?recursive=1")
+              if main_tree_obj.get("truncated"):
+                  raise RuntimeError("default branch tree is truncated")
+              main_tree_blobs = {
+                  item["path"]: (item.get("sha"), item.get("mode"), item.get("type"))
+                  for item in main_tree_obj.get("tree", [])
+                  if item.get("type") == "blob" and item.get("path")
+              }
+              tree_cache[main_sha] = main_tree_blobs
+          except Exception as exc:
+              # Do not create PRs when we cannot establish the current main tree.
+              raise SystemExit(
+                  f"Cannot safely compare final branch trees to {default_branch}: {str(exc)[:160]}"
+              )
 
           def priority(name):
               low = name.lower()
@@ -208,8 +296,36 @@ jobs:
               if hold:
                   deferred.append((name, hold))
                   continue
+
+              # First detect commits already applied under different SHAs. A stale
+              # branch's final file blobs can differ from main simply because it lacks
+              # later main changes, even when its own unique patch has been superseded.
+              try:
+                  unique_patches = branch_unique_patch_count(name, sha)
+              except Exception as exc:
+                  deferred.append((name, f"patch-equivalence check failed closed: {str(exc)[:120]}"))
+                  continue
+              if unique_patches == 0:
+                  skips["all branch commits already present or patch-equivalent to main"] += 1
+                  continue
+
+              # Then filter paths whose final blob/mode is identical to current main.
+              try:
+                  branch_tree_blobs = tree_blobs_for_commit(sha)
+              except Exception as exc:
+                  deferred.append((name, f"final-tree comparison failed closed: {str(exc)[:120]}"))
+                  continue
+              effective_paths = sorted(
+                  path for path in paths
+                  if main_tree_blobs.get(path) != branch_tree_blobs.get(path)
+              )
+              if not effective_paths:
+                  skips["reported paths already match main tree (superseded work)"] += 1
+                  continue
+              paths = effective_paths
+
               if ahead > 10 or len(paths) > 20:
-                  deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} changed paths)"))
+                  deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} effective paths)"))
                   continue
               overlap = sorted(set(paths) & open_paths)
               if overlap:
