@@ -33,7 +33,7 @@ jobs:
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
           python3 - <<'PY'
-          import datetime, json, os, subprocess
+          import datetime, json, os, subprocess, time
           from pathlib import Path
           branches = json.loads(Path("/tmp/branches.json").read_text())
           prs = json.loads(Path("/tmp/open-prs.json").read_text())
@@ -43,21 +43,42 @@ jobs:
           now = datetime.datetime.now(datetime.timezone.utc)
           pr_heads = {p["head"]["ref"] for p in prs}
           active, inactive = [], []
+          unknown_dates = 0
+          date_by_sha = {}
           for b in branches:
               name = b["name"]
-              date = b.get("commit", {}).get("commit", {}).get("committer", {}).get("date")
+              sha = b.get("commit", {}).get("sha")
+              date = None
+              if sha:
+                  try:
+                      # The /branches endpoint returns only a commit SHA/URL,
+                      # not the nested commit timestamp; fetch the actual tip.
+                      date = subprocess.check_output(
+                          ["gh", "api", f"repos/{repo}/commits/{sha}",
+                           "--jq", ".commit.committer.date // .commit.author.date // empty"],
+                          text=True, stderr=subprocess.DEVNULL).strip() or None
+                  except subprocess.CalledProcessError:
+                      date = None
               recent = False
               if date:
                   try:
                       stamp = datetime.datetime.fromisoformat(date.replace("Z", "+00:00"))
                       recent = (now - stamp).days < 30
                   except ValueError:
-                      pass
-              item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads}
-              (active if name == default_branch or name in pr_heads or recent else inactive).append(item)
+                      date = None
+              if not date:
+                  unknown_dates += 1
+              # Fail conservatively: if we cannot resolve a tip date, keep it
+              # active pending review rather than wrongly treating it as stale.
+              unknown = not date
+              item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
+                      "unknown_date": unknown}
+              (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
+              time.sleep(0.05)
           lines = ["# Branch governance audit", "",
               f"- **Total branches:** {len(branches)}",
-              f"- **Active branches (heuristic):** {len(active)} / target 30",
+              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target 30",
+              f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
               f"- **Default branch:** `{default_branch}`",
               "- **Automatic deletion:** disabled by project policy.", "", "## Active branches", ""]
