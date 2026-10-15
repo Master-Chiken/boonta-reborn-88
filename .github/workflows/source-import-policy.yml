@@ -30,3 +30,7 @@ jobs:
       - name: Run policy unit tests
         working-directory: tools
         run: python3 -m unittest -v test_check_source_import_policy.py
+
+      - name: Run proposed-path guard unit tests
+        working-directory: tools
+        run: python3 -m unittest -v test_check_proposed_source_paths.py
