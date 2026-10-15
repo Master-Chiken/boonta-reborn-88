@@ -114,7 +114,12 @@ static float clampf_local(float value, float low, float high)
 
 static float road_center_at(float z, float distance)
 {
-    const float phase = z + distance * 1.15f;
+    /*
+     * z is camera-relative (negative ahead of the pod). Converting it to a
+     * progressing track coordinate keeps a given piece of road stable while
+     * it advances toward the camera instead of deforming in place.
+     */
+    const float phase = distance - z;
     return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
 }
 
@@ -177,6 +182,9 @@ static void box_add(float cx, float cy, float cz,
 static void add_road(void)
 {
     unsigned int i;
+    const float segment_length = 2.8f;
+    const float road_scroll = fmodf(g_distance, segment_length);
+    const unsigned int passed_sections = (unsigned int)floorf(g_distance / segment_length);
     const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
@@ -184,13 +192,14 @@ static void add_road(void)
     quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
-        const float z0 = 4.0f - (float)i * 2.8f;
-        const float z1 = z0 - 2.8f;
+        const unsigned int section_phase = i + passed_sections;
+        const float z0 = 4.0f + road_scroll - (float)i * segment_length;
+        const float z1 = z0 - segment_length;
         const float c0 = road_center_at(z0, g_distance);
         const float c1 = road_center_at(z1, g_distance);
         const float w = ROAD_HALF_WIDTH;
-        const GXColor road = ((i & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
-        const GXColor rail = ((i & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
+        const GXColor road = ((section_phase & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
+        const GXColor rail = ((section_phase & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
 
         quad_add((Point3){ c0 - w, ROAD_Y, z0 },
                  (Point3){ c0 + w, ROAD_Y, z0 },
@@ -217,7 +226,7 @@ static void add_road(void)
                  (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 },
                  (Point3){ c1 + w + 0.28f, ROAD_Y + 0.02f, z1 }, rail);
 
-        if ((i % 2U) == 0U) {
+        if ((section_phase % 2U) == 0U) {
             const float mark_z0 = z0 - 0.35f;
             const float mark_z1 = z0 - 1.35f;
             const float mc0 = road_center_at(mark_z0, g_distance);
@@ -232,7 +241,7 @@ static void add_road(void)
     /* A repeating start/finish stripe gives the endless prototype a lap cue. */
     {
         const float offset = fmodf(g_distance, RACE_LAP_DISTANCE);
-        const float finish_z = 4.0f - offset;
+        const float finish_z = offset - RACE_LAP_DISTANCE;
         if (finish_z > -108.0f && finish_z < 4.0f) {
             const float c0 = road_center_at(finish_z, g_distance);
             const float c1 = road_center_at(finish_z - 0.55f, g_distance);
@@ -256,17 +265,21 @@ static void add_canyon_scenery(void)
 {
     const float base_y = ROAD_Y - 0.11f;
     const float base_offset = ROAD_HALF_WIDTH + 5.0f;
+    const float wall_length = 10.0f;
+    const float wall_scroll = fmodf(g_distance, wall_length);
+    const unsigned int passed_wall_sections = (unsigned int)floorf(g_distance / wall_length);
     unsigned int i;
 
     for (i = 0U; i < 9U; ++i) {
-        const float z_near = -20.0f - (float)i * 10.0f;
-        const float z_far = z_near - 10.0f;
+        const unsigned int wall_phase = i + passed_wall_sections;
+        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
-        const float near_height = 2.5f + (float)(i % 4U) * 0.85f;
-        const float far_height = 2.5f + (float)((i + 1U) % 4U) * 0.85f;
-        const float near_top_offset = base_offset + 1.6f + (float)(i % 2U) * 0.8f;
-        const float far_top_offset = base_offset + 1.6f + (float)((i + 1U) % 2U) * 0.8f;
+        const float near_height = 2.5f + (float)(wall_phase % 4U) * 0.85f;
+        const float far_height = 2.5f + (float)((wall_phase + 1U) % 4U) * 0.85f;
+        const float near_top_offset = base_offset + 1.6f + (float)(wall_phase % 2U) * 0.8f;
+        const float far_top_offset = base_offset + 1.6f + (float)((wall_phase + 1U) % 2U) * 0.8f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
@@ -286,24 +299,23 @@ static void add_canyon_scenery(void)
             GXColor face;
             GXColor facet;
 
-            if (((i + side_index) & 1U) == 0U) {
+            if (((wall_phase + side_index) & 1U) == 0U) {
                 face = C_CANYON_MID;
             } else {
                 face = C_CANYON_DARK;
             }
-            if (((i + side_index) % 3U) == 0U) {
+            if (((wall_phase + side_index) % 3U) == 0U) {
                 facet = C_CANYON_SUNLIT;
             } else {
                 facet = C_CANYON_LIGHT;
             }
 
-            /* Two differently colored faces create a faceted, sunlit cliff wall. */
+            /* Phase-stable faceted walls now advance with the course. */
             triangle_add(base_near, top_near, top_far, face);
             triangle_add(base_near, top_far, base_far, facet);
         }
     }
 }
-
 static void add_player_pod(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
