@@ -43,6 +43,12 @@ typedef struct {
 } Point3;
 
 typedef struct {
+    float x, y, z;
+    float right_x, right_z;
+    float half_width;
+} TrackFrame;
+
+typedef struct {
     f32 x, y, z;
     u8 r, g, b, a;
 } SceneVertex;
@@ -269,6 +275,39 @@ static void track_world_point_at(float travelled, float lateral, float height,
     out->z = center_z + right_z * lateral;
 }
 
+/* A stable local frame for one authored point, reused for all road vertices in its row. */
+static TrackFrame track_frame_at(float travelled)
+{
+    TrackFrame frame;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float dx, dz, horizontal_length;
+
+    track_sample_at(travelled, &frame.x, &frame.y, &frame.z, &frame.half_width);
+    track_sample_at(travelled - 0.25f, &before_x, &before_y, &before_z, NULL);
+    track_sample_at(travelled + 0.25f, &after_x, &after_y, &after_z, NULL);
+    dx = after_x - before_x;
+    dz = after_z - before_z;
+    horizontal_length = sqrtf(dx * dx + dz * dz);
+    if (horizontal_length > 0.001f) {
+        frame.right_x = dz / horizontal_length;
+        frame.right_z = -dx / horizontal_length;
+    } else {
+        frame.right_x = 1.0f;
+        frame.right_z = 0.0f;
+    }
+    return frame;
+}
+
+static Point3 track_frame_point(TrackFrame frame, float lateral, float height)
+{
+    Point3 point;
+    point.x = frame.x + frame.right_x * lateral;
+    point.y = frame.y + height;
+    point.z = frame.z + frame.right_z * lateral;
+    return point;
+}
+
 /* Road vertices follow the spline at each depth. */
 static Point3 track_local_to_world(Point3 local_point)
 {
@@ -402,86 +441,75 @@ static void add_road(void)
     const Point3 ground_b = {  150.0f, -0.65f, 180.0f };
     const Point3 ground_c = {  150.0f, -0.65f, -100.0f };
     const Point3 ground_d = { -150.0f, -0.65f, -100.0f };
+
+    /* Surface geometry is emitted in world coordinates, not bent from the old screen strip. */
     g_track_world_transform_enabled = 0;
+    g_vertex_y_offset = 0.0f;
     quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
-    g_track_world_transform_enabled = 1;
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
-        /* In world-space mode each road row starts from this frame's true progress.
-         * The former screen-space scroll offset placed the nearest row behind the camera. */
-        const float z0 = 4.0f - (float)i * segment_length;
-        const float z1 = z0 - segment_length;
-        const float c0 = road_center_at(z0, g_distance);
-        const float c1 = road_center_at(z1, g_distance);
-        const float w0 = road_half_width_at(z0, g_distance);
-        const float w1 = road_half_width_at(z1, g_distance);
-        const float y0 = road_height_at(z0, g_distance);
-        const float y1 = road_height_at(z1, g_distance);
+        const float distance0 = g_distance + (float)i * segment_length;
+        const float distance1 = distance0 + segment_length;
+        const TrackFrame f0 = track_frame_at(distance0);
+        const TrackFrame f1 = track_frame_at(distance1);
+        const float w0 = clampf_local(f0.half_width, 2.2f, 4.8f);
+        const float w1 = clampf_local(f1.half_width, 2.2f, 4.8f);
         const GXColor road = ((section_phase & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
         const GXColor rail = ((section_phase & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
 
-        quad_add((Point3){ c0 - w0, y0, z0 },
-                 (Point3){ c0 + w0, y0, z0 },
-                 (Point3){ c1 + w1, y1, z1 },
-                 (Point3){ c1 - w1, y1, z1 }, road);
+        quad_add(track_frame_point(f0, -w0, 0.0f),
+                 track_frame_point(f0,  w0, 0.0f),
+                 track_frame_point(f1,  w1, 0.0f),
+                 track_frame_point(f1, -w1, 0.0f), road);
 
-        /* Edge strips and rails follow the authored center, width and elevation. */
-        quad_add((Point3){ c0 - w0, y0 + 0.018f, z0 },
-                 (Point3){ c0 - w0 + 0.12f, y0 + 0.018f, z0 },
-                 (Point3){ c1 - w1 + 0.12f, y1 + 0.018f, z1 },
-                 (Point3){ c1 - w1, y1 + 0.018f, z1 }, C_EDGE_L);
-        quad_add((Point3){ c0 + w0 - 0.12f, y0 + 0.018f, z0 },
-                 (Point3){ c0 + w0, y0 + 0.018f, z0 },
-                 (Point3){ c1 + w1, y1 + 0.018f, z1 },
-                 (Point3){ c1 + w1 - 0.12f, y1 + 0.018f, z1 }, C_EDGE_R);
+        /* Edge paint, safety rails, and lane dashes use the same world-space frame. */
+        quad_add(track_frame_point(f0, -w0, 0.018f),
+                 track_frame_point(f0, -w0 + 0.12f, 0.018f),
+                 track_frame_point(f1, -w1 + 0.12f, 0.018f),
+                 track_frame_point(f1, -w1, 0.018f), C_EDGE_L);
+        quad_add(track_frame_point(f0, w0 - 0.12f, 0.018f),
+                 track_frame_point(f0, w0, 0.018f),
+                 track_frame_point(f1, w1, 0.018f),
+                 track_frame_point(f1, w1 - 0.12f, 0.018f), C_EDGE_R);
 
-        quad_add((Point3){ c0 - w0 - 0.28f, y0 + 0.02f, z0 },
-                 (Point3){ c0 - w0 - 0.28f, y0 + 0.52f, z0 },
-                 (Point3){ c1 - w1 - 0.28f, y1 + 0.52f, z1 },
-                 (Point3){ c1 - w1 - 0.28f, y1 + 0.02f, z1 }, rail);
-        quad_add((Point3){ c0 + w0 + 0.28f, y0 + 0.02f, z0 },
-                 (Point3){ c0 + w0 + 0.28f, y0 + 0.52f, z0 },
-                 (Point3){ c1 + w1 + 0.28f, y1 + 0.52f, z1 },
-                 (Point3){ c1 + w1 + 0.28f, y1 + 0.02f, z1 }, rail);
+        quad_add(track_frame_point(f0, -w0 - 0.28f, 0.02f),
+                 track_frame_point(f0, -w0 - 0.28f, 0.52f),
+                 track_frame_point(f1, -w1 - 0.28f, 0.52f),
+                 track_frame_point(f1, -w1 - 0.28f, 0.02f), rail);
+        quad_add(track_frame_point(f0, w0 + 0.28f, 0.02f),
+                 track_frame_point(f0, w0 + 0.28f, 0.52f),
+                 track_frame_point(f1, w1 + 0.28f, 0.52f),
+                 track_frame_point(f1, w1 + 0.28f, 0.02f), rail);
 
         if ((section_phase % 2U) == 0U) {
-            const float mark_z0 = z0 - 0.35f;
-            const float mark_z1 = z0 - 1.35f;
-            const float mc0 = road_center_at(mark_z0, g_distance);
-            const float mc1 = road_center_at(mark_z1, g_distance);
-            const float my0 = road_height_at(mark_z0, g_distance) + 0.035f;
-            const float my1 = road_height_at(mark_z1, g_distance) + 0.035f;
-            quad_add((Point3){ mc0 - 0.055f, my0, mark_z0 },
-                     (Point3){ mc0 + 0.055f, my0, mark_z0 },
-                     (Point3){ mc1 + 0.055f, my1, mark_z1 },
-                     (Point3){ mc1 - 0.055f, my1, mark_z1 }, C_MARKER);
+            const TrackFrame mark0 = track_frame_at(distance0 + 0.35f);
+            const TrackFrame mark1 = track_frame_at(distance0 + 1.35f);
+            quad_add(track_frame_point(mark0, -0.055f, 0.035f),
+                     track_frame_point(mark0,  0.055f, 0.035f),
+                     track_frame_point(mark1,  0.055f, 0.035f),
+                     track_frame_point(mark1, -0.055f, 0.035f), C_MARKER);
         }
     }
 
-    /* Place the checker stripe at the next circuit crossing in world-space. */
+    /* The finish stripe is placed at the next actual lap crossing along the spline. */
     {
         const float next_finish =
             (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) * RACE_LAP_DISTANCE;
         const float remaining = next_finish - g_distance;
-        const float finish_z = 4.0f - remaining;
         if (remaining >= 0.0f && remaining < (float)ROAD_SEGMENTS * segment_length) {
-            const float c0 = road_center_at(finish_z, g_distance);
-            const float c1 = road_center_at(finish_z - 0.55f, g_distance);
-            const float w0 = road_half_width_at(finish_z, g_distance);
-            const float w1 = road_half_width_at(finish_z - 0.55f, g_distance);
-            const float y0 = road_height_at(finish_z, g_distance) + 0.04f;
-            const float y1 = road_height_at(finish_z - 0.55f, g_distance) + 0.04f;
+            const TrackFrame finish0 = track_frame_at(next_finish);
+            const TrackFrame finish1 = track_frame_at(next_finish + 0.55f);
+            const float w0 = clampf_local(finish0.half_width, 2.2f, 4.8f);
+            const float w1 = clampf_local(finish1.half_width, 2.2f, 4.8f);
             const GXColor stripe = { 240, 244, 250, 255 };
-            quad_add((Point3){ c0 - w0, y0, finish_z },
-                     (Point3){ c0 + w0, y0, finish_z },
-                     (Point3){ c1 + w1, y1, finish_z - 0.55f },
-                     (Point3){ c1 - w1, y1, finish_z - 0.55f }, stripe);
+            quad_add(track_frame_point(finish0, -w0, 0.04f),
+                     track_frame_point(finish0,  w0, 0.04f),
+                     track_frame_point(finish1,  w1, 0.04f),
+                     track_frame_point(finish1, -w1, 0.04f), stripe);
         }
     }
-    g_track_world_transform_enabled = 0;
 }
-
 
 /*
  * Original low-poly canyon walls give the test road a readable world silhouette.
