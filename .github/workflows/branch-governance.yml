@@ -58,8 +58,6 @@ jobs:
                           text=True, stderr=subprocess.DEVNULL).strip() or None
                   except subprocess.CalledProcessError:
                       date = None
-              if not date:
-                  unknown_dates += 1
               recent = False
               if date:
                   try:
@@ -67,7 +65,8 @@ jobs:
                       recent = (now - stamp).days < 30
                   except ValueError:
                       date = None
-                      unknown_dates += 1
+              if not date:
+                  unknown_dates += 1
               # Fail conservatively: if we cannot resolve a tip date, keep it
               # active pending review rather than wrongly treating it as stale.
               unknown = not date
