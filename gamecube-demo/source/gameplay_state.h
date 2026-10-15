@@ -258,6 +258,20 @@ static inline float boonta_rival_contact_nudge(float player_lateral,
     return player_lateral <= rival_lateral ? -0.035f : 0.035f;
 }
 
+/* Shared by runtime and host tests: reject invalid state and bound collision drift. */
+static inline float boonta_lateral_velocity_after_rival_contact(float lateral_velocity,
+                                                                 float player_lateral,
+                                                                 float rival_lateral)
+{
+    if (!isfinite(lateral_velocity)) lateral_velocity = 0.0f;
+    if (!isfinite(player_lateral) || !isfinite(rival_lateral)) {
+        return boonta_clamp_finite_float(lateral_velocity, -0.085f, 0.085f);
+    }
+    return boonta_clamp_finite_float(
+        lateral_velocity + boonta_rival_contact_nudge(player_lateral, rival_lateral),
+        -0.085f, 0.085f);
+}
+
 
 /* Keep the demo's existing off-road and rail-edge response independently testable. */
 static inline float boonta_abs_float(float value)
