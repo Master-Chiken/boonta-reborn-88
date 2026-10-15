@@ -29,6 +29,25 @@ static void boost_tests(void) {
  assert(nearf(boonta_boost_after_frame(0.999f,0),1.0f));
 }
 
+static void steering_inertia_tests(void) {
+ /* Neutral input leaves zero lateral velocity at zero. */
+ assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 0.0f, 0.0f), 0.0f));
+
+ /* Steering acceleration grows with speed and is symmetric left/right. */
+ assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 1.0f, 0.0f), 0.001656f));
+ assert(nearf(boonta_lateral_velocity_after_steering(0.0f, -1.0f, 0.0f), -0.001656f));
+ assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 1.0f, 1.0f), 0.004416f));
+ assert(nearf(boonta_lateral_velocity_after_steering(0.0f, -1.0f, 1.0f), -0.004416f));
+
+ /* Releasing the stick damps existing drift instead of stopping it instantly. */
+ assert(nearf(boonta_lateral_velocity_after_steering(0.05f, 0.0f, 0.0f), 0.046f));
+ assert(nearf(boonta_lateral_velocity_after_steering(-0.05f, 0.0f, 0.0f), -0.046f));
+
+ /* The post-damping velocity is clamped even for an abnormal starting state. */
+ assert(nearf(boonta_lateral_velocity_after_steering(0.2f, 1.0f, 1.0f), 0.085f));
+ assert(nearf(boonta_lateral_velocity_after_steering(-0.2f, -1.0f, 1.0f), -0.085f));
+}
+
 static void lap_tests(void) {
  assert(boonta_lap_was_crossed(0.0f,119.99f,120.0f)==0);
  assert(boonta_lap_was_crossed(119.99f,120.01f,120.0f)==1);
@@ -124,6 +143,7 @@ static void offroad_and_rail_tests(void) {
 int main(void) {
  speed_tests();
  boost_tests();
+ steering_inertia_tests();
  lap_tests();
  three_lap_finish_tests();
  rival_event_tests();

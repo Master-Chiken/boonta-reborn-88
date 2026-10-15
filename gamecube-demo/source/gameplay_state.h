@@ -20,6 +20,18 @@ static inline float boonta_boost_after_frame(float boost, int active)
     if (boost > 1.0f) return 1.0f;
     return boost;
 }
+/* Match the native loop's inertia, damping and lateral-speed bounds. */
+static inline float boonta_lateral_velocity_after_steering(float lateral_velocity,
+                                                            float steering,
+                                                            float speed)
+{
+    lateral_velocity += steering * (0.0018f + speed * 0.0030f);
+    lateral_velocity *= 0.92f;
+    if (lateral_velocity < -0.085f) return -0.085f;
+    if (lateral_velocity > 0.085f) return 0.085f;
+    return lateral_velocity;
+}
+
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
 {
     if (lap_distance <= 0.0f || previous_distance < 0.0f || current_distance < previous_distance) return 0;

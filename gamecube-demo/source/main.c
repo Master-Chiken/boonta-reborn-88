@@ -570,9 +570,8 @@ int main(int argc, char **argv)
             (buttons_held & PAD_BUTTON_B) != 0U);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
-        g_lateral_velocity += steering * (0.0018f + g_speed * 0.0030f);
-        g_lateral_velocity *= 0.92f;
-        g_lateral_velocity = clampf_local(g_lateral_velocity, -0.085f, 0.085f);
+        g_lateral_velocity = boonta_lateral_velocity_after_steering(
+            g_lateral_velocity, steering, g_speed);
         g_player_lateral += g_lateral_velocity;
 
         /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
