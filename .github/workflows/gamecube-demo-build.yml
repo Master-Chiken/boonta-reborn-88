@@ -186,7 +186,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon tesseract-ocr
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
@@ -209,8 +209,14 @@ jobs:
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user"
+          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user/Config"
           chmod 700 "$HOME"
+          # Put the rendered game surface in the Dolphin main window so the
+          # CI screenshot captures the game, not only the library window.
+          cat > "$GITHUB_WORKSPACE/dolphin-render-user/Config/Dolphin.ini" <<EOF
+          [Display]
+          RenderToMain = True
+          EOF
           set +e
           timeout --signal=TERM --kill-after=3s 18s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -237,21 +243,62 @@ jobs:
                 echo "Dolphin exited before the software-renderer capture."
                 exit 1
               fi
-              import -window root "$CAPTURE"
+              window=""
+              for attempt in $(seq 1 15); do
+                for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                  title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+                  geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                  width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                  height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                  if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && ( "$title" == "Dolphin" || "$title" == *" - Dolphin" || "$title" == Dolphin\ * ) ]]; then
+                    window="$id"
+                    break
+                  fi
+                done
+                [[ -n "$window" ]] && break
+                sleep 1
+              done
+              if [[ -z "$window" ]]; then
+                echo "No visible Dolphin main window of at least 300x200 was found."
+                xwininfo -root -tree || true
+                exit 1
+              fi
+              echo "Capturing Dolphin window id=$window title=$(xdotool getwindowname "$window")"
+              xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
+              sleep 2
+              import -window "$window" "$CAPTURE"
               test -s "$CAPTURE"
               identify "$CAPTURE"
               colors=$(convert "$CAPTURE" -resize 160x90 -format %k info:)
-              echo "Software-renderer root capture has $colors distinct colors."
+              echo "Dolphin-window capture has $colors distinct colors."
               if [[ "$colors" -lt 24 ]]; then
-                echo "Capture appears blank or nearly blank; visual rendering remains unverified."
+                echo "Dolphin window capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
+              # The captured window must also contain signatures from the actual
+              # procedural scene; window chrome alone must not pass the check.
+              python3 - "$CAPTURE" <<PY
+          from pathlib import Path
+          import sys
+          from PIL import Image
+
+          image = Image.open(Path(sys.argv[1])).convert("RGB")
+          pixels = list(image.getdata())
+          cyan = sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150)
+          orange = sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135)
+          ground_green = sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100)
+          pod_blue = sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120)
+          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}")
+          if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
+              print("Captured Dolphin window is missing one or more expected scene-color signatures.")
+              sys.exit(1)
+          PY
               # The CI Dolphin window is 640x480 at y=40. The lower half of
               # its viewport must contain the dark procedural road, not the
               # near-white blank ground caused by a broken GX vertex-color path.
-              near_white_fraction=$(convert "$CAPTURE" -crop 640x240+0+280 +repage \
+              near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
-              echo "Near-white pixel fraction in the lower game viewport: $near_white_fraction"
+              echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
               if awk -v fraction="$near_white_fraction" "BEGIN { exit !(fraction > 0.25) }"; then
                 echo "The lower game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
                 exit 1
