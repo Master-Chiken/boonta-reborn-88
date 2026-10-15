@@ -174,7 +174,10 @@ jobs:
           mkdir -p "$DOLPHIN_USER/Config"
           # Force the game render surface into Dolphin's main window so the
           # screenshot is not merely the library window.
-          printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
+          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
+          [Display]
+          RenderToMain = True
+          EOF
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
@@ -187,19 +190,29 @@ jobs:
             }
             trap cleanup EXIT
             window=""
+            fallback_window=""
             for i in $(seq 1 15); do
               for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                 geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
                 width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
                 height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                 if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
-                  window="$id"
-                  break
+                  if [[ "$title" == "Dolphin" ]]; then
+                    window="$id"
+                    break
+                  fi
+                  if [[ -z "$fallback_window" && "$title" != "Error" ]]; then
+                    fallback_window="$id"
+                  fi
                 fi
               done
               [[ -n "$window" ]] && break
               sleep 1
             done
+            if [[ -z "$window" && -n "$fallback_window" ]]; then
+              window="$fallback_window"
+            fi
             if [[ -z "$window" ]]; then
               xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
               echo "No visible Dolphin window >= 300x200 was found."
@@ -250,7 +263,10 @@ jobs:
           export WINDOW_TREE="$PWD/dolphin-window-tree.txt"
           export WINDOW_LIST="$PWD/dolphin-windows.txt"
           mkdir -p "$DOLPHIN_USER/Config"
-          printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
+          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
+          [Display]
+          RenderToMain = True
+          EOF
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
@@ -263,19 +279,29 @@ jobs:
             }
             trap cleanup EXIT
             window=""
+            fallback_window=""
             for i in $(seq 1 15); do
               for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                 geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
                 width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
                 height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                 if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
-                  window="$id"
-                  break
+                  if [[ "$title" == "Dolphin" ]]; then
+                    window="$id"
+                    break
+                  fi
+                  if [[ -z "$fallback_window" && "$title" != "Error" ]]; then
+                    fallback_window="$id"
+                  fi
                 fi
               done
               [[ -n "$window" ]] && break
               sleep 1
             done
+            if [[ -z "$window" && -n "$fallback_window" ]]; then
+              window="$fallback_window"
+            fi
             if [[ -z "$window" ]]; then
               xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
               echo "No visible Dolphin window >= 300x200 was found."
@@ -298,6 +324,21 @@ jobs:
             echo "Current prototype GUI capture mean pixel intensity: $mean"
             if awk "BEGIN { exit !($mean < 0.001) }"; then
               echo "Current prototype window capture is entirely black."
+              exit 1
+            fi
+            if [[ ! -s "$PWD/control-frame.png" ]]; then
+              echo "::warning::The minimal GX control image is missing; the current capture cannot be compared reliably."
+              exit 1
+            fi
+            comparison=$(compare -metric RMSE "$PWD/control-frame.png" "$CAPTURE" null: 2>&1 || true)
+            normalized_rmse=$(printf "%s\n" "$comparison" | sed -n "s/.*(\([0-9.eE+-]*\)).*/\1/p")
+            echo "RMSE against the minimal GX control (normalized): ${normalized_rmse:-unavailable}"
+            if [[ -z "$normalized_rmse" ]]; then
+              echo "::warning::Could not calculate a normalized image-difference metric; rendering remains unverified."
+              exit 1
+            fi
+            if awk "BEGIN { exit !($normalized_rmse < 0.005) }"; then
+              echo "::warning::The current capture is almost identical to the control image; this may be Dolphin UI rather than a game frame."
               exit 1
             fi
           '
