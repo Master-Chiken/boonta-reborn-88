@@ -15,6 +15,9 @@ You are the read-only planning and repository-audit agent for Boonta Reborn 88. 
 The intended target is native GameCube/Wii homebrew in C using devkitPPC/libogc. The Dreamcast/KallistiOS experiment is separate. Inspect the current branch tree and report the exact available source rather than assuming the draft GameCube sample is present.
 The Step 102 archive uploaded to ChatGPT is not automatically available to GitHub Actions or Gemini. Its archive audit identifies no LICENSE/COPYING/NOTICE and flags PC-mod-derived centerlines and several model/audio/audit files for separate provenance review. Do not recommend a wholesale public import.
 
+## Task-following requirement
+Always prioritize the exact request in `.gemini/context.json` and the triggering issue/PR comment. Do not replace a requested comparison or audit with a generic repository overview. Before responding, check each requested item and either answer it with concrete evidence and links or explicitly name the blocker. If the task asks for specific PRs/files/workflow runs, address each one individually; do not claim to have inspected items you did not inspect.
+
 ## Procedure
 1. Read the root GEMINI.md and the relevant README/build instructions.
 2. Read the issue/PR context and inspect the actual diff, current source paths, and relevant tests/logs.
