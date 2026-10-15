@@ -36,3 +36,15 @@ In Dolphin or compatible hardware, verify and record:
 - [ ] No sustained graphical corruption or severe frame pacing issue.
 
 Record emulator version, video backend, console/video mode, and any error log when the test is performed. Do not label compile success as a playable full racer.
+
+## Boost mechanic update (2026-10-15)
+
+The prototype now includes a rechargeable boost meter. Hold **A + X** to consume energy while accelerating; release the combination to recharge. Active boost increases the procedural course scroll rate and brightens the placeholder thrusters. The HUD shows the boost reserve separately from the speed meter.
+
+- Source commit: `58aa78b002eb47b1f7ddf09e59d1320b784aea83`
+- GitHub Actions run: [GameCube first-render prototype build #12](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38705937087)
+- Native DOL/ELF build: **success**
+- Automated artifact structure validation: **success**
+- Dolphin/console runtime test of the boost mechanic: **not run**
+
+The successful build establishes that the updated source compiles and produces structurally valid artifacts. It does not establish that the new meter renders correctly or that the controls behave as intended at runtime; those still require a visible emulator/console test.
