@@ -25,7 +25,7 @@
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define CANYON_BASE_OFFSET (ROAD_HALF_WIDTH + 4.2f)
-#define GROUND_SEGMENTS    40U
+#define GROUND_SEGMENTS    42U
 #define GROUND_SEGMENT_LENGTH 2.8f
 #define RACE_LAP_DISTANCE   120.0f
 #define RACE_LAP_LIMIT       3U
@@ -286,9 +286,9 @@ static void add_canyon_scenery(void)
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
-    for (i = 0U; i < 15U; ++i) {
+    for (i = 0U; i < 18U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        const float z_near = -2.0f + wall_scroll - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
