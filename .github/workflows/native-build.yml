@@ -143,7 +143,7 @@ jobs:
       - name: Install Dolphin GUI and virtual display
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common xvfb imagemagick xdotool x11-utils dbus-x11
+          sudo apt-get install -y software-properties-common xvfb imagemagick xdotool x11-utils dbus-x11 mesa-utils
           # Ubuntu 26.04's native Dolphin/Qt package currently fails before mapping a main window.
           # Test GUI capture with the known working Noble PPA build instead.
           sudo add-apt-repository -y ppa:ubuntuhandbook1/dolphin-emu
@@ -152,6 +152,15 @@ jobs:
           # The Qt GUI binary is not probed outside Xvfb; doing so creates a misleading display/plugin crash.
           echo "Qt GUI diagnostics: D-Bus session + explicit XCB/software-rendering environment enabled for capture attempts."
           command -v dbus-run-session
+      - name: Record OpenGL capabilities under Xvfb
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 glxinfo -B > glxinfo.txt 2>&1
+          status=$?
+          cat glxinfo.txt
+          echo "glxinfo exit code: $status"
       - name: Download the earlier minimal GX renderer as a control
         uses: actions/download-artifact@v4
         with:
@@ -181,7 +190,7 @@ jobs:
           EOF
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
-            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
+            dolphin-emu --video_backend=OGL --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
               # This process handles SIGTERM as a graceful-close request and can
@@ -283,7 +292,7 @@ jobs:
           EOF
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
-            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
+            dolphin-emu --video_backend=OGL --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
               # This process handles SIGTERM as a graceful-close request and can
@@ -388,6 +397,7 @@ jobs:
         with:
           name: dolphin-visual-evidence
           path: |
+            glxinfo.txt
             control-dolphin.log
             control-window-tree.txt
             control-windows.txt
