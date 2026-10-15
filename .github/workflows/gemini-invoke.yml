@@ -124,7 +124,7 @@ jobs:
                 "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '/gemini-invoke'
+          prompt: '/gemini-invoke ${{ inputs.additional_context }}'
 
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
