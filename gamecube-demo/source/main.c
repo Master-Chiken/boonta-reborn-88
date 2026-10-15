@@ -46,6 +46,7 @@ static void *g_gx_fifo;
 static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
+static float g_vertex_y_offset;
 static float g_distance;
 static unsigned int g_lap_count;
 static float g_race_seconds;
@@ -240,7 +241,7 @@ static void vertex_add(Point3 point, GXColor color)
     if (g_vertex_count >= VERTEX_CAPACITY) return;
     v = &g_vertices[g_vertex_count++];
     v->x = point.x;
-    v->y = point.y;
+    v->y = point.y + g_vertex_y_offset;
     v->z = point.z;
     v->r = color.r;
     v->g = color.g;
@@ -850,25 +851,35 @@ static void draw_frame(void)
 {
     const float center_near = road_center_at(5.5f, g_distance);
     const float center_ahead = road_center_at(-14.0f, g_distance);
-    /* Follow the pod laterally; steering moves the course relative to the camera. */
-    /* Pitch moves the camera target subtly to communicate nose-down/up attitude. */
-    guVector camera = { center_near + g_player_lateral, 1.65f - 0.20f * g_pitch_down, 7.0f };
+    const float height_near = road_height_at(5.5f, g_distance) - ROAD_Y;
+    const float height_ahead = road_height_at(-14.0f, g_distance) - ROAD_Y;
+    /* Follow the spline laterally and vertically; steering moves the course relative to camera. */
+    /* The two centerline samples provide a forward tangent estimate for this projection. */
+    guVector camera = { center_near + g_player_lateral,
+                        1.65f - 0.20f * g_pitch_down + height_near, 7.0f };
     guVector up = { 0.0f, 1.0f, 0.0f };
     guVector target = { center_ahead + g_player_lateral,
-                        -0.85f - 0.45f * g_pitch_down, -15.0f };
+                        -0.85f - 0.45f * g_pitch_down + height_ahead, -15.0f };
     Mtx view;
     Mtx44 projection;
 
     g_vertex_count = 0;
+    g_vertex_y_offset = 0.0f;
     add_road();
     add_canyon_scenery();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+            /* Rival pods ride the same authored elevation as their projected road point. */
+            g_vertex_y_offset = road_height_at(g_rival_z[rival_index], g_distance) - ROAD_Y;
             add_rival_pod(g_rival_z[rival_index], g_rival_lateral[rival_index], rival_index);
         }
+        g_vertex_y_offset = 0.0f;
     }
+    /* Keep the player's craft attached to the current track grade, including boost flames. */
+    g_vertex_y_offset = road_height_at(1.0f, g_distance) - ROAD_Y;
     add_player_pod();
+    g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
