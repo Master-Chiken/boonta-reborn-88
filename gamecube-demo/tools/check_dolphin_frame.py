@@ -13,8 +13,11 @@ def scene_signatures(image: Image.Image) -> dict[str, int]:
     return {
         "cyan": sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150),
         "orange": sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135),
-        "ground_green": sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100),
-        "pod_blue": sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120),
+        "ground_sand": sum(1 for r, g, b in pixels if r > 1.15 * g and g > 1.15 * b and r > 70),
+        "pod_blue": sum(
+            1 for r, g, b in pixels
+            if r < 70 and 100 < g < 200 and b > 170 and b > 1.15 * g and b > 2 * r
+        ),
     }
 
 
@@ -38,39 +41,38 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
     return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
 
 
-def road_center_from_ground_bounds(image: Image.Image) -> tuple[float, int]:
-    """Estimate road center from the green-ground boundaries on both sides."""
+def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
+    """Estimate the road center from its dark blue-grey asphalt, independent of terrain color."""
     image = image.convert("RGB")
     row_centers = []
-    midpoint = image.width // 2
-    # The ground is green (C_GROUND ~= RGB(23, 48, 40)); road asphalt is dark
-    # blue-gray. Use a narrow upper/mid viewport above the player pod and HUD.
     y_start = int(image.height * 0.52)
     y_end = int(image.height * 0.60)
-    for y in range(y_start, y_end):
-        left_ground_edge = None
-        right_ground_edge = None
-        for x in range(image.width):
-            r, g, b = image.getpixel((x, y))
-            if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100:
-                if x < midpoint:
-                    left_ground_edge = x
-                elif right_ground_edge is None:
-                    right_ground_edge = x
-        # A valid row has green ground on each side of the road.
-        if (left_ground_edge is not None and right_ground_edge is not None
-                and right_ground_edge > left_ground_edge):
-            row_centers.append((left_ground_edge + right_ground_edge) / 2.0)
+    pixels = image.load()
 
-    # Ignore isolated HUD/aliasing pixels by aggregating many road rows and
-    # use the median so rivals and small scene details cannot dominate it.
+    for y in range(y_start, y_end):
+        asphalt_x = []
+        for x in range(image.width):
+            r, g, b = pixels[x, y]
+            # Match the two procedural road colors; exclude the warm ground,
+            # cyan rails, orange/red edge strips, and blue sky.
+            if (24 <= r <= 78 and 30 <= g <= 82 and 42 <= b <= 96
+                    and g >= r + 3 and b >= g + 8):
+                asphalt_x.append(x)
+
+        # One asphalt run may contain a narrow lane marker; the outermost
+        # asphalt pixels still give a stable left/right boundary estimate.
+        if len(asphalt_x) >= 8:
+            left_edge = asphalt_x[0]
+            right_edge = asphalt_x[-1]
+            if right_edge - left_edge >= 10:
+                row_centers.append((left_edge + right_edge) / 2.0)
+
     if len(row_centers) < 10:
         raise ValueError(
-            f"Insufficient road-boundary rows in ROI y=[{y_start},{y_end}); "
+            f"Insufficient asphalt-boundary rows in ROI y=[{y_start},{y_end}); "
             f"found {len(row_centers)}, need 10."
         )
     return float(median(row_centers)), len(row_centers)
-
 
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
@@ -217,8 +219,8 @@ def main() -> int:
     if abs(pod_delta_x) > args.max_pod_drift:
         raise SystemExit("Player pod moved too far across the screen; expected the camera to follow it.")
 
-    baseline_road_x, baseline_road_rows = road_center_from_ground_bounds(baseline)
-    steered_road_x, steered_road_rows = road_center_from_ground_bounds(image)
+    baseline_road_x, baseline_road_rows = road_center_from_asphalt(baseline)
+    steered_road_x, steered_road_rows = road_center_from_asphalt(image)
     road_response = (baseline_road_x - steered_road_x
                      if args.direction == "right"
                      else steered_road_x - baseline_road_x)
