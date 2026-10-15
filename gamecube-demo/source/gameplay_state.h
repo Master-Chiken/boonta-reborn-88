@@ -188,6 +188,36 @@ static inline float boonta_lateral_velocity_after_steering(float lateral_velocit
         lateral_velocity, steering, speed, 1.0f);
 }
 
+/*
+ * Holding slide increases turn impulse while reducing lateral grip. That makes
+ * a corner easier to initiate but lets sideways drift persist after release.
+ */
+static inline float boonta_lateral_velocity_after_steering_slide_scaled(
+    float lateral_velocity, float steering, float speed, int slide_active,
+    float frame_scale)
+{
+    if (!slide_active) {
+        return boonta_lateral_velocity_after_steering_scaled(
+            lateral_velocity, steering, speed, frame_scale);
+    }
+    if (!isfinite(lateral_velocity)) lateral_velocity = 0.0f;
+    if (!isfinite(steering)) steering = 0.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
+    lateral_velocity += steering * (0.0018f + speed * 0.0030f) *
+                        1.35f * frame_scale;
+    lateral_velocity *= powf(0.965f, frame_scale);
+    if (!isfinite(lateral_velocity)) return 0.0f;
+    return boonta_clamp_finite_float(lateral_velocity, -0.085f, 0.085f);
+}
+
+static inline float boonta_lateral_velocity_after_steering_slide(
+    float lateral_velocity, float steering, float speed, int slide_active)
+{
+    return boonta_lateral_velocity_after_steering_slide_scaled(
+        lateral_velocity, steering, speed, slide_active, 1.0f);
+}
+
 static inline float boonta_lateral_position_after_frame(float lateral_position,
                                                          float lateral_velocity,
                                                          float frame_scale)
