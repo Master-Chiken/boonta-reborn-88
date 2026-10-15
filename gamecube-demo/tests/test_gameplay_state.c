@@ -26,14 +26,18 @@ static void cadence_consistency_tests(void) {
 
  /* One simulated second: 60 nominal frames versus 50 PAL-rate frames. */
  for (i = 0U; i < 60U; ++i) {
-  speed60 = boonta_speed_after_input_scaled(speed60, 0, 0, 1.0f);
+  const int accelerating = i < 24U;
+  const int braking = i >= 48U;
+  speed60 = boonta_speed_after_input_scaled(speed60, accelerating, braking, 1.0f);
   boost60 = boonta_boost_after_frame_scaled(boost60, 1, 1.0f);
   heat60 = boonta_engine_heat_after_frame_scaled(heat60, 1, 1.0f);
   lateral60 = boonta_lateral_velocity_after_steering_scaled(lateral60, 0.0f, 0.0f, 1.0f);
   distance60 = boonta_distance_after_frame_scaled(distance60, 0.5f, 0, 1.0f);
  }
  for (i = 0U; i < 50U; ++i) {
-  speed50 = boonta_speed_after_input_scaled(speed50, 0, 0, 1.2f);
+  const int accelerating = i < 20U;
+  const int braking = i >= 40U;
+  speed50 = boonta_speed_after_input_scaled(speed50, accelerating, braking, 1.2f);
   boost50 = boonta_boost_after_frame_scaled(boost50, 1, 1.2f);
   heat50 = boonta_engine_heat_after_frame_scaled(heat50, 1, 1.2f);
   lateral50 = boonta_lateral_velocity_after_steering_scaled(lateral50, 0.0f, 0.0f, 1.2f);
