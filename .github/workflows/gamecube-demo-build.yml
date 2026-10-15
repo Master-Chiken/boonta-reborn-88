@@ -235,8 +235,8 @@ jobs:
               fi
               ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
               echo "Text detected in captured frame:"
-              printf '%s\\n' "$ocr"
-              if printf '%s\\n' "$ocr" | grep -Eiq 'failed to init core|failed to initialize|could not boot|failed to load executable'; then
+              printf '%s\n' "$ocr"
+              if printf '%s\n' "$ocr" | grep -Eiq 'failed to init core|failed to initialize|could not boot|failed to load executable'; then
                 echo "Captured frame contains a Dolphin boot/core error dialog; this must not count as a visual pass."
                 exit 1
               fi
@@ -248,7 +248,7 @@ jobs:
           echo "Dolphin user files created during boot attempt:"
           find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
           if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
-            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \\; || true
+            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \; || true
           fi
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The optional software-renderer capture failed. Native build and headless smoke remain separate results."
@@ -263,5 +263,6 @@ jobs:
           path: |
             dolphin-software-frame.png
             dolphin-render.log
+            dolphin-render-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
