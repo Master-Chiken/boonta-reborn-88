@@ -20,9 +20,7 @@ ELF SHA-256: `a42cf06c5b7b9e8b93e1e5336d60bad93cfbde87d440409651251ed78116bf56`
 
 ## What this does and does not prove
 
-This is the first confirmed native GameCube DOL build in this repository's new clean-room demonstration path. It verifies that the sample can compile and link with devkitPPC/libogc, that a non-empty DOL/ELF is produced, and that the basic DOL/ELF structures satisfy the repository's artifact validator.
-
-It does **not** verify that Dolphin or a console boots the DOL, that GX output is visible, or that controller behavior works in runtime. No Dolphin executable was available in the build-inspection environment, so runtime testing remains **NOT RUN**. The successful GitHub artifact is available until 2026-10-21 (seven-day retention).
+This section records the initial native-build milestone. At that point, runtime behavior was not yet confirmed. Subsequent DOL boot and visible-render validation are recorded below.
 
 ## Latest headless Dolphin smoke test (2026-10-15)
 
@@ -37,16 +35,29 @@ It does **not** verify that Dolphin or a console boots the DOL, that GX output i
 
 This smoke test establishes only that the built DOL can be launched and its Dolphin process remains active for the bounded test interval without the workflow's fatal/boot markers. Because the Null video backend is used, it does **not** verify visible GX output, controller response, race progression, frame pacing, or hardware behavior. The earlier experiment with the GUI/OpenGL capture remains inconclusive and is not upgraded to a pass by this headless result.
 
+## Latest visible Dolphin render validation (2026-10-15)
+
+- Workflow: [GameCube first-render prototype build, run #68](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698)
+- Source branch/PR: [PR #59 — GX vertex-color pipeline](https://github.com/Master-Chiken/boonta-reborn-88/pull/59)
+- Host gameplay/pause tests, DOL padding unit tests, native devkitPPC/libogc build, and DOL/ELF structural validation: **success**.
+- Dolphin headless process smoke (12 seconds): **success**.
+- Dolphin Software Renderer/Xvfb visual capture: **success**; the DOL boots and the capture visibly shows the procedural curved road, alternating road surface, cyan/orange rails, center markings, the player placeholder pod, and a rival pod.
+- [View the captured PNG and Dolphin logs in the run artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698/artifacts/11969630454). GitHub Actions artifacts have short retention (seven days).
+- DOL output is now padded to the 32-byte boundaries used by Dolphin's section loader. The generated DOL is 139,936 bytes; before padding, the last section required four more bytes at the end of the file.
+- The GX color path was corrected to source material colors from the per-vertex stream (GX_SRC_VTX) rather than the default register source (GX_SRC_REG). The prior white ground/road capture is the regression this new test is intended to catch.
+
+This validates boot and one visible frame only. It does **not** yet prove controller response, the complete race loop, frame pacing over time, or operation on a physical GameCube/Wii. The follow-up CI capture guard rejects a lower viewport dominated by near-white pixels; its latest run is tracked on the [PR #59 checks](https://github.com/Master-Chiken/boonta-reborn-88/pull/59).
+
 ## Runtime smoke-test checklist
 
 In Dolphin or compatible hardware, verify and record:
 
-- [ ] DOL boots without hanging or crashing.
-- [ ] The procedural road and placeholder craft are visible.
-- [ ] Control Stick or D-pad steers left/right.
-- [ ] A accelerates and B brakes.
-- [ ] Y resets the demo's distance, steering, and speed.
-- [ ] No sustained graphical corruption or severe frame pacing issue.
+- [x] DOL boots in Dolphin without a core-init error.
+- [x] The procedural road and placeholder craft are visible in a captured frame.
+- [ ] Control Stick or D-pad steers left/right (requires interactive input testing).
+- [ ] A accelerates and B brakes (requires interactive input testing).
+- [ ] Y resets the demo's distance, steering, and speed (requires interactive input testing).
+- [ ] No sustained graphical corruption or severe frame pacing issue (requires a longer session).
 
 Record emulator version, video backend, console/video mode, and any error log when the test is performed. Do not label compile success as a playable full racer.
 
