@@ -32,24 +32,28 @@ IS_CONNECTED = 1 << 6
 NEUTRAL_AXIS = 128
 
 
-def _controller_state(frame: int, steering: str = "right") -> bytes:
+def _controller_state(frame: int, steering: str = "right",
+                      scenario: str = "control-smoke") -> bytes:
     """Return one packed controller poll with neutral analog axes."""
     buttons = A  # Hold accelerator for the whole run.
     if frame == 0:
         buttons |= Y  # Reset to a deterministic starting position.
     if 1 <= frame < 80:
         buttons |= X  # Boost near the start.
-    if 100 <= frame < 140:
-        buttons |= B  # Brake pulse.
-    if frame in (220, 280):
-        buttons |= START  # Pause, then resume with one-frame presses.
+    if scenario == "control-smoke":
+        if 100 <= frame < 140:
+            buttons |= B  # Exercise a short brake pulse.
+        if frame in (220, 280):
+            buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
-    # Keep the requested direction held during the slow software-renderer capture.
-    if steering == "right" and frame < STEERING_HOLD_FRAMES:
-        flags |= DPAD_RIGHT
-    elif steering == "left" and frame < STEERING_HOLD_FRAMES:
-        flags |= DPAD_LEFT
+    # Steering-capture input belongs to the short control smoke only. A full
+    # race stays centered so the scripted run tests progression, not off-road recovery.
+    if scenario == "control-smoke":
+        if steering == "right" and frame < STEERING_HOLD_FRAMES:
+            flags |= DPAD_RIGHT
+        elif steering == "left" and frame < STEERING_HOLD_FRAMES:
+            flags |= DPAD_LEFT
 
     # DTM stores Dolphin's controller axes as unsigned bytes (0..255), centered at
     # 128. The emulated controller layer converts that center to libogc's signed 0;
@@ -59,7 +63,7 @@ def _controller_state(frame: int, steering: str = "right") -> bytes:
 
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
-              steering: str = "right") -> bytes:
+              steering: str = "right", scenario: str = "control-smoke") -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -69,6 +73,10 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
+    if scenario not in ("control-smoke", "full-race"):
+        raise ValueError("scenario must be one of: control-smoke, full-race")
+    if scenario == "full-race" and steering != "none":
+        raise ValueError("full-race scenario requires --steering none")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
@@ -89,7 +97,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame, steering))
+        data.extend(_controller_state(frame, steering, scenario))
     return bytes(data)
 
 
@@ -102,11 +110,15 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race"),
+                        default="control-smoke",
+                        help="short control validation or a longer unsteered race run")
     args = parser.parse_args()
-    payload = build_dtm(args.frames, args.game_id, args.steering)
+    payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
-    print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, steering={args.steering}, {len(payload)} bytes")
+    print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, "
+          f"steering={args.steering}, scenario={args.scenario}, {len(payload)} bytes")
     return 0
 
 

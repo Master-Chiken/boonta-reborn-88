@@ -193,6 +193,132 @@ static void steering_input_tests(void) {
  assert(nearf(boonta_steering_input(32.0f, 1, 1), 0.25f));
 }
 
+
+static void pitch_tradeoff_tests(void) {
+ /* Centered/noisy input is neutral; stick-up maps to nose-down. */
+ assert(nearf(boonta_pitch_input(0.0f), 0.0f));
+ assert(nearf(boonta_pitch_input(12.0f), 0.0f));
+ assert(nearf(boonta_pitch_input(-16.0f), 0.0f));
+ assert(nearf(boonta_pitch_input(72.0f), 56.0f / 111.0f));
+ assert(nearf(boonta_pitch_input(-72.0f), -0.5f));
+ assert(nearf(boonta_pitch_input(127.0f), 1.0f));
+ assert(nearf(boonta_pitch_input(-128.0f), -1.0f));
+ assert(nearf(boonta_pitch_input(NAN), 0.0f));
+ assert(nearf(boonta_pitch_input(INFINITY), 0.0f));
+
+ /* Nose-down trades steering authority for faster progress; nose-up does the opposite. */
+ assert(nearf(boonta_steering_after_pitch(0.5f, 0.0f), 0.5f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, 1.0f), 0.3f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, -1.0f), 0.675f));
+ assert(nearf(boonta_steering_after_pitch(1.0f, -1.0f), 1.0f));
+ assert(nearf(boonta_steering_after_pitch(NAN, 0.8f), 0.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, NAN), 0.5f));
+
+ /* Compare actual forward progress at the same throttle/speed and frame scale. */
+ {
+  const float neutral = boonta_distance_after_pitch_scaled(0.0f, 0.5f, 0, 0.0f, 1.0f);
+  const float nose_down = boonta_distance_after_pitch_scaled(0.0f, 0.5f, 0, 1.0f, 1.0f);
+  const float nose_up = boonta_distance_after_pitch_scaled(0.0f, 0.5f, 0, -1.0f, 1.0f);
+  assert(nearf(neutral, 0.07f));
+  assert(nearf(nose_down, 0.0784f));
+  assert(nearf(nose_up, 0.0616f));
+  assert(nose_down > neutral && neutral > nose_up);
+
+  /* Pitch is elapsed-time scaled, and boost's greater base motion is preserved. */
+  assert(nearf(
+      boonta_distance_after_pitch_scaled(0.0f, 0.5f, 1, 1.0f, 1.0f),
+      0.1232f));
+  assert(nearf(
+      boonta_distance_after_pitch_scaled(0.0f, 0.5f, 0, 1.0f, 1.2f),
+      0.09408f));
+  assert(nearf(
+      boonta_distance_after_pitch_scaled(0.0f, 0.5f, 0, NAN, 1.0f),
+      0.07f));
+  assert(nearf(
+      boonta_distance_after_pitch_scaled(10.0f, 0.5f, 0, 1.0f, NAN),
+      10.0f));
+ }
+}
+
+
+
+static void track_scroll_tests(void) {
+ const float road_length = 2.8f;
+ const float wall_length = 10.0f;
+
+ assert(nearf(boonta_track_scroll_offset(0.0f, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(2.7f, road_length), 2.7f));
+ assert(nearf(boonta_track_scroll_offset(2.8f, road_length), 0.0f));
+ assert(boonta_track_section_index(2.799f, road_length) == 0U);
+ assert(boonta_track_section_index(2.8f, road_length) == 1U);
+ assert(boonta_track_section_index(9.999f, wall_length) == 0U);
+ assert(boonta_track_section_index(10.0f, wall_length) == 1U);
+
+ /* The world-space phase of adjacent segments is continuous at scroll wrap. */
+ {
+  const float before_distance = 2.799f;
+  const float before_scroll = boonta_track_scroll_offset(before_distance, road_length);
+  const float before_z = 4.0f + before_scroll - road_length;
+  const float before_phase = boonta_track_phase(before_distance, before_z);
+  const float after_distance = road_length;
+  const float after_z = 4.0f + boonta_track_scroll_offset(after_distance, road_length);
+  const float after_phase = boonta_track_phase(after_distance, after_z);
+  assert(nearf(before_phase, after_phase));
+
+  const float before_wall_distance = 9.999f;
+  const float before_wall_z = -10.0f +
+      boonta_track_scroll_offset(before_wall_distance, wall_length) - wall_length;
+  const float before_wall_phase = boonta_track_phase(before_wall_distance, before_wall_z);
+  const float after_wall_phase = boonta_track_phase(
+      wall_length, -10.0f + boonta_track_scroll_offset(wall_length, wall_length));
+  assert(nearf(before_wall_phase, after_wall_phase));
+ }
+
+ /* Bad distance, segment length or coordinates must not propagate non-finite data. */
+ assert(nearf(boonta_track_scroll_offset(-1.0f, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(NAN, road_length), 0.0f));
+ assert(nearf(boonta_track_scroll_offset(1.0f, 0.0f), 0.0f));
+ assert(boonta_track_section_index(INFINITY, road_length) == 0U);
+ assert(boonta_track_section_index(1.0f, NAN) == 0U);
+ assert(nearf(boonta_track_phase(NAN, 2.0f), 0.0f));
+ assert(nearf(boonta_track_phase(2.0f, INFINITY), 0.0f));
+}
+
+static void slide_drift_tests(void) {
+ const float regular_turn = boonta_lateral_velocity_after_steering_scaled(
+     0.0f, 1.0f, 1.0f, 1.0f);
+ const float slide_turn = boonta_lateral_velocity_after_steering_slide_scaled(
+     0.0f, 1.0f, 1.0f, 1, 1.0f);
+ const float regular_coast = boonta_lateral_velocity_after_steering_scaled(
+     0.05f, 0.0f, 0.0f, 1.0f);
+ const float slide_coast = boonta_lateral_velocity_after_steering_slide_scaled(
+     0.05f, 0.0f, 0.0f, 1, 1.0f);
+
+ /* Disabled slide preserves established handling; active slide turns harder. */
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.02f, -0.3f, 0.7f, 0, 1.0f),
+     boonta_lateral_velocity_after_steering_scaled(
+         0.02f, -0.3f, 0.7f, 1.0f)));
+ assert(slide_turn > regular_turn);
+ assert(slide_coast > regular_coast);
+ assert(nearf(slide_coast, 0.04825f));
+
+ /* Drift is still bounded and invalid state/timing remains finite. */
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.2f, 1.0f, 1.0f, 1, 1.0f),
+     0.085f));
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         NAN, NAN, NAN, 1, 1.0f),
+     0.0f));
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.05f, 1.0f, 0.5f, 1, NAN),
+     0.05f));
+}
+
 static void steering_inertia_tests(void) {
  /* Neutral input leaves zero lateral velocity at zero. */
  assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 0.0f, 0.0f), 0.0f));
@@ -493,9 +619,9 @@ static void invalid_scaled_frame_tests(void) {
 }
 
 int main(void) {
- non_finite_physics_state_tests();
  finite_clamp_tests();
  frame_scale_tests();
+ non_finite_physics_state_tests();
  invalid_scaled_frame_tests();
  cadence_consistency_tests();
  speed_tests();
@@ -503,10 +629,13 @@ int main(void) {
  boost_overheat_tests();
  lap_clock_tests();
  steering_input_tests();
+ pitch_tradeoff_tests();
+ slide_drift_tests();
  steering_inertia_tests();
  lap_tests();
  three_lap_finish_tests();
  distance_progression_tests();
+ track_scroll_tests();
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();

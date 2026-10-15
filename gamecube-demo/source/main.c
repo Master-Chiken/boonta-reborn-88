@@ -52,19 +52,22 @@ static float g_lap_seconds;
 static float g_last_lap_seconds;
 static float g_best_lap_seconds;
 static float g_speed;
+static float g_pitch_down;
 static float g_player_lateral;
 static float g_lateral_velocity;
 static float g_boost = 1.0f;
 static float g_engine_heat;
 static int g_boost_overheated;
 static int g_boost_active;
+static int g_slide_active;
 static float g_rival_z[BOONTA_RIVAL_COUNT];
 static float g_rival_lateral[BOONTA_RIVAL_COUNT];
 static unsigned int g_overtake_count;
 static int g_paused;
 static int g_race_finished;
 
-static const GXColor C_GROUND = { 23, 48, 40, 255 };
+static const GXColor C_GROUND = { 133, 98, 60, 255 };
+static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
 static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
@@ -77,6 +80,13 @@ static const GXColor C_POD_SIDE = { 17, 75, 139, 255 };
 static const GXColor C_POD_ACCENT = { 70, 231, 248, 255 };
 static const GXColor C_THRUST = { 255, 132, 45, 255 };
 static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
+static const GXColor C_EXHAUST_CORE = { 255, 244, 190, 255 };
+static const GXColor C_TETHER = { 20, 43, 66, 255 };
+static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
+static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
+static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
+static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
+static const GXColor C_CANYON_SUNLIT = { 205, 145, 82, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -86,6 +96,8 @@ static const u8 g_font5x7[128][7] = {
     ['6'] = {14,16,16,30,17,17,14}, ['7'] = {31,1,2,4,8,8,8},
     ['8'] = {14,17,17,14,17,17,14}, ['9'] = {14,17,17,15,1,1,14},
     ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
+    ['C'] = {14,17,16,16,16,17,14}, ['D'] = {30,17,17,17,17,17,30},
+    ['H'] = {17,17,17,31,17,17,17},
     ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
     ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
     ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
@@ -102,7 +114,12 @@ static float clampf_local(float value, float low, float high)
 
 static float road_center_at(float z, float distance)
 {
-    const float phase = z + distance * 1.15f;
+    /*
+     * z is camera-relative (negative ahead of the pod). Converting it to a
+     * progressing track coordinate keeps a given piece of road stable while
+     * it advances toward the camera instead of deforming in place.
+     */
+    const float phase = boonta_track_phase(distance, z);
     return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
 }
 
@@ -165,6 +182,9 @@ static void box_add(float cx, float cy, float cz,
 static void add_road(void)
 {
     unsigned int i;
+    const float segment_length = 2.8f;
+    const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
+    const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
     const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
@@ -172,13 +192,14 @@ static void add_road(void)
     quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
-        const float z0 = 4.0f - (float)i * 2.8f;
-        const float z1 = z0 - 2.8f;
+        const unsigned int section_phase = i + passed_sections;
+        const float z0 = 4.0f + road_scroll - (float)i * segment_length;
+        const float z1 = z0 - segment_length;
         const float c0 = road_center_at(z0, g_distance);
         const float c1 = road_center_at(z1, g_distance);
         const float w = ROAD_HALF_WIDTH;
-        const GXColor road = ((i & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
-        const GXColor rail = ((i & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
+        const GXColor road = ((section_phase & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
+        const GXColor rail = ((section_phase & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
 
         quad_add((Point3){ c0 - w, ROAD_Y, z0 },
                  (Point3){ c0 + w, ROAD_Y, z0 },
@@ -205,7 +226,7 @@ static void add_road(void)
                  (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 },
                  (Point3){ c1 + w + 0.28f, ROAD_Y + 0.02f, z1 }, rail);
 
-        if ((i % 2U) == 0U) {
+        if ((section_phase % 2U) == 0U) {
             const float mark_z0 = z0 - 0.35f;
             const float mark_z1 = z0 - 1.35f;
             const float mc0 = road_center_at(mark_z0, g_distance);
@@ -219,8 +240,8 @@ static void add_road(void)
 
     /* A repeating start/finish stripe gives the endless prototype a lap cue. */
     {
-        const float offset = fmodf(g_distance, RACE_LAP_DISTANCE);
-        const float finish_z = 4.0f - offset;
+        const float offset = boonta_track_scroll_offset(g_distance, RACE_LAP_DISTANCE);
+        const float finish_z = offset - RACE_LAP_DISTANCE;
         if (finish_z > -108.0f && finish_z < 4.0f) {
             const float c0 = road_center_at(finish_z, g_distance);
             const float c1 = road_center_at(finish_z - 0.55f, g_distance);
@@ -234,16 +255,105 @@ static void add_road(void)
     }
 }
 
+
+/*
+ * Original low-poly canyon walls give the test road a readable world silhouette.
+ * The panels are deliberately simple, stable geometry rather than extracted game art.
+ * Their bases sit just above the desert floor and remain outside the track rails.
+ */
+static void add_canyon_scenery(void)
+{
+    const float base_y = ROAD_Y - 0.11f;
+    const float base_offset = ROAD_HALF_WIDTH + 5.0f;
+    const float wall_length = 10.0f;
+    const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
+    const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
+    unsigned int i;
+
+    for (i = 0U; i < 9U; ++i) {
+        const unsigned int wall_phase = i + passed_wall_sections;
+        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        const float z_far = z_near - wall_length;
+        const float center_near = road_center_at(z_near, g_distance);
+        const float center_far = road_center_at(z_far, g_distance);
+        const float near_height = 2.5f + (float)(wall_phase % 4U) * 0.85f;
+        const float far_height = 2.5f + (float)((wall_phase + 1U) % 4U) * 0.85f;
+        const float near_top_offset = base_offset + 1.6f + (float)(wall_phase % 2U) * 0.8f;
+        const float far_top_offset = base_offset + 1.6f + (float)((wall_phase + 1U) % 2U) * 0.8f;
+        unsigned int side_index;
+
+        for (side_index = 0U; side_index < 2U; ++side_index) {
+            const float side = side_index == 0U ? -1.0f : 1.0f;
+            const Point3 base_near = {
+                center_near + side * base_offset, base_y, z_near
+            };
+            const Point3 top_near = {
+                center_near + side * near_top_offset, base_y + near_height, z_near
+            };
+            const Point3 base_far = {
+                center_far + side * base_offset, base_y, z_far
+            };
+            const Point3 top_far = {
+                center_far + side * far_top_offset, base_y + far_height, z_far
+            };
+            GXColor face;
+            GXColor facet;
+
+            if (((wall_phase + side_index) & 1U) == 0U) {
+                face = C_CANYON_MID;
+            } else {
+                face = C_CANYON_DARK;
+            }
+            if (((wall_phase + side_index) % 3U) == 0U) {
+                facet = C_CANYON_SUNLIT;
+            } else {
+                facet = C_CANYON_LIGHT;
+            }
+
+            /* Phase-stable faceted walls now advance with the course. */
+            triangle_add(base_near, top_near, top_far, face);
+            triangle_add(base_near, top_far, base_far, facet);
+        }
+    }
+}
 static void add_player_pod(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
+    const float engine_offset = 0.82f;
+    const float flame_length = 0.22f + 0.55f * g_speed + (g_boost_active ? 0.55f : 0.0f);
 
-    /* Paired engine pods, rear thrusters and a central tapered-looking nose. */
-    box_add(center - 0.62f, -0.62f, 1.08f,
-            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center + 0.62f, -0.62f, 1.08f,
-            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center, -0.49f, 0.63f, 0.54f, 0.09f, 0.18f,
+    /*
+     * Twin engines need to read as two separate masses connected to a cockpit,
+     * rather than one blue block. Draw the narrow clean-room tether strips first
+     * so their anchors disappear naturally beneath the engine nacelles.
+     */
+    quad_add((Point3){ center - 0.51f, -0.41f, 0.25f },
+             (Point3){ center - 0.48f, -0.61f, 0.25f },
+             (Point3){ center - 0.16f, -0.51f, -0.38f },
+             (Point3){ center - 0.21f, -0.40f, -0.38f }, C_TETHER);
+    quad_add((Point3){ center + 0.48f, -0.61f, 0.25f },
+             (Point3){ center + 0.51f, -0.41f, 0.25f },
+             (Point3){ center + 0.21f, -0.40f, -0.38f },
+             (Point3){ center + 0.16f, -0.51f, -0.38f }, C_TETHER);
+    quad_add((Point3){ center - 0.49f, -0.43f, 0.23f },
+             (Point3){ center - 0.48f, -0.48f, 0.23f },
+             (Point3){ center - 0.20f, -0.43f, -0.36f },
+             (Point3){ center - 0.21f, -0.40f, -0.36f }, C_TETHER_HIGHLIGHT);
+    quad_add((Point3){ center + 0.48f, -0.48f, 0.23f },
+             (Point3){ center + 0.49f, -0.43f, 0.23f },
+             (Point3){ center + 0.21f, -0.40f, -0.36f },
+             (Point3){ center + 0.20f, -0.43f, -0.36f }, C_TETHER_HIGHLIGHT);
+
+    /* Longer, wider-spaced nacelles give the racer a stronger twin-engine silhouette. */
+    box_add(center - engine_offset, -0.62f, 1.08f,
+            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+    box_add(center + engine_offset, -0.62f, 1.08f,
+            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+
+    /* Central body and raised canopy keep the cockpit visually separate from the engines. */
+    box_add(center, -0.49f, 0.23f, 0.35f, 0.09f, 0.20f,
+            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
+    box_add(center, -0.34f, -0.12f, 0.22f, 0.11f, 0.24f,
             C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
 
     triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
@@ -256,12 +366,33 @@ static void add_player_pod(void)
                  (Point3){ center + 0.08f, -0.45f, -0.40f },
                  (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
 
+    /*
+     * Exhaust length follows speed, with an additional boost plume. This is
+     * intentionally simple original geometry, but its state is now readable
+     * in the scene instead of only in the HUD meters.
+     */
     if (g_speed > 0.12f) {
-        const GXColor thrust = (g_boost_active || g_speed > 0.70f) ? C_THRUST_HOT : C_THRUST;
-        box_add(center - 0.62f, -0.62f, 2.10f,
-                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
-        box_add(center + 0.62f, -0.62f, 2.10f,
-                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
+        const GXColor thrust = (g_boost_active || g_speed > 0.70f)
+            ? C_THRUST_HOT : C_THRUST;
+        const float exhaust_end = 1.93f + flame_length;
+        box_add(center - engine_offset, -0.62f, 1.93f + flame_length * 0.5f,
+                0.15f, 0.14f, flame_length * 0.5f,
+                thrust, C_THRUST, C_THRUST);
+        box_add(center + engine_offset, -0.62f, 1.93f + flame_length * 0.5f,
+                0.15f, 0.14f, flame_length * 0.5f,
+                thrust, C_THRUST, C_THRUST);
+
+        /* Small hot cores sit just behind the plume so boost has a brighter tip. */
+        quad_add((Point3){ center - engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset - 0.065f, -0.56f, exhaust_end + 0.02f },
+                 g_boost_active ? C_EXHAUST_CORE : C_THRUST_HOT);
+        quad_add((Point3){ center + engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset - 0.065f, -0.56f, exhaust_end + 0.02f },
+                 g_boost_active ? C_EXHAUST_CORE : C_THRUST_HOT);
     }
 }
 
@@ -470,6 +601,21 @@ static void draw_hud(void)
         }
     }
 
+    /* Small pitch gauge: nose-down is right, nose-up is left, neutral is centered. */
+    {
+        const float pitch_center = w - 78.0f;
+        const float pitch_left = pitch_center - 42.0f;
+        const float pitch_right = pitch_center + 42.0f;
+        const float pitch_marker = pitch_center + 35.0f * g_pitch_down;
+        append_screen_quad(pitch_left, 37.0f, pitch_right, 43.0f, 0.5f, dark);
+        append_screen_quad(pitch_center - 1.0f, 36.0f, pitch_center + 1.0f, 44.0f, 0.4f, white);
+        append_screen_quad(pitch_marker - 2.0f, 35.0f, pitch_marker + 2.0f, 45.0f,
+                           0.3f, g_pitch_down > 0.65f ? boost_fill : fill);
+        append_text("PITCH", pitch_left, 46.0f, 1.0f, white);
+        append_text("SLIDE", pitch_left, 56.0f, 1.0f,
+                    g_slide_active ? boost_fill : empty);
+    }
+
     /* Symbolic finish banner: a checkered flag made from original GX quads. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
@@ -542,7 +688,7 @@ static void initialise_video_and_gx(void)
     if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 
     GX_Init(g_gx_fifo, GX_FIFO_SIZE);
-    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
                    (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
     GX_SetScissor(0, 0, g_video_mode->fbWidth, g_video_mode->efbHeight);
@@ -585,14 +731,17 @@ static void draw_frame(void)
     const float center_near = road_center_at(5.5f, g_distance);
     const float center_ahead = road_center_at(-14.0f, g_distance);
     /* Follow the pod laterally; steering moves the course relative to the camera. */
-    guVector camera = { center_near + g_player_lateral, 1.65f, 7.0f };
+    /* Pitch moves the camera target subtly to communicate nose-down/up attitude. */
+    guVector camera = { center_near + g_player_lateral, 1.65f - 0.20f * g_pitch_down, 7.0f };
     guVector up = { 0.0f, 1.0f, 0.0f };
-    guVector target = { center_ahead + g_player_lateral, -0.85f, -15.0f };
+    guVector target = { center_ahead + g_player_lateral,
+                        -0.85f - 0.45f * g_pitch_down, -15.0f };
     Mtx view;
     Mtx44 projection;
 
     g_vertex_count = 0;
     add_road();
+    add_canyon_scenery();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
@@ -601,7 +750,7 @@ static void draw_frame(void)
     }
     add_player_pod();
 
-    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
@@ -638,6 +787,8 @@ int main(int argc, char **argv)
         u32 buttons_down;
         u32 buttons_held;
         s8 stick_x;
+        s8 stick_y;
+        float pitch_down;
         float steering;
         u64 frame_tick;
         float frame_delta_seconds;
@@ -651,6 +802,7 @@ int main(int argc, char **argv)
         buttons_down = PAD_ButtonsDown(0);
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
+        stick_y = PAD_StickY(0);
         if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
             g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
@@ -662,12 +814,14 @@ int main(int argc, char **argv)
             g_last_lap_seconds = 0.0f;
             g_best_lap_seconds = 0.0f;
             g_player_lateral = 0.0f;
+            g_pitch_down = 0.0f;
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
             g_engine_heat = 0.0f;
             g_boost_overheated = 0;
             g_boost_active = 0;
+            g_slide_active = 0;
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
                 g_rival_lateral[rival_index] = 0.0f;
@@ -679,6 +833,7 @@ int main(int argc, char **argv)
 
         if (g_paused || g_race_finished) {
             g_boost_active = 0;
+            g_slide_active = 0;
             draw_frame();
             continue;
         }
@@ -695,10 +850,16 @@ int main(int argc, char **argv)
         g_boost_overheated = boonta_boost_overheated_after_frame(
             g_boost_overheated, g_engine_heat);
 
-        steering = boonta_steering_input(
-            (float)stick_x,
-            (buttons_held & PAD_BUTTON_LEFT) != 0U,
-            (buttons_held & PAD_BUTTON_RIGHT) != 0U);
+        /* Up/forward on the analog stick pitches down; down pitches up. */
+        pitch_down = boonta_pitch_input((float)stick_y);
+        g_pitch_down = pitch_down;
+        g_slide_active = (buttons_held & PAD_TRIGGER_L) != 0U;
+        steering = boonta_steering_after_pitch(
+            boonta_steering_input(
+                (float)stick_x,
+                (buttons_held & PAD_BUTTON_LEFT) != 0U,
+                (buttons_held & PAD_BUTTON_RIGHT) != 0U),
+            pitch_down);
 
         g_speed = boonta_speed_after_input_scaled(
             g_speed,
@@ -707,8 +868,8 @@ int main(int argc, char **argv)
             frame_scale);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
-        g_lateral_velocity = boonta_lateral_velocity_after_steering_scaled(
-            g_lateral_velocity, steering, g_speed, frame_scale);
+        g_lateral_velocity = boonta_lateral_velocity_after_steering_slide_scaled(
+            g_lateral_velocity, steering, g_speed, g_slide_active, frame_scale);
         g_player_lateral = clampf_local(
             boonta_lateral_position_after_frame(
                 g_player_lateral, g_lateral_velocity, frame_scale),
@@ -723,7 +884,7 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             const unsigned int previous_laps = g_lap_count;
-            g_distance = boonta_distance_after_frame_scaled(g_distance, g_speed, g_boost_active, frame_scale);
+            g_distance = boonta_distance_after_pitch_scaled(g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
             if (g_lap_count > previous_laps) {

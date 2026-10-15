@@ -19,6 +19,18 @@ from make_dolphin_dtm import (
     build_dtm,
 )
 
+# Pillow is installed in the opt-in Dolphin visual job but isn't required for
+# the lightweight host DTM protocol tests.
+try:
+    from PIL import Image, ImageDraw
+    from check_dolphin_frame import finish_banner_visible, player_pod_bounds, road_center_from_asphalt
+except ImportError:
+    Image = None
+    ImageDraw = None
+    finish_banner_visible = None
+    player_pod_bounds = None
+    road_center_from_asphalt = None
+
 
 def record(blob: bytes, frame: int) -> bytes:
     start = HEADER_SIZE + frame * 8
@@ -86,6 +98,104 @@ class DolphinDtmTests(unittest.TestCase):
             with self.subTest(frame=frame):
                 self.assertFalse(record(neutral_blob, frame)[1] & DPAD_LEFT)
                 self.assertFalse(record(neutral_blob, frame)[1] & DPAD_RIGHT)
+
+    def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
+        frames = 6000
+        blob = build_dtm(frames, steering="none", scenario="full-race")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+        self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
+
+        for frame in (0, 1, 79, 80, 219, 220, 280, 3599, 5999):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertTrue(state[0] & A)
+                self.assertFalse(state[0] & (B | START))
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+                self.assertEqual(bool(state[0] & Y), frame == 0)
+                self.assertEqual(bool(state[0] & X), 1 <= frame < 80)
+
+    def test_full_race_profile_rejects_directional_steering(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(10, steering="right", scenario="full-race")
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or road_center_from_asphalt is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_asphalt_center_estimator_is_independent_of_desert_ground_color(self) -> None:
+        image = Image.new("RGB", (800, 480), (133, 98, 60))
+        draw = ImageDraw.Draw(image)
+        y0, y1 = int(480 * 0.52), int(480 * 0.60) - 1
+        draw.rectangle((300, y0, 500, y1), fill=(37, 43, 59))
+        center, rows = road_center_from_asphalt(image)
+        self.assertAlmostEqual(center, 400.0)
+        self.assertGreaterEqual(rows, 10)
+
+        shifted = Image.new("RGB", (800, 480), (133, 98, 60))
+        shifted_draw = ImageDraw.Draw(shifted)
+        shifted_draw.rectangle((260, y0, 460, y1), fill=(45, 51, 67))
+        shifted_center, shifted_rows = road_center_from_asphalt(shifted)
+        self.assertAlmostEqual(shifted_center, 360.0)
+        self.assertGreaterEqual(shifted_rows, 10)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or player_pod_bounds is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_pod_bounds_ignore_sparse_color_outliers_but_reject_real_clipping(self) -> None:
+        cyan = (33, 164, 220)
+        image = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((310, 350, 370, 400), fill=cyan)
+        draw.rectangle((470, 350, 540, 400), fill=cyan)
+        # A couple of unrelated background pixels should not make the pod look
+        # clipped, but their color is intentionally identical to the pod mask.
+        image.putpixel((116, 350), cyan)
+        image.putpixel((799, 350), cyan)
+
+        center, left, right, pixel_count = player_pod_bounds(image)
+        self.assertGreater(center, 400.0)
+        self.assertLess(center, 450.0)
+        self.assertGreater(left, 300)
+        self.assertLess(left, 325)
+        self.assertGreater(right, 525)
+        self.assertLess(right, 550)
+        self.assertGreater(pixel_count, 6000)
+
+        clipped = Image.new("RGB", (800, 480), (105, 170, 225))
+        clipped_draw = ImageDraw.Draw(clipped)
+        clipped_draw.rectangle((310, 350, 370, 400), fill=cyan)
+        clipped_draw.rectangle((470, 350, 540, 400), fill=cyan)
+        clipped_draw.rectangle((0, 350, 40, 400), fill=cyan)
+        with self.assertRaises(ValueError):
+            player_pod_bounds(clipped)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or finish_banner_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_finish_detector_requires_the_centered_checkerboard(self) -> None:
+        image = Image.new("RGB", (800, 480), (8, 18, 30))
+        draw = ImageDraw.Draw(image)
+        cx, cy, tile_w, tile_h = 400.0, 280.0, 17.5, 11.7
+        left, top = cx - 2 * tile_w, cy - 1.5 * tile_h
+        for row in range(3):
+            for col in range(4):
+                color = (238, 246, 255) if (row + col) % 2 == 0 else (12, 18, 27)
+                x0 = round(left + col * tile_w)
+                y0 = round(top + row * tile_h)
+                x1 = round(left + (col + 1) * tile_w - 1)
+                y1 = round(top + (row + 1) * tile_h - 1)
+                draw.rectangle((x0, y0, x1, y1), fill=color)
+        self.assertTrue(finish_banner_visible(image))
+
+        pause = Image.new("RGB", (800, 480), (8, 18, 30))
+        pause_draw = ImageDraw.Draw(pause)
+        pause_draw.rectangle((387, 263, 396, 297), fill=(238, 246, 255))
+        pause_draw.rectangle((404, 263, 413, 297), fill=(238, 246, 255))
+        self.assertFalse(finish_banner_visible(pause))
 
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")

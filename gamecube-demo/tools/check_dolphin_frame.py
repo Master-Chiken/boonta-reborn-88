@@ -13,13 +13,22 @@ def scene_signatures(image: Image.Image) -> dict[str, int]:
     return {
         "cyan": sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150),
         "orange": sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135),
-        "ground_green": sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100),
-        "pod_blue": sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120),
+        "ground_sand": sum(1 for r, g, b in pixels if r > 1.15 * g and g > 1.15 * b and r > 70),
+        "pod_blue": sum(
+            1 for r, g, b in pixels
+            if r < 70 and 100 < g < 200 and b > 170 and b > 1.15 * g and b > 2 * r
+        ),
     }
 
 
 def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
-    """Return (horizontal center, left edge, right edge, pixel count) for pod-top pixels."""
+    """Return robust (center, left edge, right edge, pixel count) for pod-top pixels.
+
+    The camera scene can contain a few unrelated pixels with a similar cyan
+    signature. Use trimmed bounds for the pod silhouette, while separately
+    rejecting a meaningful number of mask pixels touching the image border.
+    This avoids false "clipped pod" failures from one-pixel canyon/rail accents.
+    """
     image = image.convert("RGB")
     pod_x = []
     # The player's bright cyan top is approximately C_POD_TOP = (33, 164, 220).
@@ -31,46 +40,61 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
             r, g, b = image.getpixel((x, y))
             if r < 70 and 100 < g < 200 and b > 170 and b > g * 1.15 and b > r * 2:
                 pod_x.append(x)
-    if len(pod_x) < 50:
+    pixel_count = len(pod_x)
+    if pixel_count < 50:
         raise ValueError(
-            f"No stable player-pod surface pixels in lower viewport; found {len(pod_x)}."
+            f"No stable player-pod surface pixels in lower viewport; found {pixel_count}."
         )
-    return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
+
+    border_hits = sum(1 for x in pod_x if x <= 1 or x >= image.width - 2)
+    border_limit = max(3, int(pixel_count * 0.01))
+    if border_hits > border_limit:
+        raise ValueError(
+            f"Player pod may be clipped: {border_hits} matching pixels touch the frame border "
+            f"(limit {border_limit} of {pixel_count})."
+        )
+
+    pod_x.sort()
+    trim = int(pixel_count * 0.02)
+    robust_x = pod_x[trim:pixel_count - trim] if trim else pod_x
+    return sum(robust_x) / len(robust_x), robust_x[0], robust_x[-1], pixel_count
 
 
-def road_center_from_ground_bounds(image: Image.Image) -> tuple[float, int]:
-    """Estimate road center from the green-ground boundaries on both sides."""
+def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
+    """Estimate the road center from its dark blue-grey asphalt, independent of terrain color."""
     image = image.convert("RGB")
     row_centers = []
-    midpoint = image.width // 2
-    # The ground is green (C_GROUND ~= RGB(23, 48, 40)); road asphalt is dark
-    # blue-gray. Use a narrow upper/mid viewport above the player pod and HUD.
     y_start = int(image.height * 0.52)
     y_end = int(image.height * 0.60)
-    for y in range(y_start, y_end):
-        left_ground_edge = None
-        right_ground_edge = None
-        for x in range(image.width):
-            r, g, b = image.getpixel((x, y))
-            if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100:
-                if x < midpoint:
-                    left_ground_edge = x
-                elif right_ground_edge is None:
-                    right_ground_edge = x
-        # A valid row has green ground on each side of the road.
-        if (left_ground_edge is not None and right_ground_edge is not None
-                and right_ground_edge > left_ground_edge):
-            row_centers.append((left_ground_edge + right_ground_edge) / 2.0)
+    pixels = image.load()
 
-    # Ignore isolated HUD/aliasing pixels by aggregating many road rows and
-    # use the median so rivals and small scene details cannot dominate it.
-    if len(row_centers) < 10:
+    for y in range(y_start, y_end):
+        asphalt_x = []
+        for x in range(image.width):
+            r, g, b = pixels[x, y]
+            # Match the two procedural road colors; exclude the warm ground,
+            # cyan rails, orange/red edge strips, and blue sky.
+            if (24 <= r <= 78 and 30 <= g <= 82 and 42 <= b <= 96
+                    and g >= r + 3 and b >= g + 8):
+                asphalt_x.append(x)
+
+        # One asphalt run may contain a narrow lane marker; the outermost
+        # asphalt pixels still give a stable left/right boundary estimate.
+        if len(asphalt_x) >= 8:
+            left_edge = asphalt_x[0]
+            right_edge = asphalt_x[-1]
+            if right_edge - left_edge >= 10:
+                row_centers.append((left_edge + right_edge) / 2.0)
+
+    # At 800x480, Software Renderer anti-aliasing can leave only a handful
+    # of exact asphalt-colored scanlines. Five rows are enough for a median;
+    # the separate >=25 px response gate still rejects weak/no-motion captures.
+    if len(row_centers) < 5:
         raise ValueError(
-            f"Insufficient road-boundary rows in ROI y=[{y_start},{y_end}); "
-            f"found {len(row_centers)}, need 10."
+            f"Insufficient asphalt-boundary rows in ROI y=[{y_start},{y_end}); "
+            f"found {len(row_centers)}, need 5."
         )
     return float(median(row_centers)), len(row_centers)
-
 
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
@@ -108,11 +132,71 @@ def validate_scene(image: Image.Image, label: str) -> None:
         raise SystemExit(f"{label} frame is missing expected scene/craft color signatures; DOL may not have booted.")
 
 
+def finish_banner_visible(image: Image.Image) -> bool:
+    """Detect the demo's centered 4x3 finish-flag checkerboard.
+
+    Dolphin-window captures may include a toolbar, while direct framebuffer
+    captures do not. Search both likely vertical centers and small scale/offset
+    ranges; the alternating pattern distinguishes the finish banner from pause.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    pixels = image.load()
+
+    def white_fraction(x0: float, y0: float, x1: float, y1: float) -> float:
+        left = max(0, int(x0))
+        top = max(0, int(y0))
+        right = min(width, int(x1))
+        bottom = min(height, int(y1))
+        hit = total = 0
+        for y in range(top, bottom):
+            for x in range(left, right):
+                r, g, b = pixels[x, y]
+                total += 1
+                if r > 205 and g > 215 and b > 220:
+                    hit += 1
+        return hit / max(total, 1)
+
+    center_x = width / 2.0
+    center_y_candidates = (height / 2.0, height * 0.5833333333)
+    for tile_width in range(12, 25):
+        for tile_height in range(8, 18):
+            for x_offset in (-6, -3, 0, 3, 6):
+                for center_y_base in center_y_candidates:
+                    for y_offset in (-6, -3, 0, 3, 6):
+                        cx = center_x + x_offset
+                        cy = center_y_base + y_offset
+                        left = cx - 2 * tile_width
+                        top = cy - 1.5 * tile_height
+                        matched = True
+                        for row in range(3):
+                            for col in range(4):
+                                x0 = left + col * tile_width + tile_width * 0.15
+                                x1 = left + (col + 1) * tile_width - tile_width * 0.15
+                                y0 = top + row * tile_height + tile_height * 0.15
+                                y1 = top + (row + 1) * tile_height - tile_height * 0.15
+                                bright = white_fraction(x0, y0, x1, y1)
+                                if (row + col) % 2 == 0:
+                                    if bright < 0.35:
+                                        matched = False
+                                        break
+                                elif bright > 0.15:
+                                    matched = False
+                                    break
+                            if not matched:
+                                break
+                        if matched:
+                            return True
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
-    parser.add_argument("--baseline", required=True, type=Path,
+    parser.add_argument("--baseline", type=Path,
                         help="matching frame rendered with --steering none")
+    parser.add_argument("--expect-finish", action="store_true",
+                        help="check for the three-lap finish flag instead of comparing steering frames")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -122,11 +206,20 @@ def main() -> int:
     parser.add_argument("--min-course-shift", type=float, default=25.0,
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
+    image = Image.open(args.frame).convert("RGB")
+    if args.expect_finish:
+        if args.baseline is not None:
+            parser.error("--expect-finish cannot be combined with --baseline")
+        if not finish_banner_visible(image):
+            raise SystemExit("The centered three-lap finish checkerboard was not detected in the Dolphin capture.")
+        print("Three-lap finish banner detected in the visible Dolphin frame.")
+        return 0
+    if args.baseline is None:
+        parser.error("--baseline is required unless --expect-finish is set")
     direction_label = "Right-input" if args.direction == "right" else "Left-input"
     expected_road_direction = "leftward" if args.direction == "right" else "rightward"
     expected_marker_direction = "rightward" if args.direction == "right" else "leftward"
 
-    image = Image.open(args.frame).convert("RGB")
     baseline = Image.open(args.baseline).convert("RGB")
     if image.size != baseline.size:
         raise SystemExit(f"Frame dimensions differ: steered={image.size}, baseline={baseline.size}")
@@ -148,8 +241,8 @@ def main() -> int:
     if abs(pod_delta_x) > args.max_pod_drift:
         raise SystemExit("Player pod moved too far across the screen; expected the camera to follow it.")
 
-    baseline_road_x, baseline_road_rows = road_center_from_ground_bounds(baseline)
-    steered_road_x, steered_road_rows = road_center_from_ground_bounds(image)
+    baseline_road_x, baseline_road_rows = road_center_from_asphalt(baseline)
+    steered_road_x, steered_road_rows = road_center_from_asphalt(image)
     road_response = (baseline_road_x - steered_road_x
                      if args.direction == "right"
                      else steered_road_x - baseline_road_x)
