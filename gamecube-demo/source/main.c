@@ -41,6 +41,7 @@ static u16 g_vertex_count;
 static float g_distance;
 static float g_speed;
 static float g_player_lateral;
+static float g_lateral_velocity;
 static float g_boost = 1.0f;
 static int g_boost_active;
 
@@ -405,6 +406,7 @@ int main(int argc, char **argv)
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
             g_player_lateral = 0.0f;
+            g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
         }
@@ -425,10 +427,20 @@ int main(int argc, char **argv)
         if ((buttons_held & PAD_BUTTON_B) != 0U) g_speed -= 0.022f;
         g_speed = clampf_local(g_speed, 0.0f, 1.0f);
 
-        g_player_lateral += steering * (0.025f + g_speed * 0.04f);
-        g_player_lateral = clampf_local(g_player_lateral, -4.2f, 4.2f);
-        if (fabsf(g_player_lateral) > 3.3f) {
-            g_speed = clampf_local(g_speed - 0.018f, 0.0f, 1.0f);
+        /* Steering has inertia: quick direction changes need a moment to settle. */
+        g_lateral_velocity += steering * (0.0018f + g_speed * 0.0030f);
+        g_lateral_velocity *= 0.92f;
+        g_lateral_velocity = clampf_local(g_lateral_velocity, -0.085f, 0.085f);
+        g_player_lateral += g_lateral_velocity;
+
+        /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
+        if (fabsf(g_player_lateral) > 3.15f) {
+            const float excess = fabsf(g_player_lateral) - 3.15f;
+            g_speed = clampf_local(g_speed - (0.008f + excess * 0.012f), 0.0f, 1.0f);
+        }
+        if (fabsf(g_player_lateral) > 3.85f) {
+            g_player_lateral = (g_player_lateral < 0.0f) ? -3.85f : 3.85f;
+            g_lateral_velocity *= -0.35f;
         }
         g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
 
