@@ -45,6 +45,12 @@ This proves that a visible prototype scene renders in the CI Dolphin Software Re
 
 The remaining acceptance checks are interactive steering, acceleration/braking, boost and overheat cooldown, pause/resume (the clocks should freeze), reset (all clocks should return to zero), completion of a three-lap run with current/best lap timing, and longer-session stability. A screenshot or headless process smoke cannot verify controller response or race completion. Physical GameCube/Wii behavior is also unverified. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
 
+## Optional full-race CI diagnostic
+
+For a longer free GitHub Actions check, open **Actions → GameCube first-render prototype build → Run workflow** and enable `full_race_diagnostic`. This uses a deterministic 6,000-frame neutral-steering DTM movie, launches the current DOL in Dolphin's Software Renderer, and checks the captured frame for the prototype's centered three-lap finish flag. The movie, log and screenshot are retained in the workflow artifact for seven days.
+
+The normal push/PR pipeline leaves this option disabled to keep routine CI fast and reduce free Actions-minute usage. The finish-banner check shows that the tested build reached and rendered the prototype's finish state under this scripted emulator run; it is not a substitute for live-controller, long-session or physical GameCube/Wii validation.
+
 ## Source boundary
 
 The C source and geometry here are original procedural scaffolding created for this repository. Do not add Step 102 source, third-party mod data, or commercial game content to this folder unless provenance and redistribution rights are separately cleared.
