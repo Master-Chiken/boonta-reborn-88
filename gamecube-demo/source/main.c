@@ -255,7 +255,7 @@ static void draw_hud(void)
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
-    append_screen_quad(bar_left - 8.0f, bar_bottom - 16.0f,
+    append_screen_quad(bar_left - 8.0f, bar_bottom - 34.0f,
                        bar_left + bar_width + 8.0f, bar_bottom + 4.0f,
                        0.5f, dark);
     append_screen_quad(bar_left, bar_bottom - 12.0f,
