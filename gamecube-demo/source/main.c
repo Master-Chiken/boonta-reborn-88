@@ -21,6 +21,7 @@
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define RACE_LAP_DISTANCE   120.0f
+#define LAP_INDICATOR_COUNT  5U
 #define ROAD_Y             (-1.05f)
 #define PI_F               3.14159265358979323846f
 
@@ -40,6 +41,7 @@ static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
 static float g_distance;
+static unsigned int g_lap_count;
 static float g_speed;
 static float g_player_lateral;
 static float g_lateral_velocity;
@@ -262,6 +264,7 @@ static void draw_hud(void)
     const GXColor fill = { 64, 220, 243, 255 };
     const GXColor boost_fill = { 255, 157, 61, 255 };
     const GXColor progress_fill = { 137, 241, 154, 255 };
+    const GXColor lap_done = { 137, 241, 154, 255 };
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
@@ -275,7 +278,7 @@ static void draw_hud(void)
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
-    append_screen_quad(bar_left - 8.0f, bar_bottom - 46.0f,
+    append_screen_quad(bar_left - 8.0f, bar_bottom - 62.0f,
                        bar_left + bar_width + 8.0f, bar_bottom + 4.0f,
                        0.5f, dark);
     append_screen_quad(bar_left, bar_bottom - 12.0f,
@@ -296,6 +299,19 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 42.0f,
                        bar_left + bar_width * lap_progress, bar_bottom - 34.0f,
                        0.3f, progress_fill);
+    /* Five lap markers light up as full laps are completed. */
+    {
+        unsigned int i;
+        const float marker_gap = 4.0f;
+        const float marker_width = (bar_width - marker_gap * (LAP_INDICATOR_COUNT - 1U)) / (float)LAP_INDICATOR_COUNT;
+        for (i = 0; i < LAP_INDICATOR_COUNT; ++i) {
+            const float left = bar_left + (marker_width + marker_gap) * (float)i;
+            const GXColor marker = (i < g_lap_count) ? lap_done : empty;
+            append_screen_quad(left, bar_bottom - 58.0f,
+                               left + marker_width, bar_bottom - 50.0f,
+                               0.3f, marker);
+        }
+    }
 
     /* A centered steering tick gives immediate visual feedback without text. */
     {
@@ -430,6 +446,7 @@ int main(int argc, char **argv)
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
+            g_lap_count = 0U;
             g_player_lateral = 0.0f;
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
@@ -467,7 +484,14 @@ int main(int argc, char **argv)
             g_player_lateral = (g_player_lateral < 0.0f) ? -3.85f : 3.85f;
             g_lateral_velocity *= -0.35f;
         }
-        g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+        {
+            const float previous_distance = g_distance;
+            g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+            if ((unsigned int)(g_distance / RACE_LAP_DISTANCE) >
+                (unsigned int)(previous_distance / RACE_LAP_DISTANCE)) {
+                ++g_lap_count;
+            }
+        }
 
         draw_frame();
     }
