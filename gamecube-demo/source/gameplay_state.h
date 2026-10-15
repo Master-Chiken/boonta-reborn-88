@@ -103,8 +103,15 @@ static inline float boonta_distance_after_frame(float distance, float speed, int
 
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
 {
-    if (lap_distance <= 0.0f || previous_distance < 0.0f || current_distance < previous_distance) return 0;
-    return (unsigned int)(current_distance / lap_distance) > (unsigned int)(previous_distance / lap_distance);
+    /* Reject NaN/infinity before float-to-unsigned conversion (undefined behavior
+     * for non-finite or out-of-range values). A corrupt frame must not invent laps. */
+    if (!isfinite(previous_distance) || !isfinite(current_distance) ||
+        !isfinite(lap_distance) || lap_distance <= 0.0f ||
+        previous_distance < 0.0f || current_distance < previous_distance) {
+        return 0;
+    }
+    return floorf(current_distance / lap_distance) >
+           floorf(previous_distance / lap_distance);
 }
 
 static inline unsigned int boonta_lap_count_after_frame(unsigned int lap_count,
