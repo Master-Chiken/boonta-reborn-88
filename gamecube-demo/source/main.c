@@ -97,6 +97,7 @@ static const u8 g_font5x7[128][7] = {
 
 static float clampf_local(float value, float low, float high)
 {
+    if (!isfinite(value)) return 0.0f;
     if (value < low) return low;
     if (value > high) return high;
     return value;
@@ -363,7 +364,7 @@ static void draw_hud(void)
     Mtx identity;
     Mtx44 ortho;
     char time_text[20];
-    char lap_text[24];
+    char lap_text[40];
     char best_text[20];
     unsigned int lap_display;
     const float w = (float)g_video_mode->fbWidth;
@@ -751,8 +752,10 @@ int main(int argc, char **argv)
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);
-                    g_lateral_velocity += boonta_rival_contact_nudge(
-                        g_player_lateral, g_rival_lateral[rival_index]);
+                    g_lateral_velocity = clampf_local(
+                        g_lateral_velocity + boonta_rival_contact_nudge(
+                            g_player_lateral, g_rival_lateral[rival_index]),
+                        -0.085f, 0.085f);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
                     ++g_overtake_count;
