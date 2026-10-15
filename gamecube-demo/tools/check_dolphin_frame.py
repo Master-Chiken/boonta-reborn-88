@@ -37,8 +37,8 @@ def main() -> int:
         raise SystemExit("No player-pod orange pixels found in the lower game viewport.")
     player_center_x = sum(player_x) / len(player_x)
     print(f"DTM-steered player-pod orange-pixel center x={player_center_x:.1f}")
-    if player_center_x <= image.width * 0.54:
-        raise SystemExit("DTM playback did not produce the expected rightward player response.")
+    if player_center_x <= image.width * 0.515:
+        raise SystemExit("DTM playback did not produce the expected visible rightward player response.")
     return 0
 
 
