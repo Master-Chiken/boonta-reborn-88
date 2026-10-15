@@ -6,6 +6,15 @@
 #define BOONTA_RIVAL_COUNT 3U
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 
+/* Clamp finite simulation state; recover NaN/infinity without propagating it. */
+static inline float boonta_clamp_finite_float(float value, float low, float high)
+{
+    if (!isfinite(value)) return 0.0f;
+    if (value < low) return low;
+    if (value > high) return high;
+    return value;
+}
+
 /* Preserve 60 Hz tuning, compensate PAL/NTSC cadence and cap long stalls. */
 static inline float boonta_frame_scale_from_delta(float delta_seconds)
 {
