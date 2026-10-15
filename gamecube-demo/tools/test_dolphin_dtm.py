@@ -68,6 +68,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(record(right_blob, 30)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 30)[1] & DPAD_LEFT)
         self.assertTrue(record(right_blob, 100)[1] & DPAD_RIGHT)
+        self.assertEqual(record(right_blob, 100)[4:], bytes((128,) * 4))
         self.assertTrue(record(right_blob, STEERING_HOLD_FRAMES - 1)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, STEERING_HOLD_FRAMES)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 2020)[1] & DPAD_LEFT)
@@ -75,6 +76,7 @@ class DolphinDtmTests(unittest.TestCase):
 
         left_blob = build_dtm(3600, steering="left")
         self.assertTrue(record(left_blob, 30)[1] & DPAD_LEFT)
+        self.assertEqual(record(left_blob, 30)[4:], bytes((128,) * 4))
         self.assertFalse(record(left_blob, 30)[1] & DPAD_RIGHT)
         self.assertFalse(record(left_blob, STEERING_HOLD_FRAMES)[1] & DPAD_LEFT)
 
@@ -83,6 +85,7 @@ class DolphinDtmTests(unittest.TestCase):
             with self.subTest(frame=frame):
                 self.assertFalse(record(neutral_blob, frame)[1] & DPAD_LEFT)
                 self.assertFalse(record(neutral_blob, frame)[1] & DPAD_RIGHT)
+                self.assertEqual(record(neutral_blob, frame)[4:], bytes((128,) * 4))
 
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")
