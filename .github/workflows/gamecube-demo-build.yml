@@ -211,6 +211,12 @@ jobs:
               set -euo pipefail
               flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
                 --video_backend="Software Renderer" \
+                --config=Logger.Options.WriteToFile=True \
+                --config=Logger.Options.WriteToConsole=True \
+                --config=Logger.Options.Verbosity=2 \
+                --config=Logger.Logs.BOOT=True \
+                --config=Logger.Logs.CORE=True \
+                --config=Logger.Logs.Video=True \
                 --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
               emu_pid=$!
               cleanup() {
