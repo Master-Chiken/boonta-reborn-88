@@ -178,8 +178,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
