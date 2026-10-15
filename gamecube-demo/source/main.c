@@ -907,9 +907,11 @@ static void draw_frame(void)
     Point3 camera_point;
     Point3 target_point;
     /* Position and aim are sampled from the same world-space spline as the mesh. */
+    /* Raise the chase camera and shorten look-ahead so the craft stays in view
+     * through the tight curvature of the test oval instead of collapsing to the horizon. */
     track_world_point_at(g_distance - 3.0f, g_player_lateral,
-                         1.65f - 0.20f * g_pitch_down, &camera_point);
-    track_world_point_at(g_distance + 19.0f, g_player_lateral,
+                         2.70f - 0.20f * g_pitch_down, &camera_point);
+    track_world_point_at(g_distance + 12.0f, g_player_lateral,
                          0.20f - 0.45f * g_pitch_down, &target_point);
     guVector camera = { camera_point.x, camera_point.y, camera_point.z };
     guVector up = { 0.0f, 1.0f, 0.0f };
