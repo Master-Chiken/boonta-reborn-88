@@ -8,12 +8,12 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A procedural scrolling curved road with edge strips and barrier rails.
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
-- A clean-room procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
+- Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
-This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, a full physics model, and multi-rival race logic are not implemented.
+This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and a full physics model are not implemented.
 
 ## Controls
 
