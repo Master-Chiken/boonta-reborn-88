@@ -142,7 +142,7 @@ static inline float boonta_lateral_velocity_after_steering_scaled(float lateral_
                                                                     float frame_scale)
 {
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
-    lateral_velocity += * (0.0018f + speed * 0.0030f) * frame_scale;
+    lateral_velocity += steering * (0.0018f + speed * 0.0030f) * frame_scale;
     lateral_velocity *= powf(0.92f, frame_scale);
     if (lateral_velocity < -0.085f) return -0.085f;
     if (lateral_velocity > 0.085f) return 0.085f;
