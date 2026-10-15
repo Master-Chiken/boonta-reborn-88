@@ -36,6 +36,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(blob[0x0C], 0)  # starts from boot, not savestate
         self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
         self.assertEqual(struct.unpack_from("<Q", blob, 0x15)[0], frames)
+        self.assertEqual(struct.unpack_from("<Q", blob, 0xED)[0], frames * 10_000_000)
         self.assertEqual(blob[0x89], 0)  # do not import movie settings
 
     def test_known_start_boost_brake_and_pause_resume_presses(self) -> None:
