@@ -11,13 +11,13 @@ This repository contains two distinct tracks that must not be confused:
 
 - **Primary target:** native GameCube/Wii homebrew.
 - **Current verified technical milestone:** `gamecube-demo/` produces a non-empty `boonta_gc_demo.dol` and `boonta_gc_demo.elf` with devkitPPC/libogc. See [the build status report](docs/GAMECUBE_FIRST_RENDER_STATUS.md).
-- **Runtime status:** a successful compile and valid DOL/ELF structure do not prove that the game boots, renders visibly, or responds correctly to a controller. The runtime checklist remains open until those checks are performed and recorded.
+- **Runtime status:** a 12-second Dolphin process smoke test with the null video backend now passes in CI ([run #49](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38722692467)). This confirms the DOL process stayed active, not that the game rendered visibly, accepted controller input, or completed a race. Those runtime checks remain open.
 - **Fuller gameplay baseline:** the Step 102 archive describes course/pod presets, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, race modes, HUD, and save/progression scaffolding. Treat those as archive-described scope, not as features verified in the clean-room demo.
 
 ## Current next milestones
 
 1. Run the clean-room DOL in a visible Dolphin session or on suitable hardware and record emulator/version, video backend, visible scene, and controller results.
-2. Add reproducible host-side tests for gameplay state transitions (pause/resume, reset, lap timing, collision/overtake edge cases) wherever the logic can be separated from GX rendering.
+2. Extend the host-side state tests to cover collision/overtake edge cases and frame/lap interactions; pause, speed, boost-meter and lap-boundary transitions are already covered.
 3. Establish a compact playable vertical slice: one course, controllable pod, camera follow, track collision, and stable frame timing.
 4. Continue the Step 102 source and license audit independently. Import only source/data whose authorship and redistribution rights are clear.
 5. Keep compile, headless process smoke tests, visible rendering, controller input, and a completed race as separate acceptance gates.

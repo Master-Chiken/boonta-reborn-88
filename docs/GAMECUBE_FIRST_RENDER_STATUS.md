@@ -1,6 +1,6 @@
 # GameCube first-render build status
 
-Date: 2026-10-14
+Last updated: 2026-10-15
 
 ## Verified by GitHub Actions
 
@@ -23,6 +23,19 @@ ELF SHA-256: `a42cf06c5b7b9e8b93e1e5336d60bad93cfbde87d440409651251ed78116bf56`
 This is the first confirmed native GameCube DOL build in this repository's new clean-room demonstration path. It verifies that the sample can compile and link with devkitPPC/libogc, that a non-empty DOL/ELF is produced, and that the basic DOL/ELF structures satisfy the repository's artifact validator.
 
 It does **not** verify that Dolphin or a console boots the DOL, that GX output is visible, or that controller behavior works in runtime. No Dolphin executable was available in the build-inspection environment, so runtime testing remains **NOT RUN**. The successful GitHub artifact is available until 2026-10-21 (seven-day retention).
+
+## Latest headless Dolphin smoke test (2026-10-15)
+
+- Workflow: [GameCube first-render prototype build — PR #49 run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38722692467)
+- Source/PR: [PR #49](https://github.com/Master-Chiken/boonta-reborn-88/pull/49), merged to `main` as `5acd893c0c618f746f16cb6a0af388ecd128637d`.
+- Host gameplay-state tests: **success** (speed input, boost activation/energy bounds, lap-boundary crossing).
+- Host pause/reset tests: **success**.
+- Native devkitPPC/libogc DOL/ELF build: **success**.
+- DOL/ELF structure validation: **success**.
+- Dolphin process smoke: **success**; Dolphin remained active for the 12-second bounded window using `--batch --video_backend=Null`.
+- Runtime log message: “Dolphin remained active for the 12-second process smoke window (elapsed: 12s).”
+
+This smoke test establishes only that the built DOL can be launched and its Dolphin process remains active for the bounded test interval without the workflow's fatal/boot markers. Because the Null video backend is used, it does **not** verify visible GX output, controller response, race progression, frame pacing, or hardware behavior. The earlier experiment with the GUI/OpenGL capture remains inconclusive and is not upgraded to a pass by this headless result.
 
 ## Runtime smoke-test checklist
 
