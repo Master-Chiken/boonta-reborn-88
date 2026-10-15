@@ -1,10 +1,12 @@
 import hashlib
+import io
 import tempfile
 import unittest
 import zipfile
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from verify_wii64_archive import inspect_archive, sha256_bytes
+from verify_wii64_archive import inspect_archive, main, sha256_bytes
 
 
 class VerifyWii64ArchiveTests(unittest.TestCase):
@@ -41,6 +43,17 @@ class VerifyWii64ArchiveTests(unittest.TestCase):
                 archive.writestr("apps/wii64/boot.dol", b"second copy")
             with self.assertRaisesRegex(ValueError, "duplicate archive member"):
                 inspect_archive(path)
+
+    def test_cli_returns_error_for_corrupt_zip(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "corrupt.zip"
+            path.write_bytes(b"not a ZIP archive")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                result = main([str(path)])
+        self.assertEqual(result, 2)
+        self.assertIn("cannot inspect archive", stderr.getvalue())
 
 
 if __name__ == "__main__":
