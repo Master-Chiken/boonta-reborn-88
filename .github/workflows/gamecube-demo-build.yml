@@ -36,6 +36,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Compile and run gameplay-state unit tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_gameplay_state.c -lm -o /tmp/test_gameplay_state
+          /tmp/test_gameplay_state
+
       - name: Compile and run pause/resume unit tests
         run: |
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
