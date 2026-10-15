@@ -234,6 +234,39 @@ static void add_player_pod(void)
     }
 }
 
+static void add_rival_pod(void)
+{
+    /* A lightweight procedural rival ahead of the player; no external assets. */
+    const float z = -13.0f;
+    const float center = road_center_at(z, g_distance) +
+                         1.15f * sinf(g_distance * 0.018f + 1.2f);
+    const GXColor rival_top = { 220, 82, 62, 255 };
+    const GXColor rival_side = { 120, 39, 70, 255 };
+    const GXColor rival_glow = { 255, 184, 92, 255 };
+
+    box_add(center - 0.34f, -0.78f, z + 0.35f,
+            0.15f, 0.13f, 0.42f, rival_top, rival_side, rival_glow);
+    box_add(center + 0.34f, -0.78f, z + 0.35f,
+            0.15f, 0.13f, 0.42f, rival_top, rival_side, rival_glow);
+    box_add(center, -0.70f, z + 0.20f,
+            0.30f, 0.10f, 0.28f, rival_top, rival_side, rival_side);
+
+    triangle_add((Point3){ center - 0.42f, -0.77f, z + 0.08f },
+                 (Point3){ center + 0.42f, -0.77f, z + 0.08f },
+                 (Point3){ center, -0.60f, z - 0.92f }, rival_top);
+    triangle_add((Point3){ center - 0.42f, -0.77f, z + 0.08f },
+                 (Point3){ center, -0.60f, z - 0.92f },
+                 (Point3){ center - 0.08f, -0.72f, z - 0.72f }, rival_side);
+    triangle_add((Point3){ center + 0.42f, -0.77f, z + 0.08f },
+                 (Point3){ center + 0.08f, -0.72f, z - 0.72f },
+                 (Point3){ center, -0.60f, z - 0.92f }, rival_side);
+
+    box_add(center - 0.34f, -0.78f, z + 0.80f,
+            0.075f, 0.07f, 0.20f, rival_glow, rival_glow, rival_glow);
+    box_add(center + 0.34f, -0.78f, z + 0.80f,
+            0.075f, 0.07f, 0.20f, rival_glow, rival_glow, rival_glow);
+}
+
 static void draw_vertex_buffer(void)
 {
     u16 i;
@@ -402,6 +435,7 @@ static void draw_frame(void)
 
     g_vertex_count = 0;
     add_road();
+    add_rival_pod();
     add_player_pod();
 
     GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
