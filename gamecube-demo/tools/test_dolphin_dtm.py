@@ -62,16 +62,24 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertFalse(record(blob, 221)[0] & START)
         self.assertFalse(record(blob, 281)[0] & START)
 
-    def test_steering_direction_changes_are_deterministic(self) -> None:
-        blob = build_dtm(3600)
-        self.assertTrue(record(blob, 30)[1] & DPAD_RIGHT)
-        self.assertFalse(record(blob, 30)[1] & DPAD_LEFT)
-        self.assertFalse(record(blob, 100)[1] & DPAD_LEFT)
-        self.assertFalse(record(blob, 100)[1] & DPAD_RIGHT)
-        self.assertTrue(record(blob, 2020)[1] & DPAD_LEFT)
-        self.assertFalse(record(blob, 2020)[1] & DPAD_RIGHT)
-        self.assertFalse(record(blob, 3000)[1] & DPAD_LEFT)
-        self.assertFalse(record(blob, 3000)[1] & DPAD_RIGHT)
+    def test_steering_profiles_are_deterministic_and_do_not_cancel(self) -> None:
+        right_blob = build_dtm(3600, steering="right")
+        self.assertTrue(record(right_blob, 30)[1] & DPAD_RIGHT)
+        self.assertFalse(record(right_blob, 30)[1] & DPAD_LEFT)
+        self.assertFalse(record(right_blob, 100)[1] & DPAD_LEFT)
+        self.assertFalse(record(right_blob, 100)[1] & DPAD_RIGHT)
+        self.assertFalse(record(right_blob, 2020)[1] & DPAD_LEFT)
+        self.assertFalse(record(right_blob, 2020)[1] & DPAD_RIGHT)
+
+        left_blob = build_dtm(3600, steering="left")
+        self.assertTrue(record(left_blob, 30)[1] & DPAD_LEFT)
+        self.assertFalse(record(left_blob, 30)[1] & DPAD_RIGHT)
+
+        neutral_blob = build_dtm(3600, steering="none")
+        for frame in (0, 30, 100, 2020, 3000):
+            with self.subTest(frame=frame):
+                self.assertFalse(record(neutral_blob, frame)[1] & DPAD_LEFT)
+                self.assertFalse(record(neutral_blob, frame)[1] & DPAD_RIGHT)
 
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")
