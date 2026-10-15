@@ -10,6 +10,7 @@
 #include <ogc/gu.h>
 #include <ogc/gx.h>
 #include <ogc/system.h>
+#include <ogc/lwp_watchdog.h>
 
 #include "pause_state.h"
 #include "gameplay_state.h"
@@ -46,6 +47,10 @@ static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
 static float g_distance;
 static unsigned int g_lap_count;
+static float g_race_seconds;
+static float g_lap_seconds;
+static float g_last_lap_seconds;
+static float g_best_lap_seconds;
 static float g_speed;
 static float g_player_lateral;
 static float g_lateral_velocity;
@@ -72,6 +77,23 @@ static const GXColor C_POD_SIDE = { 17, 75, 139, 255 };
 static const GXColor C_POD_ACCENT = { 70, 231, 248, 255 };
 static const GXColor C_THRUST = { 255, 132, 45, 255 };
 static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
+
+/* Compact original 5x7 glyphs for race-clock HUD text. */
+static const u8 g_font5x7[128][7] = {
+    ['0'] = {14,17,19,21,25,17,14}, ['1'] = {4,12,4,4,4,4,14},
+    ['2'] = {14,17,1,2,4,8,31}, ['3'] = {30,1,1,14,1,1,30},
+    ['4'] = {2,6,10,18,31,2,2}, ['5'] = {31,16,16,30,1,1,30},
+    ['6'] = {14,16,16,30,17,17,14}, ['7'] = {31,1,2,4,8,8,8},
+    ['8'] = {14,17,17,14,17,17,14}, ['9'] = {14,17,17,15,1,1,14},
+    ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
+    ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
+    ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
+    ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
+    ['T'] = {31,4,4,4,4,4,4}, [':'] = {0,4,4,0,4,4,0},
+    ['.'] = {0,0,0,0,0,4,4}, ['-'] = {0,0,0,31,0,0,0},
+    [' '] = {0,0,0,0,0,0,0}
+};
+
 
 static float clampf_local(float value, float low, float high)
 {
@@ -296,10 +318,45 @@ static void append_screen_quad(float x0, float y0, float x1, float y1,
              (Point3){ x1, y1, z }, (Point3){ x0, y1, z }, color);
 }
 
+static void append_text(const char *text, float x, float y, float scale,
+                         GXColor color)
+{
+    const unsigned char *ch;
+    for (ch = (const unsigned char *)text; *ch != '\0'; ++ch) {
+        const unsigned char c = (*ch < 128U) ? *ch : (unsigned char)' ';
+        unsigned int row;
+        unsigned int col;
+        for (row = 0; row < 7U; ++row) {
+            for (col = 0; col < 5U; ++col) {
+                if ((g_font5x7[c][row] & (1U << (4U - col))) != 0U) {
+                    const float px = x + (float)col * scale;
+                    const float py = y + (float)row * scale;
+                    append_screen_quad(px, py, px + scale, py + scale, 0.15f, color);
+                }
+            }
+        }
+        x += 6.0f * scale;
+    }
+}
+
+static void append_formatted_time(char *buffer, size_t size, float seconds)
+{
+    unsigned int tenths;
+    if (!isfinite(seconds) || seconds < 0.0f) seconds = 0.0f;
+    if (seconds > 5999.9f) seconds = 5999.9f;
+    tenths = (unsigned int)(seconds * 10.0f);
+    (void)snprintf(buffer, size, "%02u:%02u.%u",
+                   tenths / 600U, (tenths / 10U) % 60U, tenths % 10U);
+}
+
 static void draw_hud(void)
 {
     Mtx identity;
     Mtx44 ortho;
+    char time_text[20];
+    char lap_text[24];
+    char best_text[20];
+    unsigned int lap_display;
     const float w = (float)g_video_mode->fbWidth;
     const float h = (float)g_video_mode->efbHeight;
     const GXColor dark = { 8, 18, 30, 235 };
@@ -316,6 +373,15 @@ static void draw_hud(void)
     const float bar_bottom = h - 24.0f;
     const float lap_progress = g_race_finished ? 1.0f : fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
     const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
+
+    append_formatted_time(time_text, sizeof(time_text), g_race_seconds);
+    append_formatted_time(best_text, sizeof(best_text), g_best_lap_seconds);
+    lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
+    {
+        char lap_time[20];
+        append_formatted_time(lap_time, sizeof(lap_time), g_lap_seconds);
+        (void)snprintf(lap_text, sizeof(lap_text), "LAP %u %s", lap_display, lap_time);
+    }
 
     GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
     guMtxIdentity(identity);
@@ -362,6 +428,21 @@ static void draw_hud(void)
             append_screen_quad(left, bar_bottom - 58.0f,
                                left + marker_width, bar_bottom - 50.0f,
                                0.3f, marker);
+        }
+    }
+
+    /* Race, current-lap and best-lap clocks remain visible above the course. */
+    {
+        const float cx = w * 0.5f;
+        append_screen_quad(cx - 100.0f, 10.0f, cx + 100.0f, 60.0f, 0.55f, dark);
+        append_text("TIME", cx - 90.0f, 15.0f, 1.0f, white);
+        append_text(time_text, cx - 55.0f, 15.0f, 1.0f, white);
+        append_text(lap_text, cx - 90.0f, 28.0f, 1.0f, white);
+        if (g_best_lap_seconds > 0.0f) {
+            append_text("BEST", cx - 90.0f, 41.0f, 1.0f, heat_cool);
+            append_text(best_text, cx - 55.0f, 41.0f, 1.0f, heat_cool);
+        } else {
+            append_text("BEST --:--.-", cx - 55.0f, 41.0f, 1.0f, heat_cool);
         }
     }
 
@@ -526,17 +607,24 @@ static void draw_frame(void)
 
 int main(int argc, char **argv)
 {
+    u64 previous_tick;
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
+    previous_tick = gettime();
 
     for (;;) {
         u32 buttons_down;
         u32 buttons_held;
         s8 stick_x;
         float steering;
+        u64 frame_tick;
+        float frame_delta_seconds;
 
         PAD_ScanPads();
+        frame_tick = gettime();
+        frame_delta_seconds = (float)diff_usec(previous_tick, frame_tick) * 0.000001f;
+        previous_tick = frame_tick;
         buttons_down = PAD_ButtonsDown(0);
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
@@ -546,6 +634,10 @@ int main(int argc, char **argv)
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
             g_lap_count = 0U;
+            g_race_seconds = 0.0f;
+            g_lap_seconds = 0.0f;
+            g_last_lap_seconds = 0.0f;
+            g_best_lap_seconds = 0.0f;
             g_player_lateral = 0.0f;
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
@@ -565,6 +657,9 @@ int main(int argc, char **argv)
             draw_frame();
             continue;
         }
+
+        g_race_seconds = boonta_elapsed_after_frame(g_race_seconds, frame_delta_seconds, 1);
+        g_lap_seconds = boonta_elapsed_after_frame(g_lap_seconds, frame_delta_seconds, 1);
 
         g_boost_active = boonta_boost_should_activate_with_heat(
             (buttons_held & PAD_BUTTON_X) != 0U,
@@ -598,9 +693,16 @@ int main(int argc, char **argv)
         }
         {
             const float previous_distance = g_distance;
+            const unsigned int previous_laps = g_lap_count;
             g_distance = boonta_distance_after_frame(g_distance, g_speed, g_boost_active);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
+            if (g_lap_count > previous_laps) {
+                g_last_lap_seconds = g_lap_seconds;
+                g_best_lap_seconds = boonta_best_lap_after_finish(
+                    g_best_lap_seconds, g_last_lap_seconds);
+                g_lap_seconds = 0.0f;
+            }
             if (boonta_race_is_finished(g_lap_count, RACE_LAP_LIMIT)) {
                 g_race_finished = 1;
                 g_speed = 0.0f;

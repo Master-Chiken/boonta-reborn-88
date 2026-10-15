@@ -9,7 +9,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
 - A clean-room procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
-- A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
+- A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
@@ -43,7 +43,7 @@ This proves that a visible prototype scene renders in the CI Dolphin Software Re
 
 ## Runtime validation still required
 
-The remaining acceptance checks are interactive steering, acceleration/braking, boost, pause/resume, reset, completion of a three-lap run, and longer-session stability. A screenshot or headless process smoke cannot verify controller response or race completion. Physical GameCube/Wii behavior is also unverified. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
+The remaining acceptance checks are interactive steering, acceleration/braking, boost and overheat cooldown, pause/resume (the clocks should freeze), reset (all clocks should return to zero), completion of a three-lap run with current/best lap timing, and longer-session stability. A screenshot or headless process smoke cannot verify controller response or race completion. Physical GameCube/Wii behavior is also unverified. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
 
 ## Source boundary
 
