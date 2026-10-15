@@ -5,7 +5,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 ## Current scope
 
 - Native GameCube GX initialization and 3D colored-vertex rendering.
-- A procedural curved test road with contrasting edge strips and barrier rails, a warm desert floor, daylight sky, and original low-poly canyon walls.
+- A genuinely scrolling procedural desert course: curved asphalt segments, lane markers, and faceted canyon walls advance continuously with race distance; the start/finish stripe approaches once per lap instead of receding. The environment uses a warm desert floor, daylight sky, and original low-poly canyon geometry.
 - An original procedural twin-engine racer with separated engine nacelles, visible tether strips, a raised cockpit canopy, and exhaust plumes that lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle, brake, pitch, and slide. Pitching nose-down increases forward progress at the cost of steering authority; pitching nose-up slows progress but improves steering. Holding L initiates a low-grip slide: it increases turn impulse while retaining sideways drift, so releasing it early is part of cornering. Pitch/slide state is exposed in the HUD and covered by deterministic host tests.
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
