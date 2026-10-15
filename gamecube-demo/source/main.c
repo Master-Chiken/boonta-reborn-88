@@ -394,6 +394,7 @@ static void draw_hud(void)
     guMtxIdentity(identity);
     guOrtho(ortho, 0.0f, h, 0.0f, w, 0.0f, 1.0f);
     GX_LoadPosMtxImm(identity, GX_PNMTX0);
+    GX_SetCurrentMtx(GX_PNMTX0);
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
