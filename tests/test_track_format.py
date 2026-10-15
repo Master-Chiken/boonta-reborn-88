@@ -91,6 +91,21 @@ class TrackFormatTests(unittest.TestCase):
         )
         self.assertEqual(checked_in, expected)
 
+    def test_header_exports_closed_loop_polyline_length(self):
+        track = load_track(EXAMPLE_PATH)
+        points = track["points"]
+        expected_length = sum(
+            math.dist(
+                (points[index]["x"], points[index]["y"], points[index]["z"]),
+                (points[(index + 1) % len(points)]["x"],
+                 points[(index + 1) % len(points)]["y"],
+                 points[(index + 1) % len(points)]["z"]),
+            )
+            for index in range(len(points))
+        )
+        header = render_header(track, "original test oval")
+        self.assertIn(f"#define BOONTA_TRACK_LENGTH {expected_length:.6f}f", header)
+
     def test_header_export_sanitizes_leading_digit(self):
         track = load_track(EXAMPLE_PATH)
         header = render_header(track, "88 oval")
