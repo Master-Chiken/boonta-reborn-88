@@ -41,14 +41,14 @@ def course_edge_center(image: Image.Image) -> tuple[float, int]:
     """Track the bright cyan road-edge strip relative to the camera-following pod."""
     image = image.convert("RGB")
     edge_x = []
-    # C_EDGE_R = (50, 225, 246). Scan farther down the road in the Software
-    # Renderer; narrow hue bounds distinguish this edge from the cyan pod accent.
+    # C_EDGE_R ~= (50, 225, 246). Use the distant upper/mid viewport so
+    # the player-pod accent is excluded; allow renderer anti-aliasing at edges.
     y_start = int(image.height * 0.35)
-    y_end = int(image.height * 0.82)
+    y_end = int(image.height * 0.65)
     for y in range(y_start, y_end):
         for x in range(image.width):
             r, g, b = image.getpixel((x, y))
-            if r < 65 and 205 < g < 245 and b > 225:
+            if r < 90 and g > 180 and b > 200:
                 edge_x.append(x)
     # The cyan edge is distant and anti-aliased in this ROI; require at
     # least ten pixels, then let the independent 25 px centroid-shift gate
