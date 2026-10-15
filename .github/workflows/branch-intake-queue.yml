@@ -49,7 +49,7 @@ jobs:
           import json
           import os
           import subprocess
-          import time
+          from concurrent.futures import ThreadPoolExecutor
           from collections import Counter
           from pathlib import Path
 
@@ -108,10 +108,38 @@ jobs:
           # guess which stale or overlapping implementation is the right one.
           branches.sort(key=lambda b: (priority(b.get("name", "")), b.get("name", "")))
           compared_shas = {}
+          comparison_failures = {}
           candidates = []
           deferred = []
           skips = Counter()
           seen_shas = set()
+
+          # Comparison requests dominate intake time. Fetch each unique eligible tip
+          # concurrently, with a small bound to respect GitHub API limits. pool.map
+          # preserves sorted input order so reports stay deterministic.
+          comparison_shas = sorted({
+              item.get("commit", {}).get("sha", "")
+              for item in branches
+              if item.get("name")
+              and item.get("name") != default_branch
+              and item.get("name") not in open_heads
+              and item.get("commit", {}).get("sha")
+              and item.get("commit", {}).get("sha") not in open_shas
+          })
+
+          def fetch_compare(sha):
+              try:
+                  endpoint = f"repos/{repo}/compare/{default_branch}...{sha}"
+                  return sha, api_json(endpoint), None
+              except Exception as exc:
+                  return sha, None, str(exc)[:120]
+
+          with ThreadPoolExecutor(max_workers=min(8, max(1, len(comparison_shas)))) as pool:
+              for sha, comparison, error in pool.map(fetch_compare, comparison_shas):
+                  if error:
+                      comparison_failures[sha] = error
+                  else:
+                      compared_shas[sha] = comparison
 
           for branch_info in branches:
               name = branch_info.get("name", "")
@@ -130,15 +158,13 @@ jobs:
                   continue
               seen_shas.add(sha)
 
-              if sha not in compared_shas:
-                  endpoint = f"repos/{repo}/compare/{default_branch}...{sha}"
-                  try:
-                      compared_shas[sha] = api_json(endpoint)
-                  except Exception as exc:
-                      deferred.append((name, f"comparison API failed: {str(exc)[:120]}"))
-                      continue
-                  time.sleep(0.03)
-              compare = compared_shas[sha]
+              if sha in comparison_failures:
+                  deferred.append((name, f"comparison API failed: {comparison_failures[sha]}"))
+                  continue
+              compare = compared_shas.get(sha)
+              if compare is None:
+                  deferred.append((name, "comparison result unavailable; retry on the next queue run"))
+                  continue
               ahead = int(compare.get("ahead_by") or 0)
               behind = int(compare.get("behind_by") or 0)
               files = compare.get("files") or []
