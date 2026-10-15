@@ -24,7 +24,8 @@
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define RACE_LAP_DISTANCE   120.0f
-#define LAP_INDICATOR_COUNT  5U
+#define RACE_LAP_LIMIT       3U
+#define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
 #define ROAD_Y             (-1.05f)
 #define PI_F               3.14159265358979323846f
 
@@ -54,6 +55,7 @@ static float g_rival_z = -18.0f;
 static float g_rival_lateral;
 static unsigned int g_overtake_count;
 static int g_paused;
+static int g_race_finished;
 
 static const GXColor C_GROUND = { 23, 48, 40, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
@@ -308,7 +310,7 @@ static void draw_hud(void)
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
-    const float lap_progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
+    const float lap_progress = g_race_finished ? 1.0f : fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
     const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
 
     GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
@@ -367,8 +369,31 @@ static void draw_hud(void)
         }
     }
 
-    /* Pause icon: a framed pair of bars remains visible without font assets. */
-    if (g_paused) {
+    /* Symbolic finish banner: a checkered flag made from original GX quads. */
+    if (g_race_finished) {
+        const float cx = w * 0.5f;
+        const float cy = h * 0.5f;
+        const float tile = 14.0f;
+        const float left = cx - 28.0f;
+        const float top = cy - 21.0f;
+        const GXColor finish_panel = { 8, 18, 30, 245 };
+        const GXColor black = { 12, 18, 27, 255 };
+        unsigned int row;
+        unsigned int col;
+        append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
+                           0.6f, finish_panel);
+        for (row = 0; row < 3U; ++row) {
+            for (col = 0; col < 4U; ++col) {
+                const GXColor square = (((row + col) & 1U) == 0U) ? white : black;
+                append_screen_quad(left + (float)col * tile,
+                                   top + (float)row * tile,
+                                   left + (float)(col + 1U) * tile,
+                                   top + (float)(row + 1U) * tile,
+                                   0.2f, square);
+            }
+        }
+    } else if (g_paused) {
+        /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
         const GXColor pause_panel = { 8, 18, 30, 235 };
@@ -505,7 +530,7 @@ int main(int argc, char **argv)
         buttons_down = PAD_ButtonsDown(0);
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
-        if ((buttons_down & PAD_BUTTON_START) != 0U) {
+        if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
             g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
@@ -518,10 +543,11 @@ int main(int argc, char **argv)
             g_rival_z = -18.0f;
             g_rival_lateral = 0.0f;
             g_overtake_count = 0U;
+            g_race_finished = 0;
             g_paused = boonta_pause_state_next(g_paused, 0, 1);
         }
 
-        if (g_paused) {
+        if (g_paused || g_race_finished) {
             g_boost_active = 0;
             draw_frame();
             continue;
@@ -561,9 +587,12 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
-            if (boonta_lap_was_crossed(previous_distance, g_distance,
-                                       RACE_LAP_DISTANCE)) {
-                ++g_lap_count;
+            g_lap_count = boonta_lap_count_after_frame(
+                g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
+            if (boonta_race_is_finished(g_lap_count, RACE_LAP_LIMIT)) {
+                g_race_finished = 1;
+                g_speed = 0.0f;
+                g_boost_active = 0;
             }
         }
 
