@@ -242,7 +242,7 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || false }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && github.event.pull_request.number == 134) }}
         shell: bash
         run: |
           set -euo pipefail
