@@ -639,10 +639,12 @@ int main(int argc, char **argv)
         float steering;
         u64 frame_tick;
         float frame_delta_seconds;
+        float frame_scale;
 
         PAD_ScanPads();
         frame_tick = gettime();
         frame_delta_seconds = (float)diff_usec(previous_tick, frame_tick) * 0.000001f;
+        frame_scale = boonta_frame_scale_from_delta(frame_delta_seconds);
         previous_tick = frame_tick;
         buttons_down = PAD_ButtonsDown(0);
         buttons_held = PAD_ButtonsHeld(0);
@@ -686,8 +688,8 @@ int main(int argc, char **argv)
             (buttons_held & PAD_BUTTON_X) != 0U,
             (buttons_held & PAD_BUTTON_A) != 0U,
             g_boost, g_engine_heat, g_boost_overheated);
-        g_boost = boonta_boost_after_frame(g_boost, g_boost_active);
-        g_engine_heat = boonta_engine_heat_after_frame(g_engine_heat, g_boost_active);
+        g_boost = boonta_boost_after_frame_scaled(g_boost, g_boost_active, frame_scale);
+        g_engine_heat = boonta_engine_heat_after_frame_scaled(g_engine_heat, g_boost_active, frame_scale);
         g_boost_overheated = boonta_boost_overheated_after_frame(
             g_boost_overheated, g_engine_heat);
 
@@ -696,18 +698,20 @@ int main(int argc, char **argv)
             (buttons_held & PAD_BUTTON_LEFT) != 0U,
             (buttons_held & PAD_BUTTON_RIGHT) != 0U);
 
-        g_speed = boonta_speed_after_input(
+        g_speed = boonta_speed_after_input_scaled(
             g_speed,
             (buttons_held & PAD_BUTTON_A) != 0U,
-            (buttons_held & PAD_BUTTON_B) != 0U);
+            (buttons_held & PAD_BUTTON_B) != 0U,
+            frame_scale);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
-        g_lateral_velocity = boonta_lateral_velocity_after_steering(
-            g_lateral_velocity, steering, g_speed);
-        g_player_lateral += g_lateral_velocity;
+        g_lateral_velocity = boonta_lateral_velocity_after_steering_scaled(
+            g_lateral_velocity, steering, g_speed, frame_scale);
+        g_player_lateral = boonta_lateral_position_after_frame(
+            g_player_lateral, g_lateral_velocity, frame_scale);
 
         /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
-        g_speed = boonta_speed_after_offroad(g_speed, g_player_lateral);
+        g_speed = boonta_speed_after_offroad_scaled(g_speed, g_player_lateral, frame_scale);
         if (boonta_is_past_rail(g_player_lateral)) {
             g_player_lateral = boonta_lateral_after_rail_contact(g_player_lateral);
             g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(g_lateral_velocity);
@@ -715,7 +719,7 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             const unsigned int previous_laps = g_lap_count;
-            g_distance = boonta_distance_after_frame(g_distance, g_speed, g_boost_active);
+            g_distance = boonta_distance_after_frame_scaled(g_distance, g_speed, g_boost_active, frame_scale);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
             if (g_lap_count > previous_laps) {
@@ -739,7 +743,8 @@ int main(int argc, char **argv)
                 int rival_event;
                 g_rival_lateral[rival_index] = 1.10f * sinf(
                     g_distance * 0.022f + 1.2f + (float)rival_index * 1.55f);
-                g_rival_z[rival_index] += 0.035f + g_speed * 0.045f;
+                g_rival_z[rival_index] = boonta_rival_z_after_frame(
+                    g_rival_z[rival_index], g_speed, frame_scale);
                 rival_event = boonta_rival_event(
                     g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
