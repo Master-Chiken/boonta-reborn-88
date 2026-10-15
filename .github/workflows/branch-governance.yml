@@ -2,6 +2,8 @@ name: Branch governance audit
 
 on:
   workflow_dispatch:
+  create:
+    branches: ["**"]
   schedule:
     - cron: "23 9 * * 1"
 
@@ -16,6 +18,7 @@ concurrency:
 
 jobs:
   audit:
+    if: github.event_name != 'create' || github.event.ref_type == 'branch'
     name: Inventory and report branch activity
     runs-on: ubuntu-latest
     steps:
