@@ -464,7 +464,9 @@ static void initialise_video_and_gx(void)
     GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
 
     GX_SetNumChans(1);
-    GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG,
+    /* Geometry supplies its own RGBA per vertex; use that stream directly.
+       GX_SRC_REG here leaves the material on its default register color. */
+    GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_VTX, GX_SRC_VTX,
                    GX_LIGHTNULL, GX_DF_NONE, GX_AF_NONE);
     GX_SetNumTexGens(0);
     GX_SetNumTevStages(1);
