@@ -25,7 +25,7 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
-#define RACE_LAP_DISTANCE   180.6f /* approximate arc length of generated oval */
+#define RACE_LAP_DISTANCE   181.2322f /* generated oval arc length */
 #define RACE_LAP_LIMIT       3U
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
 #define ROAD_Y             (-1.05f)
