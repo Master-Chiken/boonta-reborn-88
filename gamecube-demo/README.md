@@ -7,7 +7,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - Native GameCube GX initialization and 3D colored-vertex rendering.
 - A procedural curved test road with contrasting edge strips and barrier rails, a warm desert floor, daylight sky, and original low-poly canyon walls.
 - An original procedural twin-engine racer with separated engine nacelles, visible tether strips, a raised cockpit canopy, and exhaust plumes that lengthen with speed and boost.
-- GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
+- GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle, brake, and a manual-based pitch trade-off: pushing the stick forward/nose-down increases forward progress while reducing steering authority; pulling back/nose-up slows progress but improves steering. A compact pitch gauge and camera response expose the input state. Pitch helpers are covered by deterministic host tests.
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
@@ -18,6 +18,7 @@ This is a gameplay prototype, not the completed racer and not a port of the comm
 ## Controls
 
 - Control Stick left/right (or D-pad): steer.
+- Control Stick up/forward: pitch down for more forward progress but weaker steering; down/back: pitch up for slower progress and tighter control.
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; energy drains and recharges on release. Heat rises during boost; at 98% heat, boost locks out until the engine cools to 60% or below.
