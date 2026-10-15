@@ -346,7 +346,7 @@ jobs:
                 echo "Captured frame contains a Dolphin boot/core error dialog."
                 exit 1
               fi
-              echo "Scripted-input smoke passed: visible player-pod displacement and HUD-marker response were detected. Full gameplay remains unverified."
+              echo "Scripted camera-follow smoke passed: pod stayed visible, course edge shifted left, and HUD response was detected. Full gameplay remains unverified."
             '
           status=$?
           set -e
@@ -363,7 +363,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional scripted-input/pod-displacement diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The optional scripted camera-follow/course-edge diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 
