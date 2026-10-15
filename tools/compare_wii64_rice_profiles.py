@@ -29,10 +29,12 @@ def settings(profile: Profile) -> dict[str, list[str]]:
 
 
 def find_profile(profiles: list[Profile], query: str) -> Profile | None:
-    exact = [p for p in profiles if p.name.casefold() == query.casefold()]
+    """Resolve one profile name; return None when missing or ambiguous."""
+    folded_query = query.casefold()
+    exact = [p for p in profiles if p.name.casefold() == folded_query]
     if exact:
-        return exact[0]
-    partial = [p for p in profiles if query.casefold() in p.name.casefold()]
+        return exact[0] if len(exact) == 1 else None
+    partial = [p for p in profiles if folded_query in p.name.casefold()]
     return partial[0] if len(partial) == 1 else None
 
 
