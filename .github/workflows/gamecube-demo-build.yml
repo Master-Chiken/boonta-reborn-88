@@ -231,7 +231,7 @@ jobs:
           test -s build-artifact/boonta_gc_demo.dol
           export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
-          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo
           test -s "$DTM"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
@@ -304,40 +304,7 @@ jobs:
               fi
               # The captured window must also contain signatures from the actual
               # procedural scene; window chrome alone must not pass the check.
-              python3 - "$CAPTURE" <<PY
-          from pathlib import Path
-          import sys
-          from PIL import Image
-
-          image = Image.open(Path(sys.argv[1])).convert("RGB")
-          pixels = list(image.getdata())
-          cyan = sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150)
-          orange = sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135)
-          ground_green = sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100)
-          pod_blue = sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120)
-          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}")
-          if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
-              print("Captured Dolphin window is missing one or more expected scene-color signatures.")
-              sys.exit(1)
-
-          # The deterministic DTM holds D-pad right while accelerating early
-          # in the run. Measure only the player's orange engines, excluding the
-          # orange road edge near the far-left side of the viewport.
-          player_x = []
-          for y in range(int(image.height * 0.72), image.height - 20):
-              for x in range(int(image.width * 0.25), int(image.width * 0.90)):
-                  r, g, b = image.getpixel((x, y))
-                  if r > 220 and 80 < g < 185 and b < 110:
-                      player_x.append(x)
-          if not player_x:
-              print("No player-pod orange pixels found in the lower game viewport.")
-              sys.exit(1)
-          player_center_x = sum(player_x) / len(player_x)
-          print(f"Scripted DTM player-pod orange-pixel center x={player_center_x:.1f}")
-          if player_center_x <= image.width * 0.54:
-              print("Dolphin DTM playback did not produce the expected rightward player response.")
-              sys.exit(1)
-          PY
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE"
               # The captured Dolphin main window is 800x480. Its lower
               # viewport should contain the dark road, not a near-white field.
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
