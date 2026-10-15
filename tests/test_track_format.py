@@ -83,6 +83,14 @@ class TrackFormatTests(unittest.TestCase):
         self.assertIn("boonta_track_points_original_test_oval", header)
         self.assertEqual(header.count("    { "), 8)
 
+    def test_checked_in_gamecube_header_matches_exporter(self):
+        track = load_track(EXAMPLE_PATH)
+        expected = render_header(track, "original test oval")
+        checked_in = (ROOT / "gamecube-demo" / "source" / "generated_track.h").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(checked_in, expected)
+
     def test_header_export_sanitizes_leading_digit(self):
         track = load_track(EXAMPLE_PATH)
         header = render_header(track, "88 oval")
