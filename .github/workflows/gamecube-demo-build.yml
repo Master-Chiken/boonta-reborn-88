@@ -190,7 +190,8 @@ jobs:
           flatpak install --user --assumeyes flathub org.kde.Platform//6.11
           flatpak info --user org.kde.Platform//6.11
           flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
-          flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version
+          # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
+          flatpak info --user org.DolphinEmu.dolphin-emu
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         shell: bash
