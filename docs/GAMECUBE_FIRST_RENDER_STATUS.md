@@ -4,14 +4,14 @@ Last updated: 2026-10-15
 
 ## Latest CI visible-render verification (2026-10-15)
 
-- Native build and visible-render evidence: [GameCube first-render prototype run #68](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698).
+- Native build and visible-render evidence: [GameCube first-render prototype run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531).
 - Relevant merged fixes: [PR #53 — DOL 32-byte section padding and Dolphin diagnostic](https://github.com/Master-Chiken/boonta-reborn-88/pull/53) and [PR #60 — GX per-vertex color pipeline](https://github.com/Master-Chiken/boonta-reborn-88/pull/60).
 - Host gameplay/pause tests, DOL-padding tests, GX color-pipeline regression tests, native devkitPPC/libogc build, DOL/ELF structure validation and the 12-second Dolphin Null-backend process smoke: **success**.
-- The [Software Renderer/Xvfb frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727757698/artifacts/11969630454) show the curved procedural road, alternating road sections, cyan/orange edge rails, center markers, blue/orange player pod and rival pod.
+- The [Software Renderer/Xvfb frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471) show the curved procedural road, alternating road sections, cyan/orange edge rails, center markers, blue/orange player pod and rival pod.
 - The DOL post-processing pads the final section from 139,932 to 139,936 bytes, satisfying Dolphin's 32-byte-rounded section reads.
 - The color issue was caused by selecting a material register color rather than the per-vertex color stream. The current GX configuration uses `GX_SRC_VTX` for material color while keeping lighting disabled. A host regression test checks the expected color-channel/vertex-descriptor/TEV configuration.
 
-This validates startup and a visible scene in Dolphin's Software Renderer CI environment. It does **not** prove controller response, long-session frame pacing, a completed race, or behavior on physical GameCube/Wii hardware. The [current quality-gate work](https://github.com/Master-Chiken/boonta-reborn-88/pull/61) adds a check to reject screenshots where the lower game viewport is predominantly near-white.
+This validates startup and a visible scene in Dolphin's Software Renderer CI environment. It does **not** prove controller response, long-session frame pacing, a completed race, or behavior on physical GameCube/Wii hardware. The [current quality-gate work](https://github.com/Master-Chiken/boonta-reborn-88/pull/62) adds a check to reject screenshots where the lower game viewport is predominantly near-white.
 
 ## Verified by GitHub Actions
 
