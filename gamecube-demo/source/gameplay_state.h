@@ -25,4 +25,22 @@ static inline int boonta_lap_was_crossed(float previous_distance, float current_
     if (lap_distance <= 0.0f || previous_distance < 0.0f || current_distance < previous_distance) return 0;
     return (unsigned int)(current_distance / lap_distance) > (unsigned int)(previous_distance / lap_distance);
 }
+
+static inline unsigned int boonta_lap_count_after_frame(unsigned int lap_count,
+                                                         float previous_distance,
+                                                         float current_distance,
+                                                         float lap_distance)
+{
+    if (boonta_lap_was_crossed(previous_distance, current_distance, lap_distance) &&
+        lap_count < 0xffffffffU) {
+        return lap_count + 1U;
+    }
+    return lap_count;
+}
+
+static inline int boonta_race_is_finished(unsigned int lap_count, unsigned int lap_limit)
+{
+    return lap_limit > 0U && lap_count >= lap_limit;
+}
+
 #endif
