@@ -27,6 +27,13 @@ class CompareProfilesTests(unittest.TestCase):
         self.assertIsNone(find_profile(profiles, "Racer"))
         self.assertEqual(find_profile(profiles, "Alpha").name, "Racer Alpha")
 
+    def test_duplicate_exact_names_are_ambiguous(self):
+        profiles = parse_profiles(
+            "{one}\nName=Duplicate Racer\n{two}\nName=Duplicate Racer\n"
+        )
+        self.assertIsNone(find_profile(profiles, "Duplicate Racer"))
+        self.assertIsNone(find_profile(profiles, "Duplicate"))
+
     def test_duplicate_keys_are_not_silently_discarded(self):
         profile = parse_profiles("{one}\nName=Example\nOption=1\nOption=2\n")[0]
         self.assertEqual(settings(profile)["Option"], ["1", "2"])
