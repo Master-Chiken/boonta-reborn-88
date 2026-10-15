@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Extract command
         id: extract
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REQUEST: ${{ github.event.comment.body || github.event.review.body || '' }}
           AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association || github.event.review.author_association || '' }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Acknowledge request
         if: steps.extract.outputs.command == 'invoke'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         with:
           script: |
             const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
@@ -75,7 +75,7 @@ jobs:
       issues: write
     steps:
       - name: Explain owner-only approval
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         with:
           script: |
             const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
@@ -110,7 +110,7 @@ jobs:
       issues: write
     steps:
       - name: Explain the write gate
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         with:
           script: |
             const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
