@@ -51,14 +51,16 @@ The C source and geometry here are original procedural scaffolding created for t
 
 ## What the automated Dolphin checks prove
 
-The scripted DTM comparison is an **input-path smoke diagnostic**. It confirms that the neutral and right-input captures render expected scene colors and that a HUD steering-state marker changes. It does **not** measure player-pod displacement, world motion, steering physics, control feel, or completion of a race.
+The scripted DTM comparison is an **input-path smoke diagnostic**. It checks that expected scene colors render, that the cyan player-pod surface shifts between neutral and right-input captures, and that the HUD steering-state marker changes. If the pod reaches the image border, the diagnostic reports a quality warning rather than silently treating the frame as an ideal steering result.
+
+This is evidence of a **visible response to scripted input in Dolphin's Software Renderer**, not proof of representative handling, track-relative motion, use of a real controller, or a completed race.
 
 Keep validation claims separate:
 
 - **Host tests and native DOL/ELF build:** the tested code compiles and its deterministic helper tests pass.
 - **Dolphin null-video smoke:** the emulator process accepts/runs the DOL for the bounded smoke window; this is not visual verification.
-- **Software-renderer frame/input-path diagnostic:** a scene is captured and the scripted input is reflected by the HUD state marker.
-- **Interactive steering and complete race:** still require a visible Dolphin session (or physical hardware) with an actual controller profile, driving, three lap crossings, finish, reset, and evidence recorded against the tested commit.
+- **Software-renderer input diagnostic:** scene signatures, visible player-pod displacement, and the independent HUD marker are compared against a neutral baseline.
+- **Interactive steering and complete race:** still require a visible Dolphin session (or physical hardware) with an actual controller profile, acceleration/braking/steering, three lap crossings, finish, reset, and evidence recorded against the tested commit.
 
-Never report the HUD-marker diagnostic as proof that the craft visibly steers. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
+Do not report the scripted capture as proof that the game is fully playable. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
 
