@@ -86,6 +86,11 @@ if "Do not edit files or call write tools" not in invoke_prompt:
     errors.append("Gemini invoke prompt must prohibit file writes")
 if "@{.gemini/context.json}" not in invoke_prompt:
     errors.append("Gemini invoke prompt must inject the dispatcher request context directly")
+if "{{args}}" not in invoke_prompt:
+    errors.append("Gemini invoke prompt must include the triggering request arguments")
+
+if "prompt: '/gemini-invoke ${{ inputs.additional_context }}'" not in invoke:
+    errors.append("Gemini invoke workflow must pass the triggering request into the custom command")
 
 if '--arg context "${ADDITIONAL_CONTEXT}"' not in invoke:
     errors.append("Gemini invoke workflow must copy the triggering comment into context.json")
