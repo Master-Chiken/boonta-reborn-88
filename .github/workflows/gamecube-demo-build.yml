@@ -377,10 +377,7 @@ jobs:
                 python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 6000 --game-id ID-boo --steering none --scenario full-race
                 mkdir -p "$RACE_USER/Config"
                 chmod 700 "$RACE_USER"
-                cat > "$RACE_USER/Config/Dolphin.ini" <<EOF
-              [Display]
-              RenderToMain = True
-              EOF
+                printf '[Display]\nRenderToMain = True\n' > "$RACE_USER/Config/Dolphin.ini"
                 capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 220
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                 echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
