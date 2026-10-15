@@ -1,0 +1,363 @@
+name: Branch intake queue
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_prs:
+        description: "Maximum draft PRs to prepare (1, 3, 5, or 10)"
+        required: false
+        default: "5"
+        type: choice
+        options:
+          - "1"
+          - "3"
+          - "5"
+          - "10"
+  schedule:
+    - cron: "17 9,17 * * *"
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: branch-intake-queue
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    name: Surface safe branch candidates as draft PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MAX_PRS: ${{ github.event.inputs.max_prs || '5' }}
+    steps:
+      - name: Inventory branches and open pull requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MAX_PRS" in
+            1|3|5|10) ;;
+            *) echo "::error::max_prs must be 1, 3, 5, or 10"; exit 1 ;;
+          esac
+          gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import time
+          from concurrent.futures import ThreadPoolExecutor
+          from collections import Counter
+          from pathlib import Path
+
+          repo = os.environ["GH_REPO"]
+          default_branch = subprocess.check_output(
+              ["gh", "api", f"repos/{repo}", "--jq", ".default_branch"], text=True
+          ).strip()
+          branches = json.loads(Path("/tmp/branches.json").read_text())
+          open_prs = json.loads(Path("/tmp/open-prs.json").read_text())
+          max_prs = int(os.environ["MAX_PRS"])
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          def api_json(endpoint):
+              return json.loads(subprocess.check_output(
+                  ["gh", "api", endpoint], text=True, stderr=subprocess.PIPE
+              ))
+
+          def priority(name):
+              low = name.lower()
+              ordered = [
+                  ("fix/", 0), ("fix-", 0),
+                  ("test/", 1), ("test-", 1),
+                  ("feat/", 2), ("feature/", 2),
+                  ("ci/", 3), ("tools/", 3),
+                  ("docs/", 4), ("security/", 5),
+                  ("automation/", 6), ("ai/", 6),
+                  ("audit/", 7),
+              ]
+              return next((score for prefix, score in ordered if low.startswith(prefix)), 8)
+
+          def source_hold(name, paths):
+              low_name = name.lower()
+              if "step102" in low_name or "source-import" in low_name or low_name.startswith("import/"):
+                  return "source-import / Step 102 work is held for manual provenance review"
+              blocked_suffixes = (".iso", ".gcm", ".n64", ".z64", ".v64", ".rom", ".wad", ".7z", ".rar", ".zip")
+              for path in paths:
+                  low = path.lower()
+                  if low.endswith(blocked_suffixes) or any(
+                      marker in low for marker in ("proprietary", "commercial-assets", "unlicensed")
+                  ):
+                      return f"sensitive archive or asset path requires manual review: {path}"
+                  if "step102" in low or "source-import" in low:
+                      return f"source-import path requires manual provenance review: {path}"
+              return None
+
+          # Do not open an intake PR for work already represented by an open PR.
+          open_heads = {p.get("head", {}).get("ref") for p in open_prs}
+          open_shas = {p.get("head", {}).get("sha") for p in open_prs}
+
+          # Retrieve every changed-file page for each open PR concurrently.
+          # An incomplete inventory would make overlap detection unsafe, so any
+          # API error fails closed rather than allowing a potentially conflicting PR.
+          def fetch_open_pr_paths(pr):
+              number = int(pr["number"])
+              started = time.monotonic()
+              endpoint = f"repos/{repo}/pulls/{number}/files?per_page=100"
+              pages = json.loads(subprocess.check_output(
+                  ["gh", "api", "--paginate", "--slurp", endpoint],
+                  text=True, stderr=subprocess.PIPE
+              ))
+              paths = {
+                  item.get("filename", "")
+                  for page in pages
+                  for item in page
+                  if item.get("filename")
+              }
+              return number, paths, time.monotonic() - started
+
+          open_pr_paths_started = time.monotonic()
+          with ThreadPoolExecutor(max_workers=min(10, max(1, len(open_prs)))) as pool:
+              open_pr_path_results = list(pool.map(fetch_open_pr_paths, open_prs))
+          open_pr_paths_wall_seconds = time.monotonic() - open_pr_paths_started
+          open_pr_paths_request_seconds = sum(elapsed for _, _, elapsed in open_pr_path_results)
+          open_paths = set().union(*(paths for _, paths, _ in open_pr_path_results)) if open_pr_path_results else set()
+
+          # A shared changed path is a reason to serialize candidates, not to
+          # guess which stale or overlapping implementation is the right one.
+          branches.sort(key=lambda b: (priority(b.get("name", "")), b.get("name", "")))
+          compared_shas = {}
+          comparison_failures = {}
+          candidates = []
+          deferred = []
+          skips = Counter()
+          seen_shas = set()
+
+          # Comparison requests dominate intake time. Fetch each unique eligible tip
+          # concurrently, with a small bound to respect GitHub API limits. pool.map
+          # preserves sorted input order so reports stay deterministic.
+          comparison_shas = sorted({
+              item.get("commit", {}).get("sha", "")
+              for item in branches
+              if item.get("name")
+              and item.get("name") != default_branch
+              and item.get("name") not in open_heads
+              and item.get("commit", {}).get("sha")
+              and item.get("commit", {}).get("sha") not in open_shas
+          })
+
+          comparison_started = time.monotonic()
+          comparison_request_seconds = 0.0
+
+          def fetch_compare(sha):
+              request_started = time.monotonic()
+              try:
+                  endpoint = f"repos/{repo}/compare/{default_branch}...{sha}"
+                  return sha, api_json(endpoint), None, time.monotonic() - request_started
+              except Exception as exc:
+                  return sha, None, str(exc)[:120], time.monotonic() - request_started
+
+          with ThreadPoolExecutor(max_workers=min(10, max(1, len(comparison_shas)))) as pool:
+              for sha, comparison, error, request_seconds in pool.map(fetch_compare, comparison_shas):
+                  comparison_request_seconds += request_seconds
+                  if error:
+                      comparison_failures[sha] = error
+                  else:
+                      compared_shas[sha] = comparison
+          comparison_wall_seconds = time.monotonic() - comparison_started
+
+          for branch_info in branches:
+              name = branch_info.get("name", "")
+              sha = branch_info.get("commit", {}).get("sha", "")
+              if not name or name == default_branch or not sha:
+                  skips["default or missing ref"] += 1
+                  continue
+              if name in open_heads:
+                  skips["already has an open PR"] += 1
+                  continue
+              if sha in open_shas:
+                  skips["tip SHA already has an open PR"] += 1
+                  continue
+              if sha in seen_shas:
+                  skips["duplicate branch tip SHA"] += 1
+                  continue
+              seen_shas.add(sha)
+
+              if sha in comparison_failures:
+                  deferred.append((name, f"comparison API failed: {comparison_failures[sha]}"))
+                  continue
+              compare = compared_shas.get(sha)
+              if compare is None:
+                  deferred.append((name, "comparison result unavailable; retry on the next queue run"))
+                  continue
+              ahead = int(compare.get("ahead_by") or 0)
+              behind = int(compare.get("behind_by") or 0)
+              files = compare.get("files") or []
+              paths = sorted({item.get("filename", "") for item in files if item.get("filename")})
+
+              if compare.get("too_large"):
+                  deferred.append((name, "GitHub comparison is too large for safe automatic intake"))
+                  continue
+              if ahead <= 0 or not paths:
+                  skips["no unique file changes versus main"] += 1
+                  continue
+              hold = source_hold(name, paths)
+              if hold:
+                  deferred.append((name, hold))
+                  continue
+              if ahead > 10 or len(paths) > 20:
+                  deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} changed paths)"))
+                  continue
+              overlap = sorted(set(paths) & open_paths)
+              if overlap:
+                  deferred.append((name, f"overlaps an open PR on: {', '.join(overlap[:4])}"))
+                  continue
+
+              candidates.append({
+                  "name": name, "sha": sha, "ahead": ahead, "behind": behind,
+                  "paths": paths, "priority": priority(name),
+                  "changed": len(paths), "status": compare.get("status", "unknown"),
+              })
+
+          candidates.sort(key=lambda c: (c["priority"], c["ahead"], c["changed"], c["name"]))
+          created = []
+          selected_paths = set()
+          created_count = 0
+          for candidate in candidates:
+              if created_count >= max_prs:
+                  break
+              overlaps = sorted(set(candidate["paths"]) & selected_paths)
+              if overlaps:
+                  deferred.append((candidate["name"], f"serialized behind another candidate touching: {', '.join(overlaps[:4])}"))
+                  continue
+
+              name = candidate["name"]
+              ahead = candidate["ahead"]
+              behind = candidate["behind"]
+              paths = candidate["paths"]
+              path_list = "\n".join(f"- {path}" for path in paths[:20])
+              if len(paths) > 20:
+                  path_list += f"\n- ... and {len(paths) - 20} more"
+              body = f"""## Automated branch intake — draft only
+
+          This pull request surfaces an existing branch for review. It is **not** an approval, a merge recommendation, or proof that the change works.
+
+          - Source branch: {name}
+          - Head SHA at inventory time: {candidate['sha']} (verify that it still matches the current PR head)
+          - Commits ahead of {default_branch}: {ahead}
+          - Commits behind {default_branch}: {behind}
+          - Changed paths: {len(paths)}
+          - Compare status: {candidate['status']}
+
+          ### Changed paths
+          {path_list}
+
+          ### Required before merge
+          - Review the complete diff against the current {default_branch}; resolve conflicts rather than bypassing them.
+          - Confirm the relevant checks passed on this exact head SHA.
+          - Add or update regression tests for behavior changes.
+          - Verify source provenance and redistribution rights for imported code/data/assets.
+          - Follow docs/MAINLINE_ACCEPTANCE_GATE.md and keep claims limited to evidence actually collected.
+
+          This automation does not push to {default_branch}, merge, force-push, or delete branches. The original branch and its history are preserved. Large changes, overlapping changes, and Step 102/source-import candidates are deliberately held for manual review.
+          """
+              body_path = Path("/tmp/branch-intake-pr.md")
+              body_path.write_text(body)
+              title = f"intake: {name}"
+              result = subprocess.run(
+                  ["gh", "pr", "create", "--repo", repo, "--base", default_branch,
+                   "--head", name, "--draft", "--title", title,
+                   "--body-file", str(body_path)],
+                  text=True, capture_output=True
+              )
+              if result.returncode != 0:
+                  deferred.append((name, f"PR creation failed: {(result.stderr or result.stdout).strip()[:160]}"))
+                  continue
+
+              url = result.stdout.strip().splitlines()[-1]
+              confirmed_head = subprocess.run(
+                  ["gh", "pr", "view", url, "--repo", repo, "--json", "headRefOid", "--jq", ".headRefOid"],
+                  text=True, capture_output=True
+              )
+              head_matches = confirmed_head.returncode == 0 and confirmed_head.stdout.strip() == candidate["sha"]
+              build_paths = (
+                  "gamecube-demo/Makefile",
+                  "gamecube-demo/source/",
+                  "gamecube-demo/tests/",
+                  "gamecube-demo/include/",
+                  "gamecube-demo/data/",
+                  "gamecube-demo/tools/",
+              )
+              needs_build = any(
+                  path == "gamecube-demo/Makefile" or path.startswith(build_paths[1:])
+                  for path in paths
+              )
+              if not head_matches:
+                  body += "\n\n**Intake race note:** the branch tip changed while this PR was being created. Re-review the current diff; no automatic validation was dispatched."
+                  subprocess.run(
+                      ["gh", "pr", "edit", url, "--repo", repo, "--body", body],
+                      text=True, capture_output=True
+                  )
+                  validation = "branch head changed during intake; validation not dispatched"
+              elif needs_build and ".github/workflows/gamecube-demo-build.yml" not in paths:
+                  dispatch = subprocess.run(
+                      ["gh", "workflow", "run", "gamecube-demo-build.yml",
+                       "--repo", repo, "--ref", name],
+                      text=True, capture_output=True
+                  )
+                  validation = "dispatched prototype build/tests" if dispatch.returncode == 0 else (
+                      "manual CI dispatch needed: " + (dispatch.stderr or dispatch.stdout).strip()[:120]
+                  )
+              else:
+                  validation = "no automatic prototype build needed" if not needs_build else (
+                      "workflow definition changed; manual workflow review/dispatch required"
+                  )
+              created.append((name, url, ahead, behind, len(paths), validation))
+              selected_paths.update(paths)
+              open_paths.update(paths)
+              created_count += 1
+
+          lines = [
+              "# Branch intake queue",
+              "",
+              f"- Default branch: {default_branch}",
+              f"- Total branch refs scanned: {len(branches)}",
+              f"- Existing open PRs at start: {len(open_prs)}",
+              f"- Open-PR changed-file inventory wall time: {open_pr_paths_wall_seconds:.2f}s",
+              f"- Open-PR serial-equivalent request wait: {open_pr_paths_request_seconds:.2f}s",
+              f"- Estimated open-PR inventory speedup: {open_pr_paths_request_seconds / max(open_pr_paths_wall_seconds, 0.001):.1f}x",
+              f"- Branches with a small, distinct diff identified: {len(candidates)}",
+              f"- Unique tip comparisons attempted: {len(comparison_shas)}",
+              f"- Comparison phase wall time: {comparison_wall_seconds:.2f}s",
+              f"- Serial-equivalent request wait: {comparison_request_seconds:.2f}s",
+              f"- Estimated comparison-stage speedup: {comparison_request_seconds / max(comparison_wall_seconds, 0.001):.1f}x",
+              f"- Draft PRs created this run: {len(created)} / {max_prs} requested",
+              f"- Candidates deferred for manual review or overlap: {len(deferred)}",
+              "- Automatic merge, direct-to-main push, force-push, and branch deletion: **disabled**",
+              "",
+              "## Draft PRs created",
+              "",
+          ]
+          if created:
+              lines += [f"- [{name}]({url}) — {ahead} ahead / {behind} behind; {files} paths; {validation}"
+                        for name, url, ahead, behind, files, validation in created]
+          else:
+              lines.append("No eligible candidate was promoted to a draft PR on this run.")
+          lines += ["", "## Deferred candidates", ""]
+          if deferred:
+              lines += [f"- {name}: {reason}" for name, reason in deferred[:30]]
+              if len(deferred) > 30:
+                  lines.append(f"- ... and {len(deferred) - 30} more")
+          else:
+              lines.append("No candidates were deferred for manual review.")
+          lines += ["", "## Summary of safe skips", ""]
+          if skips:
+              lines += [f"- {reason}: {count}" for reason, count in sorted(skips.items())]
+          else:
+              lines.append("None.")
+          summary_path.write_text("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          PY
