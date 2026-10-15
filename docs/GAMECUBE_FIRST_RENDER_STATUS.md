@@ -2,6 +2,14 @@
 
 Last updated: 2026-10-15
 
+## Mainline state after timing and multi-rival integration
+
+- Current main commit: `7d46e90de0e9db4e9ed36f88012ac15ab2491f18`.
+- Post-merge run: [GameCube first-render prototype run 38744031286](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286). The host gameplay/pause tests, native DOL/ELF build, artifact validation, and 12-second Dolphin null-video smoke succeeded. The optional visible Software Renderer diagnostic was still in progress when checked.
+- [PR #97](https://github.com/Master-Chiken/boonta-reborn-88/pull/97) added three staggered procedural rivals and per-rival collision/overtake/reset behavior; [PR #98](https://github.com/Master-Chiken/boonta-reborn-88/pull/98) added elapsed-time scaling for 50/60 Hz; [PR #100](https://github.com/Master-Chiken/boonta-reborn-88/pull/100) guards scaled speed input against NaN and infinities. PRs #93 and #94 supply race/lap clocks and defensive lap crossing.
+- The cadence tests compare one simulated second at 60 and 50 updates, including acceleration/coasting/braking, boost/heat, steering, off-road drag, route distance, and rival motion. Frame-scale is capped at 50 ms to limit physics jumps after a stall.
+- These checks still do not prove visible interactive controller response, a completed live three-lap run/restart, long-session stability, or physical-console behavior.
+
 ## Latest CI visible-render verification (2026-10-15)
 
 - Native build and visible-render evidence: [GameCube first-render prototype run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531).
