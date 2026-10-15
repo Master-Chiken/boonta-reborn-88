@@ -183,6 +183,25 @@ static void three_lap_finish_tests(void) {
 }
 
 
+static void multiple_rival_spacing_tests(void) {
+ assert(BOONTA_RIVAL_COUNT == 3U);
+ assert(nearf(boonta_rival_initial_z(0U), -18.0f));
+ assert(nearf(boonta_rival_initial_z(1U), -34.0f));
+ assert(nearf(boonta_rival_initial_z(2U), -50.0f));
+
+ /* Collision respawns and overtakes preserve staggered spacing. */
+ assert(nearf(boonta_rival_respawn_z(0U, 1), -20.0f));
+ assert(nearf(boonta_rival_respawn_z(1U, 1), -32.0f));
+ assert(nearf(boonta_rival_respawn_z(2U, 1), -44.0f));
+ assert(nearf(boonta_rival_respawn_z(0U, 0), -22.0f));
+ assert(nearf(boonta_rival_respawn_z(1U, 0), -34.0f));
+ assert(nearf(boonta_rival_respawn_z(2U, 0), -46.0f));
+
+ assert(boonta_rival_event(boonta_rival_initial_z(0U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(boonta_rival_initial_z(1U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+}
+
 static void rival_event_tests(void) {
  /* The rival only triggers a contact/overtake decision once it reaches the player. */
  assert(boonta_rival_event(-18.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
@@ -250,6 +269,7 @@ static void simulated_three_lap_run_tests(void) {
  float race_seconds = 0.0f;
  float lap_seconds = 0.0f;
  float best_lap_seconds = 0.0f;
+ float last_lap_seconds = 0.0f;
  unsigned int laps = 0U;
  unsigned int frames = 0U;
  int overheated = 0;
@@ -268,11 +288,15 @@ static void simulated_three_lap_run_tests(void) {
   distance = boonta_distance_after_frame(distance, speed, boost_active);
   laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
   if (laps > previous_laps) {
-   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, lap_seconds);
+   last_lap_seconds = lap_seconds;
+   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, last_lap_seconds);
    lap_seconds = 0.0f;
   }
   finished = boonta_race_is_finished(laps, 3U);
-  if (finished) speed = 0.0f;
+  if (finished) {
+   speed = 0.0f;
+   lap_seconds = last_lap_seconds;
+  }
   ++frames;
  }
 
@@ -282,7 +306,8 @@ static void simulated_three_lap_run_tests(void) {
  assert(distance >= 360.0f);
  assert(race_seconds > 0.0f);
  assert(best_lap_seconds > 0.0f);
- assert(lap_seconds >= 0.0f);
+ assert(last_lap_seconds > 0.0f);
+ assert(nearf(lap_seconds, last_lap_seconds));
  assert(nearf(speed, 0.0f));
 }
 
@@ -297,6 +322,7 @@ int main(void) {
  three_lap_finish_tests();
  distance_progression_tests();
  simulated_three_lap_run_tests();
+ multiple_rival_spacing_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
