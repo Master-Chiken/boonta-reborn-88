@@ -7,6 +7,8 @@
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 static inline float boonta_speed_after_input(float speed, int accelerating, int braking)
 {
+    /* Recover deterministically from a corrupted speed instead of propagating NaN. */
+    if (!isfinite(speed)) speed = 0.0f;
     if (accelerating) speed += 0.012f; else speed -= 0.003f;
     if (braking) speed -= 0.022f;
     if (speed < 0.0f) return 0.0f;
