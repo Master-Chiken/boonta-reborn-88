@@ -29,15 +29,30 @@ jobs:
         with:
           script: |
             const run = context.payload.workflow_run;
-            const prs = run.pull_requests || [];
-            if (!prs.length) {
-              core.info('This failed run is not linked to a pull request; no comment will be posted.');
+            // Prefer the PR association supplied by GitHub, but verify the exact
+            // head SHA. Some workflow_run payloads have no pull_requests entry.
+            let candidate = (run.pull_requests || []).find(item =>
+              item && item.number && item.head && item.head.sha === run.head_sha
+            );
+            if (!candidate && run.head_branch && run.head_sha) {
+              const { data: candidates } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                base: 'main',
+                head: context.repo.owner + ':' + String(run.head_branch),
+                per_page: 100,
+              });
+              candidate = candidates.find(item => item.head.sha === run.head_sha);
+            }
+            if (!candidate) {
+              core.info('No open PR targeting main matches this exact workflow-run head SHA; no comment will be posted.');
               return;
             }
 
-            const prNumber = Number(prs[0].number);
+            const prNumber = Number(candidate.number);
             if (!Number.isInteger(prNumber) || prNumber < 1) {
-              core.warning('No valid pull request number in workflow_run payload.');
+              core.warning('No valid pull request number found.');
               return;
             }
 
@@ -46,8 +61,8 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber,
             });
-            if (pr.state !== 'open' || pr.base.ref !== 'main') {
-              core.info('PR is closed or does not target main; no comment will be posted.');
+            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.head.sha !== run.head_sha) {
+              core.info('PR is closed, does not target main, or no longer matches the failed run SHA; no comment will be posted.');
               return;
             }
 
