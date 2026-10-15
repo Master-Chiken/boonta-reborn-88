@@ -51,15 +51,15 @@ The C source and geometry here are original procedural scaffolding created for t
 
 ## What the automated Dolphin checks prove
 
-The scripted DTM comparison is an **input-path and camera-follow smoke diagnostic**. It checks that expected scene colors render, the cyan player pod remains inside the captured frame and stays near its neutral-input screen position, the course's bright cyan edge shifts left under right steering, and the separate HUD state marker responds.
+The scripted DTM comparison is a **bidirectional input-path and camera-follow smoke diagnostic**. It captures neutral, right-input, and left-input frames. Both steered frames must keep the pod inside the image and near its neutral screen position. The test estimates the road center from the green-ground boundaries across multiple rows: right steering must shift that road silhouette left and the HUD marker right, while left steering must shift the road silhouette right and the HUD marker left.
 
-The initial capture showed the pod moving from about x=429 to x=748 and clipping at the right image edge. That exposed a real camera-follow issue. The camera now follows the pod's lateral offset; the updated Software Renderer test requires the pod to remain un-clipped with no more than 80 px centroid drift, and the course edge to shift left by at least 25 px. Those are automated scene checks, not tuning claims about handling quality.
+The initial capture showed the pod moving from about x=429 to x=748 and clipping at the right image edge. That exposed a real camera-follow issue. The camera now follows the pod's lateral offset; the updated Software Renderer test requires the pod to remain un-clipped with no more than 80 px centroid drift and the road silhouette to shift at least 25 px in the expected direction for both steering inputs. Those are automated scene checks, not tuning claims about handling quality.
 
 Keep validation claims separate:
 
 - **Host tests and native DOL/ELF build:** the tested code compiles and its deterministic helper tests pass.
 - **Dolphin null-video smoke:** the emulator process accepts/runs the DOL for the bounded smoke window; this is not visual verification.
-- **Software-renderer camera-follow diagnostic:** scene signatures, on-screen pod position, leftward course-edge response, and the independent HUD marker are compared against a neutral baseline.
+- **Software-renderer camera-follow diagnostic:** scene signatures, pod framing, and road-silhouette/HUD response are checked against a neutral baseline in both left and right steering directions.
 - **Interactive steering and complete race:** still require a visible Dolphin session (or physical hardware) with an actual controller profile, acceleration/braking/steering, three lap crossings, finish, reset, and evidence recorded against the tested commit.
 
 Do not report the scripted capture as proof that the game is fully playable. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.

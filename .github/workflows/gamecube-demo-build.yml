@@ -235,26 +235,32 @@ jobs:
           export BASELINE_LOG="$GITHUB_WORKSPACE/dolphin-neutral-baseline.log"
           export BASELINE_USER="$GITHUB_WORKSPACE/dolphin-neutral-user"
           export STEERED_USER="$GITHUB_WORKSPACE/dolphin-steered-user"
+          export LEFT_USER="$GITHUB_WORKSPACE/dolphin-left-steered-user"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
+          export LEFT_DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-left.dtm"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
+          export LEFT_LOG="$GITHUB_WORKSPACE/dolphin-left-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
+          export LEFT_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-left-frame.png"
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
           test -s "$BASELINE_DTM"
           test -s "$DTM"
+          test -s "$LEFT_DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config"
-          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER"
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"
           # Use isolated Dolphin profiles so the second capture cannot reuse
           # the first session's movie state, window or display configuration.
-          for user_dir in "$BASELINE_USER" "$STEERED_USER"; do
+          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"; do
             cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
           EOF
           done
           set +e
-          timeout --signal=TERM --kill-after=3s 70s xvfb-run -a -s "-screen 0 1280x720x24" \
+          timeout --signal=TERM --kill-after=3s 100s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
             bash -c '
               set -euo pipefail
@@ -330,8 +336,10 @@ jobs:
               }
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
-              echo "Running camera-follow diagnostic: confirm pod framing, leftward road-edge response, and independent HUD input state; this is not full-playability verification."
-              python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --min-shift 2.0
+              capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
+              echo "Running bidirectional camera-follow diagnostic: green-ground road silhouette should shift opposite to each steering direction."
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
@@ -346,15 +354,21 @@ jobs:
                 echo "Captured frame contains a Dolphin boot/core error dialog."
                 exit 1
               fi
-              echo "Scripted camera-follow smoke passed: pod stayed visible, course edge shifted left, and HUD response was detected. Full gameplay remains unverified."
+              left_near_white_fraction=$(convert "$LEFT_CAPTURE" -crop 800x180+0+280 +repage -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
+              echo "Near-white pixel fraction in the lower left-steering viewport: $left_near_white_fraction"
+              if awk -v fraction="$left_near_white_fraction" "BEGIN { exit !(fraction > 0.25) }"; then
+                echo "The left-steered game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
+                exit 1
+              fi
+              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input. Full gameplay remains unverified."
             '
           status=$?
           set -e
           [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -363,7 +377,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional scripted camera-follow/course-edge diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The optional bidirectional camera-follow/road-silhouette diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 
@@ -374,12 +388,16 @@ jobs:
           name: gamecube-dolphin-software-frame-diagnostic
           path: |
             dolphin-software-frame.png
+            dolphin-software-left-frame.png
             dolphin-neutral-baseline.png
             dolphin-render.log
+            dolphin-left-render.log
             dolphin-neutral-baseline.log
             dolphin-flatpak-cli-capabilities.log
             dolphin-scripted-controller-input.dtm
+            dolphin-scripted-controller-left.dtm
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
+            dolphin-left-steered-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
