@@ -5,6 +5,56 @@
 
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
 
+
+static void frame_scale_tests(void) {
+ assert(nearf(boonta_frame_scale_from_delta(1.0f / 60.0f), 1.0f));
+ assert(nearf(boonta_frame_scale_from_delta(1.0f / 50.0f), 1.2f));
+ assert(nearf(boonta_frame_scale_from_delta(1.0f), 3.0f));
+ assert(nearf(boonta_frame_scale_from_delta(0.0f), 1.0f));
+ assert(nearf(boonta_frame_scale_from_delta(-0.01f), 1.0f));
+ assert(nearf(boonta_frame_scale_from_delta(NAN), 1.0f));
+ assert(nearf(boonta_frame_scale_from_delta(INFINITY), 3.0f));
+}
+
+static void cadence_consistency_tests(void) {
+ float speed60 = 0.5f, speed50 = 0.5f;
+ float boost60 = 0.8f, boost50 = 0.8f;
+ float heat60 = 0.2f, heat50 = 0.2f;
+ float lateral60 = 0.05f, lateral50 = 0.05f;
+ float distance60 = 0.0f, distance50 = 0.0f;
+ float offroad60 = 0.8f, offroad50 = 0.8f;
+ unsigned int i;
+
+ /* One second: 0.4 s accelerate, 0.4 s coast and 0.2 s brake. */
+ for (i = 0U; i < 60U; ++i) {
+  const int accelerating = i < 24U;
+  const int braking = i >= 48U;
+  speed60 = boonta_speed_after_input_scaled(speed60, accelerating, braking, 1.0f);
+  boost60 = boonta_boost_after_frame_scaled(boost60, 1, 1.0f);
+  heat60 = boonta_engine_heat_after_frame_scaled(heat60, 1, 1.0f);
+  lateral60 = boonta_lateral_velocity_after_steering_scaled(lateral60, 0.0f, 0.0f, 1.0f);
+  distance60 = boonta_distance_after_frame_scaled(distance60, 0.5f, 0, 1.0f);
+  offroad60 = boonta_speed_after_offroad_scaled(offroad60, 3.5f, 1.0f);
+ }
+ for (i = 0U; i < 50U; ++i) {
+  const int accelerating = i < 20U;
+  const int braking = i >= 40U;
+  speed50 = boonta_speed_after_input_scaled(speed50, accelerating, braking, 1.2f);
+  boost50 = boonta_boost_after_frame_scaled(boost50, 1, 1.2f);
+  heat50 = boonta_engine_heat_after_frame_scaled(heat50, 1, 1.2f);
+  lateral50 = boonta_lateral_velocity_after_steering_scaled(lateral50, 0.0f, 0.0f, 1.2f);
+  distance50 = boonta_distance_after_frame_scaled(distance50, 0.5f, 0, 1.2f);
+  offroad50 = boonta_speed_after_offroad_scaled(offroad50, 3.5f, 1.2f);
+ }
+
+ assert(nearf(speed60, speed50));
+ assert(nearf(boost60, boost50));
+ assert(nearf(heat60, heat50));
+ assert(nearf(lateral60, lateral50));
+ assert(nearf(distance60, distance50));
+ assert(nearf(offroad60, offroad50));
+}
+
 static void speed_tests(void) {
  assert(nearf(boonta_speed_after_input(0.0f,1,0),0.012f));
  assert(nearf(boonta_speed_after_input(0.5f,0,0),0.497f));
@@ -240,6 +290,7 @@ static void simulated_three_lap_run_tests(void) {
  float race_seconds = 0.0f;
  float lap_seconds = 0.0f;
  float best_lap_seconds = 0.0f;
+ float last_lap_seconds = 0.0f;
  unsigned int laps = 0U;
  unsigned int frames = 0U;
  int overheated = 0;
@@ -258,11 +309,15 @@ static void simulated_three_lap_run_tests(void) {
   distance = boonta_distance_after_frame(distance, speed, boost_active);
   laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
   if (laps > previous_laps) {
-   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, lap_seconds);
+   last_lap_seconds = lap_seconds;
+   best_lap_seconds = boonta_best_lap_after_finish(best_lap_seconds, last_lap_seconds);
    lap_seconds = 0.0f;
   }
   finished = boonta_race_is_finished(laps, 3U);
-  if (finished) speed = 0.0f;
+  if (finished) {
+   speed = 0.0f;
+   lap_seconds = last_lap_seconds;
+  }
   ++frames;
  }
 
@@ -272,11 +327,14 @@ static void simulated_three_lap_run_tests(void) {
  assert(distance >= 360.0f);
  assert(race_seconds > 0.0f);
  assert(best_lap_seconds > 0.0f);
- assert(lap_seconds >= 0.0f);
+ assert(last_lap_seconds > 0.0f);
+ assert(nearf(lap_seconds, last_lap_seconds));
  assert(nearf(speed, 0.0f));
 }
 
 int main(void) {
+ frame_scale_tests();
+ cadence_consistency_tests();
  speed_tests();
  boost_tests();
  boost_overheat_tests();
