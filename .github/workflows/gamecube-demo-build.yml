@@ -46,6 +46,9 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
+      - name: Test DOL padding and artifact validation utilities
+        run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
+
   build-gamecube-demo:
     runs-on: ubuntu-latest
     container:
@@ -69,6 +72,9 @@ jobs:
           make clean
           set -o pipefail
           make 2>&1 | tee build.log
+          # libogc's DOL output may omit the final bytes required for
+          # 32-byte-aligned section reads. Dolphin rejects such a DOL at boot.
+          python3 tools/pad_dol.py boonta_gc_demo.dol
           test -s boonta_gc_demo.dol
           test -s boonta_gc_demo.elf
 
