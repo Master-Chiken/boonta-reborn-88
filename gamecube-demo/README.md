@@ -9,7 +9,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
 - A clean-room procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
-- A basic speed bar, steering-position tick, rechargeable boost-energy meter, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
+- A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
@@ -20,7 +20,7 @@ This is a gameplay prototype, not the completed racer and not a port of the comm
 - Control Stick left/right (or D-pad): steer.
 - A: accelerate.
 - B: brake.
-- Hold X + A: engage boost while accelerating; the energy meter drains and recharges when boost is released.
+- Hold X + A: engage boost while accelerating; energy drains and recharges on release. Heat rises during boost; at 98% heat, boost locks out until the engine cools to 60% or below.
 - Start: toggle pause/resume; the pause icon appears in the center of the HUD.
 - Y: reset the run, lap counter, rival, overtake indicators, and pause state.
 
