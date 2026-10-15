@@ -707,6 +707,8 @@ int main(int argc, char **argv)
                 g_race_finished = 1;
                 g_speed = 0.0f;
                 g_boost_active = 0;
+                /* Freeze the finished HUD on the lap that just completed. */
+                g_lap_seconds = g_last_lap_seconds;
             }
         }
 
