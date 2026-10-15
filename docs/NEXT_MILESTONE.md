@@ -1,37 +1,54 @@
-# Next milestone: restore the native GameCube/Wii prototype in CI
+# Next milestone: visible runtime verification and provenance sign-off
 
-## Goal
+## Current state (2026-10-14)
 
-Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The next milestone is not another Dreamcast screen: it is a reviewed source-only import, automated host tests, and the first native GameCube cross-build.
+The Step 102 source-only subset now lives on draft PR #17 (branch import/step102-source-only). It has passed:
+- the path/asset import policy and host regression suite in GitHub Actions;
+- a devkitPPC/libogc cross-build that produced a non-empty swe1r_gc_port.dol of approximately 301 KiB;
+- a 12-second headless Dolphin process smoke test using the null video backend.
 
-## Audit findings
+[Latest validation run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432).
 
-- The source archive `Star_Wars_Racer_GameCube_Step102.zip` is available in the project history/library and has been inspected.
-- It contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, docs, and host tests.
-- The archive README describes 25 course entries, 23 pod presets/variants, physics, drift/boost/heat/damage, rival AI, pickups/hazards, several race modes, HUD, and save/progression scaffolding.
-- The host release suite passed in a clean temporary environment: host shell checks and 91 Python unit tests passed. This is not a native target build.
-- The archive README explicitly says that a real devkitPPC/libogc `.dol` build and Dolphin/console runtime test remain pending.
-- The source prototype has not yet been imported into this GitHub repository. The existing native workflow intentionally stops until its source tree is present.
-- The separate Dreamcast starter and its CI artifact do not validate the GameCube/Wii prototype.
+Nothing from this import has been merged into main. Do not call this a finished or playable port yet: visible rendering, controller response and gameplay remain unverified. The experimental Xvfb/OpenGL capture produced almost-black frames and failed its image-content check; diagnose the capture environment versus game startup before drawing conclusions about the renderer.
 
-## Work sequence
+## Immediate work
 
-1. Review the source archive's provenance, license, generated route data, and assets.
-2. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
-3. Run the host test suite in GitHub Actions.
-4. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
-5. Inspect the first compiler failure if any and fix it without disabling tests.
-6. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
-7. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
+1. **Source rights:** verify the origin/ownership and redistribution terms for the imported C source, headers, build files, tests and documentation. The supplied ZIP does not contain a license covering the source tree as a whole.
+2. **Visible emulator test:** open the generated DOL in Dolphin with a visible video backend and a mapped GameCube controller. Verify picture output, pod/track rendering, menus, steering, throttle, braking, boost, checkpoint/lap progression, finish, pause and restart.
+3. **Record runtime evidence:** capture video/screenshots and logs, list exactly what was tested, and distinguish verified behavior from untested behavior.
+4. **Fix only demonstrated issues:** preserve current host tests and CI gates. Add regression coverage for each gameplay or renderer defect discovered.
+5. **Review before merge:** keep PR #17 in draft until the licensing boundary and visible runtime test are satisfactorily reviewed. Never merge automatically.
 
-## Acceptance criteria
+## Provenance exclusions
 
-- Source provenance and redistribution boundaries are documented.
-- Host tests pass in GitHub Actions.
-- Native GameCube cross-build produces a non-empty DOL.
-- Compile success and emulator/hardware testing are reported separately.
-- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
+The first public source-only import intentionally excludes:
+- PC-mod-derived course centerlines and their manifest;
+- imported centerline and generated mesh/boundary headers;
+- voice/audio, model/texture exports and unreviewed asset files;
+- ROMs, disc images, extracted game data, binary dumps and PC/N64 extraction helpers.
 
-## What the project owner needs to do now
+Builds use USE_IMPORTED_SPLINE=0 with a demo/procedural track. The path guard is a safety net, not a license scanner.
 
-Nothing needs to be installed locally for this planning step. Keep the source archive available in the ChatGPT Library. The work can continue in GitHub with cloud CI; an actual emulator/console run may still require a separate runtime environment.
+## Reproducible CI commands
+
+Host checks:
+
+~~~sh
+python3 tools/check_source_import_policy.py
+bash tools/release_check.sh
+~~~
+
+Native build with devkitPro installed:
+
+~~~sh
+export DEVKITPRO=/opt/devkitpro
+export DEVKITPPC="$DEVKITPRO/devkitPPC"
+make clean
+make USE_IMPORTED_SPLINE=0
+~~~
+
+CI currently uses the container image devkitpro/devkitppc:latest; pinning the exact image digest is a future reproducibility improvement.
+
+## Later vertical-slice goal
+
+Once visible rendering/controller behavior is confirmed, concentrate on one stable and satisfying race: one course, one controllable pod, functional camera follow, track boundaries/collision, reliable finish logic and stable frame timing. Only expand presentation, assets, additional courses and packaging after that vertical slice is verified.

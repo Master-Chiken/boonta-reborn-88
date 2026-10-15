@@ -1,7 +1,20 @@
 name: GameCube native build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "source/**"
+      - "include/**"
+      - "data/**"
+      - "tools/**"
+      - "tests/**"
+      - "Makefile"
+      - ".github/workflows/native-build.yml"
   push:
     branches: [main]
     paths:
@@ -12,49 +25,140 @@ on:
       - "tests/**"
       - "Makefile"
       - ".github/workflows/native-build.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  host-validation:
+    name: Host gameplay regression suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Reject unreviewed source/assets
+        run: python3 tools/check_source_import_policy.py
+      - name: Run host-side regression tests
+        run: bash tools/release_check.sh
+
   build:
+    needs: host-validation
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitppc:latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Verify source archive was imported
+      - name: Verify source tree
         shell: bash
         run: |
-          if [[ ! -f Makefile || ! -d source || -z "$(find source -maxdepth 1 -type f 2>/dev/null | head -n 1)" ]]; then
-            echo "::error::The native source prototype is not present in this GitHub repository yet."
-            echo "Import the source-only contents of Star_Wars_Racer_GameCube_Step102.zip first."
-            echo "Do not upload ROMs, disc images, or proprietary game assets."
-            exit 2
-          fi
-
-      - name: Run Python tests
-        shell: bash
-        run: python3 -m unittest discover -s tests -v
-
-      - name: Build GameCube DOL
+          set -euo pipefail
+          test -f Makefile
+          test -f source/main.c
+          test -f source/track_centerline.generated.h
+          test ! -e source/track_centerlines_pc.generated.h
+          test ! -e source/track_centerline.imported.h
+      - name: Build native GameCube DOL using the procedural fallback track
         shell: bash
         run: |
+          set -euo pipefail
           export DEVKITPRO=/opt/devkitpro
           export DEVKITPPC="$DEVKITPRO/devkitPPC"
           make clean
-          make
+          make USE_IMPORTED_SPLINE=0
           test -s swe1r_gc_port.dol
-
-      - name: Upload DOL and build log
+          ls -lh swe1r_gc_port.dol
+      - name: Upload DOL and build map
         uses: actions/upload-artifact@v4
         with:
-          name: swe1r-gc-build
+          name: swe1r-gc-step102-source-only
           path: |
             swe1r_gc_port.dol
             swe1r_gc_port.elf
             swe1r_gc_port.elf.map
           if-no-files-found: error
+          retention-days: 7
+
+  dolphin-visible-preview:
+    name: Capture a rendered Dolphin frame
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:26.04
+    steps:
+      - name: Download the compiled DOL
+        uses: actions/download-artifact@v4
+        with:
+          name: swe1r-gc-step102-source-only
+          path: dist
+      - name: Install free Dolphin, Xvfb, OpenGL software renderer, and screenshot tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb imagemagick mesa-utils libgl1-mesa-dri libxcb-cursor0 libxkbcommon-x11-0 libxcb-xinerama0 gdb
+          rm -rf /var/lib/apt/lists/*
+          export PATH="/usr/games:$PATH"
+          QT_QPA_PLATFORM=offscreen dolphin-emu --version
+      - name: Capture Dolphin window output
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/games:$PATH"
+          export LIBGL_ALWAYS_SOFTWARE=1
+          xvfb-run -a -s "-screen 0 1280x720x24" bash -lc '
+            set -euo pipefail
+            export PATH="/usr/games:$PATH"
+            export LIBGL_ALWAYS_SOFTWARE=1
+            export QT_QPA_PLATFORM=xcb
+            mkdir -p artifacts /tmp/dolphin-user
+            export HOME=/tmp/dolphin-user
+            export XDG_CONFIG_HOME=/tmp/dolphin-user/.config
+            export XDG_DATA_HOME=/tmp/dolphin-user/.local/share
+            gdb --quiet --batch \
+              -ex "set pagination off" \
+              -ex run \
+              -ex "thread apply all bt full" \
+              --args dolphin-emu --video_backend="Software Renderer" \
+                --exec=dist/swe1r_gc_port.dol --user=/tmp/dolphin-user \
+              > artifacts/dolphin-visible.log 2>&1 &
+            debugger_pid=$!
+            cleanup() {
+              kill -TERM "$debugger_pid" 2>/dev/null || true
+              wait "$debugger_pid" 2>/dev/null || true
+            }
+            trap cleanup EXIT
+            sleep 8
+            alive=0
+            if ! kill -0 "$debugger_pid" 2>/dev/null; then alive=1; fi
+            set +e
+            import -window root artifacts/dolphin-preview.png
+            capture_status=$?
+            set -e
+            cat artifacts/dolphin-visible.log || true
+            if [[ "$capture_status" -ne 0 ]]; then
+              echo "Screenshot capture failed; see Dolphin log above."
+              exit 1
+            fi
+            identify -format "Captured frame: %wx%h, %[channels], %b\\n" artifacts/dolphin-preview.png
+            test -s artifacts/dolphin-preview.png
+            if [[ "$alive" -ne 0 ]]; then
+              echo "Dolphin exited before screenshot capture; GDB backtrace is included in the runtime log."
+              exit 1
+            fi
+          '
+      - name: Upload screenshot and runtime log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-visible-frame-preview
+          path: |
+            artifacts/dolphin-preview.png
+            artifacts/dolphin-visible.log
+          if-no-files-found: warn
           retention-days: 7
