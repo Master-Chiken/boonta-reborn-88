@@ -77,6 +77,9 @@ static const GXColor C_POD_SIDE = { 17, 75, 139, 255 };
 static const GXColor C_POD_ACCENT = { 70, 231, 248, 255 };
 static const GXColor C_THRUST = { 255, 132, 45, 255 };
 static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
+static const GXColor C_EXHAUST_CORE = { 255, 244, 190, 255 };
+static const GXColor C_TETHER = { 20, 43, 66, 255 };
+static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -237,13 +240,41 @@ static void add_road(void)
 static void add_player_pod(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
+    const float engine_offset = 0.82f;
+    const float flame_length = 0.22f + 0.55f * g_speed + (g_boost_active ? 0.55f : 0.0f);
 
-    /* Paired engine pods, rear thrusters and a central tapered-looking nose. */
-    box_add(center - 0.62f, -0.62f, 1.08f,
-            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center + 0.62f, -0.62f, 1.08f,
-            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center, -0.49f, 0.63f, 0.54f, 0.09f, 0.18f,
+    /*
+     * Twin engines need to read as two separate masses connected to a cockpit,
+     * rather than one blue block. Draw the narrow clean-room tether strips first
+     * so their anchors disappear naturally beneath the engine nacelles.
+     */
+    quad_add((Point3){ center - 0.51f, -0.41f, 0.25f },
+             (Point3){ center - 0.48f, -0.61f, 0.25f },
+             (Point3){ center - 0.16f, -0.51f, -0.38f },
+             (Point3){ center - 0.21f, -0.40f, -0.38f }, C_TETHER);
+    quad_add((Point3){ center + 0.48f, -0.61f, 0.25f },
+             (Point3){ center + 0.51f, -0.41f, 0.25f },
+             (Point3){ center + 0.21f, -0.40f, -0.38f },
+             (Point3){ center + 0.16f, -0.51f, -0.38f }, C_TETHER);
+    quad_add((Point3){ center - 0.49f, -0.43f, 0.23f },
+             (Point3){ center - 0.48f, -0.48f, 0.23f },
+             (Point3){ center - 0.20f, -0.43f, -0.36f },
+             (Point3){ center - 0.21f, -0.40f, -0.36f }, C_TETHER_HIGHLIGHT);
+    quad_add((Point3){ center + 0.48f, -0.48f, 0.23f },
+             (Point3){ center + 0.49f, -0.43f, 0.23f },
+             (Point3){ center + 0.21f, -0.40f, -0.36f },
+             (Point3){ center + 0.20f, -0.43f, -0.36f }, C_TETHER_HIGHLIGHT);
+
+    /* Longer, wider-spaced nacelles give the racer a stronger twin-engine silhouette. */
+    box_add(center - engine_offset, -0.62f, 1.08f,
+            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+    box_add(center + engine_offset, -0.62f, 1.08f,
+            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+
+    /* Central body and raised canopy keep the cockpit visually separate from the engines. */
+    box_add(center, -0.49f, 0.23f, 0.35f, 0.09f, 0.20f,
+            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
+    box_add(center, -0.34f, -0.12f, 0.22f, 0.11f, 0.24f,
             C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
 
     triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
@@ -256,12 +287,33 @@ static void add_player_pod(void)
                  (Point3){ center + 0.08f, -0.45f, -0.40f },
                  (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
 
+    /*
+     * Exhaust length follows speed, with an additional boost plume. This is
+     * intentionally simple original geometry, but its state is now readable
+     * in the scene instead of only in the HUD meters.
+     */
     if (g_speed > 0.12f) {
-        const GXColor thrust = (g_boost_active || g_speed > 0.70f) ? C_THRUST_HOT : C_THRUST;
-        box_add(center - 0.62f, -0.62f, 2.10f,
-                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
-        box_add(center + 0.62f, -0.62f, 2.10f,
-                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
+        const GXColor thrust = (g_boost_active || g_speed > 0.70f)
+            ? C_THRUST_HOT : C_THRUST;
+        const float exhaust_end = 1.93f + flame_length;
+        box_add(center - engine_offset, -0.62f, 1.93f + flame_length * 0.5f,
+                0.15f, 0.14f, flame_length * 0.5f,
+                thrust, C_THRUST, C_THRUST);
+        box_add(center + engine_offset, -0.62f, 1.93f + flame_length * 0.5f,
+                0.15f, 0.14f, flame_length * 0.5f,
+                thrust, C_THRUST, C_THRUST);
+
+        /* Small hot cores sit just behind the plume so boost has a brighter tip. */
+        quad_add((Point3){ center - engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
+                 (Point3){ center - engine_offset - 0.065f, -0.56f, exhaust_end + 0.02f },
+                 g_boost_active ? C_EXHAUST_CORE : C_THRUST_HOT);
+        quad_add((Point3){ center + engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
+                 (Point3){ center + engine_offset - 0.065f, -0.56f, exhaust_end + 0.02f },
+                 g_boost_active ? C_EXHAUST_CORE : C_THRUST_HOT);
     }
 }
 
