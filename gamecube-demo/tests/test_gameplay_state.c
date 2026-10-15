@@ -173,6 +173,26 @@ static void three_lap_finish_tests(void) {
 }
 
 
+static void multiple_rival_spacing_tests(void) {
+ assert(BOONTA_RIVAL_COUNT == 3U);
+ assert(nearf(boonta_rival_initial_z(0U), -18.0f));
+ assert(nearf(boonta_rival_initial_z(1U), -34.0f));
+ assert(nearf(boonta_rival_initial_z(2U), -50.0f));
+
+ /* Collision respawns and overtakes preserve staggered spacing. */
+ assert(nearf(boonta_rival_respawn_z(0U, 1), -20.0f));
+ assert(nearf(boonta_rival_respawn_z(1U, 1), -32.0f));
+ assert(nearf(boonta_rival_respawn_z(2U, 1), -44.0f));
+ assert(nearf(boonta_rival_respawn_z(0U, 0), -22.0f));
+ assert(nearf(boonta_rival_respawn_z(1U, 0), -34.0f));
+ assert(nearf(boonta_rival_respawn_z(2U, 0), -46.0f));
+
+ /* Initial spacing keeps all rivals safely ahead of the player. */
+ assert(boonta_rival_event(boonta_rival_initial_z(0U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(boonta_rival_initial_z(1U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+}
+
 static void rival_event_tests(void) {
  /* The rival only triggers a contact/overtake decision once it reaches the player. */
  assert(boonta_rival_event(-18.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
@@ -287,6 +307,7 @@ int main(void) {
  three_lap_finish_tests();
  distance_progression_tests();
  simulated_three_lap_run_tests();
+ multiple_rival_spacing_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
