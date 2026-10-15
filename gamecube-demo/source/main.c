@@ -321,50 +321,61 @@ static void add_canyon_scenery(void)
  * They are deliberately original polygon scenery (no copied game geometry) and
  * use the same track-relative scroll so the skyline follows the road.
  */
+/*
+ * Taller, distant ridge crests continue directly from the top edge of each
+ * roadside canyon panel. Sharing the same section lengths, scroll, heights,
+ * and top offsets keeps the skyline attached to the walls as the track advances.
+ */
 static void add_distant_canyon_ridges(void)
 {
     const float base_y = ROAD_Y - 0.11f;
-    const float base_offset = ROAD_HALF_WIDTH + 5.2f;
-    const float ridge_length = 13.0f;
-    const float ridge_scroll = boonta_track_scroll_offset(g_distance, ridge_length);
-    const unsigned int passed_sections = boonta_track_section_index(g_distance, ridge_length);
+    const float base_offset = ROAD_HALF_WIDTH + 5.0f;
+    const float wall_length = 10.0f;
+    const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
+    const unsigned int passed_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
-    for (i = 0U; i < 7U; ++i) {
+    for (i = 0U; i < 9U; ++i) {
         const unsigned int phase = i + passed_sections;
-        const float z_near = -30.0f + ridge_scroll - (float)i * ridge_length;
-        const float z_far = z_near - ridge_length;
-        const float z_peak = z_near - ridge_length *
-            (0.32f + (float)(phase % 3U) * 0.12f);
+        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        const float z_far = z_near - wall_length;
+        const float z_peak = z_near - wall_length *
+            (0.35f + (float)(phase % 3U) * 0.10f);
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
         const float center_peak = road_center_at(z_peak, g_distance);
-        const float near_height = 7.0f + (float)(phase % 5U) * 2.0f;
-        const float far_height = 7.0f + (float)((phase + 1U) % 5U) * 2.0f;
-        const float peak_height = (near_height > far_height ? near_height : far_height)
-            + 2.8f + (float)(phase % 3U);
-        const float near_top_offset = base_offset + 2.8f + (float)(phase % 2U) * 0.6f;
-        const float far_top_offset = base_offset + 2.8f + (float)((phase + 1U) % 2U) * 0.6f;
-        const float peak_top_offset = (near_top_offset + far_top_offset) * 0.5f
-            + 1.8f + (float)(phase % 2U) * 0.6f;
+        const float near_height = 2.5f + (float)(phase % 4U) * 0.85f;
+        const float far_height = 2.5f + (float)((phase + 1U) % 4U) * 0.85f;
+        const float near_top_offset = base_offset + 1.6f
+            + (float)(phase % 2U) * 0.8f;
+        const float far_top_offset = base_offset + 1.6f
+            + (float)((phase + 1U) % 2U) * 0.8f;
+        const float highest_wall_point = near_height > far_height
+            ? near_height : far_height;
+        const float peak_height = highest_wall_point + 4.5f
+            + (float)(phase % 3U) * 1.25f;
+        const float peak_top_offset = base_offset + 3.0f
+            + (float)(phase % 2U) * 0.8f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
             const float side = side_index == 0U ? -1.0f : 1.0f;
-            const Point3 base_near = {
-                center_near + side * base_offset, base_y, z_near
-            };
             const Point3 top_near = {
-                center_near + side * near_top_offset, base_y + near_height, z_near
-            };
-            const Point3 peak = {
-                center_peak + side * peak_top_offset, base_y + peak_height, z_peak
+                center_near + side * near_top_offset,
+                base_y + near_height, z_near
             };
             const Point3 top_far = {
-                center_far + side * far_top_offset, base_y + far_height, z_far
+                center_far + side * far_top_offset,
+                base_y + far_height, z_far
             };
-            const Point3 base_far = {
-                center_far + side * base_offset, base_y, z_far
+            const Point3 peak = {
+                center_peak + side * peak_top_offset,
+                base_y + peak_height, z_peak
+            };
+            const Point3 top_mid = {
+                (top_near.x + top_far.x) * 0.5f,
+                (top_near.y + top_far.y) * 0.5f,
+                (top_near.z + top_far.z) * 0.5f
             };
             GXColor face;
             GXColor facet;
@@ -376,12 +387,12 @@ static void add_distant_canyon_ridges(void)
                 face = C_CANYON_MID;
                 facet = C_CANYON_LIGHT;
             }
-            /* Break up each ridge face to suggest sunlit mesas and shadowed slopes. */
-            triangle_add(base_near, top_near, peak, face);
-            triangle_add(base_near, peak, base_far, facet);
-            triangle_add(base_far, peak, top_far,
+
+            /* The bottom edge exactly matches the wall's top edge: no floating panels. */
+            triangle_add(top_near, peak, top_mid, face);
+            triangle_add(top_mid, peak, top_far,
                          ((phase + side_index) % 3U) == 0U
-                             ? C_CANYON_SUNLIT : C_CANYON_LIGHT);
+                             ? C_CANYON_SUNLIT : facet);
         }
     }
 }
@@ -811,8 +822,8 @@ static void draw_frame(void)
 
     g_vertex_count = 0;
     add_road();
-    add_distant_canyon_ridges();
     add_canyon_scenery();
+    add_distant_canyon_ridges();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
