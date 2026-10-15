@@ -5,7 +5,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 ## Current scope
 
 - Native GameCube GX initialization and 3D colored-vertex rendering.
-- A procedural scrolling curved road with edge strips and barrier rails.
+- A procedural curved test road with contrasting edge strips and barrier rails, a warm desert floor, daylight sky, and original low-poly canyon walls.
 - An original procedural twin-engine racer with separated engine nacelles, visible tether strips, a raised cockpit canopy, and exhaust plumes that lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
@@ -57,7 +57,7 @@ The C source and geometry here are original procedural scaffolding created for t
 
 ## What the automated Dolphin checks prove
 
-The scripted DTM comparison is a **bidirectional input-path and camera-follow smoke diagnostic**. It captures neutral, right-input, and left-input frames. Both steered frames must keep the pod inside the image and near its neutral screen position. The test estimates the road center from the green-ground boundaries across multiple rows: right steering must shift that road silhouette left and the HUD marker right, while left steering must shift the road silhouette right and the HUD marker left.
+The scripted DTM comparison is a **bidirectional input-path and camera-follow smoke diagnostic**. It captures neutral, right-input, and left-input frames. Both steered frames must keep the pod inside the image and near its neutral screen position. The test estimates the road center from the dark blue-grey asphalt boundaries across multiple rows, so the check remains valid when the terrain palette changes: right steering must shift that road silhouette left and the HUD marker right, while left steering must shift the road silhouette right and the HUD marker left.
 
 The initial capture showed the pod moving from about x=429 to x=748 and clipping at the right image edge. That exposed a real camera-follow issue. The camera now follows the pod's lateral offset; the updated Software Renderer test requires the pod to remain un-clipped with no more than 80 px centroid drift and the road silhouette to shift at least 25 px in the expected direction for both steering inputs. Those are automated scene checks, not tuning claims about handling quality.
 
