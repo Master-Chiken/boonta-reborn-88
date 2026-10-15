@@ -176,18 +176,18 @@ jobs:
               skipped=$((skipped + 1))
             fi
           done <<'MERGED_CANDIDATES'
-          maintenance/fix-branch-cleanup-protection-check 44f74b33be94555c242c13db0769823e4b32561e 139
-          maintenance/proof-based-cleanup fca93b8d359bc6049beb94d16f26ad731d40b72b 138
-          ai/gemini-agent-hardening 14973dce75c2455b55fe9bc42a8b0484823b0b20 15
-          ai/openrouter-free-pr-review 19f31276b8ee46d72fd0557454ae30b7c3b64e82 14
-          audit/initial-repository-audit 4c4ae81cc2a2bd6f3546ca0de0b43f25c579c685 54
-          automation/checkout-v7-clean-rebase f8f513133915b77d075f82218d521e27db408135 40
-          automation/ci-failure-triage f8144f5c1cdcb8626ea8561389cf4dca5597a856 32
-          automation/github-script-v9-clean-rebase 3fd29d209388ad829a3fc84dcb7febd7680f0a63 41
-          automation/upload-artifact-v7-pinned 5d15493a645f1c16ab06a2d2fac8e5e3914cc9c0 42
-          docs/record-dolphin-headless-smoke d07bf10959c4da1e19d7bf36d6cb5d2ab4894f33 50
-          docs/record-visible-dolphin-frame 35587e9a3196ada8965ec1699d4e6593efd88e4a 58
-          docs/refresh-repository-audit ceaae89303ea81e29e0dbc1864f781b55a4d8beb 57
+          test/dtm-neutral-axis-regression 802d3a6ff03f880be044ee05afafaa96696a2633 144
+          maintenance/fix-cleanup-shell-quoting c8087fe657092e4d6d9fe736be025a777864b406 145
+          test/dolphin-scripted-controller-input e960885ec8a837826aa5df614b2de615404adfa1 134
+          fix/nonfinite-speed-state-v2 6466cb0d745d9f8eff02f6ca856823babac43d28 135
+          ci/dolphin-software-frame-diagnostic ce3d768c9775026af909454a1daefb9648e6672f 133
+          docs/align-runtime-evidence-main e60a54f824c049dce98eb4cf08fd388a694a64d7 131
+          fix/non-finite-boost-state 5a594bf4fdd1e0c962c04a0b775626a2b292b38d 130
+          governance/hard-105-branch-cap 869694a111cf6f2efcac6af8b481fe67aff614ff 125
+          fix/non-finite-steering-input bcd2fd9dc9477b07d7c0c426ac12f626559bc6ee 129
+          fix/sanitize-scaled-gameplay-timing 10494d3d11710086bb6f6de74943fac3b3ea1fea 128
+          fix/dtm-pod-detection-window 8bc9d509c356516f6823fe46733e97f875689f21 117
+          fix/use-branch-tip-date-cache 79c7d2cf03da7bdf6cd991d9f8871f133becb911 112
           MERGED_CANDIDATES
 
           final_deleted=0
