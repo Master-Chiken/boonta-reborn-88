@@ -288,8 +288,14 @@ jobs:
           orange = sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135)
           ground_green = sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100)
           pod_blue = sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120)
-          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}")
-          if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
+          # The three-rival milestone uses distinct original colors for the
+          # second and third rivals. Count those signatures so the screenshot
+          # gate notices if either additional craft disappears from the scene.
+          rival_purple = sum(1 for r, g, b in pixels if r > 120 and b > 150 and r > 1.2 * g and b > 1.35 * g)
+          rival_gold = sum(1 for r, g, b in pixels if r > 220 and 150 < g < 220 and 20 < b < 120)
+          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}, rival_purple={rival_purple}, rival_gold={rival_gold}")
+          if (cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30 or
+                  rival_purple < 5 or rival_gold < 5):
               print("Captured Dolphin window is missing one or more expected scene-color signatures.")
               sys.exit(1)
           PY
