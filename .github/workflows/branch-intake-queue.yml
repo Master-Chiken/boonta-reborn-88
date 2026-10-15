@@ -298,6 +298,16 @@ jobs:
                   deferred.append((name, hold))
                   continue
 
+              # Cheap metadata gates run before patch/tree lookups. A stale or large
+              # branch stays intact for deliberate rebase/cherry-pick review.
+              if behind > 10:
+                  stale_base_deferred += 1
+                  deferred.append((name, f"stale base: {behind} commits behind main (>10); rebase or cherry-pick manually"))
+                  continue
+              if ahead > 10:
+                  deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead)"))
+                  continue
+
               # First detect commits already applied under different SHAs. A stale
               # branch's final file blobs can differ from main simply because it lacks
               # later main changes, even when its own unique patch has been superseded.
@@ -328,12 +338,8 @@ jobs:
               # Small merge-base diffs on very stale branches can still contain
               # obsolete implementations around files changed repeatedly in main.
               # Keep those branches intact, but require an explicit rebase/cherry-pick review.
-              if behind > 10:
-                  stale_base_deferred += 1
-                  deferred.append((name, f"stale base: {behind} commits behind main (>10); rebase or cherry-pick manually"))
-                  continue
-              if ahead > 10 or len(paths) > 20:
-                  deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} effective paths)"))
+              if len(paths) > 20:
+                  deferred.append((name, f"large scope needs a deliberate review ({len(paths)} effective paths)"))
                   continue
               overlap = sorted(set(paths) & open_paths)
               if overlap:
