@@ -58,8 +58,8 @@ static float g_boost = 1.0f;
 static float g_engine_heat;
 static int g_boost_overheated;
 static int g_boost_active;
-static float g_rival_z = -18.0f;
-static float g_rival_lateral;
+static float g_rival_z[BOONTA_RIVAL_COUNT];
+static float g_rival_lateral[BOONTA_RIVAL_COUNT];
 static unsigned int g_overtake_count;
 static int g_paused;
 static int g_race_finished;
@@ -267,14 +267,23 @@ static void add_player_pod(void)
     }
 }
 
-static void add_rival_pod(void)
+static void add_rival_pod(float z, float lateral, unsigned int rival_index)
 {
-    /* A lightweight procedural rival ahead of the player; no external assets. */
-    const float z = g_rival_z;
-    const float center = road_center_at(z, g_distance) + g_rival_lateral;
-    const GXColor rival_top = { 220, 82, 62, 255 };
-    const GXColor rival_side = { 120, 39, 70, 255 };
-    const GXColor rival_glow = { 255, 184, 92, 255 };
+    /* Original procedural rivals have distinct colors to make the pack readable. */
+    const float center = road_center_at(z, g_distance) + lateral;
+    GXColor rival_top = { 220, 82, 62, 255 };
+    GXColor rival_side = { 120, 39, 70, 255 };
+    GXColor rival_glow = { 255, 184, 92, 255 };
+
+    if (rival_index == 1U) {
+        rival_top = (GXColor){ 170, 110, 242, 255 };
+        rival_side = (GXColor){ 83, 53, 145, 255 };
+        rival_glow = (GXColor){ 220, 188, 255, 255 };
+    } else if (rival_index == 2U) {
+        rival_top = (GXColor){ 248, 188, 54, 255 };
+        rival_side = (GXColor){ 146, 82, 24, 255 };
+        rival_glow = (GXColor){ 255, 232, 130, 255 };
+    }
 
     box_add(center - 0.34f, -0.78f, z + 0.35f,
             0.15f, 0.13f, 0.42f, rival_top, rival_side, rival_glow);
@@ -582,7 +591,12 @@ static void draw_frame(void)
 
     g_vertex_count = 0;
     add_road();
-    add_rival_pod();
+    {
+        unsigned int rival_index;
+        for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+            add_rival_pod(g_rival_z[rival_index], g_rival_lateral[rival_index], rival_index);
+        }
+    }
     add_player_pod();
 
     GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
@@ -608,9 +622,14 @@ static void draw_frame(void)
 int main(int argc, char **argv)
 {
     u64 previous_tick;
+    unsigned int rival_index;
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
+    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+        g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
+        g_rival_lateral[rival_index] = 0.0f;
+    }
     previous_tick = gettime();
 
     for (;;) {
@@ -645,8 +664,10 @@ int main(int argc, char **argv)
             g_engine_heat = 0.0f;
             g_boost_overheated = 0;
             g_boost_active = 0;
-            g_rival_z = -18.0f;
-            g_rival_lateral = 0.0f;
+            for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+                g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
+                g_rival_lateral[rival_index] = 0.0f;
+            }
             g_overtake_count = 0U;
             g_race_finished = 0;
             g_paused = boonta_pause_state_next(g_paused, 0, 1);
@@ -707,24 +728,31 @@ int main(int argc, char **argv)
                 g_race_finished = 1;
                 g_speed = 0.0f;
                 g_boost_active = 0;
+                /* Keep the finished HUD on the completed final-lap time. */
+                g_lap_seconds = g_last_lap_seconds;
             }
         }
 
-        /* The rival approaches in camera space and gently changes lanes. */
-        g_rival_lateral = 1.10f * sinf(g_distance * 0.022f + 1.2f);
-        g_rival_z += 0.035f + g_speed * 0.045f;
-        {
-            const int rival_event = boonta_rival_event(
-                g_rival_z, g_player_lateral, g_rival_lateral);
-            if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
-                /* Contact costs speed and nudges the player away from the rival. */
-                g_speed = boonta_speed_after_rival_contact(g_speed);
-                g_lateral_velocity += boonta_rival_contact_nudge(
-                    g_player_lateral, g_rival_lateral);
-                g_rival_z = -20.0f;
-            } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
-                ++g_overtake_count;
-                g_rival_z = -22.0f;
+        /* Staggered scripted opponents approach in camera space and change lanes. */
+        if (!g_race_finished) {
+            for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+                int rival_event;
+                g_rival_lateral[rival_index] = 1.10f * sinf(
+                    g_distance * 0.022f + 1.2f + (float)rival_index * 1.55f);
+                g_rival_z[rival_index] += 0.035f + g_speed * 0.045f;
+                rival_event = boonta_rival_event(
+                    g_rival_z[rival_index], g_player_lateral,
+                    g_rival_lateral[rival_index]);
+                if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
+                    /* Any single contact costs speed and nudges the player from that rival. */
+                    g_speed = boonta_speed_after_rival_contact(g_speed);
+                    g_lateral_velocity += boonta_rival_contact_nudge(
+                        g_player_lateral, g_rival_lateral[rival_index]);
+                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
+                } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
+                    ++g_overtake_count;
+                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 0);
+                }
             }
         }
 
