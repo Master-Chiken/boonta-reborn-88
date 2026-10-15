@@ -995,11 +995,24 @@ int main(int argc, char **argv)
                 g_player_lateral, g_lateral_velocity, frame_scale),
             -4.0f, 4.0f);
 
-        /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
-        g_speed = boonta_speed_after_offroad_scaled(g_speed, g_player_lateral, frame_scale);
-        if (boonta_is_past_rail(g_player_lateral)) {
-            g_player_lateral = boonta_lateral_after_rail_contact(g_player_lateral);
-            g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(g_lateral_velocity);
+        /*
+         * Off-road and rail limits are expressed relative to the local authored
+         * half-width, so narrow sections are not secretly as wide as broad ones.
+         */
+        {
+            const float local_half_width = track_half_width_at(g_distance);
+            const float lateral_scale = ROAD_HALF_WIDTH /
+                (local_half_width > 0.1f ? local_half_width : ROAD_HALF_WIDTH);
+            const float normalized_lateral = g_player_lateral * lateral_scale;
+            g_speed = boonta_speed_after_offroad_scaled(
+                g_speed, normalized_lateral, frame_scale);
+            if (boonta_is_past_rail(normalized_lateral)) {
+                const float resolved_lateral =
+                    boonta_lateral_after_rail_contact(normalized_lateral);
+                g_player_lateral = resolved_lateral / lateral_scale;
+                g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(
+                    g_lateral_velocity);
+            }
         }
         {
             const float previous_distance = g_distance;
