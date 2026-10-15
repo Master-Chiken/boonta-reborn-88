@@ -708,8 +708,10 @@ int main(int argc, char **argv)
         /* Steering has inertia: quick direction changes need a moment to settle. */
         g_lateral_velocity = boonta_lateral_velocity_after_steering_scaled(
             g_lateral_velocity, steering, g_speed, frame_scale);
-        g_player_lateral = boonta_lateral_position_after_frame(
-            g_player_lateral, g_lateral_velocity, frame_scale);
+        g_player_lateral = clampf_local(
+            boonta_lateral_position_after_frame(
+                g_player_lateral, g_lateral_velocity, frame_scale),
+            -4.0f, 4.0f);
 
         /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
         g_speed = boonta_speed_after_offroad_scaled(g_speed, g_player_lateral, frame_scale);
