@@ -140,12 +140,51 @@ static void offroad_and_rail_tests(void) {
  assert(nearf(boonta_lateral_velocity_after_rail_contact(-0.08f), 0.028f));
 }
 
+static void distance_progression_tests(void) {
+ assert(nearf(boonta_distance_after_frame(0.0f, 0.5f, 0), 0.07f));
+ assert(nearf(boonta_distance_after_frame(0.0f, 0.5f, 1), 0.11f));
+ assert(nearf(boonta_distance_after_frame(10.0f, 1.0f, 0), 10.14f));
+ assert(nearf(boonta_distance_after_frame(10.0f, 1.0f, 1), 10.22f));
+}
+
+/* Deterministic straight-line frame simulation: exercises the same speed,
+ * boost, distance and lap helpers called by the native GameCube loop.
+ * This is a host regression test, not proof of live controller or hardware input. */
+static void simulated_three_lap_run_tests(void) {
+ float distance = 0.0f;
+ float speed = 0.0f;
+ float boost = 1.0f;
+ unsigned int laps = 0U;
+ unsigned int frames = 0U;
+ int finished = 0;
+
+ while (!finished && frames < 5000U) {
+  const int boost_active = boonta_boost_should_activate(1, 1, boost);
+  const float previous_distance = distance;
+  boost = boonta_boost_after_frame(boost, boost_active);
+  speed = boonta_speed_after_input(speed, 1, 0);
+  distance = boonta_distance_after_frame(distance, speed, boost_active);
+  laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
+  finished = boonta_race_is_finished(laps, 3U);
+  if (finished) speed = 0.0f;
+  ++frames;
+ }
+
+ assert(frames > 0U && frames < 5000U);
+ assert(finished == 1);
+ assert(laps == 3U);
+ assert(distance >= 360.0f);
+ assert(nearf(speed, 0.0f));
+}
+
 int main(void) {
  speed_tests();
  boost_tests();
  steering_inertia_tests();
  lap_tests();
  three_lap_finish_tests();
+ distance_progression_tests();
+ simulated_three_lap_run_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
