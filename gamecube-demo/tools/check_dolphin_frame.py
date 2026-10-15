@@ -101,13 +101,18 @@ def main() -> int:
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
     parser.add_argument("--baseline", required=True, type=Path,
                         help="matching frame rendered with --steering none")
+    parser.add_argument("--direction", choices=("left", "right"), default="right",
+                        help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
-                        help="minimum rightward HUD-marker shift for scripted-input smoke")
+                        help="minimum HUD-marker response in the requested steering direction")
     parser.add_argument("--max-pod-drift", type=float, default=80.0,
                         help="maximum neutral-to-steered player-pod centroid drift while camera follows")
     parser.add_argument("--min-course-shift", type=float, default=25.0,
-                        help="minimum leftward road-edge shift under right steering input")
+                        help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
+    direction_label = "Right-input" if args.direction == "right" else "Left-input"
+    expected_course_direction = "leftward" if args.direction == "right" else "rightward"
+    expected_marker_direction = "rightward" if args.direction == "right" else "leftward"
 
     image = Image.open(args.frame).convert("RGB")
     baseline = Image.open(args.baseline).convert("RGB")
@@ -120,7 +125,7 @@ def main() -> int:
     pod_delta_x = steered_pod_x - baseline_pod_x
     print(f"Neutral player-pod center x={baseline_pod_x:.1f} "
           f"(bounds {baseline_left}..{baseline_right}, {baseline_pixels} pixels)")
-    print(f"Right-input player-pod center x={steered_pod_x:.1f} "
+    print(f"{direction_label} player-pod center x={steered_pod_x:.1f} "
           f"(bounds {steered_left}..{steered_right}, {steered_pixels} pixels)")
     print(f"Player-pod screen drift={pod_delta_x:.1f}px "
           f"(maximum {args.max_pod_drift:.1f}px with camera follow)")
@@ -133,23 +138,32 @@ def main() -> int:
 
     baseline_course_x, baseline_course_pixels = course_edge_center(baseline)
     steered_course_x, steered_course_pixels = course_edge_center(image)
-    course_shift_left = baseline_course_x - steered_course_x
+    course_response = (baseline_course_x - steered_course_x
+                       if args.direction == "right"
+                       else steered_course_x - baseline_course_x)
     print(f"Neutral cyan course-edge center x={baseline_course_x:.1f} ({baseline_course_pixels} pixels)")
-    print(f"Right-input cyan course-edge center x={steered_course_x:.1f} ({steered_course_pixels} pixels)")
-    print(f"Road-edge leftward response={course_shift_left:.1f}px "
+    print(f"{direction_label} cyan course-edge center x={steered_course_x:.1f} ({steered_course_pixels} pixels)")
+    print(f"Road-edge {expected_course_direction} response={course_response:.1f}px "
           f"(minimum {args.min_course_shift:.1f}px)")
-    if course_shift_left < args.min_course_shift:
-        raise SystemExit("Road edge did not move sufficiently left relative to the camera-following player pod.")
+    if course_response < args.min_course_shift:
+        raise SystemExit(
+            f"Road edge did not move sufficiently {expected_course_direction} relative to the camera-following player pod."
+        )
 
     # Retain the HUD state marker as an independent input-state diagnostic.
     baseline_x = steering_indicator_center(baseline)
     steered_x = steering_indicator_center(image)
-    delta_x = steered_x - baseline_x
+    marker_response = (steered_x - baseline_x
+                       if args.direction == "right"
+                       else baseline_x - steered_x)
     print(f"Neutral HUD marker center x={baseline_x:.1f}")
-    print(f"Right-input HUD marker center x={steered_x:.1f}")
-    print(f"HUD marker delta_x={delta_x:.1f}px (minimum {args.min_shift:.1f}px)")
-    if delta_x < args.min_shift:
-        raise SystemExit("Scripted input did not move the HUD steering-state marker.")
+    print(f"{direction_label} HUD marker center x={steered_x:.1f}")
+    print(f"HUD marker {expected_marker_direction} response={marker_response:.1f}px "
+          f"(minimum {args.min_shift:.1f}px)")
+    if marker_response < args.min_shift:
+        raise SystemExit(
+            f"Scripted input did not move the HUD steering-state marker {expected_marker_direction}."
+        )
     return 0
 
 
