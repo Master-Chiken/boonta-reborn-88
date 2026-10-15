@@ -164,6 +164,11 @@ static void steering_input_tests(void) {
  assert(nearf(boonta_steering_input(-64.0f, 0, 0), -0.5f));
  assert(nearf(boonta_steering_input(127.0f, 0, 0), 127.0f / 128.0f));
  assert(nearf(boonta_steering_input(-128.0f, 0, 0), -1.0f));
+ /* Non-finite analog input is treated as a neutral stick, not NaN steering. */
+ assert(nearf(boonta_steering_input(NAN, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(INFINITY, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(-INFINITY, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(NAN, 1, 0), -0.7f));
 
  /* D-pad steering adds to analog input, with bounded saturation. */
  assert(nearf(boonta_steering_input(0.0f, 1, 0), -0.7f));

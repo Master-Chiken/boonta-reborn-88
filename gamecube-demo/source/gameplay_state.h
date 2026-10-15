@@ -127,6 +127,8 @@ static inline float boonta_steering_input(float stick_x,
                                           int left_held,
                                           int right_held)
 {
+    /* Corrupt controller data must not poison lateral physics with NaN. */
+    if (!isfinite(stick_x)) stick_x = 0.0f;
     float steering = stick_x / 128.0f;
     if (left_held) steering -= 0.7f;
     if (right_held) steering += 0.7f;
