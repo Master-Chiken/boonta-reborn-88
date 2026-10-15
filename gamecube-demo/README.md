@@ -8,6 +8,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A procedural scrolling curved road with edge strips and barrier rails.
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake.
+- A clean-room procedural rival craft ahead on the track, with its own lateral motion and original placeholder geometry.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, lap-progress bar, repeating start/finish stripe, and five completed-lap indicators.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
