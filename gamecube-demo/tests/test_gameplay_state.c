@@ -81,12 +81,40 @@ static void rival_event_tests(void) {
  assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
 }
 
+
+static void offroad_and_rail_tests(void) {
+ /* No speed loss on the road, including the exact 3.15 boundary. */
+ assert(nearf(boonta_speed_after_offroad(0.5f, 0.0f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.15f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.15f), 0.5f));
+
+ /* The existing off-road drag starts just outside the road edge and is symmetric. */
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.16f), 0.49188f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.16f), 0.49188f));
+ assert(nearf(boonta_speed_after_offroad(0.01f, 3.85f), 0.0f));
+ assert(nearf(boonta_speed_after_offroad(1.0f, 100.0f), 0.0f));
+
+ /* A rail contact triggers strictly beyond +/-3.85 and clamps the lateral position. */
+ assert(!boonta_is_past_rail(3.85f));
+ assert(!boonta_is_past_rail(-3.85f));
+ assert(boonta_is_past_rail(3.851f));
+ assert(boonta_is_past_rail(-3.851f));
+ assert(nearf(boonta_lateral_after_rail_contact(4.5f), 3.85f));
+ assert(nearf(boonta_lateral_after_rail_contact(-4.5f), -3.85f));
+ assert(nearf(boonta_lateral_after_rail_contact(3.0f), 3.0f));
+
+ /* The contact reverses and attenuates lateral velocity (bounce-back). */
+ assert(nearf(boonta_lateral_velocity_after_rail_contact(0.08f), -0.028f));
+ assert(nearf(boonta_lateral_velocity_after_rail_contact(-0.08f), 0.028f));
+}
+
 int main(void) {
  speed_tests();
  boost_tests();
  lap_tests();
  three_lap_finish_tests();
  rival_event_tests();
+ offroad_and_rail_tests();
  puts("gameplay-state tests passed");
  return 0;
 }
