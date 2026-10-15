@@ -734,7 +734,7 @@ int main(int argc, char **argv)
         /* Staggered scripted opponents approach in camera space and change lanes. */
         if (!g_race_finished) {
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-                const int rival_event;
+                int rival_event;
                 g_rival_lateral[rival_index] = 1.10f * sinf(
                     g_distance * 0.022f + 1.2f + (float)rival_index * 1.55f);
                 g_rival_z[rival_index] += 0.035f + g_speed * 0.045f;
