@@ -36,6 +36,18 @@ Ce contrôle :
 
 Un test réussi ne remplace pas la revue humaine de la pull request.
 
+## Coordinateur automatique quotidien
+
+Une fois cette PR de sécurité explicitement revue et fusionnée, le workflow [Daily read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) pourra publier un rapport quotidien dans [l'issue de coordination #23](https://github.com/Master-Chiken/boonta-reborn-88/issues/23).
+
+- Horaire : une fois par jour à 07:15 UTC, plus un lancement manuel via **Actions → Daily read-only AI project coordinator → Run workflow**.
+- Le rapport inspecte les fichiers présents sur `main`, les issues/PR ouvertes et les éléments de CI, puis propose une seule prochaine tâche prioritaire.
+- Il est strictement en lecture seule : aucun outil de création de branche, de modification de fichier, de commit, de PR ou de fusion n'est fourni à l'agent.
+- Il utilise le même secret `GEMINI_API_KEY`, le modèle explicitement configuré et aucun fallback payant. Si le quota gratuit est épuisé, le rapport échoue plutôt que de facturer.
+- Il n'active pas l'écriture de Gemini. Les changements de code restent soumis à un plan approuvé et au verrou `GEMINI_WRITE_ENABLED`.
+
+Le workflow ne sera pas actif avant fusion de cette PR et nécessite que le secret `GEMINI_API_KEY` soit configuré. Il ne peut pas inspecter les archives de la bibliothèque ChatGPT automatiquement.
+
 ## Premier test : lecture seule
 
 Après validation et fusion explicite de cette PR de sécurité, et après l'ajout du secret, ouvre la [PR #13](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) et écris ce commentaire :
