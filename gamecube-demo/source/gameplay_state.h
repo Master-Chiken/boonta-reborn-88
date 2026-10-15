@@ -17,8 +17,10 @@ static inline float boonta_frame_scale_from_delta(float delta_seconds)
 static inline float boonta_speed_after_input_scaled(float speed, int accelerating,
                                                       int braking, float frame_scale)
 {
-    /* Recover deterministically from corrupted simulation state. */
+    /* Recover deterministically from corrupted simulation state or timing. */
     if (!isfinite(speed)) speed = 0.0f;
+    /* A non-finite scale would otherwise propagate NaN through the result. */
+    if (!isfinite(frame_scale) || frame_scale < 0.0f) frame_scale = 0.0f;
     if (accelerating) speed += 0.012f * frame_scale;
     else speed -= 0.003f * frame_scale;
     if (braking) speed -= 0.022f * frame_scale;
