@@ -54,7 +54,11 @@ static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
 static float g_vertex_y_offset;
+/* 0 = ordinary world geometry, 1 = spline surface, 2 = rigid craft frame. */
 static int g_track_world_transform_enabled;
+static float g_vehicle_anchor_progress;
+static float g_vehicle_anchor_local_z;
+static float g_vehicle_anchor_center_x;
 static float g_distance;
 static unsigned int g_lap_count;
 static float g_race_seconds;
@@ -265,7 +269,7 @@ static void track_world_point_at(float travelled, float lateral, float height,
     out->z = center_z + right_z * lateral;
 }
 
-/* Existing meshes use a forward-facing local plane; bend each vertex into the track frame. */
+/* Road vertices follow the spline at each depth. */
 static Point3 track_local_to_world(Point3 local_point)
 {
     const float travelled = g_distance + (4.0f - local_point.z);
@@ -280,13 +284,62 @@ static Point3 track_local_to_world(Point3 local_point)
     return world_point;
 }
 
+/* A racer has one anchor and a fixed tangent: its mesh must not bend around corners. */
+static Point3 track_vehicle_local_to_world(Point3 local_point)
+{
+    float center_x = 0.0f, center_y = 0.0f, center_z = 0.0f;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float dx, dy, dz, tangent_length, horizontal_length;
+    float forward, lateral, right_x, right_z, height;
+    Point3 world_point;
+
+    track_sample_at(g_vehicle_anchor_progress, &center_x, &center_y, &center_z, NULL);
+    track_sample_at(g_vehicle_anchor_progress - 0.25f,
+                    &before_x, &before_y, &before_z, NULL);
+    track_sample_at(g_vehicle_anchor_progress + 0.25f,
+                    &after_x, &after_y, &after_z, NULL);
+    dx = after_x - before_x;
+    dy = after_y - before_y;
+    dz = after_z - before_z;
+    tangent_length = sqrtf(dx * dx + dy * dy + dz * dz);
+    horizontal_length = sqrtf(dx * dx + dz * dz);
+    if (tangent_length > 0.001f) {
+        forward = g_vehicle_anchor_local_z - local_point.z;
+        world_point.x = center_x + (dx / tangent_length) * forward;
+        world_point.y = center_y + (dy / tangent_length) * forward;
+        world_point.z = center_z + (dz / tangent_length) * forward;
+    } else {
+        forward = 0.0f;
+        world_point.x = center_x;
+        world_point.y = center_y;
+        world_point.z = center_z;
+    }
+
+    if (horizontal_length > 0.001f) {
+        right_x = dz / horizontal_length;
+        right_z = -dx / horizontal_length;
+    } else {
+        right_x = 1.0f;
+        right_z = 0.0f;
+    }
+    lateral = local_point.x - g_vehicle_anchor_center_x;
+    height = local_point.y - (ROAD_Y + center_y * 0.45f);
+    world_point.x += right_x * lateral;
+    world_point.y += height;
+    world_point.z += right_z * lateral;
+    return world_point;
+}
+
 static void vertex_add(Point3 point, GXColor color)
 {
     SceneVertex *v;
     if (g_vertex_count >= VERTEX_CAPACITY) return;
     point.y += g_vertex_y_offset;
-    if (g_track_world_transform_enabled) {
+    if (g_track_world_transform_enabled == 1) {
         point = track_local_to_world(point);
+    } else if (g_track_world_transform_enabled == 2) {
+        point = track_vehicle_local_to_world(point);
     }
     v = &g_vertices[g_vertex_count++];
     v->x = point.x;
@@ -983,15 +1036,21 @@ static void draw_frame(void)
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-            g_track_world_transform_enabled = 1;
-            g_vertex_y_offset = road_height_at(g_rival_z[rival_index], g_distance) - ROAD_Y;
+            g_track_world_transform_enabled = 2;
+            g_vehicle_anchor_local_z = g_rival_z[rival_index];
+            g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+            g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+            g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
             add_rival_pod(g_rival_z[rival_index], g_rival_lateral[rival_index], rival_index);
         }
         g_track_world_transform_enabled = 0;
         g_vertex_y_offset = 0.0f;
     }
-    g_track_world_transform_enabled = 1;
-    g_vertex_y_offset = road_height_at(1.0f, g_distance) - ROAD_Y;
+    g_track_world_transform_enabled = 2;
+    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+    g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+    g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
     add_player_pod();
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
