@@ -276,8 +276,8 @@ static void add_canyon_scenery(void)
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
-        const float near_height = 5.2f + (float)(wall_phase % 4U) * 1.10f;
-        const float far_height = 5.2f + (float)((wall_phase + 1U) % 4U) * 1.10f;
+        const float near_height = 3.4f + (float)(wall_phase % 4U) * 0.65f;
+        const float far_height = 3.4f + (float)((wall_phase + 1U) % 4U) * 0.65f;
         const float near_top_offset = base_offset + 1.6f + (float)(wall_phase % 2U) * 0.8f;
         const float far_top_offset = base_offset + 1.6f + (float)((wall_phase + 1U) % 2U) * 0.8f;
         unsigned int side_index;
@@ -316,11 +316,6 @@ static void add_canyon_scenery(void)
         }
     }
 }
-/*
- * Distant, taller ridge silhouettes sit beyond the low roadside canyon walls.
- * They are deliberately original polygon scenery (no copied game geometry) and
- * use the same track-relative scroll so the skyline follows the road.
- */
 static void add_player_pod(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
