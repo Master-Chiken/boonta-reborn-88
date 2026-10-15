@@ -270,6 +270,33 @@ static inline float boonta_distance_after_pitch_scaled(float distance, float spe
     return isfinite(next_distance) && next_distance >= distance ? next_distance : distance;
 }
 
+/* Camera-relative course geometry uses these helpers to scroll continuously. */
+static inline float boonta_track_scroll_offset(float distance, float segment_length)
+{
+    float offset;
+    if (!isfinite(distance) || distance < 0.0f ||
+        !isfinite(segment_length) || segment_length <= 0.0f) return 0.0f;
+    offset = fmodf(distance, segment_length);
+    return isfinite(offset) && offset >= 0.0f ? offset : 0.0f;
+}
+
+static inline unsigned int boonta_track_section_index(float distance, float segment_length)
+{
+    float sections;
+    if (!isfinite(distance) || distance < 0.0f ||
+        !isfinite(segment_length) || segment_length <= 0.0f) return 0U;
+    sections = floorf(distance / segment_length);
+    /* Saturation is safer than an out-of-range float-to-integer conversion in a very long session. */
+    if (sections > 2000000000.0f) return 2000000000U;
+    return (unsigned int)sections;
+}
+
+static inline float boonta_track_phase(float distance, float camera_relative_z)
+{
+    if (!isfinite(distance) || !isfinite(camera_relative_z)) return 0.0f;
+    return distance - camera_relative_z;
+}
+
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
 {
     /* Reject NaN/infinity before float-to-unsigned conversion (undefined behavior
