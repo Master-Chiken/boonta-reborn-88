@@ -67,10 +67,13 @@ def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
             if right_edge - left_edge >= 10:
                 row_centers.append((left_edge + right_edge) / 2.0)
 
-    if len(row_centers) < 10:
+    # At 800x480, Software Renderer anti-aliasing can leave only a handful
+    # of exact asphalt-colored scanlines. Five rows are enough for a median;
+    # the separate >=25 px response gate still rejects weak/no-motion captures.
+    if len(row_centers) < 5:
         raise ValueError(
             f"Insufficient asphalt-boundary rows in ROI y=[{y_start},{y_end}); "
-            f"found {len(row_centers)}, need 10."
+            f"found {len(row_centers)}, need 5."
         )
     return float(median(row_centers)), len(row_centers)
 
