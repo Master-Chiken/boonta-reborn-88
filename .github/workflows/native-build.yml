@@ -34,7 +34,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
       - name: Verify source archive was imported
         shell: bash
         run: |
@@ -44,15 +43,12 @@ jobs:
             echo "Do not upload ROMs, disc images, or proprietary game assets."
             exit 2
           fi
-
       - name: Static native project preflight
         shell: bash
         run: python3 tools/check_native_project.py
-
       - name: Run complete host regression suite
         shell: bash
         run: bash tools/release_check.sh
-
       - name: Build GameCube DOL
         shell: bash
         run: |
@@ -64,7 +60,6 @@ jobs:
             make
             test -s swe1r_gc_port.dol
           } 2>&1 | tee build.log
-
       - name: Upload native build evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -88,12 +83,10 @@ jobs:
         with:
           name: swe1r-gc-build-evidence
           path: build-artifact
-
       - name: Install Dolphin and virtual display
         run: |
           sudo apt-get update
           sudo apt-get install -y dolphin-emu xvfb
-
       - name: Launch DOL in Dolphin batch mode
         shell: bash
         run: |
@@ -125,7 +118,6 @@ jobs:
             exit 1
           fi
           echo "This smoke test does not verify visible rendering, controller input, or race completion."
-
       - name: Upload Dolphin smoke log
         if: always()
         uses: actions/upload-artifact@v4
@@ -145,37 +137,44 @@ jobs:
         with:
           name: swe1r-gc-build-evidence
           path: build-artifact
-
       - name: Install Dolphin and virtual display
         run: |
           sudo apt-get update
           sudo apt-get install -y dolphin-emu xvfb imagemagick
-
-      - name: Dump emulator-rendered frames without the GUI
+      - name: Configure and capture emulator frames
         shell: bash
         run: |
           set -euo pipefail
-          export DOL="$PWD/build-artifact/swe1r_gc_port.dol"
-          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
-          mkdir -p "$PWD/dolphin-frames"
+          DOL="$PWD/build-artifact/swe1r_gc_port.dol"
+          DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
+          FRAME_DIR="$PWD/dolphin-frames"
+          mkdir -p "$FRAME_DIR" "$DOLPHIN_USER/Config"
+          # Write Dolphin's graphics config explicitly; CLI override syntax varies by version.
+          cat > "$DOLPHIN_USER/Config/GFX.ini" <<EOF
+          [Settings]
+          DumpEFBTarget = True
+          DumpXFBTarget = True
+          DumpFrames = True
+          DumpFramesAsImages = True
+          DumpPath = $FRAME_DIR
+          EOF
+          echo "Effective graphics configuration:"
+          cat "$DOLPHIN_USER/Config/GFX.ini"
           set +e
           timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
             --batch --video_backend="Software Renderer" \
-            --config="Graphics.Settings.DumpEFBTarget=True" \
-            --config="Graphics.Settings.DumpXFBTarget=True" \
-            --config="Graphics.Settings.DumpPath=$PWD/dolphin-frames" \
             --exec="$DOL" --user="$DOLPHIN_USER" > dolphin-frame-dump.log 2>&1
           status=$?
           set -e
           cat dolphin-frame-dump.log
+          find "$DOLPHIN_USER" "$FRAME_DIR" -maxdepth 7 -type f -print | tee dolphin-files.txt
           if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
-            echo "::error::Dolphin frame-dump run exited unexpectedly with status $status."
+            echo "::error::Dolphin frame capture exited unexpectedly with status $status."
             exit "$status"
           fi
-          find "$DOLPHIN_USER" "$PWD/dolphin-frames" -maxdepth 6 -type f -print
-          frames=$(find "$DOLPHIN_USER" "$PWD/dolphin-frames" -type f \( -iname '*.png' -o -iname '*.bmp' \) | head -n 1 || true)
+          frames=$(find "$DOLPHIN_USER" "$FRAME_DIR" -type f \( -iname '*.png' -o -iname '*.bmp' \) -size +0c | head -n 1 || true)
           if [[ -z "$frames" ]]; then
-            echo "::error::Dolphin did not produce an EFB/XFB dump; rendering is not yet verified."
+            echo "::error::No frame image was emitted. Inspect GFX.ini and emulator logs; rendering is still unverified."
             exit 1
           fi
           cp "$frames" dolphin-frame.png
@@ -187,7 +186,6 @@ jobs:
             exit 1
           fi
           echo "Non-black emulator buffer captured. Controller input and race completion remain unverified."
-
       - name: Upload Dolphin visual evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -195,7 +193,9 @@ jobs:
           name: dolphin-visual-evidence
           path: |
             dolphin-frame-dump.log
+            dolphin-files.txt
             dolphin-frame.png
             dolphin-frames/**
+            ${{ runner.temp }}/dolphin-frame-user/Config/GFX.ini
           if-no-files-found: warn
           retention-days: 7
