@@ -345,7 +345,7 @@ jobs:
                 echo "Captured frame contains a Dolphin boot/core error dialog."
                 exit 1
               fi
-              echo "Neutral and right-steered frames both rendered; the relative pod displacement passed."
+              echo "Neutral and right-steered frames both rendered; the steering-state marker moved right by the required amount."
             '
           status=$?
           set -e
