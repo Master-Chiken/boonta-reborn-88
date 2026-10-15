@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from statistics import median
 from PIL import Image
 
 
@@ -37,27 +38,38 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
     return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
 
 
-def course_edge_center(image: Image.Image) -> tuple[float, int]:
-    """Track the bright cyan road-edge strip relative to the camera-following pod."""
+def road_center_from_ground_bounds(image: Image.Image) -> tuple[float, int]:
+    """Estimate road center from the green-ground boundaries on both sides."""
     image = image.convert("RGB")
-    edge_x = []
-    # C_EDGE_R ~= (50, 225, 246). Use the distant upper/mid viewport so
-    # the player-pod accent is excluded; allow renderer anti-aliasing at edges.
-    y_start = int(image.height * 0.35)
-    y_end = int(image.height * 0.65)
+    row_centers = []
+    midpoint = image.width // 2
+    # The ground is green (C_GROUND ~= RGB(23, 48, 40)); road asphalt is dark
+    # blue-gray. Use a narrow upper/mid viewport above the player pod and HUD.
+    y_start = int(image.height * 0.52)
+    y_end = int(image.height * 0.60)
     for y in range(y_start, y_end):
+        left_ground_edge = None
+        right_ground_edge = None
         for x in range(image.width):
             r, g, b = image.getpixel((x, y))
-            if r < 90 and g > 180 and b > 200:
-                edge_x.append(x)
-    # The cyan edge is distant and anti-aliased in this ROI; require at
-    # least ten pixels, then let the independent 25 px centroid-shift gate
-    # reject frames that do not show a meaningful course-relative response.
-    if len(edge_x) < 10:
+            if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100:
+                if x < midpoint:
+                    left_ground_edge = x
+                elif right_ground_edge is None:
+                    right_ground_edge = x
+        # A valid row has green ground on each side of the road.
+        if (left_ground_edge is not None and right_ground_edge is not None
+                and right_ground_edge > left_ground_edge):
+            row_centers.append((left_ground_edge + right_ground_edge) / 2.0)
+
+    # Ignore isolated HUD/aliasing pixels by aggregating many road rows and
+    # use the median so rivals and small scene details cannot dominate it.
+    if len(row_centers) < 10:
         raise ValueError(
-            f"Insufficient C_EDGE_R-like course pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}, need 10."
+            f"Insufficient road-boundary rows in ROI y=[{y_start},{y_end}); "
+            f"found {len(row_centers)}, need 10."
         )
-    return sum(edge_x) / len(edge_x), len(edge_x)
+    return float(median(row_centers)), len(row_centers)
 
 
 def steering_indicator_center(image: Image.Image) -> float:
@@ -111,7 +123,7 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     direction_label = "Right-input" if args.direction == "right" else "Left-input"
-    expected_course_direction = "leftward" if args.direction == "right" else "rightward"
+    expected_road_direction = "leftward" if args.direction == "right" else "rightward"
     expected_marker_direction = "rightward" if args.direction == "right" else "leftward"
 
     image = Image.open(args.frame).convert("RGB")
@@ -132,22 +144,22 @@ def main() -> int:
     if baseline_left <= 0 or baseline_right >= baseline.width - 1:
         raise SystemExit("Neutral player pod is clipped by the frame border.")
     if steered_left <= 0 or steered_right >= image.width - 1:
-        raise SystemExit("Right-input player pod is clipped by the frame border; camera follow failed.")
+        raise SystemExit(f"{direction_label} player pod is clipped by the frame border; camera follow failed.")
     if abs(pod_delta_x) > args.max_pod_drift:
         raise SystemExit("Player pod moved too far across the screen; expected the camera to follow it.")
 
-    baseline_course_x, baseline_course_pixels = course_edge_center(baseline)
-    steered_course_x, steered_course_pixels = course_edge_center(image)
-    course_response = (baseline_course_x - steered_course_x
-                       if args.direction == "right"
-                       else steered_course_x - baseline_course_x)
-    print(f"Neutral cyan course-edge center x={baseline_course_x:.1f} ({baseline_course_pixels} pixels)")
-    print(f"{direction_label} cyan course-edge center x={steered_course_x:.1f} ({steered_course_pixels} pixels)")
-    print(f"Road-edge {expected_course_direction} response={course_response:.1f}px "
+    baseline_road_x, baseline_road_rows = road_center_from_ground_bounds(baseline)
+    steered_road_x, steered_road_rows = road_center_from_ground_bounds(image)
+    road_response = (baseline_road_x - steered_road_x
+                     if args.direction == "right"
+                     else steered_road_x - baseline_road_x)
+    print(f"Neutral road center x={baseline_road_x:.1f} ({baseline_road_rows} rows)")
+    print(f"{direction_label} road center x={steered_road_x:.1f} ({steered_road_rows} rows)")
+    print(f"Road-center {expected_road_direction} response={road_response:.1f}px "
           f"(minimum {args.min_course_shift:.1f}px)")
-    if course_response < args.min_course_shift:
+    if road_response < args.min_course_shift:
         raise SystemExit(
-            f"Road edge did not move sufficiently {expected_course_direction} relative to the camera-following player pod."
+            f"Road silhouette did not shift sufficiently {expected_road_direction} relative to the camera-following player pod."
         )
 
     # Retain the HUD state marker as an independent input-state diagnostic.

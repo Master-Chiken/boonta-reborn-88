@@ -337,7 +337,7 @@ jobs:
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
               capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
-              echo "Running bidirectional camera-follow diagnostic: right input should move the course left; left input should move it right."
+              echo "Running bidirectional camera-follow diagnostic: green-ground road silhouette should shift opposite to each steering direction."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
@@ -360,7 +360,7 @@ jobs:
                 echo "The left-steered game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
                 exit 1
               fi
-              echo "Bidirectional camera-follow smoke passed: pod remained visible; road edge and HUD responded in the expected direction for left and right input. Full gameplay remains unverified."
+              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input. Full gameplay remains unverified."
             '
           status=$?
           set -e
@@ -377,7 +377,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional bidirectional camera-follow/course-edge diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The optional bidirectional camera-follow/road-silhouette diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 
