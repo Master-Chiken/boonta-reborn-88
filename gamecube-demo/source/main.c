@@ -1,0 +1,438 @@
+/*
+ * Boonta Reborn 88 — clean-room GameCube rendering/input prototype.
+ *
+ * Original procedural geometry only. This small milestone validates a native
+ * GX render path, controller-driven steering, throttle/brake, and a scrolling
+ * test road. It does not include commercial game code, models, sounds, or data.
+ */
+#include <gccore.h>
+#include <ogc/pad.h>
+#include <ogc/gu.h>
+#include <ogc/gx.h>
+#include <ogc/system.h>
+
+#include <math.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <string.h>
+
+#define GX_FIFO_SIZE       (256 * 1024)
+#define VERTEX_CAPACITY    4096U
+#define ROAD_SEGMENTS      32U
+#define ROAD_HALF_WIDTH    3.6f
+#define ROAD_Y             (-1.05f)
+#define PI_F               3.14159265358979323846f
+
+typedef struct {
+    f32 x, y, z;
+} Point3;
+
+typedef struct {
+    f32 x, y, z;
+    u8 r, g, b, a;
+} SceneVertex;
+
+static GXRModeObj *g_video_mode;
+static void *g_framebuffers[2] = { NULL, NULL };
+static void *g_gx_fifo;
+static u32 g_framebuffer_index;
+static SceneVertex g_vertices[VERTEX_CAPACITY];
+static u16 g_vertex_count;
+static float g_distance;
+static float g_speed;
+static float g_player_lateral;
+static float g_boost = 1.0f;
+static int g_boost_active;
+
+static const GXColor C_GROUND = { 23, 48, 40, 255 };
+static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
+static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
+static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
+static const GXColor C_EDGE_R = { 50, 225, 246, 255 };
+static const GXColor C_RAIL_A = { 36, 98, 120, 255 };
+static const GXColor C_RAIL_B = { 50, 134, 150, 255 };
+static const GXColor C_MARKER = { 239, 230, 175, 255 };
+static const GXColor C_POD_TOP = { 33, 164, 220, 255 };
+static const GXColor C_POD_SIDE = { 17, 75, 139, 255 };
+static const GXColor C_POD_ACCENT = { 70, 231, 248, 255 };
+static const GXColor C_THRUST = { 255, 132, 45, 255 };
+static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
+
+static float clampf_local(float value, float low, float high)
+{
+    if (value < low) return low;
+    if (value > high) return high;
+    return value;
+}
+
+static float road_center_at(float z, float distance)
+{
+    const float phase = z + distance * 1.15f;
+    return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
+}
+
+static void vertex_add(Point3 point, GXColor color)
+{
+    SceneVertex *v;
+    if (g_vertex_count >= VERTEX_CAPACITY) return;
+    v = &g_vertices[g_vertex_count++];
+    v->x = point.x;
+    v->y = point.y;
+    v->z = point.z;
+    v->r = color.r;
+    v->g = color.g;
+    v->b = color.b;
+    v->a = color.a;
+}
+
+static void triangle_add(Point3 a, Point3 b, Point3 c, GXColor color)
+{
+    if ((unsigned int)g_vertex_count + 3U > VERTEX_CAPACITY) return;
+    vertex_add(a, color);
+    vertex_add(b, color);
+    vertex_add(c, color);
+}
+
+static void quad_add(Point3 a, Point3 b, Point3 c, Point3 d, GXColor color)
+{
+    triangle_add(a, b, c, color);
+    triangle_add(a, c, d, color);
+}
+
+static void box_face(Point3 p0, Point3 p1, Point3 p2, Point3 p3, GXColor color)
+{
+    quad_add(p0, p1, p2, p3, color);
+}
+
+static void box_add(float cx, float cy, float cz,
+                    float hx, float hy, float hz,
+                    GXColor top, GXColor side, GXColor rear)
+{
+    Point3 p[8];
+    p[0] = (Point3){ cx - hx, cy - hy, cz - hz };
+    p[1] = (Point3){ cx + hx, cy - hy, cz - hz };
+    p[2] = (Point3){ cx + hx, cy + hy, cz - hz };
+    p[3] = (Point3){ cx - hx, cy + hy, cz - hz };
+    p[4] = (Point3){ cx - hx, cy - hy, cz + hz };
+    p[5] = (Point3){ cx + hx, cy - hy, cz + hz };
+    p[6] = (Point3){ cx + hx, cy + hy, cz + hz };
+    p[7] = (Point3){ cx - hx, cy + hy, cz + hz };
+
+    /* Front, rear, left, right, top and underside. */
+    box_face(p[0], p[1], p[2], p[3], side);
+    box_face(p[5], p[4], p[7], p[6], rear);
+    box_face(p[4], p[0], p[3], p[7], side);
+    box_face(p[1], p[5], p[6], p[2], side);
+    box_face(p[3], p[2], p[6], p[7], top);
+    box_face(p[4], p[5], p[1], p[0], rear);
+}
+
+static void add_road(void)
+{
+    unsigned int i;
+    const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
+    const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
+    const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
+    const Point3 ground_d = { -100.0f, ROAD_Y - 0.24f, -110.0f };
+    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
+
+    for (i = 0; i < ROAD_SEGMENTS; ++i) {
+        const float z0 = 4.0f - (float)i * 2.8f;
+        const float z1 = z0 - 2.8f;
+        const float c0 = road_center_at(z0, g_distance);
+        const float c1 = road_center_at(z1, g_distance);
+        const float w = ROAD_HALF_WIDTH;
+        const GXColor road = ((i & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
+        const GXColor rail = ((i & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
+
+        quad_add((Point3){ c0 - w, ROAD_Y, z0 },
+                 (Point3){ c0 + w, ROAD_Y, z0 },
+                 (Point3){ c1 + w, ROAD_Y, z1 },
+                 (Point3){ c1 - w, ROAD_Y, z1 }, road);
+
+        /* Two bright edge strips make the procedural course readable. */
+        quad_add((Point3){ c0 - w, ROAD_Y + 0.018f, z0 },
+                 (Point3){ c0 - w + 0.12f, ROAD_Y + 0.018f, z0 },
+                 (Point3){ c1 - w + 0.12f, ROAD_Y + 0.018f, z1 },
+                 (Point3){ c1 - w, ROAD_Y + 0.018f, z1 }, C_EDGE_L);
+        quad_add((Point3){ c0 + w - 0.12f, ROAD_Y + 0.018f, z0 },
+                 (Point3){ c0 + w, ROAD_Y + 0.018f, z0 },
+                 (Point3){ c1 + w, ROAD_Y + 0.018f, z1 },
+                 (Point3){ c1 + w - 0.12f, ROAD_Y + 0.018f, z1 }, C_EDGE_R);
+
+        /* Low outer rails are simple original geometry, not game assets. */
+        quad_add((Point3){ c0 - w - 0.28f, ROAD_Y + 0.02f, z0 },
+                 (Point3){ c0 - w - 0.28f, ROAD_Y + 0.52f, z0 },
+                 (Point3){ c1 - w - 0.28f, ROAD_Y + 0.52f, z1 },
+                 (Point3){ c1 - w - 0.28f, ROAD_Y + 0.02f, z1 }, rail);
+        quad_add((Point3){ c0 + w + 0.28f, ROAD_Y + 0.02f, z0 },
+                 (Point3){ c0 + w + 0.28f, ROAD_Y + 0.52f, z0 },
+                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 },
+                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.02f, z1 }, rail);
+
+        if ((i % 2U) == 0U) {
+            const float mark_z0 = z0 - 0.35f;
+            const float mark_z1 = z0 - 1.35f;
+            const float mc0 = road_center_at(mark_z0, g_distance);
+            const float mc1 = road_center_at(mark_z1, g_distance);
+            quad_add((Point3){ mc0 - 0.055f, ROAD_Y + 0.035f, mark_z0 },
+                     (Point3){ mc0 + 0.055f, ROAD_Y + 0.035f, mark_z0 },
+                     (Point3){ mc1 + 0.055f, ROAD_Y + 0.035f, mark_z1 },
+                     (Point3){ mc1 - 0.055f, ROAD_Y + 0.035f, mark_z1 }, C_MARKER);
+        }
+    }
+}
+
+static void add_player_pod(void)
+{
+    const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
+
+    /* Paired engine pods, rear thrusters and a central tapered-looking nose. */
+    box_add(center - 0.62f, -0.62f, 1.08f,
+            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+    box_add(center + 0.62f, -0.62f, 1.08f,
+            0.27f, 0.25f, 0.83f, C_POD_TOP, C_POD_SIDE, C_THRUST);
+    box_add(center, -0.49f, 0.63f, 0.54f, 0.09f, 0.18f,
+            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
+
+    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
+                 (Point3){ center + 0.42f, -0.52f, 0.52f },
+                 (Point3){ center, -0.28f, -0.55f }, C_POD_TOP);
+    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
+                 (Point3){ center, -0.28f, -0.55f },
+                 (Point3){ center - 0.08f, -0.45f, -0.40f }, C_POD_ACCENT);
+    triangle_add((Point3){ center + 0.42f, -0.52f, 0.52f },
+                 (Point3){ center + 0.08f, -0.45f, -0.40f },
+                 (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
+
+    if (g_speed > 0.12f) {
+        const GXColor thrust = (g_boost_active || g_speed > 0.70f) ? C_THRUST_HOT : C_THRUST;
+        box_add(center - 0.62f, -0.62f, 2.10f,
+                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
+        box_add(center + 0.62f, -0.62f, 2.10f,
+                0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
+    }
+}
+
+static void draw_vertex_buffer(void)
+{
+    u16 i;
+    GX_Begin(GX_TRIANGLES, GX_VTXFMT0, g_vertex_count);
+    for (i = 0; i < g_vertex_count; ++i) {
+        const SceneVertex *v = &g_vertices[i];
+        GX_Position3f32(v->x, v->y, v->z);
+        GX_Color4u8(v->r, v->g, v->b, v->a);
+    }
+    GX_End();
+}
+
+static void append_screen_quad(float x0, float y0, float x1, float y1,
+                               float z, GXColor color)
+{
+    quad_add((Point3){ x0, y0, z }, (Point3){ x1, y0, z },
+             (Point3){ x1, y1, z }, (Point3){ x0, y1, z }, color);
+}
+
+static void draw_hud(void)
+{
+    Mtx identity;
+    Mtx44 ortho;
+    const float w = (float)g_video_mode->fbWidth;
+    const float h = (float)g_video_mode->efbHeight;
+    const GXColor dark = { 8, 18, 30, 235 };
+    const GXColor empty = { 48, 66, 80, 255 };
+    const GXColor fill = { 64, 220, 243, 255 };
+    const GXColor boost_fill = { 255, 157, 61, 255 };
+    const GXColor white = { 238, 246, 255, 255 };
+    const float bar_left = 24.0f;
+    const float bar_bottom = h - 24.0f;
+    const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
+
+    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
+    guMtxIdentity(identity);
+    guOrtho(ortho, 0.0f, h, 0.0f, w, 0.0f, 1.0f);
+    GX_LoadPosMtxImm(identity, GX_PNMTX0);
+    GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
+
+    g_vertex_count = 0;
+    append_screen_quad(bar_left - 8.0f, bar_bottom - 34.0f,
+                       bar_left + bar_width + 8.0f, bar_bottom + 4.0f,
+                       0.5f, dark);
+    append_screen_quad(bar_left, bar_bottom - 12.0f,
+                       bar_left + bar_width, bar_bottom,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 12.0f,
+                       bar_left + bar_width * g_speed, bar_bottom,
+                       0.3f, fill);
+    append_screen_quad(bar_left, bar_bottom - 28.0f,
+                       bar_left + bar_width, bar_bottom - 20.0f,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 28.0f,
+                       bar_left + bar_width * g_boost, bar_bottom - 20.0f,
+                       0.3f, boost_fill);
+
+    /* A centered steering tick gives immediate visual feedback without text. */
+    {
+        const float cx = w * 0.5f + g_player_lateral * 18.0f;
+        append_screen_quad(cx - 2.0f, h - 46.0f, cx + 2.0f, h - 30.0f,
+                           0.2f, white);
+        append_screen_quad(w * 0.5f - 48.0f, h - 43.0f,
+                           w * 0.5f + 48.0f, h - 40.0f,
+                           0.25f, empty);
+    }
+
+    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
+    draw_vertex_buffer();
+}
+
+static void initialise_video_and_gx(void)
+{
+    f32 yscale;
+    u32 scaled_height;
+
+    VIDEO_Init();
+    PAD_Init();
+    g_video_mode = VIDEO_GetPreferredMode(NULL);
+    g_framebuffers[0] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(g_video_mode));
+    g_framebuffers[1] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(g_video_mode));
+    g_gx_fifo = memalign(32, GX_FIFO_SIZE);
+
+    if (g_framebuffers[0] == NULL || g_framebuffers[1] == NULL || g_gx_fifo == NULL) {
+        while (1) VIDEO_WaitVSync();
+    }
+    memset(g_gx_fifo, 0, GX_FIFO_SIZE);
+
+    VIDEO_Configure(g_video_mode);
+    VIDEO_SetNextFramebuffer(g_framebuffers[0]);
+    VIDEO_SetBlack(FALSE);
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+    if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
+
+    GX_Init(g_gx_fifo, GX_FIFO_SIZE);
+    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
+                   (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
+    GX_SetScissor(0, 0, g_video_mode->fbWidth, g_video_mode->efbHeight);
+
+    yscale = GX_GetYScaleFactor(g_video_mode->efbHeight, g_video_mode->xfbHeight);
+    scaled_height = GX_SetDispCopyYScale(yscale);
+    GX_SetDispCopySrc(0, 0, g_video_mode->fbWidth, g_video_mode->efbHeight);
+    GX_SetDispCopyDst(g_video_mode->fbWidth, scaled_height);
+    GX_SetCopyFilter(g_video_mode->aa, g_video_mode->sample_pattern,
+                     GX_TRUE, g_video_mode->vfilter);
+    GX_SetFieldMode(g_video_mode->field_rendering,
+        ((g_video_mode->viHeight == 2 * g_video_mode->xfbHeight) ?
+         GX_ENABLE : GX_DISABLE));
+    GX_SetPixelFmt(g_video_mode->aa ? GX_PF_RGB565_Z16 : GX_PF_RGB8_Z24,
+                   GX_ZC_LINEAR);
+    GX_SetCullMode(GX_CULL_NONE);
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+    GX_SetColorUpdate(GX_TRUE);
+    GX_SetAlphaUpdate(GX_TRUE);
+    GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
+
+    GX_SetNumChans(1);
+    GX_SetChanCtrl(GX_COLOR0A0, GX_DISABLE, GX_SRC_REG, GX_SRC_REG,
+                   GX_LIGHTNULL, GX_DF_NONE, GX_AF_NONE);
+    GX_SetNumTexGens(0);
+    GX_SetNumTevStages(1);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    GX_ClearVtxDesc();
+    GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
+    GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+    GX_SetDispCopyGamma(GX_GM_1_0);
+    GX_CopyDisp(g_framebuffers[0], GX_TRUE);
+}
+
+static void draw_frame(void)
+{
+    const float center_near = road_center_at(5.5f, g_distance);
+    const float center_ahead = road_center_at(-14.0f, g_distance);
+    guVector camera = { center_near, 1.65f, 7.0f };
+    guVector up = { 0.0f, 1.0f, 0.0f };
+    guVector target = { center_ahead, -0.85f, -15.0f };
+    Mtx view;
+    Mtx44 projection;
+
+    g_vertex_count = 0;
+    add_road();
+    add_player_pod();
+
+    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+    guLookAt(view, &camera, &up, &target);
+    guPerspective(projection, 55.0f,
+                  (f32)g_video_mode->fbWidth / (f32)g_video_mode->efbHeight,
+                  0.1f, 180.0f);
+    GX_LoadProjectionMtx(projection, GX_PERSPECTIVE);
+    GX_LoadPosMtxImm(view, GX_PNMTX0);
+    GX_SetCurrentMtx(GX_PNMTX0);
+    draw_vertex_buffer();
+    draw_hud();
+
+    GX_DrawDone();
+    GX_CopyDisp(g_framebuffers[g_framebuffer_index], GX_TRUE);
+    VIDEO_SetNextFramebuffer(g_framebuffers[g_framebuffer_index]);
+    VIDEO_Flush();
+    VIDEO_WaitVSync();
+    g_framebuffer_index ^= 1U;
+}
+
+int main(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+    initialise_video_and_gx();
+
+    for (;;) {
+        u32 buttons_down;
+        u32 buttons_held;
+        s8 stick_x;
+        float steering;
+
+        PAD_ScanPads();
+        buttons_down = PAD_ButtonsDown(0);
+        buttons_held = PAD_ButtonsHeld(0);
+        stick_x = PAD_StickX(0);
+        if ((buttons_down & PAD_BUTTON_START) != 0U) {
+            /* Start is reserved for a future pause/menu screen. */
+            g_speed = 0.0f;
+        }
+        if ((buttons_down & PAD_BUTTON_Y) != 0U) {
+            g_distance = 0.0f;
+            g_player_lateral = 0.0f;
+            g_speed = 0.0f;
+            g_boost = 1.0f;
+        }
+
+        g_boost_active = ((buttons_held & PAD_BUTTON_X) != 0U &&
+                          (buttons_held & PAD_BUTTON_A) != 0U &&
+                          g_boost > 0.01f);
+        if (g_boost_active) g_boost = clampf_local(g_boost - 0.0055f, 0.0f, 1.0f);
+        else g_boost = clampf_local(g_boost + 0.0015f, 0.0f, 1.0f);
+
+        steering = (float)stick_x / 128.0f;
+        if ((buttons_held & PAD_BUTTON_LEFT) != 0U) steering -= 0.7f;
+        if ((buttons_held & PAD_BUTTON_RIGHT) != 0U) steering += 0.7f;
+        steering = clampf_local(steering, -1.0f, 1.0f);
+
+        if ((buttons_held & PAD_BUTTON_A) != 0U) g_speed += 0.012f;
+        else g_speed -= 0.003f;
+        if ((buttons_held & PAD_BUTTON_B) != 0U) g_speed -= 0.022f;
+        g_speed = clampf_local(g_speed, 0.0f, 1.0f);
+
+        g_player_lateral += steering * (0.025f + g_speed * 0.04f);
+        g_player_lateral = clampf_local(g_player_lateral, -4.2f, 4.2f);
+        if (fabsf(g_player_lateral) > 3.3f) {
+            g_speed = clampf_local(g_speed - 0.018f, 0.0f, 1.0f);
+        }
+        g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+
+        draw_frame();
+    }
+    return 0;
+}
