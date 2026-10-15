@@ -233,6 +233,8 @@ jobs:
           export BASELINE_DTM="$GITHUB_WORKSPACE/dolphin-neutral-baseline.dtm"
           export BASELINE_CAPTURE="$GITHUB_WORKSPACE/dolphin-neutral-baseline.png"
           export BASELINE_LOG="$GITHUB_WORKSPACE/dolphin-neutral-baseline.log"
+          export BASELINE_USER="$GITHUB_WORKSPACE/dolphin-neutral-user"
+          export STEERED_USER="$GITHUB_WORKSPACE/dolphin-steered-user"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
@@ -241,14 +243,16 @@ jobs:
           test -s "$BASELINE_DTM"
           test -s "$DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user/Config"
-          chmod 700 "$HOME"
-          # Put the rendered game surface in the Dolphin main window so the
-          # CI screenshot captures the game, not only the library window.
-          cat > "$GITHUB_WORKSPACE/dolphin-render-user/Config/Dolphin.ini" <<EOF
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER"
+          # Use isolated Dolphin profiles so the second capture cannot reuse
+          # the first session's movie state, window or display configuration.
+          for user_dir in "$BASELINE_USER" "$STEERED_USER"; do
+            cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
           EOF
+          done
           set +e
           timeout --signal=TERM --kill-after=3s 70s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -258,6 +262,7 @@ jobs:
                 local movie="$1"
                 local log="$2"
                 local capture="$3"
+                local user_dir="$4"
                 local emu_pid=""
                 local window=""
                 local title=""
@@ -272,7 +277,7 @@ jobs:
                   --config=Logger.Logs.BOOT=True \
                   --config=Logger.Logs.CORE=True \
                   --config=Logger.Logs.Video=True \
-                  --exec="$DOL" --movie="$movie" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$log" 2>&1 &
+                  --exec="$DOL" --movie="$movie" --user="$user_dir" > "$log" 2>&1 &
                 emu_pid=$!
                 sleep 6
                 if ! kill -0 "$emu_pid" 2>/dev/null; then
@@ -297,6 +302,7 @@ jobs:
                 if [[ -z "$window" ]]; then
                   echo "No visible Dolphin main window of at least 300x200 was found."
                   xwininfo -root -tree || true
+                  flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                   kill -KILL "$emu_pid" >/dev/null 2>&1 || true
                   wait "$emu_pid" >/dev/null 2>&1 || true
                   return 1
@@ -311,16 +317,19 @@ jobs:
                 echo "Dolphin-window capture has $colors distinct colors."
                 if [[ "$colors" -lt 24 ]]; then
                   echo "Dolphin window capture appears blank or nearly blank."
+                  flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                   kill -KILL "$emu_pid" >/dev/null 2>&1 || true
                   wait "$emu_pid" >/dev/null 2>&1 || true
                   return 1
                 fi
+                # Flatpak's launcher PID is not necessarily the emulator process.
+                flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
                 wait "$emu_pid" >/dev/null 2>&1 || true
-                sleep 1
+                sleep 2
               }
-              capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE"
-              capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE"
+              capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
+              capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
@@ -343,10 +352,15 @@ jobs:
           [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
-          if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
-            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \; || true
-          fi
+          find "$BASELINE_USER" "$STEERED_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs"; do
+            [[ -d "$log_dir" ]] || continue
+            for log_file in "$log_dir"/*; do
+              [[ -f "$log_file" ]] || continue
+              echo "--- $log_file"
+              tail -n 200 "$log_file" || true
+            done
+          done
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The optional software-renderer steering comparison failed. Native build and headless smoke remain separate results."
             exit "$status"
@@ -359,9 +373,12 @@ jobs:
           name: gamecube-dolphin-software-frame-diagnostic
           path: |
             dolphin-software-frame.png
+            dolphin-neutral-baseline.png
             dolphin-render.log
+            dolphin-neutral-baseline.log
             dolphin-flatpak-cli-capabilities.log
             dolphin-scripted-controller-input.dtm
-            dolphin-render-user/Logs/**
+            dolphin-neutral-user/Logs/**
+            dolphin-steered-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
