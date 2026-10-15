@@ -29,6 +29,51 @@ static void boost_tests(void) {
  assert(nearf(boonta_boost_after_frame(0.999f,0),1.0f));
 }
 
+static void boost_overheat_tests(void) {
+ /* Heat rises under boost, cools when released, and remains clamped. */
+ assert(nearf(boonta_engine_heat_after_frame(0.50f, 1), 0.5065f));
+ assert(nearf(boonta_engine_heat_after_frame(0.50f, 0), 0.4955f));
+ assert(nearf(boonta_engine_heat_after_frame(0.999f, 1), 1.0f));
+ assert(nearf(boonta_engine_heat_after_frame(0.003f, 0), 0.0f));
+
+ /* Boost cannot start above the heat limit or while overheat is latched. */
+ assert(boonta_boost_should_activate_with_heat(1, 1, 0.50f, 0.50f, 0));
+ assert(!boonta_boost_should_activate_with_heat(1, 1, 0.50f, 0.98f, 0));
+ assert(!boonta_boost_should_activate_with_heat(1, 1, 0.50f, 0.30f, 1));
+ assert(!boonta_boost_should_activate_with_heat(1, 1, 0.01f, 0.30f, 0));
+
+ /* Enter lockout at 98%, retain it while hot, and re-enable only at 60%. */
+ assert(!boonta_boost_overheated_after_frame(0, 0.979f));
+ assert(boonta_boost_overheated_after_frame(0, 0.98f));
+ assert(boonta_boost_overheated_after_frame(1, 0.85f));
+ assert(boonta_boost_overheated_after_frame(1, 0.6001f));
+ assert(!boonta_boost_overheated_after_frame(1, 0.60f));
+
+ /* A full cooldown cycle must not pulse boost on/off around the 98% boundary. */
+ {
+  float heat = 0.97f;
+  int overheated = 0;
+  int frames = 0;
+  while (!overheated && frames < 10) {
+   int active = boonta_boost_should_activate_with_heat(1, 1, 1.0f, heat, overheated);
+   assert(active);
+   heat = boonta_engine_heat_after_frame(heat, active);
+   overheated = boonta_boost_overheated_after_frame(overheated, heat);
+   ++frames;
+  }
+  assert(overheated && heat >= 0.98f);
+  frames = 0;
+  while (overheated && frames < 100) {
+   assert(!boonta_boost_should_activate_with_heat(1, 1, 1.0f, heat, overheated));
+   heat = boonta_engine_heat_after_frame(heat, 0);
+   overheated = boonta_boost_overheated_after_frame(overheated, heat);
+   ++frames;
+  }
+  assert(!overheated && heat <= 0.60f);
+  assert(boonta_boost_should_activate_with_heat(1, 1, 1.0f, heat, overheated));
+ }
+}
+
 static void steering_input_tests(void) {
  /* The analog stick maps its signed byte range to a normalized steering value. */
  assert(nearf(boonta_steering_input(0.0f, 0, 0), 0.0f));
@@ -175,14 +220,18 @@ static void simulated_three_lap_run_tests(void) {
  float distance = 0.0f;
  float speed = 0.0f;
  float boost = 1.0f;
+ float heat = 0.0f;
  unsigned int laps = 0U;
  unsigned int frames = 0U;
+ int overheated = 0;
  int finished = 0;
 
  while (!finished && frames < 5000U) {
-  const int boost_active = boonta_boost_should_activate(1, 1, boost);
+  const int boost_active = boonta_boost_should_activate_with_heat(1, 1, boost, heat, overheated);
   const float previous_distance = distance;
   boost = boonta_boost_after_frame(boost, boost_active);
+  heat = boonta_engine_heat_after_frame(heat, boost_active);
+  overheated = boonta_boost_overheated_after_frame(overheated, heat);
   speed = boonta_speed_after_input(speed, 1, 0);
   distance = boonta_distance_after_frame(distance, speed, boost_active);
   laps = boonta_lap_count_after_frame(laps, previous_distance, distance, 120.0f);
@@ -201,6 +250,7 @@ static void simulated_three_lap_run_tests(void) {
 int main(void) {
  speed_tests();
  boost_tests();
+ boost_overheat_tests();
  steering_input_tests();
  steering_inertia_tests();
  lap_tests();
