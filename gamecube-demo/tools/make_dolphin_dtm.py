@@ -32,7 +32,7 @@ NEUTRAL_AXIS = 0
 
 
 def _controller_state(frame: int, steering: str = "right") -> bytes:
-    """Return one packed controller poll with neutral analog axes.""
+    """Return one packed controller poll with neutral analog axes."""
     buttons = A  # Hold accelerator for the whole run.
     if frame == 0:
         buttons |= Y  # Reset to a deterministic starting position.
