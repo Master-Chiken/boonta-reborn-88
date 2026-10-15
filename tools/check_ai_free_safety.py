@@ -36,6 +36,8 @@ if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 
     errors.append("Missing exact-true write gate in gemini-dispatch.yml")
 if "command = association === 'OWNER' ? 'approve' : 'approve-denied';" not in dispatch:
     errors.append("Only the repository owner may issue the /approve command")
+if r"/^@gemini-cli\s+\/approve(?:\s|$)/" not in dispatch:
+    errors.append("The /approve command matcher must use a whitespace-aware, anchored expression")
 if "approval-denied:" not in dispatch or "The /approve command is restricted to the repository owner" not in dispatch:
     errors.append("Unauthorized approval attempts must be explicitly rejected")
 if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
