@@ -85,9 +85,14 @@ jobs:
           git -C "$tmp/repo" commit -qam "candidate implementation"
           equivalent_sha="$(git -C "$tmp/repo" rev-parse HEAD)"
 
-          # Apply the same patch to main under a different commit SHA.
+          # Advance main on an unrelated path first, so cherry-pick cannot fast-forward
+          # directly to the candidate SHA. The resulting commit must have a new SHA.
           git -C "$tmp/repo" checkout -q main
+          printf 'main only\\n' > "$tmp/repo/main-only.txt"
+          git -C "$tmp/repo" add main-only.txt
+          git -C "$tmp/repo" commit -qm "main advances independently"
           git -C "$tmp/repo" cherry-pick "$equivalent_sha" >/dev/null
+          test "$(git -C "$tmp/repo" rev-parse HEAD)" != "$equivalent_sha"
           equivalent_result="$(git -C "$tmp/repo" cherry main candidate)"
           printf '%s\n' "$equivalent_result"
           grep -F -- "- $equivalent_sha" <<< "$equivalent_result"
