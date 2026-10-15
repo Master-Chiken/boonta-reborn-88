@@ -161,7 +161,6 @@ jobs:
 
       - name: Capture the minimal GX control through Dolphin's GUI
         id: control_capture
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -219,6 +218,7 @@ jobs:
               exit 1
             fi
             xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+            : > "$WINDOW_LIST"
             for id in $(xdotool search --onlyvisible --name ".*" 2>/dev/null || true); do
               title=$(xdotool getwindowname "$id" 2>/dev/null || true)
               geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
@@ -226,6 +226,10 @@ jobs:
               height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
+            if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
+              echo "::error::Dolphin displayed an error dialog instead of a clean game-rendering session."
+              exit 1
+            fi
             xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
             sleep 4
             import -window "$window" "$CAPTURE"
@@ -252,7 +256,6 @@ jobs:
 
       - name: Capture the current GameCube prototype through Dolphin's GUI
         if: ${{ steps.control_capture.outcome == 'success' }}
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -308,6 +311,7 @@ jobs:
               exit 1
             fi
             xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+            : > "$WINDOW_LIST"
             for id in $(xdotool search --onlyvisible --name ".*" 2>/dev/null || true); do
               title=$(xdotool getwindowname "$id" 2>/dev/null || true)
               geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
@@ -315,6 +319,10 @@ jobs:
               height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
+            if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
+              echo "::error::Dolphin displayed an error dialog instead of a clean game-rendering session."
+              exit 1
+            fi
             xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
             sleep 4
             import -window "$window" "$CAPTURE"
