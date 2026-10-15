@@ -20,6 +20,7 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
+#define RACE_LAP_DISTANCE   120.0f
 #define ROAD_Y             (-1.05f)
 #define PI_F               3.14159265358979323846f
 
@@ -182,6 +183,22 @@ static void add_road(void)
                      (Point3){ mc1 - 0.055f, ROAD_Y + 0.035f, mark_z1 }, C_MARKER);
         }
     }
+
+    /* A repeating start/finish stripe gives the endless prototype a lap cue. */
+    {
+        const float offset = fmodf(g_distance, RACE_LAP_DISTANCE);
+        const float finish_z = 4.0f - offset;
+        if (finish_z > -108.0f && finish_z < 4.0f) {
+            const float c0 = road_center_at(finish_z, g_distance);
+            const float c1 = road_center_at(finish_z - 0.55f, g_distance);
+            const float half = ROAD_HALF_WIDTH;
+            const GXColor stripe = { 240, 244, 250, 255 };
+            quad_add((Point3){ c0 - half, ROAD_Y + 0.04f, finish_z },
+                     (Point3){ c0 + half, ROAD_Y + 0.04f, finish_z },
+                     (Point3){ c1 + half, ROAD_Y + 0.04f, finish_z - 0.55f },
+                     (Point3){ c1 - half, ROAD_Y + 0.04f, finish_z - 0.55f }, stripe);
+        }
+    }
 }
 
 static void add_player_pod(void)
@@ -244,9 +261,11 @@ static void draw_hud(void)
     const GXColor empty = { 48, 66, 80, 255 };
     const GXColor fill = { 64, 220, 243, 255 };
     const GXColor boost_fill = { 255, 157, 61, 255 };
+    const GXColor progress_fill = { 137, 241, 154, 255 };
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
+    const float lap_progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
     const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
 
     GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
@@ -256,7 +275,7 @@ static void draw_hud(void)
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
-    append_screen_quad(bar_left - 8.0f, bar_bottom - 34.0f,
+    append_screen_quad(bar_left - 8.0f, bar_bottom - 46.0f,
                        bar_left + bar_width + 8.0f, bar_bottom + 4.0f,
                        0.5f, dark);
     append_screen_quad(bar_left, bar_bottom - 12.0f,
@@ -271,6 +290,12 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 28.0f,
                        bar_left + bar_width * g_boost, bar_bottom - 20.0f,
                        0.3f, boost_fill);
+    append_screen_quad(bar_left, bar_bottom - 42.0f,
+                       bar_left + bar_width, bar_bottom - 34.0f,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 42.0f,
+                       bar_left + bar_width * lap_progress, bar_bottom - 34.0f,
+                       0.3f, progress_fill);
 
     /* A centered steering tick gives immediate visual feedback without text. */
     {
