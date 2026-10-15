@@ -176,18 +176,13 @@ jobs:
               skipped=$((skipped + 1))
             fi
           done <<'MERGED_CANDIDATES'
-          test/dtm-neutral-axis-regression 802d3a6ff03f880be044ee05afafaa96696a2633 144
-          maintenance/fix-cleanup-shell-quoting c8087fe657092e4d6d9fe736be025a777864b406 145
-          test/dolphin-scripted-controller-input e960885ec8a837826aa5df614b2de615404adfa1 134
-          fix/nonfinite-speed-state-v2 6466cb0d745d9f8eff02f6ca856823babac43d28 135
-          ci/dolphin-software-frame-diagnostic ce3d768c9775026af909454a1daefb9648e6672f 133
-          docs/align-runtime-evidence-main e60a54f824c049dce98eb4cf08fd388a694a64d7 131
-          fix/non-finite-boost-state 5a594bf4fdd1e0c962c04a0b775626a2b292b38d 130
-          governance/hard-105-branch-cap 869694a111cf6f2efcac6af8b481fe67aff614ff 125
-          fix/non-finite-steering-input bcd2fd9dc9477b07d7c0c426ac12f626559bc6ee 129
-          fix/sanitize-scaled-gameplay-timing 10494d3d11710086bb6f6de74943fac3b3ea1fea 128
-          fix/dtm-pod-detection-window 8bc9d509c356516f6823fe46733e97f875689f21 117
-          fix/use-branch-tip-date-cache 79c7d2cf03da7bdf6cd991d9f8871f133becb911 112
+          automation/branch-governance-30-active 04b3df8dfc82f12e4ac5cc892e4de29dfd4f42d7 109
+          automation/gemini-task-focused-reports 41625dbabcd5f5177af650c8e47eb9de2e1a865d 43
+          automation/harden-free-ai-ci 58c4751b51c8b0dcdd6a0162732474e77ab3cec1 31
+          automation/step102-provenance-guardrails 8155a66e7a9a486cbd2aec1c0179f927ae1bb6b8 44
+          ci/dolphin-cli-capability-report 04825d1c2393848f42f29077edc120aecbd5e5aa 106
+          ci/fail-on-native-compiler-warnings b0597c5b343efe7cfbb1501d776345c478440528 103
+          ci/visual-render-quality-gate 6518f7e184fac6d4c79e2e8f36acb23b0a700da9 62
           MERGED_CANDIDATES
 
           final_deleted=0
@@ -252,8 +247,8 @@ jobs:
           # The workflow's own source branch is also temporary. Delete it only if
           # its merged PR still has the exact current head and its complete Git tree
           # is byte-for-byte identical to main.
-          self_branch="maintenance/refresh-proven-cleanup-targets"
-          self_pr_number=147
+          self_branch="maintenance/cleanup-seven-proven-merged-refs"
+          self_pr_number=148
           inventory
           self_sha="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
           self_protected="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
