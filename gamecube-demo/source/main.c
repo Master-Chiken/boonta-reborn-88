@@ -599,20 +599,19 @@ int main(int argc, char **argv)
         /* The rival approaches in camera space and gently changes lanes. */
         g_rival_lateral = 1.10f * sinf(g_distance * 0.022f + 1.2f);
         g_rival_z += 0.035f + g_speed * 0.045f;
-        if (g_rival_z > -1.0f && g_rival_z < 1.8f) {
-            const float lateral_gap = fabsf(g_player_lateral - g_rival_lateral);
-            if (lateral_gap < 0.92f) {
+        {
+            const int rival_event = boonta_rival_event(
+                g_rival_z, g_player_lateral, g_rival_lateral);
+            if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                 /* Contact costs speed and nudges the player away from the rival. */
-                g_speed = clampf_local(g_speed - 0.28f, 0.0f, 1.0f);
-                g_lateral_velocity += (g_player_lateral <= g_rival_lateral) ? -0.035f : 0.035f;
+                g_speed = boonta_speed_after_rival_contact(g_speed);
+                g_lateral_velocity += boonta_rival_contact_nudge(
+                    g_player_lateral, g_rival_lateral);
                 g_rival_z = -20.0f;
-            } else {
+            } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
                 ++g_overtake_count;
                 g_rival_z = -22.0f;
             }
-        } else if (g_rival_z >= 1.8f) {
-            ++g_overtake_count;
-            g_rival_z = -22.0f;
         }
 
         draw_frame();
