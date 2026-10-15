@@ -119,7 +119,7 @@ static float road_center_at(float z, float distance)
      * progressing track coordinate keeps a given piece of road stable while
      * it advances toward the camera instead of deforming in place.
      */
-    const float phase = distance - z;
+    const float phase = boonta_track_phase(distance, z);
     return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
 }
 
@@ -183,8 +183,8 @@ static void add_road(void)
 {
     unsigned int i;
     const float segment_length = 2.8f;
-    const float road_scroll = fmodf(g_distance, segment_length);
-    const unsigned int passed_sections = (unsigned int)floorf(g_distance / segment_length);
+    const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
+    const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
     const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
     const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
@@ -240,7 +240,7 @@ static void add_road(void)
 
     /* A repeating start/finish stripe gives the endless prototype a lap cue. */
     {
-        const float offset = fmodf(g_distance, RACE_LAP_DISTANCE);
+        const float offset = boonta_track_scroll_offset(g_distance, RACE_LAP_DISTANCE);
         const float finish_z = offset - RACE_LAP_DISTANCE;
         if (finish_z > -108.0f && finish_z < 4.0f) {
             const float c0 = road_center_at(finish_z, g_distance);
@@ -266,8 +266,8 @@ static void add_canyon_scenery(void)
     const float base_y = ROAD_Y - 0.11f;
     const float base_offset = ROAD_HALF_WIDTH + 5.0f;
     const float wall_length = 10.0f;
-    const float wall_scroll = fmodf(g_distance, wall_length);
-    const unsigned int passed_wall_sections = (unsigned int)floorf(g_distance / wall_length);
+    const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
+    const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
     for (i = 0U; i < 9U; ++i) {
