@@ -81,7 +81,7 @@ class TrackFormatTests(unittest.TestCase):
         self.assertIn("#define BOONTA_TRACK_CLOSED_LOOP 1", header)
         self.assertIn("#define BOONTA_TRACK_POINT_COUNT 8U", header)
         self.assertIn("boonta_track_points_original_test_oval", header)
-        self.assertEqual(header.count("{ "), 8)
+        self.assertEqual(header.count("    { "), 8)
 
     def test_header_export_sanitizes_leading_digit(self):
         track = load_track(EXAMPLE_PATH)
