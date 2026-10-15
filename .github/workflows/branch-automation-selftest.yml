@@ -52,7 +52,7 @@ jobs:
           for path in paths:
               source = path.read_text(encoding="utf-8")
               blocks = re.findall(
-                  r"^[ \\t]*python3[ \\t]+-[ \\t]+<<'PY'[ \\t]*\\r?\\n(.*?)^[ \\t]*PY[ \\t]*$",
+                  r"^[ \t]*python3[ \t]+-[ \t]+<<'PY'[ \t]*\r?\n(.*?)^[ \t]*PY[ \t]*$",
                   source,
                   flags=re.MULTILINE | re.DOTALL,
               )
