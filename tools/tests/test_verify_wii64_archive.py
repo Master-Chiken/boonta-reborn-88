@@ -6,7 +6,12 @@ import zipfile
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
-from verify_wii64_archive import inspect_archive, main, sha256_bytes
+from verify_wii64_archive import (
+    inspect_archive,
+    main,
+    sha256_bytes,
+    sha256_stream,
+)
 
 
 class VerifyWii64ArchiveTests(unittest.TestCase):
@@ -14,6 +19,12 @@ class VerifyWii64ArchiveTests(unittest.TestCase):
         self.assertEqual(
             sha256_bytes(b"abc"),
             hashlib.sha256(b"abc").hexdigest(),
+        )
+
+    def test_sha256_stream(self):
+        self.assertEqual(
+            sha256_stream(io.BytesIO(b"abc" * 10000)),
+            hashlib.sha256(b"abc" * 10000).hexdigest(),
         )
 
     def test_reports_missing_expected_members(self):
