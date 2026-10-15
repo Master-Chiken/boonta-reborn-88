@@ -57,6 +57,16 @@ def validate_dol(path: Path) -> dict[str, int]:
                 raise ArtifactError(
                     f"{path}: {section_type}[{index}] extends beyond end of file"
                 )
+            # Dolphin's DOL reader rounds section reads up to 32 bytes. A file
+            # can have a valid raw section range yet still be rejected at boot
+            # if the aligned tail bytes are missing.
+            aligned_size = (size + 31) & ~31
+            if offset + aligned_size > len(data):
+                missing = offset + aligned_size - len(data)
+                raise ArtifactError(
+                    f"{path}: {section_type}[{index}] lacks {missing} byte(s) "
+                    "of trailing 32-byte section padding; run pad_dol.py first"
+                )
             if address == 0:
                 raise ArtifactError(f"{path}: {section_type}[{index}] has a zero load address")
             total_sections += 1
