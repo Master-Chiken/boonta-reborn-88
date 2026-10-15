@@ -53,7 +53,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(boost[0] & X)
         brake = record(blob, 120)
         self.assertTrue(brake[0] & B)
-        self.assertTrue(brake[1] & DPAD_RIGHT)
+        self.assertFalse(brake[1] & DPAD_RIGHT)
 
         pause = record(blob, 220)
         resume = record(blob, 280)
