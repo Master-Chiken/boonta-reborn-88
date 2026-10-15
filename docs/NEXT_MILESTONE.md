@@ -38,6 +38,10 @@ Mark each item pass/fail with the exact evidence. A screenshot alone is not proo
 - CI host tests and native build pass on the exact code being tested.
 - Any unverified item remains marked pending; do not infer hardware compatibility from Dolphin.
 
+## Step 102 source/provenance evidence
+
+The import hold is documented in the [source-import gate](SOURCE_IMPORT_GATE.md), [bundle audit](STEP102_BUNDLE_AUDIT.md), [host validation record](STEP102_HOST_VALIDATION.md), and [source provenance review](STEP102_SOURCE_PROVENANCE.md). These reports describe a separate archive and historical host checks only. They do **not** clear files for redistribution or provide a native build result for Step 102.
+
 ## Parallel track: Step 102 source import remains on hold
 
 The fuller Step 102 source archive is separate from the clean-room mainline code. Do not merge draft PR #17 or #22 wholesale. The available evidence does not resolve file-by-file source authorship/license, the generated centerline header whose presence contradicts the archive README, or the origin of demo track CSV data. Keep unclear-provenance source and all commercial game payloads/assets out of the public repository until permission and derivation are documented. Build success and passing tests do not resolve licensing.
