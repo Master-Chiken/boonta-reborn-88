@@ -64,7 +64,8 @@ static unsigned int g_overtake_count;
 static int g_paused;
 static int g_race_finished;
 
-static const GXColor C_GROUND = { 23, 48, 40, 255 };
+static const GXColor C_GROUND = { 133, 98, 60, 255 };
+static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
 static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
@@ -80,6 +81,10 @@ static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
 static const GXColor C_EXHAUST_CORE = { 255, 244, 190, 255 };
 static const GXColor C_TETHER = { 20, 43, 66, 255 };
 static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
+static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
+static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
+static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
+static const GXColor C_CANYON_SUNLIT = { 205, 145, 82, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -233,6 +238,64 @@ static void add_road(void)
                      (Point3){ c0 + half, ROAD_Y + 0.04f, finish_z },
                      (Point3){ c1 + half, ROAD_Y + 0.04f, finish_z - 0.55f },
                      (Point3){ c1 - half, ROAD_Y + 0.04f, finish_z - 0.55f }, stripe);
+        }
+    }
+}
+
+
+/*
+ * Original low-poly canyon walls give the test road a readable world silhouette.
+ * The panels are deliberately simple, stable geometry rather than extracted game art.
+ * Their bases sit just above the desert floor and remain outside the track rails.
+ */
+static void add_canyon_scenery(void)
+{
+    const float base_y = ROAD_Y - 0.11f;
+    const float base_offset = ROAD_HALF_WIDTH + 5.0f;
+    unsigned int i;
+
+    for (i = 0U; i < 9U; ++i) {
+        const float z_near = -20.0f - (float)i * 10.0f;
+        const float z_far = z_near - 10.0f;
+        const float center_near = road_center_at(z_near, g_distance);
+        const float center_far = road_center_at(z_far, g_distance);
+        const float near_height = 2.5f + (float)(i % 4U) * 0.85f;
+        const float far_height = 2.5f + (float)((i + 1U) % 4U) * 0.85f;
+        const float near_top_offset = base_offset + 1.6f + (float)(i % 2U) * 0.8f;
+        const float far_top_offset = base_offset + 1.6f + (float)((i + 1U) % 2U) * 0.8f;
+        unsigned int side_index;
+
+        for (side_index = 0U; side_index < 2U; ++side_index) {
+            const float side = side_index == 0U ? -1.0f : 1.0f;
+            const Point3 base_near = {
+                center_near + side * base_offset, base_y, z_near
+            };
+            const Point3 top_near = {
+                center_near + side * near_top_offset, base_y + near_height, z_near
+            };
+            const Point3 base_far = {
+                center_far + side * base_offset, base_y, z_far
+            };
+            const Point3 top_far = {
+                center_far + side * far_top_offset, base_y + far_height, z_far
+            };
+            GXColor face;
+            GXColor facet;
+
+            if (((i + side_index) & 1U) == 0U) {
+                face = C_CANYON_MID;
+            } else {
+                face = C_CANYON_DARK;
+            }
+            if (((i + side_index) % 3U) == 0U) {
+                facet = C_CANYON_SUNLIT;
+            } else {
+                facet = C_CANYON_LIGHT;
+            }
+
+            /* Two differently colored faces create a faceted, sunlit cliff wall. */
+            triangle_add(base_near, top_near, top_far, face);
+            triangle_add(base_near, top_far, base_far, facet);
         }
     }
 }
@@ -594,7 +657,7 @@ static void initialise_video_and_gx(void)
     if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 
     GX_Init(g_gx_fifo, GX_FIFO_SIZE);
-    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
                    (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
     GX_SetScissor(0, 0, g_video_mode->fbWidth, g_video_mode->efbHeight);
@@ -645,6 +708,7 @@ static void draw_frame(void)
 
     g_vertex_count = 0;
     add_road();
+    add_canyon_scenery();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
@@ -653,7 +717,7 @@ static void draw_frame(void)
     }
     add_player_pod();
 
-    GX_SetCopyClear((GXColor){ 10, 21, 42, 255 }, 0x00FFFFFF);
+    GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
