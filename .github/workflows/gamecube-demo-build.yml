@@ -246,6 +246,16 @@ jobs:
                 echo "Capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
+              # The CI Dolphin window is 640x480 at y=40. The lower half of
+              # its viewport must contain the dark procedural road, not the
+              # near-white blank ground caused by a broken GX vertex-color path.
+              near_white_fraction=$(convert "$CAPTURE" -crop 640x240+0+280 +repage \
+                -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
+              echo "Near-white pixel fraction in the lower game viewport: $near_white_fraction"
+              if awk -v fraction="$near_white_fraction" 'BEGIN { exit !(fraction > 0.25) }'; then
+                echo "The lower game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
+                exit 1
+              fi
               ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
               echo "Text detected in captured frame:"
               printf "%s\n" "$ocr"
