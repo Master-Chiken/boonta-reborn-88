@@ -176,38 +176,38 @@ jobs:
           name: boonta-reborn-gamecube-first-render
           path: build-artifact
 
-      - name: Install free Dolphin software-renderer diagnostic dependencies
+      - name: Install official free Dolphin Flatpak and capture dependencies
         shell: bash
         run: |
           set -euo pipefail
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth imagemagick qt6-qpa-plugins
-          export PATH="/usr/games:$PATH"
-          export QT_QPA_PLATFORM=offscreen
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends flatpak xvfb xauth imagemagick dbus-daemon
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
-          dolphin-emu --version
+          flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
+          flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
+          flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         shell: bash
         run: |
           set -euo pipefail
           test -s build-artifact/boonta_gc_demo.dol
-          export PATH="/usr/games:$PATH"
           export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" /tmp/dolphin-render-user
+          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user"
           chmod 700 "$HOME"
           set +e
           timeout --signal=TERM --kill-after=3s 18s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
             bash -c '
               set -euo pipefail
-              dolphin-emu --batch --video_backend="Software Renderer" \
-                --exec="$DOL" --user=/tmp/dolphin-render-user > "$DOLPHIN_LOG" 2>&1 &
+              flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
+                --batch --video_backend="Software Renderer" \
+                --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
               emu_pid=$!
               cleanup() {
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
