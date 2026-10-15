@@ -48,3 +48,17 @@ The remaining acceptance checks are interactive steering, acceleration/braking, 
 ## Source boundary
 
 The C source and geometry here are original procedural scaffolding created for this repository. Do not add Step 102 source, third-party mod data, or commercial game content to this folder unless provenance and redistribution rights are separately cleared.
+
+## What the automated Dolphin checks prove
+
+The scripted DTM comparison is an **input-path smoke diagnostic**. It confirms that the neutral and right-input captures render expected scene colors and that a HUD steering-state marker changes. It does **not** measure player-pod displacement, world motion, steering physics, control feel, or completion of a race.
+
+Keep validation claims separate:
+
+- **Host tests and native DOL/ELF build:** the tested code compiles and its deterministic helper tests pass.
+- **Dolphin null-video smoke:** the emulator process accepts/runs the DOL for the bounded smoke window; this is not visual verification.
+- **Software-renderer frame/input-path diagnostic:** a scene is captured and the scripted input is reflected by the HUD state marker.
+- **Interactive steering and complete race:** still require a visible Dolphin session (or physical hardware) with an actual controller profile, driving, three lap crossings, finish, reset, and evidence recorded against the tested commit.
+
+Never report the HUD-marker diagnostic as proof that the craft visibly steers. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
+
