@@ -52,7 +52,7 @@ jobs:
             echo
             echo "- Default branch: `$default_branch`"
             echo "- Rule: only delete a listed branch if its exact tip is reachable from `main`, it has no open PR, and GitHub reports it unprotected."
-            echo "- Maximum targets: 8. No other branches are in scope."
+            echo "- Fixed target lists: 8 ancestry-proven refs plus up to 12 exact-head merged-PR refs (20 maximum deletions in this cleanup sequence)."
             echo
             echo "| Branch | Expected tip SHA | Evidence / result |"
             echo "|---|---|---|"
@@ -120,9 +120,79 @@ jobs:
           tools/wii64-rice-profile-inspector afc8f1d6b24064482ab53ba5f4e6bb92d55d66a1
           CANDIDATES
 
+          merged_deleted=0
+          while read -r name expected_sha pr_number; do
+            [ -n "$name" ] || continue
+            [ "$merged_deleted" -lt 12 ] || break
+            inventory
+
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            if [ -z "$current_sha" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | Already absent; no action (merged PR #$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$current_sha" != "$expected_sha" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: branch tip changed (merged PR #$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if [ "$protected" != "false" ]; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: protected or protection status unknown |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: an open PR uses this branch |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            merged_pr="$(gh api "repos/$GH_REPO/pulls/$pr_number")"
+            if ! printf '%s' "$merged_pr" | jq -e --arg name "$name" --arg sha "$expected_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: merged-PR evidence did not match exact head (PR #$pr_number) |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            # Recheck current ref, PR state, and merged head immediately before deletion.
+            inventory
+            current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            merged_pr="$(gh api "repos/$GH_REPO/pulls/$pr_number")"
+            if [ "$current_sha" != "$expected_sha" ] || [ "$protected" != "false" ] || jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null || ! printf '%s' "$merged_pr" | jq -e --arg name "$name" --arg sha "$expected_sha" '.merged_at != null and .head.ref == $name and .head.sha == $sha' >/dev/null; then
+              echo "| \`$name\` | \`$expected_sha\` | PRESERVED: final merged-PR safety check failed |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+              continue
+            fi
+
+            if gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$name"; then
+              echo "| \`$name\` | \`$expected_sha\` | DELETED: unchanged exact head of merged PR #$pr_number; unprotected; no open PR |" >> "$GITHUB_STEP_SUMMARY"
+              deleted=$((deleted + 1))
+              merged_deleted=$((merged_deleted + 1))
+            else
+              echo "| \`$name\` | \`$expected_sha\` | NOT DELETED: GitHub rejected deletion |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+            fi
+          done <<'MERGED_CANDIDATES'
+          maintenance/fix-branch-cleanup-protection-check 44f74b33be94555c242c13db0769823e4b32561e 139
+          maintenance/proof-based-cleanup fca93b8d359bc6049beb94d16f26ad731d40b72b 138
+          ai/gemini-agent-hardening 14973dce75c2455b55fe9bc42a8b0484823b0b20 15
+          ai/openrouter-free-pr-review 19f31276b8ee46d72fd0557454ae30b7c3b64e82 14
+          audit/initial-repository-audit 4c4ae81cc2a2bd6f3546ca0de0b43f25c579c685 54
+          automation/checkout-v7-clean-rebase f8f513133915b77d075f82218d521e27db408135 40
+          automation/ci-failure-triage f8144f5c1cdcb8626ea8561389cf4dca5597a856 32
+          automation/github-script-v9-clean-rebase 3fd29d209388ad829a3fc84dcb7febd7680f0a63 41
+          automation/upload-artifact-v7-pinned 5d15493a645f1c16ab06a2d2fac8e5e3914cc9c0 42
+          docs/record-dolphin-headless-smoke d07bf10959c4da1e19d7bf36d6cb5d2ab4894f33 50
+          docs/record-visible-dolphin-frame 35587e9a3196ada8965ec1699d4e6593efd88e4a 58
+          docs/refresh-repository-audit ceaae89303ea81e29e0dbc1864f781b55a4d8beb 57
+          MERGED_CANDIDATES
+
           {
             echo
             echo "**Summary:** $deleted deleted; $skipped preserved or already absent."
             echo
-            echo "Only the eight hard-coded, previously audited refs can be deleted by this workflow."
+            echo "Only the two fixed candidate lists can be deleted: eight tips already reachable from main and twelve unchanged heads of explicitly merged PRs."
           } >> "$GITHUB_STEP_SUMMARY"
