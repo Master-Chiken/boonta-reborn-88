@@ -8,12 +8,12 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A procedural scrolling curved road with edge strips and barrier rails.
 - An original placeholder twin-engine hover craft built from primitive geometry.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake.
-- A clean-room procedural rival craft ahead on the track, with its own lateral motion and original placeholder geometry.
+- A clean-room procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, lap-progress bar, repeating start/finish stripe, and five completed-lap indicators.
-- A procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
+- A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
-This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and multi-rival race logic are not implemented.
+This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, a full physics model, and multi-rival race logic are not implemented.
 
 ## Controls
 
@@ -21,8 +21,8 @@ This is a gameplay prototype, not the completed racer and not a port of the comm
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; the energy meter drains and recharges when boost is released.
-- Y: reset the demo run, lap counter, rival, and overtake indicators.
-- Start: currently zeros the speed; a pause/menu is not implemented yet.
+- Start: toggle pause/resume; the pause icon appears in the center of the HUD.
+- Y: reset the run, lap counter, rival, overtake indicators, and pause state.
 
 ## Build
 
@@ -34,7 +34,6 @@ make
 ```
 
 The expected files are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`. GitHub Actions runs the same build in the `devkitpro/devkitppc` container and keeps successful outputs as a short-retention artifact.
-
 
 ## Latest native build
 
