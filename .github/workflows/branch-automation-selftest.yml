@@ -1,0 +1,66 @@
+name: Branch automation self-test
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/branch-governance.yml"
+      - ".github/workflows/branch-intake-queue.yml"
+      - ".github/workflows/branch-automation-selftest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-automation-selftest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate workflow YAML and embedded Python
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the exact tested commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate workflow YAML syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
+            .github/workflows/branch-governance.yml \
+            .github/workflows/branch-intake-queue.yml \
+            .github/workflows/branch-automation-selftest.yml
+
+      - name: Compile embedded Python scripts without executing network operations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          import textwrap
+          from pathlib import Path
+
+          paths = (
+              Path(".github/workflows/branch-governance.yml"),
+              Path(".github/workflows/branch-intake-queue.yml"),
+          )
+          checked = 0
+          for path in paths:
+              source = path.read_text(encoding="utf-8")
+              blocks = re.findall(
+                  r"^[ \\t]*python3[ \\t]+-[ \\t]+<<'PY'[ \\t]*\\r?\\n(.*?)^[ \\t]*PY[ \\t]*$",
+                  source,
+                  flags=re.MULTILINE | re.DOTALL,
+              )
+              if not blocks:
+                  raise SystemExit(f"No embedded Python heredoc found in {path}")
+              for index, block in enumerate(blocks, start=1):
+                  compile(textwrap.dedent(block), f"{path}:python-block-{index}", "exec")
+                  checked += 1
+                  print(f"Python syntax OK: {path} block {index}")
+          print(f"Validated {checked} embedded Python block(s).")
+          PY
