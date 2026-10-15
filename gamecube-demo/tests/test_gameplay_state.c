@@ -6,6 +6,15 @@
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
 
 
+static void finite_clamp_tests(void) {
+ assert(nearf(boonta_clamp_finite_float(0.04f, -0.085f, 0.085f), 0.04f));
+ assert(nearf(boonta_clamp_finite_float(0.12f, -0.085f, 0.085f), 0.085f));
+ assert(nearf(boonta_clamp_finite_float(-0.12f, -0.085f, 0.085f), -0.085f));
+ assert(nearf(boonta_clamp_finite_float(NAN, -0.085f, 0.085f), 0.0f));
+ assert(nearf(boonta_clamp_finite_float(INFINITY, -0.085f, 0.085f), 0.0f));
+ assert(nearf(boonta_clamp_finite_float(-INFINITY, -0.085f, 0.085f), 0.0f));
+}
+
 static void frame_scale_tests(void) {
  assert(nearf(boonta_frame_scale_from_delta(1.0f / 60.0f), 1.0f));
  assert(nearf(boonta_frame_scale_from_delta(1.0f / 50.0f), 1.2f));
@@ -377,6 +386,7 @@ static void simulated_three_lap_run_tests(void) {
 }
 
 int main(void) {
+ finite_clamp_tests();
  frame_scale_tests();
  cadence_consistency_tests();
  speed_tests();

@@ -97,10 +97,7 @@ static const u8 g_font5x7[128][7] = {
 
 static float clampf_local(float value, float low, float high)
 {
-    if (!isfinite(value)) return 0.0f;
-    if (value < low) return low;
-    if (value > high) return high;
-    return value;
+    return boonta_clamp_finite_float(value, low, high);
 }
 
 static float road_center_at(float z, float distance)
