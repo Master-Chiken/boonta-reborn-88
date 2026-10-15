@@ -43,4 +43,40 @@ static inline int boonta_race_is_finished(unsigned int lap_count, unsigned int l
     return lap_limit > 0U && lap_count >= lap_limit;
 }
 
+
+enum {
+    BOONTA_RIVAL_EVENT_NONE = 0,
+    BOONTA_RIVAL_EVENT_COLLISION = 1,
+    BOONTA_RIVAL_EVENT_OVERTAKE = 2
+};
+
+static inline int boonta_rival_event(float rival_z,
+                                     float player_lateral,
+                                     float rival_lateral)
+{
+    if (rival_z > -1.0f && rival_z < 1.8f) {
+        float lateral_gap = player_lateral - rival_lateral;
+        if (lateral_gap < 0.0f) lateral_gap = -lateral_gap;
+        return lateral_gap < 0.92f
+            ? BOONTA_RIVAL_EVENT_COLLISION
+            : BOONTA_RIVAL_EVENT_OVERTAKE;
+    }
+    if (rival_z >= 1.8f) return BOONTA_RIVAL_EVENT_OVERTAKE;
+    return BOONTA_RIVAL_EVENT_NONE;
+}
+
+static inline float boonta_speed_after_rival_contact(float speed)
+{
+    speed -= 0.28f;
+    if (speed < 0.0f) return 0.0f;
+    if (speed > 1.0f) return 1.0f;
+    return speed;
+}
+
+static inline float boonta_rival_contact_nudge(float player_lateral,
+                                                float rival_lateral)
+{
+    return player_lateral <= rival_lateral ? -0.035f : 0.035f;
+}
+
 #endif
