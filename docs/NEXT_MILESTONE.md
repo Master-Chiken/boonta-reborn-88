@@ -7,7 +7,8 @@ Last updated: 2026-10-15
 The active native target is the clean-room, original procedural prototype in gamecube-demo/. It is not the full game and does not contain commercial game code or extracted assets.
 
 Verified in GitHub Actions:
-- Host regression tests cover speed input, boost energy, steering inertia, lap boundaries and three-lap finish state, rival collision/overtake decisions, off-road drag, rail recovery, pause/reset behavior, and build-artifact utilities.
+- Host regression tests cover speed input, boost/overheat, steering inertia, analog/D-pad mapping, lap boundaries and three-lap finish state, three-rival spacing and rival collision/overtake decisions, off-road drag, rail recovery, pause/reset behavior, finite-state guards, and build-artifact utilities.
+- A cadence regression verifies consistent one-second outcomes at 60 and 50 gameplay updates per second; long frame deltas are capped at 50 ms for physics/state updates.
 - devkitPPC/libogc produces a non-empty GameCube DOL and ELF, and the artifact validator passes.
 - Dolphin remains active for the bounded 12-second null-video process smoke.
 - The Software Renderer capture in run #69 shows a visible procedural road, edge rails, center markers, player pod and rival pod.
@@ -18,7 +19,7 @@ Those results establish deterministic code tests, a native build, bounded emulat
 
 Load the latest mainline DOL in a visible Dolphin session. Record the Dolphin version, renderer/backend, video mode, controller profile, and a short video or screenshots plus any runtime log. Test in this order:
 
-1. Reset with Y. Check that the pod returns to the starting lateral position, speed and lap count reset, the rival and overtake indicators reset, boost refills, and pause/finish state clears.
+1. Reset with Y. Check that the pod returns to the starting lateral position, speed and lap count reset, the three rivals and overtake indicators reset, boost refills, and pause/finish state clears.
 2. Hold A, then B. Confirm acceleration and braking visibly change speed. Release A/B and confirm speed falls naturally rather than remaining stuck.
 3. Steer left and right with the Control Stick; repeat with the D-pad. Confirm movement direction is correct, motion has the programmed inertia, releasing input damps the drift, and the steering remains bounded.
 4. Drive beyond the road edge. Confirm off-road speed loss and rail-edge recovery are visible and do not freeze or destabilize rendering.
