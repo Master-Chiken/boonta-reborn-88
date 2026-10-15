@@ -6,6 +6,7 @@ on:
     paths:
       - "gamecube-demo/Makefile"
       - "gamecube-demo/source/**"
+      - "gamecube-demo/tests/**"
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
@@ -14,6 +15,7 @@ on:
     paths:
       - "gamecube-demo/Makefile"
       - "gamecube-demo/source/**"
+      - "gamecube-demo/tests/**"
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
@@ -24,6 +26,21 @@ permissions:
   contents: read
 
 jobs:
+  host-pause-state-tests:
+    name: Host pause/resume state tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Compile and run pause/resume unit tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
+          /tmp/test_pause_state
+
   build-gamecube-demo:
     runs-on: ubuntu-latest
     container:
