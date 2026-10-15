@@ -23,11 +23,12 @@ from make_dolphin_dtm import (
 # the lightweight host DTM protocol tests.
 try:
     from PIL import Image, ImageDraw
-    from check_dolphin_frame import finish_banner_visible
+    from check_dolphin_frame import finish_banner_visible, road_center_from_asphalt
 except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
+    road_center_from_asphalt = None
 
 
 def record(blob: bytes, frame: int) -> bytes:
@@ -117,6 +118,26 @@ class DolphinDtmTests(unittest.TestCase):
     def test_full_race_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(10, steering="right", scenario="full-race")
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or road_center_from_asphalt is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_asphalt_center_estimator_is_independent_of_desert_ground_color(self) -> None:
+        image = Image.new("RGB", (800, 480), (133, 98, 60))
+        draw = ImageDraw.Draw(image)
+        y0, y1 = int(480 * 0.52), int(480 * 0.60) - 1
+        draw.rectangle((300, y0, 500, y1), fill=(37, 43, 59))
+        center, rows = road_center_from_asphalt(image)
+        self.assertAlmostEqual(center, 400.0)
+        self.assertGreaterEqual(rows, 10)
+
+        shifted = Image.new("RGB", (800, 480), (133, 98, 60))
+        shifted_draw = ImageDraw.Draw(shifted)
+        shifted_draw.rectangle((260, y0, 460, y1), fill=(45, 51, 67))
+        shifted_center, shifted_rows = road_center_from_asphalt(shifted)
+        self.assertAlmostEqual(shifted_center, 360.0)
+        self.assertGreaterEqual(shifted_rows, 10)
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or finish_banner_visible is None,
