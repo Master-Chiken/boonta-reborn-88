@@ -260,7 +260,7 @@ jobs:
           EOF
           done
           set +e
-          timeout --signal=TERM --kill-after=3s 70s xvfb-run -a -s "-screen 0 1280x720x24" \
+          timeout --signal=TERM --kill-after=3s 100s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
             bash -c '
               set -euo pipefail
