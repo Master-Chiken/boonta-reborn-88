@@ -85,6 +85,7 @@ static void speed_tests(void) {
  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, NAN), 0.5f));
  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, INFINITY), 0.5f));
  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, -INFINITY), 0.5f));
+ assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, -1.0f), 0.5f));
  /* The native loop uses the scaled helper directly; invalid state must not leak. */
  assert(nearf(boonta_speed_after_input_scaled(NAN,1,0,1.0f),0.012f));
  assert(nearf(boonta_speed_after_input_scaled(INFINITY,0,0,1.0f),0.0f));
