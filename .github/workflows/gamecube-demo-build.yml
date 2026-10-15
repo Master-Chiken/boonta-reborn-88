@@ -111,6 +111,10 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb qt6-qpa-plugins
           export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
+          export HOME=/tmp/dolphin-home
+          mkdir -p "$HOME"
+          chmod 700 "$HOME"
           dolphin-emu --version
 
       - name: Run the DOL for 12 seconds with Dolphin's null video backend
