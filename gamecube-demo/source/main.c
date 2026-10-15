@@ -152,11 +152,23 @@ static float track_center_x_at(float travelled)
         const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
         const float length = segment_lengths[i];
         if (target <= length || i + 1U == BOONTA_TRACK_POINT_COUNT) {
+            const unsigned int previous = (i + BOONTA_TRACK_POINT_COUNT - 1U) % BOONTA_TRACK_POINT_COUNT;
+            const unsigned int following = (next + 1U) % BOONTA_TRACK_POINT_COUNT;
             const float t = length > 0.001f ? clampf_local(target / length, 0.0f, 1.0f) : 0.0f;
-            const float x0 = boonta_track_points_original_test_oval[i].x;
-            const float x1 = boonta_track_points_original_test_oval[next].x;
+            const float t2 = t * t;
+            const float t3 = t2 * t;
+            const float p0 = boonta_track_points_original_test_oval[previous].x;
+            const float p1 = boonta_track_points_original_test_oval[i].x;
+            const float p2 = boonta_track_points_original_test_oval[next].x;
+            const float p3 = boonta_track_points_original_test_oval[following].x;
+            /* Closed-loop Catmull-Rom interpolation removes hard kinks at points. */
+            const float smooth_x = 0.5f * (
+                2.0f * p1 + (-p0 + p2) * t
+                + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2
+                + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3
+            );
             /* Map authoring units into the current renderer's narrow road scale. */
-            return (x0 + (x1 - x0) * t) * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
+            return smooth_x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
         }
         target -= length;
     }
