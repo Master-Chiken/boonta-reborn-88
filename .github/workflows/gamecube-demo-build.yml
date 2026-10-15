@@ -322,7 +322,7 @@ jobs:
                   wait "$emu_pid" >/dev/null 2>&1 || true
                   return 1
                 fi
-                # Flatpak's launcher PID is not necessarily the emulator process.
+                # The Flatpak launcher PID is not necessarily the emulator process.
                 flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
                 wait "$emu_pid" >/dev/null 2>&1 || true
