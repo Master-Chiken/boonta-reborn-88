@@ -45,6 +45,9 @@ jobs:
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          # Mirror public Git history without checking out or executing branch code.
+          # git cherry uses patch IDs to detect changes already applied under new SHAs.
+          GIT_TERMINAL_PROMPT=0 git clone --mirror --quiet "https://github.com/${GH_REPO}.git" /tmp/racer-intake.git
           python3 - <<'PY'
           import json
           import os
@@ -67,6 +70,41 @@ jobs:
               return json.loads(subprocess.check_output(
                   ["gh", "api", endpoint], text=True, stderr=subprocess.PIPE
               ))
+
+          def branch_unique_patch_count(branch_name, expected_sha):
+              """Return count of patch-unique non-merge commits vs main, or fail closed."""
+              branch_ref = f"refs/heads/{branch_name}"
+              main_ref = f"refs/heads/{default_branch}"
+              actual = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", branch_ref],
+                  text=True, capture_output=True
+              )
+              if actual.returncode != 0:
+                  raise RuntimeError("branch did not exist in the history mirror snapshot")
+              if actual.stdout.strip() != expected_sha:
+                  raise RuntimeError("branch tip moved between inventory and history mirror")
+              mirrored_main = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", main_ref],
+                  text=True, capture_output=True
+              )
+              if mirrored_main.returncode != 0 or mirrored_main.stdout.strip() != main_sha:
+                  raise RuntimeError("main moved between inventory and history mirror")
+              merge_count = int(subprocess.check_output(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-list", "--count", "--merges",
+                   f"{main_ref}..{branch_ref}"], text=True
+              ).strip())
+              if merge_count:
+                  raise RuntimeError(
+                      f"branch has {merge_count} merge commit(s); requires explicit review"
+                  )
+              result = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "cherry", main_ref, branch_ref],
+                  text=True, capture_output=True
+              )
+              if result.returncode != 0:
+                  raise RuntimeError((result.stderr or result.stdout).strip()[:120])
+              return sum(1 for line in result.stdout.splitlines() if line.startswith("+ "))
+
 
           # Compare final Git trees, not only merge-base file lists. A stale branch
           # can be "ahead" while every change it advertises has already landed in main.
@@ -253,9 +291,19 @@ jobs:
                   deferred.append((name, hold))
                   continue
 
-              # GitHub's compare file list is based on the merge base. Filter it
-              # against actual blob/mode IDs in current main so already-merged
-              # branch work is not reopened just because its branch has old commits.
+              # First detect commits already applied under different SHAs. A stale
+              # branch's final file blobs can differ from main simply because it lacks
+              # later main changes, even when its own unique patch has been superseded.
+              try:
+                  unique_patches = branch_unique_patch_count(name, sha)
+              except Exception as exc:
+                  deferred.append((name, f"patch-equivalence check failed closed: {str(exc)[:120]}"))
+                  continue
+              if unique_patches == 0:
+                  skips["all branch commits already present or patch-equivalent to main"] += 1
+                  continue
+
+              # Then filter paths whose final blob/mode is identical to current main.
               try:
                   branch_tree_blobs = tree_blobs_for_commit(sha)
               except Exception as exc:
@@ -266,7 +314,7 @@ jobs:
                   if main_tree_blobs.get(path) != branch_tree_blobs.get(path)
               )
               if not effective_paths:
-                  skips["reported changes already match main tree (superseded work)"] += 1
+                  skips["reported paths already match main tree (superseded work)"] += 1
                   continue
               paths = effective_paths
 
