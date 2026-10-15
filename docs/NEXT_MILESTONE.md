@@ -6,10 +6,11 @@
 - The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (about 307 KB).
 - The host regression suite and static project preflight pass.
 - The headless Dolphin smoke test remains alive for its 20-second window without a detected fatal boot error.
-- **Visible rendering is still unverified.** The latest frame job produced no image. Inspection of Dolphin's current configuration source revealed that actual frame-dump activation is the main `[Movie]` key `DumpFrames`; `GFX.ini`'s `DumpFramesAsImages` only controls image output format, and is not itself the runtime dump toggle.
-- The workflow now writes both `Config/Dolphin.ini` (`[Movie] DumpFrames=True`, `[General] DumpPath`) and `Config/GFX.ini` (`[Settings] DumpFramesAsImages=True`, EFB/XFB diagnostics) before startup, then archives both configs and the file listing. This is a targeted fix based on Dolphin's config schema; the next CI result must confirm whether it works.
-- Latest completed diagnostic run before the corrected Movie setting: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38705925288
-- The revised workflow triggers a fresh run. Do not call visual validation passed until the job captures a non-black image.
+- **Visible rendering is still unverified.** Repeated CI runs produced no PNG/BMP from Dolphin, even when running the older minimal GX renderer's DOL as a control under the same user profile, software renderer, and frame-dump config. This shows the current capture method/environment is unable to provide usable evidence; it does not prove either DOL renders black.
+- The workflow writes both `Config/Dolphin.ini` (`[Movie] DumpFrames=True`, `[General] DumpPath`) and `Config/GFX.ini` (`[Settings] DumpFramesAsImages=True`, EFB/XFB diagnostics) before startup and archives the configs/file listings.
+- The diagnostic now attempts the known minimal GX control DOL first. If that control produces no image, it records the failure and skips the main-DOL capture instead of repeatedly treating the same broken capture path as a game regression. Visual capture is diagnostic-only; the native build, host regression, and emulator smoke checks remain the reliable automated gates.
+- Latest control-comparison run (control and main DOL both produced no frame): https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38707260620
+- Do not mark visual validation passed until a real non-black frame has been captured and reviewed, manually or through a reliable CI capture path.
 
 ## Audit findings
 
