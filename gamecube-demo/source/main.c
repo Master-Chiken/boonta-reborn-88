@@ -20,6 +20,8 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
+#define RACE_LAP_DISTANCE   120.0f
+#define LAP_INDICATOR_COUNT  5U
 #define ROAD_Y             (-1.05f)
 #define PI_F               3.14159265358979323846f
 
@@ -39,8 +41,10 @@ static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
 static float g_distance;
+static unsigned int g_lap_count;
 static float g_speed;
 static float g_player_lateral;
+static float g_lateral_velocity;
 static float g_boost = 1.0f;
 static int g_boost_active;
 
@@ -181,6 +185,22 @@ static void add_road(void)
                      (Point3){ mc1 - 0.055f, ROAD_Y + 0.035f, mark_z1 }, C_MARKER);
         }
     }
+
+    /* A repeating start/finish stripe gives the endless prototype a lap cue. */
+    {
+        const float offset = fmodf(g_distance, RACE_LAP_DISTANCE);
+        const float finish_z = 4.0f - offset;
+        if (finish_z > -108.0f && finish_z < 4.0f) {
+            const float c0 = road_center_at(finish_z, g_distance);
+            const float c1 = road_center_at(finish_z - 0.55f, g_distance);
+            const float half = ROAD_HALF_WIDTH;
+            const GXColor stripe = { 240, 244, 250, 255 };
+            quad_add((Point3){ c0 - half, ROAD_Y + 0.04f, finish_z },
+                     (Point3){ c0 + half, ROAD_Y + 0.04f, finish_z },
+                     (Point3){ c1 + half, ROAD_Y + 0.04f, finish_z - 0.55f },
+                     (Point3){ c1 - half, ROAD_Y + 0.04f, finish_z - 0.55f }, stripe);
+        }
+    }
 }
 
 static void add_player_pod(void)
@@ -243,9 +263,12 @@ static void draw_hud(void)
     const GXColor empty = { 48, 66, 80, 255 };
     const GXColor fill = { 64, 220, 243, 255 };
     const GXColor boost_fill = { 255, 157, 61, 255 };
+    const GXColor progress_fill = { 137, 241, 154, 255 };
+    const GXColor lap_done = { 137, 241, 154, 255 };
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
+    const float lap_progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
     const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
 
     GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
@@ -255,7 +278,7 @@ static void draw_hud(void)
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
-    append_screen_quad(bar_left - 8.0f, bar_bottom - 34.0f,
+    append_screen_quad(bar_left - 8.0f, bar_bottom - 62.0f,
                        bar_left + bar_width + 8.0f, bar_bottom + 4.0f,
                        0.5f, dark);
     append_screen_quad(bar_left, bar_bottom - 12.0f,
@@ -270,6 +293,25 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 28.0f,
                        bar_left + bar_width * g_boost, bar_bottom - 20.0f,
                        0.3f, boost_fill);
+    append_screen_quad(bar_left, bar_bottom - 42.0f,
+                       bar_left + bar_width, bar_bottom - 34.0f,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 42.0f,
+                       bar_left + bar_width * lap_progress, bar_bottom - 34.0f,
+                       0.3f, progress_fill);
+    /* Five lap markers light up as full laps are completed. */
+    {
+        unsigned int i;
+        const float marker_gap = 4.0f;
+        const float marker_width = (bar_width - marker_gap * (LAP_INDICATOR_COUNT - 1U)) / (float)LAP_INDICATOR_COUNT;
+        for (i = 0; i < LAP_INDICATOR_COUNT; ++i) {
+            const float left = bar_left + (marker_width + marker_gap) * (float)i;
+            const GXColor marker = (i < g_lap_count) ? lap_done : empty;
+            append_screen_quad(left, bar_bottom - 58.0f,
+                               left + marker_width, bar_bottom - 50.0f,
+                               0.3f, marker);
+        }
+    }
 
     /* A centered steering tick gives immediate visual feedback without text. */
     {
@@ -404,7 +446,9 @@ int main(int argc, char **argv)
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
             g_distance = 0.0f;
+            g_lap_count = 0U;
             g_player_lateral = 0.0f;
+            g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
         }
@@ -425,12 +469,29 @@ int main(int argc, char **argv)
         if ((buttons_held & PAD_BUTTON_B) != 0U) g_speed -= 0.022f;
         g_speed = clampf_local(g_speed, 0.0f, 1.0f);
 
-        g_player_lateral += steering * (0.025f + g_speed * 0.04f);
-        g_player_lateral = clampf_local(g_player_lateral, -4.2f, 4.2f);
-        if (fabsf(g_player_lateral) > 3.3f) {
-            g_speed = clampf_local(g_speed - 0.018f, 0.0f, 1.0f);
+        /* Steering has inertia: quick direction changes need a moment to settle. */
+        g_lateral_velocity += steering * (0.0018f + g_speed * 0.0030f);
+        g_lateral_velocity *= 0.92f;
+        g_lateral_velocity = clampf_local(g_lateral_velocity, -0.085f, 0.085f);
+        g_player_lateral += g_lateral_velocity;
+
+        /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
+        if (fabsf(g_player_lateral) > 3.15f) {
+            const float excess = fabsf(g_player_lateral) - 3.15f;
+            g_speed = clampf_local(g_speed - (0.008f + excess * 0.012f), 0.0f, 1.0f);
         }
-        g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+        if (fabsf(g_player_lateral) > 3.85f) {
+            g_player_lateral = (g_player_lateral < 0.0f) ? -3.85f : 3.85f;
+            g_lateral_velocity *= -0.35f;
+        }
+        {
+            const float previous_distance = g_distance;
+            g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+            if ((unsigned int)(g_distance / RACE_LAP_DISTANCE) >
+                (unsigned int)(previous_distance / RACE_LAP_DISTANCE)) {
+                ++g_lap_count;
+            }
+        }
 
         draw_frame();
     }

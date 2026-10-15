@@ -7,8 +7,8 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - Native GameCube GX initialization and 3D colored-vertex rendering.
 - A procedural scrolling curved road with edge strips and barrier rails.
 - An original placeholder twin-engine hover craft built from primitive geometry.
-- GameCube controller steering, throttle and brake.
-- A basic speed bar, steering-position tick, and rechargeable boost-energy meter.
+- GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake.
+- A basic speed bar, steering-position tick, rechargeable boost-energy meter, lap-progress bar, repeating start/finish stripe, and five completed-lap indicators.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
 This is a first-render/input smoke test, not the completed racer and not a port of the commercial game. It does not yet have collision, lap counting, AI opponents, audio, saves or a title menu.
