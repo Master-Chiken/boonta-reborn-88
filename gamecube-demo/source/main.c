@@ -12,6 +12,7 @@
 #include <ogc/system.h>
 
 #include "pause_state.h"
+#include "gameplay_state.h"
 
 #include <math.h>
 #include <malloc.h>
@@ -526,21 +527,21 @@ int main(int argc, char **argv)
             continue;
         }
 
-        g_boost_active = ((buttons_held & PAD_BUTTON_X) != 0U &&
-                          (buttons_held & PAD_BUTTON_A) != 0U &&
-                          g_boost > 0.01f);
-        if (g_boost_active) g_boost = clampf_local(g_boost - 0.0055f, 0.0f, 1.0f);
-        else g_boost = clampf_local(g_boost + 0.0015f, 0.0f, 1.0f);
+        g_boost_active = boonta_boost_should_activate(
+            (buttons_held & PAD_BUTTON_X) != 0U,
+            (buttons_held & PAD_BUTTON_A) != 0U,
+            g_boost);
+        g_boost = boonta_boost_after_frame(g_boost, g_boost_active);
 
         steering = (float)stick_x / 128.0f;
         if ((buttons_held & PAD_BUTTON_LEFT) != 0U) steering -= 0.7f;
         if ((buttons_held & PAD_BUTTON_RIGHT) != 0U) steering += 0.7f;
         steering = clampf_local(steering, -1.0f, 1.0f);
 
-        if ((buttons_held & PAD_BUTTON_A) != 0U) g_speed += 0.012f;
-        else g_speed -= 0.003f;
-        if ((buttons_held & PAD_BUTTON_B) != 0U) g_speed -= 0.022f;
-        g_speed = clampf_local(g_speed, 0.0f, 1.0f);
+        g_speed = boonta_speed_after_input(
+            g_speed,
+            (buttons_held & PAD_BUTTON_A) != 0U,
+            (buttons_held & PAD_BUTTON_B) != 0U);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
         g_lateral_velocity += steering * (0.0018f + g_speed * 0.0030f);
@@ -560,8 +561,8 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
-            if ((unsigned int)(g_distance / RACE_LAP_DISTANCE) >
-                (unsigned int)(previous_distance / RACE_LAP_DISTANCE)) {
+            if (boonta_lap_was_crossed(previous_distance, g_distance,
+                                       RACE_LAP_DISTANCE)) {
                 ++g_lap_count;
             }
         }
