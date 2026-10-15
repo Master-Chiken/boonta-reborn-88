@@ -24,4 +24,4 @@ static const BoontaTrackPoint boonta_track_points_original_test_oval[BOONTA_TRAC
     { -12.000000f, 0.200000f, 18.000000f, 3.400000f, 0 }
 };
 
-#endif
+#endif /* BOONTA_GENERATED_TRACK_ORIGINAL_TEST_OVAL_H */
