@@ -52,6 +52,7 @@ static float g_lap_seconds;
 static float g_last_lap_seconds;
 static float g_best_lap_seconds;
 static float g_speed;
+static float g_pitch_down;
 static float g_player_lateral;
 static float g_lateral_velocity;
 static float g_boost = 1.0f;
@@ -94,6 +95,7 @@ static const u8 g_font5x7[128][7] = {
     ['6'] = {14,16,16,30,17,17,14}, ['7'] = {31,1,2,4,8,8,8},
     ['8'] = {14,17,17,14,17,17,14}, ['9'] = {14,17,17,15,1,1,14},
     ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
+    ['C'] = {14,17,16,16,16,17,14}, ['H'] = {17,17,17,31,17,17,17},
     ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
     ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
     ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
@@ -585,6 +587,19 @@ static void draw_hud(void)
         }
     }
 
+    /* Small pitch gauge: nose-down is right, nose-up is left, neutral is centered. */
+    {
+        const float pitch_center = w - 78.0f;
+        const float pitch_left = pitch_center - 42.0f;
+        const float pitch_right = pitch_center + 42.0f;
+        const float pitch_marker = pitch_center + 35.0f * g_pitch_down;
+        append_screen_quad(pitch_left, 37.0f, pitch_right, 43.0f, 0.5f, dark);
+        append_screen_quad(pitch_center - 1.0f, 36.0f, pitch_center + 1.0f, 44.0f, 0.4f, white);
+        append_screen_quad(pitch_marker - 2.0f, 35.0f, pitch_marker + 2.0f, 45.0f,
+                           0.3f, g_pitch_down > 0.65f ? boost_fill : fill);
+        append_text("PITCH", pitch_left, 46.0f, 1.0f, white);
+    }
+
     /* Symbolic finish banner: a checkered flag made from original GX quads. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
@@ -700,9 +715,11 @@ static void draw_frame(void)
     const float center_near = road_center_at(5.5f, g_distance);
     const float center_ahead = road_center_at(-14.0f, g_distance);
     /* Follow the pod laterally; steering moves the course relative to the camera. */
-    guVector camera = { center_near + g_player_lateral, 1.65f, 7.0f };
+    /* Pitch moves the camera target subtly to communicate nose-down/up attitude. */
+    guVector camera = { center_near + g_player_lateral, 1.65f - 0.20f * g_pitch_down, 7.0f };
     guVector up = { 0.0f, 1.0f, 0.0f };
-    guVector target = { center_ahead + g_player_lateral, -0.85f, -15.0f };
+    guVector target = { center_ahead + g_player_lateral,
+                        -0.85f - 0.45f * g_pitch_down, -15.0f };
     Mtx view;
     Mtx44 projection;
 
@@ -754,6 +771,8 @@ int main(int argc, char **argv)
         u32 buttons_down;
         u32 buttons_held;
         s8 stick_x;
+        s8 stick_y;
+        float pitch_down;
         float steering;
         u64 frame_tick;
         float frame_delta_seconds;
@@ -767,6 +786,7 @@ int main(int argc, char **argv)
         buttons_down = PAD_ButtonsDown(0);
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
+        stick_y = PAD_StickY(0);
         if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
             g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
@@ -778,6 +798,7 @@ int main(int argc, char **argv)
             g_last_lap_seconds = 0.0f;
             g_best_lap_seconds = 0.0f;
             g_player_lateral = 0.0f;
+            g_pitch_down = 0.0f;
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
@@ -811,10 +832,15 @@ int main(int argc, char **argv)
         g_boost_overheated = boonta_boost_overheated_after_frame(
             g_boost_overheated, g_engine_heat);
 
-        steering = boonta_steering_input(
-            (float)stick_x,
-            (buttons_held & PAD_BUTTON_LEFT) != 0U,
-            (buttons_held & PAD_BUTTON_RIGHT) != 0U);
+        /* Up/forward on the analog stick pitches down; down pitches up. */
+        pitch_down = boonta_pitch_input((float)stick_y);
+        g_pitch_down = pitch_down;
+        steering = boonta_steering_after_pitch(
+            boonta_steering_input(
+                (float)stick_x,
+                (buttons_held & PAD_BUTTON_LEFT) != 0U,
+                (buttons_held & PAD_BUTTON_RIGHT) != 0U),
+            pitch_down);
 
         g_speed = boonta_speed_after_input_scaled(
             g_speed,
@@ -839,7 +865,7 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             const unsigned int previous_laps = g_lap_count;
-            g_distance = boonta_distance_after_frame_scaled(g_distance, g_speed, g_boost_active, frame_scale);
+            g_distance = boonta_distance_after_pitch_scaled(g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
             if (g_lap_count > previous_laps) {
