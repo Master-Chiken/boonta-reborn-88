@@ -21,10 +21,12 @@ class VerifyWii64ArchiveTests(unittest.TestCase):
             hashlib.sha256(b"abc").hexdigest(),
         )
 
-    def test_sha256_stream(self):
+    def test_sha256_stream_across_multiple_chunks(self):
+        payload = b"abc" * 400000
+        self.assertGreater(len(payload), 1024 * 1024)
         self.assertEqual(
-            sha256_stream(io.BytesIO(b"abc" * 10000)),
-            hashlib.sha256(b"abc" * 10000).hexdigest(),
+            sha256_stream(io.BytesIO(payload)),
+            hashlib.sha256(payload).hexdigest(),
         )
 
     def test_reports_missing_expected_members(self):
