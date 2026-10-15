@@ -6,6 +6,8 @@ import unittest
 from make_dolphin_dtm import (
     A,
     B,
+    CENTER_AXIS,
+    DEFAULT_GAME_ID,
     DPAD_LEFT,
     DPAD_RIGHT,
     HEADER_SIZE,
@@ -28,7 +30,9 @@ class DolphinDtmTests(unittest.TestCase):
         blob = build_dtm(frames)
         self.assertEqual(blob[:4], b"DTM\x1a")
         self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
-        self.assertEqual(blob[0x0B], 1)  # controller port 1 connected
+        self.assertEqual(blob[4:10], DEFAULT_GAME_ID.encode("ascii"))
+        self.assertEqual(blob[0x0A], 0)  # bWii=False
+        self.assertEqual(blob[0x0B], 1)  # GameCube controller port 1 connected
         self.assertEqual(blob[0x0C], 0)  # starts from boot, not savestate
         self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
         self.assertEqual(struct.unpack_from("<Q", blob, 0x15)[0], frames)
@@ -41,12 +45,14 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[0] & Y)
         self.assertTrue(first[1] & IS_CONNECTED)
         self.assertTrue(first[1] & DPAD_RIGHT)
+        self.assertEqual(first[4:], bytes((CENTER_AXIS,) * 4))
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
         self.assertTrue(boost[0] & X)
         brake = record(blob, 120)
         self.assertTrue(brake[0] & B)
+        self.assertTrue(brake[1] & DPAD_RIGHT)
 
         pause = record(blob, 220)
         resume = record(blob, 280)
@@ -63,6 +69,14 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertFalse(record(blob, 2200)[1] & DPAD_RIGHT)
         self.assertFalse(record(blob, 3000)[1] & DPAD_LEFT)
         self.assertFalse(record(blob, 3000)[1] & DPAD_RIGHT)
+
+    def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
+        blob = build_dtm(1, "ID-boo")
+        self.assertEqual(blob[4:10], b"ID-boo")
+        for invalid in ("", "A" * 7, "é" * 6):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises((ValueError, UnicodeEncodeError)):
+                    build_dtm(1, invalid)
 
     def test_rejects_invalid_frame_counts(self) -> None:
         for invalid in (0, -1, 12001, True, 3.5):
