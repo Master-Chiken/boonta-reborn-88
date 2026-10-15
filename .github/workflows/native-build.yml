@@ -132,6 +132,8 @@ jobs:
     needs: [build, dolphin-smoke]
     runs-on: ubuntu-24.04
     timeout-minutes: 8
+    # Visual capture is diagnostic-only; GUI/session failures must not block reliable build gates.
+    continue-on-error: true
     steps:
       - name: Download the freshly built DOL
         uses: actions/download-artifact@v4
@@ -147,7 +149,7 @@ jobs:
           sudo add-apt-repository -y ppa:ubuntuhandbook1/dolphin-emu
           sudo apt-get update
           sudo apt-get install -y dolphin-emu qt6-qpa-plugins qt6-wayland
-          dolphin-emu --version || true
+          # The Qt GUI binary is not probed outside Xvfb; doing so creates a misleading display/plugin crash.
           echo "Qt GUI diagnostics: D-Bus session + explicit XCB/software-rendering environment enabled for capture attempts."
           command -v dbus-run-session
       - name: Download the earlier minimal GX renderer as a control
