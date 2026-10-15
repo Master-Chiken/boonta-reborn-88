@@ -275,8 +275,8 @@ static void add_canyon_scenery(void)
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
-        const float near_height = 2.6f + (float)(wall_phase % 4U) * 0.4f;
-        const float far_height = 2.6f + (float)((wall_phase + 1U) % 4U) * 0.4f;
+        const float near_height = 3.1f + (float)(wall_phase % 4U) * 0.22f;
+        const float far_height = 3.1f + (float)((wall_phase + 1U) % 4U) * 0.22f;
         const float near_top_offset = base_offset + 0.9f + (float)(wall_phase % 2U) * 0.25f;
         const float far_top_offset = base_offset + 0.9f + (float)((wall_phase + 1U) % 2U) * 0.25f;
         unsigned int side_index;
@@ -311,7 +311,7 @@ static void add_canyon_scenery(void)
                 face = C_CANYON_DARK;
             }
 
-            /* Short, phase-stable panels make the canyon wall joins smoother. */
+            /* Keep every panel above the camera horizon; subtle height steps avoid isolated spikes. */
             triangle_add(base_near, top_near, top_far, face);
             triangle_add(base_near, top_far, base_far, face);
         }
