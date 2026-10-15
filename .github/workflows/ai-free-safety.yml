@@ -3,14 +3,18 @@ name: AI free-tier safety checks
 on:
   push:
     branches:
+      - main
       - ai/gemini-agent-hardening
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ai-free-safety-${{ github.ref }}
+  group: ai-free-safety-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
