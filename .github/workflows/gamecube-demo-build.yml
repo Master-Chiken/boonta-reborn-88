@@ -276,7 +276,7 @@ jobs:
                 echo "Dolphin window capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
-              python3 - "$CAPTURE" <<'PY'
+              python3 - "$CAPTURE" <<PY
           from pathlib import Path
           import sys
           from PIL import Image
