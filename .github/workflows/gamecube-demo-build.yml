@@ -47,6 +47,9 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
+      - name: Test DOL padding and artifact validation utilities
+        run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
+
   build-gamecube-demo:
     runs-on: ubuntu-latest
     container:
@@ -70,6 +73,9 @@ jobs:
           make clean
           set -o pipefail
           make 2>&1 | tee build.log
+          # libogc's DOL output may omit the final bytes required for
+          # 32-byte-aligned section reads. Dolphin rejects such a DOL at boot.
+          python3 tools/pad_dol.py boonta_gc_demo.dol
           test -s boonta_gc_demo.dol
           test -s boonta_gc_demo.elf
 
@@ -156,5 +162,120 @@ jobs:
         with:
           name: gamecube-dolphin-process-smoke
           path: dolphin-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  dolphin-software-frame-diagnostic:
+    name: Experimental Dolphin software-renderer frame diagnostic (non-blocking)
+    continue-on-error: true
+    needs: [build-gamecube-demo, host-pause-state-tests]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Download the DOL built by this workflow
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned download-artifact v4.3.0
+        with:
+          name: boonta-reborn-gamecube-first-render
+          path: build-artifact
+
+      - name: Install official free Dolphin Flatpak and capture dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon tesseract-ocr
+          export HOME=/tmp/dolphin-render-home
+          mkdir -p "$HOME"
+          chmod 700 "$HOME"
+          flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # Dolphin's official release remote does not reliably provide the KDE
+          # runtime required by the app. Install the runtime from Flathub first.
+          flatpak install --user --assumeyes flathub org.kde.Platform//6.11
+          flatpak info --user org.kde.Platform//6.11
+          flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
+          # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
+          flatpak info --user org.DolphinEmu.dolphin-emu
+
+      - name: Launch the DOL and capture a non-blocking diagnostic frame
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build-artifact/boonta_gc_demo.dol
+          export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
+          export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
+          export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
+          export HOME=/tmp/dolphin-render-home
+          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user"
+          chmod 700 "$HOME"
+          set +e
+          timeout --signal=TERM --kill-after=3s 18s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+            bash -c '
+              set -euo pipefail
+              flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
+                --video_backend="Software Renderer" \
+                --config=Logger.Options.WriteToFile=True \
+                --config=Logger.Options.WriteToConsole=True \
+                --config=Logger.Options.Verbosity=2 \
+                --config=Logger.Logs.BOOT=True \
+                --config=Logger.Logs.CORE=True \
+                --config=Logger.Logs.Video=True \
+                --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
+              emu_pid=$!
+              cleanup() {
+                kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                wait "$emu_pid" >/dev/null 2>&1 || true
+              }
+              trap cleanup EXIT
+              sleep 8
+              if ! kill -0 "$emu_pid" 2>/dev/null; then
+                cat "$DOLPHIN_LOG"
+                echo "Dolphin exited before the software-renderer capture."
+                exit 1
+              fi
+              import -window root "$CAPTURE"
+              test -s "$CAPTURE"
+              identify "$CAPTURE"
+              colors=$(convert "$CAPTURE" -resize 160x90 -format %k info:)
+              echo "Software-renderer root capture has $colors distinct colors."
+              if [[ "$colors" -lt 24 ]]; then
+                echo "Capture appears blank or nearly blank; visual rendering remains unverified."
+                exit 1
+              fi
+              ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
+              echo "Text detected in captured frame:"
+              printf "%s\n" "$ocr"
+              if printf "%s\n" "$ocr" | grep -Eiq "failed to init core|failed to initialize|could not boot|failed to load executable"; then
+                echo "Captured frame contains a Dolphin boot/core error dialog; this must not count as a visual pass."
+                exit 1
+              fi
+              echo "A non-blank frame without a recognized boot/core error dialog was captured; geometry and controls still require inspection."
+            '
+          status=$?
+          set -e
+          [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
+          echo "Dolphin user files created during boot attempt:"
+          find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
+          if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
+            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \; || true
+          fi
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::The optional software-renderer capture failed. Native build and headless smoke remain separate results."
+            exit "$status"
+          fi
+
+      - name: Upload the optional frame and log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned upload-artifact v7.0.2
+        with:
+          name: gamecube-dolphin-software-frame-diagnostic
+          path: |
+            dolphin-software-frame.png
+            dolphin-render.log
+            dolphin-render-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
