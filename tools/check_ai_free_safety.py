@@ -84,6 +84,11 @@ if not re.search(r"(?m)^\s*description\s*=\s*[\"']Runs the Gemini CLI in read-on
     errors.append("Gemini invoke prompt must be explicitly read-only")
 if "Do not edit files or call write tools" not in invoke_prompt:
     errors.append("Gemini invoke prompt must prohibit file writes")
+if "@{.gemini/context.json}" not in invoke_prompt:
+    errors.append("Gemini invoke prompt must inject the dispatcher request context directly")
+
+if '--arg context "${ADDITIONAL_CONTEXT}"' not in invoke:
+    errors.append("Gemini invoke workflow must copy the triggering comment into context.json")
 
 for required_phrase in (
     "Always prioritize the exact request in `.gemini/context.json` and the triggering issue/PR comment.",
