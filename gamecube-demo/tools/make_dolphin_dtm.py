@@ -44,9 +44,11 @@ def _controller_state(frame: int) -> bytes:
         buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
-    if frame < 2000:
+    # A short rightward pulse yields a measurable response without steering
+    # off-screen; left input is held briefly later in the recording.
+    if frame < 60:
         flags |= DPAD_RIGHT
-    elif frame < 2800:
+    elif 2000 <= frame < 2060:
         flags |= DPAD_LEFT
 
     # The DTM stores raw unsigned axis values; 128, not 0, is the neutral
