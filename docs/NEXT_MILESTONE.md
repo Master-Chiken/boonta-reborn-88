@@ -6,11 +6,11 @@
 - The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (about 307 KB).
 - The host regression suite and static project preflight pass.
 - The headless Dolphin smoke test remains alive for its 20-second window without a detected fatal boot error.
-- **Visible rendering is still unverified.** Repeated CI runs produced no PNG/BMP from Dolphin, even when running the older minimal GX renderer's DOL as a control under the same user profile, software renderer, and frame-dump config. This shows the current capture method/environment is unable to provide usable evidence; it does not prove either DOL renders black.
-- The workflow writes both `Config/Dolphin.ini` (`[Movie] DumpFrames=True`, `[General] DumpPath`) and `Config/GFX.ini` (`[Settings] DumpFramesAsImages=True`, EFB/XFB diagnostics) before startup and archives the configs/file listings.
-- The diagnostic now attempts the known minimal GX control DOL first. If that control produces no image, it records the failure and skips the main-DOL capture instead of repeatedly treating the same broken capture path as a game regression. Visual capture is diagnostic-only; the native build, host regression, and emulator smoke checks remain the reliable automated gates.
-- Latest control-comparison run (control and main DOL both produced no frame): https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38707260620
-- Do not mark visual validation passed until a real non-black frame has been captured and reviewed, manually or through a reliable CI capture path.
+- **Visible rendering is still unverified.** Both the configured headless frame-dump path and the visible-window capture path failed to produce a frame. In the latest run, Dolphin was launched in GUI mode (without `--batch`) using the older minimal GX renderer's DOL as a control, but the Xvfb root tree showed only Qt's 3×3 `Selection Owner for dolphin-emu` window and no main window of at least 300×200 pixels. This is consistent with a hosted Dolphin/Qt GUI-session startup issue; it does not prove either DOL renders black.
+- The workflow runs the known minimal GX control DOL before attempting the main DOL. If the control window cannot be captured, it records logs/window-tree evidence and skips the main capture rather than treating an unavailable capture path as a game regression. Visual capture is diagnostic-only; native build, host regression and limited emulator smoke remain the automated gates.
+- Latest GUI-control diagnostic run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38708412384
+- Earlier explicit `Dolphin.ini`/`GFX.ini` frame-dump configuration was also tested and produced no image; those settings have been removed from the current GUI-capture path.
+- Do not mark visual validation passed until a real in-game frame has been captured and reviewed via a reliable emulator/session or console run.
 
 ## Audit findings
 
