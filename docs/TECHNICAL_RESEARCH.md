@@ -11,6 +11,8 @@ The project documents and reimplements selected functions from the **Windows** v
 
 **Potential use:** learn game logic, symbols, resource handling, and research methodology. Before reusing any code, inspect the current license and file-level provenance, and confirm whether it is suitable for this project's intended license and targets.
 
+For a pinned, evidence-based subsystem review, see the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md). They record a reviewed upstream commit and keep PC observations separate from console hypotheses; they do not clear upstream code or asset reuse.
+
 ### OpenSWE1R
 Repository: https://github.com/OpenSWE1R/openswe1r
 
