@@ -6,9 +6,10 @@
 - The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (about 307 KB).
 - The host regression suite and static project preflight pass.
 - The headless Dolphin smoke test remains alive for its 20-second window without a detected fatal boot error.
-- **Visible rendering is still unverified.** Both the GUI/Xvfb screenshot attempt and the latest software-renderer EFB/XFB dump attempt failed to produce a usable frame. The latest log contains Qt session warnings and no PNG/BMP dump; this does not prove the game's framebuffer is black.
-- Latest CI run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348
-- Latest visual evidence artifact (diagnostic log only): https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348/artifacts/11958620566
+- **Visible rendering is still unverified.** The latest frame job produced no image. Its log shows Dolphin created `Config/GFX.ini`, but the workflow had only supplied graphics options through command-line overrides; no evidence showed those options had been applied.
+- The workflow now writes `GFX.ini` explicitly under the isolated Dolphin user profile, enables frame dumping and EFB/XFB capture in the `[Settings]` section, and archives the effective config plus file listing. This is a diagnostic correction, not a confirmed capture fix.
+- Latest completed CI run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348
+- The updated workflow will run on the new commit; do not call visual validation passed until the job captures a non-black image.
 
 ## Audit findings
 
@@ -21,7 +22,7 @@
 ## Work sequence
 
 1. Keep the host regression suite green and require a successful native DOL build for every gameplay change.
-2. Replace unreliable emulator image-dump assumptions with a verified capture path. First inspect Dolphin's actual generated `GFX.ini`, supported CLI/config options, and renderer logs; do not mark rendering as passed until an actual non-black frame from the game is captured.
+2. Get a verified in-game frame from Dolphin. Inspect the effective config and renderer logs if frame dumping still fails; do not interpret an absent image as proof that the game rendered black.
 3. Add a repeatable controller-input test for menu navigation and starting a race. A successful boot/smoke test alone does not verify controls.
 4. Verify the vertical slice end-to-end: one course, controllable pod, camera follow, track boundaries/collision, rival movement, lap progression, finish state, and stable frame timing.
 5. Once runtime behavior is observable, fix gameplay/rendering defects before adding more features.
