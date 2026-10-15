@@ -576,13 +576,10 @@ int main(int argc, char **argv)
         g_player_lateral += g_lateral_velocity;
 
         /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
-        if (fabsf(g_player_lateral) > 3.15f) {
-            const float excess = fabsf(g_player_lateral) - 3.15f;
-            g_speed = clampf_local(g_speed - (0.008f + excess * 0.012f), 0.0f, 1.0f);
-        }
-        if (fabsf(g_player_lateral) > 3.85f) {
-            g_player_lateral = (g_player_lateral < 0.0f) ? -3.85f : 3.85f;
-            g_lateral_velocity *= -0.35f;
+        g_speed = boonta_speed_after_offroad(g_speed, g_player_lateral);
+        if (boonta_is_past_rail(g_player_lateral)) {
+            g_player_lateral = boonta_lateral_after_rail_contact(g_player_lateral);
+            g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(g_lateral_velocity);
         }
         {
             const float previous_distance = g_distance;
