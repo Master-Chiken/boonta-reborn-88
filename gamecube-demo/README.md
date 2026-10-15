@@ -35,13 +35,15 @@ make
 
 The expected files are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`. GitHub Actions runs the same build in the `devkitpro/devkitppc` container and keeps successful outputs as a short-retention artifact.
 
-## Latest native build
+## Latest CI build and visible-render evidence
 
-The first successful devkitPPC/libogc build completed in [GitHub Actions run 38633619707](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634127716). It produced a non-empty DOL and ELF artifact. This confirms compilation/linking only; **Dolphin/console runtime testing is still pending**. See the [build status report](../docs/GAMECUBE_FIRST_RENDER_STATUS.md) for artifact sizes, hashes, and runtime checklist.
+The latest recorded clean-room prototype validation is [GameCube first-render run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531). The host gameplay/pause tests, native devkitPPC/libogc build, DOL/ELF structure checks, and bounded headless Dolphin process smoke passed. The optional [Software Renderer capture and logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471) show the procedural road, colored rails, center markers, player pod, and rival pod.
 
-## Runtime validation
+This proves that a visible prototype scene renders in the CI Dolphin Software Renderer environment. It does **not** prove a complete playable racer. See the [build status report](../docs/GAMECUBE_FIRST_RENDER_STATUS.md) for evidence and limitations.
 
-A successful compiler exit proves only that the code compiled. Load the DOL in Dolphin or suitable hardware and confirm: visible road/pod, steering response, throttle/brake response, no obvious GX crash, and reset behavior. No runtime result is claimed by this README until such a test is performed.
+## Runtime validation still required
+
+The remaining acceptance checks are interactive steering, acceleration/braking, boost, pause/resume, reset, completion of a three-lap run, and longer-session stability. A screenshot or headless process smoke cannot verify controller response or race completion. Physical GameCube/Wii behavior is also unverified. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
 
 ## Source boundary
 
