@@ -2,6 +2,25 @@
 
 Last updated: 2026-10-15
 
+## Current mainline state after camera-follow and finite-state fixes
+
+- **Current main commit:** `7618fd118ecb53d486ffcb471b0aac3aa475746c`.
+- **Branch governance:** PR #115 merged the safe intake queue, bounded parallel branch comparisons (up to 10 concurrent requests), timing summaries, and workflow syntax validation. The repository is at **100 branches / 105 maximum**. No branch ref or history was deleted.
+- **Camera-follow:** PR #117 is merged. Its exact-head Software Renderer capture passed: pod centroid drift **0.2 px** and remained un-clipped; course edge moved **88.9 px left**; HUD steering marker moved **87 px right**. This proves the scripted camera-follow scene diagnostic, not live-controller handling.
+- **Finite-state safeguards:** PR #128 centralizes non-finite/negative frame-scale handling; PR #129 neutralizes NaN/infinite analog-stick input; PR #130 recovers corrupted boost and engine-heat state. Their exact-head host/native/render checks passed before merge.
+- **DTM contract:** PR #125 adds an independent regression test for 128-centered unsigned analog axes and the maximum validated 600-frame steering hold.
+- **Latest post-merge CI:** [mainline workflow run for `7618fd1`](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38799534736). The native GameCube build/artifact checks and host regression tests passed. The 12-second Dolphin null-video smoke and optional Software Renderer retest were still running at the last audit.
+- **Still unverified:** interactive physical-style controller input, one complete three-lap run through finish and reset, longer-session stability, and physical GameCube/Wii behavior. A render capture or headless process smoke is not a full-playability pass.
+- **Step 102:** draft PR #17 remains on hold for file-by-file provenance/licensing review; it must not be merged wholesale until source origin, track-data origin, and redistribution rights are resolved.
+
+## Historical snapshot (superseded by the current mainline summary above)
+
+- Current main commit: `7d46e90de0e9db4e9ed36f88012ac15ab2491f18`.
+- Post-merge run: [GameCube first-render prototype run 38744031286](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286). The host gameplay/pause tests, native DOL/ELF build, artifact validation, and 12-second Dolphin null-video smoke succeeded. The optional visible Software Renderer diagnostic was still in progress when checked.
+- [PR #97](https://github.com/Master-Chiken/boonta-reborn-88/pull/97) added three staggered procedural rivals and per-rival collision/overtake/reset behavior; [PR #98](https://github.com/Master-Chiken/boonta-reborn-88/pull/98) added elapsed-time scaling for 50/60 Hz; [PR #100](https://github.com/Master-Chiken/boonta-reborn-88/pull/100) guards scaled speed input against NaN and infinities. PRs #93 and #94 supply race/lap clocks and defensive lap crossing.
+- The cadence tests compare one simulated second at 60 and 50 updates, including acceleration/coasting/braking, boost/heat, steering, off-road drag, route distance, and rival motion. Frame-scale is capped at 50 ms to limit physics jumps after a stall.
+- These checks still do not prove visible interactive controller response, a completed live three-lap run/restart, long-session stability, or physical-console behavior.
+
 ## Latest CI visible-render verification (2026-10-15)
 
 - Native build and visible-render evidence: [GameCube first-render prototype run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531).
@@ -61,7 +80,7 @@ Record emulator version, video backend, console/video mode, and any error log wh
 
 ## Boost mechanic update (2026-10-15)
 
-The prototype includes a rechargeable boost meter. Hold **A + X** to consume energy while accelerating; release the combination to recharge. Active boost increases the procedural course scroll rate and brightens the placeholder thrusters. The HUD shows the boost reserve separately from the speed meter. It now also stops after three counted lap crossings and shows a symbolic checkered flag; press **Y** to reset and start a fresh run. Rival contact/overtake thresholds and the collision speed/lateral response are covered by host unit tests.
+The prototype includes a rechargeable boost meter. Hold **A + X** to consume energy while accelerating; release the combination to recharge. Boost heat now rises while engaged and cools when released; at 98% heat it enters a latched lockout until heat falls to 60% or below, avoiding frame-to-frame activation oscillation. Host regressions exercise the heat bounds, lockout and cooldown transitions. The HUD now records total race time and current/best lap times using elapsed-time deltas; clocks freeze during pause/finish and reset with Y, with host tests for invalid deltas and best-lap selection. Active boost increases the procedural course scroll rate and brightens the placeholder thrusters. The HUD shows the boost reserve separately from the speed meter. It now also stops after three counted lap crossings and shows a symbolic checkered flag; press **Y** to reset and start a fresh run. Rival contact/overtake thresholds and the collision speed/lateral response are covered by host unit tests.
 
 - Source commit: `58aa78b002eb47b1f7ddf09e59d1320b784aea83`
 - GitHub Actions run: [GameCube first-render prototype build #12](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38705937087)
