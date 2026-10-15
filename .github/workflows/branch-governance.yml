@@ -95,7 +95,8 @@ jobs:
           Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(report)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"total={len(branches)}\nactive={len(active)}\nover_target={'true' if len(active) > 30 else 'false'}\n")
-              out.write(f"cap_warning={'true' if len(branches) >= 100 else 'false'}\\nhard_cap_exceeded={'true' if len(branches) > 105 else 'false'}\\n")
+              out.write(f"cap_warning={'true' if len(branches) >= 100 else 'false'}\n")
+              out.write(f"hard_cap_exceeded={'true' if len(branches) > 105 else 'false'}\n")
           PY
 
       - name: Warn when approaching or exceeding the 105-branch hard cap
