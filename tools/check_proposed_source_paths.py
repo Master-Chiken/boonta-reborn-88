@@ -26,19 +26,26 @@ def proposed_filenames(payload: object) -> list[str]:
         if not isinstance(node, dict):
             raise ValueError("Unexpected GitHub files API payload shape")
 
-        filename = node.get("filename")
-        if not isinstance(filename, str) or not filename:
-            raise ValueError("GitHub files API entry is missing a filename")
-        normalized = filename.replace("\\", "/")
-        parsed = PurePosixPath(normalized)
-        if (
-            parsed.is_absolute()
-            or not parsed.parts
-            or normalized != parsed.as_posix()
-            or any(part in ("", ".", "..") for part in parsed.parts)
-        ):
-            raise ValueError(f"Unsafe path in GitHub files API response: {filename!r}")
-        filenames.append(normalized)
+        # Include both names for renames. Otherwise a held asset could be
+        # renamed to a benign-looking path and slip past a filename-only gate.
+        names = [node.get("filename")]
+        previous_filename = node.get("previous_filename")
+        if previous_filename is not None:
+            names.append(previous_filename)
+
+        for filename in names:
+            if not isinstance(filename, str) or not filename:
+                raise ValueError("GitHub files API entry is missing a filename")
+            normalized = filename.replace("\\", "/")
+            parsed = PurePosixPath(normalized)
+            if (
+                parsed.is_absolute()
+                or not parsed.parts
+                or normalized != parsed.as_posix()
+                or any(part in ("", ".", "..") for part in parsed.parts)
+            ):
+                raise ValueError(f"Unsafe path in GitHub files API response: {filename!r}")
+            filenames.append(normalized)
 
     if not isinstance(payload, list):
         raise ValueError("Expected a JSON array from GitHub's files API")

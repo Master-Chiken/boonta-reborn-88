@@ -62,6 +62,17 @@ class ProposedPathTests(unittest.TestCase):
             ["source/main.c"],
         )
 
+    def test_blocks_renames_away_from_a_held_filename(self) -> None:
+        payload = [{
+            "filename": "source/renamed_track_data.c",
+            "previous_filename": "source/track_centerline.generated.h",
+            "status": "renamed",
+        }]
+        self.assertEqual(
+            proposed.blocked_filenames(payload),
+            ["source/track_centerline.generated.h"],
+        )
+
     def test_rejects_empty_or_malformed_api_payloads(self) -> None:
         for payload in ([], {}, [[{}]], [["not-a-file-object"]]):
             with self.subTest(payload=payload):
