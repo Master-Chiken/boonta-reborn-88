@@ -186,7 +186,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
@@ -209,8 +209,15 @@ jobs:
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user"
+          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user/Config"
           chmod 700 "$HOME"
+          # Keep the GX render surface in Dolphin's main window so the
+          # captured application window contains the running scene, not just
+          # the game library window.
+          cat > "$GITHUB_WORKSPACE/dolphin-render-user/Config/Dolphin.ini" <<EOF
+          [Display]
+          RenderToMain = True
+          EOF
           set +e
           timeout --signal=TERM --kill-after=3s 18s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -269,6 +276,22 @@ jobs:
                 echo "Dolphin window capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
+              python3 - "$CAPTURE" <<'PY'
+          from pathlib import Path
+          import sys
+          from PIL import Image
+
+          image = Image.open(Path(sys.argv[1])).convert("RGB")
+          pixels = list(image.getdata())
+          cyan = sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150)
+          orange = sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135)
+          ground_green = sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100)
+          pod_blue = sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120)
+          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}")
+          if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
+              print("Captured Dolphin window is missing one or more expected scene-color signatures.")
+              sys.exit(1)
+          PY
               ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
               echo "Text detected in captured frame:"
               printf "%s\n" "$ocr"
