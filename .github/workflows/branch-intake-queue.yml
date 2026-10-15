@@ -99,11 +99,32 @@ jobs:
           # Do not open an intake PR for work already represented by an open PR.
           open_heads = {p.get("head", {}).get("ref") for p in open_prs}
           open_shas = {p.get("head", {}).get("sha") for p in open_prs}
-          open_paths = set()
-          for pr in open_prs:
+
+          # Retrieve every changed-file page for each open PR concurrently.
+          # An incomplete inventory would make overlap detection unsafe, so any
+          # API error fails closed rather than allowing a potentially conflicting PR.
+          def fetch_open_pr_paths(pr):
               number = int(pr["number"])
-              pages = api_json(f"repos/{repo}/pulls/{number}/files?per_page=100")
-              open_paths.update(f.get("filename", "") for f in pages)
+              started = time.monotonic()
+              endpoint = f"repos/{repo}/pulls/{number}/files?per_page=100"
+              pages = json.loads(subprocess.check_output(
+                  ["gh", "api", "--paginate", "--slurp", endpoint],
+                  text=True, stderr=subprocess.PIPE
+              ))
+              paths = {
+                  item.get("filename", "")
+                  for page in pages
+                  for item in page
+                  if item.get("filename")
+              }
+              return number, paths, time.monotonic() - started
+
+          open_pr_paths_started = time.monotonic()
+          with ThreadPoolExecutor(max_workers=min(10, max(1, len(open_prs)))) as pool:
+              open_pr_path_results = list(pool.map(fetch_open_pr_paths, open_prs))
+          open_pr_paths_wall_seconds = time.monotonic() - open_pr_paths_started
+          open_pr_paths_request_seconds = sum(elapsed for _, _, elapsed in open_pr_path_results)
+          open_paths = set().union(*(paths for _, paths, _ in open_pr_path_results)) if open_pr_path_results else set()
 
           # A shared changed path is a reason to serialize candidates, not to
           # guess which stale or overlapping implementation is the right one.
@@ -305,6 +326,9 @@ jobs:
               f"- Default branch: {default_branch}",
               f"- Total branch refs scanned: {len(branches)}",
               f"- Existing open PRs at start: {len(open_prs)}",
+              f"- Open-PR changed-file inventory wall time: {open_pr_paths_wall_seconds:.2f}s",
+              f"- Open-PR serial-equivalent request wait: {open_pr_paths_request_seconds:.2f}s",
+              f"- Estimated open-PR inventory speedup: {open_pr_paths_request_seconds / max(open_pr_paths_wall_seconds, 0.001):.1f}x",
               f"- Branches with a small, distinct diff identified: {len(candidates)}",
               f"- Unique tip comparisons attempted: {len(comparison_shas)}",
               f"- Comparison phase wall time: {comparison_wall_seconds:.2f}s",
