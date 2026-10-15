@@ -29,6 +29,12 @@ This repository contains two distinct tracks that must not be confused:
 - Review the license and provenance of external reverse-engineering projects before reusing code.
 - Keep any lawful user-owned game images local. The public repository should contain original code, documentation, tools, tests, and assets cleared for redistribution only.
 
+## Wii64 reference tooling
+
+Read-only tools now support inspecting Wii64 Rice profiles, comparing INI snapshots or named profiles, and checking fingerprints of a local Wii64 archive. Start with the [Wii64 reference tools guide](docs/WII64_REFERENCE_TOOLS.md). The tools never modify settings or extract/execute archive contents, and hash matches are not a safety or compatibility verdict.
+
+The shared [Wii64 tooling workflow](.github/workflows/wii64-tool-tests.yml) runs the standard-library Python unit suite for changes under `tools/`. Physical Wii/vWii observations should be recorded with the [Wii64 test log template](docs/WII64_TEST_LOG_TEMPLATE.md). This reference work is separate from the native GameCube/Wii demo.
+
 ## Native build and runtime evidence
 
 See [GameCube first-render status](docs/GAMECUBE_FIRST_RENDER_STATUS.md) and [the prototype build instructions](gamecube-demo/README.md). Successful CI artifacts are temporary workflow outputs and are not necessarily committed into the repository.
