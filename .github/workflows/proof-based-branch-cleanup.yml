@@ -247,8 +247,8 @@ jobs:
           # The workflow's own source branch is also temporary. Delete it only if
           # its merged PR still has the exact current head and its complete Git tree
           # is byte-for-byte identical to main.
-          self_branch="maintenance/cleanup-seven-proven-merged-refs"
-          self_pr_number=148
+          self_branch="security/trusted-source-import-path-guard"
+          self_pr_number=151
           inventory
           self_sha="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
           self_protected="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
