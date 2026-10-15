@@ -41,6 +41,8 @@ static u16 g_vertex_count;
 static float g_distance;
 static float g_speed;
 static float g_player_lateral;
+static float g_boost = 1.0f;
+static int g_boost_active;
 
 static const GXColor C_GROUND = { 23, 48, 40, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
@@ -204,7 +206,7 @@ static void add_player_pod(void)
                  (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
 
     if (g_speed > 0.12f) {
-        const GXColor thrust = (g_speed > 0.70f) ? C_THRUST_HOT : C_THRUST;
+        const GXColor thrust = (g_boost_active || g_speed > 0.70f) ? C_THRUST_HOT : C_THRUST;
         box_add(center - 0.62f, -0.62f, 2.10f,
                 0.13f, 0.12f, 0.36f, thrust, C_THRUST, C_THRUST);
         box_add(center + 0.62f, -0.62f, 2.10f,
@@ -240,6 +242,7 @@ static void draw_hud(void)
     const GXColor dark = { 8, 18, 30, 235 };
     const GXColor empty = { 48, 66, 80, 255 };
     const GXColor fill = { 64, 220, 243, 255 };
+    const GXColor boost_fill = { 255, 157, 61, 255 };
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
@@ -261,6 +264,12 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 12.0f,
                        bar_left + bar_width * g_speed, bar_bottom,
                        0.3f, fill);
+    append_screen_quad(bar_left, bar_bottom - 28.0f,
+                       bar_left + bar_width, bar_bottom - 20.0f,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 28.0f,
+                       bar_left + bar_width * g_boost, bar_bottom - 20.0f,
+                       0.3f, boost_fill);
 
     /* A centered steering tick gives immediate visual feedback without text. */
     {
@@ -397,7 +406,14 @@ int main(int argc, char **argv)
             g_distance = 0.0f;
             g_player_lateral = 0.0f;
             g_speed = 0.0f;
+            g_boost = 1.0f;
         }
+
+        g_boost_active = ((buttons_held & PAD_BUTTON_X) != 0U &&
+                          (buttons_held & PAD_BUTTON_A) != 0U &&
+                          g_boost > 0.01f);
+        if (g_boost_active) g_boost = clampf_local(g_boost - 0.0055f, 0.0f, 1.0f);
+        else g_boost = clampf_local(g_boost + 0.0015f, 0.0f, 1.0f);
 
         steering = (float)stick_x / 128.0f;
         if ((buttons_held & PAD_BUTTON_LEFT) != 0U) steering -= 0.7f;
@@ -414,7 +430,7 @@ int main(int argc, char **argv)
         if (fabsf(g_player_lateral) > 3.3f) {
             g_speed = clampf_local(g_speed - 0.018f, 0.0f, 1.0f);
         }
-        g_distance += g_speed * 0.14f;
+        g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
 
         draw_frame();
     }
