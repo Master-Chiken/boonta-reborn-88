@@ -582,7 +582,7 @@ int main(int argc, char **argv)
         }
         {
             const float previous_distance = g_distance;
-            g_distance += g_speed * (g_boost_active ? 0.22f : 0.14f);
+            g_distance = boonta_distance_after_frame(g_distance, g_speed, g_boost_active);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
             if (boonta_race_is_finished(g_lap_count, RACE_LAP_LIMIT)) {
