@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:24.04
-    timeout-minutes: 6
+    timeout-minutes: 12
     permissions:
       contents: read
       actions: read
@@ -186,6 +186,7 @@ jobs:
           mkdir -p "$HOME"
           chmod 700 "$HOME"
           flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
           flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version
 
