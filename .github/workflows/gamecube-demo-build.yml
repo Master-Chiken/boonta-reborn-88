@@ -21,7 +21,19 @@ on:
       - "gamecube-demo/tools/**"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
+    inputs:
+      full_race_diagnostic:
+        description: "Run the slower, opt-in three-lap Dolphin finish check"
+        type: boolean
+        required: false
+        default: false
   workflow_call:
+    inputs:
+      full_race_diagnostic:
+        description: "Run the slower, opt-in three-lap Dolphin finish check"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -224,7 +236,13 @@ jobs:
           } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
           grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
+      - name: Test DTM protocol and finish-banner detector with Pillow
+        shell: bash
+        run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_dolphin_dtm.py' -v
+
       - name: Launch the DOL and capture a non-blocking diagnostic frame
+        env:
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || false }}
         shell: bash
         run: |
           set -euo pipefail
@@ -242,6 +260,10 @@ jobs:
           export LEFT_LOG="$GITHUB_WORKSPACE/dolphin-left-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export LEFT_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-left-frame.png"
+          export RACE_DTM="$GITHUB_WORKSPACE/dolphin-full-race.dtm"
+          export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
+          export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
+          export RACE_USER="$GITHUB_WORKSPACE/dolphin-full-race-user"
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
@@ -259,8 +281,10 @@ jobs:
           RenderToMain = True
           EOF
           done
+          capture_timeout=100
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=280; fi
           set +e
-          timeout --signal=TERM --kill-after=3s 100s xvfb-run -a -s "-screen 0 1280x720x24" \
+          timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
             bash -c '
               set -euo pipefail
@@ -269,6 +293,7 @@ jobs:
                 local log="$2"
                 local capture="$3"
                 local user_dir="$4"
+                local wait_seconds="${5:-6}"
                 local emu_pid=""
                 local window=""
                 local title=""
@@ -285,7 +310,7 @@ jobs:
                   --config=Logger.Logs.Video=True \
                   --exec="$DOL" --movie="$movie" --user="$user_dir" > "$log" 2>&1 &
                 emu_pid=$!
-                sleep 6
+                sleep "$wait_seconds"
                 if ! kill -0 "$emu_pid" 2>/dev/null; then
                   cat "$log"
                   echo "Dolphin exited before the software-renderer capture."
@@ -360,15 +385,27 @@ jobs:
                 echo "The left-steered game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
                 exit 1
               fi
-              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input. Full gameplay remains unverified."
+              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input."
+              if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
+                echo "Starting optional full-race DTM; this may take around two to four minutes."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 6000 --game-id ID-boo --steering none --scenario full-race
+                mkdir -p "$RACE_USER/Config"
+                chmod 700 "$RACE_USER"
+                printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
+                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 220
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
+                echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
+              else
+                echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
+              fi
             '
           status=$?
           set -e
           [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$RACE_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -396,8 +433,12 @@ jobs:
             dolphin-flatpak-cli-capabilities.log
             dolphin-scripted-controller-input.dtm
             dolphin-scripted-controller-left.dtm
+            dolphin-full-race.dtm
+            dolphin-full-race.png
+            dolphin-full-race.log
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
             dolphin-left-steered-user/Logs/**
+            dolphin-full-race-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
