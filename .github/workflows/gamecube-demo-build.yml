@@ -345,7 +345,7 @@ jobs:
           echo "Dolphin user files created during boot attempt:"
           find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
           if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
-            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \\; || true
+            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \; || true
           fi
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The optional software-renderer steering comparison failed. Native build and headless smoke remain separate results."
