@@ -1,0 +1,33 @@
+name: Wii64 archive verifier tests
+
+on:
+  pull_request:
+    paths:
+      - "tools/verify_wii64_archive.py"
+      - "tools/tests/test_verify_wii64_archive.py"
+      - ".github/workflows/wii64-archive-verifier-tests.yml"
+  push:
+    branches:
+      - "tools/wii64-archive-verifier"
+    paths:
+      - "tools/verify_wii64_archive.py"
+      - "tools/tests/test_verify_wii64_archive.py"
+      - ".github/workflows/wii64-archive-verifier-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run standard-library unit tests
+        env:
+          PYTHONPATH: tools
+        run: python -m unittest discover -s tools/tests -p "test_verify_wii64_archive.py" -v
