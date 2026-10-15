@@ -7,6 +7,7 @@ from make_dolphin_dtm import (
     A,
     B,
     NEUTRAL_AXIS,
+    STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     DPAD_LEFT,
     DPAD_RIGHT,
@@ -46,6 +47,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[0] & Y)
         self.assertTrue(first[1] & IS_CONNECTED)
         self.assertTrue(first[1] & DPAD_RIGHT)
+        self.assertEqual(NEUTRAL_AXIS, 128)  # raw DTM analog axes use unsigned center
         self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
 
         boost = record(blob, 20)
@@ -53,7 +55,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(boost[0] & X)
         brake = record(blob, 120)
         self.assertTrue(brake[0] & B)
-        self.assertFalse(brake[1] & DPAD_RIGHT)
+        self.assertTrue(brake[1] & DPAD_RIGHT)
 
         pause = record(blob, 220)
         resume = record(blob, 280)
@@ -66,14 +68,18 @@ class DolphinDtmTests(unittest.TestCase):
         right_blob = build_dtm(3600, steering="right")
         self.assertTrue(record(right_blob, 30)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 30)[1] & DPAD_LEFT)
-        self.assertFalse(record(right_blob, 100)[1] & DPAD_LEFT)
-        self.assertFalse(record(right_blob, 100)[1] & DPAD_RIGHT)
+        self.assertTrue(record(right_blob, 100)[1] & DPAD_RIGHT)
+        self.assertTrue(record(right_blob, 600)[1] & DPAD_RIGHT)
+        self.assertTrue(record(right_blob, STEERING_HOLD_FRAMES - 1)[1] & DPAD_RIGHT)
+        self.assertFalse(record(right_blob, STEERING_HOLD_FRAMES)[1] & DPAD_RIGHT)
         self.assertFalse(record(right_blob, 2020)[1] & DPAD_LEFT)
         self.assertFalse(record(right_blob, 2020)[1] & DPAD_RIGHT)
 
         left_blob = build_dtm(3600, steering="left")
         self.assertTrue(record(left_blob, 30)[1] & DPAD_LEFT)
         self.assertFalse(record(left_blob, 30)[1] & DPAD_RIGHT)
+        self.assertTrue(record(left_blob, 600)[1] & DPAD_LEFT)
+        self.assertFalse(record(left_blob, STEERING_HOLD_FRAMES)[1] & DPAD_LEFT)
 
         neutral_blob = build_dtm(3600, steering="none")
         for frame in (0, 30, 100, 2020, 3000):
