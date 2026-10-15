@@ -15,6 +15,7 @@ HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
+STEERING_HOLD_FRAMES = 1800  # Keep direction held throughout the variable-time screenshot window.
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
@@ -46,9 +47,9 @@ def _controller_state(frame: int, steering: str = "right") -> bytes:
     flags = IS_CONNECTED
     # Keep this diagnostic directional: a later opposite pulse would erase
     # the movement signal before slower software-renderer captures complete.
-    if steering == "right" and frame < 60:
+    if steering == "right" and frame < STEERING_HOLD_FRAMES:
         flags |= DPAD_RIGHT
-    elif steering == "left" and frame < 60:
+    elif steering == "left" and frame < STEERING_HOLD_FRAMES:
         flags |= DPAD_LEFT
 
     # Dolphin assigns the stored axis bytes directly to signed s8 pad fields.
@@ -101,7 +102,7 @@ def main() -> int:
     parser.add_argument("--game-id", default=DEFAULT_GAME_ID,
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
-                        help="directional pulse to encode; use none for a neutral baseline")
+                        help="directional hold to encode; use none for a neutral baseline")
     args = parser.parse_args()
     payload = build_dtm(args.frames, args.game_id, args.steering)
     args.output.parent.mkdir(parents=True, exist_ok=True)
