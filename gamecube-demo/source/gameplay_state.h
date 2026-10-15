@@ -1,32 +1,63 @@
 #ifndef BOONTA_REBORN_GAMEPLAY_STATE_H
 #define BOONTA_REBORN_GAMEPLAY_STATE_H
+
+#include <math.h>
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
-static inline float boonta_speed_after_input(float speed, int accelerating, int braking)
+
+/* Keep the existing tuning at 60 Hz, scale for 50 Hz, and cap long stalls. */
+static inline float boonta_frame_scale_from_delta(float delta_seconds)
 {
-    if (accelerating) speed += 0.012f; else speed -= 0.003f;
-    if (braking) speed -= 0.022f;
+    if (!(delta_seconds > 0.0f)) delta_seconds = 1.0f / 60.0f;
+    if (delta_seconds > 0.05f) delta_seconds = 0.05f;
+    return delta_seconds * 60.0f;
+}
+
+static inline float boonta_speed_after_input_scaled(float speed, int accelerating,
+                                                      int braking, float frame_scale)
+{
+    if (accelerating) speed += 0.012f * frame_scale;
+    else speed -= 0.003f * frame_scale;
+    if (braking) speed -= 0.022f * frame_scale;
     if (speed < 0.0f) return 0.0f;
     if (speed > 1.0f) return 1.0f;
     return speed;
+}
+
+static inline float boonta_speed_after_input(float speed, int accelerating, int braking)
+{
+    return boonta_speed_after_input_scaled(speed, accelerating, braking, 1.0f);
 }
 static inline int boonta_boost_should_activate(int x_held, int a_held, float boost)
 {
     return x_held && a_held && boost > 0.01f;
 }
-static inline float boonta_boost_after_frame(float boost, int active)
+static inline float boonta_boost_after_frame_scaled(float boost, int active, float frame_scale)
 {
-    if (active) boost -= 0.0055f; else boost += 0.0015f;
+    if (active) boost -= 0.0055f * frame_scale;
+    else boost += 0.0015f * frame_scale;
     if (boost < 0.0f) return 0.0f;
     if (boost > 1.0f) return 1.0f;
     return boost;
 }
-/* Boost heat rises while engaged and cools while the boost is released. */
-static inline float boonta_engine_heat_after_frame(float heat, int active)
+
+static inline float boonta_boost_after_frame(float boost, int active)
 {
-    if (active) heat += 0.0065f; else heat -= 0.0045f;
+    return boonta_boost_after_frame_scaled(boost, active, 1.0f);
+}
+/* Boost heat rises while engaged and cools while the boost is released. */
+static inline float boonta_engine_heat_after_frame_scaled(float heat, int active,
+                                                           float frame_scale)
+{
+    if (active) heat += 0.0065f * frame_scale;
+    else heat -= 0.0045f * frame_scale;
     if (heat < 0.0f) return 0.0f;
     if (heat > 1.0f) return 1.0f;
     return heat;
+}
+
+static inline float boonta_engine_heat_after_frame(float heat, int active)
+{
+    return boonta_engine_heat_after_frame_scaled(heat, active, 1.0f);
 }
 
 /* Latch an overheat until the engine cools to 60%; this avoids rapid toggling. */
@@ -57,21 +88,36 @@ static inline float boonta_steering_input(float stick_x,
 }
 
 /* Match the native loop's inertia, damping and lateral-speed bounds. */
-static inline float boonta_lateral_velocity_after_steering(float lateral_velocity,
-                                                            float steering,
-                                                            float speed)
+static inline float boonta_lateral_velocity_after_steering_scaled(float lateral_velocity,
+                                                                    float steering,
+                                                                    float speed,
+                                                                    float frame_scale)
 {
-    lateral_velocity += steering * (0.0018f + speed * 0.0030f);
-    lateral_velocity *= 0.92f;
+    lateral_velocity += steering * (0.0018f + speed * 0.0030f) * frame_scale;
+    lateral_velocity *= powf(0.92f, frame_scale);
     if (lateral_velocity < -0.085f) return -0.085f;
     if (lateral_velocity > 0.085f) return 0.085f;
     return lateral_velocity;
 }
 
+static inline float boonta_lateral_velocity_after_steering(float lateral_velocity,
+                                                            float steering,
+                                                            float speed)
+{
+    return boonta_lateral_velocity_after_steering_scaled(
+        lateral_velocity, steering, speed, 1.0f);
+}
+
 /* Shared distance integration used by both the native loop and host simulation. */
+static inline float boonta_distance_after_frame_scaled(float distance, float speed,
+                                                        int boost_active, float frame_scale)
+{
+    return distance + speed * (boost_active ? 0.22f : 0.14f) * frame_scale;
+}
+
 static inline float boonta_distance_after_frame(float distance, float speed, int boost_active)
 {
-    return distance + speed * (boost_active ? 0.22f : 0.14f);
+    return boonta_distance_after_frame_scaled(distance, speed, boost_active, 1.0f);
 }
 
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
@@ -140,16 +186,22 @@ static inline float boonta_abs_float(float value)
     return value < 0.0f ? -value : value;
 }
 
-static inline float boonta_speed_after_offroad(float speed, float player_lateral)
+static inline float boonta_speed_after_offroad_scaled(float speed, float player_lateral,
+                                                       float frame_scale)
 {
     const float distance_from_center = boonta_abs_float(player_lateral);
     if (distance_from_center > 3.15f) {
         const float excess = distance_from_center - 3.15f;
-        speed -= 0.008f + excess * 0.012f;
+        speed -= (0.008f + excess * 0.012f) * frame_scale;
     }
     if (speed < 0.0f) return 0.0f;
     if (speed > 1.0f) return 1.0f;
     return speed;
+}
+
+static inline float boonta_speed_after_offroad(float speed, float player_lateral)
+{
+    return boonta_speed_after_offroad_scaled(speed, player_lateral, 1.0f);
 }
 
 static inline int boonta_is_past_rail(float player_lateral)
