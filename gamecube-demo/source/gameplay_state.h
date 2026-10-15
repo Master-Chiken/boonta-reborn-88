@@ -1,5 +1,7 @@
 #ifndef BOONTA_REBORN_GAMEPLAY_STATE_H
 #define BOONTA_REBORN_GAMEPLAY_STATE_H
+
+#include <math.h>
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 static inline float boonta_speed_after_input(float speed, int accelerating, int braking)
 {
@@ -43,6 +45,31 @@ static inline int boonta_boost_should_activate_with_heat(int x_held, int a_held,
     return !overheated && heat < 0.98f &&
            boonta_boost_should_activate(x_held, a_held, boost);
 }
+/* Wall-clock elapsed time updates only while race simulation is active.
+ * Clamp one stalled frame to one second to avoid absurd timer jumps. */
+static inline float boonta_elapsed_after_frame(float elapsed, float delta_seconds,
+                                               int active)
+{
+    if (!isfinite(elapsed) || elapsed < 0.0f) elapsed = 0.0f;
+    if (!active || !isfinite(delta_seconds) || delta_seconds <= 0.0f) return elapsed;
+    if (delta_seconds > 1.0f) delta_seconds = 1.0f;
+    return elapsed + delta_seconds;
+}
+
+/* Keep the best positive lap; invalid or incomplete laps never replace it. */
+static inline float boonta_best_lap_after_finish(float best_seconds,
+                                                 float completed_lap_seconds)
+{
+    if (!isfinite(completed_lap_seconds) || completed_lap_seconds <= 0.0f) {
+        return isfinite(best_seconds) && best_seconds > 0.0f ? best_seconds : 0.0f;
+    }
+    if (!isfinite(best_seconds) || best_seconds <= 0.0f ||
+        completed_lap_seconds < best_seconds) {
+        return completed_lap_seconds;
+    }
+    return best_seconds;
+}
+
 /* Normalize the GameCube analog stick and D-pad into bounded steering input. */
 static inline float boonta_steering_input(float stick_x,
                                           int left_held,
