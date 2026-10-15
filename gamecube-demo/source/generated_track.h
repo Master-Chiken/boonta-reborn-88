@@ -1,0 +1,27 @@
+/* Generated from tools/track_format/example_track.json. Original test data. */
+#ifndef BOONTA_GENERATED_TRACK_ORIGINAL_TEST_OVAL_H
+#define BOONTA_GENERATED_TRACK_ORIGINAL_TEST_OVAL_H
+
+#define BOONTA_TRACK_CLOSED_LOOP 1
+#define BOONTA_TRACK_POINT_COUNT 8U
+
+typedef struct {
+    float x;
+    float y;
+    float z;
+    float half_width;
+    unsigned char checkpoint;
+} BoontaTrackPoint;
+
+static const BoontaTrackPoint boonta_track_points_original_test_oval[BOONTA_TRACK_POINT_COUNT] = {
+    { 0.000000f, 0.000000f, 0.000000f, 3.600000f, 1 },
+    { 12.000000f, 0.500000f, 18.000000f, 3.600000f, 0 },
+    { 22.000000f, 0.000000f, 42.000000f, 3.400000f, 0 },
+    { 12.000000f, -0.400000f, 66.000000f, 3.400000f, 0 },
+    { 0.000000f, 0.000000f, 78.000000f, 3.600000f, 0 },
+    { -12.000000f, 0.300000f, 66.000000f, 3.600000f, 0 },
+    { -22.000000f, 0.000000f, 42.000000f, 3.400000f, 0 },
+    { -12.000000f, 0.200000f, 18.000000f, 3.400000f, 0 }
+};
+
+#endif
