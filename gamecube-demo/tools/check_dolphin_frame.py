@@ -64,8 +64,12 @@ def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
     """Estimate the road center from its dark blue-grey asphalt, independent of terrain color."""
     image = image.convert("RGB")
     row_centers = []
-    y_start = int(image.height * 0.52)
-    y_end = int(image.height * 0.60)
+    # Use the nearer road, not the horizon. At the horizon, track curvature
+    # and scrolling phase can cancel steering-induced displacement; the
+    # mid-foreground lane provides a stronger, symmetric left/right signal.
+    # The asphalt color mask excludes the pod, rails, and HUD.
+    y_start = int(image.height * 0.65)
+    y_end = int(image.height * 0.72)
     pixels = image.load()
 
     for y in range(y_start, y_end):
