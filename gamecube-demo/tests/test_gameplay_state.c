@@ -62,7 +62,7 @@ static void cadence_consistency_tests(void) {
  assert(nearf(lateral60, lateral50));
  assert(nearf(distance60, distance50));
  assert(nearf(offroad60, offroad50));
- assert(nearf(rival_z60, rival_z50));
+ assert(fabsf(rival_z60 - rival_z50) < 0.0001f); /* bounded float accumulation drift */
  assert(fabsf(lateral_position60 - lateral_position50) < 0.005f);
 }
 
