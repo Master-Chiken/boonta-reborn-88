@@ -179,7 +179,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth imagemagick dbus-daemon tesseract-ocr
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
@@ -210,7 +210,7 @@ jobs:
             bash -c '
               set -euo pipefail
               flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
-                --batch --video_backend="Software Renderer" \
+                --video_backend="Software Renderer" \
                 --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
               emu_pid=$!
               cleanup() {
@@ -233,11 +233,23 @@ jobs:
                 echo "Capture appears blank or nearly blank; visual rendering remains unverified."
                 exit 1
               fi
-              echo "A non-blank software-renderer diagnostic frame was captured; this is not yet proof of controller response or a completed race."
+              ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
+              echo "Text detected in captured frame:"
+              printf '%s\\n' "$ocr"
+              if printf '%s\\n' "$ocr" | grep -Eiq 'failed to init core|failed to initialize|could not boot|failed to load executable'; then
+                echo "Captured frame contains a Dolphin boot/core error dialog; this must not count as a visual pass."
+                exit 1
+              fi
+              echo "A non-blank frame without a recognized boot/core error dialog was captured; geometry and controls still require inspection."
             '
           status=$?
           set -e
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
+          echo "Dolphin user files created during boot attempt:"
+          find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
+          if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
+            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \\; || true
+          fi
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The optional software-renderer capture failed. Native build and headless smoke remain separate results."
             exit "$status"
