@@ -15,7 +15,7 @@ HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
-STEERING_HOLD_FRAMES = 1800  # Hold direction through the slower software-renderer capture window.
+STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
