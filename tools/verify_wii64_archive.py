@@ -13,6 +13,7 @@ import zipfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
 EXPECTED_ARCHIVE_SHA256 = "cf935283854f69210b52ce668b6aa78551ab6c1086e6b25be2290b0c8077d154"
 EXPECTED_FILES = {
@@ -28,6 +29,23 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def sha256_stream(stream: BinaryIO) -> str:
+    """Hash a binary stream in bounded memory without loading it all at once."""
+    digest = hashlib.sha256()
+    while True:
+        chunk = stream.read(1024 * 1024)
+        if not chunk:
+            break
+        digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    """Hash a file incrementally."""
+    with path.open("rb") as stream:
+        return sha256_stream(stream)
+
+
 @dataclass(frozen=True)
 class Check:
     label: str
@@ -41,7 +59,7 @@ class Check:
 
 def inspect_archive(path: Path) -> list[Check]:
     """Hash the ZIP and known boot.dol members without extracting the archive."""
-    checks = [Check("archive", EXPECTED_ARCHIVE_SHA256, sha256_bytes(path.read_bytes()))]
+    checks = [Check("archive", EXPECTED_ARCHIVE_SHA256, sha256_file(path))]
     with zipfile.ZipFile(path) as archive:
         member_names = archive.namelist()
         counts = Counter(member_names)
@@ -53,7 +71,11 @@ def inspect_archive(path: Path) -> list[Check]:
             )
         names = set(member_names)
         for member, expected in EXPECTED_FILES.items():
-            actual = sha256_bytes(archive.read(member)) if member in names else None
+            if member not in names:
+                actual = None
+            else:
+                with archive.open(member, "r") as stream:
+                    actual = sha256_stream(stream)
             checks.append(Check(member, expected, actual))
     return checks
 
