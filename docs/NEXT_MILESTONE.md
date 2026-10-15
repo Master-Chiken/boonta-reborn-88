@@ -1,34 +1,41 @@
-# Next milestone: boot the first native GameCube/Wii build
+# Next milestone: verify the native runtime, then lock down the first playable race
 
-## Goal
+## Current verified state (2026-10-15)
 
-Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The source-only import and host-test gate are now complete on PR #22. The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (307,428 bytes). A headless Dolphin smoke test passed for 20 seconds without a detected fatal error. The active milestone is visual/runtime validation. The first visual CI attempt failed because no visible Dolphin window was found and the screenshot fallback captured a black Xvfb root window; that is a capture/launch failure, not proof that the game itself renders black. The workflow now waits up to 30 seconds for a visible Dolphin window before capturing. The next run also starts the GUI probe inside a dedicated D-Bus session: the latest diagnostics showed the Dolphin process remained alive but exposed only Qt's 3×3 selection-owner window, with no main window and no Dolphin profile logs. This points to a GUI/session startup issue, but the cause is not confirmed.
+- The source-only GameCube/Wii prototype is on PR #22's branch, `work/step102-import-gate`.
+- The devkitPPC/libogc cross-build succeeds and produces a non-empty `swe1r_gc_port.dol` (about 307 KB).
+- The host regression suite and static project preflight pass.
+- The headless Dolphin smoke test remains alive for its 20-second window without a detected fatal boot error.
+- **Visible rendering is still unverified.** Both the GUI/Xvfb screenshot attempt and the latest software-renderer EFB/XFB dump attempt failed to produce a usable frame. The latest log contains Qt session warnings and no PNG/BMP dump; this does not prove the game's framebuffer is black.
+- Latest CI run: https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348
+- Latest visual evidence artifact (diagnostic log only): https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38704997348/artifacts/11958620566
 
 ## Audit findings
 
-- The source archive `Star_Wars_Racer_GameCube_Step102.zip` is available in the project history/library and has been inspected.
-- It contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, docs, and host tests.
-- The archive README describes 25 course entries, 23 pod presets/variants, physics, drift/boost/heat/damage, rival AI, pickups/hazards, several race modes, HUD, and save/progression scaffolding.
-- The source-import workflow passed all 32 host shell checks and 5 Python policy tests. This is not a native target build.
-- The CI build succeeded on 2026-10-14 and uploaded `swe1r_gc_port.dol` (307,428 bytes), the ELF, and the build log. A headless Dolphin run stayed active for 20 seconds without a detected fatal error; visible rendering, controls, and race completion remain unverified.
-- The source-only prototype is imported on PR #22's working branch: 45 files under `source/`, 70 under `tests/`, six under `tools/`, the `data/` demo track inputs, and the root `Makefile`. The temporary encoded archive was removed after extraction.
+- The source archive `Star_Wars_Racer_GameCube_Step102.zip` contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, documentation, and host tests.
+- The imported prototype includes course entries, pod presets, physics, drift/boost/heat/damage, rival AI, pickups/hazards, race modes, HUD, and save/progression scaffolding. These are prototype features, not proof of parity with the commercial game.
+- The native-source import audit previously passed 32 host shell checks and 5 Python policy tests.
 - The separate Dreamcast starter and its CI artifact do not validate the GameCube/Wii prototype.
+- Keep the project clean-room: no ROMs, disc images, BIOS files, or uncleared proprietary assets.
 
 ## Work sequence
 
-1. Keep provenance and redistribution boundaries explicit; do not add ROMs/disc images or unclear proprietary payloads.
-2. Keep the host regression suite green as source changes land.
-3. Capture frames from Dolphin's software renderer in batch mode, avoiding the flaky Qt/X11 window path. The workflow enables frame dumping, searches the emulator user folder and dedicated dump folder for PNG output, and rejects missing or entirely black frames.
-4. Verify controller navigation and whether a race can be completed; fix runtime issues without weakening host tests. The vertical slice target remains one course, one controllable pod, camera follow, track collision, and stable frame timing.
+1. Keep the host regression suite green and require a successful native DOL build for every gameplay change.
+2. Replace unreliable emulator image-dump assumptions with a verified capture path. First inspect Dolphin's actual generated `GFX.ini`, supported CLI/config options, and renderer logs; do not mark rendering as passed until an actual non-black frame from the game is captured.
+3. Add a repeatable controller-input test for menu navigation and starting a race. A successful boot/smoke test alone does not verify controls.
+4. Verify the vertical slice end-to-end: one course, controllable pod, camera follow, track boundaries/collision, rival movement, lap progression, finish state, and stable frame timing.
+5. Once runtime behavior is observable, fix gameplay/rendering defects before adding more features.
 
 ## Acceptance criteria
 
-- Source provenance and redistribution boundaries are documented.
-- Host tests pass in GitHub Actions.
-- Native GameCube cross-build produces a non-empty DOL. **PASS** in GitHub Actions.
-- Compile success and emulator/hardware testing are reported separately. **Headless emulator smoke: PASS; visual/gameplay test: pending.** The GUI-window capture path failed: Dolphin remained alive but did not map a visible window in the CI X server. The replacement headless frame-dump path is being tested now; until a non-black emulator-rendered PNG is captured, visual rendering remains unverified.
-- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
+- Source provenance and redistribution boundaries documented.
+- Host regression suite passes in GitHub Actions.
+- Native GameCube cross-build produces a non-empty DOL. **PASS**.
+- Headless Dolphin smoke test stays alive without detected fatal boot errors. **PASS, limited scope**.
+- Non-black in-game frame captured and reviewed. **PENDING**.
+- Controller navigation and race completion verified. **PENDING**.
+- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets committed.
 
-## What the project owner needs to do now
+## What the project owner needs to do
 
-Nothing needs to be installed locally for this planning step. Keep the source archive available in the ChatGPT Library. The work can continue in GitHub with cloud CI; an actual emulator/console run may still require a separate runtime environment.
+No local installation is required for the current cloud build/test loop. Continue work on the existing PR branch. A real emulator/console run may still be needed if CI cannot provide reliable visual capture.
