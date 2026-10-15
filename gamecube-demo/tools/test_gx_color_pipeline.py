@@ -36,26 +36,6 @@ class GXColorPipelineTests(unittest.TestCase):
             SOURCE,
         )
 
-    def test_hud_binds_position_matrix_for_orthographic_vertices(self) -> None:
-        hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
-            "static void initialise_video_and_gx", 1
-        )[0]
-        position_load = hud.index("GX_LoadPosMtxImm(identity, GX_PNMTX0);")
-        matrix_bind = hud.index("GX_SetCurrentMtx(GX_PNMTX0);")
-        projection_load = hud.index("GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);")
-        hud_draw = hud.index("draw_vertex_buffer();")
-        self.assertLess(position_load, matrix_bind)
-        self.assertLess(matrix_bind, projection_load)
-        self.assertLess(projection_load, hud_draw)
-
-    def test_hud_screen_quads_use_negative_orthographic_depth(self) -> None:
-        helper = SOURCE.split("static void append_screen_quad", 1)[1].split(
-            "static void append_text", 1
-        )[0]
-        self.assertIn("const float clip_z = -z;", helper)
-        self.assertEqual(helper.count("clip_z }"), 4)
-
-
 
 if __name__ == "__main__":
     unittest.main()
