@@ -126,7 +126,12 @@ jobs:
           export HOME=/tmp/dolphin-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
-          dolphin-emu --version
+          {
+            printf '%s\n' '### apt-installed Dolphin version'
+            dolphin-emu --version 2>&1 || true
+            printf '%s\n' '### apt-installed Dolphin CLI help'
+            dolphin-emu --help 2>&1 || true
+          } | tee "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
 
       - name: Run the DOL for 12 seconds with Dolphin's null video backend
         shell: bash
@@ -165,7 +170,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned upload-artifact v7.0.2
         with:
           name: gamecube-dolphin-process-smoke
-          path: dolphin-smoke.log
+          path: |
+            dolphin-smoke.log
+            dolphin-cli-capabilities.log
           if-no-files-found: warn
           retention-days: 7
 
@@ -203,6 +210,12 @@ jobs:
           flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
           # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
           flatpak info --user org.DolphinEmu.dolphin-emu
+          {
+            printf '%s\n' '### Flatpak Dolphin version'
+            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
+            printf '%s\n' '### Flatpak Dolphin CLI help'
+            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
+          } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         shell: bash
@@ -336,6 +349,7 @@ jobs:
           path: |
             dolphin-software-frame.png
             dolphin-render.log
+            dolphin-flatpak-cli-capabilities.log
             dolphin-render-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
