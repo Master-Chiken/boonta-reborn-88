@@ -85,6 +85,14 @@ if not re.search(r"(?m)^\s*description\s*=\s*[\"']Runs the Gemini CLI in read-on
 if "Do not edit files or call write tools" not in invoke_prompt:
     errors.append("Gemini invoke prompt must prohibit file writes")
 
+for required_phrase in (
+    "Always prioritize the exact request in `.gemini/context.json` and the triggering issue/PR comment.",
+    "Do not replace a requested comparison or audit with a generic repository overview.",
+    "Before responding, check each requested item and either answer it with concrete evidence and links or explicitly name the blocker.",
+):
+    if required_phrase not in invoke_prompt:
+        errors.append(f"Gemini invoke prompt is missing task-following safeguard: {required_phrase!r}")
+
 # Plan execution may write on a branch, but must not have deletion/fork tools or merge powers.
 for forbidden_tool in ('"delete_file"', '"fork_repository"'):
     if forbidden_tool in execute:
