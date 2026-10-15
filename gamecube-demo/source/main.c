@@ -86,7 +86,6 @@ static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
 static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
 static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
 static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
-static const GXColor C_CANYON_SUNLIT = { 205, 145, 82, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -297,7 +296,6 @@ static void add_canyon_scenery(void)
                 center_far + side * far_top_offset, base_y + far_height, z_far
             };
             GXColor face;
-            GXColor facet;
 
             /*
              * Keep each wall panel visually coherent: alternate warm stone
