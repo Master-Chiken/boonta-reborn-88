@@ -86,3 +86,74 @@ jobs:
             gamecube-demo/build.log
           if-no-files-found: warn
           retention-days: 7
+
+  dolphin-process-smoke:
+    name: Dolphin headless process smoke (not visual verification)
+    needs: [build-gamecube-demo, host-pause-state-tests]
+    runs-on: ubuntu-26.04
+    container:
+      image: ubuntu:26.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Download the DOL built by this workflow
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned download-artifact v4.3.0
+        with:
+          name: boonta-reborn-gamecube-first-render
+          path: build-artifact
+
+      - name: Install free Dolphin headless-test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb qt6-qpa-plugins
+          export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
+          export HOME=/tmp/dolphin-home
+          mkdir -p "$HOME"
+          chmod 700 "$HOME"
+          dolphin-emu --version
+
+      - name: Run the DOL for 12 seconds with Dolphin's null video backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
+          export HOME=/tmp/dolphin-home
+          mkdir -p "$HOME" /tmp/dolphin-user
+          chmod 700 "$HOME"
+          test -s build-artifact/boonta_gc_demo.dol
+          set +e
+          started=$(date +%s)
+          timeout --signal=TERM --kill-after=5s 12s xvfb-run -a dolphin-emu \
+            --batch --video_backend=Null \
+            --exec="$PWD/build-artifact/boonta_gc_demo.dol" \
+            --user=/tmp/dolphin-user > dolphin-smoke.log 2>&1
+          status=$?
+          elapsed=$(( $(date +%s) - started ))
+          set -e
+          cat dolphin-smoke.log
+          if grep -Eiq "failed to load executable|could not boot|fatal error|assertion failed|SIGBUS|SIGSEGV" dolphin-smoke.log; then
+            echo "::error::Dolphin logged a boot/fatal-error marker."
+            exit 1
+          fi
+          if [[ "$elapsed" -ge 10 && ( "$status" -eq 124 || "$status" -eq 137 || "$status" -eq 143 ) ]]; then
+            echo "Dolphin remained active for the 12-second process smoke window (elapsed: ${elapsed}s)."
+            echo "This proves only process/startup stability with null video; it does not verify visible rendering, controller response, or a completed race."
+          else
+            echo "::error::Dolphin did not remain active for the expected window (status ${status}, elapsed ${elapsed}s)."
+            exit 1
+          fi
+
+      - name: Upload Dolphin process log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned upload-artifact v7.0.2
+        with:
+          name: gamecube-dolphin-process-smoke
+          path: dolphin-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
