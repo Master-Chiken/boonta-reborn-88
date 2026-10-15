@@ -168,13 +168,19 @@ jobs:
           export CAPTURE="$PWD/control-frame.png"
           export DOLPHIN_LOG="$PWD/control-dolphin.log"
           export WINDOW_TREE="$PWD/control-window-tree.txt"
-          mkdir -p "$DOLPHIN_USER"
+          export WINDOW_LIST="$PWD/control-windows.txt"
+          mkdir -p "$DOLPHIN_USER/Config"
+          # Force the game render surface into Dolphin's main window so the
+          # screenshot is not merely the library window.
+          printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
-              kill "$emu_pid" >/dev/null 2>&1 || true
+              # This process handles SIGTERM as a graceful-close request and can
+              # wait indefinitely in CI; it is safe to force-stop after capture.
+              kill -KILL "$emu_pid" >/dev/null 2>&1 || true
               wait "$emu_pid" >/dev/null 2>&1 || true
             }
             trap cleanup EXIT
@@ -197,6 +203,15 @@ jobs:
               echo "No visible Dolphin window >= 300x200 was found."
               exit 1
             fi
+            xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+            for id in $(xdotool search --onlyvisible --name ".*" 2>/dev/null || true); do
+              title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+              geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+              width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+              height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+              printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
+            done
+            xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
             sleep 4
             import -window "$window" "$CAPTURE"
             test -s "$CAPTURE"
@@ -212,6 +227,7 @@ jobs:
           set -e
           cat "$DOLPHIN_LOG" 2>/dev/null || true
           [[ ! -f "$WINDOW_TREE" ]] || cat "$WINDOW_TREE"
+          [[ ! -f "$WINDOW_LIST" ]] || cat "$WINDOW_LIST"
           find "$DOLPHIN_USER" -maxdepth 5 -type f -print | tee control-files.txt
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The known minimal GX DOL could not be captured through Dolphin's GUI. Visual CI validation will remain pending."
@@ -230,13 +246,17 @@ jobs:
           export CAPTURE="$PWD/dolphin-frame.png"
           export DOLPHIN_LOG="$PWD/dolphin-gui.log"
           export WINDOW_TREE="$PWD/dolphin-window-tree.txt"
-          mkdir -p "$DOLPHIN_USER"
+          export WINDOW_LIST="$PWD/dolphin-windows.txt"
+          mkdir -p "$DOLPHIN_USER/Config"
+          printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
           set +e
           timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
-              kill "$emu_pid" >/dev/null 2>&1 || true
+              # This process handles SIGTERM as a graceful-close request and can
+              # wait indefinitely in CI; it is safe to force-stop after capture.
+              kill -KILL "$emu_pid" >/dev/null 2>&1 || true
               wait "$emu_pid" >/dev/null 2>&1 || true
             }
             trap cleanup EXIT
@@ -259,6 +279,15 @@ jobs:
               echo "No visible Dolphin window >= 300x200 was found."
               exit 1
             fi
+            xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+            for id in $(xdotool search --onlyvisible --name ".*" 2>/dev/null || true); do
+              title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+              geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+              width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+              height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+              printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
+            done
+            xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
             sleep 4
             import -window "$window" "$CAPTURE"
             test -s "$CAPTURE"
@@ -274,6 +303,7 @@ jobs:
           set -e
           cat "$DOLPHIN_LOG" 2>/dev/null || true
           [[ ! -f "$WINDOW_TREE" ]] || cat "$WINDOW_TREE"
+          [[ ! -f "$WINDOW_LIST" ]] || cat "$WINDOW_LIST"
           find "$DOLPHIN_USER" -maxdepth 5 -type f -print | tee dolphin-files.txt
           if [[ "$status" -ne 0 ]]; then
             echo "::warning::The visible-window capture failed; rendering remains unverified."
@@ -289,11 +319,13 @@ jobs:
           path: |
             control-dolphin.log
             control-window-tree.txt
+            control-windows.txt
             control-files.txt
             control-frame.png
             ${{ runner.temp }}/dolphin-control-user/**
             dolphin-gui.log
             dolphin-window-tree.txt
+            dolphin-windows.txt
             dolphin-files.txt
             dolphin-frame.png
             ${{ runner.temp }}/dolphin-frame-user/**
