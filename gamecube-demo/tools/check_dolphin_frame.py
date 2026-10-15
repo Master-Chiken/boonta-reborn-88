@@ -37,6 +37,26 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
     return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
 
 
+def course_edge_center(image: Image.Image) -> tuple[float, int]:
+    """Track the bright cyan road-edge strip in the upper/mid viewport."""
+    image = image.convert("RGB")
+    edge_x = []
+    # C_EDGE_R = (50, 225, 246). Keep the ROI above the player pod so the
+    # moving road/edge, rather than the pod itself, is measured.
+    y_start = int(image.height * 0.35)
+    y_end = int(image.height * 0.65)
+    for y in range(y_start, y_end):
+        for x in range(image.width):
+            r, g, b = image.getpixel((x, y))
+            if r < 90 and g > 180 and b > 200:
+                edge_x.append(x)
+    if len(edge_x) < 25:
+        raise ValueError(
+            f"No stable cyan course-edge pixels in ROI y=[{y_start},{y_end}); found {len(edge_x)}."
+        )
+    return sum(edge_x) / len(edge_x), len(edge_x)
+
+
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
     marker_x = []
@@ -79,9 +99,11 @@ def main() -> int:
     parser.add_argument("--baseline", required=True, type=Path,
                         help="matching frame rendered with --steering none")
     parser.add_argument("--min-shift", type=float, default=2.0,
-                        help="minimum HUD-marker shift for input-path smoke only; not proof of pod/world steering")
-    parser.add_argument("--min-pod-shift", type=float, default=12.0,
-                        help="minimum rightward player-pod surface displacement in pixels")
+                        help="minimum rightward HUD-marker shift for scripted-input smoke")
+    parser.add_argument("--max-pod-drift", type=float, default=80.0,
+                        help="maximum neutral-to-steered player-pod centroid drift while camera follows")
+    parser.add_argument("--min-course-shift", type=float, default=25.0,
+                        help="minimum leftward road-edge shift under right steering input")
     args = parser.parse_args()
 
     image = Image.open(args.frame).convert("RGB")
@@ -93,20 +115,28 @@ def main() -> int:
     baseline_pod_x, baseline_left, baseline_right, baseline_pixels = player_pod_bounds(baseline)
     steered_pod_x, steered_left, steered_right, steered_pixels = player_pod_bounds(image)
     pod_delta_x = steered_pod_x - baseline_pod_x
-    print(f"Neutral player-pod top center x={baseline_pod_x:.1f} "
+    print(f"Neutral player-pod center x={baseline_pod_x:.1f} "
           f"(bounds {baseline_left}..{baseline_right}, {baseline_pixels} pixels)")
-    print(f"Right-steered player-pod top center x={steered_pod_x:.1f} "
+    print(f"Right-input player-pod center x={steered_pod_x:.1f} "
           f"(bounds {steered_left}..{steered_right}, {steered_pixels} pixels)")
-    print(f"Visible player-pod displacement delta_x={pod_delta_x:.1f}px "
-          f"(minimum {args.min_pod_shift:.1f}px)")
-    if pod_delta_x < args.min_pod_shift:
-        raise SystemExit("Scripted right input did not visibly move the player-pod surface rightward.")
-
-    # If the pod touches the capture border, keep the measurement but flag that
-    # the current scripted hold drives it partly out of frame. This is a useful
-    # quality warning, not a false claim that the full race is playable.
+    print(f"Player-pod screen drift={pod_delta_x:.1f}px "
+          f"(maximum {args.max_pod_drift:.1f}px with camera follow)")
+    if baseline_left <= 0 or baseline_right >= baseline.width - 1:
+        raise SystemExit("Neutral player pod is clipped by the frame border.")
     if steered_left <= 0 or steered_right >= image.width - 1:
-        print("::warning::The right-steered pod touches the capture border; review lateral camera/rail response.")
+        raise SystemExit("Right-input player pod is clipped by the frame border; camera follow failed.")
+    if abs(pod_delta_x) > args.max_pod_drift:
+        raise SystemExit("Player pod moved too far across the screen; expected the camera to follow it.")
+
+    baseline_course_x, baseline_course_pixels = course_edge_center(baseline)
+    steered_course_x, steered_course_pixels = course_edge_center(image)
+    course_shift_left = baseline_course_x - steered_course_x
+    print(f"Neutral cyan course-edge center x={baseline_course_x:.1f} ({baseline_course_pixels} pixels)")
+    print(f"Right-input cyan course-edge center x={steered_course_x:.1f} ({steered_course_pixels} pixels)")
+    print(f"Road-edge leftward response={course_shift_left:.1f}px "
+          f"(minimum {args.min_course_shift:.1f}px)")
+    if course_shift_left < args.min_course_shift:
+        raise SystemExit("Road edge did not move sufficiently left relative to the camera-following player pod.")
 
     # Retain the HUD state marker as an independent input-state diagnostic.
     baseline_x = steering_indicator_center(baseline)
