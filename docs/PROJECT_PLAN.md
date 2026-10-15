@@ -2,86 +2,77 @@
 
 ## Objective
 
-Build toward a playable enhanced racing prototype inspired by *Star Wars: Episode I — Racer*, with native GameCube/Wii homebrew as the primary target. This is a staged engineering project, not a claim that a full remaster is already available.
+Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star Wars: Episode I — Racer*. The current mainline prototype is an original clean-room technical slice, not a finished remaster or a completed port of the commercial game.
 
-## Confirmed inputs and findings
+## Source-of-truth tracks
 
-- The source archive `Star_Wars_Racer_GameCube_Step102.zip` has been inspected.
-- It contains C source modules, a GameCube Makefile, tests, research tools, documentation, and prototype assets.
-- The archive describes a source prototype with 25 course entries, 23 vehicle/pod presets and variants, physics, rival AI, items, race modes, UI, and progression scaffolding.
-- Its host release suite passed in a temporary environment: host shell checks and 91 Python unit tests passed. This does not establish a native cross-build.
-- The archive itself says the real devkitPPC/libogc `.dol` build and Dolphin/console runtime test are still pending.
-- The source archive has not yet been imported into this GitHub repository. The existing native workflow checks for the source tree and fails early until it is present.
-- The Dreamcast/KallistiOS starter is a separate experiment, not the main target.
+1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural GX rendering, controller input code, throttle/brake, boost, inertial steering, off-road drag, rail recovery, a simple rival, lap/finish state, pause/reset logic, host regressions, and automated native-build/render checks.
+2. **Step 102 source archive:** a separate candidate for the fuller gameplay baseline. Do not merge its draft import PRs wholesale. Source authorship/license, generated track data, models/materials/audio, and dependencies require file-by-file review before redistribution.
+3. **SW_RACER_RE and other external projects:** research references only. Keep PC observations separate from GameCube/Wii hypotheses. Review licenses before copying code or data.
+4. **Dreamcast/KallistiOS starter and Wii64 tools:** separate research tracks; neither is the native GameCube release milestone.
 
-## Guiding decisions
+## Current acceptance status (2026-10-15)
 
-1. **Use the right source of truth.** Work from the Step 102 GameCube/Wii prototype, not from the Dreamcast smoke-test branch.
-2. **Audit before publishing.** Check code provenance, license compatibility, asset rights, and generated data before importing files into a public repository.
-3. **Cloud-first build.** Prefer GitHub Actions/devkitPro containers to avoid requiring local toolchain installation or large downloads on the user's computer.
-4. **Test evidence matters.** Record exact commands and results. Never label a host test as a native build or a successful compile as a working game.
-5. **Keep copyrighted content out of the public repository.** No ROMs, disc images, BIOS files, or unclear extracted commercial payloads.
+### Verified in CI
+- [x] C99 host regressions for gameplay transitions, steering inertia, analog/D-pad mapping, lap boundaries, three-lap finish state, rival events, off-road response, and rail recovery.
+- [x] Deterministic host simulation reaches the configured three-lap finish using shared race-distance/lap helpers.
+- [x] Native clean-room GameCube DOL and ELF build through devkitPPC/libogc.
+- [x] DOL/ELF artifact structure validation and DOL padding.
+- [x] Bounded Dolphin null-video process smoke test.
+- [x] A visible procedural frame captured through Dolphin Software Renderer in CI.
 
-## Phases and acceptance criteria
+### Still unverified
+- [ ] Interactive steering and acceleration/braking/boost behavior using a visible Dolphin controller profile or physical controller.
+- [ ] One complete three-lap run in the running game, including finish display, stopping, reset, and a second run.
+- [ ] Longer-session stability and sustained frame pacing.
+- [ ] Physical GameCube/Wii behavior.
+- [ ] A native build or gameplay claim for the separate Step 102 archive.
 
-### Phase 0 — Prototype audit
-- [x] Create public repository and initial documentation.
-- [x] Inspect the Step 102 source archive.
-- [x] Identify source modules, build scripts, tests, target, and limitations.
-- [ ] Create a path-by-path source import manifest for the Step 102 archive.
-- [ ] Finish code/license/provenance review of external dependencies, generated route data, sample model/material files and audio.
-- [ ] Select the exact source/assets subset safe to publish.
+## Work order
 
-**Exit criterion:** a reviewed source-only import list and clear provenance notes.
+### A — Verify the running prototype
+- Use the checklist in [Next milestone](NEXT_MILESTONE.md) to exercise every control in visible Dolphin.
+- Record version/backend, controller profile, exact commit, outcomes, and evidence.
+- Add a regression test for any observed bug before changing gameplay behavior.
 
-### Phase 1 — Import and automated host tests
-- [ ] Import cleared GameCube/Wii source, headers, Makefile, tests, tools, and build docs.
-- [ ] Run host checks in GitHub Actions.
-- [ ] Fix CI failures without disabling or weakening tests.
+**Exit criterion:** reproducible interactive controls and a complete three-lap race have actual evidence attached to the tested commit.
 
-**Exit criterion:** the source tree exists in GitHub and the host test suite passes in CI.
+### B — Consolidate only validated behavior
+- Keep each behavior change isolated in a small PR with host tests and native CI.
+- Merge only after reviewing the diff and the exact-head required checks; an optional visible-render diagnostic is useful evidence but is separately labeled non-blocking.
+- Port unique behavior from old branches only if it is still missing from main and has tests. If a PR is fully superseded, close the PR but preserve its branch/commits.
+- Do not delete branches, source files, assets, or history as a way to reduce clutter.
 
-### Phase 2 — First native build
-- [ ] Build with devkitPPC/libogc in GitHub Actions.
-- [ ] Archive the DOL/ELF and compiler log.
-- [ ] Fix actual cross-compiler errors.
+**Exit criterion:** one mainline implementation for each validated prototype subsystem and fewer redundant open PRs, with historical work preserved.
 
-**Exit criterion:** a non-empty `swe1r_gc_port.dol` is produced by the native toolchain.
+### C — Improve vertical-slice feel and stability
+- Verify control direction and steering calibration.
+- Exercise off-road/rail response and rival interaction over multiple frames.
+- Verify finish/reset behavior, camera framing, visible progress, and frame pacing together.
+- Keep the visible-render diagnostic and native build passing as changes land.
 
-### Phase 3 — First runtime validation
-- [ ] Run the DOL in Dolphin or on suitable hardware.
-- [ ] Record whether it boots, draws a frame, reads controller input, and starts a race.
-- [ ] Fix the first runtime blocker.
+**Exit criterion:** repeatable, stable short races with one course, controllable pod, visible course, rival interaction, and finish/restart.
 
-**Exit criterion:** a repeatable boot and input test. Compilation alone is not sufficient.
+### D — Controlled Step 102 review and integration
+- Complete a file-path manifest with origins, license evidence, generated/copied data classification, redistribution decision, and reviewer.
+- Exclude unclear-provenance files rather than assuming the archive is wholly open source.
+- Integrate only the reviewed, cleared subset in a separate branch. Reconcile its tests and build requirements against the current demo without overwriting working mainline behavior.
+- Keep private game archives, ROMs/disc images, BIOS files, extracted commercial assets, and unresolved route data outside the public repository.
 
-### Phase 4 — Playable vertical slice
-- [ ] Load one course with a consistent route, visible road, and collision.
-- [ ] Control one pod with a follow camera.
-- [ ] Validate acceleration, braking, steering, collision, lap timing, and frame pacing.
-- [ ] Record memory and performance limits.
+**Exit criterion:** a reproducible import list whose every included file has a documented provenance/distribution disposition and whose CI tests/build pass.
 
-**Exit criterion:** a short repeatable playable race on the target environment.
+### E — Packaging and enhancements
+Only after a stable playable slice exists:
+- define “HD” for each target separately (console output, replacement assets, rendering changes, or emulator upscaling are not equivalent);
+- measure GameCube and Wii performance separately;
+- expand courses, vehicles, rival logic, UI, audio, saves, and progression only with provenance-cleared assets/code;
+- validate any disc-image/homebrew packaging separately from building a DOL/ELF.
 
-### Phase 5 — Expand and enhance
-Only after the vertical slice is stable:
-- improve original/cleared textures, materials, lighting, and effects;
-- add course-specific scenery and additional vehicles;
-- finish audio, progression, and bonus features;
-- measure performance on GameCube and Wii separately.
+## Non-negotiable engineering rules
 
-Define what “HD” means for each target before promising it: native console resolution, replacement assets, rendering changes, or emulator upscaling are different outcomes.
-
-### Phase 6 — Packaging
-- [ ] Build and validate GameCube and Wii targets separately.
-- [ ] Determine lawful homebrew executable and packaging formats.
-- [ ] Validate any image conversion separately; a DOL build does not automatically produce a valid NKit ISO or WBFS.
-- [ ] Publish only code and assets that can be redistributed.
-
-## Definition of done for each task
-
-- Changed files are committed in a reviewable branch/PR.
-- Relevant tests and toolchain versions are recorded.
-- Build and runtime results are reported truthfully.
-- Third-party code/assets have provenance and license notes.
-- ROMs, disc images, BIOS files, and uncleared commercial payloads remain outside the repository.
+- Cloud-first and free-tier-first; no billing or paid fallback to keep an automation running.
+- No direct pushes to main; use scoped branches and pull requests.
+- Never remove history or branches to tidy up; close superseded PRs while preserving their source branches.
+- CI is evidence of only the tasks that actually ran. Host tests, compilation, headless startup, visible rendering, interactive input, a completed race, and hardware testing are different gates.
+- Do not import Step 102 or external PC source/assets until provenance and redistribution rights have been reviewed.
+- Each task should report changed paths, commit SHA, test command/result, runtime evidence, and remaining blocker.
