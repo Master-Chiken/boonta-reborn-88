@@ -20,6 +20,29 @@ static inline float boonta_boost_after_frame(float boost, int active)
     if (boost > 1.0f) return 1.0f;
     return boost;
 }
+/* Boost heat rises while engaged and cools while the boost is released. */
+static inline float boonta_engine_heat_after_frame(float heat, int active)
+{
+    if (active) heat += 0.0065f; else heat -= 0.0045f;
+    if (heat < 0.0f) return 0.0f;
+    if (heat > 1.0f) return 1.0f;
+    return heat;
+}
+
+/* Latch an overheat until the engine cools to 60%; this avoids rapid toggling. */
+static inline int boonta_boost_overheated_after_frame(int overheated, float heat)
+{
+    if (overheated) return heat > 0.60f;
+    return heat >= 0.98f;
+}
+
+static inline int boonta_boost_should_activate_with_heat(int x_held, int a_held,
+                                                           float boost, float heat,
+                                                           int overheated)
+{
+    return !overheated && heat < 0.98f &&
+           boonta_boost_should_activate(x_held, a_held, boost);
+}
 /* Normalize the GameCube analog stick and D-pad into bounded steering input. */
 static inline float boonta_steering_input(float stick_x,
                                           int left_held,

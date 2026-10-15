@@ -50,6 +50,8 @@ static float g_speed;
 static float g_player_lateral;
 static float g_lateral_velocity;
 static float g_boost = 1.0f;
+static float g_engine_heat;
+static int g_boost_overheated;
 static int g_boost_active;
 static float g_rival_z = -18.0f;
 static float g_rival_lateral;
@@ -304,6 +306,8 @@ static void draw_hud(void)
     const GXColor empty = { 48, 66, 80, 255 };
     const GXColor fill = { 64, 220, 243, 255 };
     const GXColor boost_fill = { 255, 157, 61, 255 };
+    const GXColor heat_cool = { 255, 195, 83, 255 };
+    const GXColor heat_hot = { 255, 75, 58, 255 };
     const GXColor progress_fill = { 137, 241, 154, 255 };
     const GXColor lap_done = { 137, 241, 154, 255 };
     const GXColor rival_mark = { 255, 128, 88, 255 };
@@ -335,6 +339,12 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 28.0f,
                        bar_left + bar_width * g_boost, bar_bottom - 20.0f,
                        0.3f, boost_fill);
+    append_screen_quad(bar_left, bar_bottom - 50.0f,
+                       bar_left + bar_width, bar_bottom - 42.0f,
+                       0.4f, empty);
+    append_screen_quad(bar_left, bar_bottom - 50.0f,
+                       bar_left + bar_width * g_engine_heat, bar_bottom - 42.0f,
+                       0.3f, (g_engine_heat >= 0.70f || g_boost_overheated) ? heat_hot : heat_cool);
     append_screen_quad(bar_left, bar_bottom - 42.0f,
                        bar_left + bar_width, bar_bottom - 34.0f,
                        0.4f, empty);
@@ -540,6 +550,9 @@ int main(int argc, char **argv)
             g_lateral_velocity = 0.0f;
             g_speed = 0.0f;
             g_boost = 1.0f;
+            g_engine_heat = 0.0f;
+            g_boost_overheated = 0;
+            g_boost_active = 0;
             g_rival_z = -18.0f;
             g_rival_lateral = 0.0f;
             g_overtake_count = 0U;
@@ -553,11 +566,14 @@ int main(int argc, char **argv)
             continue;
         }
 
-        g_boost_active = boonta_boost_should_activate(
+        g_boost_active = boonta_boost_should_activate_with_heat(
             (buttons_held & PAD_BUTTON_X) != 0U,
             (buttons_held & PAD_BUTTON_A) != 0U,
-            g_boost);
+            g_boost, g_engine_heat, g_boost_overheated);
         g_boost = boonta_boost_after_frame(g_boost, g_boost_active);
+        g_engine_heat = boonta_engine_heat_after_frame(g_engine_heat, g_boost_active);
+        g_boost_overheated = boonta_boost_overheated_after_frame(
+            g_boost_overheated, g_engine_heat);
 
         steering = boonta_steering_input(
             (float)stick_x,
