@@ -33,6 +33,15 @@ class VerifyWii64ArchiveTests(unittest.TestCase):
         self.assertFalse(checks[1].matches)
         self.assertTrue(all(check.actual is None for check in checks[2:]))
 
+    def test_rejects_duplicate_expected_member(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "duplicate.zip"
+            with zipfile.ZipFile(path, "w") as archive:
+                archive.writestr("apps/wii64/boot.dol", b"first copy")
+                archive.writestr("apps/wii64/boot.dol", b"second copy")
+            with self.assertRaisesRegex(ValueError, "duplicate archive member"):
+                inspect_archive(path)
+
 
 if __name__ == "__main__":
     unittest.main()
