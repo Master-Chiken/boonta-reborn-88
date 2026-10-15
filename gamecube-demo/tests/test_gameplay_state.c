@@ -109,6 +109,11 @@ static void boost_tests(void) {
  assert(nearf(boonta_boost_after_frame(0.50f,1),0.4945f));
  assert(nearf(boonta_boost_after_frame(0.50f,0),0.5015f));
  assert(nearf(boonta_boost_after_frame(0.003f,1),0.0f));
+ /* Invalid resource and timing state recover deterministically. */
+ assert(nearf(boonta_boost_after_frame_scaled(NAN, 0, 1.0f), 0.0015f));
+ assert(nearf(boonta_boost_after_frame_scaled(INFINITY, 1, 1.0f), 0.0f));
+ assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, NAN), 0.5f));
+ assert(nearf(boonta_boost_after_frame_scaled(0.5f, 0, -1.0f), 0.5f));
  assert(nearf(boonta_boost_after_frame(0.999f,0),1.0f));
 }
 
@@ -118,6 +123,10 @@ static void boost_overheat_tests(void) {
  assert(nearf(boonta_engine_heat_after_frame(0.50f, 0), 0.4955f));
  assert(nearf(boonta_engine_heat_after_frame(0.999f, 1), 1.0f));
  assert(nearf(boonta_engine_heat_after_frame(0.003f, 0), 0.0f));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(NAN, 1, 1.0f), 0.0065f));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(INFINITY, 0, 1.0f), 0.0f));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, NAN), 0.5f));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 0, -1.0f), 0.5f));
 
  /* Boost cannot start above the heat limit or while overheat is latched. */
  assert(boonta_boost_should_activate_with_heat(1, 1, 0.50f, 0.50f, 0));
