@@ -64,7 +64,8 @@ jobs:
                   print(f"Python syntax OK: {path} block {index}")
           print(f"Validated {checked} embedded Python block(s).")
           PY
-- name: Verify Git patch-equivalence detection with a local fixture
+
+      - name: Verify Git patch-equivalence detection with a local fixture
         shell: bash
         run: |
           set -euo pipefail
@@ -84,9 +85,9 @@ jobs:
           git -C "$tmp/repo" commit -qam "candidate implementation"
           equivalent_sha="$(git -C "$tmp/repo" rev-parse HEAD)"
 
-          # Apply the exact same patch to main, producing a different commit SHA.
+          # Apply the same patch to main under a different commit SHA.
           git -C "$tmp/repo" checkout -q main
-          git -C "$tmp/repo" cherry-pick -qm "same change landed independently" "$equivalent_sha"
+          git -C "$tmp/repo" cherry-pick -q "$equivalent_sha"
           equivalent_result="$(git -C "$tmp/repo" cherry main candidate)"
           printf '%s\n' "$equivalent_result"
           grep -F -- "- $equivalent_sha" <<< "$equivalent_result"
