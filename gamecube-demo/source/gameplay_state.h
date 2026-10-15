@@ -110,8 +110,16 @@ static inline int boonta_lap_was_crossed(float previous_distance, float current_
         previous_distance < 0.0f || current_distance < previous_distance) {
         return 0;
     }
-    return floorf(current_distance / lap_distance) >
-           floorf(previous_distance / lap_distance);
+    {
+        const float previous_lap_index = floorf(previous_distance / lap_distance);
+        const float current_lap_index = floorf(current_distance / lap_distance);
+
+        /* Division can overflow to +infinity even when every input is finite.
+         * If distance advanced and the current index overflowed, a crossing
+         * occurred; comparing +infinity with +infinity alone would miss it. */
+        return current_lap_index > previous_lap_index ||
+               (isinf(current_lap_index) && current_distance > previous_distance);
+    }
 }
 
 static inline unsigned int boonta_lap_count_after_frame(unsigned int lap_count,
