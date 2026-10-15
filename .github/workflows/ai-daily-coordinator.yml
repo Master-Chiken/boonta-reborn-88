@@ -94,7 +94,7 @@ jobs:
 
       - name: Publish report to the coordinator issue
         if: always() && steps.coordinator.outcome != 'skipped'
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT: ${{ steps.coordinator.outputs.summary }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
