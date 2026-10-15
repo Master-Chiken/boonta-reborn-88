@@ -31,8 +31,8 @@ IS_CONNECTED = 1 << 6
 NEUTRAL_AXIS = 0
 
 
-def _controller_state(frame: int) -> bytes:
-    """Return one packed controller poll with neutral analog axes."""
+def _controller_state(frame: int, steering: str = "right") -> bytes:
+    """Return one packed controller poll with neutral analog axes.""
     buttons = A  # Hold accelerator for the whole run.
     if frame == 0:
         buttons |= Y  # Reset to a deterministic starting position.
@@ -44,11 +44,11 @@ def _controller_state(frame: int) -> bytes:
         buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
-    # A short rightward pulse yields a measurable response without steering
-    # off-screen; left input is held briefly later in the recording.
-    if frame < 60:
+    # Keep this diagnostic directional: a later opposite pulse would erase
+    # the movement signal before slower software-renderer captures complete.
+    if steering == "right" and frame < 60:
         flags |= DPAD_RIGHT
-    elif 2000 <= frame < 2060:
+    elif steering == "left" and frame < 60:
         flags |= DPAD_LEFT
 
     # Dolphin assigns the stored axis bytes directly to signed s8 pad fields.
@@ -58,7 +58,8 @@ def _controller_state(frame: int) -> bytes:
                   NEUTRAL_AXIS, NEUTRAL_AXIS))
 
 
-def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID) -> bytes:
+def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
+              steering: str = "right") -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -66,6 +67,8 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID)
         raise ValueError(f"frame_count must be between 1 and {MAX_FRAMES}")
     if not isinstance(game_id, str) or len(game_id.encode("ascii", errors="strict")) != 6:
         raise ValueError("game_id must be exactly six ASCII bytes")
+    if steering not in ("none", "left", "right"):
+        raise ValueError("steering must be one of: none, left, right")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
@@ -86,7 +89,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID)
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame))
+        data.extend(_controller_state(frame, steering))
     return bytes(data)
 
 
@@ -97,11 +100,13 @@ def main() -> int:
                         help=f"controller polls (1..{MAX_FRAMES}; default {DEFAULT_FRAMES})")
     parser.add_argument("--game-id", default=DEFAULT_GAME_ID,
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
+    parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
+                        help="directional pulse to encode; use none for a neutral baseline")
     args = parser.parse_args()
-    payload = build_dtm(args.frames, args.game_id)
+    payload = build_dtm(args.frames, args.game_id, args.steering)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
-    print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, {len(payload)} bytes")
+    print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, steering={args.steering}, {len(payload)} bytes")
     return 0
 
 
