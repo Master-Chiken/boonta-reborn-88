@@ -276,6 +276,25 @@ static void multiple_rival_spacing_tests(void) {
  assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
 }
 
+static void rival_contact_velocity_tests(void) {
+ /* Collision impulse stays within the same bounded range as steering. */
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(0.05f, 0.0f, 0.0f),
+              0.015f));
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(0.08f, 0.5f, 0.0f),
+              0.085f));
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(-0.08f, -0.5f, 0.0f),
+              -0.085f));
+
+ /* Corrupt velocity state is recovered rather than leaking NaN/infinity. */
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(NAN, 0.0f, 1.0f), 0.0f));
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(INFINITY, 0.0f, 1.0f), -0.035f));
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(-INFINITY, 0.0f, -1.0f), 0.035f));
+
+ /* Invalid rival/player lateral values cannot create a NaN contact response. */
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(0.04f, NAN, 0.0f), 0.04f));
+ assert(nearf(boonta_lateral_velocity_after_rival_contact(0.04f, 0.0f, INFINITY), 0.04f));
+}
+
 static void rival_event_tests(void) {
  /* The rival only triggers a contact/overtake decision once it reaches the player. */
  assert(boonta_rival_event(-18.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
@@ -400,6 +419,7 @@ int main(void) {
  distance_progression_tests();
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
+ rival_contact_velocity_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
