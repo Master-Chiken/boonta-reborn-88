@@ -35,3 +35,8 @@ The Branch intake queue turns existing branch work into small, reviewable pull r
 A branch being ahead of the default branch is evidence of unique commits, not evidence that the implementation is useful or correct. The automation therefore creates draft PRs only. Large or overlapping branches need an agent or maintainer to compare their diffs, identify the canonical implementation, reconcile conflicts, add tests, and retarget the resulting work to the current default branch.
 
 The workflow uses GitHub-hosted Actions and the repository token; it requires no paid AI API and does not enable the repository's gated AI writer.
+  
+## First-run permission requirement
+
+The first live queue run may report that GitHub Actions is not permitted to create pull requests, even though the workflow declares `pull-requests: write`. This is a separate repository setting. A repository admin must open **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**, and save. The queue uses this permission only to open draft PRs and has no automated merge, approval, direct-push, force-push, or branch-deletion step. The workflow now stops at the first permission-denied response and explains this setting instead of repeating failed create attempts for every candidate.
+

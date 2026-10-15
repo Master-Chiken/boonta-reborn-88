@@ -342,6 +342,8 @@ jobs:
           created = []
           selected_paths = set()
           created_count = 0
+          permission_blocked = False
+          permission_block_reason = ""
           for candidate in candidates:
               if created_count >= max_prs:
                   break
@@ -390,7 +392,15 @@ jobs:
                   text=True, capture_output=True
               )
               if result.returncode != 0:
-                  deferred.append((name, f"PR creation failed: {(result.stderr or result.stdout).strip()[:160]}"))
+                  error_text = (result.stderr or result.stdout).strip()
+                  deferred.append((name, f"PR creation failed: {error_text[:160]}"))
+                  if "GitHub Actions is not permitted to create or approve pull requests" in error_text:
+                      # This is a repository-level Actions setting, not a transient
+                      # branch failure. Stop on the first denied request instead of
+                      # repeating the same denied mutation for every candidate.
+                      permission_blocked = True
+                      permission_block_reason = error_text[:240]
+                      break
                   continue
 
               url = result.stdout.strip().splitlines()[-1]
@@ -451,6 +461,7 @@ jobs:
               f"- Serial-equivalent request wait: {comparison_request_seconds:.2f}s",
               f"- Estimated comparison-stage speedup: {comparison_request_seconds / max(comparison_wall_seconds, 0.001):.1f}x",
               f"- Draft PRs created this run: {len(created)} / {max_prs} requested",
+              f"- GitHub Actions PR-creation permission: {'BLOCKED' if permission_blocked else 'not blocked by this run'}",
               f"- Candidates deferred for manual review or overlap: {len(deferred)}",
               "- Automatic merge, direct-to-main push, force-push, and branch deletion: **disabled**",
               "",
@@ -462,6 +473,16 @@ jobs:
                         for name, url, ahead, behind, files, validation in created]
           else:
               lines.append("No eligible candidate was promoted to a draft PR on this run.")
+          if permission_blocked:
+              lines += [
+                  "",
+                  "## One-time repository setting required",
+                  "",
+                  "GitHub rejected draft-PR creation because the repository does not allow the GITHUB_TOKEN to create pull requests.",
+                  "A repository admin must open Settings → Actions → General → Workflow permissions, enable **Allow GitHub Actions to create and approve pull requests**, and save.",
+                  "This workflow only creates draft PRs; it contains no merge, approval, direct-push, force-push, or branch-deletion operation.",
+                  f"GitHub error: {permission_block_reason}",
+              ]
           lines += ["", "## Deferred candidates", ""]
           if deferred:
               lines += [f"- {name}: {reason}" for name, reason in deferred[:30]]
