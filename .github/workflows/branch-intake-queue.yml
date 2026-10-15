@@ -144,6 +144,9 @@ jobs:
               files = compare.get("files") or []
               paths = sorted({item.get("filename", "") for item in files if item.get("filename")})
 
+              if compare.get("too_large"):
+                  deferred.append((name, "GitHub comparison is too large for safe automatic intake"))
+                  continue
               if ahead <= 0 or not paths:
                   skips["no unique file changes versus main"] += 1
                   continue
@@ -151,7 +154,7 @@ jobs:
               if hold:
                   deferred.append((name, hold))
                   continue
-              if compare.get("too_large") or ahead > 10 or len(paths) > 20:
+              if ahead > 10 or len(paths) > 20:
                   deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead, {len(paths)} changed paths)"))
                   continue
               overlap = sorted(set(paths) & open_paths)
@@ -189,7 +192,7 @@ jobs:
           This pull request surfaces an existing branch for review. It is **not** an approval, a merge recommendation, or proof that the change works.
 
           - Source branch: {name}
-          - Exact head SHA: {candidate['sha']}
+          - Head SHA at inventory time: {candidate['sha']} (verify that it still matches the current PR head)
           - Commits ahead of {default_branch}: {ahead}
           - Commits behind {default_branch}: {behind}
           - Changed paths: {len(paths)}
@@ -221,6 +224,11 @@ jobs:
                   continue
 
               url = result.stdout.strip().splitlines()[-1]
+              confirmed_head = subprocess.run(
+                  ["gh", "pr", "view", url, "--repo", repo, "--json", "headRefOid", "--jq", ".headRefOid"],
+                  text=True, capture_output=True
+              )
+              head_matches = confirmed_head.returncode == 0 and confirmed_head.stdout.strip() == candidate["sha"]
               build_paths = (
                   "gamecube-demo/Makefile",
                   "gamecube-demo/source/",
@@ -233,7 +241,14 @@ jobs:
                   path == "gamecube-demo/Makefile" or path.startswith(build_paths[1:])
                   for path in paths
               )
-              if needs_build and ".github/workflows/gamecube-demo-build.yml" not in paths:
+              if not head_matches:
+                  body += "\\n\\n**Intake race note:** the branch tip changed while this PR was being created. Re-review the current diff; no automatic validation was dispatched."
+                  subprocess.run(
+                      ["gh", "pr", "edit", url, "--repo", repo, "--body", body],
+                      text=True, capture_output=True
+                  )
+                  validation = "branch head changed during intake; validation not dispatched"
+              elif needs_build and ".github/workflows/gamecube-demo-build.yml" not in paths:
                   dispatch = subprocess.run(
                       ["gh", "workflow", "run", "gamecube-demo-build.yml",
                        "--repo", repo, "--ref", name],
