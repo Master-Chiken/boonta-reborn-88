@@ -4,6 +4,7 @@
 
 #define BOONTA_TRACK_CLOSED_LOOP 1
 #define BOONTA_TRACK_POINT_COUNT 8U
+#define BOONTA_TRACK_LENGTH 181.232191f
 
 typedef struct {
     float x;
