@@ -185,6 +185,10 @@ jobs:
           chmod 700 "$HOME"
           flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
           flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          # Dolphin's official release remote does not reliably provide the KDE
+          # runtime required by the app. Install the runtime from Flathub first.
+          flatpak install --user --assumeyes flathub org.kde.Platform//6.11
+          flatpak info --user org.kde.Platform//6.11
           flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
           flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version
 
