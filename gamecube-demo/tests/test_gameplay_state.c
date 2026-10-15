@@ -11,6 +11,11 @@ static void speed_tests(void) {
  assert(nearf(boonta_speed_after_input(0.5f,1,1),0.490f));
  assert(nearf(boonta_speed_after_input(0.0f,0,1),0.0f));
  assert(nearf(boonta_speed_after_input(0.999f,1,0),1.0f));
+ /* Extreme inputs must remain inside the normalized speed range. */
+ assert(nearf(boonta_speed_after_input(1.0f,1,0),1.0f));
+ assert(nearf(boonta_speed_after_input(0.0f,0,1),0.0f));
+ assert(nearf(boonta_speed_after_input(-0.5f,0,0),0.0f));
+ assert(nearf(boonta_speed_after_input(1.5f,0,0),1.0f));
 }
 
 static void boost_tests(void) {
@@ -31,6 +36,11 @@ static void lap_tests(void) {
  assert(boonta_lap_was_crossed(239.99f,240.01f,120.0f)==1);
  assert(boonta_lap_was_crossed(10.0f,9.0f,120.0f)==0);
  assert(boonta_lap_was_crossed(10.0f,20.0f,0.0f)==0);
+ assert(boonta_lap_was_crossed(10.0f,20.0f,-120.0f)==0);
+ assert(boonta_lap_was_crossed(-1.0f,120.0f,120.0f)==0);
+ /* Exact boundary crossings count once; a stationary frame never counts. */
+ assert(boonta_lap_was_crossed(119.0f,120.0f,120.0f)==1);
+ assert(boonta_lap_was_crossed(120.0f,120.0f,120.0f)==0);
 }
 
 static void three_lap_finish_tests(void) {
@@ -56,6 +66,9 @@ static void three_lap_finish_tests(void) {
  /* No new lap should be counted after movement stops at the finish. */
  laps = boonta_lap_count_after_frame(laps, 360.01f, 360.01f, 120.0f);
  assert(laps == 3U);
+
+ /* Lap count saturates instead of wrapping at UINT_MAX. */
+ assert(boonta_lap_count_after_frame(0xffffffffU, 119.0f, 121.0f, 120.0f) == 0xffffffffU);
 }
 
 
