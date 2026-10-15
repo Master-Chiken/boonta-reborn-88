@@ -132,6 +132,7 @@ jobs:
             printf '%s\n' '### apt-installed Dolphin CLI help'
             dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
+          grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
 
       - name: Run the DOL for 12 seconds with Dolphin's null video backend
         shell: bash
@@ -186,6 +187,11 @@ jobs:
       contents: read
       actions: read
     steps:
+      - name: Check out repository for the deterministic DTM generator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Download the DOL built by this workflow
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned download-artifact v4.3.0
         with:
@@ -212,10 +218,11 @@ jobs:
           flatpak info --user org.DolphinEmu.dolphin-emu
           {
             printf '%s\n' '### Flatpak Dolphin version'
-            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
+            timeout --signal=TERM --kill-after=2s 10s flatpak run --env=QT_QPA_PLATFORM=offscreen --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
             printf '%s\n' '### Flatpak Dolphin CLI help'
-            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
+            timeout --signal=TERM --kill-after=2s 10s flatpak run --env=QT_QPA_PLATFORM=offscreen --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
+          grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         shell: bash
@@ -223,6 +230,9 @@ jobs:
           set -euo pipefail
           test -s build-artifact/boonta_gc_demo.dol
           export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
+          export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600
+          test -s "$DTM"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export HOME=/tmp/dolphin-render-home
@@ -247,7 +257,7 @@ jobs:
                 --config=Logger.Logs.BOOT=True \
                 --config=Logger.Logs.CORE=True \
                 --config=Logger.Logs.Video=True \
-                --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
+                --exec="$DOL" --movie="$DTM" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
               emu_pid=$!
               cleanup() {
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
@@ -309,6 +319,24 @@ jobs:
           if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
               print("Captured Dolphin window is missing one or more expected scene-color signatures.")
               sys.exit(1)
+
+          # The deterministic DTM holds D-pad right while accelerating early
+          # in the run. Measure only the player's orange engines, excluding the
+          # orange road edge near the far-left side of the viewport.
+          player_x = []
+          for y in range(int(image.height * 0.72), image.height - 20):
+              for x in range(int(image.width * 0.25), int(image.width * 0.90)):
+                  r, g, b = image.getpixel((x, y))
+                  if r > 220 and 80 < g < 185 and b < 110:
+                      player_x.append(x)
+          if not player_x:
+              print("No player-pod orange pixels found in the lower game viewport.")
+              sys.exit(1)
+          player_center_x = sum(player_x) / len(player_x)
+          print(f"Scripted DTM player-pod orange-pixel center x={player_center_x:.1f}")
+          if player_center_x <= image.width * 0.54:
+              print("Dolphin DTM playback did not produce the expected rightward player response.")
+              sys.exit(1)
           PY
               # The captured Dolphin main window is 800x480. Its lower
               # viewport should contain the dark road, not a near-white field.
@@ -350,6 +378,7 @@ jobs:
             dolphin-software-frame.png
             dolphin-render.log
             dolphin-flatpak-cli-capabilities.log
+            dolphin-scripted-controller-input.dtm
             dolphin-render-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
