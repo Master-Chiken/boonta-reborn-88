@@ -226,7 +226,12 @@ jobs:
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
             if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
-              echo "::error::Dolphin displayed an error dialog instead of a clean game-rendering session."
+              error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
+              if [[ -n "$error_window" ]]; then
+                import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
+                identify "$PWD/dolphin-error-dialog.png" 2>/dev/null || true
+              fi
+              echo "::error::Dolphin displayed an error dialog; saved dolphin-error-dialog.png for diagnosis."
               exit 1
             fi
             xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
@@ -316,7 +321,12 @@ jobs:
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
             if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
-              echo "::error::Dolphin displayed an error dialog instead of a clean game-rendering session."
+              error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
+              if [[ -n "$error_window" ]]; then
+                import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
+                identify "$PWD/dolphin-error-dialog.png" 2>/dev/null || true
+              fi
+              echo "::error::Dolphin displayed an error dialog; saved dolphin-error-dialog.png for diagnosis."
               exit 1
             fi
             xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
@@ -371,6 +381,8 @@ jobs:
             control-frame.png
             ${{ runner.temp }}/dolphin-control-user/**
             dolphin-gui.log
+            dolphin-error-dialog.png
+            control-error-dialog.png
             dolphin-window-tree.txt
             dolphin-windows.txt
             dolphin-files.txt
