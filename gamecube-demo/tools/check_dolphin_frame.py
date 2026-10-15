@@ -17,6 +17,26 @@ def scene_signatures(image: Image.Image) -> dict[str, int]:
     }
 
 
+def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
+    """Return (horizontal center, left edge, right edge, pixel count) for pod-top pixels."""
+    image = image.convert("RGB")
+    pod_x = []
+    # The player's bright cyan top is approximately C_POD_TOP = (33, 164, 220).
+    # This mask excludes the darker rails and the cyan road-edge markers.
+    y_start = int(image.height * 0.65)
+    y_end = int(image.height * 0.90)
+    for y in range(y_start, y_end):
+        for x in range(image.width):
+            r, g, b = image.getpixel((x, y))
+            if r < 70 and 100 < g < 200 and b > 170 and b > g * 1.15 and b > r * 2:
+                pod_x.append(x)
+    if len(pod_x) < 50:
+        raise ValueError(
+            f"No stable player-pod surface pixels in lower viewport; found {len(pod_x)}."
+        )
+    return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
+
+
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
     marker_x = []
@@ -60,6 +80,8 @@ def main() -> int:
                         help="matching frame rendered with --steering none")
     parser.add_argument("--min-shift", type=float, default=2.0,
                         help="minimum HUD-marker shift for input-path smoke only; not proof of pod/world steering")
+    parser.add_argument("--min-pod-shift", type=float, default=12.0,
+                        help="minimum rightward player-pod surface displacement in pixels")
     args = parser.parse_args()
 
     image = Image.open(args.frame).convert("RGB")
@@ -68,15 +90,33 @@ def main() -> int:
         raise SystemExit(f"Frame dimensions differ: steered={image.size}, baseline={baseline.size}")
     validate_scene(baseline, "Neutral baseline")
     validate_scene(image, "Steered")
+    baseline_pod_x, baseline_left, baseline_right, baseline_pixels = player_pod_bounds(baseline)
+    steered_pod_x, steered_left, steered_right, steered_pixels = player_pod_bounds(image)
+    pod_delta_x = steered_pod_x - baseline_pod_x
+    print(f"Neutral player-pod top center x={baseline_pod_x:.1f} "
+          f"(bounds {baseline_left}..{baseline_right}, {baseline_pixels} pixels)")
+    print(f"Right-steered player-pod top center x={steered_pod_x:.1f} "
+          f"(bounds {steered_left}..{steered_right}, {steered_pixels} pixels)")
+    print(f"Visible player-pod displacement delta_x={pod_delta_x:.1f}px "
+          f"(minimum {args.min_pod_shift:.1f}px)")
+    if pod_delta_x < args.min_pod_shift:
+        raise SystemExit("Scripted right input did not visibly move the player-pod surface rightward.")
+
+    # If the pod touches the capture border, keep the measurement but flag that
+    # the current scripted hold drives it partly out of frame. This is a useful
+    # quality warning, not a false claim that the full race is playable.
+    if steered_left <= 0 or steered_right >= image.width - 1:
+        print("::warning::The right-steered pod touches the capture border; review lateral camera/rail response.")
+
+    # Retain the HUD state marker as an independent input-state diagnostic.
     baseline_x = steering_indicator_center(baseline)
     steered_x = steering_indicator_center(image)
     delta_x = steered_x - baseline_x
-    print(f"Input-path smoke only: neutral HUD marker center x={baseline_x:.1f}")
-    print(f"Input-path smoke only: right-input HUD marker center x={steered_x:.1f}")
+    print(f"Neutral HUD marker center x={baseline_x:.1f}")
+    print(f"Right-input HUD marker center x={steered_x:.1f}")
     print(f"HUD marker delta_x={delta_x:.1f}px (minimum {args.min_shift:.1f}px)")
-    print("This diagnostic does not measure player-pod displacement, world motion, steering physics, or gameplay feel.")
     if delta_x < args.min_shift:
-        raise SystemExit("Scripted input did not move the HUD steering-state marker; this says nothing conclusive about pod/world steering.")
+        raise SystemExit("Scripted input did not move the HUD steering-state marker.")
     return 0
 
 
