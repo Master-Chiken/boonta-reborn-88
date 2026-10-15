@@ -321,8 +321,10 @@ static void draw_vertex_buffer(void)
 static void append_screen_quad(float x0, float y0, float x1, float y1,
                                float z, GXColor color)
 {
-    quad_add((Point3){ x0, y0, z }, (Point3){ x1, y0, z },
-             (Point3){ x1, y1, z }, (Point3){ x0, y1, z }, color);
+    /* guOrtho looks down -Z: positive screen-space depths are outside its clip volume. */
+    const float clip_z = -z;
+    quad_add((Point3){ x0, y0, clip_z }, (Point3){ x1, y0, clip_z },
+             (Point3){ x1, y1, clip_z }, (Point3){ x0, y1, clip_z }, color);
 }
 
 static void append_text(const char *text, float x, float y, float scale,
@@ -394,6 +396,7 @@ static void draw_hud(void)
     guMtxIdentity(identity);
     guOrtho(ortho, 0.0f, h, 0.0f, w, 0.0f, 1.0f);
     GX_LoadPosMtxImm(identity, GX_PNMTX0);
+    GX_SetCurrentMtx(GX_PNMTX0);
     GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
 
     g_vertex_count = 0;
