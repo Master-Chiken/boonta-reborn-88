@@ -248,8 +248,8 @@ jobs:
                 for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
                   title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                   geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
-                  width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
-                  height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                  width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                  height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                   if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && ( "$title" == "Dolphin" || "$title" == *" - Dolphin" || "$title" == Dolphin\ * ) ]]; then
                     window="$id"
                     break
@@ -293,9 +293,8 @@ jobs:
               print("Captured Dolphin window is missing one or more expected scene-color signatures.")
               sys.exit(1)
           PY
-              # The CI Dolphin window is 640x480 at y=40. The lower half of
-              # its viewport must contain the dark procedural road, not the
-              # near-white blank ground caused by a broken GX vertex-color path.
+              # The captured Dolphin main window is 800x480. Its lower
+              # viewport should contain the dark road, not a near-white field.
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
