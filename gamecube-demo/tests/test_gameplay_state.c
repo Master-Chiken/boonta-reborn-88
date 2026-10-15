@@ -240,6 +240,42 @@ static void pitch_tradeoff_tests(void) {
  }
 }
 
+
+static void slide_drift_tests(void) {
+ const float regular_turn = boonta_lateral_velocity_after_steering_scaled(
+     0.0f, 1.0f, 1.0f, 1.0f);
+ const float slide_turn = boonta_lateral_velocity_after_steering_slide_scaled(
+     0.0f, 1.0f, 1.0f, 1, 1.0f);
+ const float regular_coast = boonta_lateral_velocity_after_steering_scaled(
+     0.05f, 0.0f, 0.0f, 1.0f);
+ const float slide_coast = boonta_lateral_velocity_after_steering_slide_scaled(
+     0.05f, 0.0f, 0.0f, 1, 1.0f);
+
+ /* Disabled slide preserves established handling; active slide turns harder. */
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.02f, -0.3f, 0.7f, 0, 1.0f),
+     boonta_lateral_velocity_after_steering_scaled(
+         0.02f, -0.3f, 0.7f, 1.0f)));
+ assert(slide_turn > regular_turn);
+ assert(slide_coast > regular_coast);
+ assert(nearf(slide_coast, 0.04825f));
+
+ /* Drift is still bounded and invalid state/timing remains finite. */
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.2f, 1.0f, 1.0f, 1, 1.0f),
+     0.085f));
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         NAN, NAN, NAN, 1, 1.0f),
+     0.0f));
+ assert(nearf(
+     boonta_lateral_velocity_after_steering_slide_scaled(
+         0.05f, 1.0f, 0.5f, 1, NAN),
+     0.05f));
+}
+
 static void steering_inertia_tests(void) {
  /* Neutral input leaves zero lateral velocity at zero. */
  assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 0.0f, 0.0f), 0.0f));
@@ -508,6 +544,7 @@ int main(void) {
  lap_clock_tests();
  steering_input_tests();
  pitch_tradeoff_tests();
+ slide_drift_tests();
  steering_inertia_tests();
  lap_tests();
  three_lap_finish_tests();
