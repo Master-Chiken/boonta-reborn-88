@@ -10,9 +10,10 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake.
 - A clean-room procedural rival craft ahead on the track, with its own lateral motion and original placeholder geometry.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, lap-progress bar, repeating start/finish stripe, and five completed-lap indicators.
+- A procedural rival craft that approaches the player, changes lanes, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
-This is a first-render/input smoke test, not the completed racer and not a port of the commercial game. It does not yet have collision, lap counting, AI opponents, audio, saves or a title menu.
+This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and multi-rival race logic are not implemented.
 
 ## Controls
 
@@ -20,7 +21,7 @@ This is a first-render/input smoke test, not the completed racer and not a port 
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; the energy meter drains and recharges when boost is released.
-- Y: reset the demo run.
+- Y: reset the demo run, lap counter, rival, and overtake indicators.
 - Start: currently zeros the speed; a pause/menu is not implemented yet.
 
 ## Build
