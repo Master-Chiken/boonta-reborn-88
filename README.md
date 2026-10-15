@@ -4,7 +4,7 @@ An unofficial research and homebrew project aiming toward an enhanced, playable 
 
 This repository contains two distinct tracks that must not be confused:
 
-- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, including steering, throttle/brake, rechargeable boost, lap-progress cues, and a three-lap prototype run with a symbolic checkered finish marker. Its native devkitPPC/libogc build has been verified in GitHub Actions. Visible rendering and controller behavior still require a visible Dolphin or hardware test; a headless Dolphin process smoke test passes but cannot verify graphics or controls.
+- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, including steering, throttle/brake, rechargeable boost, lap-progress cues, and a three-lap prototype run with a symbolic checkered finish marker. The rival prototype has host-tested collision and overtake thresholds. Its native devkitPPC/libogc build has been verified in GitHub Actions. Visible rendering and controller behavior still require a visible Dolphin or hardware test; a headless Dolphin process smoke test passes but cannot verify graphics or controls.
 - **Step 102 source prototype**: a separate source archive investigated for a fuller reconstruction. It is not automatically part of `main`; its provenance, license, generated course data, and any assets must be reviewed before importing or redistributing it.
 
 ## Project direction
