@@ -242,8 +242,8 @@ jobs:
                 for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
                   title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                   geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
-                  width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
-                  height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                  width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                  height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
                   if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && ( "$title" == "Dolphin" || "$title" == *" - Dolphin" || "$title" == Dolphin\ * ) ]]; then
                     window="$id"
                     break
