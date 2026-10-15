@@ -58,7 +58,7 @@ static inline float boonta_pitch_input(float stick_y)
 {
     if (!isfinite(stick_y)) return 0.0f;
     if (stick_y >= -16.0f && stick_y <= 16.0f) return 0.0f;
-    if (stick_y > 0.0f) return boonta_clamp_finite_float((stick_y - 16.0f) / 112.0f, 0.0f, 1.0f);
+    if (stick_y > 0.0f) return boonta_clamp_finite_float((stick_y - 16.0f) / 111.0f, 0.0f, 1.0f);
     return boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
 }
 
