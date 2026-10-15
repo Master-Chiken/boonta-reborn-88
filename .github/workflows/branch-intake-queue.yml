@@ -1,6 +1,12 @@
 name: Branch intake queue
 
 on:
+  # Run once after this workflow definition changes on main so new intake logic
+  # is exercised against the live branch inventory. Output remains draft PRs only.
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/branch-intake-queue.yml"
   workflow_dispatch:
     inputs:
       max_prs:
