@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate scene signatures and scripted input's HUD marker; not pod physics."""
+"""Measure scripted-input pod displacement and HUD response; not full playability."""
 from __future__ import annotations
 
 import argparse
