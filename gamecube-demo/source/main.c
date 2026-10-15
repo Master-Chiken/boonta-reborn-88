@@ -749,10 +749,8 @@ int main(int argc, char **argv)
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);
-                    g_lateral_velocity = clampf_local(
-                        g_lateral_velocity + boonta_rival_contact_nudge(
-                            g_player_lateral, g_rival_lateral[rival_index]),
-                        -0.085f, 0.085f);
+                    g_lateral_velocity = boonta_lateral_velocity_after_rival_contact(
+                        g_lateral_velocity, g_player_lateral, g_rival_lateral[rival_index]);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
                     ++g_overtake_count;
