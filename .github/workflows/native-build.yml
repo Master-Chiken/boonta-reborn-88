@@ -141,7 +141,7 @@ jobs:
       - name: Install Dolphin and virtual display
         run: |
           sudo apt-get update
-          sudo apt-get install -y dolphin-emu xvfb imagemagick
+          sudo apt-get install -y dolphin-emu xvfb imagemagick xdotool x11-utils
       - name: Download the earlier minimal GX renderer as a control
         uses: actions/download-artifact@v4
         with:
@@ -151,132 +151,145 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: control-artifact
 
-      - name: Probe Dolphin frame capture with the minimal GX control
+      - name: Capture the minimal GX control through Dolphin's GUI
         id: control_capture
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          DOL="$PWD/control-artifact/boonta_gc_demo.dol"
-          DOLPHIN_USER="$RUNNER_TEMP/dolphin-control-user"
-          FRAME_DIR="$PWD/control-frames"
-          mkdir -p "$FRAME_DIR" "$DOLPHIN_USER/Config"
-          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
-          [General]
-          DumpPath = $FRAME_DIR
-
-          [Movie]
-          DumpFrames = True
-          DumpFramesSilent = True
-          EOF
-          cat > "$DOLPHIN_USER/Config/GFX.ini" <<EOF
-          [Settings]
-          DumpEFBTarget = True
-          DumpXFBTarget = True
-          DumpFramesAsImages = True
-          DumpPath = $FRAME_DIR
-          EOF
+          export DOL="$PWD/control-artifact/boonta_gc_demo.dol"
+          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-control-user"
+          export CAPTURE="$PWD/control-frame.png"
+          export DOLPHIN_LOG="$PWD/control-dolphin.log"
+          export WINDOW_TREE="$PWD/control-window-tree.txt"
+          mkdir -p "$DOLPHIN_USER"
           set +e
-          timeout --signal=TERM --kill-after=5s 15s xvfb-run -a dolphin-emu \
-            --batch --video_backend="Software Renderer" \
-            --exec="$DOL" --user="$DOLPHIN_USER" > control-frame-dump.log 2>&1
+          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
+            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
+            emu_pid=$!
+            cleanup() {
+              kill "$emu_pid" >/dev/null 2>&1 || true
+              wait "$emu_pid" >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+            window=""
+            for i in $(seq 1 15); do
+              for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
+                  window="$id"
+                  break
+                fi
+              done
+              [[ -n "$window" ]] && break
+              sleep 1
+            done
+            if [[ -z "$window" ]]; then
+              xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+              echo "No visible Dolphin window >= 300x200 was found."
+              exit 1
+            fi
+            sleep 4
+            import -window "$window" "$CAPTURE"
+            test -s "$CAPTURE"
+            identify "$CAPTURE"
+            mean=$(identify -format "%[fx:mean]" "$CAPTURE")
+            echo "Minimal GX GUI capture mean pixel intensity: $mean"
+            if awk "BEGIN { exit !($mean < 0.001) }"; then
+              echo "Control window capture is entirely black."
+              exit 1
+            fi
+          '
           status=$?
           set -e
-          cat control-frame-dump.log
-          cat "$DOLPHIN_USER/Config/Dolphin.ini"
-          cat "$DOLPHIN_USER/Config/GFX.ini"
-          find "$DOLPHIN_USER" "$FRAME_DIR" -maxdepth 7 -type f -print | tee control-files.txt
-          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
-            echo "::error::The control DOL exited unexpectedly with status $status."
+          cat "$DOLPHIN_LOG" 2>/dev/null || true
+          [[ ! -f "$WINDOW_TREE" ]] || cat "$WINDOW_TREE"
+          find "$DOLPHIN_USER" -maxdepth 5 -type f -print | tee control-files.txt
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::The known minimal GX DOL could not be captured through Dolphin's GUI. Visual CI validation will remain pending."
             exit "$status"
           fi
-          frames=$(find "$DOLPHIN_USER" "$FRAME_DIR" -type f \( -iname '*.png' -o -iname '*.bmp' \) -size +0c | head -n 1 || true)
-          if [[ -z "$frames" ]]; then
-            echo "::warning::Reference GX DOL also produced no frame; Dolphin image capture is unavailable in this CI environment, so this job cannot assess visual output."
-            exit 1
-          fi
-          cp "$frames" control-frame.png
-          identify control-frame.png
-          mean=$(identify -format '%[fx:mean]' control-frame.png)
-          echo "Control capture mean pixel intensity: $mean"
-          if awk "BEGIN { exit !($mean < 0.001) }"; then
-            echo "::warning::Reference GX DOL produced an entirely black frame; visual capture is not reliable enough to gate the build."
-            exit 1
-          fi
-          echo "Control GX DOL capture succeeded with non-black pixels."
+          echo "Control screenshot captured from the visible Dolphin window."
 
-      - name: Configure and capture emulator frames
+      - name: Capture the current GameCube prototype through Dolphin's GUI
         if: ${{ steps.control_capture.outcome == 'success' }}
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          DOL="$PWD/build-artifact/swe1r_gc_port.dol"
-          DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
-          FRAME_DIR="$PWD/dolphin-frames"
-          mkdir -p "$FRAME_DIR" "$DOLPHIN_USER/Config"
-          # Frame dumping is a Main/Movie runtime setting, not a GFX setting.
-          # DumpFramesAsImages only selects image output; MAIN_MOVIE_DUMP_FRAMES
-          # actually starts the dump. Both config files are written before launch.
-          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
-          [General]
-          DumpPath = $FRAME_DIR
-
-          [Movie]
-          DumpFrames = True
-          DumpFramesSilent = True
-          EOF
-          cat > "$DOLPHIN_USER/Config/GFX.ini" <<EOF
-          [Settings]
-          DumpEFBTarget = True
-          DumpXFBTarget = True
-          DumpFramesAsImages = True
-          DumpPath = $FRAME_DIR
-          EOF
-          echo "Effective Dolphin config:"
-          cat "$DOLPHIN_USER/Config/Dolphin.ini"
-          cat "$DOLPHIN_USER/Config/GFX.ini"
+          export DOL="$PWD/build-artifact/swe1r_gc_port.dol"
+          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
+          export CAPTURE="$PWD/dolphin-frame.png"
+          export DOLPHIN_LOG="$PWD/dolphin-gui.log"
+          export WINDOW_TREE="$PWD/dolphin-window-tree.txt"
+          mkdir -p "$DOLPHIN_USER"
           set +e
-          timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
-            --batch --video_backend="Software Renderer" \
-            --exec="$DOL" --user="$DOLPHIN_USER" > dolphin-frame-dump.log 2>&1
+          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
+            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
+            emu_pid=$!
+            cleanup() {
+              kill "$emu_pid" >/dev/null 2>&1 || true
+              wait "$emu_pid" >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+            window=""
+            for i in $(seq 1 15); do
+              for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 ]]; then
+                  window="$id"
+                  break
+                fi
+              done
+              [[ -n "$window" ]] && break
+              sleep 1
+            done
+            if [[ -z "$window" ]]; then
+              xwininfo -root -tree > "$WINDOW_TREE" 2>&1 || true
+              echo "No visible Dolphin window >= 300x200 was found."
+              exit 1
+            fi
+            sleep 4
+            import -window "$window" "$CAPTURE"
+            test -s "$CAPTURE"
+            identify "$CAPTURE"
+            mean=$(identify -format "%[fx:mean]" "$CAPTURE")
+            echo "Current prototype GUI capture mean pixel intensity: $mean"
+            if awk "BEGIN { exit !($mean < 0.001) }"; then
+              echo "Current prototype window capture is entirely black."
+              exit 1
+            fi
+          '
           status=$?
           set -e
-          cat dolphin-frame-dump.log
-          find "$DOLPHIN_USER" "$FRAME_DIR" -maxdepth 7 -type f -print | tee dolphin-files.txt
-          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
-            echo "::warning::Dolphin frame capture exited with status $status; visual validation remains pending."
+          cat "$DOLPHIN_LOG" 2>/dev/null || true
+          [[ ! -f "$WINDOW_TREE" ]] || cat "$WINDOW_TREE"
+          find "$DOLPHIN_USER" -maxdepth 5 -type f -print | tee dolphin-files.txt
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::The visible-window capture failed; rendering remains unverified."
+            exit "$status"
           fi
-          frames=$(find "$DOLPHIN_USER" "$FRAME_DIR" -type f \( -iname '*.png' -o -iname '*.bmp' \) -size +0c | head -n 1 || true)
-          if [[ -z "$frames" ]]; then
-            echo "::warning::No frame image was emitted. Visual rendering remains unverified; see the control-DOL evidence before drawing conclusions about the game."
-            exit 0
-          fi
-          cp "$frames" dolphin-frame.png
-          identify dolphin-frame.png
-          mean=$(identify -format '%[fx:mean]' dolphin-frame.png)
-          echo "Captured emulator buffer mean pixel intensity: $mean"
-          if awk "BEGIN { exit !($mean < 0.001) }"; then
-            echo "::warning::Captured emulator buffer is essentially black; visual rendering remains unverified."
-          else
-            echo "Non-black emulator buffer captured. Controller input and race completion remain unverified."
-          fi
+          echo "Current prototype screenshot captured from the visible Dolphin window."
+
       - name: Upload Dolphin visual evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dolphin-visual-evidence
           path: |
-            control-frame-dump.log
+            control-dolphin.log
+            control-window-tree.txt
             control-files.txt
             control-frame.png
-            control-frames/**
-            ${{ runner.temp }}/dolphin-control-user/Config/GFX.ini
-            ${{ runner.temp }}/dolphin-control-user/Config/Dolphin.ini
-            dolphin-frame-dump.log
+            ${{ runner.temp }}/dolphin-control-user/**
+            dolphin-gui.log
+            dolphin-window-tree.txt
             dolphin-files.txt
             dolphin-frame.png
-            dolphin-frames/**
-            ${{ runner.temp }}/dolphin-frame-user/Config/GFX.ini
-            ${{ runner.temp }}/dolphin-frame-user/Config/Dolphin.ini
+            ${{ runner.temp }}/dolphin-frame-user/**
           if-no-files-found: warn
           retention-days: 7
