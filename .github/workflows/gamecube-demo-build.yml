@@ -157,3 +157,95 @@ jobs:
           path: dolphin-smoke.log
           if-no-files-found: warn
           retention-days: 7
+
+  dolphin-software-frame-diagnostic:
+    name: Experimental Dolphin software-renderer frame diagnostic (non-blocking)
+    continue-on-error: true
+    needs: [build-gamecube-demo, host-pause-state-tests]
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Download the DOL built by this workflow
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned download-artifact v4.3.0
+        with:
+          name: boonta-reborn-gamecube-first-render
+          path: build-artifact
+
+      - name: Install free Dolphin software-renderer diagnostic dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends dolphin-emu xvfb xauth imagemagick qt6-qpa-plugins
+          export PATH="/usr/games:$PATH"
+          export QT_QPA_PLATFORM=offscreen
+          export HOME=/tmp/dolphin-render-home
+          mkdir -p "$HOME"
+          chmod 700 "$HOME"
+          dolphin-emu --version
+
+      - name: Launch the DOL and capture a non-blocking diagnostic frame
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build-artifact/boonta_gc_demo.dol
+          export PATH="/usr/games:$PATH"
+          export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
+          export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
+          export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
+          export HOME=/tmp/dolphin-render-home
+          mkdir -p "$HOME" /tmp/dolphin-render-user
+          chmod 700 "$HOME"
+          set +e
+          timeout --signal=TERM --kill-after=3s 18s xvfb-run -a -s "-screen 0 1280x720x24" \
+            env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
+            bash -c '
+              set -euo pipefail
+              dolphin-emu --batch --video_backend="Software Renderer" \
+                --exec="$DOL" --user=/tmp/dolphin-render-user > "$DOLPHIN_LOG" 2>&1 &
+              emu_pid=$!
+              cleanup() {
+                kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                wait "$emu_pid" >/dev/null 2>&1 || true
+              }
+              trap cleanup EXIT
+              sleep 8
+              if ! kill -0 "$emu_pid" 2>/dev/null; then
+                cat "$DOLPHIN_LOG"
+                echo "Dolphin exited before the software-renderer capture."
+                exit 1
+              fi
+              import -window root "$CAPTURE"
+              test -s "$CAPTURE"
+              identify "$CAPTURE"
+              colors=$(magick "$CAPTURE" -resize 160x90 -format %k info:)
+              echo "Software-renderer root capture has $colors distinct colors."
+              if [[ "$colors" -lt 24 ]]; then
+                echo "Capture appears blank or nearly blank; visual rendering remains unverified."
+                exit 1
+              fi
+              echo "A non-blank software-renderer diagnostic frame was captured; this is not yet proof of controller response or a completed race."
+            '
+          status=$?
+          set -e
+          [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
+          if [[ "$status" -ne 0 ]]; then
+            echo "::warning::The optional software-renderer capture failed. Native build and headless smoke remain separate results."
+            exit "$status"
+          fi
+
+      - name: Upload the optional frame and log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # pinned upload-artifact v7.0.2
+        with:
+          name: gamecube-dolphin-software-frame-diagnostic
+          path: |
+            dolphin-software-frame.png
+            dolphin-render.log
+          if-no-files-found: warn
+          retention-days: 7
