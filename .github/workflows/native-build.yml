@@ -148,6 +148,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y dolphin-emu qt6-qpa-plugins qt6-wayland
           dolphin-emu --version || true
+          echo "Qt GUI diagnostics: D-Bus session + explicit XCB/software-rendering environment enabled for capture attempts."
+          command -v dbus-run-session
       - name: Download the earlier minimal GX renderer as a control
         uses: actions/download-artifact@v4
         with:
@@ -174,7 +176,7 @@ jobs:
           # screenshot is not merely the library window.
           printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
           set +e
-          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
+          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
@@ -250,7 +252,7 @@ jobs:
           mkdir -p "$DOLPHIN_USER/Config"
           printf '[Display]\\nRenderToMain = True\\n' > "$DOLPHIN_USER/Config/Dolphin.ini"
           set +e
-          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a bash -euo pipefail -c '
+          timeout --signal=TERM --kill-after=5s 25s xvfb-run -a dbus-run-session -- env QT_QPA_PLATFORM=xcb QT_X11_NO_MITSHM=1 QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1 QT_DEBUG_PLUGINS=1 bash -euo pipefail -c '
             dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$DOLPHIN_LOG" 2>&1 &
             emu_pid=$!
             cleanup() {
