@@ -6,7 +6,7 @@ Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star W
 
 ## Source-of-truth tracks
 
-1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural GX rendering, controller input code, throttle/brake, boost, inertial steering, off-road drag, rail recovery, a simple rival, lap/finish state, pause/reset logic, host regressions, and automated native-build/render checks.
+1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural GX rendering, controller input code, throttle/brake, boost and overheat/cooldown, inertial steering, off-road drag, rail recovery, three staggered procedural rivals, total/current-lap/best-lap clocks, a three-lap finish state, pause/reset logic, elapsed-time-normalized 50/60 Hz gameplay updates, strict host regressions, and automated native-build/render checks.
 2. **Step 102 source archive:** a separate candidate for the fuller gameplay baseline. Do not merge its draft import PRs wholesale. Source authorship/license, generated track data, models/materials/audio, and dependencies require file-by-file review before redistribution.
 3. **SW_RACER_RE and other external projects:** research references only. Keep PC observations separate from GameCube/Wii hypotheses. Review licenses before copying code or data.
 4. **Dreamcast/KallistiOS starter and Wii64 tools:** separate research tracks; neither is the native GameCube release milestone.
@@ -16,6 +16,8 @@ Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star W
 ### Verified in CI
 - [x] C99 host regressions for gameplay transitions, steering inertia, analog/D-pad mapping, lap boundaries, three-lap finish state, rival events, off-road response, and rail recovery.
 - [x] Deterministic host simulation reaches the configured three-lap finish using shared race-distance/lap helpers.
+- [x] Cadence regression compares one simulated second at 60 updates and 50 updates, covering acceleration/coasting/braking, boost/heat, steering movement, off-road drag, distance, and rival motion.
+- [x] Speed and lap-boundary helpers recover or reject non-finite values instead of propagating NaN/infinity into the race state.
 - [x] Native clean-room GameCube DOL and ELF build through devkitPPC/libogc.
 - [x] DOL/ELF artifact structure validation and DOL padding.
 - [x] Bounded Dolphin null-video process smoke test.

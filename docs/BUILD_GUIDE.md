@@ -6,7 +6,7 @@ This guide separates the **clean-room procedural GameCube demo** currently built
 
 ## Current mainline state
 
-The clean-room demo has a native devkitPPC/libogc DOL and ELF build, artifact-structure validation, C99 host regression tests, and a bounded Dolphin headless process smoke test in GitHub Actions. A prior CI run also captured a visible procedural scene using Dolphin's Software Renderer.
+The clean-room demo now includes three staggered procedural rivals, race/current-lap/best-lap clocks, finite-state guards for speed/lap transitions, and elapsed-time-scaled gameplay updates that preserve the 60 Hz tuning while compensating for 50 Hz cadence. It has a native devkitPPC/libogc DOL/ELF build, artifact-structure validation, strict C99 gameplay/pause tests, and a bounded Dolphin headless process smoke test. A prior CI run captured a visible procedural scene using Dolphin's Software Renderer.
 
 These checks are deliberately separate:
 - **Host tests** validate the named deterministic functions and state transitions.
@@ -34,7 +34,7 @@ cc -std=c99 -Wall -Wextra -Werror -pedantic \
 python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 ```
 
-The gameplay tests cover speed/boost inputs, analog-stick and D-pad mapping, steering inertia/damping, lap boundaries and finish state, a deterministic simulated three-lap progression, rival collision/overtake thresholds, off-road drag, and rail recovery. The simulation is not a controller test.
+The gameplay tests cover speed/boost inputs, analog-stick and D-pad mapping, steering inertia/damping, 50/60 Hz cadence consistency (including accelerate/coast/brake), lap boundaries and finish state, a deterministic simulated three-lap progression, rival collision/overtake thresholds, off-road drag, rail recovery, and non-finite speed/lap input guards. The simulation is not a controller test.
 
 ## Reproduce the native build
 
@@ -57,6 +57,7 @@ GitHub Actions runs the native build in the `devkitpro/devkitppc` container, pad
 
 | Evidence | Result | Boundary |
 |---|---|---|
+| Current mainline after PR #100, commit `7d46e90de0e9db4e9ed36f88012ac15ab2491f18` | [Post-merge CI run 38744031286](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286): host tests, native DOL/ELF build, artifact validation, and 12-second Dolphin null-video smoke succeeded; the optional Software Renderer job was still running when checked. | Confirms the required automated gates for the current timing/speed-guard mainline. It is not live-controller or complete-race proof. |
 | Mainline native build on commit `adf4b596f18affa68dd70f33fb90cdfc60821824` | [CI run 38738237495 passed](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38738237495) | Host tests, DOL/ELF build, artifact validation, and headless smoke for the code then on main. |
 | Visible procedural-scene capture | [CI run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531) | Visible road, edge rails, center markers, player pod, and rival pod in Dolphin Software Renderer. Not live input or a completed race. |
 | Steering-inertia regressions | [PR #84 / run 38737739411](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38737739411), merged | Deterministic host tests, native build, artifact validation, headless smoke, and optional frame diagnostic passed on the exact PR head. |
