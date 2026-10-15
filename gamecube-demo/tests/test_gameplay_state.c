@@ -29,6 +29,27 @@ static void boost_tests(void) {
  assert(nearf(boonta_boost_after_frame(0.999f,0),1.0f));
 }
 
+static void steering_input_tests(void) {
+ /* The analog stick maps its signed byte range to a normalized steering value. */
+ assert(nearf(boonta_steering_input(0.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(64.0f, 0, 0), 0.5f));
+ assert(nearf(boonta_steering_input(-64.0f, 0, 0), -0.5f));
+ assert(nearf(boonta_steering_input(127.0f, 0, 0), 127.0f / 128.0f));
+ assert(nearf(boonta_steering_input(-128.0f, 0, 0), -1.0f));
+
+ /* D-pad steering adds to analog input, with bounded saturation. */
+ assert(nearf(boonta_steering_input(0.0f, 1, 0), -0.7f));
+ assert(nearf(boonta_steering_input(0.0f, 0, 1), 0.7f));
+ assert(nearf(boonta_steering_input(64.0f, 1, 0), -0.2f));
+ assert(nearf(boonta_steering_input(-64.0f, 0, 1), 0.2f));
+ assert(nearf(boonta_steering_input(127.0f, 0, 1), 1.0f));
+ assert(nearf(boonta_steering_input(-128.0f, 1, 0), -1.0f));
+
+ /* Simultaneous opposite D-pad directions cancel; valid stick input remains. */
+ assert(nearf(boonta_steering_input(0.0f, 1, 1), 0.0f));
+ assert(nearf(boonta_steering_input(32.0f, 1, 1), 0.25f));
+}
+
 static void steering_inertia_tests(void) {
  /* Neutral input leaves zero lateral velocity at zero. */
  assert(nearf(boonta_lateral_velocity_after_steering(0.0f, 0.0f, 0.0f), 0.0f));
@@ -180,6 +201,7 @@ static void simulated_three_lap_run_tests(void) {
 int main(void) {
  speed_tests();
  boost_tests();
+ steering_input_tests();
  steering_inertia_tests();
  lap_tests();
  three_lap_finish_tests();
