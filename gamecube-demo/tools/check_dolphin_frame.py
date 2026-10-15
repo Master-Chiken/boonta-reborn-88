@@ -22,7 +22,13 @@ def scene_signatures(image: Image.Image) -> dict[str, int]:
 
 
 def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
-    """Return (horizontal center, left edge, right edge, pixel count) for pod-top pixels."""
+    """Return robust (center, left edge, right edge, pixel count) for pod-top pixels.
+
+    The camera scene can contain a few unrelated pixels with a similar cyan
+    signature. Use trimmed bounds for the pod silhouette, while separately
+    rejecting a meaningful number of mask pixels touching the image border.
+    This avoids false "clipped pod" failures from one-pixel canyon/rail accents.
+    """
     image = image.convert("RGB")
     pod_x = []
     # The player's bright cyan top is approximately C_POD_TOP = (33, 164, 220).
@@ -34,11 +40,24 @@ def player_pod_bounds(image: Image.Image) -> tuple[float, int, int, int]:
             r, g, b = image.getpixel((x, y))
             if r < 70 and 100 < g < 200 and b > 170 and b > g * 1.15 and b > r * 2:
                 pod_x.append(x)
-    if len(pod_x) < 50:
+    pixel_count = len(pod_x)
+    if pixel_count < 50:
         raise ValueError(
-            f"No stable player-pod surface pixels in lower viewport; found {len(pod_x)}."
+            f"No stable player-pod surface pixels in lower viewport; found {pixel_count}."
         )
-    return sum(pod_x) / len(pod_x), min(pod_x), max(pod_x), len(pod_x)
+
+    border_hits = sum(1 for x in pod_x if x <= 1 or x >= image.width - 2)
+    border_limit = max(3, int(pixel_count * 0.01))
+    if border_hits > border_limit:
+        raise ValueError(
+            f"Player pod may be clipped: {border_hits} matching pixels touch the frame border "
+            f"(limit {border_limit} of {pixel_count})."
+        )
+
+    pod_x.sort()
+    trim = int(pixel_count * 0.02)
+    robust_x = pod_x[trim:pixel_count - trim] if trim else pod_x
+    return sum(robust_x) / len(robust_x), robust_x[0], robust_x[-1], pixel_count
 
 
 def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
