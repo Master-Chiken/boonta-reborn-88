@@ -1,12 +1,11 @@
-import importlib.util
+import sys
 import unittest
 from pathlib import Path
 
-MODULE_PATH = Path(__file__).parents[1] / "compare_wii64_rice_ini.py"
-SPEC = importlib.util.spec_from_file_location("compare_wii64_rice_ini", MODULE_PATH)
-MODULE = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(MODULE)
+# Make the sibling tools directory importable when unittest discovers this file.
+TOOLS_DIR = Path(__file__).parents[1]
+sys.path.insert(0, str(TOOLS_DIR))
+import compare_wii64_rice_ini as MODULE
 
 
 class CompareRiceIniTests(unittest.TestCase):
