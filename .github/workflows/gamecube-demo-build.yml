@@ -227,7 +227,7 @@ jobs:
               import -window root "$CAPTURE"
               test -s "$CAPTURE"
               identify "$CAPTURE"
-              colors=$(magick "$CAPTURE" -resize 160x90 -format %k info:)
+              colors=$(convert "$CAPTURE" -resize 160x90 -format %k info:)
               echo "Software-renderer root capture has $colors distinct colors."
               if [[ "$colors" -lt 24 ]]; then
                 echo "Capture appears blank or nearly blank; visual rendering remains unverified."
