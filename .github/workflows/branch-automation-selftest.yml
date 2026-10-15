@@ -87,7 +87,7 @@ jobs:
 
           # Apply the same patch to main under a different commit SHA.
           git -C "$tmp/repo" checkout -q main
-          git -C "$tmp/repo" cherry-pick -q "$equivalent_sha"
+          git -C "$tmp/repo" cherry-pick "$equivalent_sha" >/dev/null
           equivalent_result="$(git -C "$tmp/repo" cherry main candidate)"
           printf '%s\n' "$equivalent_result"
           grep -F -- "- $equivalent_sha" <<< "$equivalent_result"
