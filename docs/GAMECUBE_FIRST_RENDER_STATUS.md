@@ -61,3 +61,10 @@ The prototype includes a rechargeable boost meter. Hold **A + X** to consume ene
 - Dolphin/console runtime test of the boost mechanic: **not run**
 
 The successful build establishes that the updated source compiles and produces structurally valid artifacts. It does not establish that the new meter renders correctly or that the controls behave as intended at runtime; those still require a visible emulator/console test.
+
+## Off-road drag and rail-contact regression coverage
+
+The existing driving loop's off-road speed loss (outside lateral position +/-3.15) and rail recovery (outside +/-3.85) are now factored into dependency-free gameplay helpers used by the live GameCube loop. Host tests cover exact boundaries, symmetric penalties, speed clamping, lateral-position clamping, and the attenuated velocity bounce-back.
+
+These tests verify the programmed transitions only. A visible Dolphin/console run is still required to confirm that the road-edge positions and collision response feel correct in the rendered scene.
+

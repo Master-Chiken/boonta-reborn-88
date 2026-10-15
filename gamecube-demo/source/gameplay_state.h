@@ -79,4 +79,40 @@ static inline float boonta_rival_contact_nudge(float player_lateral,
     return player_lateral <= rival_lateral ? -0.035f : 0.035f;
 }
 
+
+/* Keep the demo's existing off-road and rail-edge response independently testable. */
+static inline float boonta_abs_float(float value)
+{
+    return value < 0.0f ? -value : value;
+}
+
+static inline float boonta_speed_after_offroad(float speed, float player_lateral)
+{
+    const float distance_from_center = boonta_abs_float(player_lateral);
+    if (distance_from_center > 3.15f) {
+        const float excess = distance_from_center - 3.15f;
+        speed -= 0.008f + excess * 0.012f;
+    }
+    if (speed < 0.0f) return 0.0f;
+    if (speed > 1.0f) return 1.0f;
+    return speed;
+}
+
+static inline int boonta_is_past_rail(float player_lateral)
+{
+    return boonta_abs_float(player_lateral) > 3.85f;
+}
+
+static inline float boonta_lateral_after_rail_contact(float player_lateral)
+{
+    if (player_lateral > 3.85f) return 3.85f;
+    if (player_lateral < -3.85f) return -3.85f;
+    return player_lateral;
+}
+
+static inline float boonta_lateral_velocity_after_rail_contact(float lateral_velocity)
+{
+    return lateral_velocity * -0.35f;
+}
+
 #endif
