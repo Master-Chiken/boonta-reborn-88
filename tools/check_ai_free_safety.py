@@ -22,6 +22,8 @@ def read(path: str) -> str:
 dispatch = read(".github/workflows/gemini-dispatch.yml")
 invoke = read(".github/workflows/gemini-invoke.yml")
 execute = read(".github/workflows/gemini-plan-execute.yml")
+daily = read(".github/workflows/ai-daily-coordinator.yml")
+daily_prompt = read(".github/commands/gemini-daily-coordinator.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
@@ -89,6 +91,25 @@ if "GEMINI_WRITE_ENABLED" not in instructions or "exactly true" not in instructi
     errors.append("GEMINI.md must document the exact write-enable gate")
 if "payment method" not in instructions.lower():
     errors.append("GEMINI.md must forbid adding a payment method")
+
+# The scheduled coordinator must remain read-only and run no more than once daily.
+if 'cron: "15 7 * * *"' not in daily:
+    errors.append("Daily coordinator must have one fixed daily schedule")
+if "contents: write" in daily or "pull-requests: write" in daily:
+    errors.append("Daily coordinator must not have repository/code write permissions")
+if 'issues: write' not in daily:
+    errors.append("Daily coordinator needs issue-comment permission to publish its report")
+for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', '"delete_file"', '"create_pull_request"', '"merge_pull_request"'):
+    if forbidden in daily:
+        errors.append(f"Daily coordinator must not expose write tool {forbidden}")
+if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
+    errors.append("Daily coordinator must use the existing Gemini API-key secret only")
+if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
+    errors.append("Daily coordinator must keep the explicitly selected free-tier model")
+if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
+    errors.append("Daily coordinator prompt must enforce read-only and €0 constraints")
+if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
+    errors.append("Daily coordinator prompt must preserve branch and provenance safety")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
