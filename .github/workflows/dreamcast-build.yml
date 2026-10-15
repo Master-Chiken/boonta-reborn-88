@@ -33,7 +33,7 @@ jobs:
         run: test -s dreamcast/boonta_dc.elf
 
       - name: Upload Dreamcast ELF
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: boonta-reborn-dreamcast-elf
           path: dreamcast/boonta_dc.elf
