@@ -149,16 +149,26 @@ jobs:
           DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
           FRAME_DIR="$PWD/dolphin-frames"
           mkdir -p "$FRAME_DIR" "$DOLPHIN_USER/Config"
-          # Write Dolphin's graphics config explicitly; CLI override syntax varies by version.
+          # Frame dumping is a Main/Movie runtime setting, not a GFX setting.
+          # DumpFramesAsImages only selects image output; MAIN_MOVIE_DUMP_FRAMES
+          # actually starts the dump. Both config files are written before launch.
+          cat > "$DOLPHIN_USER/Config/Dolphin.ini" <<EOF
+          [General]
+          DumpPath = $FRAME_DIR
+
+          [Movie]
+          DumpFrames = True
+          DumpFramesSilent = True
+          EOF
           cat > "$DOLPHIN_USER/Config/GFX.ini" <<EOF
           [Settings]
           DumpEFBTarget = True
           DumpXFBTarget = True
-          DumpFrames = True
           DumpFramesAsImages = True
           DumpPath = $FRAME_DIR
           EOF
-          echo "Effective graphics configuration:"
+          echo "Effective Dolphin config:"
+          cat "$DOLPHIN_USER/Config/Dolphin.ini"
           cat "$DOLPHIN_USER/Config/GFX.ini"
           set +e
           timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
@@ -197,5 +207,6 @@ jobs:
             dolphin-frame.png
             dolphin-frames/**
             ${{ runner.temp }}/dolphin-frame-user/Config/GFX.ini
+            ${{ runner.temp }}/dolphin-frame-user/Config/Dolphin.ini
           if-no-files-found: warn
           retention-days: 7
