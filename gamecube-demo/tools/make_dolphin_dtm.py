@@ -72,6 +72,11 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID)
     header[0x0C] = 0  # bFromSaveState=False; starts from boot.
     struct.pack_into("<QQQQ", header, 0x0D, frame_count, frame_count, 0, 0)
     struct.pack_into("<I", header, 0x2D, 0)  # numRerecords
+    # Dolphin stops movie playback once emulated ticks exceed DTMHeader.tickCount.
+    # The demo's test movie boots an executable, so use a conservative PAL-safe
+    # tick budget (486 MHz / 50 Hz = 9.72M ticks per frame); input bytes still
+    # end playback exactly at frame_count.
+    struct.pack_into("<Q", header, 0xED, frame_count * 10_000_000)
     author = b"Boonta CI"
     header[0x31:0x31 + len(author)] = author
     header[0x89] = 0  # bSaveConfig=False; do not override emulator settings.
