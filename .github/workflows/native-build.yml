@@ -137,8 +137,10 @@ jobs:
 
   dolphin-visual:
     needs: [build, dolphin-smoke]
-    runs-on: ubuntu-26.04
-    timeout-minutes: 3
+    # Ubuntu 24.04's stable Qt/X11 stack is used for GUI capture; the 26.04
+    # package currently starts Dolphin without mapping a visible window.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - name: Download the freshly built DOL
         uses: actions/download-artifact@v4
@@ -164,8 +166,7 @@ jobs:
           dbus-run-session -- xvfb-run -a bash -c '
             set +e
             export QT_QPA_PLATFORM=xcb
-            export QT_DEBUG_PLUGINS=1
-            dolphin-emu --platform xcb --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
+            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
             pid=$!
             window=""
             for attempt in $(seq 1 30); do
