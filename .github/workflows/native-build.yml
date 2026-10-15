@@ -137,9 +137,7 @@ jobs:
 
   dolphin-visual:
     needs: [build, dolphin-smoke]
-    # Ubuntu 24.04's stable Qt/X11 stack is used for GUI capture; the 26.04
-    # package currently starts Dolphin without mapping a visible window.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - name: Download the freshly built DOL
@@ -148,70 +146,47 @@ jobs:
           name: swe1r-gc-build-evidence
           path: build-artifact
 
-      - name: Install Dolphin, virtual display, and screenshot utility
+      - name: Install Dolphin and virtual display
         run: |
           sudo apt-get update
-          sudo apt-get install -y dolphin-emu xvfb imagemagick xdotool x11-utils dbus-daemon
+          sudo apt-get install -y dolphin-emu xvfb imagemagick
 
-      - name: Try rendering the DOL and capture the first frame
+      - name: Dump emulator-rendered frames without the GUI
         shell: bash
         run: |
           set -euo pipefail
           export DOL="$PWD/build-artifact/swe1r_gc_port.dol"
-          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-visual-user"
-          export LOG="$PWD/dolphin-visual.log"
-          export SCREEN="$PWD/dolphin-frame.png"
-          export WINDOWS="$PWD/dolphin-window-tree.txt"
+          export DOLPHIN_USER="$RUNNER_TEMP/dolphin-frame-user"
+          mkdir -p "$PWD/dolphin-frames"
           set +e
-          dbus-run-session -- xvfb-run -a bash -c '
-            set +e
-            export QT_QPA_PLATFORM=xcb
-            dolphin-emu --video_backend="Software Renderer" --exec="$DOL" --user="$DOLPHIN_USER" > "$LOG" 2>&1 &
-            pid=$!
-            window=""
-            for attempt in $(seq 1 30); do
-              window=$(xdotool search --onlyvisible --name "Dolphin" 2>/dev/null | head -n1 || true)
-              if [[ -n "$window" ]]; then break; fi
-              sleep 1
-            done
-            xwininfo -root -tree > "$WINDOWS" 2>&1
-            if [[ -n "$window" ]]; then
-              echo "Found visible Dolphin window: $window" >> "$LOG"
-              sleep 2
-              import -window "$window" "$SCREEN"
-              capture_status=$?
-            else
-              echo "No visible Dolphin window appeared within 30 seconds." >> "$LOG"
-              echo "--- Dolphin process state ---" >> "$LOG"
-              ps -eo pid,ppid,stat,etime,args | grep -E "[d]olphin-emu|[d]olphin" >> "$LOG" || true
-              import -window root "$SCREEN"
-              capture_status=1
-            fi
-            echo "--- Dolphin user logs ---" >> "$LOG"
-            find "$DOLPHIN_USER" -maxdepth 6 -type f \( -name "*.log" -o -name "*.txt" \) -print -exec tail -n 200 {} \; >> "$LOG" 2>/dev/null || true
-            kill -TERM "$pid" 2>/dev/null || true
-            sleep 1
-            kill -KILL "$pid" 2>/dev/null || true
-            wait "$pid" 2>/dev/null || true
-            exit "$capture_status"
-          '
+          timeout --signal=TERM --kill-after=5s 20s xvfb-run -a dolphin-emu \
+            --batch --video_backend="Software Renderer" \
+            --config="Core.Movie.DumpFrames=True" \
+            --config="Graphics.Settings.DumpFramesAsImages=True" \
+            --config="Graphics.Settings.DumpPath=$PWD/dolphin-frames" \
+            --exec="$DOL" --user="$DOLPHIN_USER" > dolphin-frame-dump.log 2>&1
           status=$?
           set -e
-          cat dolphin-visual.log
-          cat dolphin-window-tree.txt
-          if [[ "$status" -ne 0 ]]; then
-            echo "::error::Could not capture a Dolphin software-renderer frame (status $status)."
+          cat dolphin-frame-dump.log
+          if [[ "$status" -ne 0 && "$status" -ne 124 && "$status" -ne 137 && "$status" -ne 143 ]]; then
+            echo "::error::Dolphin frame-dump run exited unexpectedly with status $status."
             exit "$status"
           fi
-          test -s dolphin-frame.png
-          identify dolphin-frame.png
-          mean=$(identify -format '%[fx:mean]' dolphin-frame.png)
-          echo "Captured frame mean pixel intensity: $mean"
-          if awk "BEGIN { exit !($mean < 0.001) }"; then
-            echo "::error::Captured frame is entirely black; visible game rendering is not verified."
+          find "$DOLPHIN_USER" "$PWD/dolphin-frames" -maxdepth 6 -type f -print
+          frames=$(find "$DOLPHIN_USER" "$PWD/dolphin-frames" -type f -iname '*.png' | head -n 1 || true)
+          if [[ -z "$frames" ]]; then
+            echo "::error::Dolphin did not produce a PNG frame dump; rendering is not yet verified."
             exit 1
           fi
-          echo "Non-black frame captured. Controller input and race completion are still unverified."
+          cp "$frames" dolphin-frame.png
+          identify dolphin-frame.png
+          mean=$(identify -format '%[fx:mean]' dolphin-frame.png)
+          echo "Captured emulator frame mean pixel intensity: $mean"
+          if awk "BEGIN { exit !($mean < 0.001) }"; then
+            echo "::error::Captured emulator frame is entirely black."
+            exit 1
+          fi
+          echo "Non-black frame dumped by Dolphin. Controller input and race completion remain unverified."
 
       - name: Upload Dolphin visual evidence
         if: always()
@@ -219,7 +194,8 @@ jobs:
         with:
           name: dolphin-visual-evidence
           path: |
-            dolphin-visual.log
+            dolphin-frame-dump.log
             dolphin-frame.png
+            dolphin-frames/**
           if-no-files-found: warn
           retention-days: 7
