@@ -417,9 +417,28 @@ static void simulated_three_lap_run_tests(void) {
  assert(nearf(speed, 0.0f));
 }
 
+static void invalid_scaled_frame_tests(void) {
+ const float invalid_scales[] = { NAN, INFINITY, -INFINITY, -1.0f };
+ unsigned int i;
+
+ for (i = 0U; i < sizeof(invalid_scales) / sizeof(invalid_scales[0]); ++i) {
+  const float scale = invalid_scales[i];
+  assert(nearf(boonta_sanitize_frame_scale(scale), 0.0f));
+  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, scale), 0.5f));
+  assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, scale), 0.5f));
+  assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, scale), 0.5f));
+  assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, scale), 0.04f));
+  assert(nearf(boonta_lateral_position_after_frame(1.0f, 0.04f, scale), 1.0f));
+  assert(nearf(boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, scale), 10.0f));
+  assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, scale), -18.0f));
+  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, scale), 0.5f));
+ }
+}
+
 int main(void) {
  finite_clamp_tests();
  frame_scale_tests();
+ invalid_scaled_frame_tests();
  cadence_consistency_tests();
  speed_tests();
  boost_tests();
