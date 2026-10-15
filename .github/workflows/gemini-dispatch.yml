@@ -41,7 +41,7 @@ jobs:
             const request = process.env.REQUEST || '';
             const association = process.env.AUTHOR_ASSOCIATION || '';
             let command = 'fallthrough';
-            if (/^@gemini-cli\\s+\\/approve(?:\\s|$)/.test(request)) {
+            if (/^@gemini-cli\s+\/approve(?:\s|$)/.test(request)) {
               // Only the repository owner may authorize the write-capable workflow.
               command = association === 'OWNER' ? 'approve' : 'approve-denied';
             } else if (request.startsWith('@gemini-cli')) {
