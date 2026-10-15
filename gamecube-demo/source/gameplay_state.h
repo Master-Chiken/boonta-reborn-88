@@ -48,6 +48,31 @@ static inline float boonta_speed_after_input(float speed, int accelerating, int 
 {
     return boonta_speed_after_input_scaled(speed, accelerating, braking, 1.0f);
 }
+
+/*
+ * Racer-style pitch: a forward/up stick push means nose-down. Pitching down
+ * rewards risk with more forward travel but reduces steering authority; pitching
+ * up trades speed for tighter control. Ignore small stick noise around center.
+ */
+static inline float boonta_pitch_input(float stick_y)
+{
+    if (!isfinite(stick_y)) return 0.0f;
+    if (stick_y >= -16.0f && stick_y <= 16.0f) return 0.0f;
+    if (stick_y > 0.0f) return boonta_clamp_finite_float((stick_y - 16.0f) / 112.0f, 0.0f, 1.0f);
+    return boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
+}
+
+/* While pitching up (negative), steering grows up to +35%; nose-down loses 40%. */
+static inline float boonta_steering_after_pitch(float steering, float pitch_down)
+{
+    float steering_scale;
+    if (!isfinite(steering)) steering = 0.0f;
+    if (!isfinite(pitch_down)) pitch_down = 0.0f;
+    pitch_down = boonta_clamp_finite_float(pitch_down, -1.0f, 1.0f);
+    steering = boonta_clamp_finite_float(steering, -1.0f, 1.0f);
+    steering_scale = 1.0f - (pitch_down >= 0.0f ? 0.40f : 0.35f) * pitch_down;
+    return boonta_clamp_finite_float(steering * steering_scale, -1.0f, 1.0f);
+}
 static inline int boonta_boost_should_activate(int x_held, int a_held, float boost)
 {
     return x_held && a_held && boost > 0.01f;
@@ -182,6 +207,23 @@ static inline float boonta_distance_after_frame_scaled(float distance, float spe
 static inline float boonta_distance_after_frame(float distance, float speed, int boost_active)
 {
     return boonta_distance_after_frame_scaled(distance, speed, boost_active, 1.0f);
+}
+
+/* Apply the pitch trade-off to forward progress without corrupting the HUD's 0..1 speed state. */
+static inline float boonta_distance_after_pitch_scaled(float distance, float speed,
+                                                        int boost_active, float pitch_down,
+                                                        float frame_scale)
+{
+    float motion_scale;
+    float next_distance;
+    if (!isfinite(distance) || distance < 0.0f) distance = 0.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
+    pitch_down = boonta_clamp_finite_float(pitch_down, -1.0f, 1.0f);
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
+    motion_scale = 1.0f + pitch_down * 0.12f;
+    next_distance = distance + speed * (boost_active ? 0.22f : 0.14f) *
+                    motion_scale * frame_scale;
+    return isfinite(next_distance) && next_distance >= distance ? next_distance : distance;
 }
 
 static inline int boonta_lap_was_crossed(float previous_distance, float current_distance, float lap_distance)
