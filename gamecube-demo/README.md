@@ -6,7 +6,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 
 - Native GameCube GX initialization and 3D colored-vertex rendering.
 - A procedural scrolling curved road with edge strips and barrier rails.
-- An original placeholder twin-engine hover craft built from primitive geometry.
+- An original procedural twin-engine racer with separated engine nacelles, visible tether strips, a raised cockpit canopy, and exhaust plumes that lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle and brake. Off-road drag and rail-bounce boundaries are covered by strict host unit tests.
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
