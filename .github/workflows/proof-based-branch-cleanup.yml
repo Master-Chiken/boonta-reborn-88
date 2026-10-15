@@ -65,7 +65,7 @@ jobs:
             inventory
 
             current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
-            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].protected // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)]([0] // {}) | .protected | if . == null then empty else tostring end' "$RUNNER_TEMP/branches.json")"
             if [ -z "$current_sha" ]; then
               echo "| `$name` | `$expected_sha` | Already absent; no action |" >> "$GITHUB_STEP_SUMMARY"
               skipped=$((skipped + 1))
@@ -95,7 +95,7 @@ jobs:
             # Recheck tip, protection and open PR status immediately before deletion.
             inventory
             current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
-            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].protected // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)]([0] // {}) | .protected | if . == null then empty else tostring end' "$RUNNER_TEMP/branches.json")"
             if [ "$current_sha" != "$expected_sha" ] || [ "$protected" != "false" ] || jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
               echo "| `$name` | `$expected_sha` | PRESERVED: final safety check failed |" >> "$GITHUB_STEP_SUMMARY"
               skipped=$((skipped + 1))
