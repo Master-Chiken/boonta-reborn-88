@@ -23,13 +23,19 @@ static inline float boonta_frame_scale_from_delta(float delta_seconds)
     return delta_seconds * 60.0f;
 }
 
+/* Invalid frame scales must never propagate NaN/infinity into simulation state. */
+static inline float boonta_sanitize_frame_scale(float frame_scale)
+{
+    if (!isfinite(frame_scale) || frame_scale < 0.0f) return 0.0f;
+    return frame_scale;
+}
+
 static inline float boonta_speed_after_input_scaled(float speed, int accelerating,
                                                       int braking, float frame_scale)
 {
     /* Recover deterministically from corrupted simulation state or timing. */
     if (!isfinite(speed)) speed = 0.0f;
-    /* A non-finite scale would otherwise propagate NaN through the result. */
-    if (!isfinite(frame_scale) || frame_scale < 0.0f) frame_scale = 0.0f;
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     if (accelerating) speed += 0.012f * frame_scale;
     else speed -= 0.003f * frame_scale;
     if (braking) speed -= 0.022f * frame_scale;
@@ -48,6 +54,7 @@ static inline int boonta_boost_should_activate(int x_held, int a_held, float boo
 }
 static inline float boonta_boost_after_frame_scaled(float boost, int active, float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     if (active) boost -= 0.0055f * frame_scale;
     else boost += 0.0015f * frame_scale;
     if (boost < 0.0f) return 0.0f;
@@ -63,6 +70,7 @@ static inline float boonta_boost_after_frame(float boost, int active)
 static inline float boonta_engine_heat_after_frame_scaled(float heat, int active,
                                                            float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     if (active) heat += 0.0065f * frame_scale;
     else heat -= 0.0045f * frame_scale;
     if (heat < 0.0f) return 0.0f;
@@ -133,7 +141,8 @@ static inline float boonta_lateral_velocity_after_steering_scaled(float lateral_
                                                                     float speed,
                                                                     float frame_scale)
 {
-    lateral_velocity += steering * (0.0018f + speed * 0.0030f) * frame_scale;
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
+    lateral_velocity += * (0.0018f + speed * 0.0030f) * frame_scale;
     lateral_velocity *= powf(0.92f, frame_scale);
     if (lateral_velocity < -0.085f) return -0.085f;
     if (lateral_velocity > 0.085f) return 0.085f;
@@ -152,6 +161,7 @@ static inline float boonta_lateral_position_after_frame(float lateral_position,
                                                          float lateral_velocity,
                                                          float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     return lateral_position + lateral_velocity * frame_scale;
 }
 
@@ -159,6 +169,7 @@ static inline float boonta_lateral_position_after_frame(float lateral_position,
 static inline float boonta_distance_after_frame_scaled(float distance, float speed,
                                                         int boost_active, float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     return distance + speed * (boost_active ? 0.22f : 0.14f) * frame_scale;
 }
 
@@ -226,6 +237,7 @@ static inline float boonta_rival_respawn_z(unsigned int rival_index, int collisi
 
 static inline float boonta_rival_z_after_frame(float rival_z, float speed, float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     return rival_z + (0.035f + speed * 0.045f) * frame_scale;
 }
 
@@ -282,6 +294,7 @@ static inline float boonta_abs_float(float value)
 static inline float boonta_speed_after_offroad_scaled(float speed, float player_lateral,
                                                        float frame_scale)
 {
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
     const float distance_from_center = boonta_abs_float(player_lateral);
     if (distance_from_center > 3.15f) {
         const float excess = distance_from_center - 3.15f;
