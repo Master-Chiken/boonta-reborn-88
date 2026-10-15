@@ -1,37 +1,54 @@
-# Next milestone: restore the native GameCube/Wii prototype in CI
+# Next milestone: verify an interactive GameCube racing slice
 
-## Goal
+Last updated: 2026-10-15
 
-Use the existing Step 102 GameCube/Wii source prototype as the primary project baseline. The next milestone is not another Dreamcast screen: it is a reviewed source-only import, automated host tests, and the first native GameCube cross-build.
+## Current mainline baseline
 
-## Audit findings
+The active native target is the clean-room, original procedural prototype in gamecube-demo/. It is not the full game and does not contain commercial game code or extracted assets.
 
-- The source archive `Star_Wars_Racer_GameCube_Step102.zip` is available in the project history/library and has been inspected.
-- It contains a C prototype, GameCube Makefile, gameplay/renderer modules, tools, docs, and host tests.
-- The archive README describes 25 course entries, 23 pod presets/variants, physics, drift/boost/heat/damage, rival AI, pickups/hazards, several race modes, HUD, and save/progression scaffolding.
-- The host release suite passed in a clean temporary environment: host shell checks and 91 Python unit tests passed. This is not a native target build.
-- The archive README explicitly says that a real devkitPPC/libogc `.dol` build and Dolphin/console runtime test remain pending.
-- The source prototype has not yet been imported into this GitHub repository. The existing native workflow intentionally stops until its source tree is present.
-- The separate Dreamcast starter and its CI artifact do not validate the GameCube/Wii prototype.
+Verified in GitHub Actions:
+- Host regression tests cover speed input, boost energy, steering inertia, lap boundaries and three-lap finish state, rival collision/overtake decisions, off-road drag, rail recovery, pause/reset behavior, and build-artifact utilities.
+- devkitPPC/libogc produces a non-empty GameCube DOL and ELF, and the artifact validator passes.
+- Dolphin remains active for the bounded 12-second null-video process smoke.
+- The Software Renderer capture in run #69 shows a visible procedural road, edge rails, center markers, player pod and rival pod.
 
-## Work sequence
+Those results establish deterministic code tests, a native build, bounded emulator startup, and a visible CI scene. They do not yet establish correct live controller input, a fully completed three-lap race, sustained frame pacing, or behavior on physical GameCube/Wii hardware.
 
-1. Review the source archive's provenance, license, generated route data, and assets.
-2. Import only cleared source, headers, Makefile, tools, tests, and documentation; do not import ROMs/disc images or unclear proprietary payloads.
-3. Run the host test suite in GitHub Actions.
-4. Use the existing devkitPPC/libogc workflow to build `swe1r_gc_port.dol`.
-5. Inspect the first compiler failure if any and fix it without disabling tests.
-6. Run the DOL in Dolphin if available and record actual boot/render/controller results. A successful compile alone is not runtime proof.
-7. Once a build boots, focus on a small playable vertical slice: one course, one controllable pod, camera follow, track collision, and stable frame timing.
+## Immediate milestone: interactive controller and race acceptance
 
-## Acceptance criteria
+Load the latest mainline DOL in a visible Dolphin session. Record the Dolphin version, renderer/backend, video mode, controller profile, and a short video or screenshots plus any runtime log. Test in this order:
 
-- Source provenance and redistribution boundaries are documented.
-- Host tests pass in GitHub Actions.
-- Native GameCube cross-build produces a non-empty DOL.
-- Compile success and emulator/hardware testing are reported separately.
-- No commercial ROMs, disc images, BIOS files, or uncleared proprietary assets are committed.
+1. Reset with Y. Check that the pod returns to the starting lateral position, speed and lap count reset, the rival and overtake indicators reset, boost refills, and pause/finish state clears.
+2. Hold A, then B. Confirm acceleration and braking visibly change speed. Release A/B and confirm speed falls naturally rather than remaining stuck.
+3. Steer left and right with the Control Stick; repeat with the D-pad. Confirm movement direction is correct, motion has the programmed inertia, releasing input damps the drift, and the steering remains bounded.
+4. Drive beyond the road edge. Confirm off-road speed loss and rail-edge recovery are visible and do not freeze or destabilize rendering.
+5. Hold X + A to boost. Confirm energy drains while active and recharges after release.
+6. Press Start while moving. Confirm the pause icon appears and simulation freezes; press Start again and confirm it resumes. Press Y while paused and confirm a clean reset/unpause.
+7. Complete three counted lap crossings. Confirm the three HUD markers advance consistently, the finish flag appears, and movement stops after the configured race limit. Press Y and confirm another run can begin.
+8. Let the scene run for a longer session. Look for graphics corruption, crashes, and severe frame pacing problems.
 
-## What the project owner needs to do now
+Mark each item pass/fail with the exact evidence. A screenshot alone is not proof of controller input; a headless process smoke is not proof of visible rendering. A successful compiler run is not proof of a complete race.
 
-Nothing needs to be installed locally for this planning step. Keep the source archive available in the ChatGPT Library. The work can continue in GitHub with cloud CI; an actual emulator/console run may still require a separate runtime environment.
+### Acceptance criteria
+
+- The visible scene starts without a fatal/boot error.
+- Steering, acceleration, braking, boost, pause/resume, and reset behave as described.
+- A three-lap run reaches the finish and stops; reset starts a fresh run.
+- No sustained render corruption or crash appears during the longer session.
+- CI host tests and native build pass on the exact code being tested.
+- Any unverified item remains marked pending; do not infer hardware compatibility from Dolphin.
+
+## Parallel track: Step 102 source import remains on hold
+
+The fuller Step 102 source archive is separate from the clean-room mainline code. Do not merge draft PR #17 or #22 wholesale. The available evidence does not resolve file-by-file source authorship/license, the generated centerline header whose presence contradicts the archive README, or the origin of demo track CSV data. Keep unclear-provenance source and all commercial game payloads/assets out of the public repository until permission and derivation are documented. Build success and passing tests do not resolve licensing.
+
+## PC research to guide faithful behavior
+
+Use the pinned SW_RACER_RE research snapshot as a source of questions and behavior observations, not as portable GameCube code. Track each finding in the behavior matrix, distinguish observed PC facts from GameCube/N64 hypotheses, and implement independently unless a deliberate license review clears code reuse. Keep route geometry, extracted assets, ROMs and disc images out unless provenance and redistribution rights are established.
+
+## Next technical improvements after the interactive run
+
+- Add regression tests for any bug found during the controller session before changing behavior.
+- Validate input/steering, off-road/rail response, rival interactions and finish/reset together in deterministic host tests where practical.
+- Improve the procedural track, camera and collision model as a cohesive vertical slice; preserve a clean CI build and visible-render diagnostic with every change.
+- Only then expand race systems, presentation, assets and bonus content.
