@@ -289,9 +289,60 @@ jobs:
             skipped=$((skipped + 1))
           fi
 
+          # Exact one-branch exception: remove only if its full tree is identical to its merge-base with main.
+          mergebase_branch="Master-Chiken-patch-1"
+          mergebase_expected_sha="09f320e4bc9a321eadef33f4f7b5260d23146b9f"
+          inventory
+          mergebase_sha="$(jq -r --arg name "$mergebase_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+          mergebase_protected="$(jq -r --arg name "$mergebase_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+          if [ -z "$mergebase_sha" ]; then
+            echo "| `$mergebase_branch` | `$mergebase_expected_sha` | Already absent; no action |" >> "$GITHUB_STEP_SUMMARY"
+            skipped=$((skipped + 1))
+          elif [ "$mergebase_sha" != "$mergebase_expected_sha" ]; then
+            echo "| `$mergebase_branch` | `$mergebase_expected_sha` | PRESERVED: exact target tip changed |" >> "$GITHUB_STEP_SUMMARY"
+            skipped=$((skipped + 1))
+          elif [ "$mergebase_protected" != "false" ]; then
+            echo "| `$mergebase_branch` | `$mergebase_expected_sha` | PRESERVED: protected or protection status unknown |" >> "$GITHUB_STEP_SUMMARY"
+            skipped=$((skipped + 1))
+          elif jq -e --arg name "$mergebase_branch" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+            echo "| `$mergebase_branch` | `$mergebase_expected_sha` | PRESERVED: an open PR uses this branch |" >> "$GITHUB_STEP_SUMMARY"
+            skipped=$((skipped + 1))
+          else
+            # Fetch only this explicit target, then prove the tip has the same complete tree as its common ancestor.
+            git -C "$workdir" fetch --quiet origin "refs/heads/$mergebase_branch:refs/remotes/origin/cleanup-target"
+            merge_base="$(git -C "$workdir" merge-base "$mergebase_expected_sha" "$main_ref" || true)"
+            target_tree=""
+            base_tree=""
+            if [ -n "$merge_base" ]; then
+              target_tree="$(git -C "$workdir" rev-parse "$mergebase_expected_sha^{tree}")"
+              base_tree="$(git -C "$workdir" rev-parse "$merge_base^{tree}")"
+            fi
+            if [ -z "$merge_base" ] || [ "$target_tree" != "$base_tree" ]; then
+              echo "| `$mergebase_branch` | `$mergebase_expected_sha` | PRESERVED: complete tree does not equal merge-base tree |" >> "$GITHUB_STEP_SUMMARY"
+              skipped=$((skipped + 1))
+            else
+              # Recheck exact head, protection and PR usage immediately before deletion.
+              inventory
+              mergebase_sha_again="$(jq -r --arg name "$mergebase_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+              mergebase_protected_again="$(jq -r --arg name "$mergebase_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+              if [ "$mergebase_sha_again" = "$mergebase_expected_sha" ] && [ "$mergebase_protected_again" = "false" ] && ! jq -e --arg name "$mergebase_branch" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+                if gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$mergebase_branch"; then
+                  echo "| `$mergebase_branch` | `$mergebase_expected_sha` | DELETED: exact unprotected tip has same full tree as merge base; no open PR |" >> "$GITHUB_STEP_SUMMARY"
+                  deleted=$((deleted + 1))
+                else
+                  echo "| `$mergebase_branch` | `$mergebase_expected_sha` | NOT DELETED: GitHub rejected deletion |" >> "$GITHUB_STEP_SUMMARY"
+                  skipped=$((skipped + 1))
+                fi
+              else
+                echo "| `$mergebase_branch` | `$mergebase_expected_sha` | PRESERVED: final exact-head/protection/PR check failed |" >> "$GITHUB_STEP_SUMMARY"
+                skipped=$((skipped + 1))
+              fi
+            fi
+          fi
+
           {
             echo
             echo "**Summary:** $deleted deleted; $skipped preserved or already absent."
             echo
-            echo "Deletion scope is finite: the eight ancestor-proven refs, twelve exact heads of merged PRs, three finalization refs with matching merged PRs, and the helper source branch only if its full tree equals main."
+            echo "Deletion scope is finite: existing fixed lists with their exact evidence, the helper source branch only with a merged-PR exact-head proof and full-tree equality to main, and Master-Chiken-patch-1 only if its exact tip is unprotected, unused by open PRs, unchanged, and its full tree equals its merge-base tree."
           } >> "$GITHUB_STEP_SUMMARY"
