@@ -132,6 +132,7 @@ jobs:
             printf '%s\n' '### apt-installed Dolphin CLI help'
             dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
+          grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-cli-capabilities.log"
 
       - name: Run the DOL for 12 seconds with Dolphin's null video backend
         shell: bash
@@ -186,6 +187,11 @@ jobs:
       contents: read
       actions: read
     steps:
+      - name: Check out repository for the deterministic DTM generator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Download the DOL built by this workflow
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # pinned download-artifact v4.3.0
         with:
@@ -212,10 +218,11 @@ jobs:
           flatpak info --user org.DolphinEmu.dolphin-emu
           {
             printf '%s\n' '### Flatpak Dolphin version'
-            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
+            timeout --signal=TERM --kill-after=2s 10s flatpak run --env=QT_QPA_PLATFORM=offscreen --command=dolphin-emu org.DolphinEmu.dolphin-emu --version 2>&1 || true
             printf '%s\n' '### Flatpak Dolphin CLI help'
-            flatpak run --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
+            timeout --signal=TERM --kill-after=2s 10s flatpak run --env=QT_QPA_PLATFORM=offscreen --command=dolphin-emu org.DolphinEmu.dolphin-emu --help 2>&1 || true
           } | tee "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
+          grep -F -- '--movie=MOVIE' "$GITHUB_WORKSPACE/dolphin-flatpak-cli-capabilities.log"
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         shell: bash
@@ -223,95 +230,107 @@ jobs:
           set -euo pipefail
           test -s build-artifact/boonta_gc_demo.dol
           export DOL="$GITHUB_WORKSPACE/build-artifact/boonta_gc_demo.dol"
+          export BASELINE_DTM="$GITHUB_WORKSPACE/dolphin-neutral-baseline.dtm"
+          export BASELINE_CAPTURE="$GITHUB_WORKSPACE/dolphin-neutral-baseline.png"
+          export BASELINE_LOG="$GITHUB_WORKSPACE/dolphin-neutral-baseline.log"
+          export BASELINE_USER="$GITHUB_WORKSPACE/dolphin-neutral-user"
+          export STEERED_USER="$GITHUB_WORKSPACE/dolphin-steered-user"
+          export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
+          test -s "$BASELINE_DTM"
+          test -s "$DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$GITHUB_WORKSPACE/dolphin-render-user/Config"
-          chmod 700 "$HOME"
-          # Put the rendered game surface in the Dolphin main window so the
-          # CI screenshot captures the game, not only the library window.
-          cat > "$GITHUB_WORKSPACE/dolphin-render-user/Config/Dolphin.ini" <<EOF
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER"
+          # Use isolated Dolphin profiles so the second capture cannot reuse
+          # the first session's movie state, window or display configuration.
+          for user_dir in "$BASELINE_USER" "$STEERED_USER"; do
+            cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
           EOF
+          done
           set +e
-          timeout --signal=TERM --kill-after=3s 35s xvfb-run -a -s "-screen 0 1280x720x24" \
+          timeout --signal=TERM --kill-after=3s 70s xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
             bash -c '
               set -euo pipefail
-              flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
-                --video_backend="Software Renderer" \
-                --config=Logger.Options.WriteToFile=True \
-                --config=Logger.Options.WriteToConsole=True \
-                --config=Logger.Options.Verbosity=2 \
-                --config=Logger.Logs.BOOT=True \
-                --config=Logger.Logs.CORE=True \
-                --config=Logger.Logs.Video=True \
-                --exec="$DOL" --user="$GITHUB_WORKSPACE/dolphin-render-user" > "$DOLPHIN_LOG" 2>&1 &
-              emu_pid=$!
-              cleanup() {
+              capture_frame() {
+                local movie="$1"
+                local log="$2"
+                local capture="$3"
+                local user_dir="$4"
+                local emu_pid=""
+                local window=""
+                local title=""
+                local geometry=""
+                local width=""
+                local height=""
+                flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
+                  --video_backend="Software Renderer" \
+                  --config=Logger.Options.WriteToFile=True \
+                  --config=Logger.Options.WriteToConsole=True \
+                  --config=Logger.Options.Verbosity=2 \
+                  --config=Logger.Logs.BOOT=True \
+                  --config=Logger.Logs.CORE=True \
+                  --config=Logger.Logs.Video=True \
+                  --exec="$DOL" --movie="$movie" --user="$user_dir" > "$log" 2>&1 &
+                emu_pid=$!
+                sleep 6
+                if ! kill -0 "$emu_pid" 2>/dev/null; then
+                  cat "$log"
+                  echo "Dolphin exited before the software-renderer capture."
+                  return 1
+                fi
+                for attempt in $(seq 1 15); do
+                  for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                    title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+                    geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                    width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                    height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                    if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && "$title" == *Dolphin* ]]; then
+                      window="$id"
+                      break
+                    fi
+                  done
+                  [[ -n "$window" ]] && break
+                  sleep 1
+                done
+                if [[ -z "$window" ]]; then
+                  echo "No visible Dolphin main window of at least 300x200 was found."
+                  xwininfo -root -tree || true
+                  flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                  kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                  wait "$emu_pid" >/dev/null 2>&1 || true
+                  return 1
+                fi
+                echo "Capturing $capture from Dolphin window id=$window title=$(xdotool getwindowname "$window")"
+                xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
+                sleep 1
+                import -window "$window" "$capture"
+                test -s "$capture"
+                identify "$capture"
+                colors=$(convert "$capture" -resize 160x90 -format %k info:)
+                echo "Dolphin-window capture has $colors distinct colors."
+                if [[ "$colors" -lt 24 ]]; then
+                  echo "Dolphin window capture appears blank or nearly blank."
+                  flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                  kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                  wait "$emu_pid" >/dev/null 2>&1 || true
+                  return 1
+                fi
+                # The Flatpak launcher PID is not necessarily the emulator process.
+                flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
                 wait "$emu_pid" >/dev/null 2>&1 || true
+                sleep 2
               }
-              trap cleanup EXIT
-              sleep 8
-              if ! kill -0 "$emu_pid" 2>/dev/null; then
-                cat "$DOLPHIN_LOG"
-                echo "Dolphin exited before the software-renderer capture."
-                exit 1
-              fi
-              window=""
-              for attempt in $(seq 1 15); do
-                for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
-                  title=$(xdotool getwindowname "$id" 2>/dev/null || true)
-                  geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
-                  width=$(printf "%s\n" "$geometry" | sed -n "s/^WIDTH=//p")
-                  height=$(printf "%s\n" "$geometry" | sed -n "s/^HEIGHT=//p")
-                  if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && ( "$title" == "Dolphin" || "$title" == *" - Dolphin" || "$title" == Dolphin\ * ) ]]; then
-                    window="$id"
-                    break
-                  fi
-                done
-                [[ -n "$window" ]] && break
-                sleep 1
-              done
-              if [[ -z "$window" ]]; then
-                echo "No visible Dolphin main window of at least 300x200 was found."
-                xwininfo -root -tree || true
-                exit 1
-              fi
-              echo "Capturing Dolphin window id=$window title=$(xdotool getwindowname "$window")"
-              xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
-              sleep 2
-              import -window "$window" "$CAPTURE"
-              test -s "$CAPTURE"
-              identify "$CAPTURE"
-              colors=$(convert "$CAPTURE" -resize 160x90 -format %k info:)
-              echo "Dolphin-window capture has $colors distinct colors."
-              if [[ "$colors" -lt 24 ]]; then
-                echo "Dolphin window capture appears blank or nearly blank; visual rendering remains unverified."
-                exit 1
-              fi
-              # The captured window must also contain signatures from the actual
-              # procedural scene; window chrome alone must not pass the check.
-              python3 - "$CAPTURE" <<PY
-          from pathlib import Path
-          import sys
-          from PIL import Image
-
-          image = Image.open(Path(sys.argv[1])).convert("RGB")
-          pixels = list(image.getdata())
-          cyan = sum(1 for r, g, b in pixels if r < 110 and g > 145 and b > 150)
-          orange = sum(1 for r, g, b in pixels if r > 180 and 45 < g < 190 and b < 135)
-          ground_green = sum(1 for r, g, b in pixels if g > 1.25 * r and g > 1.05 * b and g > 25 and r < 100)
-          pod_blue = sum(1 for r, g, b in pixels if b > 145 and b > 1.35 * r and g > 65 and r < 120)
-          print(f"Scene color-pixel counts: cyan={cyan}, orange={orange}, ground_green={ground_green}, pod_blue={pod_blue}")
-          if cyan < 30 or orange < 30 or ground_green < 100 or pod_blue < 30:
-              print("Captured Dolphin window is missing one or more expected scene-color signatures.")
-              sys.exit(1)
-          PY
-              # The captured Dolphin main window is 800x480. Its lower
-              # viewport should contain the dark road, not a near-white field.
+              capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
+              capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
@@ -321,23 +340,29 @@ jobs:
               fi
               ocr=$(tesseract "$CAPTURE" stdout --psm 6 2>/dev/null || true)
               echo "Text detected in captured frame:"
-              printf "%s\n" "$ocr"
-              if printf "%s\n" "$ocr" | grep -Eiq "failed to init core|failed to initialize|could not boot|failed to load executable"; then
-                echo "Captured frame contains a Dolphin boot/core error dialog; this must not count as a visual pass."
+              printf "%s\\n" "$ocr"
+              if printf "%s\\n" "$ocr" | grep -Eiq "failed to init core|failed to initialize|could not boot|failed to load executable"; then
+                echo "Captured frame contains a Dolphin boot/core error dialog."
                 exit 1
               fi
-              echo "A non-blank frame without a recognized boot/core error dialog was captured; geometry and controls still require inspection."
+              echo "Neutral and right-steered frames both rendered; the relative pod displacement passed."
             '
           status=$?
           set -e
+          [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$GITHUB_WORKSPACE/dolphin-render-user" -maxdepth 4 -type f -print || true
-          if [[ -d "$GITHUB_WORKSPACE/dolphin-render-user/Logs" ]]; then
-            find "$GITHUB_WORKSPACE/dolphin-render-user/Logs" -maxdepth 2 -type f -print -exec tail -n 200 {} \; || true
-          fi
+          find "$BASELINE_USER" "$STEERED_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs"; do
+            [[ -d "$log_dir" ]] || continue
+            for log_file in "$log_dir"/*; do
+              [[ -f "$log_file" ]] || continue
+              echo "--- $log_file"
+              tail -n 200 "$log_file" || true
+            done
+          done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional software-renderer capture failed. Native build and headless smoke remain separate results."
+            echo "::warning::The optional software-renderer steering comparison failed. Native build and headless smoke remain separate results."
             exit "$status"
           fi
 
@@ -348,8 +373,12 @@ jobs:
           name: gamecube-dolphin-software-frame-diagnostic
           path: |
             dolphin-software-frame.png
+            dolphin-neutral-baseline.png
             dolphin-render.log
+            dolphin-neutral-baseline.log
             dolphin-flatpak-cli-capabilities.log
-            dolphin-render-user/Logs/**
+            dolphin-scripted-controller-input.dtm
+            dolphin-neutral-user/Logs/**
+            dolphin-steered-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
