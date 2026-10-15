@@ -59,6 +59,7 @@ static float g_boost = 1.0f;
 static float g_engine_heat;
 static int g_boost_overheated;
 static int g_boost_active;
+static int g_slide_active;
 static float g_rival_z[BOONTA_RIVAL_COUNT];
 static float g_rival_lateral[BOONTA_RIVAL_COUNT];
 static unsigned int g_overtake_count;
@@ -95,7 +96,8 @@ static const u8 g_font5x7[128][7] = {
     ['6'] = {14,16,16,30,17,17,14}, ['7'] = {31,1,2,4,8,8,8},
     ['8'] = {14,17,17,14,17,17,14}, ['9'] = {14,17,17,15,1,1,14},
     ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
-    ['C'] = {14,17,16,16,16,17,14}, ['H'] = {17,17,17,31,17,17,17},
+    ['C'] = {14,17,16,16,16,17,14}, ['D'] = {30,17,17,17,17,17,30},
+    ['H'] = {17,17,17,31,17,17,17},
     ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
     ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
     ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
@@ -598,6 +600,8 @@ static void draw_hud(void)
         append_screen_quad(pitch_marker - 2.0f, 35.0f, pitch_marker + 2.0f, 45.0f,
                            0.3f, g_pitch_down > 0.65f ? boost_fill : fill);
         append_text("PITCH", pitch_left, 46.0f, 1.0f, white);
+        append_text("SLIDE", pitch_left, 56.0f, 1.0f,
+                    g_slide_active ? boost_fill : empty);
     }
 
     /* Symbolic finish banner: a checkered flag made from original GX quads. */
@@ -805,6 +809,7 @@ int main(int argc, char **argv)
             g_engine_heat = 0.0f;
             g_boost_overheated = 0;
             g_boost_active = 0;
+            g_slide_active = 0;
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
                 g_rival_lateral[rival_index] = 0.0f;
@@ -816,6 +821,7 @@ int main(int argc, char **argv)
 
         if (g_paused || g_race_finished) {
             g_boost_active = 0;
+            g_slide_active = 0;
             draw_frame();
             continue;
         }
@@ -835,6 +841,7 @@ int main(int argc, char **argv)
         /* Up/forward on the analog stick pitches down; down pitches up. */
         pitch_down = boonta_pitch_input((float)stick_y);
         g_pitch_down = pitch_down;
+        g_slide_active = (buttons_held & PAD_TRIGGER_L) != 0U;
         steering = boonta_steering_after_pitch(
             boonta_steering_input(
                 (float)stick_x,
@@ -849,8 +856,8 @@ int main(int argc, char **argv)
             frame_scale);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
-        g_lateral_velocity = boonta_lateral_velocity_after_steering_scaled(
-            g_lateral_velocity, steering, g_speed, frame_scale);
+        g_lateral_velocity = boonta_lateral_velocity_after_steering_slide_scaled(
+            g_lateral_velocity, steering, g_speed, g_slide_active, frame_scale);
         g_player_lateral = clampf_local(
             boonta_lateral_position_after_frame(
                 g_player_lateral, g_lateral_velocity, frame_scale),
