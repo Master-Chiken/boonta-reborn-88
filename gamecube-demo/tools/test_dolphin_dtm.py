@@ -6,7 +6,7 @@ import unittest
 from make_dolphin_dtm import (
     A,
     B,
-    CENTER_AXIS,
+    NEUTRAL_AXIS,
     DEFAULT_GAME_ID,
     DPAD_LEFT,
     DPAD_RIGHT,
@@ -46,7 +46,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[0] & Y)
         self.assertTrue(first[1] & IS_CONNECTED)
         self.assertTrue(first[1] & DPAD_RIGHT)
-        self.assertEqual(first[4:], bytes((CENTER_AXIS,) * 4))
+        self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
