@@ -28,7 +28,8 @@ jobs:
       - name: Check out trusted base revision only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          # Always load the latest trusted policy from the fixed target branch; PR event base SHAs may lag behind main.
+          ref: main
           persist-credentials: false
 
       - name: Fetch proposed filenames as API metadata only
