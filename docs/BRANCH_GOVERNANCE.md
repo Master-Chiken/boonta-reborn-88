@@ -31,3 +31,9 @@ If the target is exceeded, it opens a single tracking issue (if one is not alrea
 3. Test and merge useful work through PRs.
 4. Keep historical or uncertain branches untouched until their contents have been reviewed and preserved.
 5. Report active count and remaining blockers; aim for 30 or fewer active branches without deleting branch refs.
+
+## Automated intake of branch work
+
+The companion [Branch intake queue](BRANCH_INTAKE.md) compares existing branch tips with the default branch and prepares a limited number of draft PRs for small, distinct changes. It runs the existing GameCube prototype tests for relevant code candidates and defers overlapping, oversized, and Step 102/source-import changes for manual review.
+
+The intake queue does not create branches, merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must still pass the exact-head checks and the mainline acceptance gate before a maintainer merges it.
