@@ -58,11 +58,35 @@ static void three_lap_finish_tests(void) {
  assert(laps == 3U);
 }
 
+
+static void rival_event_tests(void) {
+ /* The rival only triggers a contact/overtake decision once it reaches the player. */
+ assert(boonta_rival_event(-18.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(-1.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+ assert(boonta_rival_event(-0.99f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
+ assert(boonta_rival_event(1.79f, 0.0f, 2.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(boonta_rival_event(1.8f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(boonta_rival_event(2.1f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+
+ /* The 0.92 lane-gap boundary is not a collision; it counts as an overtake. */
+ assert(boonta_rival_event(0.0f, 0.92f, 0.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(boonta_rival_event(0.0f, 0.919f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
+
+ /* Contact penalty is bounded and the lateral response pushes away from the rival. */
+ assert(nearf(boonta_speed_after_rival_contact(1.0f), 0.72f));
+ assert(nearf(boonta_speed_after_rival_contact(0.1f), 0.0f));
+ assert(nearf(boonta_speed_after_rival_contact(0.0f), 0.0f));
+ assert(nearf(boonta_rival_contact_nudge(-0.5f, 0.0f), -0.035f));
+ assert(nearf(boonta_rival_contact_nudge(0.5f, 0.0f), 0.035f));
+ assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
+}
+
 int main(void) {
  speed_tests();
  boost_tests();
  lap_tests();
  three_lap_finish_tests();
+ rival_event_tests();
  puts("gameplay-state tests passed");
  return 0;
 }
