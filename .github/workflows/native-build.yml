@@ -225,7 +225,7 @@ jobs:
               height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
-            if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
+            if grep -Eiq "title=Error([[:space:]]|$)" "$WINDOW_LIST"; then
               error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
               if [[ -n "$error_window" ]]; then
                 import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
@@ -320,7 +320,7 @@ jobs:
               height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
               printf "id=%s title=%s width=%s height=%s\\n" "$id" "$title" "$width" "$height" >> "$WINDOW_LIST"
             done
-            if grep -Eiq 'title=Error([[:space:]]|$)' "$WINDOW_LIST"; then
+            if grep -Eiq "title=Error([[:space:]]|$)" "$WINDOW_LIST"; then
               error_window=$(xdotool search --onlyvisible --name '^Error$' 2>/dev/null | head -n 1 || true)
               if [[ -n "$error_window" ]]; then
                 import -window "$error_window" "$PWD/dolphin-error-dialog.png" || true
