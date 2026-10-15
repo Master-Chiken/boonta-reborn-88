@@ -344,7 +344,6 @@ static void add_road(void)
 {
     unsigned int i;
     const float segment_length = 2.8f;
-    const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
     const Point3 ground_a = { -150.0f, -0.65f, 180.0f };
     const Point3 ground_b = {  150.0f, -0.65f, 180.0f };
@@ -356,7 +355,9 @@ static void add_road(void)
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
-        const float z0 = 4.0f + road_scroll - (float)i * segment_length;
+        /* In world-space mode each road row starts from this frame's true progress.
+         * The former screen-space scroll offset placed the nearest row behind the camera. */
+        const float z0 = 4.0f - (float)i * segment_length;
         const float z1 = z0 - segment_length;
         const float c0 = road_center_at(z0, g_distance);
         const float c1 = road_center_at(z1, g_distance);
@@ -405,11 +406,13 @@ static void add_road(void)
         }
     }
 
-    /* The finish cue shares the exported circuit length and local road width. */
+    /* Place the checker stripe at the next circuit crossing in world-space. */
     {
-        const float offset = boonta_track_scroll_offset(g_distance, RACE_LAP_DISTANCE);
-        const float finish_z = offset - RACE_LAP_DISTANCE;
-        if (finish_z > -108.0f && finish_z < 4.0f) {
+        const float next_finish =
+            (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) * RACE_LAP_DISTANCE;
+        const float remaining = next_finish - g_distance;
+        const float finish_z = 4.0f - remaining;
+        if (remaining >= 0.0f && remaining < (float)ROAD_SEGMENTS * segment_length) {
             const float c0 = road_center_at(finish_z, g_distance);
             const float c1 = road_center_at(finish_z - 0.55f, g_distance);
             const float w0 = road_half_width_at(finish_z, g_distance);
@@ -437,13 +440,13 @@ static void add_canyon_scenery(void)
     const float wall_margin = 5.0f;
     g_track_world_transform_enabled = 1;
     const float wall_length = 10.0f;
-    const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
     for (i = 0U; i < 9U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        /* Canyon panels also follow true forward progress after world transformation. */
+        const float z_near = -10.0f - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
