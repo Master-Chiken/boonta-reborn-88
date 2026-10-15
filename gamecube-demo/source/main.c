@@ -341,7 +341,7 @@ static void draw_hud(void)
     append_screen_quad(bar_left, bar_bottom - 42.0f,
                        bar_left + bar_width * lap_progress, bar_bottom - 34.0f,
                        0.3f, progress_fill);
-    /* Five lap markers light up as full laps are completed. */
+    /* One marker per configured race lap; the prototype finishes at RACE_LAP_LIMIT. */
     {
         unsigned int i;
         const float marker_gap = 4.0f;
