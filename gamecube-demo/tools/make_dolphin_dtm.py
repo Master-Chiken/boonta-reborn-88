@@ -17,6 +17,7 @@ DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
 RESET_PRESS_FRAME = 240  # Build non-default gameplay state before testing Y reset.
+RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 120
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
@@ -45,7 +46,7 @@ def _controller_state(frame: int, steering: str = "right",
             buttons = A
             if 1 <= frame < RESET_BOOST_END_FRAME:
                 buttons |= X
-        elif frame == RESET_PRESS_FRAME:
+        elif RESET_PRESS_FRAME <= frame < RESET_PRESS_FRAME + RESET_HOLD_FRAMES:
             buttons = Y
         else:
             buttons = 0
