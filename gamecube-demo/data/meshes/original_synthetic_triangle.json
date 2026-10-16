@@ -2,9 +2,9 @@
   "format": "boonta-mesh-v1",
   "name": "original-synthetic-triangle",
   "vertices": [
-    { "position": [-0.65, 0.0, 0.0], "color": [255, 70, 50, 255] },
-    { "position": [0.65, 0.0, 0.0], "color": [50, 220, 255, 255] },
-    { "position": [0.0, 1.10, 0.0], "color": [255, 240, 110, 255] }
+    { "position": [-0.65, 0.0, 0.0], "color": [255, 70, 50, 255], "uv": [0, 0] },
+    { "position": [0.65, 0.0, 0.0], "color": [50, 220, 255, 255], "uv": [1, 0] },
+    { "position": [0.0, 1.10, 0.0], "color": [255, 240, 110, 255], "uv": [0.5, 1] }
   ],
   "indices": [0, 1, 2]
 }

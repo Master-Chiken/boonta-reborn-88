@@ -32,9 +32,10 @@ def render_header(data: dict) -> str:
     for vertex in mesh["vertices"]:
         x, y, z = vertex["position"]
         r, g, b, a = vertex["color"]
+        u, v = vertex["uv"]
         vertex_rows.append(
-            "    { %.6ff, %.6ff, %.6ff, %dU, %dU, %dU, %dU }"
-            % (x, y, z, r, g, b, a)
+            "    { %.6ff, %.6ff, %.6ff, %dU, %dU, %dU, %dU, %.6ff, %.6ff }"
+            % (x, y, z, r, g, b, a, u, v)
         )
 
     index_rows = []

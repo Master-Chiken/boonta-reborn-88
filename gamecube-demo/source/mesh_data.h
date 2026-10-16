@@ -7,7 +7,7 @@
 
 /*
  * This contract is deliberately limited to the attributes currently submitted
- * by the GameCube GX renderer: XYZ positions and RGBA8 vertex colour.
+ * by the GameCube GX renderer: XYZ positions, RGBA8 vertex colour and UVs.
  *
  * The existing renderer can expand at most 4096 vertices. For an indexed
  * triangle list, the expanded index count must be a multiple of three and
@@ -26,6 +26,8 @@ typedef struct {
     uint8_t g;
     uint8_t b;
     uint8_t a;
+    float u;
+    float v;
 } BoontaMeshVertex;
 
 /*
@@ -114,7 +116,9 @@ boonta_mesh_validate(const BoontaMeshView *mesh)
     for (i = 0U; i < mesh->vertex_count; ++i) {
         if (!isfinite(mesh->vertices[i].x) ||
             !isfinite(mesh->vertices[i].y) ||
-            !isfinite(mesh->vertices[i].z)) {
+            !isfinite(mesh->vertices[i].z) ||
+            !isfinite(mesh->vertices[i].u) ||
+            !isfinite(mesh->vertices[i].v)) {
             return BOONTA_MESH_NONFINITE_POSITION;
         }
     }

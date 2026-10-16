@@ -82,7 +82,21 @@ def validate_mesh(data: Any) -> dict[str, Any]:
                 )
             channels.append(channel)
 
-        normalized_vertices.append({"position": coordinates, "color": channels})
+        # UVs are optional in v1 so existing authored meshes remain compatible.
+        # Missing coordinates normalize to (0, 0), ready for a later GX texture stage.
+        uv = vertex.get("uv", [0.0, 0.0])
+        if not isinstance(uv, list) or len(uv) != 2:
+            raise MeshValidationError(f"vertices[{index}].uv must contain exactly 2 numbers")
+        texture_coordinates = [
+            _number(uv[axis], f"vertices[{index}].uv[{axis}]")
+            for axis in range(2)
+        ]
+
+        normalized_vertices.append({
+            "position": coordinates,
+            "color": channels,
+            "uv": texture_coordinates,
+        })
 
     indices = data.get("indices")
     if not isinstance(indices, list):

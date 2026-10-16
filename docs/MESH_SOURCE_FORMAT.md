@@ -34,9 +34,10 @@ A document has exactly these required semantic fields:
 | `vertices` | array | 3 to 4096 vertex objects. |
 | `vertices[].position` | array of numbers | Exactly three finite coordinates `[x, y, z]`; each coordinate is in [-1,000,000, 1,000,000]. Booleans are not numbers for this contract. |
 | `vertices[].color` | array of integers | Exactly four RGBA8 channels, each in [0, 255]. Booleans and fractional values are rejected. |
+| `vertices[].uv` | optional array of numbers | If present, exactly two finite values `[u, v]`, each in [-1,000,000, 1,000,000]. Missing UVs default to `[0.0, 0.0]`. Booleans are rejected. |
 | `indices` | array of integers | 3 to 4095 entries; count must be divisible by three. Each index is zero-based and must refer to an existing vertex. Booleans and fractional values are rejected. |
 
-Each consecutive group of three indices describes one triangle. Triangles with zero area are rejected by both the host validator and runtime contract. Unknown optional attributes such as normals, UVs, materials, textures, skeletons and collision metadata are **not part of v1**; do not silently imply that they are supported. Unknown keys at the top level or inside vertex objects are currently ignored by the validator rather than rejected; they are not supported v1 fields, and callers must not rely on them.
+Each consecutive group of three indices describes one triangle. Triangles with zero area are rejected by both the host validator and runtime contract. Normals, material/texture references, skeletons and collision metadata are **not part of v1**; do not silently imply that they are supported. UV coordinates are accepted as optional vertex metadata and are consumed by the synthetic mesh's GX checker-texture path; general texture assets and materials are not part of v1. Unknown keys at the top level or inside vertex objects are currently ignored by the validator rather than rejected; they are not supported v1 fields, and callers must not rely on them.
 
 The top-level example below is a complete minimal document:
 
@@ -52,6 +53,8 @@ The top-level example below is a complete minimal document:
   "indices": [0, 1, 2]
 }
 ```
+
+The optional `vertices[].uv` field is a two-number `[u, v]` pair. If omitted, both coordinates normalize to `0.0` to preserve existing v1 fixtures. UVs must be finite and stay within the same absolute numeric bound as positions; values outside `[0, 1]` are permitted for tiled/repeated mapping. UVs are exported into the C vertex contract and submitted to GX for the original synthetic triangle, which samples a procedural 8x8 RGB565 checkerboard. This is a narrow renderer integration test, not general image decoding or material support.
 
 The checked-in fixture is the canonical runnable example. Keep all test meshes original and synthetic unless provenance and redistribution permission are independently established.
 
@@ -84,4 +87,4 @@ The test suite checks valid input, malformed/missing fields, numeric and count l
 
 ## Explicit non-goals
 
-v1 does not provide runtime filesystem loading, commercial-asset import, proprietary format parsing, textures/UVs/normals/materials, animation/skeletons, collision data, or a general-purpose model pipeline. GameCube J3D BMD/BDL, Wii BRRES/MDL0, PC data blocks and N64 formats are distinct candidates and must not be treated as interchangeable without version-specific evidence and tests. Keep the Step 102 archive and all uncleared source/data on HOLD.
+v1 does not provide runtime filesystem loading, commercial-asset import, proprietary format parsing, general texture asset decoding/loading and material support, normals, animation/skeletons, collision data, or a general-purpose model pipeline. Optional UV coordinates are validated, exported, and sampled by the synthetic triangle's procedural GX checker texture. GameCube J3D BMD/BDL, Wii BRRES/MDL0, PC data blocks and N64 formats are distinct candidates and must not be treated as interchangeable without version-specific evidence and tests. Keep the Step 102 archive and all uncleared source/data on HOLD.

@@ -74,6 +74,29 @@ class MeshFormatTests(unittest.TestCase):
         candidate["vertices"][1]["color"] = [255, 0, 255, 0]
         self.assertEqual(len(validate_mesh(candidate)["vertices"]), 3)
 
+    def test_optional_uvs_normalize_and_export(self) -> None:
+        legacy = copy.deepcopy(self.raw)
+        for vertex in legacy["vertices"]:
+            vertex.pop("uv", None)
+        mesh = validate_mesh(legacy)
+        self.assertEqual([vertex["uv"] for vertex in mesh["vertices"]], [[0.0, 0.0]] * 3)
+
+        candidate = copy.deepcopy(self.raw)
+        candidate["vertices"][0]["uv"] = [0.25, 0.75]
+        candidate["vertices"][1]["uv"] = [1, 0]
+        candidate["vertices"][2]["uv"] = [0, 1]
+        normalized = validate_mesh(candidate)
+        self.assertEqual(normalized["vertices"][0]["uv"], [0.25, 0.75])
+        header = render_header(candidate)
+        self.assertIn("255U, 70U, 50U, 255U, 0.250000f, 0.750000f", header)
+
+    def test_invalid_uvs_are_rejected(self) -> None:
+        self.assert_rejected(lambda data: data["vertices"][0].update(uv=[0.0]))
+        self.assert_rejected(lambda data: data["vertices"][0].update(uv=[0.0, 0.0, 1.0]))
+        self.assert_rejected(lambda data: data["vertices"][0].update(uv=[True, 0.0]))
+        self.assert_rejected(lambda data: data["vertices"][0].update(uv=[float("nan"), 0.0]))
+        self.assert_rejected(lambda data: data["vertices"][0].update(uv=[1_000_001.0, 0.0]))
+
     def test_name_limit_and_non_integer_indices_are_rejected(self) -> None:
         self.assert_rejected(lambda data: data.update(name="n" * 81))
         self.assert_rejected(lambda data: data.update(indices=[0, True, 2]))

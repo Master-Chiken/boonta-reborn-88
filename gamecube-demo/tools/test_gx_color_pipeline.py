@@ -36,6 +36,22 @@ class GXColorPipelineTests(unittest.TestCase):
             SOURCE,
         )
 
+    def test_synthetic_mesh_submits_uvs_to_a_real_texture_stage(self) -> None:
+        draw = SOURCE.split("static int draw_synthetic_mesh(void)", 1)[1].split(
+            "static void append_screen_quad", 1
+        )[0]
+        self.assertIn("GX_LoadTexObj(&g_mesh_texture, GX_TEXMAP0);", draw)
+        self.assertIn("GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);", draw)
+        self.assertIn("GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);", draw)
+        self.assertIn("GX_TexCoord2f32(v->u, v->v);", draw)
+        self.assertIn("GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);", draw)
+        self.assertIn("GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);", draw)
+
+    def test_synthetic_texture_is_tiled_aligned_and_cache_flushed(self) -> None:
+        self.assertIn("static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE] ATTRIBUTE_ALIGN(32);", SOURCE)
+        self.assertIn("GX_TF_RGB565", SOURCE)
+        self.assertIn("DCFlushRange(g_mesh_texture_pixels, sizeof(g_mesh_texture_pixels));", SOURCE)
+
     def test_hud_binds_position_matrix_for_orthographic_vertices(self) -> None:
         hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
             "static void initialise_video_and_gx", 1
