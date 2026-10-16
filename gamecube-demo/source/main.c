@@ -88,8 +88,8 @@ static int g_race_finished;
 
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_SKY = { 105, 170, 225, 255 };
-static const GXColor C_ROAD_A = { 40, 245, 90, 255 };
-static const GXColor C_ROAD_B = { 245, 235, 40, 255 };
+static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
+static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
 static const GXColor C_EDGE_R = { 50, 225, 246, 255 };
 static const GXColor C_RAIL_A = { 36, 98, 120, 255 };
@@ -437,15 +437,12 @@ static void add_road(void)
     unsigned int i;
     const float segment_length = 2.8f;
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
-    const Point3 ground_a = { -150.0f, -0.65f, 180.0f };
-    const Point3 ground_b = {  150.0f, -0.65f, 180.0f };
-    const Point3 ground_c = {  150.0f, -0.65f, -100.0f };
-    const Point3 ground_d = { -150.0f, -0.65f, -100.0f };
 
-    /* Surface geometry is emitted in world coordinates, not bent from the old screen strip. */
+    /* The screen-space desert backdrop already supplies the ground color.
+     * Avoid a giant world-space ground plane: it can win depth tests over the
+     * narrow spline ribbon and hide the actual road and racer. */
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
-    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
@@ -1084,9 +1081,8 @@ static void draw_frame(void)
     g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
-    /* Temporary diagnostic: paint the authored spline ribbon over the ground
-     * without depth rejection to determine whether Z ordering hides the asphalt. */
-    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
+    /* Keep hardware depth testing enabled for the road, walls and rigid pods. */
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
                   (f32)g_video_mode->fbWidth / (f32)g_video_mode->efbHeight,
