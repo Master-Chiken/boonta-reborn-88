@@ -713,6 +713,7 @@ static void invalid_scaled_frame_tests(void) {
 }
 
 int main(void) {
+ race_state_reset_tests();
  finite_clamp_tests();
  frame_scale_tests();
  non_finite_physics_state_tests();
