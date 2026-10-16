@@ -52,7 +52,7 @@ jobs:
             echo
             echo "- Default branch: \`$default_branch\`"
             echo "- Rule: only delete a listed branch if its exact tip is reachable from \`main\`, it has no open PR, and GitHub reports it unprotected."
-            echo "- Fixed scope: 21 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
+            echo "- Fixed scope: 23 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
             echo
             echo "| Branch | Expected tip SHA | Evidence / result |"
             echo "|---|---|---|"
@@ -111,6 +111,8 @@ jobs:
             fi
           done <<'CANDIDATES'
           diagnostic/road-depth-visibility 8545899a9e699c7f50dfce07c6b761f8dd64a377
+          feature/runtime-track-spline 9cab51641daa4f8087fb9d5bdf65b236f356eb19
+          feature/neutral-track-spline-format 72c62232798124d418530a8a74e21fdac43fd364
           ci/wii64-tool-tests e7969c4f72ab803f5f6a8c2248317cdb5f4df0de
           docs/branch-consolidation-plan 431db6000d083636341343d2a783d8696431e8b4
           docs/wii64-test-log-template 3add41a3589964baaaf725871517828a2564e9d7
@@ -178,6 +180,7 @@ jobs:
             fi
           done <<'MERGED_CANDIDATES'
           automation/branch-governance-30-active 04b3df8dfc82f12e4ac5cc892e4de29dfd4f42d7 109
+          maintenance/add-road-depth-to-cleanup-list 2d41b8e94feb65508880b1e59898233ac289d384 166
           automation/gemini-task-focused-reports 41625dbabcd5f5177af650c8e47eb9de2e1a865d 43
           automation/harden-free-ai-ci 58c4751b51c8b0dcdd6a0162732474e77ab3cec1 31
           automation/step102-provenance-guardrails 8155a66e7a9a486cbd2aec1c0179f927ae1bb6b8 44
@@ -248,8 +251,8 @@ jobs:
           # The workflow's own source branch is also temporary. Delete it only if
           # its merged PR still has the exact current head and its complete Git tree
           # is byte-for-byte identical to main.
-          self_branch="security/check-renamed-held-paths"
-          self_pr_number=153
+          self_branch="maintenance/branch-cleanup-batch-3"
+          self_pr_number=0
           inventory
           self_sha="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
           self_protected="$(jq -r --arg name "$self_branch" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
