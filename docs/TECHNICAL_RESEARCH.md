@@ -67,3 +67,11 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 3. What repeatable controller-driven race test proves steering, pitch/slide, rival interaction, lap completion, reset, and stable frame pacing in the current clean-room GameCube demo?
 4. Which console-specific resource formats and visual behaviors are confirmed from lawful GameCube/N64 evidence, rather than inferred from Windows PC research?
 5. Which assets or tools have file-level provenance and license terms suitable for the intended public project?
+
+
+## Recovered research and archive-audit references
+
+- [PC source findings](PC_SOURCE_FINDINGS.md) — pinned source-level observations and follow-up questions for the Windows PC research reference.
+- [PC technical map](PC_TECHNICAL_MAP.md) and [PC-first research plan](PC_FIRST_RESEARCH_PLAN.md) — subsystem map, external tooling, and a research-before-port workflow.
+- [Version comparison matrix](VERSION_COMPARISON_MATRIX.md) and [cross-platform reference matrix](CROSS_PLATFORM_REFERENCE_MATRIX.md) — keep PC, Dreamcast, N64, and GameCube/Wii assumptions separate and testable.
+- [Step 102 archive audit](STEP102_IMPORT_AUDIT.md) and [handoff/access boundaries](STEP102_HANDOFF_AND_ACCESS.md) — audit of the larger 359-file archive, distinct from the separate 123-file source-only bundle; both remain subject to provenance and redistribution review.
