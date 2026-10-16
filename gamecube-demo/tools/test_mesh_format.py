@@ -140,11 +140,11 @@ class MeshFormatTests(unittest.TestCase):
                 view = f"boonta_generated_mesh_{suffix}_view"
                 harness = temp_path / "validate.c"
                 harness.write_text(
-                    '#include <stdio.h>\\n'
-                    f'#include "{header_name}"\\n'
-                    'int main(void) {\\n'
-                    f'  return boonta_mesh_validate(&{view}) == BOONTA_MESH_VALID ? 0 : 1;\\n'
-                    '}\\n',
+                    '#include <stdio.h>\n'
+                    f'#include "{header_name}"\n'
+                    'int main(void) {\n'
+                    f'  return boonta_mesh_validate(&{view}) == BOONTA_MESH_VALID ? 0 : 1;\n'
+                    '}\n',
                     encoding="utf-8",
                 )
                 binary = temp_path / "validate"
