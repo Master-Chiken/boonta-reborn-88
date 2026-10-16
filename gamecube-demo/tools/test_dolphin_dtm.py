@@ -195,14 +195,16 @@ class DolphinDtmTests(unittest.TestCase):
         released_boost = record(blob, PAUSE_BOOST_END_FRAME)
         self.assertEqual(released_boost[0], A)
 
-        start = record(blob, PAUSE_PRESS_FRAME)
-        self.assertEqual(start[0], START)  # no throttle/boost held with Start
-        self.assertTrue(start[1] & IS_CONNECTED)
-        self.assertFalse(start[1] & (DPAD_LEFT | DPAD_RIGHT))
-        self.assertEqual(start[2:4], bytes((0, 0)))
-        self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
+        for frame in range(PAUSE_PRESS_FRAME, PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES):
+            with self.subTest(start_hold_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)  # Start alone for several emulated polls
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
-        for frame in (PAUSE_PRESS_FRAME + 1, 120, 600, 3599):
+        for frame in (PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES, 120, 600, 3599):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
                 self.assertEqual(state[0], 0)  # no second Start press to resume
