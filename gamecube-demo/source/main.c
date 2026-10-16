@@ -65,26 +65,32 @@ static int g_track_world_transform_enabled;
 static float g_vehicle_anchor_progress;
 static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
-static float g_distance;
-static unsigned int g_lap_count;
-static float g_race_seconds;
-static float g_lap_seconds;
-static float g_last_lap_seconds;
-static float g_best_lap_seconds;
-static float g_speed;
-static float g_pitch_down;
-static float g_player_lateral;
-static float g_lateral_velocity;
-static float g_boost = 1.0f;
-static float g_engine_heat;
-static int g_boost_overheated;
-static int g_boost_active;
-static int g_slide_active;
-static float g_rival_z[BOONTA_RIVAL_COUNT];
-static float g_rival_lateral[BOONTA_RIVAL_COUNT];
-static unsigned int g_overtake_count;
-static int g_paused;
-static int g_race_finished;
+static BoontaRaceState g_race_state;
+
+/*
+ * Keep the established runtime expressions readable while placing all state
+ * cleared by reset into one host-testable object.
+ */
+#define g_distance          (g_race_state.distance)
+#define g_lap_count         (g_race_state.lap_count)
+#define g_race_seconds      (g_race_state.race_seconds)
+#define g_lap_seconds       (g_race_state.lap_seconds)
+#define g_last_lap_seconds  (g_race_state.last_lap_seconds)
+#define g_best_lap_seconds  (g_race_state.best_lap_seconds)
+#define g_speed             (g_race_state.speed)
+#define g_pitch_down        (g_race_state.pitch_down)
+#define g_player_lateral    (g_race_state.player_lateral)
+#define g_lateral_velocity  (g_race_state.lateral_velocity)
+#define g_boost             (g_race_state.boost)
+#define g_engine_heat       (g_race_state.engine_heat)
+#define g_boost_overheated  (g_race_state.boost_overheated)
+#define g_boost_active      (g_race_state.boost_active)
+#define g_slide_active      (g_race_state.slide_active)
+#define g_rival_z           (g_race_state.rival_z)
+#define g_rival_lateral     (g_race_state.rival_lateral)
+#define g_overtake_count    (g_race_state.overtake_count)
+#define g_paused            (g_race_state.paused)
+#define g_race_finished     (g_race_state.race_finished)
 
 static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
@@ -1082,10 +1088,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
-    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-        g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
-        g_rival_lateral[rival_index] = 0.0f;
-    }
+    boonta_race_state_reset(&g_race_state);
     previous_tick = gettime();
 
     for (;;) {
@@ -1112,28 +1115,10 @@ int main(int argc, char **argv)
             g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
         if ((buttons_down & PAD_BUTTON_Y) != 0U) {
-            g_distance = 0.0f;
-            g_lap_count = 0U;
-            g_race_seconds = 0.0f;
-            g_lap_seconds = 0.0f;
-            g_last_lap_seconds = 0.0f;
-            g_best_lap_seconds = 0.0f;
-            g_player_lateral = 0.0f;
-            g_pitch_down = 0.0f;
-            g_lateral_velocity = 0.0f;
-            g_speed = 0.0f;
-            g_boost = 1.0f;
-            g_engine_heat = 0.0f;
-            g_boost_overheated = 0;
-            g_boost_active = 0;
-            g_slide_active = 0;
-            for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-                g_rival_z[rival_index] = boonta_rival_initial_z(rival_index);
-                g_rival_lateral[rival_index] = 0.0f;
-            }
-            g_overtake_count = 0U;
-            g_race_finished = 0;
-            g_paused = boonta_pause_state_next(g_paused, 0, 1);
+            boonta_race_state_reset(&g_race_state);
+            /* Render the clean start state before any input advances the race. */
+            draw_frame();
+            continue;
         }
 
         if (g_paused || g_race_finished) {
