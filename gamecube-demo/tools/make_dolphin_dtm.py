@@ -19,6 +19,8 @@ STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to a
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
+PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
+PAUSE_BOOST_END_FRAME = 30
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
@@ -41,13 +43,24 @@ def _controller_state(frame: int, steering: str = "right",
     """Return one packed controller poll with one explicit steering source."""
     if scenario == "reset-check":
         # First create a state that differs visibly from reset: accelerate, boost,
-        # and steer. Y is pressed alone at frame 240; every later poll is neutral.
+        # and steer. Y is pressed alone at frame 120; every later poll is neutral.
         if frame < RESET_PRESS_FRAME:
             buttons = A
             if 1 <= frame < RESET_BOOST_END_FRAME:
                 buttons |= X
         elif RESET_PRESS_FRAME <= frame < RESET_PRESS_FRAME + RESET_HOLD_FRAMES:
             buttons = Y
+        else:
+            buttons = 0
+    elif scenario == "pause-check":
+        # Create some movement, then press Start alone once and leave every later
+        # poll neutral. The game should stay paused for the remainder of the movie.
+        if frame < PAUSE_PRESS_FRAME:
+            buttons = A
+            if 1 <= frame < PAUSE_BOOST_END_FRAME:
+                buttons |= X
+        elif frame == PAUSE_PRESS_FRAME:
+            buttons = START
         else:
             buttons = 0
     else:
@@ -67,7 +80,8 @@ def _controller_state(frame: int, steering: str = "right",
     # Control-smoke movies exercise exactly one steering source at a time. A full
     # race stays centered so it tests lap progression rather than steering response.
     if ((scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
-            or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)):
+            or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)
+            or (scenario == "pause-check" and frame < PAUSE_PRESS_FRAME)):
         if steering_source == "dpad":
             if steering == "right":
                 flags |= DPAD_RIGHT
@@ -98,8 +112,8 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race", "reset-check"):
-        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check")
+    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check"):
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
     if scenario == "full-race" and steering != "none":
@@ -137,9 +151,9 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check"),
                         default="control-smoke",
-                        help="short control validation, full race, or neutral Y-reset check")
+                        help="short control validation, full race, Y-reset check, or Start-pause check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()
