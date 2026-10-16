@@ -15,6 +15,7 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "generated_track.h"
+#include "mesh_data.h"
 
 #if !BOONTA_TRACK_CLOSED_LOOP
 #error "The scrolling GameCube race runtime currently requires a closed-loop track."
@@ -729,6 +730,46 @@ static void draw_vertex_buffer(void)
     GX_End();
 }
 
+/*
+ * One original, indexed triangle exercises the validated mesh contract through
+ * the real GX path. It is deliberately submitted separately so the existing
+ * procedural scene retains its established vertex budget and geometry.
+ */
+static const BoontaMeshVertex g_synthetic_mesh_vertices[3] = {
+    { -0.65f, 0.00f, 0.0f, 255U, 70U, 50U, 255U },
+    {  0.65f, 0.00f, 0.0f, 50U, 220U, 255U, 255U },
+    {  0.00f, 1.10f, 0.0f, 255U, 240U, 110U, 255U }
+};
+static const uint16_t g_synthetic_mesh_indices[3] = { 0U, 1U, 2U };
+
+static int draw_synthetic_mesh(void)
+{
+    const BoontaMeshView mesh = {
+        g_synthetic_mesh_vertices,
+        3U,
+        sizeof(g_synthetic_mesh_vertices),
+        g_synthetic_mesh_indices,
+        3U,
+        sizeof(g_synthetic_mesh_indices)
+    };
+    size_t i;
+
+    if (boonta_mesh_validate(&mesh) != BOONTA_MESH_VALID) {
+        return 0;
+    }
+
+    GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (u16)mesh.index_count);
+    for (i = 0U; i < mesh.index_count; ++i) {
+        const BoontaMeshVertex *v = &mesh.vertices[mesh.indices[i]];
+        const Point3 local = { v->x + 2.05f, v->y - 0.45f, v->z };
+        const Point3 world = track_local_to_world(local);
+        GX_Position3f32(world.x, world.y, world.z);
+        GX_Color4u8(v->r, v->g, v->b, v->a);
+    }
+    GX_End();
+    return 1;
+}
+
 static void append_screen_quad(float x0, float y0, float x1, float y1,
                                float z, GXColor color)
 {
@@ -1064,6 +1105,7 @@ static void draw_frame(void)
     GX_LoadPosMtxImm(view, GX_PNMTX0);
     GX_SetCurrentMtx(GX_PNMTX0);
     draw_vertex_buffer();
+    (void)draw_synthetic_mesh();
     draw_hud();
 
     /*
