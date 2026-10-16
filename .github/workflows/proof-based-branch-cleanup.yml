@@ -181,6 +181,7 @@ jobs:
             fi
           done <<'MERGED_CANDIDATES'
           automation/branch-governance-30-active 04b3df8dfc82f12e4ac5cc892e4de29dfd4f42d7 109
+          maintenance/cleanup-contained-collision-test-branch 5c79e4c6f349383583c7c064c9da23e1b8e61b7d 168
           maintenance/add-road-depth-to-cleanup-list 2d41b8e94feb65508880b1e59898233ac289d384 166
           automation/gemini-task-focused-reports 41625dbabcd5f5177af650c8e47eb9de2e1a865d 43
           automation/harden-free-ai-ci 58c4751b51c8b0dcdd6a0162732474e77ab3cec1 31
