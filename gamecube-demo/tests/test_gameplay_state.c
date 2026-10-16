@@ -453,6 +453,40 @@ static void rival_contact_velocity_tests(void) {
  assert(nearf(boonta_lateral_velocity_after_rival_contact(0.12f, 0.0f, NAN), 0.085f));
 }
 
+static void multiframe_rival_contact_tests(void) {
+ float speed = 0.90f;
+ float player_lateral = 0.0f;
+ float lateral_velocity = 0.0f;
+ const float rival_laterals[] = { 0.50f, -0.50f, 0.20f, -0.20f };
+ unsigned int i;
+
+ /*
+  * Several contacts across a race should reduce speed without producing
+  * non-finite state or allowing lateral momentum to escape its physics bound.
+  * The neutral-steering frame between contacts models the retained drift.
+  */
+ for (i = 0U; i < sizeof(rival_laterals) / sizeof(rival_laterals[0]); ++i) {
+  const float speed_before = speed;
+
+  speed = boonta_speed_after_rival_contact(speed);
+  lateral_velocity = boonta_lateral_velocity_after_rival_contact(
+      lateral_velocity, player_lateral, rival_laterals[i]);
+  player_lateral = boonta_lateral_position_after_frame(
+      player_lateral, lateral_velocity, 1.0f);
+  lateral_velocity = boonta_lateral_velocity_after_steering_scaled(
+      lateral_velocity, 0.0f, speed, 1.0f);
+
+  assert(isfinite(speed) && speed >= 0.0f && speed <= 1.0f);
+  assert(isfinite(player_lateral));
+  assert(isfinite(lateral_velocity));
+  assert(fabsf(lateral_velocity) <= 0.085f);
+  assert(speed < speed_before);
+ }
+
+ /* Four successive contacts must clamp the racer at rest, never below zero. */
+ assert(nearf(speed, 0.0f));
+}
+
 static void rival_event_tests(void) {
  /* The rival only triggers a contact/overtake decision once it reaches the player. */
  assert(boonta_rival_event(-18.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
@@ -643,6 +677,7 @@ int main(void) {
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
+ multiframe_rival_contact_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
