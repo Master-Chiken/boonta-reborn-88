@@ -135,6 +135,62 @@ def validate_scene(image: Image.Image, label: str) -> None:
         raise SystemExit(f"{label} frame is missing expected scene/craft color signatures; DOL may not have booted.")
 
 
+def reset_state_metrics(image: Image.Image) -> dict[str, float]:
+    """Measure HUD bars that should be reset to the start-state values.
+
+    The prototype's fixed-size HUD bar region is at x=24 with width 190 on
+    ordinary 640/800-wide captures (130 on very small previews). We sample the
+    center scanline of each bar to ignore quad-edge rasterization differences.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    bar_left = 24
+    bar_width = 130 if width < 500 else 190
+    bar_right = min(width, bar_left + bar_width)
+    if bar_right - bar_left < max(100, int(bar_width * 0.8)) or height < 100:
+        raise ValueError(f"Image too small for reset-state HUD inspection: {image.size}")
+
+    def row_pixels(y_offset: int) -> list[tuple[int, int, int]]:
+        y = max(0, min(height - 1, height - y_offset))
+        return [image.getpixel((x, y)) for x in range(bar_left, bar_right)]
+
+    speed_row = row_pixels(30)
+    boost_row = row_pixels(48)
+    heat_row = row_pixels(70)
+    progress_row = row_pixels(62)
+    lap_marker_row = row_pixels(78)
+
+    speed_fill = sum(1 for r, g, b in speed_row if r < 100 and g > 180 and b > 200)
+    boost_fill = sum(1 for r, g, b in boost_row
+                     if r > 220 and 110 < g < 190 and b < 100)
+    heat_fill = sum(1 for r, g, b in heat_row if r > 200 and b < 160)
+    progress_fill = sum(1 for r, g, b in progress_row
+                        if g > 180 and r > 100 and b > 100)
+    lap_done = sum(1 for r, g, b in lap_marker_row
+                   if g > 180 and r > 100 and b > 100)
+    row_width = max(1, len(speed_row))
+    return {
+        "speed_fill_pixels": float(speed_fill),
+        "boost_fill_fraction": boost_fill / row_width,
+        "heat_fill_pixels": float(heat_fill),
+        "lap_progress_pixels": float(progress_fill),
+        "completed_lap_marker_pixels": float(lap_done),
+    }
+
+
+def reset_state_visible(image: Image.Image) -> bool:
+    """Return true only when the HUD visibly matches the clean start state."""
+    metrics = reset_state_metrics(image)
+    tolerance = max(3.0, (130.0 if image.width < 500 else 190.0) * 0.02)
+    return (
+        metrics["speed_fill_pixels"] <= tolerance
+        and metrics["boost_fill_fraction"] >= 0.90
+        and metrics["heat_fill_pixels"] <= tolerance
+        and metrics["lap_progress_pixels"] <= tolerance
+        and metrics["completed_lap_marker_pixels"] <= tolerance
+    )
+
+
 def finish_banner_visible(image: Image.Image) -> bool:
     """Detect the demo's centered 4x3 finish-flag checkerboard.
 
@@ -200,6 +256,8 @@ def main() -> int:
                         help="matching frame rendered with --steering none")
     parser.add_argument("--expect-finish", action="store_true",
                         help="check for the three-lap finish flag instead of comparing steering frames")
+    parser.add_argument("--expect-reset", action="store_true",
+                        help="check that speed/lap/heat are empty and boost is refilled after Y reset")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -210,12 +268,24 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
+    if args.expect_finish and args.expect_reset:
+        parser.error("--expect-finish and --expect-reset cannot be used together")
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")
         if not finish_banner_visible(image):
             raise SystemExit("The centered three-lap finish checkerboard was not detected in the Dolphin capture.")
         print("Three-lap finish banner detected in the visible Dolphin frame.")
+        return 0
+    if args.expect_reset:
+        if args.baseline is not None:
+            parser.error("--expect-reset cannot be combined with --baseline")
+        validate_scene(image, "Reset-state")
+        metrics = reset_state_metrics(image)
+        print("Reset HUD metrics: " + ", ".join(f"{name}={value:.3f}" for name, value in metrics.items()))
+        if not reset_state_visible(image):
+            raise SystemExit("The visible HUD does not match reset state (expected zero speed/heat/lap progress and full boost).")
+        print("Clean Y-reset HUD state detected in the visible Dolphin frame.")
         return 0
     if args.baseline is None:
         parser.error("--baseline is required unless --expect-finish is set")
