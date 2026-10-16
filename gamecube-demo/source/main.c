@@ -440,16 +440,29 @@ static void add_road(void)
     unsigned int i;
     const float segment_length = 2.8f;
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
-    /* A low desert floor grounds the canyon walls; the higher spline ribbon
-     * wins the depth test now that the EFB Z buffer is cleared every frame. */
-    const Point3 ground_a = { -150.0f, -1.40f, 180.0f };
-    const Point3 ground_b = {  150.0f, -1.40f, 180.0f };
-    const Point3 ground_c = {  150.0f, -1.40f, -100.0f };
-    const Point3 ground_d = { -150.0f, -1.40f, -100.0f };
+    /* The floor follows the same spline as the road, with a short reach behind the
+     * player and a little more reach than the visible canyon panels. This keeps the
+     * cliff bases grounded on bends instead of leaving a giant flat plane under them. */
+    const unsigned int ground_segments = ROAD_SEGMENTS + 10U;
+    const float ground_start = -2.0f * segment_length;
+    const float ground_margin = 5.0f;
+    const float ground_drop = 0.24f;
 
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
-    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
+    for (i = 0U; i < ground_segments; ++i) {
+        const float distance0 = g_distance + ground_start + (float)i * segment_length;
+        const float distance1 = distance0 + segment_length;
+        const TrackFrame f0 = track_frame_at(distance0);
+        const TrackFrame f1 = track_frame_at(distance1);
+        const float half0 = clampf_local(f0.half_width, 2.2f, 4.8f) + ground_margin;
+        const float half1 = clampf_local(f1.half_width, 2.2f, 4.8f) + ground_margin;
+
+        quad_add(track_frame_point(f0, -half0, -ground_drop),
+                 track_frame_point(f0,  half0, -ground_drop),
+                 track_frame_point(f1,  half1, -ground_drop),
+                 track_frame_point(f1, -half1, -ground_drop), C_GROUND);
+    }
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
@@ -537,8 +550,9 @@ static void add_canyon_scenery(void)
         const float center_far = road_center_at(z_far, g_distance);
         const float base_offset_near = road_half_width_at(z_near, g_distance) + wall_margin;
         const float base_offset_far = road_half_width_at(z_far, g_distance) + wall_margin;
-        const float base_y_near = road_height_at(z_near, g_distance) - 0.11f;
-        const float base_y_far = road_height_at(z_far, g_distance) - 0.11f;
+        /* Keep wall footings aligned with the matching spline-following floor ribbon. */
+        const float base_y_near = road_height_at(z_near, g_distance) - 0.24f;
+        const float base_y_far = road_height_at(z_far, g_distance) - 0.24f;
         const float near_height = 2.5f + (float)(wall_phase % 4U) * 0.85f;
         const float far_height = 2.5f + (float)((wall_phase + 1U) % 4U) * 0.85f;
         const float near_top_offset = base_offset_near + 1.6f + (float)(wall_phase % 2U) * 0.8f;
