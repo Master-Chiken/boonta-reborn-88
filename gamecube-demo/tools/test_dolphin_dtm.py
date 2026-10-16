@@ -130,7 +130,7 @@ class DolphinDtmTests(unittest.TestCase):
     def test_asphalt_center_estimator_is_independent_of_desert_ground_color(self) -> None:
         image = Image.new("RGB", (800, 480), (133, 98, 60))
         draw = ImageDraw.Draw(image)
-        y0, y1 = int(480 * 0.52), int(480 * 0.60) - 1
+        y0, y1 = int(480 * 0.65), int(480 * 0.72) - 1
         draw.rectangle((300, y0, 500, y1), fill=(37, 43, 59))
         center, rows = road_center_from_asphalt(image)
         self.assertAlmostEqual(center, 400.0)
