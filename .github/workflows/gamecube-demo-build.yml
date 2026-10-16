@@ -62,6 +62,9 @@ jobs:
       - name: Test DOL padding and artifact validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
+      - name: Validate clean-room track format and checked-in runtime header
+        run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
+
   build-gamecube-demo:
     runs-on: ubuntu-latest
     container:
@@ -242,7 +245,9 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || false }}
+          # Run the longer finish check automatically only for this spline-integration PR.
+          # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && github.head_ref == 'feature/runtime-track-spline') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -282,7 +287,7 @@ jobs:
           EOF
           done
           capture_timeout=100
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=280; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=520; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -388,11 +393,11 @@ jobs:
               echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
                 echo "Starting optional full-race DTM; this may take around two to four minutes."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 6000 --game-id ID-boo --steering none --scenario full-race
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
                 mkdir -p "$RACE_USER/Config"
                 chmod 700 "$RACE_USER"
                 printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 220
+                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                 echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
               else

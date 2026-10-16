@@ -14,6 +14,14 @@
 
 #include "pause_state.h"
 #include "gameplay_state.h"
+#include "generated_track.h"
+
+#if !BOONTA_TRACK_CLOSED_LOOP
+#error "The scrolling GameCube race runtime currently requires a closed-loop track."
+#endif
+#if BOONTA_TRACK_POINT_COUNT < 4U
+#error "Closed-loop Catmull-Rom runtime tracks require at least four points."
+#endif
 
 #include <math.h>
 #include <malloc.h>
@@ -24,7 +32,7 @@
 #define VERTEX_CAPACITY    4096U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
-#define RACE_LAP_DISTANCE   120.0f
+#define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
 #define RACE_LAP_LIMIT       3U
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
 #define ROAD_Y             (-1.05f)
@@ -33,6 +41,12 @@
 typedef struct {
     f32 x, y, z;
 } Point3;
+
+typedef struct {
+    float x, y, z;
+    float right_x, right_z;
+    float half_width;
+} TrackFrame;
 
 typedef struct {
     f32 x, y, z;
@@ -45,6 +59,12 @@ static void *g_gx_fifo;
 static u32 g_framebuffer_index;
 static SceneVertex g_vertices[VERTEX_CAPACITY];
 static u16 g_vertex_count;
+static float g_vertex_y_offset;
+/* 0 = ordinary world geometry, 1 = spline surface, 2 = rigid craft frame. */
+static int g_track_world_transform_enabled;
+static float g_vehicle_anchor_progress;
+static float g_vehicle_anchor_local_z;
+static float g_vehicle_anchor_center_x;
 static float g_distance;
 static unsigned int g_lap_count;
 static float g_race_seconds;
@@ -66,8 +86,8 @@ static unsigned int g_overtake_count;
 static int g_paused;
 static int g_race_finished;
 
-static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_SKY = { 105, 170, 225, 255 };
+static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
 static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
@@ -86,7 +106,6 @@ static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
 static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
 static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
 static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
-static const GXColor C_CANYON_SUNLIT = { 205, 145, 82, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -112,21 +131,257 @@ static float clampf_local(float value, float low, float high)
     return boonta_clamp_finite_float(value, low, high);
 }
 
+/*
+ * Sample the authored closed-loop spline by travelled arc length. Runtime track
+ * points remain in world coordinates; existing scene meshes are built in a local
+ * forward plane and mapped into the actual course frame vertex by vertex.
+ */
+static float catmull_rom_component(float p0, float p1, float p2, float p3, float t)
+{
+    const float t2 = t * t;
+    const float t3 = t2 * t;
+    return 0.5f * (
+        2.0f * p1 + (-p0 + p2) * t
+        + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2
+        + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3
+    );
+}
+
+static void track_sample_at(float travelled, float *x_out, float *y_out,
+                            float *z_out, float *width_out)
+{
+    /* Segment lengths are cached because many road vertices sample each frame. */
+    static float segment_lengths[BOONTA_TRACK_POINT_COUNT];
+    static float total_length;
+    static int lengths_ready;
+    unsigned int i;
+    float target;
+
+    if (x_out != NULL) *x_out = 0.0f;
+    if (y_out != NULL) *y_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
+    if (width_out != NULL) *width_out = ROAD_HALF_WIDTH;
+
+    if (!lengths_ready) {
+        for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+            const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
+            const float dx = boonta_track_points_original_test_oval[next].x -
+                             boonta_track_points_original_test_oval[i].x;
+            const float dy = boonta_track_points_original_test_oval[next].y -
+                             boonta_track_points_original_test_oval[i].y;
+            const float dz = boonta_track_points_original_test_oval[next].z -
+                             boonta_track_points_original_test_oval[i].z;
+            segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
+            total_length += segment_lengths[i];
+        }
+        lengths_ready = 1;
+    }
+
+    if (!isfinite(travelled) || total_length <= 0.001f) return;
+    target = fmodf(travelled, total_length);
+    if (target < 0.0f) target += total_length;
+
+    for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+        const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
+        const float length = segment_lengths[i];
+        if (target <= length || i + 1U == BOONTA_TRACK_POINT_COUNT) {
+            const unsigned int previous =
+                (i + BOONTA_TRACK_POINT_COUNT - 1U) % BOONTA_TRACK_POINT_COUNT;
+            const unsigned int following = (next + 1U) % BOONTA_TRACK_POINT_COUNT;
+            const float t = length > 0.001f
+                ? clampf_local(target / length, 0.0f, 1.0f) : 0.0f;
+            const BoontaTrackPoint *p0 = &boonta_track_points_original_test_oval[previous];
+            const BoontaTrackPoint *p1 = &boonta_track_points_original_test_oval[i];
+            const BoontaTrackPoint *p2 = &boonta_track_points_original_test_oval[next];
+            const BoontaTrackPoint *p3 = &boonta_track_points_original_test_oval[following];
+            const float smooth_x = catmull_rom_component(p0->x, p1->x, p2->x, p3->x, t);
+            const float smooth_y = catmull_rom_component(p0->y, p1->y, p2->y, p3->y, t);
+            const float smooth_z = catmull_rom_component(p0->z, p1->z, p2->z, p3->z, t);
+            const float smooth_width = catmull_rom_component(
+                p0->half_width, p1->half_width, p2->half_width, p3->half_width, t);
+
+            if (x_out != NULL) *x_out = smooth_x;
+            if (y_out != NULL) *y_out = clampf_local(smooth_y, -3.0f, 3.0f);
+            if (z_out != NULL) *z_out = smooth_z;
+            if (width_out != NULL) *width_out = clampf_local(smooth_width, 2.2f, 4.8f);
+            return;
+        }
+        target -= length;
+    }
+}
+
+static float track_center_x_at(float travelled)
+{
+    float x = 0.0f;
+    track_sample_at(travelled, &x, NULL, NULL, NULL);
+    return x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
+}
+
+static float track_half_width_at(float travelled)
+{
+    float width = ROAD_HALF_WIDTH;
+    track_sample_at(travelled, NULL, NULL, NULL, &width);
+    return width;
+}
+
+static float track_elevation_at(float travelled)
+{
+    float elevation = 0.0f;
+    track_sample_at(travelled, NULL, &elevation, NULL, NULL);
+    return elevation;
+}
+
 static float road_center_at(float z, float distance)
 {
-    /*
-     * z is camera-relative (negative ahead of the pod). Converting it to a
-     * progressing track coordinate keeps a given piece of road stable while
-     * it advances toward the camera instead of deforming in place.
-     */
-    const float phase = boonta_track_phase(distance, z);
-    return 2.15f * sinf(phase * 0.035f) + 0.85f * sinf(phase * 0.078f);
+    return track_center_x_at(distance + (4.0f - z));
+}
+
+static float road_half_width_at(float z, float distance)
+{
+    return track_half_width_at(distance + (4.0f - z));
+}
+
+static float road_height_at(float z, float distance)
+{
+    return ROAD_Y + track_elevation_at(distance + (4.0f - z)) * 0.45f;
+}
+
+/* Map a distance/lateral/elevation triple into the authored world-space track. */
+static void track_world_point_at(float travelled, float lateral, float height,
+                                 Point3 *out)
+{
+    float center_x = 0.0f, center_y = 0.0f, center_z = 0.0f;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float tangent_x, tangent_z, tangent_length, right_x, right_z;
+
+    track_sample_at(travelled, &center_x, &center_y, &center_z, NULL);
+    track_sample_at(travelled - 0.25f, &before_x, &before_y, &before_z, NULL);
+    track_sample_at(travelled + 0.25f, &after_x, &after_y, &after_z, NULL);
+    tangent_x = after_x - before_x;
+    tangent_z = after_z - before_z;
+    tangent_length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+    if (tangent_length > 0.001f) {
+        /* With travel along +Z, camera-right points toward -X. */
+        right_x = -tangent_z / tangent_length;
+        right_z = tangent_x / tangent_length;
+    } else {
+        right_x = -1.0f;
+        right_z = 0.0f;
+    }
+
+    out->x = center_x + right_x * lateral;
+    out->y = center_y + height;
+    out->z = center_z + right_z * lateral;
+}
+
+/* A stable local frame for one authored point, reused for all road vertices in its row. */
+static TrackFrame track_frame_at(float travelled)
+{
+    TrackFrame frame;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float dx, dz, horizontal_length;
+
+    track_sample_at(travelled, &frame.x, &frame.y, &frame.z, &frame.half_width);
+    track_sample_at(travelled - 0.25f, &before_x, &before_y, &before_z, NULL);
+    track_sample_at(travelled + 0.25f, &after_x, &after_y, &after_z, NULL);
+    dx = after_x - before_x;
+    dz = after_z - before_z;
+    horizontal_length = sqrtf(dx * dx + dz * dz);
+    if (horizontal_length > 0.001f) {
+        /* Match the camera's right-handed basis along the authored course. */
+        frame.right_x = -dz / horizontal_length;
+        frame.right_z = dx / horizontal_length;
+    } else {
+        frame.right_x = -1.0f;
+        frame.right_z = 0.0f;
+    }
+    return frame;
+}
+
+static Point3 track_frame_point(TrackFrame frame, float lateral, float height)
+{
+    Point3 point;
+    point.x = frame.x + frame.right_x * lateral;
+    point.y = frame.y + height;
+    point.z = frame.z + frame.right_z * lateral;
+    return point;
+}
+
+/* Road vertices follow the spline at each depth. */
+static Point3 track_local_to_world(Point3 local_point)
+{
+    const float travelled = g_distance + (4.0f - local_point.z);
+    float center_y = 0.0f;
+    const float lateral = local_point.x - track_center_x_at(travelled);
+    float height;
+    Point3 world_point;
+
+    track_sample_at(travelled, NULL, &center_y, NULL, NULL);
+    height = local_point.y - (ROAD_Y + center_y * 0.45f);
+    track_world_point_at(travelled, lateral, height, &world_point);
+    return world_point;
+}
+
+/* A racer has one anchor and a fixed tangent: its mesh must not bend around corners. */
+static Point3 track_vehicle_local_to_world(Point3 local_point)
+{
+    float center_x = 0.0f, center_y = 0.0f, center_z = 0.0f;
+    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
+    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float dx, dy, dz, tangent_length, horizontal_length;
+    float forward, lateral, right_x, right_z, height;
+    Point3 world_point;
+
+    track_sample_at(g_vehicle_anchor_progress, &center_x, &center_y, &center_z, NULL);
+    track_sample_at(g_vehicle_anchor_progress - 0.25f,
+                    &before_x, &before_y, &before_z, NULL);
+    track_sample_at(g_vehicle_anchor_progress + 0.25f,
+                    &after_x, &after_y, &after_z, NULL);
+    dx = after_x - before_x;
+    dy = after_y - before_y;
+    dz = after_z - before_z;
+    tangent_length = sqrtf(dx * dx + dy * dy + dz * dz);
+    horizontal_length = sqrtf(dx * dx + dz * dz);
+    if (tangent_length > 0.001f) {
+        forward = g_vehicle_anchor_local_z - local_point.z;
+        world_point.x = center_x + (dx / tangent_length) * forward;
+        world_point.y = center_y + (dy / tangent_length) * forward;
+        world_point.z = center_z + (dz / tangent_length) * forward;
+    } else {
+        forward = 0.0f;
+        world_point.x = center_x;
+        world_point.y = center_y;
+        world_point.z = center_z;
+    }
+
+    if (horizontal_length > 0.001f) {
+        /* Keep craft lateral offsets consistent with road and camera frames. */
+        right_x = -dz / horizontal_length;
+        right_z = dx / horizontal_length;
+    } else {
+        right_x = -1.0f;
+        right_z = 0.0f;
+    }
+    lateral = local_point.x - g_vehicle_anchor_center_x;
+    height = local_point.y - (ROAD_Y + center_y * 0.45f);
+    world_point.x += right_x * lateral;
+    world_point.y += height;
+    world_point.z += right_z * lateral;
+    return world_point;
 }
 
 static void vertex_add(Point3 point, GXColor color)
 {
     SceneVertex *v;
     if (g_vertex_count >= VERTEX_CAPACITY) return;
+    point.y += g_vertex_y_offset;
+    if (g_track_world_transform_enabled == 1) {
+        point = track_local_to_world(point);
+    } else if (g_track_world_transform_enabled == 2) {
+        point = track_vehicle_local_to_world(point);
+    }
     v = &g_vertices[g_vertex_count++];
     v->x = point.x;
     v->y = point.y;
@@ -183,78 +438,94 @@ static void add_road(void)
 {
     unsigned int i;
     const float segment_length = 2.8f;
-    const float road_scroll = boonta_track_scroll_offset(g_distance, segment_length);
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
-    const Point3 ground_a = { -100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_b = {  100.0f, ROAD_Y - 0.24f, 7.0f };
-    const Point3 ground_c = {  100.0f, ROAD_Y - 0.24f, -110.0f };
-    const Point3 ground_d = { -100.0f, ROAD_Y - 0.24f, -110.0f };
-    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
+    /* The floor follows the same spline as the road, with a short reach behind the
+     * player and a little more reach than the visible canyon panels. This keeps the
+     * cliff bases grounded on bends instead of leaving a giant flat plane under them. */
+    const unsigned int ground_segments = ROAD_SEGMENTS + 12U;
+    const float ground_start = -2.0f * segment_length;
+    const float ground_margin = 4.2f;
+    const float ground_drop = 0.24f;
+
+    g_track_world_transform_enabled = 0;
+    g_vertex_y_offset = 0.0f;
+    for (i = 0U; i < ground_segments; ++i) {
+        const float distance0 = g_distance + ground_start + (float)i * segment_length;
+        const float distance1 = distance0 + segment_length;
+        const TrackFrame f0 = track_frame_at(distance0);
+        const TrackFrame f1 = track_frame_at(distance1);
+        const float half0 = clampf_local(f0.half_width, 2.2f, 4.8f) + ground_margin;
+        const float half1 = clampf_local(f1.half_width, 2.2f, 4.8f) + ground_margin;
+
+        quad_add(track_frame_point(f0, -half0, -ground_drop),
+                 track_frame_point(f0,  half0, -ground_drop),
+                 track_frame_point(f1,  half1, -ground_drop),
+                 track_frame_point(f1, -half1, -ground_drop), C_GROUND);
+    }
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
-        const float z0 = 4.0f + road_scroll - (float)i * segment_length;
-        const float z1 = z0 - segment_length;
-        const float c0 = road_center_at(z0, g_distance);
-        const float c1 = road_center_at(z1, g_distance);
-        const float w = ROAD_HALF_WIDTH;
+        const float distance0 = g_distance + (float)i * segment_length;
+        const float distance1 = distance0 + segment_length;
+        const TrackFrame f0 = track_frame_at(distance0);
+        const TrackFrame f1 = track_frame_at(distance1);
+        const float w0 = clampf_local(f0.half_width, 2.2f, 4.8f);
+        const float w1 = clampf_local(f1.half_width, 2.2f, 4.8f);
         const GXColor road = ((section_phase & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
         const GXColor rail = ((section_phase & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
 
-        quad_add((Point3){ c0 - w, ROAD_Y, z0 },
-                 (Point3){ c0 + w, ROAD_Y, z0 },
-                 (Point3){ c1 + w, ROAD_Y, z1 },
-                 (Point3){ c1 - w, ROAD_Y, z1 }, road);
+        quad_add(track_frame_point(f0, -w0, 0.0f),
+                 track_frame_point(f0,  w0, 0.0f),
+                 track_frame_point(f1,  w1, 0.0f),
+                 track_frame_point(f1, -w1, 0.0f), road);
 
-        /* Two bright edge strips make the procedural course readable. */
-        quad_add((Point3){ c0 - w, ROAD_Y + 0.018f, z0 },
-                 (Point3){ c0 - w + 0.12f, ROAD_Y + 0.018f, z0 },
-                 (Point3){ c1 - w + 0.12f, ROAD_Y + 0.018f, z1 },
-                 (Point3){ c1 - w, ROAD_Y + 0.018f, z1 }, C_EDGE_L);
-        quad_add((Point3){ c0 + w - 0.12f, ROAD_Y + 0.018f, z0 },
-                 (Point3){ c0 + w, ROAD_Y + 0.018f, z0 },
-                 (Point3){ c1 + w, ROAD_Y + 0.018f, z1 },
-                 (Point3){ c1 + w - 0.12f, ROAD_Y + 0.018f, z1 }, C_EDGE_R);
+        /* Edge paint, safety rails, and lane dashes use the same world-space frame. */
+        quad_add(track_frame_point(f0, -w0, 0.018f),
+                 track_frame_point(f0, -w0 + 0.12f, 0.018f),
+                 track_frame_point(f1, -w1 + 0.12f, 0.018f),
+                 track_frame_point(f1, -w1, 0.018f), C_EDGE_L);
+        quad_add(track_frame_point(f0, w0 - 0.12f, 0.018f),
+                 track_frame_point(f0, w0, 0.018f),
+                 track_frame_point(f1, w1, 0.018f),
+                 track_frame_point(f1, w1 - 0.12f, 0.018f), C_EDGE_R);
 
-        /* Low outer rails are simple original geometry, not game assets. */
-        quad_add((Point3){ c0 - w - 0.28f, ROAD_Y + 0.02f, z0 },
-                 (Point3){ c0 - w - 0.28f, ROAD_Y + 0.52f, z0 },
-                 (Point3){ c1 - w - 0.28f, ROAD_Y + 0.52f, z1 },
-                 (Point3){ c1 - w - 0.28f, ROAD_Y + 0.02f, z1 }, rail);
-        quad_add((Point3){ c0 + w + 0.28f, ROAD_Y + 0.02f, z0 },
-                 (Point3){ c0 + w + 0.28f, ROAD_Y + 0.52f, z0 },
-                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.52f, z1 },
-                 (Point3){ c1 + w + 0.28f, ROAD_Y + 0.02f, z1 }, rail);
+        quad_add(track_frame_point(f0, -w0 - 0.28f, 0.02f),
+                 track_frame_point(f0, -w0 - 0.28f, 0.52f),
+                 track_frame_point(f1, -w1 - 0.28f, 0.52f),
+                 track_frame_point(f1, -w1 - 0.28f, 0.02f), rail);
+        quad_add(track_frame_point(f0, w0 + 0.28f, 0.02f),
+                 track_frame_point(f0, w0 + 0.28f, 0.52f),
+                 track_frame_point(f1, w1 + 0.28f, 0.52f),
+                 track_frame_point(f1, w1 + 0.28f, 0.02f), rail);
 
         if ((section_phase % 2U) == 0U) {
-            const float mark_z0 = z0 - 0.35f;
-            const float mark_z1 = z0 - 1.35f;
-            const float mc0 = road_center_at(mark_z0, g_distance);
-            const float mc1 = road_center_at(mark_z1, g_distance);
-            quad_add((Point3){ mc0 - 0.055f, ROAD_Y + 0.035f, mark_z0 },
-                     (Point3){ mc0 + 0.055f, ROAD_Y + 0.035f, mark_z0 },
-                     (Point3){ mc1 + 0.055f, ROAD_Y + 0.035f, mark_z1 },
-                     (Point3){ mc1 - 0.055f, ROAD_Y + 0.035f, mark_z1 }, C_MARKER);
+            const TrackFrame mark0 = track_frame_at(distance0 + 0.35f);
+            const TrackFrame mark1 = track_frame_at(distance0 + 1.35f);
+            quad_add(track_frame_point(mark0, -0.055f, 0.035f),
+                     track_frame_point(mark0,  0.055f, 0.035f),
+                     track_frame_point(mark1,  0.055f, 0.035f),
+                     track_frame_point(mark1, -0.055f, 0.035f), C_MARKER);
         }
     }
 
-    /* A repeating start/finish stripe gives the endless prototype a lap cue. */
+    /* The finish stripe is placed at the next actual lap crossing along the spline. */
     {
-        const float offset = boonta_track_scroll_offset(g_distance, RACE_LAP_DISTANCE);
-        const float finish_z = offset - RACE_LAP_DISTANCE;
-        if (finish_z > -108.0f && finish_z < 4.0f) {
-            const float c0 = road_center_at(finish_z, g_distance);
-            const float c1 = road_center_at(finish_z - 0.55f, g_distance);
-            const float half = ROAD_HALF_WIDTH;
+        const float next_finish =
+            (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) * RACE_LAP_DISTANCE;
+        const float remaining = next_finish - g_distance;
+        if (remaining >= 0.0f && remaining < (float)ROAD_SEGMENTS * segment_length) {
+            const TrackFrame finish0 = track_frame_at(next_finish);
+            const TrackFrame finish1 = track_frame_at(next_finish + 0.55f);
+            const float w0 = clampf_local(finish0.half_width, 2.2f, 4.8f);
+            const float w1 = clampf_local(finish1.half_width, 2.2f, 4.8f);
             const GXColor stripe = { 240, 244, 250, 255 };
-            quad_add((Point3){ c0 - half, ROAD_Y + 0.04f, finish_z },
-                     (Point3){ c0 + half, ROAD_Y + 0.04f, finish_z },
-                     (Point3){ c1 + half, ROAD_Y + 0.04f, finish_z - 0.55f },
-                     (Point3){ c1 - half, ROAD_Y + 0.04f, finish_z - 0.55f }, stripe);
+            quad_add(track_frame_point(finish0, -w0, 0.04f),
+                     track_frame_point(finish0,  w0, 0.04f),
+                     track_frame_point(finish1,  w1, 0.04f),
+                     track_frame_point(finish1, -w1, 0.04f), stripe);
         }
     }
 }
-
 
 /*
  * Original low-poly canyon walls give the test road a readable world silhouette.
@@ -263,58 +534,61 @@ static void add_road(void)
  */
 static void add_canyon_scenery(void)
 {
-    const float base_y = ROAD_Y - 0.11f;
-    const float base_offset = ROAD_HALF_WIDTH + 5.0f;
-    const float wall_length = 10.0f;
-    const float wall_scroll = boonta_track_scroll_offset(g_distance, wall_length);
+    const float wall_margin = 4.2f;
+    g_track_world_transform_enabled = 1;
+    const float wall_length = 6.0f;
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
-    for (i = 0U; i < 9U; ++i) {
+    for (i = 0U; i < 18U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        const float z_near = -10.0f + wall_scroll - (float)i * wall_length;
+        /* More, shorter panels keep the canyon continuous around tight spline bends. */
+        const float z_near = -2.0f - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
-        const float near_height = 2.5f + (float)(wall_phase % 4U) * 0.85f;
-        const float far_height = 2.5f + (float)((wall_phase + 1U) % 4U) * 0.85f;
-        const float near_top_offset = base_offset + 1.6f + (float)(wall_phase % 2U) * 0.8f;
-        const float far_top_offset = base_offset + 1.6f + (float)((wall_phase + 1U) % 2U) * 0.8f;
+        const float base_offset_near = road_half_width_at(z_near, g_distance) + wall_margin;
+        const float base_offset_far = road_half_width_at(z_far, g_distance) + wall_margin;
+        /* Keep wall footings aligned with the matching spline-following floor ribbon. */
+        const float base_y_near = road_height_at(z_near, g_distance) - 0.24f;
+        const float base_y_far = road_height_at(z_far, g_distance) - 0.24f;
+        const float near_height = 3.8f + (float)(wall_phase % 4U) * 0.15f;
+        const float far_height = 3.8f + (float)((wall_phase + 1U) % 4U) * 0.15f;
+        const float near_top_offset = base_offset_near + 0.15f + (float)(wall_phase % 2U) * 0.08f;
+        const float far_top_offset = base_offset_far + 0.15f + (float)((wall_phase + 1U) % 2U) * 0.08f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
             const float side = side_index == 0U ? -1.0f : 1.0f;
             const Point3 base_near = {
-                center_near + side * base_offset, base_y, z_near
+                center_near + side * base_offset_near, base_y_near, z_near
             };
             const Point3 top_near = {
-                center_near + side * near_top_offset, base_y + near_height, z_near
+                center_near + side * near_top_offset, base_y_near + near_height, z_near
             };
             const Point3 base_far = {
-                center_far + side * base_offset, base_y, z_far
+                center_far + side * base_offset_far, base_y_far, z_far
             };
             const Point3 top_far = {
-                center_far + side * far_top_offset, base_y + far_height, z_far
+                center_far + side * far_top_offset, base_y_far + far_height, z_far
             };
             GXColor face;
-            GXColor facet;
+            const unsigned int tone_phase = wall_phase + side_index;
 
-            if (((wall_phase + side_index) & 1U) == 0U) {
+            if ((tone_phase % 4U) == 0U) {
+                face = C_CANYON_LIGHT;
+            } else if ((tone_phase & 1U) == 0U) {
                 face = C_CANYON_MID;
             } else {
                 face = C_CANYON_DARK;
             }
-            if (((wall_phase + side_index) % 3U) == 0U) {
-                facet = C_CANYON_SUNLIT;
-            } else {
-                facet = C_CANYON_LIGHT;
-            }
 
-            /* Phase-stable faceted walls now advance with the course. */
+            /* Same tone on both triangles avoids an oversized diagonal facet. */
             triangle_add(base_near, top_near, top_far, face);
-            triangle_add(base_near, top_far, base_far, facet);
+            triangle_add(base_near, top_far, base_far, face);
         }
     }
+    g_track_world_transform_enabled = 0;
 }
 static void add_player_pod(void)
 {
@@ -728,29 +1002,53 @@ static void initialise_video_and_gx(void)
 
 static void draw_frame(void)
 {
-    const float center_near = road_center_at(5.5f, g_distance);
-    const float center_ahead = road_center_at(-14.0f, g_distance);
-    /* Follow the pod laterally; steering moves the course relative to the camera. */
-    /* Pitch moves the camera target subtly to communicate nose-down/up attitude. */
-    guVector camera = { center_near + g_player_lateral, 1.65f - 0.20f * g_pitch_down, 7.0f };
+    Point3 camera_point;
+    Point3 target_point;
+    /* Position and aim are sampled from the same world-space spline as the mesh. */
+    /* Follow the local course tangent with enough downward pitch to keep the
+     * near road and the player's pod in frame, including the first start-line view. */
+    track_world_point_at(g_distance - 2.5f, g_player_lateral,
+                         3.20f - 0.20f * g_pitch_down, &camera_point);
+    track_world_point_at(g_distance + 8.0f, g_player_lateral,
+                         -0.05f - 0.45f * g_pitch_down, &target_point);
+    guVector camera = { camera_point.x, camera_point.y, camera_point.z };
     guVector up = { 0.0f, 1.0f, 0.0f };
-    guVector target = { center_ahead + g_player_lateral,
-                        -0.85f - 0.45f * g_pitch_down, -15.0f };
+    guVector target = { target_point.x, target_point.y, target_point.z };
     Mtx view;
     Mtx44 projection;
 
+    GX_SetCopyClear(C_SKY, 0x00FFFFFF);
+    /* Render straight into the cleared EFB; a 2D backdrop previously left
+     * orthographic state immediately before the depth-tested world pass. */
     g_vertex_count = 0;
+    g_vertex_y_offset = 0.0f;
+    g_track_world_transform_enabled = 0;
     add_road();
     add_canyon_scenery();
     {
         unsigned int rival_index;
         for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+            g_track_world_transform_enabled = 2;
+            g_vehicle_anchor_local_z = g_rival_z[rival_index];
+            g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+            g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+            g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
             add_rival_pod(g_rival_z[rival_index], g_rival_lateral[rival_index], rival_index);
         }
+        g_track_world_transform_enabled = 0;
+        g_vertex_y_offset = 0.0f;
     }
+    g_track_world_transform_enabled = 2;
+    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+    g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+    g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
     add_player_pod();
+    g_track_world_transform_enabled = 0;
+    g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
+    /* Keep real depth testing for the ground, spline road, canyon panels and pods. */
     GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
@@ -762,6 +1060,13 @@ static void draw_frame(void)
     draw_vertex_buffer();
     draw_hud();
 
+    /*
+     * draw_hud disables Z updates for overlay quads. Restore them before the
+     * copy: GX_CopyDisp(..., GX_TRUE) clears EFB depth only while Z updates
+     * are enabled. Without this, stale depth from the previous frame hides
+     * the moving world-space track as the camera follows a closed loop.
+     */
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     GX_DrawDone();
     GX_CopyDisp(g_framebuffers[g_framebuffer_index], GX_TRUE);
     VIDEO_SetNextFramebuffer(g_framebuffers[g_framebuffer_index]);
@@ -875,11 +1180,24 @@ int main(int argc, char **argv)
                 g_player_lateral, g_lateral_velocity, frame_scale),
             -4.0f, 4.0f);
 
-        /* Leave the road and the craft loses speed; hitting the rail pushes it back. */
-        g_speed = boonta_speed_after_offroad_scaled(g_speed, g_player_lateral, frame_scale);
-        if (boonta_is_past_rail(g_player_lateral)) {
-            g_player_lateral = boonta_lateral_after_rail_contact(g_player_lateral);
-            g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(g_lateral_velocity);
+        /*
+         * Off-road and rail limits are expressed relative to the local authored
+         * half-width, so narrow sections are not secretly as wide as broad ones.
+         */
+        {
+            const float local_half_width = track_half_width_at(g_distance);
+            const float lateral_scale = ROAD_HALF_WIDTH /
+                (local_half_width > 0.1f ? local_half_width : ROAD_HALF_WIDTH);
+            const float normalized_lateral = g_player_lateral * lateral_scale;
+            g_speed = boonta_speed_after_offroad_scaled(
+                g_speed, normalized_lateral, frame_scale);
+            if (boonta_is_past_rail(normalized_lateral)) {
+                const float resolved_lateral =
+                    boonta_lateral_after_rail_contact(normalized_lateral);
+                g_player_lateral = resolved_lateral / lateral_scale;
+                g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(
+                    g_lateral_velocity);
+            }
         }
         {
             const float previous_distance = g_distance;

@@ -27,6 +27,16 @@ class TrackFormatTests(unittest.TestCase):
         self.assertEqual(len(track["points"]), 8)
         self.assertTrue(track["points"][0]["checkpoint"])
 
+    def test_start_finish_tangent_points_forward(self):
+        points = self.valid["points"]
+        previous = points[-1]
+        following = points[1]
+        # Catmull-Rom's start tangent is proportional to next - previous.
+        # Equal X and increasing Z keep the start line facing down-course.
+        self.assertAlmostEqual(following["x"], previous["x"], places=6)
+        self.assertGreater(following["z"], previous["z"])
+        self.assertTrue(points[0]["checkpoint"])
+
     def test_point_to_point_course_is_valid(self):
         data = copy.deepcopy(self.valid)
         data["closed_loop"] = False
@@ -82,6 +92,29 @@ class TrackFormatTests(unittest.TestCase):
         self.assertIn("#define BOONTA_TRACK_POINT_COUNT 8U", header)
         self.assertIn("boonta_track_points_original_test_oval", header)
         self.assertEqual(header.count("    { "), 8)
+
+    def test_checked_in_gamecube_header_matches_exporter(self):
+        track = load_track(EXAMPLE_PATH)
+        expected = render_header(track, "original test oval")
+        checked_in = (ROOT / "gamecube-demo" / "source" / "generated_track.h").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(checked_in, expected)
+
+    def test_header_exports_closed_loop_polyline_length(self):
+        track = load_track(EXAMPLE_PATH)
+        points = track["points"]
+        expected_length = sum(
+            math.dist(
+                (points[index]["x"], points[index]["y"], points[index]["z"]),
+                (points[(index + 1) % len(points)]["x"],
+                 points[(index + 1) % len(points)]["y"],
+                 points[(index + 1) % len(points)]["z"]),
+            )
+            for index in range(len(points))
+        )
+        header = render_header(track, "original test oval")
+        self.assertIn(f"#define BOONTA_TRACK_LENGTH {expected_length:.6f}f", header)
 
     def test_header_export_sanitizes_leading_digit(self):
         track = load_track(EXAMPLE_PATH)
