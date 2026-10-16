@@ -197,7 +197,7 @@ jobs:
     continue-on-error: true
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: read
@@ -317,7 +317,7 @@ jobs:
           EOF
           done
           capture_timeout=160
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=520; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
