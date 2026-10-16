@@ -7,6 +7,8 @@ from make_dolphin_dtm import (
     A,
     B,
     NEUTRAL_AXIS,
+    RESET_PRESS_FRAME,
+    RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     DPAD_LEFT,
@@ -136,25 +138,41 @@ class DolphinDtmTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_dtm(10, steering_source="both")  # type: ignore[arg-type]
 
-    def test_reset_check_profile_presses_y_once_then_stays_neutral(self) -> None:
-        blob = build_dtm(3600, steering="none", scenario="reset-check")
-        first = record(blob, 0)
-        self.assertEqual(first[0], Y)
-        self.assertTrue(first[1] & IS_CONNECTED)
-        self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
+    def test_reset_check_profile_builds_state_then_presses_y_once(self) -> None:
+        blob = build_dtm(3600, steering="right", steering_source="stick",
+                         scenario="reset-check")
 
-        for frame in (1, 2, 79, 80, 220, 599, 600, 3599):
+        initial = record(blob, 0)
+        self.assertEqual(initial[0], A)
+        self.assertTrue(initial[1] & IS_CONNECTED)
+        self.assertEqual(initial[4], 255)  # Right stick, before reset
+        self.assertEqual(initial[5], NEUTRAL_AXIS)
+
+        boosted = record(blob, 1)
+        self.assertEqual(boosted[0], A | X)
+        self.assertEqual(boosted[4], 255)
+        before_reset = record(blob, RESET_PRESS_FRAME - 1)
+        self.assertEqual(before_reset[0], A)
+        self.assertEqual(before_reset[4], 255)
+        self.assertFalse(before_reset[1] & DPAD_RIGHT)
+
+        boost_release = record(blob, RESET_BOOST_END_FRAME)
+        self.assertEqual(boost_release[0], A)
+        self.assertEqual(boost_release[4], 255)
+
+        reset = record(blob, RESET_PRESS_FRAME)
+        self.assertEqual(reset[0], Y)  # Y alone: do not hide a reset edge
+        self.assertTrue(reset[1] & IS_CONNECTED)
+        self.assertFalse(reset[1] & (DPAD_LEFT | DPAD_RIGHT))
+        self.assertEqual(reset[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (RESET_PRESS_FRAME + 1, RESET_PRESS_FRAME + 2, 599, 600, 3599):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
-                self.assertEqual(state[0], 0)  # no throttle, brake, boost or repeat reset
-                self.assertEqual(state[1] & (DPAD_LEFT | DPAD_RIGHT), 0)
+                self.assertEqual(state[0], 0)  # no input after the reset edge
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[2:4], bytes((0, 0)))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
-
-    def test_reset_check_rejects_directional_input(self) -> None:
-        with self.assertRaises(ValueError):
-            build_dtm(10, steering="left", scenario="reset-check")
 
     def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
         frames = 6000
