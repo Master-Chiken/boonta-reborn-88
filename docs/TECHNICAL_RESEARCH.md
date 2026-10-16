@@ -10,7 +10,7 @@ The next test milestones passed after the latest gameplay-test additions in [PR 
 
 These checks validate only the clean-room prototype and the specific test paths that ran. They do not prove subjective handling quality, a complete interactive race, parity with the commercial game, or a native build of the separate Step 102 archive. Actual controller playtesting remains outstanding, and the Step 102 source import stays on hold until provenance and redistribution decisions are documented file by file.
 
-Use the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) to map pinned PC observations to testable hypotheses without treating PC behavior or data as confirmed GameCube behavior.
+Use the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) to map pinned PC observations to testable hypotheses without treating PC behavior or data as confirmed GameCube behavior. The [source and artifact register](SOURCE_AND_ARTIFACT_REGISTER.md) preserves the prior supplied-input inventory and public-repository handling boundaries; the [project status and continuity map](PROJECT_STATUS_AND_MAP.md) tracks current milestones and validation limits.
 
 
 ## Existing Star Wars: Episode I — Racer research
