@@ -2,6 +2,10 @@
 
 These rules apply to **every future project change**, not just the current GameCube milestone: gameplay code, rendering, input, asset tools, parsers, collision, UI, tests, CI, documentation, and proposed integrations. Read this file before planning or implementing work.
 
+## Equal standard for every contributor
+
+This rule applies without exception to **the project owner (Master-Chiken), Biddy-Pinky, this assistant, and every other human or AI-assisted contributor**. It governs project planning, priorities, implementation, testing, reviews, documentation, research, and performance work—not only code merged to `main`. No contributor gets a shortcut because of role, urgency, convenience, branch/fork, or because a task is labelled as an optimization. Whoever proposes or reviews a change must verify the same sequence and ask for evidence: correct end-to-end behaviour first, maintainable and well-handled behaviour second, measured optimization third. The same expectations apply when reviewing work authored by the project owner or Biddy-Pinky.
+
 ## Mandatory engineering order: Make it work, make it good, make it fast
 
 This order applies to every project task. Do not skip ahead to polish or optimization while the end-to-end behavior is still incorrect.
