@@ -20,6 +20,7 @@ RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y res
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
 PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
+PAUSE_HOLD_FRAMES = 6  # Hold Start for ~100 ms so the emulated input poll cannot miss a short tap.
 PAUSE_BOOST_END_FRAME = 30
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
@@ -59,7 +60,7 @@ def _controller_state(frame: int, steering: str = "right",
             buttons = A
             if 1 <= frame < PAUSE_BOOST_END_FRAME:
                 buttons |= X
-        elif frame == PAUSE_PRESS_FRAME:
+        elif PAUSE_PRESS_FRAME <= frame < PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES:
             buttons = START
         else:
             buttons = 0
