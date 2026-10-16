@@ -1042,6 +1042,13 @@ static void draw_frame(void)
     draw_vertex_buffer();
     draw_hud();
 
+    /*
+     * draw_hud disables Z updates for overlay quads. Restore them before the
+     * copy: GX_CopyDisp(..., GX_TRUE) clears EFB depth only while Z updates
+     * are enabled. Without this, stale depth from the previous frame hides
+     * the moving world-space track as the camera follows a closed loop.
+     */
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     GX_DrawDone();
     GX_CopyDisp(g_framebuffers[g_framebuffer_index], GX_TRUE);
     VIDEO_SetNextFramebuffer(g_framebuffers[g_framebuffer_index]);
