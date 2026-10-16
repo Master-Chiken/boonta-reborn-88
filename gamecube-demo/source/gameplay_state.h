@@ -55,7 +55,9 @@ static inline float boonta_frame_scale_from_delta(float delta_seconds)
 /* Invalid frame scales must never propagate NaN/infinity into simulation state. */
 static inline float boonta_sanitize_frame_scale(float frame_scale)
 {
+    /* Match the 50 ms frame-delta cap: 0.05 s * 60 Hz = 3 simulation frames. */
     if (!isfinite(frame_scale) || frame_scale < 0.0f) return 0.0f;
+    if (frame_scale > 3.0f) return 3.0f;
     return frame_scale;
 }
 
