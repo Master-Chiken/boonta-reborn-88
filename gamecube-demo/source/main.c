@@ -16,6 +16,7 @@
 #include "gameplay_state.h"
 #include "generated_track.h"
 #include "generated_mesh.h"
+#include "generated_mesh_diamond.h"
 
 #if !BOONTA_TRACK_CLOSED_LOOP
 #error "The scrolling GameCube race runtime currently requires a closed-loop track."
@@ -731,23 +732,25 @@ static void draw_vertex_buffer(void)
 }
 
 /*
- * One original, indexed triangle exercises the validated mesh contract through
- * the real GX path. It is deliberately submitted separately so the existing
- * procedural scene retains its established vertex budget and geometry.
+ * Submit one original indexed mesh through the validated GX path. Each mesh is
+ * drawn separately so the existing procedural scene keeps its vertex budget;
+ * local offsets make the test fixtures distinguishable in the same camera view.
  */
-static int draw_synthetic_mesh(void)
+static int draw_synthetic_mesh(const BoontaMeshView *mesh,
+                               float local_offset_x, float local_offset_y)
 {
-    const BoontaMeshView *mesh = &boonta_generated_mesh_original_synthetic_triangle_view;
     size_t i;
 
-    if (boonta_mesh_validate(mesh) != BOONTA_MESH_VALID) {
+    if (mesh == NULL || boonta_mesh_validate(mesh) != BOONTA_MESH_VALID) {
         return 0;
     }
 
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (u16)mesh->index_count);
     for (i = 0U; i < mesh->index_count; ++i) {
         const BoontaMeshVertex *v = &mesh->vertices[mesh->indices[i]];
-        const Point3 local = { v->x + 2.05f, v->y - 0.45f, v->z };
+        const Point3 local = {
+            v->x + local_offset_x, v->y + local_offset_y, v->z
+        };
         const Point3 world = track_local_to_world(local);
         GX_Position3f32(world.x, world.y, world.z);
         GX_Color4u8(v->r, v->g, v->b, v->a);
@@ -1091,7 +1094,10 @@ static void draw_frame(void)
     GX_LoadPosMtxImm(view, GX_PNMTX0);
     GX_SetCurrentMtx(GX_PNMTX0);
     draw_vertex_buffer();
-    (void)draw_synthetic_mesh();
+    (void)draw_synthetic_mesh(
+        &boonta_generated_mesh_original_synthetic_triangle_view, 2.05f, -0.45f);
+    (void)draw_synthetic_mesh(
+        &boonta_generated_mesh_original_synthetic_diamond_view, -2.05f, -0.45f);
     draw_hud();
 
     /*
