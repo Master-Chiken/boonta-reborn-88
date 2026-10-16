@@ -284,6 +284,8 @@ class DolphinDtmTests(unittest.TestCase):
         for y0, y1 in ((444, 455), (428, 435), (406, 413), (414, 421), (398, 405)):
             draw.rectangle((24, y0, 213, y1), fill=empty)
         draw.rectangle((24, 428, 213, 435), fill=(255, 157, 61))
+        # The reset steering tick is centered at screen x=400 and remains visible.
+        draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
         self.assertTrue(reset_state_visible(image))
 
         accelerated = image.copy()
