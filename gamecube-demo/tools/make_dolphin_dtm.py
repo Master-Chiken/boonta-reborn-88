@@ -16,6 +16,8 @@ CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
+RESET_PRESS_FRAME = 240  # Build non-default gameplay state before testing Y reset.
+RESET_BOOST_END_FRAME = 120
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
@@ -36,13 +38,23 @@ def _controller_state(frame: int, steering: str = "right",
                       scenario: str = "control-smoke",
                       steering_source: str = "dpad") -> bytes:
     """Return one packed controller poll with one explicit steering source."""
-    # The reset-check profile stays neutral after its single Y press so the
-    # clean start state cannot be hidden by subsequent acceleration.
-    buttons = 0 if scenario == "reset-check" else A
-    if frame == 0:
-        buttons |= Y  # Reset to a deterministic starting position.
-    if scenario != "reset-check" and 1 <= frame < 80:
-        buttons |= X  # Boost near the start.
+    if scenario == "reset-check":
+        # First create a state that differs visibly from reset: accelerate, boost,
+        # and steer. Y is pressed alone at frame 240; every later poll is neutral.
+        if frame < RESET_PRESS_FRAME:
+            buttons = A
+            if 1 <= frame < RESET_BOOST_END_FRAME:
+                buttons |= X
+        elif frame == RESET_PRESS_FRAME:
+            buttons = Y
+        else:
+            buttons = 0
+    else:
+        buttons = A  # Hold accelerator for the normal control/race scenarios.
+        if frame == 0:
+            buttons |= Y  # Reset to a deterministic starting position.
+        if 1 <= frame < 80:
+            buttons |= X  # Boost near the start.
     if scenario == "control-smoke":
         if 100 <= frame < 140:
             buttons |= B  # Exercise a short brake pulse.
@@ -53,7 +65,8 @@ def _controller_state(frame: int, steering: str = "right",
     stick_x = NEUTRAL_AXIS
     # Control-smoke movies exercise exactly one steering source at a time. A full
     # race stays centered so it tests lap progression rather than steering response.
-    if scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES:
+    if ((scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
+            or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)):
         if steering_source == "dpad":
             if steering == "right":
                 flags |= DPAD_RIGHT
@@ -88,8 +101,8 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("scenario must be one of: control-smoke, full-race, reset-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
-    if scenario in ("full-race", "reset-check") and steering != "none":
-        raise ValueError(f"{scenario} scenario requires --steering none")
+    if scenario == "full-race" and steering != "none":
+        raise ValueError("full-race scenario requires --steering none")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
