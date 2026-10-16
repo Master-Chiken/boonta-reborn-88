@@ -68,6 +68,41 @@ static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 
+/* 8x8 RGB565 checkerboard stored in GX's 4x4 tiled texture layout. */
+#define MESH_TEXTURE_SIZE 8U
+static GXTexObj g_mesh_texture;
+static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE];
+
+static u16 pack_rgb565(u8 r, u8 g, u8 b)
+{
+    return (u16)(((u16)(r >> 3) << 11) |
+                 ((u16)(g >> 2) << 5) |
+                 (u16)(b >> 3));
+}
+
+static void initialise_mesh_texture(void)
+{
+    u32 x;
+    u32 y;
+
+    for (y = 0U; y < MESH_TEXTURE_SIZE; ++y) {
+        for (x = 0U; x < MESH_TEXTURE_SIZE; ++x) {
+            const u32 tile = ((y / 4U) * (MESH_TEXTURE_SIZE / 4U) +
+                              (x / 4U)) * 16U;
+            const u32 within_tile = (y % 4U) * 4U + (x % 4U);
+            const int alternate = (((x / 2U) + (y / 2U)) & 1U) != 0U;
+            g_mesh_texture_pixels[tile + within_tile] = alternate
+                ? pack_rgb565(35U, 210U, 240U)
+                : pack_rgb565(255U, 105U, 45U);
+        }
+    }
+
+    DCFlushRange(g_mesh_texture_pixels, sizeof(g_mesh_texture_pixels));
+    GX_InitTexObj(&g_mesh_texture, g_mesh_texture_pixels,
+                  MESH_TEXTURE_SIZE, MESH_TEXTURE_SIZE, GX_TF_RGB565,
+                  GX_REPEAT, GX_REPEAT, GX_FALSE);
+}
+
 /*
  * Keep the established runtime expressions readable while placing all state
  * cleared by reset into one host-testable object.
@@ -744,6 +779,16 @@ static int draw_synthetic_mesh(void)
         return 0;
     }
 
+    /* Enable a real GX texture stage only for this source-driven mesh. */
+    GX_LoadTexObj(&g_mesh_texture, GX_TEXMAP0);
+    GX_SetNumTexGens(1);
+    GX_SetNumTevStages(1);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+    GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+    GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+
     GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (u16)mesh->index_count);
     for (i = 0U; i < mesh->index_count; ++i) {
         const BoontaMeshVertex *v = &mesh->vertices[mesh->indices[i]];
@@ -751,8 +796,15 @@ static int draw_synthetic_mesh(void)
         const Point3 world = track_local_to_world(local);
         GX_Position3f32(world.x, world.y, world.z);
         GX_Color4u8(v->r, v->g, v->b, v->a);
+        GX_TexCoord2f32(v->u, v->v);
     }
     GX_End();
+
+    /* Return to the vertex-colour-only state used by the procedural scene/HUD. */
+    GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
+    GX_SetNumTexGens(0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
     return 1;
 }
 
@@ -995,6 +1047,7 @@ static void initialise_video_and_gx(void)
     if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 
     GX_Init(g_gx_fifo, GX_FIFO_SIZE);
+    initialise_mesh_texture();
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
                    (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
