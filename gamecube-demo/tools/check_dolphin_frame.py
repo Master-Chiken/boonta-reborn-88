@@ -294,6 +294,15 @@ def pause_icon_visible(image: Image.Image) -> bool:
     return left_fraction >= 0.68 and right_fraction >= 0.68
 
 
+def resumed_state_visible(image: Image.Image) -> bool:
+    """Return true when the pause overlay is gone and the speed bar has advanced."""
+    metrics = reset_state_metrics(image)
+    return (
+        not pause_icon_visible(image)
+        and metrics["speed_fill_pixels"] >= 8.0
+    )
+
+
 def finish_banner_visible(image: Image.Image) -> bool:
     """Detect the demo's centered 4x3 finish-flag checkerboard.
 
@@ -408,10 +417,8 @@ def main() -> int:
         validate_scene(image, "Resumed-state")
         metrics = reset_state_metrics(image)
         print("Resumed HUD metrics: " + ", ".join(f"{name}={value:.3f}" for name, value in metrics.items()))
-        if pause_icon_visible(image):
-            raise SystemExit("The pause overlay is still visible after the scripted Start-resume input.")
-        if metrics["speed_fill_pixels"] < 8.0:
-            raise SystemExit("The race does not show enough speed-bar fill to prove throttle resumed after the pause.")
+        if not resumed_state_visible(image):
+            raise SystemExit("The visible frame does not prove the game resumed (pause overlay absent and speed bar advanced).")
         print("Pause overlay cleared and speed bar advanced after the scripted Start-resume input.")
         return 0
     if args.baseline is None:
