@@ -36,10 +36,12 @@ def _controller_state(frame: int, steering: str = "right",
                       scenario: str = "control-smoke",
                       steering_source: str = "dpad") -> bytes:
     """Return one packed controller poll with one explicit steering source."""
-    buttons = A  # Hold accelerator for the whole run.
+    # The reset-check profile stays neutral after its single Y press so the
+    # clean start state cannot be hidden by subsequent acceleration.
+    buttons = 0 if scenario == "reset-check" else A
     if frame == 0:
         buttons |= Y  # Reset to a deterministic starting position.
-    if 1 <= frame < 80:
+    if scenario != "reset-check" and 1 <= frame < 80:
         buttons |= X  # Boost near the start.
     if scenario == "control-smoke":
         if 100 <= frame < 140:
@@ -82,12 +84,12 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race"):
-        raise ValueError("scenario must be one of: control-smoke, full-race")
+    if scenario not in ("control-smoke", "full-race", "reset-check"):
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
-    if scenario == "full-race" and steering != "none":
-        raise ValueError("full-race scenario requires --steering none")
+    if scenario in ("full-race", "reset-check") and steering != "none":
+        raise ValueError(f"{scenario} scenario requires --steering none")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
@@ -121,9 +123,9 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check"),
                         default="control-smoke",
-                        help="short control validation or a longer unsteered race run")
+                        help="short control validation, full race, or neutral Y-reset check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()
