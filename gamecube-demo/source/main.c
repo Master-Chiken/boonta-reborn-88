@@ -86,7 +86,6 @@ static unsigned int g_overtake_count;
 static int g_paused;
 static int g_race_finished;
 
-static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
 static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
