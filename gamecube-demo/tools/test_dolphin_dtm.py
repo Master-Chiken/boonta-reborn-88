@@ -106,7 +106,7 @@ class DolphinDtmTests(unittest.TestCase):
         right_blob = build_dtm(3600, steering="right", steering_source="stick")
         right_pressed = record(right_blob, 30)
         self.assertFalse(right_pressed[1] & (DPAD_LEFT | DPAD_RIGHT))
-        self.assertEqual(right_pressed[2:4], b"\\x00\\x00")  # analog triggers released
+        self.assertEqual(right_pressed[2:4], bytes((0, 0)))  # analog triggers released
         self.assertEqual(right_pressed[4], 255)  # full-right main stick
         self.assertEqual(right_pressed[5], NEUTRAL_AXIS)  # no unintended pitch
         self.assertEqual(right_pressed[6:], bytes((NEUTRAL_AXIS, NEUTRAL_AXIS)))
