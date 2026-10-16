@@ -263,10 +263,11 @@ static void track_world_point_at(float travelled, float lateral, float height,
     tangent_z = after_z - before_z;
     tangent_length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
     if (tangent_length > 0.001f) {
-        right_x = tangent_z / tangent_length;
-        right_z = -tangent_x / tangent_length;
+        /* With travel along +Z, camera-right points toward -X. */
+        right_x = -tangent_z / tangent_length;
+        right_z = tangent_x / tangent_length;
     } else {
-        right_x = 1.0f;
+        right_x = -1.0f;
         right_z = 0.0f;
     }
 
@@ -290,10 +291,11 @@ static TrackFrame track_frame_at(float travelled)
     dz = after_z - before_z;
     horizontal_length = sqrtf(dx * dx + dz * dz);
     if (horizontal_length > 0.001f) {
-        frame.right_x = dz / horizontal_length;
-        frame.right_z = -dx / horizontal_length;
+        /* Match the camera's right-handed basis along the authored course. */
+        frame.right_x = -dz / horizontal_length;
+        frame.right_z = dx / horizontal_length;
     } else {
-        frame.right_x = 1.0f;
+        frame.right_x = -1.0f;
         frame.right_z = 0.0f;
     }
     return frame;
@@ -356,10 +358,11 @@ static Point3 track_vehicle_local_to_world(Point3 local_point)
     }
 
     if (horizontal_length > 0.001f) {
-        right_x = dz / horizontal_length;
-        right_z = -dx / horizontal_length;
+        /* Keep craft lateral offsets consistent with road and camera frames. */
+        right_x = -dz / horizontal_length;
+        right_z = dx / horizontal_length;
     } else {
-        right_x = 1.0f;
+        right_x = -1.0f;
         right_z = 0.0f;
     }
     lateral = local_point.x - g_vehicle_anchor_center_x;
