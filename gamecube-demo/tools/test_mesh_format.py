@@ -28,6 +28,12 @@ from validate_mesh import (
 SOURCE = ROOT / "gamecube-demo" / "data" / "meshes" / "original_synthetic_triangle.json"
 SOURCES = sorted((ROOT / "gamecube-demo" / "data" / "meshes").glob("*.json"))
 GENERATED = ROOT / "gamecube-demo" / "source" / "generated_mesh.h"
+CHECKED_IN_HEADERS = {
+    "original_synthetic_triangle.json": GENERATED,
+    "original_synthetic_diamond.json": (
+        ROOT / "gamecube-demo" / "source" / "generated_mesh_diamond.h"
+    ),
+}
 EXPORTER = ROOT / "tools" / "mesh_format" / "export_mesh_header.py"
 
 
@@ -64,6 +70,19 @@ class MeshFormatTests(unittest.TestCase):
                 )
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 self.assertEqual(output.read_text(encoding="utf-8"), render_header(mesh))
+
+    def test_every_original_fixture_matches_its_checked_in_generated_header(self) -> None:
+        source_names = {source.name for source in SOURCES}
+        self.assertEqual(source_names, set(CHECKED_IN_HEADERS))
+        for source in SOURCES:
+            with self.subTest(source=source.name):
+                expected = render_header(load_mesh(source))
+                generated_path = CHECKED_IN_HEADERS[source.name]
+                self.assertEqual(
+                    generated_path.read_text(encoding="utf-8"),
+                    expected,
+                    f"{generated_path.relative_to(ROOT)} is stale; regenerate it from {source.name}",
+                )
 
     def test_coordinate_and_rgba_extremes_are_accepted(self) -> None:
         candidate = copy.deepcopy(self.raw)
