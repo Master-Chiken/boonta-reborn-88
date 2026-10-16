@@ -1,64 +1,77 @@
-# Next milestone: verify an interactive GameCube racing slice
+# Next milestone: Interactive validation of the clean-room racing slice
 
 Last updated: 2026-10-16
 
-## Current mainline baseline
+## Goal of this milestone
 
-The active native target is the clean-room, original procedural prototype in gamecube-demo/. It is not the full game and does not contain commercial game code or extracted assets.
+Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a real controller in a visible Dolphin session (and later on real hardware).
 
-Verified in GitHub Actions:
-- Host regression tests cover speed input, boost/overheat, steering inertia, analog/D-pad mapping, lap boundaries and three-lap finish state, three-rival spacing and rival collision/overtake decisions, off-road drag, rail recovery, pause/reset behavior, finite-state guards, and build-artifact utilities.
-- A cadence regression verifies consistent one-second outcomes at 60 and 50 gameplay updates per second; long frame deltas are capped at 50 ms for physics/state updates.
-- devkitPPC/libogc produces a non-empty GameCube DOL and ELF, and the artifact validator passes.
-- Dolphin remains active for the bounded 12-second null-video process smoke.
-- The Software Renderer capture in run #69 shows a visible procedural road, edge rails, center markers, player pod and rival pod.
+This is the gate before expanding the vertical slice.
 
-Those results establish deterministic code tests, a native build, bounded emulator startup, and a visible CI scene. They do not yet establish correct live controller input, a fully completed three-lap race, sustained frame pacing, or behavior on physical GameCube/Wii hardware.
+## What is already verified (CI)
 
-## Automated acceptance evidence for the runtime integration
+- Host regression tests (speed, boost/overheat, steering, lap boundaries, rivals, pause/reset, finite-state guards, etc.)
+- Consistent 50/60 Hz cadence handling
+- Native `boonta_gc_demo.dol` / `.elf` build with devkitPPC/libogc
+- Bounded Dolphin null-video smoke
+- Visible Software Renderer capture (road, rails, markers, player + rival pods)
 
-On 2026-10-16, GitHub Actions run [#38891767425](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38891767425) tested runtime-code head `e0e9d54382992a2394df05ba919a06485355a602`. The native DOL/ELF build, host gameplay/pause tests, artifact validation, and Dolphin process smoke passed. The Software Renderer job passed the deterministic left/right steering comparison and the scripted full-race diagnostic: after 12,000 controller polls with throttle held and steering neutral, the captured visible Dolphin frame was recognized as showing the three-lap finish banner.
+These prove the code compiles, the deterministic logic works, and a scene can render.  
+They do **not** yet prove live controller response or a completed three-lap race.
 
-This is reproducible CI evidence of automated race progression and a visible finish state for the runtime integration. A scripted DTM is not a substitute for a person controlling the game live. Manual stick/D-pad, braking, boost, pause/resume, reset/restart, sustained frame pacing, and physical GameCube/Wii behavior remain pending. A later workflow run should be checked against its exact commit; the optional Software Renderer diagnostic is non-blocking in CI.
-## Immediate milestone: interactive controller and race acceptance
+## Interactive acceptance checklist
 
-Load the latest mainline DOL in a visible Dolphin session. Record the Dolphin version, renderer/backend, video mode, controller profile, and a short video or screenshots plus any runtime log. Test in this order:
+Load the latest mainline DOL in a **visible** Dolphin session.  
+Record: Dolphin version, video backend, video mode, controller profile, and evidence (short video or screenshots + notes).
 
-1. Reset with Y. Check that the pod returns to the starting lateral position, speed and lap count reset, the three rivals and overtake indicators reset, boost refills, and pause/finish state clears.
-2. Hold A, then B. Confirm acceleration and braking visibly change speed. Release A/B and confirm speed falls naturally rather than remaining stuck.
-3. Steer left and right with the Control Stick; repeat with the D-pad. Confirm movement direction is correct, motion has the programmed inertia, releasing input damps the drift, and the steering remains bounded.
-4. Drive beyond the road edge. Confirm off-road speed loss and rail-edge recovery are visible and do not freeze or destabilize rendering.
-5. Hold X + A to boost. Confirm energy drains while active and recharges after release.
-6. Press Start while moving. Confirm the pause icon appears and simulation freezes; press Start again and confirm it resumes. Press Y while paused and confirm a clean reset/unpause.
-7. Complete three counted lap crossings. Confirm the three HUD markers advance consistently, the finish flag appears, and movement stops after the configured race limit. Press Y and confirm another run can begin.
-8. Let the scene run for a longer session. Look for graphics corruption, crashes, and severe frame pacing problems.
+Test in this exact order:
 
-Mark each item pass/fail with the exact evidence. A screenshot alone is not proof of controller input; a headless process smoke is not proof of visible rendering. A successful compiler run is not proof of a complete race.
+1. **Reset (Y)**  
+   Pod returns to start position, speed and lap counters reset, rivals and overtake markers reset, boost refilled, pause/finish state cleared.
+
+2. **Throttle / Brake (A / B)**  
+   Acceleration and braking visibly change speed. Speed falls naturally when released.
+
+3. **Steering**  
+   Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
+
+4. **Off-road & rails**  
+   Drive off the road → speed loss visible. Rail recovery works without freezing or breaking rendering.
+
+5. **Boost (X + A)**  
+   Energy drains while boosting, recharges after release. Overheat lockout behaves correctly.
+
+6. **Pause (Start)**  
+   Pause icon appears, simulation freezes. Resume works. Reset (Y) while paused is clean.
+
+7. **Full three-lap race**  
+   Three lap crossings counted correctly. Finish flag appears. Movement stops after the race limit. Reset allows a new run.
+
+8. **Longer session**  
+   Several minutes of play. No sustained graphical corruption, crashes, or severe frame pacing issues.
 
 ### Acceptance criteria
 
-- The visible scene starts without a fatal/boot error.
-- Steering, acceleration, braking, boost, pause/resume, and reset behave as described.
-- A three-lap run reaches the finish and stops; reset starts a fresh run.
-- No sustained render corruption or crash appears during the longer session.
-- CI host tests and native build pass on the exact code being tested.
-- Any unverified item remains marked pending; do not infer hardware compatibility from Dolphin.
+- [ ] Scene starts without fatal error
+- [ ] All controls above behave as described
+- [ ] Three-lap race reaches finish and stops cleanly
+- [ ] Reset starts a fresh run
+- [ ] No sustained corruption or crash in longer session
+- [ ] CI host tests + native build still pass on the exact commit tested
+- [ ] Evidence recorded (video/screenshots + notes)
 
-## Step 102 source/provenance evidence
+Any item not tested remains **pending**. Do not claim hardware compatibility from Dolphin alone.
 
-The import hold is documented in the [source-import gate](SOURCE_IMPORT_GATE.md), [bundle audit](STEP102_BUNDLE_AUDIT.md), [host validation record](STEP102_HOST_VALIDATION.md), and [source provenance review](STEP102_SOURCE_PROVENANCE.md). These reports describe a separate archive and historical host checks only. They do **not** clear files for redistribution or provide a native build result for Step 102.
+## After this milestone
 
-## Parallel track: Step 102 source import remains on hold
+Once the interactive checklist is fully green:
 
-The fuller Step 102 source archive is separate from the clean-room mainline code. Do not merge draft PR #17 or #22 wholesale. The available evidence does not resolve file-by-file source authorship/license, the generated centerline header whose presence contradicts the archive README, or the origin of demo track CSV data. Keep unclear-provenance source and all commercial game payloads/assets out of the public repository until permission and derivation are documented. Build success and passing tests do not resolve licensing.
+1. Fix any bugs found during the session and add regression tests.
+2. Improve the procedural track, camera and collision as one coherent vertical slice.
+3. Only then expand content (more tracks, pods, AI, presentation, bonuses).
 
-## PC research to guide faithful behavior
+## Parallel track (do not mix)
 
-Use the pinned SW_RACER_RE research snapshot as a source of questions and behavior observations, not as portable GameCube code. Track each finding in the behavior matrix, distinguish observed PC facts from GameCube/N64 hypotheses, and implement independently unless a deliberate license review clears code reuse. Keep route geometry, extracted assets, ROMs and disc images out unless provenance and redistribution rights are established.
-
-## Next technical improvements after the interactive run
-
-- Add regression tests for any bug found during the controller session before changing behavior.
-- Validate input/steering, off-road/rail response, rival interactions and finish/reset together in deterministic host tests where practical.
-- Improve the procedural track, camera and collision model as a cohesive vertical slice; preserve a clean CI build and visible-render diagnostic with every change.
-- Only then expand race systems, presentation, assets and bonus content.
+Step 102 source archive remains on **import hold**.  
+See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
+Do not merge unclear-provenance code or any commercial assets.
