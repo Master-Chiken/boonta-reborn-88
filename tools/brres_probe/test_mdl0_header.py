@@ -39,7 +39,7 @@ class MDL0HeaderTests(unittest.TestCase):
         struct.pack_into(">IIi", data, 4, 0x60, 11, 0)
         struct.pack_into(">i", data, 0x10, 0x4C)
         struct.pack_into(">i", data, 0x48, 0x60)
-        data[0x60:0x6A] = b"detached\\0"
+        data[0x60:0x69] = b"detached\0"
 
         header = validate_mdl0_v11(data, 0, brres_start=0)
         self.assertEqual(header.brres_relative_offset, 0)
