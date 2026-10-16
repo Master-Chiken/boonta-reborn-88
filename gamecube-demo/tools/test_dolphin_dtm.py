@@ -308,6 +308,33 @@ class DolphinDtmTests(unittest.TestCase):
         ImageDraw.Draw(completed_lap).rectangle((24, 398, 44, 405), fill=(137, 241, 154))
         self.assertFalse(reset_state_visible(completed_lap))
 
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or reset_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_reset_state_detector_accounts_for_dolphin_toolbar_offset(self) -> None:
+        image = Image.new("RGB", (800, 480), (239, 239, 239))
+        draw = ImageDraw.Draw(image)
+        # Visible Dolphin window capture: toolbar occupies rows 0..83 and the
+        # scaled game viewport begins at row 84.
+        draw.rectangle((0, 84, 799, 479), fill=(106, 169, 225))
+        empty = (48, 66, 80)
+        # Project the source HUD scanlines into the reduced game viewport.
+        viewport_top = 84
+        viewport_height = 480 - viewport_top
+
+        def screen_y(offset: int) -> int:
+            return round(viewport_top + viewport_height * (480 - offset) / 480)
+
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            draw.line((24, y, 213, y), fill=empty, width=2)
+        boost_y = screen_y(48)
+        draw.line((24, boost_y, 213, boost_y), fill=(255, 157, 61), width=2)
+        # Centered reset steering tick; it is measured independently of the bars.
+        draw.rectangle((398, 444, 401, 455), fill=(238, 246, 255))
+        self.assertTrue(reset_state_visible(image))
+
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")
         self.assertEqual(blob[4:10], b"ID-boo")
