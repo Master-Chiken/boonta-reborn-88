@@ -15,8 +15,9 @@ Unofficial fan / homebrew project. Clean-room first.
 - [x] Clean-room procedural GX prototype
 - [x] Basic driving, boost, heat, rivals, lap system, HUD
 - [x] Native DOL/ELF build + CI
-- [x] Host tests + visible render evidence
-- [ ] **Interactive controller + full 3-lap race validation** ← current focus  
+- [x] Host tests + native build + visible render evidence
+- [x] Scripted controller-direction checks and visible three-lap finish in Dolphin CI ([run #38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111))
+- [ ] **Manual controller + live finish/reset/restart acceptance** ← current focus  
   → See `NEXT_MILESTONE.md`
 
 ---
