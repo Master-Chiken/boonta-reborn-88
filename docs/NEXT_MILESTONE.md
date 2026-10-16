@@ -1,6 +1,6 @@
 # Next milestone: verify an interactive GameCube racing slice
 
-Last updated: 2026-10-15
+Last updated: 2026-10-16
 
 ## Current mainline baseline
 
@@ -14,6 +14,12 @@ Verified in GitHub Actions:
 - The Software Renderer capture in run #69 shows a visible procedural road, edge rails, center markers, player pod and rival pod.
 
 Those results establish deterministic code tests, a native build, bounded emulator startup, and a visible CI scene. They do not yet establish correct live controller input, a fully completed three-lap race, sustained frame pacing, or behavior on physical GameCube/Wii hardware.
+
+## Additional acceptance evidence on PR #157 (not yet mainline)
+
+On 2026-10-16, GitHub Actions run [#38891767425](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38891767425) tested the `feature/runtime-track-spline` head `e0e9d54382992a2394df05ba919a06485355a602`. The native DOL/ELF build, host gameplay/pause tests, artifact validation, and Dolphin process smoke passed. The software-renderer job also passed the deterministic left/right steering comparison and the scripted full-race diagnostic: after 12,000 controller polls with throttle held and steering neutral, the captured visible Dolphin frame was recognized as showing the three-lap finish banner.
+
+This is evidence of automated race progression and a visible finish state on the PR branch. It is **not yet a mainline result**, and the scripted DTM is not a substitute for a person controlling the game live. Manual stick/D-pad, braking, boost, pause/resume, reset/restart, sustained frame pacing, and physical GameCube/Wii behavior remain pending. The software-renderer job is marked non-blocking in CI, so retain the artifact/log evidence and re-check the exact head before merge.
 
 ## Immediate milestone: interactive controller and race acceptance
 
