@@ -17,7 +17,7 @@ This repository contains two distinct tracks that must not be confused:
 ## Current next milestones
 
 1. Run the manual controller acceptance checklist in `docs/NEXT_MILESTONE.md`: stick/D-pad, A/B, X+A, Start, Y reset and live restart; record Dolphin version/backend and evidence.
-2. Finish host regression coverage for multi-frame rival collision response (tracked in PR #161), camera-follow timing, and lap/finish interactions. Existing coverage includes pause, speed, boost, lap boundaries, and rival events.
+2. Expand host regression coverage for camera-follow timing and lap/finish interactions. Host tests now also exercise repeated rival contacts across several successive frames, alongside pause, speed, boost, lap boundaries, and rival events.
 3. Test a longer visible session for frame pacing, rendering stability, and recovery from off-road/rail contact.
 4. Establish the playable vertical slice: one complete course, controllable pod, camera follow, collision, and clean finish/reset.
 5. Continue the Step 102 source/license audit independently; import only files whose authorship and redistribution rights are clear. Keep build, visible rendering, scripted race, manual control, and physical hardware as separate acceptance gates.
