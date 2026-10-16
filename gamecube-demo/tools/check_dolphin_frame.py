@@ -255,6 +255,54 @@ def reset_state_visible(image: Image.Image) -> bool:
     )
 
 
+def pause_icon_visible(image: Image.Image) -> bool:
+    """Detect the framed pair of vertical pause bars in a visible Dolphin capture."""
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    scale_x = width / 800.0
+    scale_y = viewport_height / 480.0
+    center_x = width / 2.0
+    center_y = viewport_top + viewport_height / 2.0
+    pixels = image.load()
+
+    def white_fraction(x0: float, y0: float, x1: float, y1: float) -> float:
+        left = max(0, int(x0))
+        top = max(0, int(y0))
+        right = min(width, int(x1))
+        bottom = min(height, int(y1))
+        hit = total = 0
+        for y in range(top, bottom):
+            for x in range(left, right):
+                r, g, b = pixels[x, y]
+                total += 1
+                if r > 205 and g > 210 and b > 215:
+                    hit += 1
+        return hit / max(total, 1)
+
+    # Match the two 9x36 white bars, projecting logical 800x480 coordinates
+    # into both framebuffer captures and window captures that include a toolbar.
+    left_fraction = white_fraction(
+        center_x - 13.0 * scale_x, center_y - 18.0 * scale_y,
+        center_x - 4.0 * scale_x, center_y + 18.0 * scale_y,
+    )
+    right_fraction = white_fraction(
+        center_x + 4.0 * scale_x, center_y - 18.0 * scale_y,
+        center_x + 13.0 * scale_x, center_y + 18.0 * scale_y,
+    )
+    return left_fraction >= 0.68 and right_fraction >= 0.68
+
+
+def resumed_state_visible(image: Image.Image) -> bool:
+    """Return true when the pause overlay is gone and the speed bar has advanced."""
+    metrics = reset_state_metrics(image)
+    return (
+        not pause_icon_visible(image)
+        and metrics["speed_fill_pixels"] >= 8.0
+    )
+
+
 def finish_banner_visible(image: Image.Image) -> bool:
     """Detect the demo's centered 4x3 finish-flag checkerboard.
 
@@ -322,6 +370,10 @@ def main() -> int:
                         help="check for the three-lap finish flag instead of comparing steering frames")
     parser.add_argument("--expect-reset", action="store_true",
                         help="check that speed/lap/heat are empty and boost is refilled after Y reset")
+    parser.add_argument("--expect-pause", action="store_true",
+                        help="check that a Start input visibly leaves the game in paused state")
+    parser.add_argument("--expect-resume", action="store_true",
+                        help="check that the pause overlay is gone and throttle visibly moves the game after Start resumes")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -332,8 +384,8 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
-    if args.expect_finish and args.expect_reset:
-        parser.error("--expect-finish and --expect-reset cannot be used together")
+    if sum((args.expect_finish, args.expect_reset, args.expect_pause, args.expect_resume)) > 1:
+        parser.error("--expect-finish, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")
@@ -350,6 +402,24 @@ def main() -> int:
         if not reset_state_visible(image):
             raise SystemExit("The visible HUD does not match reset state (expected zero speed/heat/lap progress and full boost).")
         print("Clean Y-reset HUD state detected in the visible Dolphin frame.")
+        return 0
+    if args.expect_pause:
+        if args.baseline is not None:
+            parser.error("--expect-pause cannot be combined with --baseline")
+        validate_scene(image, "Pause-state")
+        if not pause_icon_visible(image):
+            raise SystemExit("The framed pause bars were not detected in the visible Dolphin capture.")
+        print("Paused-state icon detected in the visible Dolphin frame.")
+        return 0
+    if args.expect_resume:
+        if args.baseline is not None:
+            parser.error("--expect-resume cannot be combined with --baseline")
+        validate_scene(image, "Resumed-state")
+        metrics = reset_state_metrics(image)
+        print("Resumed HUD metrics: " + ", ".join(f"{name}={value:.3f}" for name, value in metrics.items()))
+        if not resumed_state_visible(image):
+            raise SystemExit("The visible frame does not prove the game resumed (pause overlay absent and speed bar advanced).")
+        print("Pause overlay cleared and speed bar advanced after the scripted Start-resume input.")
         return 0
     if args.baseline is None:
         parser.error("--baseline is required unless --expect-finish is set")

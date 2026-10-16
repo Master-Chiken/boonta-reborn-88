@@ -12,6 +12,11 @@ from make_dolphin_dtm import (
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
+    PAUSE_BOOST_END_FRAME,
+    PAUSE_HOLD_FRAMES,
+    PAUSE_PRESS_FRAME,
+    RESUME_HOLD_FRAMES,
+    RESUME_PRESS_FRAME,
     DPAD_LEFT,
     DPAD_RIGHT,
     HEADER_SIZE,
@@ -30,6 +35,8 @@ try:
         finish_banner_visible,
         player_pod_bounds,
         reset_state_visible,
+        pause_icon_visible,
+        resumed_state_visible,
         road_center_from_asphalt,
     )
 except ImportError:
@@ -38,6 +45,8 @@ except ImportError:
     finish_banner_visible = None
     player_pod_bounds = None
     reset_state_visible = None
+    pause_icon_visible = None
+    resumed_state_visible = None
     road_center_from_asphalt = None
 
 
@@ -178,6 +187,68 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertEqual(state[2:4], bytes((0, 0)))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+    def test_pause_check_profile_presses_start_once_then_stays_neutral(self) -> None:
+        blob = build_dtm(3600, steering="right", scenario="pause-check")
+        before = record(blob, PAUSE_PRESS_FRAME - 1)
+        self.assertTrue(before[0] & A)
+        self.assertFalse(before[0] & START)
+        self.assertTrue(before[1] & DPAD_RIGHT)
+        self.assertEqual(before[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        boost = record(blob, PAUSE_BOOST_END_FRAME - 1)
+        self.assertEqual(boost[0], A | X)
+        released_boost = record(blob, PAUSE_BOOST_END_FRAME)
+        self.assertEqual(released_boost[0], A)
+
+        for frame in range(PAUSE_PRESS_FRAME, PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES):
+            with self.subTest(start_hold_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)  # Start alone for several emulated polls
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES, 120, 600, 3599):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)  # no second Start press to resume
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_resume_check_profile_pauses_then_resumes_with_throttle(self) -> None:
+        blob = build_dtm(3600, steering="none", scenario="resume-check")
+        before_pause = record(blob, PAUSE_PRESS_FRAME - 1)
+        self.assertEqual(before_pause[0], A)
+
+        for frame in range(PAUSE_PRESS_FRAME, PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES):
+            with self.subTest(pause_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES, 100, RESUME_PRESS_FRAME - 1):
+            with self.subTest(paused_neutral_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)
+
+        for frame in range(RESUME_PRESS_FRAME, RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES):
+            with self.subTest(resume_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES, 200, 3599):
+            with self.subTest(running_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], A)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
     def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
         frames = 6000
         blob = build_dtm(frames, steering="none", scenario="full-race")
@@ -275,6 +346,60 @@ class DolphinDtmTests(unittest.TestCase):
         pause_draw.rectangle((387, 263, 396, 297), fill=(238, 246, 255))
         pause_draw.rectangle((404, 263, 413, 297), fill=(238, 246, 255))
         self.assertFalse(finish_banner_visible(pause))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or pause_icon_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_pause_detector_requires_both_bars_and_handles_dolphin_toolbar(self) -> None:
+        sky = (105, 170, 225)
+        pause_panel = (8, 18, 30)
+        white = (238, 246, 255)
+
+        direct = Image.new("RGB", (800, 480), sky)
+        draw = ImageDraw.Draw(direct)
+        draw.rectangle((368, 210, 432, 270), fill=pause_panel)
+        draw.rectangle((387, 222, 396, 258), fill=white)
+        draw.rectangle((404, 222, 413, 258), fill=white)
+        self.assertTrue(pause_icon_visible(direct))
+
+        neutral = Image.new("RGB", (800, 480), sky)
+        self.assertFalse(pause_icon_visible(neutral))
+
+        # A real Dolphin window capture includes an 84 px toolbar above the
+        # 480 px game viewport; the detector must project the icon into that area.
+        window = Image.new("RGB", (800, 564), (239, 239, 239))
+        window_draw = ImageDraw.Draw(window)
+        window_draw.rectangle((0, 84, 799, 563), fill=sky)
+        cy = 84 + 240
+        window_draw.rectangle((368, cy - 30, 432, cy + 30), fill=pause_panel)
+        window_draw.rectangle((387, cy - 18, 396, cy + 18), fill=white)
+        window_draw.rectangle((404, cy - 18, 413, cy + 18), fill=white)
+        self.assertTrue(pause_icon_visible(window))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or resumed_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_resume_detector_requires_no_pause_icon_and_nonzero_speed(self) -> None:
+        image = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw = ImageDraw.Draw(image)
+        empty = (48, 66, 80)
+        draw.rectangle((24, 444, 213, 455), fill=empty)
+        draw.rectangle((24, 444, 95, 455), fill=(50, 225, 246))
+        draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
+        self.assertTrue(resumed_state_visible(image))
+
+        no_speed = image.copy()
+        ImageDraw.Draw(no_speed).rectangle((24, 444, 213, 455), fill=empty)
+        self.assertFalse(resumed_state_visible(no_speed))
+
+        still_paused = image.copy()
+        paused_draw = ImageDraw.Draw(still_paused)
+        paused_draw.rectangle((368, 210, 432, 270), fill=(8, 18, 30))
+        paused_draw.rectangle((387, 222, 396, 258), fill=(238, 246, 255))
+        paused_draw.rectangle((404, 222, 413, 258), fill=(238, 246, 255))
+        self.assertFalse(resumed_state_visible(still_paused))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or reset_state_visible is None,
