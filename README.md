@@ -4,23 +4,23 @@ An unofficial research and homebrew project aiming toward an enhanced, playable 
 
 This repository contains two distinct tracks that must not be confused:
 
-- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, including steering, throttle/brake, boost with heat/cooldown, three staggered procedural rivals, total/current-lap/best-lap clocks, and a three-lap prototype finish marker. Strict host tests now cover 50/60 Hz cadence consistency and non-finite speed/lap guards. Its DOL/ELF build, artifact validation and 12-second Dolphin process smoke test pass in CI; an earlier Software Renderer run captured the visible road, rails, markers and craft. Interactive controller behavior and a completed live three-lap run/restart are still unverified.
+- **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, now using an authored closed-loop oval spline for the road, floor, canyon and racer placement. It includes steering, throttle/brake, boost with heat/cooldown, three procedural rivals, lap timing, and a three-lap finish marker. Host tests cover 50/60 Hz cadence, invalid-state guards, lap/finish transitions and rival behavior. Native DOL/ELF build, artifact validation and Dolphin process smoke pass in CI. The visible Software Renderer diagnostic in [run #38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111) detected the finish banner after a 12,000-poll scripted three-lap race; see the [captured evidence artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111/artifacts/12046395423). Automated steering and race progression are verified, but **manual controller play, live restart, long-session frame pacing, and physical hardware remain unverified**.
 - **Step 102 source prototype**: a separate source archive investigated for a fuller reconstruction. It is not automatically part of `main`; its provenance, license, generated course data, and any assets must be reviewed before importing or redistributing it.
 
 ## Project direction
 
 - **Primary target:** native GameCube/Wii homebrew.
 - **Current verified technical milestone:** `gamecube-demo/` produces a non-empty `boonta_gc_demo.dol` and `boonta_gc_demo.elf` with devkitPPC/libogc; gameplay updates are normalized across 50/60 Hz and the speed helper rejects non-finite state. See [the build status report](docs/GAMECUBE_FIRST_RENDER_STATUS.md) and [current mainline CI run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286).
-- **Runtime status:** the latest recorded visible-render validation is [CI run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531). Host tests, native build, artifact validation, and the 12-second Dolphin Null-backend smoke passed; its [Software Renderer frame artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471) shows the procedural road, colored rails, center markers, player pod and rival pod. This proves visible output in the CI renderer, not interactive controller response, a completed three-lap run, long-session stability, or physical-hardware behavior.
+- **Runtime status:** the latest full visible-render diagnostic is [CI run #38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111). Native build, host regressions and the 12-second Dolphin Null-backend smoke passed; its [Software Renderer artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111/artifacts/12046395423) contains neutral, left/right steering, and full-race frames. The 12,000-poll scripted movie reaches the three-lap finish banner. This still is not proof of a live user-controlled race, clean manual reset/restart, sustained frame pacing, or physical-hardware compatibility.
 - **Fuller gameplay baseline:** the Step 102 archive describes course/pod presets, racing physics, drift/boost/heat/damage, rival AI, pickups/hazards, race modes, HUD, and save/progression scaffolding. Treat those as archive-described scope, not as features verified in the clean-room demo.
 
 ## Current next milestones
 
-1. Verify controller input and a completed three-lap run in a visible Dolphin session or on suitable hardware; record emulator/version, video backend, and observed behavior.
-2. Extend host-side tests for camera-follow timing, collision response over several frames, and lap/finish interactions; pause, speed, boost-meter, lap-boundary, rival-event, and race-finish transitions are already covered.
-3. Establish a compact playable vertical slice: one course, controllable pod, camera follow, track collision, and stable frame timing.
-4. Continue the Step 102 source and license audit independently. Import only source/data whose authorship and redistribution rights are clear.
-5. Keep compile, headless process smoke tests, visible rendering, controller input, and a completed race as separate acceptance gates.
+1. Run the manual controller acceptance checklist in `docs/NEXT_MILESTONE.md`: stick/D-pad, A/B, X+A, Start, Y reset and live restart; record Dolphin version/backend and evidence.
+2. Finish host regression coverage for multi-frame rival collision response (tracked in PR #161), camera-follow timing, and lap/finish interactions. Existing coverage includes pause, speed, boost, lap boundaries, and rival events.
+3. Test a longer visible session for frame pacing, rendering stability, and recovery from off-road/rail contact.
+4. Establish the playable vertical slice: one complete course, controllable pod, camera follow, collision, and clean finish/reset.
+5. Continue the Step 102 source/license audit independently; import only files whose authorship and redistribution rights are clear. Keep build, visible rendering, scripted race, manual control, and physical hardware as separate acceptance gates.
 
 ## Legal and asset policy
 
