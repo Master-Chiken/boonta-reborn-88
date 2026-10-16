@@ -7,6 +7,9 @@ from make_dolphin_dtm import (
     A,
     B,
     NEUTRAL_AXIS,
+    RESET_PRESS_FRAME,
+    RESET_HOLD_FRAMES,
+    RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     DPAD_LEFT,
@@ -23,12 +26,18 @@ from make_dolphin_dtm import (
 # the lightweight host DTM protocol tests.
 try:
     from PIL import Image, ImageDraw
-    from check_dolphin_frame import finish_banner_visible, player_pod_bounds, road_center_from_asphalt
+    from check_dolphin_frame import (
+        finish_banner_visible,
+        player_pod_bounds,
+        reset_state_visible,
+        road_center_from_asphalt,
+    )
 except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
     player_pod_bounds = None
+    reset_state_visible = None
     road_center_from_asphalt = None
 
 
@@ -130,6 +139,45 @@ class DolphinDtmTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_dtm(10, steering_source="both")  # type: ignore[arg-type]
 
+    def test_reset_check_profile_builds_state_then_holds_y(self) -> None:
+        blob = build_dtm(3600, steering="right", steering_source="stick",
+                         scenario="reset-check")
+
+        initial = record(blob, 0)
+        self.assertEqual(initial[0], A)
+        self.assertTrue(initial[1] & IS_CONNECTED)
+        self.assertEqual(initial[4], 255)  # Right stick, before reset
+        self.assertEqual(initial[5], NEUTRAL_AXIS)
+
+        boosted = record(blob, 1)
+        self.assertEqual(boosted[0], A | X)
+        self.assertEqual(boosted[4], 255)
+        before_reset = record(blob, RESET_PRESS_FRAME - 1)
+        self.assertEqual(before_reset[0], A)
+        self.assertEqual(before_reset[4], 255)
+        self.assertFalse(before_reset[1] & DPAD_RIGHT)
+
+        boost_release = record(blob, RESET_BOOST_END_FRAME)
+        self.assertEqual(boost_release[0], A)
+        self.assertEqual(boost_release[4], 255)
+
+        for frame in range(RESET_PRESS_FRAME, RESET_PRESS_FRAME + RESET_HOLD_FRAMES):
+            with self.subTest(reset_hold_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], Y)  # realistic short hold, no throttle/boost
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (RESET_PRESS_FRAME + RESET_HOLD_FRAMES, 599, 600, 3599):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)  # neutral after the held reset
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
     def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
         frames = 6000
         blob = build_dtm(frames, steering="none", scenario="full-race")
@@ -227,6 +275,69 @@ class DolphinDtmTests(unittest.TestCase):
         pause_draw.rectangle((387, 263, 396, 297), fill=(238, 246, 255))
         pause_draw.rectangle((404, 263, 413, 297), fill=(238, 246, 255))
         self.assertFalse(finish_banner_visible(pause))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or reset_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_reset_state_detector_requires_zero_speed_heat_lap_and_full_boost(self) -> None:
+        image = Image.new("RGB", (800, 480), (8, 18, 30))
+        draw = ImageDraw.Draw(image)
+        empty = (48, 66, 80)
+        # Draw the five horizontal HUD bars at the exact reset-state positions.
+        for y0, y1 in ((444, 455), (428, 435), (406, 413), (414, 421), (398, 405)):
+            draw.rectangle((24, y0, 213, y1), fill=empty)
+        draw.rectangle((24, 428, 213, 435), fill=(255, 157, 61))
+        # The reset steering tick is centered at screen x=400 and remains visible.
+        draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
+        self.assertTrue(reset_state_visible(image))
+
+        accelerated = image.copy()
+        ImageDraw.Draw(accelerated).rectangle((24, 444, 80, 455), fill=(64, 220, 243))
+        self.assertFalse(reset_state_visible(accelerated))
+
+        boost_not_refilled = image.copy()
+        ImageDraw.Draw(boost_not_refilled).rectangle((130, 428, 213, 435), fill=empty)
+        self.assertFalse(reset_state_visible(boost_not_refilled))
+
+        lap_progress = image.copy()
+        ImageDraw.Draw(lap_progress).rectangle((24, 414, 54, 421), fill=(137, 241, 154))
+        self.assertFalse(reset_state_visible(lap_progress))
+
+        heat_not_cleared = image.copy()
+        ImageDraw.Draw(heat_not_cleared).rectangle((24, 406, 44, 413), fill=(255, 75, 58))
+        self.assertFalse(reset_state_visible(heat_not_cleared))
+
+        completed_lap = image.copy()
+        ImageDraw.Draw(completed_lap).rectangle((24, 398, 44, 405), fill=(137, 241, 154))
+        self.assertFalse(reset_state_visible(completed_lap))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or reset_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_reset_state_detector_accounts_for_dolphin_toolbar_offset(self) -> None:
+        image = Image.new("RGB", (800, 480), (239, 239, 239))
+        draw = ImageDraw.Draw(image)
+        # Visible Dolphin window capture: toolbar occupies rows 0..83 and the
+        # scaled game viewport begins at row 84.
+        draw.rectangle((0, 84, 799, 479), fill=(106, 169, 225))
+        empty = (48, 66, 80)
+        # Project the source HUD scanlines into the reduced game viewport.
+        viewport_top = 84
+        viewport_height = 480 - viewport_top
+
+        def screen_y(offset: int) -> int:
+            return round(viewport_top + viewport_height * (480 - offset) / 480)
+
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            draw.line((24, y, 213, y), fill=empty, width=2)
+        boost_y = screen_y(48)
+        draw.line((24, boost_y, 213, boost_y), fill=(255, 157, 61), width=2)
+        # Centered reset steering tick; it is measured independently of the bars.
+        draw.rectangle((398, 444, 401, 455), fill=(238, 246, 255))
+        self.assertTrue(reset_state_visible(image))
 
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")

@@ -101,27 +101,59 @@ def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
 
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
-    marker_x = []
     # The prototype draws a bright 4-pixel steering-state tick near the bottom
     # of the HUD at x = screen_center + g_player_lateral * 18. This is a HUD/state
     # signal useful for a deterministic scripted-input smoke test. It is NOT a
     # measurement of player-pod displacement, world motion, steering physics, or
     # gameplay feel; those require a separate interactive acceptance test.
-    x_start = int(image.width * 0.35)
+    #
+    # A Dolphin window capture includes its toolbar, so use the detected viewport
+    # to project the logical HUD tick rows into screenshot coordinates. Locate
+    # the narrowest vertical cluster of bright pixels instead of averaging every
+    # white pixel in the scene (which can include pod highlights or track details).
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, image.height - viewport_top)
+    y_start = round(viewport_top + viewport_height * (image.height - 46) / image.height)
+    y_end = round(viewport_top + viewport_height * (image.height - 30) / image.height)
+    x_start = int(image.width * 0.30)
     x_end = int(image.width * 0.70)
-    y_start = int(image.height * 0.89)
-    y_end = int(image.height * 0.96)
-    for y in range(y_start, y_end):
-        for x in range(x_start, x_end):
+    column_hits = []
+    for x in range(x_start, x_end):
+        hits = 0
+        for y in range(y_start, min(y_end, image.height)):
             r, g, b = image.getpixel((x, y))
             if r > 215 and g > 215 and b > 215:
-                marker_x.append(x)
-    if len(marker_x) < 20:
+                hits += 1
+        column_hits.append((x, hits))
+
+    peak = max((hits for _, hits in column_hits), default=0)
+    if peak < 8:
         raise ValueError(
-            f"No stable bright steering indicator in ROI x=[{x_start},{x_end}), "
-            f"y=[{y_start},{y_end}); found {len(marker_x)} pixels."
+            f"No stable bright steering tick in projected HUD rows "
+            f"y=[{y_start},{y_end}); strongest column had {peak} bright pixels."
         )
-    return sum(marker_x) / len(marker_x)
+
+    # Keep columns that contain a substantial portion of the strongest tick
+    # column; narrow scene highlights then cannot pull the result toward the
+    # middle of the screen.
+    active = [(x, hits) for x, hits in column_hits if hits >= max(6, int(peak * 0.60))]
+    groups = []
+    current = []
+    for item in active:
+        if current and item[0] != current[-1][0] + 1:
+            groups.append(current)
+            current = []
+        current.append(item)
+    if current:
+        groups.append(current)
+    if not groups:
+        raise ValueError("No contiguous bright steering-tick columns found.")
+
+    best_group = max(groups, key=lambda group: sum(hits for _, hits in group))
+    if len(best_group) > 12:
+        raise ValueError(f"Steering-tick candidate is too wide ({len(best_group)} columns).")
+    weight = sum(hits for _, hits in best_group)
+    return sum(x * hits for x, hits in best_group) / max(1, weight)
 
 
 def validate_scene(image: Image.Image, label: str) -> None:
@@ -133,6 +165,94 @@ def validate_scene(image: Image.Image, label: str) -> None:
     # ground-green count diagnostic rather than rejecting that valid viewpoint.
     if signatures["cyan"] < 30 or signatures["orange"] < 30 or signatures["pod_blue"] < 30:
         raise SystemExit(f"{label} frame is missing expected scene/craft color signatures; DOL may not have booted.")
+
+
+def detect_game_viewport_top(image: Image.Image) -> int:
+    """Find the start of the rendered game viewport in a Dolphin window capture.
+
+    A normal Dolphin window screenshot includes a light toolbar above the 3D
+    viewport; framebuffer-only images start at row zero. Identify the first
+    full-width sky row so HUD coordinates can be scaled into either capture.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    sample_step = max(1, width // 160)
+    sample_x = range(0, width, sample_step)
+    threshold = max(1, int(len(sample_x) * 0.72))
+    for y in range(min(int(height * 0.30), height)):
+        sky_hits = 0
+        for x in sample_x:
+            r, g, b = image.getpixel((x, y))
+            if (65 <= r <= 145 and 125 <= g <= 200 and b >= 190
+                    and b > r * 1.2 and b > g * 1.1):
+                sky_hits += 1
+        if sky_hits >= threshold:
+            return y
+    return 0
+
+
+def reset_state_metrics(image: Image.Image) -> dict[str, float]:
+    """Measure HUD bars that should be reset to the start-state values.
+
+    The prototype's HUD is authored in the game viewport's own pixel coordinates.
+    Dolphin window captures include a toolbar, which reduces and offsets the
+    viewport; convert HUD row locations into capture coordinates before sampling.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    bar_left = 24
+    bar_width = 130 if width < 500 else 190
+    bar_right = min(width, bar_left + bar_width)
+    if bar_right - bar_left < max(100, int(bar_width * 0.8)) or height < 100:
+        raise ValueError(f"Image too small for reset-state HUD inspection: {image.size}")
+
+    def row_pixels(y_offset: int) -> list[tuple[int, int, int]]:
+        logical_y = max(0, min(height - 1, height - y_offset))
+        y = round(viewport_top + viewport_height * logical_y / height)
+        y = max(0, min(height - 1, y))
+        return [image.getpixel((x, y)) for x in range(bar_left, bar_right)]
+
+    speed_row = row_pixels(30)
+    boost_row = row_pixels(48)
+    heat_row = row_pixels(70)
+    progress_row = row_pixels(62)
+    lap_marker_row = row_pixels(78)
+
+    speed_fill = sum(1 for r, g, b in speed_row if r < 100 and g > 180 and b > 200)
+    boost_fill = sum(1 for r, g, b in boost_row
+                     if r > 220 and 110 < g < 190 and b < 100)
+    heat_fill = sum(1 for r, g, b in heat_row if r > 200 and b < 160)
+    progress_fill = sum(1 for r, g, b in progress_row
+                        if g > 180 and r > 100 and b > 100)
+    lap_done = sum(1 for r, g, b in lap_marker_row
+                   if g > 180 and r > 100 and b > 100)
+    steering_marker_offset = abs(steering_indicator_center(image) - width / 2.0)
+    row_width = max(1, len(speed_row))
+    return {
+        "speed_fill_pixels": float(speed_fill),
+        "boost_fill_fraction": boost_fill / row_width,
+        "heat_fill_pixels": float(heat_fill),
+        "lap_progress_pixels": float(progress_fill),
+        "completed_lap_marker_pixels": float(lap_done),
+        "steering_marker_offset_pixels": steering_marker_offset,
+        "game_viewport_top_pixels": float(viewport_top),
+    }
+
+
+def reset_state_visible(image: Image.Image) -> bool:
+    """Return true only when the HUD visibly matches the clean start state."""
+    metrics = reset_state_metrics(image)
+    tolerance = max(3.0, (130.0 if image.width < 500 else 190.0) * 0.02)
+    return (
+        metrics["speed_fill_pixels"] <= tolerance
+        and metrics["boost_fill_fraction"] >= 0.90
+        and metrics["heat_fill_pixels"] <= tolerance
+        and metrics["lap_progress_pixels"] <= tolerance
+        and metrics["completed_lap_marker_pixels"] <= tolerance
+        and metrics["steering_marker_offset_pixels"] <= 4.0
+    )
 
 
 def finish_banner_visible(image: Image.Image) -> bool:
@@ -200,6 +320,8 @@ def main() -> int:
                         help="matching frame rendered with --steering none")
     parser.add_argument("--expect-finish", action="store_true",
                         help="check for the three-lap finish flag instead of comparing steering frames")
+    parser.add_argument("--expect-reset", action="store_true",
+                        help="check that speed/lap/heat are empty and boost is refilled after Y reset")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -210,12 +332,24 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
+    if args.expect_finish and args.expect_reset:
+        parser.error("--expect-finish and --expect-reset cannot be used together")
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")
         if not finish_banner_visible(image):
             raise SystemExit("The centered three-lap finish checkerboard was not detected in the Dolphin capture.")
         print("Three-lap finish banner detected in the visible Dolphin frame.")
+        return 0
+    if args.expect_reset:
+        if args.baseline is not None:
+            parser.error("--expect-reset cannot be combined with --baseline")
+        validate_scene(image, "Reset-state")
+        metrics = reset_state_metrics(image)
+        print("Reset HUD metrics: " + ", ".join(f"{name}={value:.3f}" for name, value in metrics.items()))
+        if not reset_state_visible(image):
+            raise SystemExit("The visible HUD does not match reset state (expected zero speed/heat/lap progress and full boost).")
+        print("Clean Y-reset HUD state detected in the visible Dolphin frame.")
         return 0
     if args.baseline is None:
         parser.error("--baseline is required unless --expect-finish is set")
