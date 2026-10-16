@@ -16,8 +16,15 @@ This is the gate before expanding the vertical slice.
 - Bounded Dolphin null-video smoke
 - Visible Software Renderer capture (road, rails, markers, player + rival pods)
 
-These prove the code compiles, the deterministic logic works, and a scene can render.  
-They do **not** yet prove live controller response or a completed three-lap race.
+These prove the tested code compiles, deterministic assertions pass, and scripted states can render. They do **not** yet prove live controller response or a manually driven three-lap race.
+
+## Latest automated evidence (2026-10-16)
+
+PR #180 was merged as main commit `e3adea9424268d7321113acc4ffc621242212dd9`. It adds reusable Software Renderer assertions for pause/resume and keeps the longer full-race DTM as an opt-in diagnostic.
+
+On the PR head, [run #38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194) passed host tests, native DOL/ELF build/artifact validation, Dolphin Null-backend smoke, scripted D-pad/analog steering checks, Y-reset HUD validation, pause icon detection, resume-with-throttle validation, and the optional 12,000-poll three-lap finish-banner check. The [captured frames, DTM movies and logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194/artifacts/12070108432) preserve the evidence.
+
+The post-merge mainline workflow for `e3adea9424268d7321113acc4ffc621242212dd9` is [run #38957249755](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38957249755); it was still running when this status was refreshed, so its final result must be checked. The optional scripted full-race run and all other DTM checks are not substitutes for manual controller acceptance. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller.
 
 ## Interactive acceptance checklist
 
