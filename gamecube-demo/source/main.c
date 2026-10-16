@@ -983,57 +983,6 @@ static void initialise_video_and_gx(void)
     GX_CopyDisp(g_framebuffers[0], GX_TRUE);
 }
 
-static void draw_desert_backdrop(void)
-{
-    Mtx identity;
-    Mtx44 ortho;
-    const float w = (float)g_video_mode->fbWidth;
-    const float h = (float)g_video_mode->efbHeight;
-    const float horizon = h * 0.40f;
-    const float lower_edge = h * 0.405f;
-    const GXColor distant_dune_a = { 111, 73, 48, 255 };
-    const GXColor distant_dune_b = { 150, 92, 52, 255 };
-    const GXColor distant_dune_c = { 172, 112, 65, 255 };
-
-    /* A stable desert horizon sits behind the 3D course even in shallow valleys. */
-    g_vertex_count = 0;
-    g_vertex_y_offset = 0.0f;
-    g_track_world_transform_enabled = 0;
-    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
-    guMtxIdentity(identity);
-    guOrtho(ortho, 0.0f, h, 0.0f, w, 0.0f, 1.0f);
-    GX_LoadPosMtxImm(identity, GX_PNMTX0);
-    GX_SetCurrentMtx(GX_PNMTX0);
-    GX_LoadProjectionMtx(ortho, GX_ORTHOGRAPHIC);
-
-    quad_add((Point3){ 0.0f, horizon, -0.72f },
-             (Point3){ w, horizon, -0.72f },
-             (Point3){ w, h, -0.72f },
-             (Point3){ 0.0f, h, -0.72f }, C_GROUND);
-
-    /* Faceted distant mesa silhouettes, composed from original flat-color geometry. */
-    quad_add((Point3){ 0.0f, horizon, -0.70f },
-             (Point3){ w * 0.18f, h * 0.345f, -0.70f },
-             (Point3){ w * 0.34f, lower_edge, -0.70f },
-             (Point3){ w * 0.34f, horizon, -0.70f }, distant_dune_a);
-    quad_add((Point3){ w * 0.18f, h * 0.345f, -0.70f },
-             (Point3){ w * 0.41f, h * 0.365f, -0.70f },
-             (Point3){ w * 0.50f, horizon, -0.70f },
-             (Point3){ w * 0.34f, lower_edge, -0.70f }, distant_dune_b);
-    quad_add((Point3){ w * 0.60f, horizon, -0.70f },
-             (Point3){ w * 0.72f, h * 0.325f, -0.70f },
-             (Point3){ w * 0.87f, h * 0.355f, -0.70f },
-             (Point3){ w * 0.93f, horizon, -0.70f }, distant_dune_c);
-    quad_add((Point3){ w * 0.87f, h * 0.355f, -0.70f },
-             (Point3){ w * 0.96f, h * 0.37f, -0.70f },
-             (Point3){ w, horizon, -0.70f },
-             (Point3){ w * 0.93f, horizon, -0.70f }, distant_dune_a);
-
-    draw_vertex_buffer();
-    /* The scene buffer must not contain this screen-space background. */
-    g_vertex_count = 0;
-}
-
 static void draw_frame(void)
 {
     Point3 camera_point;
@@ -1052,7 +1001,8 @@ static void draw_frame(void)
     Mtx44 projection;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
-    draw_desert_backdrop();
+    /* Render straight into the cleared EFB; a 2D backdrop previously left
+     * orthographic state immediately before the depth-tested world pass. */
     g_vertex_count = 0;
     g_vertex_y_offset = 0.0f;
     g_track_world_transform_enabled = 0;
