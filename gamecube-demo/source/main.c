@@ -106,7 +106,6 @@ static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
 static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
 static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
 static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
-static const GXColor C_CANYON_SUNLIT = { 205, 145, 82, 255 };
 
 /* Compact original 5x7 glyphs for race-clock HUD text. */
 static const u8 g_font5x7[128][7] = {
@@ -443,9 +442,9 @@ static void add_road(void)
     /* The floor follows the same spline as the road, with a short reach behind the
      * player and a little more reach than the visible canyon panels. This keeps the
      * cliff bases grounded on bends instead of leaving a giant flat plane under them. */
-    const unsigned int ground_segments = ROAD_SEGMENTS + 10U;
+    const unsigned int ground_segments = ROAD_SEGMENTS + 12U;
     const float ground_start = -2.0f * segment_length;
-    const float ground_margin = 5.0f;
+    const float ground_margin = 4.2f;
     const float ground_drop = 0.24f;
 
     g_track_world_transform_enabled = 0;
@@ -535,16 +534,16 @@ static void add_road(void)
  */
 static void add_canyon_scenery(void)
 {
-    const float wall_margin = 5.0f;
+    const float wall_margin = 4.2f;
     g_track_world_transform_enabled = 1;
-    const float wall_length = 10.0f;
+    const float wall_length = 6.0f;
     const unsigned int passed_wall_sections = boonta_track_section_index(g_distance, wall_length);
     unsigned int i;
 
-    for (i = 0U; i < 9U; ++i) {
+    for (i = 0U; i < 18U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        /* Canyon panels also follow true forward progress after world transformation. */
-        const float z_near = -10.0f - (float)i * wall_length;
+        /* More, shorter panels keep the canyon continuous around tight spline bends. */
+        const float z_near = -2.0f - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
@@ -553,10 +552,10 @@ static void add_canyon_scenery(void)
         /* Keep wall footings aligned with the matching spline-following floor ribbon. */
         const float base_y_near = road_height_at(z_near, g_distance) - 0.24f;
         const float base_y_far = road_height_at(z_far, g_distance) - 0.24f;
-        const float near_height = 2.5f + (float)(wall_phase % 4U) * 0.85f;
-        const float far_height = 2.5f + (float)((wall_phase + 1U) % 4U) * 0.85f;
-        const float near_top_offset = base_offset_near + 1.6f + (float)(wall_phase % 2U) * 0.8f;
-        const float far_top_offset = base_offset_far + 1.6f + (float)((wall_phase + 1U) % 2U) * 0.8f;
+        const float near_height = 3.8f + (float)(wall_phase % 4U) * 0.15f;
+        const float far_height = 3.8f + (float)((wall_phase + 1U) % 4U) * 0.15f;
+        const float near_top_offset = base_offset_near + 0.15f + (float)(wall_phase % 2U) * 0.08f;
+        const float far_top_offset = base_offset_far + 0.15f + (float)((wall_phase + 1U) % 2U) * 0.08f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
@@ -574,22 +573,19 @@ static void add_canyon_scenery(void)
                 center_far + side * far_top_offset, base_y_far + far_height, z_far
             };
             GXColor face;
-            GXColor facet;
+            const unsigned int tone_phase = wall_phase + side_index;
 
-            if (((wall_phase + side_index) & 1U) == 0U) {
+            if ((tone_phase % 4U) == 0U) {
+                face = C_CANYON_LIGHT;
+            } else if ((tone_phase & 1U) == 0U) {
                 face = C_CANYON_MID;
             } else {
                 face = C_CANYON_DARK;
             }
-            if (((wall_phase + side_index) % 3U) == 0U) {
-                facet = C_CANYON_SUNLIT;
-            } else {
-                facet = C_CANYON_LIGHT;
-            }
 
-            /* Phase-stable faceted walls now advance with the course. */
+            /* Same tone on both triangles avoids an oversized diagonal facet. */
             triangle_add(base_near, top_near, top_far, face);
-            triangle_add(base_near, top_far, base_far, facet);
+            triangle_add(base_near, top_far, base_far, face);
         }
     }
     g_track_world_transform_enabled = 0;
