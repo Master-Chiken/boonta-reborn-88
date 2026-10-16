@@ -101,27 +101,59 @@ def road_center_from_asphalt(image: Image.Image) -> tuple[float, int]:
 
 def steering_indicator_center(image: Image.Image) -> float:
     image = image.convert("RGB")
-    marker_x = []
     # The prototype draws a bright 4-pixel steering-state tick near the bottom
     # of the HUD at x = screen_center + g_player_lateral * 18. This is a HUD/state
     # signal useful for a deterministic scripted-input smoke test. It is NOT a
     # measurement of player-pod displacement, world motion, steering physics, or
     # gameplay feel; those require a separate interactive acceptance test.
-    x_start = int(image.width * 0.35)
+    #
+    # A Dolphin window capture includes its toolbar, so use the detected viewport
+    # to project the logical HUD tick rows into screenshot coordinates. Locate
+    # the narrowest vertical cluster of bright pixels instead of averaging every
+    # white pixel in the scene (which can include pod highlights or track details).
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, image.height - viewport_top)
+    y_start = round(viewport_top + viewport_height * (image.height - 46) / image.height)
+    y_end = round(viewport_top + viewport_height * (image.height - 30) / image.height)
+    x_start = int(image.width * 0.30)
     x_end = int(image.width * 0.70)
-    y_start = int(image.height * 0.89)
-    y_end = int(image.height * 0.96)
-    for y in range(y_start, y_end):
-        for x in range(x_start, x_end):
+    column_hits = []
+    for x in range(x_start, x_end):
+        hits = 0
+        for y in range(y_start, min(y_end, image.height)):
             r, g, b = image.getpixel((x, y))
             if r > 215 and g > 215 and b > 215:
-                marker_x.append(x)
-    if len(marker_x) < 20:
+                hits += 1
+        column_hits.append((x, hits))
+
+    peak = max((hits for _, hits in column_hits), default=0)
+    if peak < 8:
         raise ValueError(
-            f"No stable bright steering indicator in ROI x=[{x_start},{x_end}), "
-            f"y=[{y_start},{y_end}); found {len(marker_x)} pixels."
+            f"No stable bright steering tick in projected HUD rows "
+            f"y=[{y_start},{y_end}); strongest column had {peak} bright pixels."
         )
-    return sum(marker_x) / len(marker_x)
+
+    # Keep columns that contain a substantial portion of the strongest tick
+    # column; narrow scene highlights then cannot pull the result toward the
+    # middle of the screen.
+    active = [(x, hits) for x, hits in column_hits if hits >= max(6, int(peak * 0.60))]
+    groups = []
+    current = []
+    for item in active:
+        if current and item[0] != current[-1][0] + 1:
+            groups.append(current)
+            current = []
+        current.append(item)
+    if current:
+        groups.append(current)
+    if not groups:
+        raise ValueError("No contiguous bright steering-tick columns found.")
+
+    best_group = max(groups, key=lambda group: sum(hits for _, hits in group))
+    if len(best_group) > 12:
+        raise ValueError(f"Steering-tick candidate is too wide ({len(best_group)} columns).")
+    weight = sum(hits for _, hits in best_group)
+    return sum(x * hits for x, hits in best_group) / max(1, weight)
 
 
 def validate_scene(image: Image.Image, label: str) -> None:
