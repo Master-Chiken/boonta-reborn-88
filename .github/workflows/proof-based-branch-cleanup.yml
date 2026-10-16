@@ -52,7 +52,7 @@ jobs:
             echo
             echo "- Default branch: \`$default_branch\`"
             echo "- Rule: only delete a listed branch if its exact tip is reachable from \`main\`, it has no open PR, and GitHub reports it unprotected."
-            echo "- Fixed scope: 20 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
+            echo "- Fixed scope: 21 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
             echo
             echo "| Branch | Expected tip SHA | Evidence / result |"
             echo "|---|---|---|"
@@ -110,6 +110,7 @@ jobs:
               skipped=$((skipped + 1))
             fi
           done <<'CANDIDATES'
+          diagnostic/road-depth-visibility 8545899a9e699c7f50dfce07c6b761f8dd64a377
           ci/wii64-tool-tests e7969c4f72ab803f5f6a8c2248317cdb5f4df0de
           docs/branch-consolidation-plan 431db6000d083636341343d2a783d8696431e8b4
           docs/wii64-test-log-template 3add41a3589964baaaf725871517828a2564e9d7
