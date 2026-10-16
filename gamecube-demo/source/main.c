@@ -88,8 +88,8 @@ static int g_race_finished;
 
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_SKY = { 105, 170, 225, 255 };
-static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
-static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
+static const GXColor C_ROAD_A = { 40, 245, 90, 255 };
+static const GXColor C_ROAD_B = { 245, 235, 40, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
 static const GXColor C_EDGE_R = { 50, 225, 246, 255 };
 static const GXColor C_RAIL_A = { 36, 98, 120, 255 };
@@ -1084,7 +1084,9 @@ static void draw_frame(void)
     g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
-    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+    /* Temporary diagnostic: paint the authored spline ribbon over the ground
+     * without depth rejection to determine whether Z ordering hides the asphalt. */
+    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
                   (f32)g_video_mode->fbWidth / (f32)g_video_mode->efbHeight,
