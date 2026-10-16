@@ -286,7 +286,7 @@ jobs:
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$STICK_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_STICK_DTM" --frames 3600 --game-id ID-boo --steering left --steering-source stick
-          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESET_DTM" --frames 3600 --game-id ID-boo --steering none --scenario reset-check
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESET_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick --scenario reset-check
           test -s "$BASELINE_DTM"
           test -s "$DTM"
           test -s "$LEFT_DTM"
