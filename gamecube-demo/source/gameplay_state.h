@@ -4,6 +4,35 @@
 #include <math.h>
 
 #define BOONTA_RIVAL_COUNT 3U
+#define BOONTA_RIVAL_COUNT 3U
+
+/*
+ * Resettable live race state. Kept separate from renderer/camera bookkeeping so
+ * the exact Y-button restart transition can be exercised by host tests.
+ */
+typedef struct {
+    float distance;
+    unsigned int lap_count;
+    float race_seconds;
+    float lap_seconds;
+    float last_lap_seconds;
+    float best_lap_seconds;
+    float speed;
+    float pitch_down;
+    float player_lateral;
+    float lateral_velocity;
+    float boost;
+    float engine_heat;
+    int boost_overheated;
+    int boost_active;
+    int slide_active;
+    float rival_z[BOONTA_RIVAL_COUNT];
+    float rival_lateral[BOONTA_RIVAL_COUNT];
+    unsigned int overtake_count;
+    int paused;
+    int race_finished;
+} BoontaRaceState;
+
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 
 /* Clamp finite simulation state; recover NaN/infinity without propagating it. */
@@ -346,6 +375,41 @@ enum {
 static inline float boonta_rival_initial_z(unsigned int rival_index)
 {
     return -18.0f - (float)rival_index * 16.0f;
+}
+
+
+/*
+ * Reset every gameplay value affected by the Y-button restart, including the
+ * best-lap display and opponent spacing. Renderer/camera caches are derived again
+ * by draw_frame(); this helper intentionally owns only race simulation state.
+ */
+static inline void boonta_race_state_reset(BoontaRaceState *state)
+{
+    unsigned int i;
+    if (state == 0) return;
+
+    state->distance = 0.0f;
+    state->lap_count = 0U;
+    state->race_seconds = 0.0f;
+    state->lap_seconds = 0.0f;
+    state->last_lap_seconds = 0.0f;
+    state->best_lap_seconds = 0.0f;
+    state->speed = 0.0f;
+    state->pitch_down = 0.0f;
+    state->player_lateral = 0.0f;
+    state->lateral_velocity = 0.0f;
+    state->boost = 1.0f;
+    state->engine_heat = 0.0f;
+    state->boost_overheated = 0;
+    state->boost_active = 0;
+    state->slide_active = 0;
+    state->overtake_count = 0U;
+    state->paused = 0;
+    state->race_finished = 0;
+    for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+        state->rival_z[i] = boonta_rival_initial_z(i);
+        state->rival_lateral[i] = 0.0f;
+    }
 }
 
 static inline float boonta_rival_respawn_z(unsigned int rival_index, int collision)
