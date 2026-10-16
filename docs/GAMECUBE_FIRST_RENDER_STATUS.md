@@ -4,13 +4,13 @@ Last updated: 2026-10-16
 
 ## Current mainline and reproducible CI evidence
 
-- **Current main commit:** `cacec9c35d9a41258493c619368a6537d952a7a9` — merge of PR #178, “test: verify visible Y-reset state in Dolphin.”
-- **Latest verified CI run on that commit:** [GameCube first-render prototype run #38948039632](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632) completed successfully.
+- **Current main commit:** `e3adea9424268d7321113acc4ffc621242212dd9` — merge of PR #180, “test: verify visible Dolphin pause and resume states.”
+- **Post-merge CI for this main commit:** [run #38957249755](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38957249755) was in progress during this status update. Its final result must be checked before claiming the new main commit has passed the full workflow.
 - **Host tests:** pass for gameplay and pause/reset state, including the deterministic reset helper, multi-frame rival-contact bounds, and the newer reset/steering DTM protocol and visual-detector fixtures.
 - **Native build:** `boonta_gc_demo.dol` and `.elf` built with devkitPPC/libogc; artifact structure validation passed.
 - **Dolphin headless smoke:** the 12-second Null-backend process check passed. This proves bounded startup/process behavior, not that a person can control the game.
-- **Automated visible-render diagnostics:** the Software Renderer diagnostic completed successfully. The workflow now covers scripted D-pad steering, analog-stick left/right steering and a scripted Y-reset state check, with frames/DTM/logs in [the diagnostic artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632/artifacts/12066738177).
-- **Earlier scripted-race evidence:** [run #38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111) captured the finish banner after a 12,000-poll scripted three-lap movie. Keep this separate from a live user-controlled race on the current mainline.
+- **Automated visible-render diagnostics on PR #180 head:** [run #38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194) completed successfully. In addition to D-pad/stick steering and Y-reset, it detected the visible pause icon, verified the pause overlay disappeared after Start-resume with throttle movement, and detected the three-lap finish banner after a 12,000-poll scripted DTM. See the [diagnostic artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194/artifacts/12070108432). The full-race DTM was explicitly enabled on that PR; standard mainline runs do not necessarily repeat the long scenario.
+- **Evidence limits:** the successful PR-head test used scripted inputs and the Software Renderer. It does not constitute a live user-controlled race, long-session stability test or physical-console acceptance.
 - **Build status report:** this is automated CI evidence only. It must not be labelled as physical-controller, physical-console, or long-session acceptance.
 
 ## What is now covered automatically
@@ -20,6 +20,8 @@ The project has moved beyond a static first-render test:
 - deterministic host tests for steering, speed, boost/heat, lap boundaries, rivals, pause, reset and finite-state handling;
 - automated D-pad and analog-stick movie inputs with Software Renderer response checks;
 - a Y-reset movie that first changes the race state and then checks a visibly clean reset HUD;
+- scripted Start pause/resume checks that assert a visible pause overlay and throttle-driven movement after resuming;
+- an opt-in scripted three-lap movie with a finish-banner detector;
 - bounded Dolphin startup smoke and renderer diagnostics.
 
 These improvements make regressions easier to detect, but **DTM playback is still scripted input**, not a physical controller test.

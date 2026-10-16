@@ -19,11 +19,12 @@ Unofficial fan / homebrew project. Clean-room first.
 - [x] Dolphin headless process smoke.
 - [x] Automated D-pad left/right and analog-stick left/right steering diagnostics.
 - [x] Automated Y-reset scenario with a visible HUD-state assertion.
-- [x] Scripted three-lap finish-banner evidence on [earlier run #38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111).
+- [x] Scripted three-lap finish-banner check passed on PR #180 head in [run #38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194); this was DTM-driven, not a manual race.
+- [x] Scripted Start pause/resume visible-state checks passed on PR #180 head in [run #38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194).
 - [ ] **Manual controller + live finish/reset/restart acceptance** — current focus.
   → See [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md) and [current test evidence/status](GAMECUBE_FIRST_RENDER_STATUS.md).
 
-Latest CI on current main commit `cacec9c35d9a41258493c619368a6537d952a7a9` passed native build, host tests, Dolphin headless smoke and automated Software Renderer diagnostics: [run #38948039632](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632). Automated input movies prove the configured movie input produces the expected scripted response; they do **not** establish physical-controller playability.
+PR #180 was merged to main as commit `e3adea9424268d7321113acc4ffc621242212dd9`. Its PR-head run [#38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194) passed build/tests and visibly checked steering, reset, pause/resume, plus the opt-in scripted three-lap finish banner. Post-merge mainline verification is [run #38957249755](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38957249755); its final result must be checked. Automated input movies prove scripted responses only and do **not** establish physical-controller playability.
 
 ---
 
