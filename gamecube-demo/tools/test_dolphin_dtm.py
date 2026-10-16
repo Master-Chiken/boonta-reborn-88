@@ -139,7 +139,7 @@ class DolphinDtmTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_dtm(10, steering_source="both")  # type: ignore[arg-type]
 
-    def test_reset_check_profile_builds_state_then_presses_y_once(self) -> None:
+    def test_reset_check_profile_builds_state_then_holds_y(self) -> None:
         blob = build_dtm(3600, steering="right", steering_source="stick",
                          scenario="reset-check")
 
