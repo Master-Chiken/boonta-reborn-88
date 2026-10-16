@@ -701,7 +701,9 @@ static void invalid_scaled_frame_tests(void) {
  for (i = 0U; i < sizeof(invalid_scales) / sizeof(invalid_scales[0]); ++i) {
   const float scale = invalid_scales[i];
   assert(nearf(boonta_sanitize_frame_scale(scale), 0.0f));
+  assert(nearf(boonta_sanitize_frame_scale(1000.0f), 3.0f));
   assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, scale), 0.5f));
+  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f), 0.536f));
   assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, scale), 0.04f));
