@@ -71,7 +71,7 @@ static BoontaRaceState g_race_state;
 /* 8x8 RGB565 checkerboard stored in GX's 4x4 tiled texture layout. */
 #define MESH_TEXTURE_SIZE 8U
 static GXTexObj g_mesh_texture;
-static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE];
+static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE] ATTRIBUTE_ALIGN(32);
 
 static u16 pack_rgb565(u8 r, u8 g, u8 b)
 {
