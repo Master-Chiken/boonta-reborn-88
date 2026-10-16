@@ -62,6 +62,9 @@ jobs:
       - name: Test DOL padding and artifact validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
+      - name: Validate clean-room track format and checked-in runtime header
+        run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
+
   build-gamecube-demo:
     runs-on: ubuntu-latest
     container:
