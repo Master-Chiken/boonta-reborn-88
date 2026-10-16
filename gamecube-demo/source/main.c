@@ -1042,12 +1042,12 @@ static void draw_frame(void)
     Point3 camera_point;
     Point3 target_point;
     /* Position and aim are sampled from the same world-space spline as the mesh. */
-    /* Keep a moderate chase-camera pitch: the flatter framing retains the racer
-     * in view while the desert horizon and world-space road provide ground context. */
-    track_world_point_at(g_distance - 3.0f, g_player_lateral,
-                         2.70f - 0.20f * g_pitch_down, &camera_point);
-    track_world_point_at(g_distance + 12.0f, g_player_lateral,
-                         0.20f - 0.45f * g_pitch_down, &target_point);
+    /* Follow the local course tangent with enough downward pitch to keep the
+     * near road and the player's pod in frame, including the first start-line view. */
+    track_world_point_at(g_distance - 2.5f, g_player_lateral,
+                         3.20f - 0.20f * g_pitch_down, &camera_point);
+    track_world_point_at(g_distance + 8.0f, g_player_lateral,
+                         -0.05f - 0.45f * g_pitch_down, &target_point);
     guVector camera = { camera_point.x, camera_point.y, camera_point.z };
     guVector up = { 0.0f, 1.0f, 0.0f };
     guVector target = { target_point.x, target_point.y, target_point.z };
