@@ -4,13 +4,14 @@ Last updated: 2026-10-16
 
 ## Current mainline
 
-- **Current main commit:** `73cc2e1a1018af0e6c14df7e9aec7023d005e7ea` — merge commit for PR #161.
-- **Latest post-merge CI:** [GameCube first-render prototype run #38902484737](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38902484737) completed successfully on this exact commit.
+- **Current main commit:** `59412b5ca5767b63ff7015132518edff235eb42a` — documentation-only squash merge for PR #162.
+- **Latest runtime-tested commit:** `73cc2e1a1018af0e6c14df7e9aec7023d005e7ea` — PR #161 merge. No game code changed in the subsequent documentation-only commit.
+- **Latest runtime CI:** [GameCube first-render prototype run #38902484737](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38902484737) completed successfully on the runtime-tested commit.
 - **Host regression tests:** passed, including the multi-frame rival-contact test added in PR #161.
 - **Native build:** `boonta_gc_demo.dol` / `.elf` built successfully with devkitPPC/libogc.
 - **Dolphin headless smoke:** passed. This confirms bounded startup/process behavior, not live controller response.
 - **Software Renderer diagnostic:** passed. This confirms the scripted frame/render checks, not manual playability.
-- **Branch inventory:** 78 branch references were visible in the GitHub API on 2026-10-16. This is a snapshot, not a cleanup target by itself; do not delete branches automatically.
+- **Branch inventory:** 79 branch references were visible in the GitHub API on 2026-10-16. This is a snapshot, not a cleanup target by itself; do not delete branches automatically.
 - **Recent regression coverage:** finite-state guards, 50/60 Hz cadence, steering inertia, boost/overheat, lap boundaries, pause/reset, off-road/rail response, rival events and multi-frame rival collisions.
 
 ## Still pending — interactive acceptance
