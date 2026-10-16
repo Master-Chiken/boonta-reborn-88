@@ -722,6 +722,8 @@ static void invalid_scaled_frame_tests(void) {
  assert(nearf(boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 1000.0f), boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 3.0f)));
  assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, 1000.0f), boonta_rival_z_after_frame(-18.0f, 0.5f, 3.0f)));
  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, 1000.0f), boonta_speed_after_offroad_scaled(0.5f, 4.0f, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 1000.0f), boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 3.0f)));
+ assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
 }
 
 int main(void) {
