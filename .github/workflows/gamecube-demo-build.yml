@@ -259,12 +259,20 @@ jobs:
           export BASELINE_USER="$GITHUB_WORKSPACE/dolphin-neutral-user"
           export STEERED_USER="$GITHUB_WORKSPACE/dolphin-steered-user"
           export LEFT_USER="$GITHUB_WORKSPACE/dolphin-left-steered-user"
+          export STICK_USER="$GITHUB_WORKSPACE/dolphin-stick-steered-user"
+          export LEFT_STICK_USER="$GITHUB_WORKSPACE/dolphin-left-stick-steered-user"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
           export LEFT_DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-left.dtm"
+          export STICK_DTM="$GITHUB_WORKSPACE/dolphin-scripted-stick-right.dtm"
+          export LEFT_STICK_DTM="$GITHUB_WORKSPACE/dolphin-scripted-stick-left.dtm"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
           export LEFT_LOG="$GITHUB_WORKSPACE/dolphin-left-render.log"
+          export STICK_LOG="$GITHUB_WORKSPACE/dolphin-stick-right-render.log"
+          export LEFT_STICK_LOG="$GITHUB_WORKSPACE/dolphin-stick-left-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export LEFT_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-left-frame.png"
+          export STICK_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-stick-right-frame.png"
+          export LEFT_STICK_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-stick-left-frame.png"
           export RACE_DTM="$GITHUB_WORKSPACE/dolphin-full-race.dtm"
           export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
           export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
@@ -272,15 +280,19 @@ jobs:
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$STICK_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_STICK_DTM" --frames 3600 --game-id ID-boo --steering left --steering-source stick
           test -s "$BASELINE_DTM"
           test -s "$DTM"
           test -s "$LEFT_DTM"
+          test -s "$STICK_DTM"
+          test -s "$LEFT_STICK_DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config"
-          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config" "$STICK_USER/Config" "$LEFT_STICK_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER"
           # Use isolated Dolphin profiles so the second capture cannot reuse
           # the first session's movie state, window or display configuration.
-          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"; do
+          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER"; do
             cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
@@ -367,9 +379,13 @@ jobs:
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
               capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
-              echo "Running bidirectional camera-follow diagnostic: green-ground road silhouette should shift opposite to each steering direction."
+              capture_frame "$STICK_DTM" "$STICK_LOG" "$STICK_CAPTURE" "$STICK_USER"
+              capture_frame "$LEFT_STICK_DTM" "$LEFT_STICK_LOG" "$LEFT_STICK_CAPTURE" "$LEFT_STICK_USER"
+              echo "Running D-pad and analog-stick camera-follow diagnostics: road silhouette should shift opposite to each steering direction."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$STICK_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_STICK_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
@@ -390,7 +406,7 @@ jobs:
                 echo "The left-steered game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
                 exit 1
               fi
-              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input."
+              echo "D-pad and analog-stick steering smoke passed: both input sources shifted the road silhouette and HUD in the expected direction."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
                 echo "Starting optional full-race DTM; this may take around two to four minutes."
                 python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
@@ -408,9 +424,12 @@ jobs:
           set -e
           [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
+          [[ ! -f "$LEFT_LOG" ]] || cat "$LEFT_LOG"
+          [[ ! -f "$STICK_LOG" ]] || cat "$STICK_LOG"
+          [[ ! -f "$LEFT_STICK_LOG" ]] || cat "$LEFT_STICK_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RACE_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -431,19 +450,27 @@ jobs:
           path: |
             dolphin-software-frame.png
             dolphin-software-left-frame.png
+            dolphin-software-stick-right-frame.png
+            dolphin-software-stick-left-frame.png
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
+            dolphin-stick-right-render.log
+            dolphin-stick-left-render.log
             dolphin-neutral-baseline.log
             dolphin-flatpak-cli-capabilities.log
             dolphin-scripted-controller-input.dtm
             dolphin-scripted-controller-left.dtm
+            dolphin-scripted-stick-right.dtm
+            dolphin-scripted-stick-left.dtm
             dolphin-full-race.dtm
             dolphin-full-race.png
             dolphin-full-race.log
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
             dolphin-left-steered-user/Logs/**
+            dolphin-stick-steered-user/Logs/**
+            dolphin-left-stick-steered-user/Logs/**
             dolphin-full-race-user/Logs/**
           if-no-files-found: warn
           retention-days: 7

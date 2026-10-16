@@ -102,6 +102,34 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertFalse(record(neutral_blob, frame)[1] & DPAD_RIGHT)
                 self.assertEqual(record(neutral_blob, frame)[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+    def test_analog_stick_steering_profiles_encode_left_right_and_release(self) -> None:
+        right_blob = build_dtm(3600, steering="right", steering_source="stick")
+        right_pressed = record(right_blob, 30)
+        self.assertFalse(right_pressed[1] & (DPAD_LEFT | DPAD_RIGHT))
+        self.assertEqual(right_pressed[2:4], bytes((0, 0)))  # analog triggers released
+        self.assertEqual(right_pressed[4], 255)  # full-right main stick
+        self.assertEqual(right_pressed[5], NEUTRAL_AXIS)  # no unintended pitch
+        self.assertEqual(right_pressed[6:], bytes((NEUTRAL_AXIS, NEUTRAL_AXIS)))
+        self.assertEqual(record(right_blob, STEERING_HOLD_FRAMES)[4], NEUTRAL_AXIS)
+
+        left_blob = build_dtm(3600, steering="left", steering_source="stick")
+        left_pressed = record(left_blob, 30)
+        self.assertFalse(left_pressed[1] & (DPAD_LEFT | DPAD_RIGHT))
+        self.assertEqual(left_pressed[4], 0)  # full-left main stick
+        self.assertEqual(left_pressed[5], NEUTRAL_AXIS)
+        self.assertEqual(record(left_blob, STEERING_HOLD_FRAMES)[4], NEUTRAL_AXIS)
+
+        neutral_blob = build_dtm(3600, steering="none", steering_source="stick")
+        for frame in (0, 30, 100, 599, 600, 3000):
+            with self.subTest(frame=frame):
+                self.assertEqual(record(neutral_blob, frame)[4:6],
+                                 bytes((NEUTRAL_AXIS, NEUTRAL_AXIS)))
+                self.assertFalse(record(neutral_blob, frame)[1] & (DPAD_LEFT | DPAD_RIGHT))
+
+    def test_rejects_unknown_steering_source(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(10, steering_source="both")  # type: ignore[arg-type]
+
     def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
         frames = 6000
         blob = build_dtm(frames, steering="none", scenario="full-race")

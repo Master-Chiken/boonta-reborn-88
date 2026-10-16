@@ -33,8 +33,9 @@ NEUTRAL_AXIS = 128
 
 
 def _controller_state(frame: int, steering: str = "right",
-                      scenario: str = "control-smoke") -> bytes:
-    """Return one packed controller poll with neutral analog axes."""
+                      scenario: str = "control-smoke",
+                      steering_source: str = "dpad") -> bytes:
+    """Return one packed controller poll with one explicit steering source."""
     buttons = A  # Hold accelerator for the whole run.
     if frame == 0:
         buttons |= Y  # Reset to a deterministic starting position.
@@ -47,23 +48,31 @@ def _controller_state(frame: int, steering: str = "right",
             buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
-    # Steering-capture input belongs to the short control smoke only. A full
-    # race stays centered so the scripted run tests progression, not off-road recovery.
-    if scenario == "control-smoke":
-        if steering == "right" and frame < STEERING_HOLD_FRAMES:
-            flags |= DPAD_RIGHT
-        elif steering == "left" and frame < STEERING_HOLD_FRAMES:
-            flags |= DPAD_LEFT
+    stick_x = NEUTRAL_AXIS
+    # Control-smoke movies exercise exactly one steering source at a time. A full
+    # race stays centered so it tests lap progression rather than steering response.
+    if scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES:
+        if steering_source == "dpad":
+            if steering == "right":
+                flags |= DPAD_RIGHT
+            elif steering == "left":
+                flags |= DPAD_LEFT
+        elif steering_source == "stick":
+            if steering == "right":
+                stick_x = 255
+            elif steering == "left":
+                stick_x = 0
 
-    # DTM stores Dolphin's controller axes as unsigned bytes (0..255), centered at
-    # 128. The emulated controller layer converts that center to libogc's signed 0;
-    # writing 0 here would encode full-left/full-down, not a neutral baseline.
-    return bytes((buttons, flags, 0, 0, NEUTRAL_AXIS, NEUTRAL_AXIS,
+    # DTM ControllerState packs digital buttons first, then analog trigger bytes,
+    # then main-stick and C-stick axes. Neutral unsigned axes are centered at 128;
+    # 0 and 255 deliberately represent full-left and full-right for the main stick.
+    return bytes((buttons, flags, 0, 0, stick_x, NEUTRAL_AXIS,
                   NEUTRAL_AXIS, NEUTRAL_AXIS))
 
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
-              steering: str = "right", scenario: str = "control-smoke") -> bytes:
+              steering: str = "right", scenario: str = "control-smoke",
+              steering_source: str = "dpad") -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -75,6 +84,8 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("steering must be one of: none, left, right")
     if scenario not in ("control-smoke", "full-race"):
         raise ValueError("scenario must be one of: control-smoke, full-race")
+    if steering_source not in ("dpad", "stick"):
+        raise ValueError("steering_source must be one of: dpad, stick")
     if scenario == "full-race" and steering != "none":
         raise ValueError("full-race scenario requires --steering none")
 
@@ -97,7 +108,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame, steering, scenario))
+        data.extend(_controller_state(frame, steering, scenario, steering_source))
     return bytes(data)
 
 
@@ -113,12 +124,16 @@ def main() -> int:
     parser.add_argument("--scenario", choices=("control-smoke", "full-race"),
                         default="control-smoke",
                         help="short control validation or a longer unsteered race run")
+    parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
+                        help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()
-    payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario)
+    payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario,
+                        args.steering_source)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
     print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, "
-          f"steering={args.steering}, scenario={args.scenario}, {len(payload)} bytes")
+          f"steering={args.steering}, source={args.steering_source}, scenario={args.scenario}, "
+          f"{len(payload)} bytes")
     return 0
 
 
