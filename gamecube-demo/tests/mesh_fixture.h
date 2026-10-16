@@ -5,9 +5,9 @@
 
 /* Original test-only triangle; no game-derived geometry or assets. */
 static const BoontaMeshVertex boonta_test_triangle_vertices[3] = {
-    { 0.0f, 0.0f, 0.0f, 255U, 40U, 40U, 255U },
-    { 1.0f, 0.0f, 0.0f, 40U, 255U, 40U, 255U },
-    { 0.0f, 1.0f, 0.0f, 40U, 40U, 255U, 255U }
+    { 0.0f, 0.0f, 0.0f, 255U, 40U, 40U, 255U, 0.0f, 0.0f },
+    { 1.0f, 0.0f, 0.0f, 40U, 255U, 40U, 255U, 1.0f, 0.0f },
+    { 0.0f, 1.0f, 0.0f, 40U, 40U, 255U, 255U, 0.0f, 1.0f }
 };
 static const uint16_t boonta_test_triangle_indices[3] = { 0U, 1U, 2U };
 
