@@ -8,6 +8,7 @@ from make_dolphin_dtm import (
     B,
     NEUTRAL_AXIS,
     RESET_PRESS_FRAME,
+    RESET_HOLD_FRAMES,
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
@@ -160,16 +161,19 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(boost_release[0], A)
         self.assertEqual(boost_release[4], 255)
 
-        reset = record(blob, RESET_PRESS_FRAME)
-        self.assertEqual(reset[0], Y)  # Y alone: do not hide a reset edge
-        self.assertTrue(reset[1] & IS_CONNECTED)
-        self.assertFalse(reset[1] & (DPAD_LEFT | DPAD_RIGHT))
-        self.assertEqual(reset[4:], bytes((NEUTRAL_AXIS,) * 4))
+        for frame in range(RESET_PRESS_FRAME, RESET_PRESS_FRAME + RESET_HOLD_FRAMES):
+            with self.subTest(reset_hold_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], Y)  # realistic short hold, no throttle/boost
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
-        for frame in (RESET_PRESS_FRAME + 1, RESET_PRESS_FRAME + 2, 599, 600, 3599):
+        for frame in (RESET_PRESS_FRAME + RESET_HOLD_FRAMES, 599, 600, 3599):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
-                self.assertEqual(state[0], 0)  # no input after the reset edge
+                self.assertEqual(state[0], 0)  # neutral after the held reset
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[2:4], bytes((0, 0)))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
