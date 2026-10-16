@@ -10,6 +10,10 @@ Before editing, inspect current `main`, relevant source and tests, the README/st
 
 Follow this order for every task: first establish the smallest correct, end-to-end behavior and test it; next improve maintainability, edge cases, error handling and player experience without overengineering; only then profile and optimize demonstrated performance bottlenecks. Do not polish broken behavior or prematurely optimize speculative bottlenecks. For performance-focused tasks, prove the intended behavior and baseline first, keep the solution maintainable, then benchmark the measured optimization and re-run correctness tests. Follow the fuller rule in the repository-root [AGENTS.md](../AGENTS.md).
 
+## Equal application
+
+These instructions apply equally to work requested by the project owner (Master-Chiken), work proposed or authored by Biddy-Pinky, and work produced with any AI coding assistant. Do not relax the order when implementing or reviewing either person's changes: establish and verify behaviour first, improve quality second, and optimize only measured bottlenecks third. State evidence and limitations honestly; role, urgency, and a performance-oriented task title do not waive the rule.
+
 ## Current project direction
 
 - The primary target is the **clean-room native GameCube homebrew DOL**, keeping Wii compatibility where practical.

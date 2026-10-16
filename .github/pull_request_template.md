@@ -12,6 +12,8 @@
 - [ ] **Make it good:** Maintainability, edge cases, errors, scope, and user/developer experience were reviewed without overengineering.
 - [ ] **Make it fast:** Performance work (if any) is based on measurement/profile and has before/after evidence where practical; otherwise no speculative optimization was added.
 
+The same standard applies to every author and reviewer, explicitly including Master-Chiken and Biddy-Pinky, as well as AI-assisted changes. No role or urgency-based exceptions.
+
 If a stage was already satisfied or is not applicable, briefly explain why rather than checking it mechanically.
 
 ## Change summary
