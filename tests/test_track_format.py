@@ -27,6 +27,16 @@ class TrackFormatTests(unittest.TestCase):
         self.assertEqual(len(track["points"]), 8)
         self.assertTrue(track["points"][0]["checkpoint"])
 
+    def test_start_finish_tangent_points_forward(self):
+        points = self.valid["points"]
+        previous = points[-1]
+        following = points[1]
+        # Catmull-Rom's start tangent is proportional to next - previous.
+        # Equal X and increasing Z keep the start line facing down-course.
+        self.assertAlmostEqual(following["x"], previous["x"], places=6)
+        self.assertGreater(following["z"], previous["z"])
+        self.assertTrue(points[0]["checkpoint"])
+
     def test_point_to_point_course_is_valid(self):
         data = copy.deepcopy(self.valid)
         data["closed_loop"] = False
