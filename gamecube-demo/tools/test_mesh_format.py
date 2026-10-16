@@ -25,6 +25,7 @@ from validate_mesh import (
 )
 
 SOURCE = ROOT / "gamecube-demo" / "data" / "meshes" / "original_synthetic_triangle.json"
+SOURCES = sorted((ROOT / "gamecube-demo" / "data" / "meshes").glob("*.json"))
 GENERATED = ROOT / "gamecube-demo" / "source" / "generated_mesh.h"
 EXPORTER = ROOT / "tools" / "mesh_format" / "export_mesh_header.py"
 
@@ -46,6 +47,36 @@ class MeshFormatTests(unittest.TestCase):
         self.assertEqual(len(mesh["vertices"]), 3)
         self.assertEqual(mesh["indices"], [0, 1, 2])
         self.assertEqual(render_header(mesh), GENERATED.read_text(encoding="utf-8"))
+
+    def test_all_original_fixtures_validate_and_export_independently(self) -> None:
+        self.assertGreaterEqual(len(SOURCES), 2)
+        names = set()
+        for source in SOURCES:
+            mesh = load_mesh(source)
+            self.assertNotIn(mesh["name"], names)
+            names.add(mesh["name"])
+            with tempfile.TemporaryDirectory() as temp:
+                output = Path(temp) / "mesh.h"
+                completed = subprocess.run(
+                    [sys.executable, str(EXPORTER), str(source), str(output)],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                self.assertEqual(output.read_text(encoding="utf-8"), render_header(mesh))
+
+    def test_coordinate_and_rgba_extremes_are_accepted(self) -> None:
+        candidate = copy.deepcopy(self.raw)
+        candidate["vertices"][0]["position"] = [-1_000_000, 0, 0]
+        candidate["vertices"][1]["position"] = [1_000_000, 0, 0]
+        candidate["vertices"][2]["position"] = [0, 1_000_000, 0]
+        candidate["vertices"][0]["color"] = [0, 255, 0, 255]
+        candidate["vertices"][1]["color"] = [255, 0, 255, 0]
+        self.assertEqual(len(validate_mesh(candidate)["vertices"]), 3)
+
+    def test_name_limit_and_non_integer_indices_are_rejected(self) -> None:
+        self.assert_rejected(lambda data: data.update(name="n" * 81))
+        self.assert_rejected(lambda data: data.update(indices=[0, True, 2]))
+        self.assert_rejected(lambda data: data.update(indices=[0, 1.0, 2]))
 
     def test_missing_or_wrong_root_fields_are_rejected(self) -> None:
         self.assert_rejected(lambda data: data.update(format="unknown-mesh-v9"))
