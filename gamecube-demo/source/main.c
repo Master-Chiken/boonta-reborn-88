@@ -1030,8 +1030,8 @@ static void draw_frame(void)
     g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
-    /* Keep hardware depth testing enabled for the road, walls and rigid pods. */
-    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
+    /* TEMP diagnostic: disable depth rejection to isolate why the asphalt ribbon is absent. */
+    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
                   (f32)g_video_mode->fbWidth / (f32)g_video_mode->efbHeight,
