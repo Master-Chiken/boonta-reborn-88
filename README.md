@@ -7,6 +7,10 @@ This repository contains two distinct tracks that must not be confused:
 - **Clean-room demo** in `gamecube-demo/`: original procedural GX rendering and driving prototype, now using an authored closed-loop oval spline for the road, floor, canyon and racer placement. It includes steering, throttle/brake, boost with heat/cooldown, three procedural rivals, lap timing, and a three-lap finish marker. Host tests cover 50/60 Hz cadence, invalid-state guards, lap/finish transitions and rival behavior. Native DOL/ELF build, artifact validation and Dolphin process smoke pass in CI. The latest mainline CI [run #38948039632](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632) passed host tests, native build, Dolphin headless smoke, and automated Software Renderer diagnostics for D-pad/analog-stick steering and the Y-reset HUD state; see the [diagnostic artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632/artifacts/12066738177). An earlier run [#38899605111](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38899605111) captured the finish banner after a 12,000-poll scripted three-lap race. These are deterministic CI diagnostics, not manual acceptance: **live controller play, pause/reset interaction, current-head full-race acceptance, long-session frame pacing, and physical hardware remain unverified**.
 - **Step 102 source prototype**: a separate source archive investigated for a fuller reconstruction. It is not automatically part of `main`; its provenance, license, generated course data, and any assets must be reviewed before importing or redistributing it.
 
+## Rule for every future change
+
+**Read [AGENTS.md](AGENTS.md) before planning or implementing any work.** It is the project's required pre-flight checklist for value, duplicate-work checks, scope, licensing/provenance, tests, review, and evidence. Do not start a new feature until its outcome, smallest useful scope, risks, and acceptance checks are clear.
+
 ## Project direction
 
 - **Primary target:** native GameCube/Wii homebrew.
