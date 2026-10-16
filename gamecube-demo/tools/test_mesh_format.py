@@ -75,7 +75,10 @@ class MeshFormatTests(unittest.TestCase):
         self.assertEqual(len(validate_mesh(candidate)["vertices"]), 3)
 
     def test_optional_uvs_normalize_and_export(self) -> None:
-        mesh = validate_mesh(self.raw)
+        legacy = copy.deepcopy(self.raw)
+        for vertex in legacy["vertices"]:
+            vertex.pop("uv", None)
+        mesh = validate_mesh(legacy)
         self.assertEqual([vertex["uv"] for vertex in mesh["vertices"]], [[0.0, 0.0]] * 3)
 
         candidate = copy.deepcopy(self.raw)
