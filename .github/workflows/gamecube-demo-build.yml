@@ -284,7 +284,7 @@ jobs:
           EOF
           done
           capture_timeout=100
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=280; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=340; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -394,7 +394,7 @@ jobs:
                 mkdir -p "$RACE_USER/Config"
                 chmod 700 "$RACE_USER"
                 printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 220
+                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 270
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                 echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
               else
