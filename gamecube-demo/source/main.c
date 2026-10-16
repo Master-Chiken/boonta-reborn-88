@@ -1035,8 +1035,8 @@ static void draw_frame(void)
     g_vertex_y_offset = 0.0f;
 
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
-    /* TEMP diagnostic: disable depth rejection to isolate why the asphalt ribbon is absent. */
-    GX_SetZMode(GX_FALSE, GX_ALWAYS, GX_FALSE);
+    /* Keep real depth testing for the ground, spline road, canyon panels and pods. */
+    GX_SetZMode(GX_TRUE, GX_LEQUAL, GX_TRUE);
     guLookAt(view, &camera, &up, &target);
     guPerspective(projection, 55.0f,
                   (f32)g_video_mode->fbWidth / (f32)g_video_mode->efbHeight,
