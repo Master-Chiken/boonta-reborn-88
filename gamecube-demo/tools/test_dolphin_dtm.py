@@ -13,6 +13,7 @@ from make_dolphin_dtm import (
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     PAUSE_BOOST_END_FRAME,
+    PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
     DPAD_LEFT,
     DPAD_RIGHT,
