@@ -712,6 +712,24 @@ static void invalid_scaled_frame_tests(void) {
   assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, scale), -18.0f));
   assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, scale), 0.5f));
  }
+
+ /* Every frame-scaled physics helper must apply the same upper bound. */
+ assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f),
+              boonta_speed_after_input_scaled(0.5f, 1, 0, 3.0f)));
+ assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, 1000.0f),
+              boonta_boost_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, 1000.0f),
+              boonta_engine_heat_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 1000.0f),
+              boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_lateral_position_after_frame(1.0f, 0.04f, 1000.0f),
+              boonta_lateral_position_after_frame(1.0f, 0.04f, 3.0f)));
+ assert(nearf(boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 1000.0f),
+              boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 3.0f)));
+ assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, 1000.0f),
+              boonta_rival_z_after_frame(-18.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, 1000.0f),
+              boonta_speed_after_offroad_scaled(0.5f, 4.0f, 3.0f)));
 }
 
 int main(void) {
