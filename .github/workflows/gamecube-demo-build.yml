@@ -387,7 +387,7 @@ jobs:
               capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
               capture_frame "$STICK_DTM" "$STICK_LOG" "$STICK_CAPTURE" "$STICK_USER"
               capture_frame "$LEFT_STICK_DTM" "$LEFT_STICK_LOG" "$LEFT_STICK_CAPTURE" "$LEFT_STICK_USER"
-              capture_frame "$RESET_DTM" "$RESET_LOG" "$RESET_CAPTURE" "$RESET_USER"
+              capture_frame "$RESET_DTM" "$RESET_LOG" "$RESET_CAPTURE" "$RESET_USER" 24
               echo "Running D-pad and analog-stick camera-follow diagnostics: road silhouette should shift opposite to each steering direction."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
