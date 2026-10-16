@@ -87,6 +87,7 @@ static int g_paused;
 static int g_race_finished;
 
 static const GXColor C_SKY = { 105, 170, 225, 255 };
+static const GXColor C_GROUND = { 133, 98, 60, 255 };
 static const GXColor C_ROAD_A = { 37, 43, 59, 255 };
 static const GXColor C_ROAD_B = { 45, 51, 67, 255 };
 static const GXColor C_EDGE_L = { 255, 94, 63, 255 };
@@ -436,12 +437,16 @@ static void add_road(void)
     unsigned int i;
     const float segment_length = 2.8f;
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
+    /* A low desert floor grounds the canyon walls; the higher spline ribbon
+     * wins the depth test now that the EFB Z buffer is cleared every frame. */
+    const Point3 ground_a = { -150.0f, -1.40f, 180.0f };
+    const Point3 ground_b = {  150.0f, -1.40f, 180.0f };
+    const Point3 ground_c = {  150.0f, -1.40f, -100.0f };
+    const Point3 ground_d = { -150.0f, -1.40f, -100.0f };
 
-    /* The screen-space desert backdrop already supplies the ground color.
-     * Avoid a giant world-space ground plane: it can win depth tests over the
-     * narrow spline ribbon and hide the actual road and racer. */
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
+    quad_add(ground_a, ground_b, ground_c, ground_d, C_GROUND);
 
     for (i = 0; i < ROAD_SEGMENTS; ++i) {
         const unsigned int section_phase = i + passed_sections;
