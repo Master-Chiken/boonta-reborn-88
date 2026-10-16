@@ -7,6 +7,7 @@ import copy
 import json
 import subprocess
 import sys
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -123,6 +124,39 @@ class MeshFormatTests(unittest.TestCase):
             bad_file.write_text("{not-json", encoding="utf-8")
             with self.assertRaises(MeshValidationError):
                 load_mesh(bad_file)
+
+    def test_generated_headers_pass_the_c_runtime_validator(self) -> None:
+        compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+        if compiler is None:
+            self.skipTest("a C compiler is not installed")
+        for source in SOURCES:
+            mesh = load_mesh(source)
+            suffix = "".join(ch.lower() if ch.isalnum() else "_" for ch in mesh["name"])
+            header_name = f"mesh_{suffix}.h"
+            with tempfile.TemporaryDirectory() as temp:
+                temp_path = Path(temp)
+                header = temp_path / header_name
+                header.write_text(render_header(mesh), encoding="utf-8")
+                view = f"boonta_generated_mesh_{suffix}_view"
+                harness = temp_path / "validate.c"
+                harness.write_text(
+                    '#include <stdio.h>\\n'
+                    f'#include "{header_name}"\\n'
+                    'int main(void) {\\n'
+                    f'  return boonta_mesh_validate(&{view}) == BOONTA_MESH_VALID ? 0 : 1;\\n'
+                    '}\\n',
+                    encoding="utf-8",
+                )
+                binary = temp_path / "validate"
+                compiled = subprocess.run(
+                    [compiler, "-std=c99", "-Wall", "-Wextra", "-Werror",
+                     "-I", str(ROOT / "gamecube-demo" / "source"),
+                     str(harness), "-lm", "-o", str(binary)],
+                    check=False, capture_output=True, text=True,
+                )
+                self.assertEqual(compiled.returncode, 0, compiled.stderr)
+                executed = subprocess.run([str(binary)], check=False)
+                self.assertEqual(executed.returncode, 0, f"C validator rejected {source.name}")
 
     def test_exporter_cli_produces_deterministic_header(self) -> None:
         expected = render_header(load_mesh(SOURCE))
