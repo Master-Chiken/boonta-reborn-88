@@ -415,6 +415,15 @@ static void three_lap_finish_tests(void) {
 
  /* Lap count saturates instead of wrapping at UINT_MAX. */
  assert(boonta_lap_count_after_frame(0xffffffffU, 119.0f, 121.0f, 120.0f) == 0xffffffffU);
+ /* Multi-boundary increments must saturate, never wrap the unsigned counter. */
+ assert(boonta_lap_count_after_frame(0xfffffffeU, 0.0f, 360.0f, 120.0f) == 0xffffffffU);
+ /* A boundary reached exactly counts once; remaining on it does not count again. */
+ assert(boonta_lap_count_after_frame(0U, 119.0f, 120.0f, 120.0f) == 1U);
+ assert(boonta_lap_count_after_frame(1U, 120.0f, 120.0f, 120.0f) == 1U);
+ /* Invalid lap lengths and negative distances must leave progress unchanged. */
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, 0.0f) == 2U);
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, NAN) == 2U);
+ assert(boonta_lap_count_after_frame(2U, -1.0f, 240.0f, 120.0f) == 2U);
 }
 
 
