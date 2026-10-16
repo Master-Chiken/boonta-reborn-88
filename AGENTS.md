@@ -2,6 +2,16 @@
 
 These rules apply to **every future project change**, not just the current GameCube milestone: gameplay code, rendering, input, asset tools, parsers, collision, UI, tests, CI, documentation, and proposed integrations. Read this file before planning or implementing work.
 
+## Mandatory engineering order: Make it work, make it good, make it fast
+
+This order applies to every project task. Do not skip ahead to polish or optimization while the end-to-end behavior is still incorrect.
+
+1. **Make it work.** Deliver the smallest correct end-to-end behavior for the stated goal. Define observable acceptance criteria, handle expected edge cases, and add/run tests that demonstrate the behavior. A build passing alone is not enough when behavior has not been tested.
+2. **Make it good.** Once it works, improve clarity, maintainability, error handling, appropriate architecture, and player/developer experience. Keep the scope focused; do not turn “good” into an excuse for speculative frameworks, oversized refactors, or feature creep.
+3. **Make it fast.** Only after correctness and design quality are adequate, optimize demonstrated bottlenecks. Measure/profile first, compare before/after where practical, add regression or benchmark coverage, and verify that the optimization preserves behavior. Do not perform speculative performance tuning.
+
+The order is a decision rule, not a demand for unnecessary work: if a stage is already satisfied, record the evidence and move on. For a performance-focused task, reproduce and define the required behavior first, preserve correctness and maintainability, then optimize the measured bottleneck.
+
 ## Required pre-flight: decide before coding
 
 Before starting any change, answer these questions:

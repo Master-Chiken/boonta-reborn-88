@@ -11,6 +11,10 @@ This repository contains two distinct tracks that must not be confused:
 
 **Read [AGENTS.md](AGENTS.md) before planning or implementing any work.** It is the project's required pre-flight checklist for value, duplicate-work checks, scope, licensing/provenance, tests, review, and evidence. Do not start a new feature until its outcome, smallest useful scope, risks, and acceptance checks are clear.
 
+## Engineering rule for every task
+
+**Make it work, make it good, make it fast — in that order.** First prove the smallest correct end-to-end behavior; then improve quality and maintainability; optimize performance only after that, using measurements and regression checks. See [AGENTS.md](AGENTS.md) for the full rule.
+
 ## Project direction
 
 - **Primary target:** native GameCube/Wii homebrew.

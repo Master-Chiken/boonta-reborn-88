@@ -6,6 +6,10 @@
 
 Before editing, inspect current `main`, relevant source and tests, the README/status docs, related open issues, and existing pull requests/branches. Identify the concrete player-visible or developer-blocking outcome, smallest useful scope, assumptions/risks, tests and acceptance evidence. Avoid duplicate branches/PRs and speculative work. If a key behavior, format, platform, license or provenance is uncertain, investigate it before writing dependent code.
 
+## Engineering order: Make it work, make it good, make it fast
+
+Follow this order for every task: first establish the smallest correct, end-to-end behavior and test it; next improve maintainability, edge cases, error handling and player experience without overengineering; only then profile and optimize demonstrated performance bottlenecks. Do not polish broken behavior or prematurely optimize speculative bottlenecks. For performance-focused tasks, prove the intended behavior and baseline first, keep the solution maintainable, then benchmark the measured optimization and re-run correctness tests. Follow the fuller rule in the repository-root [AGENTS.md](../AGENTS.md).
+
 ## Current project direction
 
 - The primary target is the **clean-room native GameCube homebrew DOL**, keeping Wii compatibility where practical.

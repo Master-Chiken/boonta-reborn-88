@@ -6,6 +6,14 @@
 - [ ] Platform/file-format assumptions and license/provenance risks have been checked; no uncleared assets or commercial game data are included.
 - [ ] Acceptance criteria and validation steps were identified before implementation.
 
+## Engineering order
+
+- [ ] **Make it work:** The smallest end-to-end behavior meets stated acceptance criteria and relevant correctness tests run.
+- [ ] **Make it good:** Maintainability, edge cases, errors, scope, and user/developer experience were reviewed without overengineering.
+- [ ] **Make it fast:** Performance work (if any) is based on measurement/profile and has before/after evidence where practical; otherwise no speculative optimization was added.
+
+If a stage was already satisfied or is not applicable, briefly explain why rather than checking it mechanically.
+
 ## Change summary
 
 **Problem / goal:**
