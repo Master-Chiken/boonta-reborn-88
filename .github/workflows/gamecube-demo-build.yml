@@ -447,7 +447,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional bidirectional camera-follow/road-silhouette diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The optional Dolphin Software Renderer input/reset diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 
