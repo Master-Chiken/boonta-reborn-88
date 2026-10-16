@@ -11,6 +11,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "mesh_format"))
+
 from export_mesh_header import render_header
 from validate_mesh import (
     FORMAT,
@@ -21,7 +24,6 @@ from validate_mesh import (
     validate_mesh,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "gamecube-demo" / "data" / "meshes" / "original_synthetic_triangle.json"
 GENERATED = ROOT / "gamecube-demo" / "source" / "generated_mesh.h"
 EXPORTER = ROOT / "tools" / "mesh_format" / "export_mesh_header.py"
