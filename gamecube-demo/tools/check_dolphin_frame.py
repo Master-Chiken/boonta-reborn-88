@@ -363,6 +363,8 @@ def main() -> int:
                         help="check that speed/lap/heat are empty and boost is refilled after Y reset")
     parser.add_argument("--expect-pause", action="store_true",
                         help="check that a Start input visibly leaves the game in paused state")
+    parser.add_argument("--expect-resume", action="store_true",
+                        help="check that the pause overlay is gone and throttle visibly moves the game after Start resumes")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -373,8 +375,8 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
-    if sum((args.expect_finish, args.expect_reset, args.expect_pause)) > 1:
-        parser.error("--expect-finish, --expect-reset, and --expect-pause are mutually exclusive")
+    if sum((args.expect_finish, args.expect_reset, args.expect_pause, args.expect_resume)) > 1:
+        parser.error("--expect-finish, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")
@@ -399,6 +401,18 @@ def main() -> int:
         if not pause_icon_visible(image):
             raise SystemExit("The framed pause bars were not detected in the visible Dolphin capture.")
         print("Paused-state icon detected in the visible Dolphin frame.")
+        return 0
+    if args.expect_resume:
+        if args.baseline is not None:
+            parser.error("--expect-resume cannot be combined with --baseline")
+        validate_scene(image, "Resumed-state")
+        metrics = reset_state_metrics(image)
+        print("Resumed HUD metrics: " + ", ".join(f"{name}={value:.3f}" for name, value in metrics.items()))
+        if pause_icon_visible(image):
+            raise SystemExit("The pause overlay is still visible after the scripted Start-resume input.")
+        if metrics["speed_fill_pixels"] < 8.0:
+            raise SystemExit("The race does not show enough speed-bar fill to prove throttle resumed after the pause.")
+        print("Pause overlay cleared and speed bar advanced after the scripted Start-resume input.")
         return 0
     if args.baseline is None:
         parser.error("--baseline is required unless --expect-finish is set")
