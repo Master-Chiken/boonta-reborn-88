@@ -26,7 +26,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-      - name: Verify and delete the eight audited branch refs
+      - name: Verify and delete only explicitly audited branch refs
         shell: bash
         run: |
           set -euo pipefail
@@ -52,7 +52,7 @@ jobs:
             echo
             echo "- Default branch: \`$default_branch\`"
             echo "- Rule: only delete a listed branch if its exact tip is reachable from \`main\`, it has no open PR, and GitHub reports it unprotected."
-            echo "- Fixed scope: 23 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
+            echo "- Fixed scope: 24 pre-existing project branches proven redundant, plus temporary cleanup branches created while installing this workflow."
             echo
             echo "| Branch | Expected tip SHA | Evidence / result |"
             echo "|---|---|---|"
@@ -111,6 +111,7 @@ jobs:
             fi
           done <<'CANDIDATES'
           diagnostic/road-depth-visibility 8545899a9e699c7f50dfce07c6b761f8dd64a377
+          test/gamecube-multiframe-collisions 61f5918acb0443a1c59efabe217c0a1ca640a219
           feature/runtime-track-spline 9cab51641daa4f8087fb9d5bdf65b236f356eb19
           feature/neutral-track-spline-format 72c62232798124d418530a8a74e21fdac43fd364
           ci/wii64-tool-tests e7969c4f72ab803f5f6a8c2248317cdb5f4df0de
