@@ -677,6 +677,7 @@ int main(void) {
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
+ multiframe_rival_contact_tests();
  rival_event_tests();
  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
