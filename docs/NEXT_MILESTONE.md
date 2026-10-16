@@ -19,6 +19,13 @@ This is the gate before expanding the vertical slice.
 These prove the code compiles, the deterministic logic works, and a scene can render.  
 They do **not** yet prove live controller response or a completed three-lap race.
 
+## New automated evidence on current main (2026-10-16)
+
+The latest CI on main commit `cacec9c35d9a41258493c619368a6537d952a7a9` is [run #38948039632](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632). It passed host tests, native DOL/ELF build and validation, Dolphin Null-backend smoke, and the non-blocking Software Renderer diagnostic. Automated input diagnostics now include D-pad steering, analog-stick left/right steering and a Y-reset HUD assertion. See the [captured diagnostic artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38948039632/artifacts/12066738177).
+
+These are deterministic movie-driven emulator tests. They do **not** complete any of the manual controller acceptance items below; leave the checklist pending until someone records an actual visible Dolphin session with a configured controller.
+
+
 ## Interactive acceptance checklist
 
 Load the latest mainline DOL in a **visible** Dolphin session.  
