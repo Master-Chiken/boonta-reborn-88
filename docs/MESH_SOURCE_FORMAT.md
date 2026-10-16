@@ -36,7 +36,7 @@ A document has exactly these required semantic fields:
 | `vertices[].color` | array of integers | Exactly four RGBA8 channels, each in [0, 255]. Booleans and fractional values are rejected. |
 | `indices` | array of integers | 3 to 4095 entries; count must be divisible by three. Each index is zero-based and must refer to an existing vertex. Booleans and fractional values are rejected. |
 
-Each consecutive group of three indices describes one triangle. Triangles with zero area are rejected by both the host validator and runtime contract. Unknown optional attributes such as normals, UVs, materials, textures, skeletons and collision metadata are **not part of v1**; do not silently imply that they are supported.
+Each consecutive group of three indices describes one triangle. Triangles with zero area are rejected by both the host validator and runtime contract. Unknown optional attributes such as normals, UVs, materials, textures, skeletons and collision metadata are **not part of v1**; do not silently imply that they are supported. Unknown keys at the top level or inside vertex objects are currently ignored by the validator rather than rejected; they are not supported v1 fields, and callers must not rely on them.
 
 The top-level example below is a complete minimal document:
 
