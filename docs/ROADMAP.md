@@ -69,11 +69,13 @@ PR #180 was merged to main as commit `e3adea9424268d7321113acc4ffc621242212dd9`.
 
 ## Guiding principles
 
-1. Clean-room first; publish only original or redistribution-cleared code/assets.
-2. One coherent playable vertical slice before broad content expansion.
-3. Keep CI green and evidence-based.
-4. Interactive playability matters more than feature/branch/PR count.
-5. Legal caution over speed.
+1. **Make it work, make it good, make it fast — in that order.** First prove correct end-to-end behavior, then improve quality/maintainability, then optimize measured bottlenecks.
+2. Clean-room first; publish only original or redistribution-cleared code/assets.
+3. One coherent playable vertical slice before broad content expansion.
+4. Keep CI green and evidence-based.
+5. Interactive playability matters more than feature/branch/PR count.
+6. Legal caution over speed.
+
 
 ## How to follow progress
 
