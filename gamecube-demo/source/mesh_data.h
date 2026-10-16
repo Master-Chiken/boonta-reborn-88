@@ -75,8 +75,8 @@ static inline int boonta_mesh_size_bytes(size_t count,
 /*
  * Validate a non-empty indexed triangle list before reading its contents for
  * conversion/submission. Degenerate (zero-area) triangles are rejected.
- * This is a data contract only; it performs no allocation and does not submit
- * the fixture to GX.
+ * Validation performs no allocation or copy. Callers may submit data to GX
+ * only after the complete view has passed this validator.
  */
 static inline BoontaMeshValidation
 boonta_mesh_validate(const BoontaMeshView *mesh)

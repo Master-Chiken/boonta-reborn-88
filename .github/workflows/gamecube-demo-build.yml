@@ -10,6 +10,7 @@ on:
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
+      - "tools/mesh_format/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
+      - "tools/mesh_format/**"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
     inputs:
@@ -64,7 +66,7 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
-      - name: Test DOL padding and artifact validation utilities
+      - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
       - name: Validate clean-room track format and checked-in runtime header
