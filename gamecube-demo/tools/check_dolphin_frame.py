@@ -135,15 +135,41 @@ def validate_scene(image: Image.Image, label: str) -> None:
         raise SystemExit(f"{label} frame is missing expected scene/craft color signatures; DOL may not have booted.")
 
 
-def reset_state_metrics(image: Image.Image) -> dict[str, float]:
-    """Measure HUD bars that should be reset to the start-state values.
+def detect_game_viewport_top(image: Image.Image) -> int:
+    """Find the start of the rendered game viewport in a Dolphin window capture.
 
-    The prototype's fixed-size HUD bar region is at x=24 with width 190 on
-    ordinary 640/800-wide captures (130 on very small previews). We sample the
-    center scanline of each bar to ignore quad-edge rasterization differences.
+    A normal Dolphin window screenshot includes a light toolbar above the 3D
+    viewport; framebuffer-only images start at row zero. Identify the first
+    full-width sky row so HUD coordinates can be scaled into either capture.
     """
     image = image.convert("RGB")
     width, height = image.size
+    sample_step = max(1, width // 160)
+    sample_x = range(0, width, sample_step)
+    threshold = max(1, int(len(sample_x) * 0.72))
+    for y in range(min(int(height * 0.30), height)):
+        sky_hits = 0
+        for x in sample_x:
+            r, g, b = image.getpixel((x, y))
+            if (65 <= r <= 145 and 125 <= g <= 200 and b >= 190
+                    and b > r * 1.2 and b > g * 1.1):
+                sky_hits += 1
+        if sky_hits >= threshold:
+            return y
+    return 0
+
+
+def reset_state_metrics(image: Image.Image) -> dict[str, float]:
+    """Measure HUD bars that should be reset to the start-state values.
+
+    The prototype's HUD is authored in the game viewport's own pixel coordinates.
+    Dolphin window captures include a toolbar, which reduces and offsets the
+    viewport; convert HUD row locations into capture coordinates before sampling.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
     bar_left = 24
     bar_width = 130 if width < 500 else 190
     bar_right = min(width, bar_left + bar_width)
@@ -151,7 +177,9 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
         raise ValueError(f"Image too small for reset-state HUD inspection: {image.size}")
 
     def row_pixels(y_offset: int) -> list[tuple[int, int, int]]:
-        y = max(0, min(height - 1, height - y_offset))
+        logical_y = max(0, min(height - 1, height - y_offset))
+        y = round(viewport_top + viewport_height * logical_y / height)
+        y = max(0, min(height - 1, y))
         return [image.getpixel((x, y)) for x in range(bar_left, bar_right)]
 
     speed_row = row_pixels(30)
@@ -177,6 +205,7 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
         "lap_progress_pixels": float(progress_fill),
         "completed_lap_marker_pixels": float(lap_done),
         "steering_marker_offset_pixels": steering_marker_offset,
+        "game_viewport_top_pixels": float(viewport_top),
     }
 
 
