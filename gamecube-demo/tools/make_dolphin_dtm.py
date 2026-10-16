@@ -16,9 +16,9 @@ CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
-RESET_PRESS_FRAME = 240  # Build non-default gameplay state before testing Y reset.
+RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
-RESET_BOOST_END_FRAME = 120
+RESET_BOOST_END_FRAME = 60
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
