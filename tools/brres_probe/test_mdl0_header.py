@@ -31,6 +31,22 @@ class MDL0HeaderTests(unittest.TestCase):
     def test_valid_synthetic_header_and_negative_back_reference(self):
         self.valid()
 
+    def test_detached_subfile_zero_back_reference(self):
+        # An extracted MDL0 subfile begins at offset zero; the documented
+        # signed back-reference is zero for this detached representation.
+        data = bytearray(0x70)
+        data[0:4] = b"MDL0"
+        struct.pack_into(">IIi", data, 4, 0x60, 11, 0)
+        struct.pack_into(">i", data, 0x10, 0x4C)
+        struct.pack_into(">i", data, 0x48, 0x60)
+        data[0x60:0x6A] = b"detached\\0"
+
+        header = validate_mdl0_v11(data, 0, brres_start=0)
+        self.assertEqual(header.brres_relative_offset, 0)
+        self.assertEqual(header.brres_target, 0)
+        self.assertEqual(header.start, 0)
+        self.assertEqual(header.name_target, 0x60)
+
     def test_wrong_magic(self):
         data, start = self.valid()
         data[start:start + 4] = b"NOPE"
