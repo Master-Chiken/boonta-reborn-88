@@ -15,6 +15,8 @@ from make_dolphin_dtm import (
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
+    RESUME_HOLD_FRAMES,
+    RESUME_PRESS_FRAME,
     DPAD_LEFT,
     DPAD_RIGHT,
     HEADER_SIZE,
@@ -34,6 +36,7 @@ try:
         player_pod_bounds,
         reset_state_visible,
         pause_icon_visible,
+        resumed_state_visible,
         road_center_from_asphalt,
     )
 except ImportError:
@@ -43,6 +46,7 @@ except ImportError:
     player_pod_bounds = None
     reset_state_visible = None
     pause_icon_visible = None
+    resumed_state_visible = None
     road_center_from_asphalt = None
 
 
@@ -214,6 +218,37 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertEqual(state[2:4], bytes((0, 0)))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+    def test_resume_check_profile_pauses_then_resumes_with_throttle(self) -> None:
+        blob = build_dtm(3600, steering="none", scenario="resume-check")
+        before_pause = record(blob, PAUSE_PRESS_FRAME - 1)
+        self.assertEqual(before_pause[0], A)
+
+        for frame in range(PAUSE_PRESS_FRAME, PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES):
+            with self.subTest(pause_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES, 100, RESUME_PRESS_FRAME - 1):
+            with self.subTest(paused_neutral_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)
+
+        for frame in range(RESUME_PRESS_FRAME, RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES):
+            with self.subTest(resume_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES, 200, 3599):
+            with self.subTest(running_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], A)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
     def test_full_race_profile_keeps_throttle_and_neutral_steering(self) -> None:
         frames = 6000
         blob = build_dtm(frames, steering="none", scenario="full-race")
@@ -341,6 +376,30 @@ class DolphinDtmTests(unittest.TestCase):
         window_draw.rectangle((387, cy - 18, 396, cy + 18), fill=white)
         window_draw.rectangle((404, cy - 18, 413, cy + 18), fill=white)
         self.assertTrue(pause_icon_visible(window))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or resumed_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_resume_detector_requires_no_pause_icon_and_nonzero_speed(self) -> None:
+        image = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw = ImageDraw.Draw(image)
+        empty = (48, 66, 80)
+        draw.rectangle((24, 444, 213, 455), fill=empty)
+        draw.rectangle((24, 444, 95, 455), fill=(50, 225, 246))
+        draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
+        self.assertTrue(resumed_state_visible(image))
+
+        no_speed = image.copy()
+        ImageDraw.Draw(no_speed).rectangle((24, 444, 213, 455), fill=empty)
+        self.assertFalse(resumed_state_visible(no_speed))
+
+        still_paused = image.copy()
+        paused_draw = ImageDraw.Draw(still_paused)
+        paused_draw.rectangle((368, 210, 432, 270), fill=(8, 18, 30))
+        paused_draw.rectangle((387, 222, 396, 258), fill=(238, 246, 255))
+        paused_draw.rectangle((404, 222, 413, 258), fill=(238, 246, 255))
+        self.assertFalse(resumed_state_visible(still_paused))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or reset_state_visible is None,
