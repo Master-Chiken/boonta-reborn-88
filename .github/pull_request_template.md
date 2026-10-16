@@ -1,0 +1,38 @@
+## Required pre-flight
+
+- [ ] I read [AGENTS.md](../AGENTS.md) and followed the project-wide pre-flight rules.
+- [ ] I checked current source/tests, relevant issues, and open PRs/branches to avoid duplicating existing work.
+- [ ] This change advances a concrete project milestone; its scope is the smallest useful change.
+- [ ] Platform/file-format assumptions and license/provenance risks have been checked; no uncleared assets or commercial game data are included.
+- [ ] Acceptance criteria and validation steps were identified before implementation.
+
+## Change summary
+
+**Problem / goal:**
+
+
+**Scope and non-goals:**
+
+
+**Why this advances the playable vertical slice:**
+
+
+## Validation evidence
+
+**Checks run (include links to CI runs/artifacts where possible):**
+
+
+**Manual/runtime checks completed:**
+
+
+**Not tested / limitations / unresolved risks:**
+
+
+## Integration
+
+- [ ] Diff reviewed against current `main`; no unrelated changes or accidental generated/proprietary payloads.
+- [ ] Regression tests added or updated for any reproduced bug.
+- [ ] Documentation/status updated if project state or acceptance status changed.
+- [ ] Claims distinguish host tests, native build, Dolphin headless smoke, scripted visible diagnostics, manual controller play, and physical hardware.
+
+**Next smallest step:** 
