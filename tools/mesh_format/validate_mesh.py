@@ -23,7 +23,10 @@ def _number(value: Any, label: str) -> float:
     # bool is a subclass of int in Python; it is not a valid coordinate.
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise MeshValidationError(f"{label} must be a number")
-    number = float(value)
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise MeshValidationError(f"{label} must be finite") from exc
     if not math.isfinite(number):
         raise MeshValidationError(f"{label} must be finite")
     if number < -MAX_ABS_COORDINATE or number > MAX_ABS_COORDINATE:
@@ -127,7 +130,7 @@ def load_mesh(path: str | Path) -> dict[str, Any]:
     try:
         with Path(path).open("r", encoding="utf-8") as stream:
             data = json.load(stream)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise MeshValidationError(f"cannot read valid JSON: {exc}") from exc
     return validate_mesh(data)
 

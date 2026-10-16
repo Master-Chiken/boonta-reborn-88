@@ -59,6 +59,7 @@ class MeshFormatTests(unittest.TestCase):
         self.assert_rejected(lambda data: data["vertices"][0].update(position=[float("nan"), 0.0, 0.0]))
         self.assert_rejected(lambda data: data["vertices"][0].update(position=[float("inf"), 0.0, 0.0]))
         self.assert_rejected(lambda data: data["vertices"][0].update(position=[1_000_001.0, 0.0, 0.0]))
+        self.assert_rejected(lambda data: data["vertices"][0].update(position=[10**1000, 0.0, 0.0]))
 
     def test_rgba8_channels_are_strict(self) -> None:
         self.assert_rejected(lambda data: data["vertices"][0].update(color=[255, 0, 0]))
@@ -82,6 +83,13 @@ class MeshFormatTests(unittest.TestCase):
             data["vertices"][2]["position"] = list(data["vertices"][1]["position"])
 
         self.assert_rejected(make_degenerate)
+
+    def test_loader_rejects_malformed_json(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            bad_file = Path(temp) / "invalid.json"
+            bad_file.write_text("{not-json", encoding="utf-8")
+            with self.assertRaises(MeshValidationError):
+                load_mesh(bad_file)
 
     def test_exporter_cli_produces_deterministic_header(self) -> None:
         expected = render_header(load_mesh(SOURCE))
