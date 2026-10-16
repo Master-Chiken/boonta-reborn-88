@@ -5,7 +5,7 @@ Last updated: 2026-10-16
 ## Current mainline
 
 - **Runtime-tested mainline commit:** `73cc2e1a1018af0e6c14df7e9aec7023d005e7ea` — PR #161 merge.
-- **Subsequent mainline changes:** PRs #162 and #163 only refreshed this status document; neither changed gameplay source or build inputs.
+- **Subsequent mainline changes:** documentation-only status refreshes followed this runtime-tested commit; no gameplay source or build inputs changed.
 - **Latest runtime CI:** [GameCube first-render prototype run #38902484737](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38902484737) completed successfully on the runtime-tested commit.
 - **Host regression tests:** passed, including the multi-frame rival-contact test added in PR #161.
 - **Native build:** `boonta_gc_demo.dol` / `.elf` built successfully with devkitPPC/libogc.
