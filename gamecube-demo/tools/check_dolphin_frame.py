@@ -168,6 +168,7 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
                         if g > 180 and r > 100 and b > 100)
     lap_done = sum(1 for r, g, b in lap_marker_row
                    if g > 180 and r > 100 and b > 100)
+    steering_marker_offset = abs(steering_indicator_center(image) - width / 2.0)
     row_width = max(1, len(speed_row))
     return {
         "speed_fill_pixels": float(speed_fill),
@@ -175,6 +176,7 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
         "heat_fill_pixels": float(heat_fill),
         "lap_progress_pixels": float(progress_fill),
         "completed_lap_marker_pixels": float(lap_done),
+        "steering_marker_offset_pixels": steering_marker_offset,
     }
 
 
@@ -188,6 +190,7 @@ def reset_state_visible(image: Image.Image) -> bool:
         and metrics["heat_fill_pixels"] <= tolerance
         and metrics["lap_progress_pixels"] <= tolerance
         and metrics["completed_lap_marker_pixels"] <= tolerance
+        and metrics["steering_marker_offset_pixels"] <= 4.0
     )
 
 
