@@ -5,8 +5,8 @@
 #include "mesh_data.h"
 
 static const BoontaMeshVertex boonta_generated_mesh_original_synthetic_triangle_vertices[3U] = {
-    { -0.650000f, 0.000000f, 0.000000f, 255U, 70U, 50U, 255U },
-    { 0.650000f, 0.000000f, 0.000000f, 50U, 220U, 255U, 255U },
+    { -0.650000f, 0.000000f, 0.000000f, 255U, 70U, 50U, 255U, 0.000000f, 0.000000f },
+    { 0.650000f, 0.000000f, 0.000000f, 50U, 220U, 255U, 255U, 0.000000f, 0.000000f },
     { 0.000000f, 1.100000f, 0.000000f, 255U, 240U, 110U, 255U }
 };
 
