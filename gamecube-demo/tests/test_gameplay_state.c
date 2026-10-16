@@ -638,6 +638,62 @@ static void non_finite_physics_state_tests(void) {
  assert(!boonta_boost_should_activate_with_heat(1, 1, 0.5f, NAN, 0));
 }
 
+static void race_state_reset_tests(void) {
+ BoontaRaceState state;
+ unsigned int i;
+
+ state.distance = 42.0f;
+ state.lap_count = 2U;
+ state.race_seconds = 88.0f;
+ state.lap_seconds = 22.0f;
+ state.last_lap_seconds = 21.0f;
+ state.best_lap_seconds = 19.0f;
+ state.speed = 0.9f;
+ state.pitch_down = 0.8f;
+ state.player_lateral = 2.2f;
+ state.lateral_velocity = -0.04f;
+ state.boost = 0.1f;
+ state.engine_heat = 0.99f;
+ state.boost_overheated = 1;
+ state.boost_active = 1;
+ state.slide_active = 1;
+ state.overtake_count = 7U;
+ state.paused = 1;
+ state.race_finished = 1;
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  state.rival_z[i] = 8.0f + (float)i;
+  state.rival_lateral[i] = -1.0f - (float)i;
+ }
+
+ boonta_race_state_reset(&state);
+
+ assert(nearf(state.distance, 0.0f));
+ assert(state.lap_count == 0U);
+ assert(nearf(state.race_seconds, 0.0f));
+ assert(nearf(state.lap_seconds, 0.0f));
+ assert(nearf(state.last_lap_seconds, 0.0f));
+ assert(nearf(state.best_lap_seconds, 0.0f));
+ assert(nearf(state.speed, 0.0f));
+ assert(nearf(state.pitch_down, 0.0f));
+ assert(nearf(state.player_lateral, 0.0f));
+ assert(nearf(state.lateral_velocity, 0.0f));
+ assert(nearf(state.boost, 1.0f));
+ assert(nearf(state.engine_heat, 0.0f));
+ assert(state.boost_overheated == 0);
+ assert(state.boost_active == 0);
+ assert(state.slide_active == 0);
+ assert(state.overtake_count == 0U);
+ assert(state.paused == 0);
+ assert(state.race_finished == 0);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
+  assert(nearf(state.rival_lateral[i], 0.0f));
+ }
+
+ /* Defensive no-op for a missing state pointer. */
+ boonta_race_state_reset(0);
+}
+
 static void invalid_scaled_frame_tests(void) {
  const float invalid_scales[] = { NAN, INFINITY, -INFINITY, -1.0f };
  unsigned int i;
