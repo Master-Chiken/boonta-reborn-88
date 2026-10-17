@@ -72,6 +72,20 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertEqual(helper.count("clip_z }"), 4)
 
 
+    def test_finish_banner_has_readable_label_and_required_glyphs(self) -> None:
+        self.assertRegex(SOURCE, r"\['F'\]\s*=\s*\{31,16,16,30,16,16,16\}")
+        self.assertRegex(SOURCE, r"\['N'\]\s*=\s*\{17,25,21,19,17,17,17\}")
+        finish = SOURCE.split("/* Finish banner:", 1)[1].split(
+            "} else if (g_paused)", 1
+        )[0]
+        self.assertIn(
+            'append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);',
+            finish,
+        )
+        self.assertIn("for (row = 0; row < 3U; ++row)", finish)
+        self.assertIn("for (col = 0; col < 4U; ++col)", finish)
+
+
 
 if __name__ == "__main__":
     unittest.main()
