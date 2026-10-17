@@ -1,6 +1,6 @@
 # Boonta Reborn 88
 
-### A future native GameCube/Wii remaster of Star Wars: Episode I – Racer (1999) — an HD++ vision with an HD+++ Premium stretch goal.
+### A remaster for Star Wars: Episode I – Racer (1999) on GameCube and/or Wii.
 
 [![GameCube demo CI](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml/badge.svg?branch=main)](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml)
 
