@@ -435,7 +435,7 @@ def main() -> int:
     parser.add_argument("--expect-resume", action="store_true",
                         help="check that the pause overlay is gone and throttle visibly moves the game after Start resumes")
     parser.add_argument("--expect-neutral-steering", action="store_true",
-                        help="compare against baseline; small analog deflection must not shift the course or HUD marker")
+                        help="compare against baseline; a small analog deflection must not move the player-lateral HUD marker")
     parser.add_argument("--max-neutral-shift", type=float, default=2.0,
                         help="maximum absolute player-lateral HUD-marker shift for a near-deadzone analog input")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
@@ -509,7 +509,7 @@ def main() -> int:
         validate_scene(image, "Near-deadzone analog input")
         road_shift, marker_shift = neutral_steering_deltas(baseline, image)
         print(f"Near-deadzone absolute road-center shift={road_shift:.1f}px "
-              f"(maximum {args.max_neutral_shift:.1f}px)")
+              "(diagnostic only; track phase may vary between captures)")
         print(f"Near-deadzone absolute HUD-marker shift={marker_shift:.1f}px "
               f"(maximum {args.max_neutral_shift:.1f}px)")
         if marker_shift > args.max_neutral_shift:
