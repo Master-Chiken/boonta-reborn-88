@@ -33,6 +33,7 @@ try:
     from PIL import Image, ImageDraw
     from check_dolphin_frame import (
         finish_banner_visible,
+        finish_label_visible,
         player_pod_bounds,
         reset_state_visible,
         pause_icon_visible,
@@ -43,6 +44,7 @@ except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
+    finish_label_visible = None
     player_pod_bounds = None
     reset_state_visible = None
     pause_icon_visible = None
@@ -346,6 +348,47 @@ class DolphinDtmTests(unittest.TestCase):
         pause_draw.rectangle((387, 263, 396, 297), fill=(238, 246, 255))
         pause_draw.rectangle((404, 263, 413, 297), fill=(238, 246, 255))
         self.assertFalse(finish_banner_visible(pause))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or finish_label_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_finish_label_detector_requires_orange_text_in_banner_roi(self) -> None:
+        color = (255, 157, 61)
+        glyphs = {
+            "F": (31, 16, 16, 30, 16, 16, 16),
+            "I": (14, 4, 4, 4, 4, 4, 14),
+            "N": (17, 25, 21, 19, 17, 17, 17),
+            "S": (15, 16, 16, 14, 1, 1, 30),
+            "H": (17, 17, 17, 31, 17, 17, 17),
+        }
+
+        def draw_label(image, viewport_top: int) -> None:
+            draw = ImageDraw.Draw(image)
+            x = 400 - 18
+            y = viewport_top + 240 - 30
+            for char in "FINISH":
+                for row, bits in enumerate(glyphs[char]):
+                    for col in range(5):
+                        if bits & (1 << (4 - col)):
+                            draw.point((x + col, y + row), fill=color)
+                x += 6
+
+        # Direct 800x480 framebuffer capture.
+        direct = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw_label(direct, 0)
+        self.assertTrue(finish_label_visible(direct))
+
+        # Dolphin window capture: 84 px toolbar above the 480 px viewport.
+        window = Image.new("RGB", (800, 564), (239, 239, 239))
+        window_draw = ImageDraw.Draw(window)
+        window_draw.rectangle((0, 84, 799, 563), fill=(105, 170, 225))
+        draw_label(window, 84)
+        self.assertTrue(finish_label_visible(window))
+
+        # A checkerboard/scene without the orange word must not pass the label check.
+        no_label = Image.new("RGB", (800, 480), (105, 170, 225))
+        self.assertFalse(finish_label_visible(no_label))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or pause_icon_visible is None,
