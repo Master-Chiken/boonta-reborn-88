@@ -715,9 +715,9 @@ static void non_finite_physics_state_tests(void) {
  assert(nearf(boonta_speed_after_offroad_scaled(NAN, 0.0f, 1.0f), 0.0f));
  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, NAN, 1.0f), 0.5f));
  assert(nearf(boonta_abs_float(NAN), 0.0f));
- assert(!boonta_is_past_rail(NAN));
- assert(nearf(boonta_lateral_after_rail_contact(NAN), 0.0f));
- assert(nearf(boonta_lateral_after_rail_contact(INFINITY), 0.0f));
+ assert(!boonta_is_past_rail(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_lateral_after_rail_contact(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
+ assert(nearf(boonta_lateral_after_rail_contact(INFINITY, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(NAN), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(INFINITY), 0.0f));
 
