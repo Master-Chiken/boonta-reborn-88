@@ -1,16 +1,16 @@
 # Boonta Reborn 88
 
-### Bring podracing back to GameCube and Wii — one playable lap at a time.
+### An HD++ remaster/remake vision for Star Wars: Episode I – Racer (1999) on GameCube and Wii.
 
 [![GameCube demo CI](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml/badge.svg?branch=main)](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml)
 
-**Boonta Reborn 88 is an unofficial, clean-room homebrew project inspired by _Star Wars: Episode I – Racer_ (1999).** The goal is bigger than a nostalgia trip: build a genuinely fun racer for classic Nintendo hardware, prove one complete race from start to finish, then grow it with original tracks, pods, and ideas.
+**Boonta Reborn 88 aims to become an enhanced fan-made remaster/remake of _Star Wars: Episode I – Racer_ (1999)** for Nintendo GameCube and Wii. The long-term vision goes beyond a straight port: HD-style visuals, a major presentation upgrade, refined racing, new tracks and pods, bonus modes, and future DLC-style content—while building console-specific versions around the strengths of the original hardware.
 
 The player-pod mesh/texture, varied canyon skyline, and readable finish banner are now integrated on `main` ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204)). The linked Dolphin captures are scripted diagnostics, not proof of manual-controller acceptance.
 
-We're building it in public—and this is a great moment to join. Whether you enjoy low-level C, 3D art, gameplay feel, test automation, technical research, or simply putting a prototype through its paces, **you can make a visible difference**.
+We're building it in public—and this is a great moment to join. Whether you enjoy low-level C, 3D art, gameplay feel, test automation, or technical research, **you can make a visible difference**. Contributors with experience in the original game, its modding scene, file formats, asset pipelines, or console development are particularly welcome; describe your experience and the workflow you can contribute to.
 
-> **The goal isn't to collect features or make impressive promises. It's to get one complete, enjoyable race working — then build on a solid foundation.**
+> **The vision is a full HD++ Racer experience: a remaster/remake with upgraded visuals, bonus content, and room to grow through new tracks, pods, modes, and DLC-style expansions.** The immediate milestone remains the same: make one complete, enjoyable race work reliably before expanding the content.
 
 [Project roadmap](docs/ROADMAP.md) · [Current playable milestone](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) · [Build & test guide](docs/BUILD_GUIDE.md) · [Join the community](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474)
 
@@ -18,7 +18,7 @@ We're building it in public—and this is a great moment to join. Whether you en
 
 ## What we're building
 
-The mainline project is a clean-room GameCube prototype in `gamecube-demo/`. Its course, rivals and effects are original procedural work, alongside an original source-authored player mesh and texture—not imported commercial game code or assets.
+The current GameCube development build lives in `gamecube-demo/`. It is an early racing foundation: a native GX scene, procedural course and rivals, and an original player mesh/texture path. The intended end product is much more ambitious than this prototype; full remaster visuals, broad game-asset compatibility, and a complete manually verified race are not finished yet.
 
 ### What's already here
 
@@ -38,9 +38,9 @@ We keep the work focused on a playable vertical slice rather than spreading effo
 
 1. **Prove the race is playable.** In visible Dolphin, verify steering, acceleration/braking, boost and overheating, off-road/rail response, pause/resume, three-lap finish, reset and restart. Record the emulator version, controller setup, results, and any evidence. Start with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
 2. **Make the course and racer feel convincing.** Improve the track silhouette, camera, handling, and collision response as one coherent experience.
-3. **Grow the asset pipeline safely.** Extend the validated mesh/texture path to matching track and collision data without destabilizing driving. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
+3. **Build the remaster asset pipeline.** Extend the existing mesh/texture path toward richer models, textures, track data, and collision. Experience with the original game's modding scene, file formats, asset workflows, or reverse-engineering research is especially welcome. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
 
-More tracks, additional pods, expanded menus, audio, saves, progression, and bonus modes belong after the first race is reliable. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
+Once the first race is reliable, the roadmap opens up to the bigger remaster vision: upgraded visual presentation, more tracks and pods, expanded menus, audio, saves, progression, bonus modes, and DLC-style content packs. These are intended future features, not claims about the current prototype. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
 
 ## Come build this with us
 
@@ -52,7 +52,7 @@ More tracks, additional pods, expanded menus, audio, saves, progression, and bon
 | C and gameplay | Improve steering feel, race-state transitions, collisions, lap timing, or reset/restart behavior—with regression tests. |
 | Graphics and 3D | Improve the GX scene, camera, course readability, or the validated mesh/texture path. |
 | Python and tooling | Strengthen format validators, synthetic fixtures, artifact checks, and reproducible diagnostics. |
-| Research and documentation | Document observed behavior, clarify formats, improve setup instructions, or help maintain the test checklist. |
+| Original-game modding and asset research | Investigate documented formats, modding workflows, compatibility, and model/texture conversion paths; share reproducible research. |\n| Research and documentation | Document observed behavior, clarify formats, improve setup instructions, or help maintain the test checklist. |
 | GameCube/Wii hardware | Reproduce the same checks on real hardware and clearly record the hardware, video mode, controls, and results. |
 
 ### Good places to start
@@ -69,7 +69,7 @@ The longer-term vision reaches beyond a technical demo: an original, polished ra
 
 ## Build and run the prototype
 
-The clean-room demo can be built without bundling a commercial ROM or extracted game assets. For the native DOL/ELF build, install the official [devkitPro GameCube/Wii toolchain](https://devkitpro.org/) with devkitPPC and libogc, open its configured shell, then run:
+To build the current GameCube prototype, install the official [devkitPro GameCube/Wii toolchain](https://devkitpro.org/) with devkitPPC and libogc, open its configured shell, then run:
 
 ```sh
 git clone https://github.com/Master-Chiken/boonta-reborn-88.git
@@ -96,15 +96,19 @@ python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
 For artifact validation, Dolphin diagnostics, troubleshooting, and the full validation boundaries, use the [build guide](docs/BUILD_GUIDE.md) and [prototype instructions](gamecube-demo/README.md). A successful build or headless smoke test is not the same as a manually completed race.
 
-## Clean-room and source policy
+## Copyright Disclaimer
 
-This is a fan homebrew/research project, not an official Star Wars product and not a completed port of the commercial game.
+The original game (Star Wars Episode 1 Racer) is a property of the LucasArts Entertainment Company LLC.
 
-- Do not commit commercial ROMs, disc images, BIOS files, extracted proprietary models/textures/audio, or other copyrighted payloads.
-- The separate Step 102 source archive remains on hold until file-level authorship, license, and redistribution rights are clear.
-- Review third-party source and assets before reuse. The root MIT license does not grant rights to Star Wars material or automatically relicense outside contributions.
+Boonta Reborn 88 is an unofficial fan project and is not affiliated with or endorsed by the original rights holders.
 
-Keep the public project reproducible, original, and safe to build. See the [source-import gate](docs/SOURCE_IMPORT_GATE.md) for details.
+## About
+
+Research and homebrew development for an enhanced Star Wars: Episode I – Racer (1999) experience on Nintendo GameCube and Wii, with HD visuals, bonus features, and console-specific builds.
+
+**Long-term goal:** create an HD++ remaster/remake that elevates the original racing experience with upgraded visuals and presentation, refined gameplay, bonus content, and future DLC-style expansions such as new circuits, pods, challenges, and game modes. GameCube and Wii-specific builds are part of the plan.
+
+The complete remaster, all bonus features, and DLC-style content are future goals—not a claim that they are already implemented. The current development status and the next playable milestone are documented above and in the [roadmap](docs/ROADMAP.md).
 
 ---
 
