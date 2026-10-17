@@ -5,10 +5,10 @@
 #include "mesh_data.h"
 
 static const BoontaMeshVertex boonta_generated_mesh_original_synthetic_diamond_vertices[4U] = {
-    { 0.000000f, 1.000000f, 0.000000f, 255U, 80U, 80U, 255U },
-    { 1.000000f, 0.000000f, 0.000000f, 80U, 255U, 120U, 255U },
-    { 0.000000f, -1.000000f, 0.000000f, 80U, 120U, 255U, 255U },
-    { -1.000000f, 0.000000f, 0.000000f, 255U, 220U, 80U, 255U }
+    { 0.000000f, 1.000000f, 0.000000f, 255U, 80U, 80U, 255U, 0.000000f, 0.000000f },
+    { 1.000000f, 0.000000f, 0.000000f, 80U, 255U, 120U, 255U, 0.000000f, 0.000000f },
+    { 0.000000f, -1.000000f, 0.000000f, 80U, 120U, 255U, 255U, 0.000000f, 0.000000f },
+    { -1.000000f, 0.000000f, 0.000000f, 255U, 220U, 80U, 255U, 0.000000f, 0.000000f }
 };
 
 static const uint16_t boonta_generated_mesh_original_synthetic_diamond_indices[6U] = {
