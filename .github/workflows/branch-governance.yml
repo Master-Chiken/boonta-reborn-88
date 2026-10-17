@@ -91,9 +91,15 @@ jobs:
               item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
                       "unknown_date": unknown}
               (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
+          general_alert_threshold = 105
+          biddy_pinky_alert_threshold = 200
+          general_alert_status = "TRIGGERED" if len(branches) >= general_alert_threshold else "not triggered"
+          biddy_pinky_alert_status = "TRIGGERED" if len(branches) >= biddy_pinky_alert_threshold else "not triggered"
           lines = ["# Branch inventory and lifecycle audit", "",
               f"- **Total branches:** {len(branches)} (informational; no project-defined numeric cap)",
               f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} (informational; not a work gate)",
+              f"- **General-contributor coordination alert (105 total branches):** {general_alert_status} (advisory only; no workflow failure or task interruption)",
+              f"- **Biddy-Pinky coordination alert (200 total branches):** {biddy_pinky_alert_status} (advisory only; no workflow failure or task interruption)",
               f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
               f"- Unique tip dates requested: {len(tip_shas)}",
@@ -102,7 +108,7 @@ jobs:
               f"- Estimated lookup-stage speedup: {date_lookup_request_seconds / max(date_lookup_wall_seconds, 0.001):.1f}x",
               f"- **Default branch:** `{default_branch}`",
               "- **Automatic deletion:** disabled by project policy.",
-              "- **Task sequencing:** branch count never blocks work; Jules must finish the current task or document an evidence-backed external blocker before starting an unrelated task.", "",
+              "- **Task sequencing:** these alerts do not interrupt an active task; after reaching the applicable threshold, complete and hand off the current task before starting an unrelated task. Biddy-Pinky retains the allowance for up to two genuinely independent workstreams.", "",
               "## Active branches", ""]
           lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active, key=lambda x: x["name"])]
           lines += ["", "## Inactive candidates for human/AI review", "",
