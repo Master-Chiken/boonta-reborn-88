@@ -72,6 +72,16 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertEqual(helper.count("clip_z }"), 4)
 
 
+    def test_quad_builder_keeps_finish_quads_inside_buffer_capacity(self) -> None:
+        self.assertRegex(SOURCE, r"#define VERTEX_CAPACITY\s+8192U")
+        quad = SOURCE.split("static void quad_add", 1)[1].split(
+            "static void box_face", 1
+        )[0]
+        self.assertIn(
+            "if ((unsigned int)g_vertex_count + 6U > VERTEX_CAPACITY) return;",
+            quad,
+        )
+
     def test_finish_banner_has_readable_label_and_required_glyphs(self) -> None:
         self.assertRegex(SOURCE, r"\['F'\]\s*=\s*\{31,16,16,30,16,16,16\}")
         self.assertRegex(SOURCE, r"\['N'\]\s*=\s*\{17,25,21,19,17,17,17\}")
