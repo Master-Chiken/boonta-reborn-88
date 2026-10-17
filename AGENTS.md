@@ -51,13 +51,16 @@ Do not start a converter, broad asset catalog, major rewrite, new renderer/platf
 - Use original or synthetic fixtures for public tests. Keep any lawful local reference data local unless redistribution permission is documented.
 - Review each external dependency or borrowed code path for license, compatibility, attribution, and actual benefit before adopting it.
 
-## Branches, pull requests, and integration
+## Branches, task lifecycle, pull requests, and integration
 
-- Do not push directly to `main`; make changes reviewable through pull requests and preserve rollback options.
-- Prefer an appropriate existing branch/PR over creating another branch. Respect the project branch ceiling and any active branch-governance issue.
-- Never delete useful branches, commits, or files automatically. Do not merge stale fork histories wholesale; compare unique diffs and integrate selectively.
-- Avoid parallel PRs that change the same behavior/files without a clear dependency plan.
-- Keep the change focused. Separate unrelated work so that each review can explain its purpose, risk, and evidence.
+- **No project-defined numerical branch cap.** Total and active branch counts are informational only. Never block useful work, fail an audit, interrupt an active task, or delete/rewrite branches solely because a count reaches a threshold. GitHub's own service constraints still apply; the project imposes no arbitrary branch-count ceiling.
+- Every branch must represent a concrete task or a clearly documented existing workstream. Use one focused branch per task; do not create empty, speculative, or duplicate branches merely because the count is unlimited. Prefer continuing the existing branch for the same task.
+- **Jules must finish one task before starting an unrelated task.** After beginning a task, continue until it is implemented, relevant tests have been run, failures have been addressed where possible, the final diff has been self-reviewed, a reviewable PR has been submitted, relevant CI checks are terminal, and a truthful completion report is posted. Do not start another independent Jules task while any of these steps remain unfinished.
+- Jules' task is considered handed off when its PR is reviewable, checks are complete or a concrete external blocker is documented, and the report explicitly states what is waiting on a human. A task does not need to be merged to count as handed off; Jules must never merge automatically or bypass owner review.
+- If a real external blocker prevents completion, record the exact blocker and evidence, preserve the branch and current work, report tests and remaining steps, and wait for the next decision. Do not silently abandon a task or label ordinary test failures as external blockers.
+- Branch count never determines parallelism. Parallel work is allowed only when the project’s contributor policy permits it and the tasks are genuinely independent. Jules is limited to one active implementation task at a time. Preserve Biddy-Pinky’s established allowance of up to two independent workstreams (at most one runtime implementation and one non-overlapping research/documentation/tooling/review task), unless the owner explicitly changes that policy.
+- Do not push directly to main; integrate through reviewable PRs and preserve rollback options. Never delete useful branches, commits, or files automatically. Do not merge stale fork histories wholesale; compare unique diffs and integrate selectively.
+- Avoid parallel PRs that change the same behavior/files without a clear dependency plan. Keep each change focused so its purpose, risk, and evidence can be reviewed.
 
 ## Required validation and honest reporting
 
