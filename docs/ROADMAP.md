@@ -2,9 +2,17 @@
 
 Last updated: 2026-10-17
 
-**Goal**  
-Create an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), native on GameCube / Wii, with improved visuals and bonus content.  
-Unofficial fan / homebrew project. Clean-room first.
+**Primary product ambition**  
+Build a future native GameCube/Wii fan-made remaster of *Star Wars: Episode I – Racer* (1999). The original 1999 release did not receive a dedicated native edition for GameCube or Wii, so Boonta Reborn 88 aims to create a new homebrew experience for those consoles rather than claim an existing port.
+
+**Vision tiers**
+- **HD++ Remaster (primary vision):** improve visual clarity and asset detail within original console limits, refine handling/camera, develop new original or rights-cleared tracks and pods, and grow the experience with improved UI/audio, progression, bonus challenges and modes.
+- **HD+++ Premium (aspirational stretch goal):** take presentation and content further if performance, development resources, and rights allow; potential DLC-style packs, richer effects and environments, and a broader roster are future ideas, not current features.
+- **Ideal wider dream:** if technically and practically feasible, explore a broader remake-style experience inspired by the wider *Star Wars Racer* legacy. This is not a promise to reproduce other commercial games or assets.
+
+**Platform reality:** HD++ and HD+++ Premium are labels for visual quality, production polish, and scope, not a promise of native HD video output on GameCube/Wii. The console builds must fit their legacy hardware and video-output limits. An actual HD-resolution Premium build would require a separate platform target and remains optional.
+
+Unofficial fan / homebrew project, not affiliated with or endorsed by the original rights holders. Clean-room first.
 
 ---
 
@@ -57,13 +65,26 @@ Automated movies and rendered frames prove only the specific scripted responses 
 - Basic menus and HUD polish.
 - Minimal sound set (engine, boost, impacts, UI).
 
-## Phase 3 – Remaster & Bonuses
+## Phase 3 – HD++ Remaster and Bonuses
 
-- Visual upgrades (materials, effects, and higher internal resolution where possible).
-- Extra modes (Time Trial, Versus, etc.).
-- Quality-of-life options.
-- Wii-specific improvements if relevant.
-- Further polish and stability.
+**Goal:** turn the validated racing slice into a distinctly enhanced Episode I – Racer-inspired experience, using original or rights-cleared assets and staying within console budgets.
+
+- Upgrade visual clarity, art direction, pod/track detail, scenery, materials and effects where practical.
+- Add original or rights-cleared circuits and pods.
+- Improve UI, audio, options, progression, quality-of-life and race feedback.
+- Add bonus modes and challenge content (for example Time Trial and Versus, if feasible).
+- Validate frame pacing and compatibility on the targeted GameCube/Wii configurations.
+
+## Phase 4 – HD+++ Premium (aspirational stretch goal)
+
+This is a **long-range ambition, not a committed feature list or a description of the current prototype**. Pursue it only after the HD++ base is stable and the platform, team, rights and performance budget are clear.
+
+- Push visual presentation, environments, effects, UI/audio and content depth to the highest level the chosen target supports.
+- Consider larger content expansions: extra circuits, pods, challenge sets, bonus modes, and DLC-style packs.
+- Explore a broader *Star Wars Racer*-inspired remake scope only if technically feasible and the necessary rights and redistribution conditions are clear.
+- Consider a separate true-HD-resolution edition only on a suitable, more capable platform; do not imply that native GameCube/Wii output is 720p/1080p.
+
+**Exit criteria:** a defined target platform, realistic production scope, rights/provenance review, measurable performance targets, and a stable HD++ base. Until those exist, the Premium tier remains aspirational.
 
 ---
 
