@@ -172,29 +172,37 @@ static void boost_overheat_tests(void) {
 }
 
 static void steering_input_tests(void) {
- /* The analog stick maps its signed byte range to a normalized steering value. */
+ /* Small idle-stick noise must be neutral, with a gradual response outside the deadzone. */
  assert(nearf(boonta_steering_input(0.0f, 0, 0), 0.0f));
- assert(nearf(boonta_steering_input(64.0f, 0, 0), 0.5f));
- assert(nearf(boonta_steering_input(-64.0f, 0, 0), -0.5f));
- assert(nearf(boonta_steering_input(127.0f, 0, 0), 127.0f / 128.0f));
+ assert(nearf(boonta_steering_input(4.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(-8.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(8.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(9.0f, 0, 0), 1.0f / 119.0f));
+ assert(nearf(boonta_steering_input(-9.0f, 0, 0), -1.0f / 120.0f));
+
+ /* Rescaling keeps the entire signed stick range available for full steering. */
+ assert(nearf(boonta_steering_input(64.0f, 0, 0), 56.0f / 119.0f));
+ assert(nearf(boonta_steering_input(-64.0f, 0, 0), -56.0f / 120.0f));
+ assert(nearf(boonta_steering_input(127.0f, 0, 0), 1.0f));
  assert(nearf(boonta_steering_input(-128.0f, 0, 0), -1.0f));
+
  /* Non-finite analog input is treated as a neutral stick, not NaN steering. */
  assert(nearf(boonta_steering_input(NAN, 0, 0), 0.0f));
  assert(nearf(boonta_steering_input(INFINITY, 0, 0), 0.0f));
  assert(nearf(boonta_steering_input(-INFINITY, 0, 0), 0.0f));
  assert(nearf(boonta_steering_input(NAN, 1, 0), -0.7f));
 
- /* D-pad steering adds to analog input, with bounded saturation. */
+ /* D-pad steering remains digital and can combine with the analog stick. */
  assert(nearf(boonta_steering_input(0.0f, 1, 0), -0.7f));
  assert(nearf(boonta_steering_input(0.0f, 0, 1), 0.7f));
- assert(nearf(boonta_steering_input(64.0f, 1, 0), -0.2f));
- assert(nearf(boonta_steering_input(-64.0f, 0, 1), 0.2f));
+ assert(nearf(boonta_steering_input(64.0f, 1, 0), 56.0f / 119.0f - 0.7f));
+ assert(nearf(boonta_steering_input(-64.0f, 0, 1), -56.0f / 120.0f + 0.7f));
  assert(nearf(boonta_steering_input(127.0f, 0, 1), 1.0f));
  assert(nearf(boonta_steering_input(-128.0f, 1, 0), -1.0f));
 
  /* Simultaneous opposite D-pad directions cancel; valid stick input remains. */
  assert(nearf(boonta_steering_input(0.0f, 1, 1), 0.0f));
- assert(nearf(boonta_steering_input(32.0f, 1, 1), 0.25f));
+ assert(nearf(boonta_steering_input(32.0f, 1, 1), 24.0f / 119.0f));
 }
 
 
