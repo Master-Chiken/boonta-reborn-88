@@ -2,8 +2,6 @@ name: Branch governance audit
 
 on:
   workflow_dispatch:
-  create:
-    branches: ["**"]
   schedule:
     - cron: "23 9 * * 1"
 
@@ -18,7 +16,6 @@ concurrency:
 
 jobs:
   audit:
-    if: github.event_name != 'create' || github.event.ref_type == 'branch'
     name: Inventory and report branch activity
     runs-on: ubuntu-latest
     steps:
@@ -95,10 +92,9 @@ jobs:
               item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
                       "unknown_date": unknown}
               (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
-          lines = ["# Branch governance audit", "",
-              f"- **Total branches:** {len(branches)}",
-              f"- **Hard cap:** 105 branches; status: {'EXCEEDED' if len(branches) > 105 else ('AT LIMIT' if len(branches) == 105 else 'within limit')}",
-              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target 30",
+          lines = ["# Branch inventory and lifecycle audit", "",
+              f"- **Total branches:** {len(branches)} (informational; no project-defined numeric cap)",
+              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} (informational; not a work gate)",
               f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
               f"- Unique tip dates requested: {len(tip_shas)}",
@@ -106,7 +102,9 @@ jobs:
               f"- Serial-equivalent request wait: {date_lookup_request_seconds:.2f}s",
               f"- Estimated lookup-stage speedup: {date_lookup_request_seconds / max(date_lookup_wall_seconds, 0.001):.1f}x",
               f"- **Default branch:** `{default_branch}`",
-              "- **Automatic deletion:** disabled by project policy.", "", "## Active branches", ""]
+              "- **Automatic deletion:** disabled by project policy.",
+              "- **Task sequencing:** branch count never blocks work; Jules must finish the current task or document an evidence-backed external blocker before starting an unrelated task.", "",
+              "## Active branches", ""]
           lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active, key=lambda x: x["name"])]
           lines += ["", "## Inactive candidates for human/AI review", "",
               "These branches are only candidates for review. They have not been deleted or modified."]
@@ -114,72 +112,6 @@ jobs:
           report = "\n".join(lines) + "\n"
           Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(report)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"total={len(branches)}\nactive={len(active)}\nover_target={'true' if len(active) > 30 else 'false'}\n")
-              out.write(f"cap_warning={'true' if len(branches) >= 100 else 'false'}\n")
-              out.write(f"hard_cap_exceeded={'true' if len(branches) > 105 else 'false'}\n")
+              out.write(f"total={len(branches)}\nactive={len(active)}\n")
           PY
 
-      - name: Warn when approaching or exceeding the 105-branch hard cap
-        if: steps.inventory.outputs.cap_warning == 'true' || steps.inventory.outputs.hard_cap_exceeded == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TOTAL: ${{ steps.inventory.outputs.total }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          title="Branch governance: 105-branch hard cap"
-          existing="$(gh issue list --repo "$GH_REPO" --state open --search "$title" --json number,title --jq '.[0].number // empty')"
-          if [ -z "$existing" ]; then
-            {
-              echo "## Branch count hard cap"
-              echo
-              echo "- Current total: **$TOTAL**"
-              echo "- Hard cap: **105 branches**"
-              echo "- Early warning: **100 branches**"
-              echo "Stop creating branches at 100; do not exceed 105."
-              echo "Preserve all branch history. Never delete automatically."
-              echo "GitHub Actions reports after creation; it cannot retroactively block the create event."
-            } > /tmp/issue.md
-            gh issue create --repo "$GH_REPO" --title "$title" --body-file /tmp/issue.md
-          else
-            gh issue comment "$existing" --repo "$GH_REPO" --body "Latest audit reports $TOTAL branches; hard cap 105, warning threshold 100."
-          fi
-
-      - name: Fail audit if hard cap exceeded
-        if: steps.inventory.outputs.hard_cap_exceeded == 'true'
-        run: |
-          echo "::error::Repository has ${{ steps.inventory.outputs.total }} branches; hard cap is 105. No branches were deleted."
-          exit 1
-      - name: Open a consolidation tracking issue when active branches exceed 30
-        if: steps.inventory.outputs.over_target == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TOTAL: ${{ steps.inventory.outputs.total }}
-          ACTIVE: ${{ steps.inventory.outputs.active }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          title="Branch governance: consolidation needed"
-          existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\"" --json number,title --jq '.[0].number // empty')"
-          if [ -z "$existing" ]; then
-            {
-              echo "## Active branch target exceeded"
-              echo
-              echo "- Total branches: **$TOTAL** (historical/inactive branches may remain)"
-              echo "- Active branches (30-day/open-PR heuristic): **$ACTIVE**"
-              echo "- Target: **30 active branches or fewer**"
-              echo
-              echo "### Required actions"
-              echo "1. Review branch purposes, open PRs, recent commits, and whether work is already in `main`."
-              echo "2. Consolidate useful work through reviewed pull requests and CI."
-              echo "3. Do not delete branches automatically. Preserve all branch contents and commits; historical branches may remain."
-              echo "4. Update this issue with the remaining active count and blockers."
-              echo
-              echo "Generated by the Branch governance audit workflow."
-            } > /tmp/issue.md
-            gh issue create --repo "$GH_REPO" --title "$title" --body-file /tmp/issue.md
-          else
-            echo "Tracking issue #$existing is already open; no duplicate created."
-          fi
