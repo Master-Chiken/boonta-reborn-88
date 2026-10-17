@@ -408,11 +408,15 @@ def neutral_steering_deltas(baseline: Image.Image,
 
 def neutral_steering_stable(baseline: Image.Image, candidate: Image.Image,
                             max_shift: float = 2.0) -> bool:
-    """Check that a small stick value causes neither course response nor HUD drift."""
+    """Check that a small stick value causes no lateral HUD-state drift.
+
+    Road position can vary as the neutral car advances along a curved course, so the
+    HUD marker (which directly encodes player_lateral) is the deterministic gate.
+    """
     if not (max_shift >= 0.0):
         raise ValueError("max_shift must be non-negative")
-    road_shift, marker_shift = neutral_steering_deltas(baseline, candidate)
-    return road_shift <= max_shift and marker_shift <= max_shift
+    _, marker_shift = neutral_steering_deltas(baseline, candidate)
+    return marker_shift <= max_shift
 
 
 def main() -> int:
@@ -433,7 +437,7 @@ def main() -> int:
     parser.add_argument("--expect-neutral-steering", action="store_true",
                         help="compare against baseline; small analog deflection must not shift the course or HUD marker")
     parser.add_argument("--max-neutral-shift", type=float, default=2.0,
-                        help="maximum absolute road/HUD-marker shift for a near-deadzone analog input")
+                        help="maximum absolute player-lateral HUD-marker shift for a near-deadzone analog input")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -508,9 +512,9 @@ def main() -> int:
               f"(maximum {args.max_neutral_shift:.1f}px)")
         print(f"Near-deadzone absolute HUD-marker shift={marker_shift:.1f}px "
               f"(maximum {args.max_neutral_shift:.1f}px)")
-        if road_shift > args.max_neutral_shift or marker_shift > args.max_neutral_shift:
+        if marker_shift > args.max_neutral_shift:
             raise SystemExit(
-                "A near-deadzone analog input moved the road silhouette or steering HUD marker."
+                "A near-deadzone analog input moved the player-lateral HUD marker."
             )
         print("Near-deadzone analog input produced no measurable steering response.")
         return 0
