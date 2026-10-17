@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "../source/gameplay_state.h"
+#include "../source/generated_track.h"
 
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
 
@@ -690,7 +691,7 @@ static void race_state_reset_tests(void) {
  unsigned int i;
 
  /* Model the actual terminal state after crossing the third lap boundary. */
- state.distance = 360.0f;
+ state.distance = 3.0f * BOONTA_TRACK_LENGTH;
  state.lap_count = 3U;
  state.race_seconds = 88.0f;
  state.lap_seconds = 22.0f;
