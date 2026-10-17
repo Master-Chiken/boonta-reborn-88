@@ -6,7 +6,7 @@
 
 **Boonta Reborn 88 is an unofficial, clean-room homebrew project inspired by _Star Wars: Episode I – Racer_ (1999).** The ambition is to build an exciting, enhanced racing experience for native GameCube/Wii hardware, with Dolphin as a practical development and testing environment.
 
-The latest visual work is documented in [the current racer/canyon PR chain](https://github.com/Master-Chiken/boonta-reborn-88/pull/204). Automated Dolphin captures there are scripted diagnostics, not proof of manual-controller acceptance.
+The player-pod mesh/texture, varied canyon skyline, and readable finish banner are now integrated on `main` ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204)). The linked Dolphin captures are scripted diagnostics, not proof of manual-controller acceptance.
 
 We're building it in public. Whether you enjoy low-level C, rendering, gameplay feel, test automation, or simply putting a prototype through its paces, **there's a useful way to contribute**.
 
@@ -18,12 +18,12 @@ We're building it in public. Whether you enjoy low-level C, rendering, gameplay 
 
 ## What we're building
 
-The mainline project is a clean-room GameCube prototype in `gamecube-demo/`. Its rendering and course geometry are original procedural work—not imported commercial game code or assets.
+The mainline project is a clean-room GameCube prototype in `gamecube-demo/`. Its course, rivals and effects are original procedural work, alongside an original source-authored player mesh and texture—not imported commercial game code or assets.
 
 ### What's already here
 
 - **A native GameCube build** using devkitPPC/libogc, producing a DOL and ELF.
-- **A visible 3D racing scene** with a scrolling desert course, road markings, canyon walls, and original procedural podracer and rival craft.
+- **A visible 3D racing scene** with a scrolling desert course, road markings, a varied canyon skyline, and an original low-poly twin-engine player craft with a source-authored RGB565 texture; the course, rivals and exhaust remain procedural.
 - **Prototype racing systems** for steering inertia, throttle/brake, boost and heat, pitch/slide, off-road drag, rail recovery, rival interactions, lap timing, pause and reset.
 - **Automated regression coverage** for gameplay state, input mapping, race/lap logic, and edge cases.
 - **Dolphin diagnostics** that build and validate the native artifacts and have exercised scripted steering, reset, pause/resume, and finish-state checks.
@@ -38,7 +38,7 @@ We keep the work focused on a playable vertical slice rather than spreading effo
 
 1. **Prove the race is playable.** In visible Dolphin, verify steering, acceleration/braking, boost and overheating, off-road/rail response, pause/resume, three-lap finish, reset and restart. Record the emulator version, controller setup, results, and any evidence. Start with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
 2. **Make the course and racer feel convincing.** Improve the track silhouette, camera, handling, and collision response as one coherent experience.
-3. **Grow the asset pipeline safely.** Establish a documented, bounds-checked path for original test meshes and textures, then confirmed track/collision data. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
+3. **Grow the asset pipeline safely.** Extend the validated mesh/texture path to matching track and collision data without destabilizing driving. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
 
 More tracks, additional pods, expanded menus, audio, saves, progression, and bonus modes belong after the first race is reliable. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
 
