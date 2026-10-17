@@ -101,12 +101,12 @@ class TextureFormatTests(unittest.TestCase):
             source = Path(temp) / "texture_test.c"
             binary = Path(temp) / "texture_test"
             source.write_text(
-                '#include "generated_texture_player_pod.h"\\n'
+                '#include "generated_texture_player_pod.h"\n'
                 'int main(void) { return '
                 'BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH == 16U && '
                 '(sizeof(boonta_generated_texture_original_twin_engine_panel_pixels) / '
                 'sizeof(boonta_generated_texture_original_twin_engine_panel_pixels[0])) == 256U '
-                '? 0 : 1; }\\n',
+                '? 0 : 1; }\n',
                 encoding="utf-8",
             )
             compiled = subprocess.run(
