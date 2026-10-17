@@ -6,9 +6,7 @@
 
 **Boonta Reborn 88 is an unofficial, clean-room homebrew project inspired by _Star Wars: Episode I – Racer_ (1999).** The ambition is to build an exciting, enhanced racing experience for native GameCube/Wii hardware, with Dolphin as a practical development and testing environment.
 
-![Boonta Reborn 88 prototype on the desert course at the three-lap finish, with the new twin-engine racer and readable FINISH banner](docs/images/boonta-reborn-finish-preview.png)
-
-*Development snapshot from [the current racer/canyon PR chain](https://github.com/Master-Chiken/boonta-reborn-88/pull/204), captured in Dolphin's Software Renderer during a scripted finish check. It shows visual progress, not manual-controller acceptance.*
+The latest visual work is documented in [the current racer/canyon PR chain](https://github.com/Master-Chiken/boonta-reborn-88/pull/204). Automated Dolphin captures there are scripted diagnostics, not proof of manual-controller acceptance.
 
 We're building it in public. Whether you enjoy low-level C, rendering, gameplay feel, test automation, or simply putting a prototype through its paces, **there's a useful way to contribute**.
 
