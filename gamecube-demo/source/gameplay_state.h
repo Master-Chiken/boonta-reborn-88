@@ -501,6 +501,8 @@ static inline float boonta_lateral_velocity_after_rival_contact(float lateral_ve
 #define BOONTA_REFERENCE_ROAD_HALF_WIDTH 3.6f
 #define BOONTA_MIN_ROAD_HALF_WIDTH 2.2f
 #define BOONTA_MAX_ROAD_HALF_WIDTH 4.8f
+/* Keep this offset identical to the outer position of the rendered GX rails. */
+#define BOONTA_RAIL_OUTER_OFFSET 0.28f
 
 static inline float boonta_effective_road_half_width(float authored_half_width)
 {
@@ -563,16 +565,38 @@ static inline float boonta_speed_after_offroad(float speed, float player_lateral
     return boonta_speed_after_offroad_scaled(speed, player_lateral, 1.0f);
 }
 
-static inline int boonta_is_past_rail(float player_lateral)
+/*
+ * Lateral coordinates have already been normalized to the 3.6-unit reference
+ * road. Convert the rendered rail's outer line (effective half-width + offset)
+ * into that same coordinate space so narrow/wide authored tracks collide at the
+ * visible rail rather than at a fixed, width-dependent physical location.
+ */
+static inline float boonta_normalized_rail_limit(float authored_half_width)
 {
-    return isfinite(player_lateral) && boonta_abs_float(player_lateral) > 3.85f;
+    const float effective_half_width =
+        boonta_effective_road_half_width(authored_half_width);
+    const float rail_outer_lateral =
+        effective_half_width + BOONTA_RAIL_OUTER_OFFSET;
+    const float limit = rail_outer_lateral *
+        BOONTA_REFERENCE_ROAD_HALF_WIDTH / effective_half_width;
+    return isfinite(limit) ? limit : (BOONTA_REFERENCE_ROAD_HALF_WIDTH + BOONTA_RAIL_OUTER_OFFSET);
 }
 
-static inline float boonta_lateral_after_rail_contact(float player_lateral)
+static inline int boonta_is_past_rail(float player_lateral,
+                                      float authored_half_width)
 {
+    return isfinite(player_lateral) &&
+        boonta_abs_float(player_lateral) >
+            boonta_normalized_rail_limit(authored_half_width);
+}
+
+static inline float boonta_lateral_after_rail_contact(float player_lateral,
+                                                       float authored_half_width)
+{
+    const float limit = boonta_normalized_rail_limit(authored_half_width);
     if (!isfinite(player_lateral)) return 0.0f;
-    if (player_lateral > 3.85f) return 3.85f;
-    if (player_lateral < -3.85f) return -3.85f;
+    if (player_lateral > limit) return limit;
+    if (player_lateral < -limit) return -limit;
     return player_lateral;
 }
 
