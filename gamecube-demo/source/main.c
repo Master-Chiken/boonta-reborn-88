@@ -35,7 +35,7 @@
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
 #define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
-#define ROAD_HALF_WIDTH    3.6f
+#define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
 #define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
 #define RACE_LAP_LIMIT       3U
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
@@ -261,7 +261,7 @@ static float road_center_at(float z, float distance)
 
 static float road_half_width_at(float z, float distance)
 {
-    return track_half_width_at(distance + (4.0f - z));
+    return boonta_effective_road_half_width(track_half_width_at(distance + (4.0f - z)));
 }
 
 static float road_height_at(float z, float distance)
@@ -479,8 +479,8 @@ static void add_road(void)
         const float distance1 = distance0 + segment_length;
         const TrackFrame f0 = track_frame_at(distance0);
         const TrackFrame f1 = track_frame_at(distance1);
-        const float half0 = clampf_local(f0.half_width, 2.2f, 4.8f) + ground_margin;
-        const float half1 = clampf_local(f1.half_width, 2.2f, 4.8f) + ground_margin;
+        const float half0 = boonta_effective_road_half_width(f0.half_width) + ground_margin;
+        const float half1 = boonta_effective_road_half_width(f1.half_width) + ground_margin;
 
         quad_add(track_frame_point(f0, -half0, -ground_drop),
                  track_frame_point(f0,  half0, -ground_drop),
@@ -494,8 +494,8 @@ static void add_road(void)
         const float distance1 = distance0 + segment_length;
         const TrackFrame f0 = track_frame_at(distance0);
         const TrackFrame f1 = track_frame_at(distance1);
-        const float w0 = clampf_local(f0.half_width, 2.2f, 4.8f);
-        const float w1 = clampf_local(f1.half_width, 2.2f, 4.8f);
+        const float w0 = boonta_effective_road_half_width(f0.half_width);
+        const float w1 = boonta_effective_road_half_width(f1.half_width);
         const GXColor road = ((section_phase & 1U) == 0U) ? C_ROAD_A : C_ROAD_B;
         const GXColor rail = ((section_phase & 1U) == 0U) ? C_RAIL_A : C_RAIL_B;
 
@@ -541,8 +541,8 @@ static void add_road(void)
         if (remaining >= 0.0f && remaining < (float)ROAD_SEGMENTS * segment_length) {
             const TrackFrame finish0 = track_frame_at(next_finish);
             const TrackFrame finish1 = track_frame_at(next_finish + 0.55f);
-            const float w0 = clampf_local(finish0.half_width, 2.2f, 4.8f);
-            const float w1 = clampf_local(finish1.half_width, 2.2f, 4.8f);
+            const float w0 = boonta_effective_road_half_width(finish0.half_width);
+            const float w1 = boonta_effective_road_half_width(finish1.half_width);
             const GXColor stripe = { 240, 244, 250, 255 };
             quad_add(track_frame_point(finish0, -w0, 0.04f),
                      track_frame_point(finish0,  w0, 0.04f),
@@ -1235,20 +1235,20 @@ int main(int argc, char **argv)
             -4.0f, 4.0f);
 
         /*
-         * Off-road and rail limits are expressed relative to the local authored
-         * half-width, so narrow sections are not secretly as wide as broad ones.
+         * Off-road and rail limits use the effective rendered half-width, so
+         * clamped track widths cannot create a hidden collision/render mismatch.
          */
         {
             const float local_half_width = track_half_width_at(g_distance);
-            const float lateral_scale = ROAD_HALF_WIDTH /
-                (local_half_width > 0.1f ? local_half_width : ROAD_HALF_WIDTH);
-            const float normalized_lateral = g_player_lateral * lateral_scale;
+            const float normalized_lateral = boonta_normalize_road_lateral(
+                g_player_lateral, local_half_width);
             g_speed = boonta_speed_after_offroad_scaled(
                 g_speed, normalized_lateral, frame_scale);
             if (boonta_is_past_rail(normalized_lateral)) {
                 const float resolved_lateral =
                     boonta_lateral_after_rail_contact(normalized_lateral);
-                g_player_lateral = resolved_lateral / lateral_scale;
+                g_player_lateral = boonta_restore_road_lateral(
+                    resolved_lateral, local_half_width);
                 g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(
                     g_lateral_velocity);
             }

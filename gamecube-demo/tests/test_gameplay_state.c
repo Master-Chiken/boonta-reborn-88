@@ -526,6 +526,37 @@ static void rival_event_tests(void) {
 }
 
 
+static void road_width_alignment_tests(void) {
+ /* The renderer's effective width stays within its documented runtime bounds. */
+ assert(nearf(boonta_effective_road_half_width(3.4f), 3.4f));
+ assert(nearf(boonta_effective_road_half_width(3.6f), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(0.5f), BOONTA_MIN_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(100.0f), BOONTA_MAX_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(NAN), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(INFINITY), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+
+ /* Road edges map to the same reference coordinate for narrow and broad tracks. */
+ assert(nearf(boonta_normalize_road_lateral(2.2f, 0.5f), 3.6f));
+ assert(nearf(boonta_normalize_road_lateral(4.8f, 100.0f), 3.6f));
+ assert(nearf(boonta_normalize_road_lateral(-2.2f, 0.5f), -3.6f));
+ assert(nearf(boonta_normalize_road_lateral(-4.8f, 100.0f), -3.6f));
+ assert(nearf(boonta_restore_road_lateral(3.6f, 0.5f), 2.2f));
+ assert(nearf(boonta_restore_road_lateral(-3.6f, 100.0f), -4.8f));
+
+ /* Rail recovery restores the effective visible edge, not the raw file width. */
+ {
+  const float narrow_rail = boonta_restore_road_lateral(3.85f, 0.5f);
+  const float broad_rail = boonta_restore_road_lateral(3.85f, 100.0f);
+  assert(nearf(narrow_rail, 3.85f * 2.2f / 3.6f));
+  assert(nearf(broad_rail, 3.85f * 4.8f / 3.6f));
+  assert(nearf(boonta_restore_road_lateral(
+      boonta_lateral_after_rail_contact(4.0f), 0.5f), narrow_rail));
+ }
+
+ assert(nearf(boonta_normalize_road_lateral(NAN, 3.6f), 0.0f));
+ assert(nearf(boonta_restore_road_lateral(INFINITY, 3.6f), 0.0f));
+}
+
 static void offroad_and_rail_tests(void) {
  /* No speed loss on the road, including the exact 3.15 boundary. */
  assert(nearf(boonta_speed_after_offroad(0.5f, 0.0f), 0.5f));
@@ -766,7 +797,8 @@ int main(void) {
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
- offroad_and_rail_tests();
+  road_width_alignment_tests();
+  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
  return 0;
 }

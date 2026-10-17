@@ -493,6 +493,48 @@ static inline float boonta_lateral_velocity_after_rival_contact(float lateral_ve
 }
 
 
+/*
+ * The current GX demo intentionally bounds effective road width for readable
+ * geometry. Keep collision coordinates in the same width space as the rendered
+ * road; the neutral track format can legally contain widths outside this range.
+ */
+#define BOONTA_REFERENCE_ROAD_HALF_WIDTH 3.6f
+#define BOONTA_MIN_ROAD_HALF_WIDTH 2.2f
+#define BOONTA_MAX_ROAD_HALF_WIDTH 4.8f
+
+static inline float boonta_effective_road_half_width(float authored_half_width)
+{
+    if (!isfinite(authored_half_width)) return BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    if (authored_half_width < BOONTA_MIN_ROAD_HALF_WIDTH) {
+        return BOONTA_MIN_ROAD_HALF_WIDTH;
+    }
+    if (authored_half_width > BOONTA_MAX_ROAD_HALF_WIDTH) {
+        return BOONTA_MAX_ROAD_HALF_WIDTH;
+    }
+    return authored_half_width;
+}
+
+static inline float boonta_normalize_road_lateral(float lateral,
+                                                   float authored_half_width)
+{
+    float normalized;
+    if (!isfinite(lateral)) return 0.0f;
+    normalized = lateral * BOONTA_REFERENCE_ROAD_HALF_WIDTH /
+        boonta_effective_road_half_width(authored_half_width);
+    return isfinite(normalized) ? normalized : 0.0f;
+}
+
+static inline float boonta_restore_road_lateral(float normalized_lateral,
+                                                 float authored_half_width)
+{
+    float lateral;
+    if (!isfinite(normalized_lateral)) return 0.0f;
+    lateral = normalized_lateral *
+        boonta_effective_road_half_width(authored_half_width) /
+        BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    return isfinite(lateral) ? lateral : 0.0f;
+}
+
 /* Keep the demo's existing off-road and rail-edge response independently testable. */
 static inline float boonta_abs_float(float value)
 {
