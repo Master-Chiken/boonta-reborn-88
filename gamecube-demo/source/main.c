@@ -31,7 +31,9 @@
 #include <string.h>
 
 #define GX_FIFO_SIZE       (256 * 1024)
-#define VERTEX_CAPACITY    4096U
+/* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
+ * Keep enough headroom so append operations don't silently drop the checkerboard. */
+#define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
@@ -446,6 +448,8 @@ static void triangle_add(Point3 a, Point3 b, Point3 c, GXColor color)
 
 static void quad_add(Point3 a, Point3 b, Point3 c, Point3 d, GXColor color)
 {
+    /* Reserve the entire quad before submitting either triangle. */
+    if ((unsigned int)g_vertex_count + 6U > VERTEX_CAPACITY) return;
     triangle_add(a, b, c, color);
     triangle_add(a, c, d, color);
 }
