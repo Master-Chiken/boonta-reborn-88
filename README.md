@@ -4,11 +4,11 @@
 
 [![GameCube demo CI](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml/badge.svg?branch=main)](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml)
 
-**Boonta Reborn 88 is an unofficial, clean-room homebrew project inspired by _Star Wars: Episode I – Racer_ (1999).** The ambition is to build an exciting, enhanced racing experience for native GameCube/Wii hardware, with Dolphin as a practical development and testing environment.
+**Boonta Reborn 88 is an unofficial, clean-room homebrew project inspired by _Star Wars: Episode I – Racer_ (1999).** The goal is bigger than a nostalgia trip: build a genuinely fun racer for classic Nintendo hardware, prove one complete race from start to finish, then grow it with original tracks, pods, and ideas.
 
 The player-pod mesh/texture, varied canyon skyline, and readable finish banner are now integrated on `main` ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204)). The linked Dolphin captures are scripted diagnostics, not proof of manual-controller acceptance.
 
-We're building it in public. Whether you enjoy low-level C, rendering, gameplay feel, test automation, or simply putting a prototype through its paces, **there's a useful way to contribute**.
+We're building it in public—and this is a great moment to join. Whether you enjoy low-level C, 3D art, gameplay feel, test automation, technical research, or simply putting a prototype through its paces, **you can make a visible difference**.
 
 > **The goal isn't to collect features or make impressive promises. It's to get one complete, enjoyable race working — then build on a solid foundation.**
 
@@ -42,9 +42,9 @@ We keep the work focused on a playable vertical slice rather than spreading effo
 
 More tracks, additional pods, expanded menus, audio, saves, progression, and bonus modes belong after the first race is reliable. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
 
-## Come contribute
+## Come build this with us
 
-**You don't need to be an expert in every part of the project—or write a huge feature to make a difference.** A clear test report can be just as useful as a code change.
+**You don't need to know everything or arrive with a huge feature.** Curiosity, clear communication, and the willingness to test an idea are valuable here. A useful bug report, a small fix, a model, a tool, or one careful test session can move the game forward.
 
 | If you enjoy… | You could help with… |
 | --- | --- |
@@ -57,11 +57,17 @@ More tracks, additional pods, expanded menus, audio, saves, progression, and bon
 
 ### Good places to start
 
-- **Most valuable right now:** follow the manual test plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Mark each check **PASS / FAIL / NOT TESTED**; include the Dolphin version, video backend, controller profile, and screenshots or a short video where useful.
+- **Best first contribution:** follow the manual test plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Mark each check **PASS / FAIL / NOT TESTED**; include the Dolphin version, video backend, controller profile, and screenshots or a short video where useful.
 - **Interested in rendering or asset formats?** Read [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181) first so new work builds on the existing mesh and test foundations instead of duplicating them.
 - **Not sure where to begin?** Open an issue or join the [Discord community](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474). Explain what you would like to try and what environment you have. Small, focused experiments and well-documented findings are welcome.
 
-### Build and run the prototype
+### Why join now?
+
+The foundations are real, but the most important part is still ahead: making the whole race feel right from the first launch to the finish line. Your work can have a visible impact—whether that means improving handling, shaping the world, strengthening a tool, or finding a bug no automated test has caught.
+
+The longer-term vision reaches beyond a technical demo: an original, polished racing experience, with room for new circuits, distinctive pods, smarter rivals, sound, and bonus modes. I'm also working on other projects, and I'm interested in meeting creative, dependable collaborators who enjoy building things together. Start with one small contribution; the best partnerships can grow from there.
+
+## Build and run the prototype
 
 The clean-room demo can be built without bundling a commercial ROM or extracted game assets. For the native DOL/ELF build, install the official [devkitPro GameCube/Wii toolchain](https://devkitpro.org/) with devkitPPC and libogc, open its configured shell, then run:
 
@@ -90,16 +96,6 @@ python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
 For artifact validation, Dolphin diagnostics, troubleshooting, and the full validation boundaries, use the [build guide](docs/BUILD_GUIDE.md) and [prototype instructions](gamecube-demo/README.md). A successful build or headless smoke test is not the same as a manually completed race.
 
-## How we work
-
-We follow one simple engineering order:
-
-1. **Make it work:** prove the smallest useful end-to-end behavior.
-2. **Make it good:** handle edge cases, keep the implementation understandable, and add regression tests.
-3. **Make it fast:** optimize only after correctness is established, using measurements where practical.
-
-Before implementing a change, read [`AGENTS.md`](AGENTS.md) and check the current issues/PRs. Prefer focused, reviewable pull requests and include the test commands and results. Be explicit about what was **not** tested—host tests, native builds, scripted Dolphin checks, manual controller play, and physical hardware prove different things.
-
 ## Clean-room and source policy
 
 This is a fan homebrew/research project, not an official Star Wars product and not a completed port of the commercial game.
@@ -112,4 +108,4 @@ Keep the public project reproducible, original, and safe to build. See the [sour
 
 ---
 
-**Want to help make the first complete race happen?** Pick a check or a small task, share what you find, and let's turn the prototype into a game one verified improvement at a time.
+**Want to help make the first complete race happen?** Pick one small task, introduce yourself in an issue or on [Discord](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474), and show us what you enjoy working on. I'm also building other projects and would love to meet thoughtful, reliable people who enjoy turning ambitious ideas into real things. A great collaboration here can be the start of more projects together.
