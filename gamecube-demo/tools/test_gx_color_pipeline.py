@@ -37,7 +37,7 @@ class GXColorPipelineTests(unittest.TestCase):
         )
 
     def test_synthetic_mesh_submits_uvs_to_a_real_texture_stage(self) -> None:
-        draw = SOURCE.split("static int draw_synthetic_mesh(void)", 1)[1].split(
+        draw = SOURCE.split("static int draw_synthetic_mesh(", 1)[1].split(
             "static void append_screen_quad", 1
         )[0]
         self.assertIn("GX_LoadTexObj(&g_mesh_texture, GX_TEXMAP0);", draw)
