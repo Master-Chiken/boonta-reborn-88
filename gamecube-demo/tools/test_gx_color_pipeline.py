@@ -74,6 +74,23 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertNotIn("boonta_generated_mesh_original_synthetic_triangle_view", frame)
         self.assertNotIn("boonta_generated_mesh_original_synthetic_diamond_view", frame)
 
+    def test_canyon_uses_contiguous_varied_ridge_profile_and_rock_fins(self) -> None:
+        profile = SOURCE.split("static float canyon_ridge_height_for_phase", 1)[1].split(
+            "static void add_canyon_scenery", 1
+        )[0]
+        scenery = SOURCE.split("static void add_canyon_scenery(void)", 1)[1].split(
+            "static void add_player_exhaust", 1
+        )[0]
+        self.assertIn("switch (phase % 10U)", profile)
+        self.assertIn("case 2U: return 5.20f;", profile)
+        self.assertIn("case 7U: return 5.55f;", profile)
+        self.assertIn("canyon_ridge_height_for_phase(ridge_phase + 1U)", scenery)
+        self.assertIn("if ((ridge_phase % 6U) == 2U)", scenery)
+        self.assertIn("triangle_add(top_near, ridge_peak, top_far, ridge_face);", scenery)
+        self.assertIn("triangle_add(ridge_peak, ridge_shoulder, top_far, C_CANYON_MID);", scenery)
+        self.assertIn("g_track_world_transform_enabled = 1;", scenery)
+        self.assertIn("g_track_world_transform_enabled = 0;", scenery)
+
     def test_hud_binds_position_matrix_for_orthographic_vertices(self) -> None:
         hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
             "static void initialise_video_and_gx", 1
