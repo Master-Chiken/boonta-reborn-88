@@ -2,7 +2,7 @@
 
 ## Policy: unlimited branch count, disciplined task completion
 
-- **No project-defined numerical cap** on total or active branches. Historic targets of 30 active branches and thresholds of 100/105/200 branches are superseded. Counts are informational; they must not block useful work, fail an audit, or trigger branch deletion.
+- **No project-defined numerical cap** on total or active branches. Total and active counts remain informational; branch inventory does not block useful work, fail an audit, or trigger branch deletion.
 - **Finish work before starting more work.** Jules must handle one implementation task at a time and must not start another independent task until the current task has reached a review-ready handoff: implementation complete, relevant tests attempted, failures fixed where practical, final diff reviewed, PR submitted, relevant CI checks terminal, and a truthful completion report posted.
 - If external dependencies genuinely block completion, Jules must document the exact blocker and evidence, preserve the branch, list completed work/tests/remaining steps, and wait for a decision. A red test alone is not permission to abandon a task; fix it where possible.
 - A task is handed off when its PR is reviewable and relevant CI checks are complete, or when a concrete external blocker is explicitly recorded. Human review and merge remain separate; Jules does not merge automatically.
@@ -10,6 +10,12 @@
 - Branch count does not control concurrency. Jules has one active implementation task at a time. Biddy-Pinky may run up to two genuinely independent workstreams under the project’s existing policy: at most one runtime implementation plus one non-overlapping research/documentation/tooling/review task.
 - Do not push directly to main. Use focused pull requests, review the full diff, and validate exact-head CI before merge. No automatic merge, force-push, history rewriting, or automatic deletion of useful branches.
 - Keep the budget at €0. Never enable billing or use paid tools. Preserve clean-room and source-provenance restrictions.
+
+## Coordination alerts (not caps)
+
+- **General contributors:** show an informational coordination alert at **105 total repository branches**. At that point, finish and hand off the current task before starting an unrelated task; do not abandon or interrupt the task already in progress.
+- **Biddy-Pinky:** use a separate informational threshold of **200 total repository branches**, rather than applying the general 105-branch alert to that contributor. Biddy-Pinky may still run up to two genuinely independent workstreams under the existing policy.
+- These are reminders for task sequencing, not branch caps. Neither threshold may fail CI, block creation of useful branches, create issues automatically, trigger merges, or delete/rewrite history. The inventory workflow only reports whether each alert threshold has been reached.
 
 ## What counts as active?
 
@@ -23,7 +29,7 @@ The Branch governance audit workflow runs weekly and on demand. It reports:
 - branch tips with known or unknown commit dates;
 - inactive branch references that may be reviewed manually.
 
-It does not impose a numeric cap, fail because of branch count, create an issue just because a count target is exceeded, merge branches, or delete branches automatically. It should not run a full inventory on every branch-creation event.
+It does not impose a numeric cap, fail because of branch count, create an issue just because a count target is exceeded, merge branches, or delete branches automatically. It reports the general 105-branch coordination alert and the Biddy-Pinky-specific 200-branch alert without interrupting active work. It should not run a full inventory on every branch-creation event.
 
 ## Manual review sequence
 
