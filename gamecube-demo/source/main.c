@@ -1,9 +1,9 @@
 /*
  * Boonta Reborn 88 — clean-room GameCube rendering/input prototype.
  *
- * Original procedural geometry only. This small milestone validates a native
- * GX render path, controller-driven steering, throttle/brake, and a scrolling
- * test road. It does not include commercial game code, models, sounds, or data.
+ * Original authored mesh/texture sources plus procedural course/effects.
+ * Native GX renderer with controller-driven steering, throttle/brake and a
+ * scrolling closed-loop track. No commercial game code/assets are included.
  */
 #include <gccore.h>
 #include <ogc/pad.h>
@@ -15,8 +15,8 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "generated_track.h"
-#include "generated_mesh.h"
-#include "generated_mesh_diamond.h"
+#include "generated_mesh_player_pod.h"
+#include "generated_texture_player_pod.h"
 
 #if !BOONTA_TRACK_CLOSED_LOOP
 #error "The scrolling GameCube race runtime currently requires a closed-loop track."
@@ -71,39 +71,21 @@ static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 
-/* 8x8 RGB565 checkerboard stored in GX's 4x4 tiled texture layout. */
-#define MESH_TEXTURE_SIZE 8U
-static GXTexObj g_mesh_texture;
-static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE] ATTRIBUTE_ALIGN(32);
+/* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
+#define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
+#define POD_TEXTURE_HEIGHT BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_HEIGHT
+static GXTexObj g_pod_texture;
+static u16 g_pod_texture_pixels[POD_TEXTURE_WIDTH * POD_TEXTURE_HEIGHT] ATTRIBUTE_ALIGN(32);
 
-static u16 pack_rgb565(u8 r, u8 g, u8 b)
+static void initialise_pod_texture(void)
 {
-    return (u16)(((u16)(r >> 3) << 11) |
-                 ((u16)(g >> 2) << 5) |
-                 (u16)(b >> 3));
-}
-
-static void initialise_mesh_texture(void)
-{
-    u32 x;
-    u32 y;
-
-    for (y = 0U; y < MESH_TEXTURE_SIZE; ++y) {
-        for (x = 0U; x < MESH_TEXTURE_SIZE; ++x) {
-            const u32 tile = ((y / 4U) * (MESH_TEXTURE_SIZE / 4U) +
-                              (x / 4U)) * 16U;
-            const u32 within_tile = (y % 4U) * 4U + (x % 4U);
-            const int alternate = (((x / 2U) + (y / 2U)) & 1U) != 0U;
-            g_mesh_texture_pixels[tile + within_tile] = alternate
-                ? pack_rgb565(35U, 210U, 240U)
-                : pack_rgb565(255U, 105U, 45U);
-        }
-    }
-
-    DCFlushRange(g_mesh_texture_pixels, sizeof(g_mesh_texture_pixels));
-    GX_InitTexObj(&g_mesh_texture, g_mesh_texture_pixels,
-                  MESH_TEXTURE_SIZE, MESH_TEXTURE_SIZE, GX_TF_RGB565,
-                  GX_REPEAT, GX_REPEAT, GX_FALSE);
+    memcpy(g_pod_texture_pixels,
+           boonta_generated_texture_original_twin_engine_panel_pixels,
+           sizeof(g_pod_texture_pixels));
+    DCFlushRange(g_pod_texture_pixels, sizeof(g_pod_texture_pixels));
+    GX_InitTexObj(&g_pod_texture, g_pod_texture_pixels,
+                  POD_TEXTURE_WIDTH, POD_TEXTURE_HEIGHT, GX_TF_RGB565,
+                  GX_CLAMP, GX_CLAMP, GX_FALSE);
 }
 
 /*
@@ -638,61 +620,12 @@ static void add_canyon_scenery(void)
     }
     g_track_world_transform_enabled = 0;
 }
-static void add_player_pod(void)
+static void add_player_exhaust(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
     const float engine_offset = 0.82f;
     const float flame_length = 0.22f + 0.55f * g_speed + (g_boost_active ? 0.55f : 0.0f);
 
-    /*
-     * Twin engines need to read as two separate masses connected to a cockpit,
-     * rather than one blue block. Draw the narrow clean-room tether strips first
-     * so their anchors disappear naturally beneath the engine nacelles.
-     */
-    quad_add((Point3){ center - 0.51f, -0.41f, 0.25f },
-             (Point3){ center - 0.48f, -0.61f, 0.25f },
-             (Point3){ center - 0.16f, -0.51f, -0.38f },
-             (Point3){ center - 0.21f, -0.40f, -0.38f }, C_TETHER);
-    quad_add((Point3){ center + 0.48f, -0.61f, 0.25f },
-             (Point3){ center + 0.51f, -0.41f, 0.25f },
-             (Point3){ center + 0.21f, -0.40f, -0.38f },
-             (Point3){ center + 0.16f, -0.51f, -0.38f }, C_TETHER);
-    quad_add((Point3){ center - 0.49f, -0.43f, 0.23f },
-             (Point3){ center - 0.48f, -0.48f, 0.23f },
-             (Point3){ center - 0.20f, -0.43f, -0.36f },
-             (Point3){ center - 0.21f, -0.40f, -0.36f }, C_TETHER_HIGHLIGHT);
-    quad_add((Point3){ center + 0.48f, -0.48f, 0.23f },
-             (Point3){ center + 0.49f, -0.43f, 0.23f },
-             (Point3){ center + 0.21f, -0.40f, -0.36f },
-             (Point3){ center + 0.20f, -0.43f, -0.36f }, C_TETHER_HIGHLIGHT);
-
-    /* Longer, wider-spaced nacelles give the racer a stronger twin-engine silhouette. */
-    box_add(center - engine_offset, -0.62f, 1.08f,
-            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center + engine_offset, -0.62f, 1.08f,
-            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-
-    /* Central body and raised canopy keep the cockpit visually separate from the engines. */
-    box_add(center, -0.49f, 0.23f, 0.35f, 0.09f, 0.20f,
-            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
-    box_add(center, -0.34f, -0.12f, 0.22f, 0.11f, 0.24f,
-            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
-
-    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
-                 (Point3){ center + 0.42f, -0.52f, 0.52f },
-                 (Point3){ center, -0.28f, -0.55f }, C_POD_TOP);
-    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
-                 (Point3){ center, -0.28f, -0.55f },
-                 (Point3){ center - 0.08f, -0.45f, -0.40f }, C_POD_ACCENT);
-    triangle_add((Point3){ center + 0.42f, -0.52f, 0.52f },
-                 (Point3){ center + 0.08f, -0.45f, -0.40f },
-                 (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
-
-    /*
-     * Exhaust length follows speed, with an additional boost plume. This is
-     * intentionally simple original geometry, but its state is now readable
-     * in the scene instead of only in the HUD meters.
-     */
     if (g_speed > 0.12f) {
         const GXColor thrust = (g_boost_active || g_speed > 0.70f)
             ? C_THRUST_HOT : C_THRUST;
@@ -704,7 +637,6 @@ static void add_player_pod(void)
                 0.15f, 0.14f, flame_length * 0.5f,
                 thrust, C_THRUST, C_THRUST);
 
-        /* Small hot cores sit just behind the plume so boost has a brighter tip. */
         quad_add((Point3){ center - engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
                  (Point3){ center - engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
                  (Point3){ center - engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
@@ -776,8 +708,7 @@ static void draw_vertex_buffer(void)
  * drawn separately so the existing procedural scene keeps its vertex budget;
  * local offsets make the test fixtures distinguishable in the same camera view.
  */
-static int draw_synthetic_mesh(const BoontaMeshView *mesh,
-                               float local_offset_x, float local_offset_y)
+static int draw_player_pod_asset(const BoontaMeshView *mesh)
 {
     size_t i;
 
@@ -785,8 +716,7 @@ static int draw_synthetic_mesh(const BoontaMeshView *mesh,
         return 0;
     }
 
-    /* Enable a real GX texture stage only for this source-driven mesh. */
-    GX_LoadTexObj(&g_mesh_texture, GX_TEXMAP0);
+    GX_LoadTexObj(&g_pod_texture, GX_TEXMAP0);
     GX_SetNumTexGens(1);
     GX_SetNumTevStages(1);
     GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
@@ -799,16 +729,17 @@ static int draw_synthetic_mesh(const BoontaMeshView *mesh,
     for (i = 0U; i < mesh->index_count; ++i) {
         const BoontaMeshVertex *v = &mesh->vertices[mesh->indices[i]];
         const Point3 local = {
-            v->x + local_offset_x, v->y + local_offset_y, v->z
+            g_vehicle_anchor_center_x + g_player_lateral + v->x,
+            v->y + g_vertex_y_offset,
+            v->z
         };
-        const Point3 world = track_local_to_world(local);
+        const Point3 world = track_vehicle_local_to_world(local);
         GX_Position3f32(world.x, world.y, world.z);
         GX_Color4u8(v->r, v->g, v->b, v->a);
         GX_TexCoord2f32(v->u, v->v);
     }
     GX_End();
 
-    /* Return to the vertex-colour-only state used by the procedural scene/HUD. */
     GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
     GX_SetNumTexGens(0);
     GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
@@ -1056,7 +987,7 @@ static void initialise_video_and_gx(void)
     if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 
     GX_Init(g_gx_fifo, GX_FIFO_SIZE);
-    initialise_mesh_texture();
+    initialise_pod_texture();
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
                    (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
@@ -1138,7 +1069,7 @@ static void draw_frame(void)
     g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
     g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
     g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
-    add_player_pod();
+    add_player_exhaust();
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
 
@@ -1153,10 +1084,14 @@ static void draw_frame(void)
     GX_LoadPosMtxImm(view, GX_PNMTX0);
     GX_SetCurrentMtx(GX_PNMTX0);
     draw_vertex_buffer();
-    (void)draw_synthetic_mesh(
-        &boonta_generated_mesh_original_synthetic_triangle_view, 2.05f, -0.45f);
-    (void)draw_synthetic_mesh(
-        &boonta_generated_mesh_original_synthetic_diamond_view, -2.05f, -0.45f);
+    g_track_world_transform_enabled = 2;
+    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+    g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+    g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
+    (void)draw_player_pod_asset(&boonta_generated_mesh_original_twin_engine_racer_view);
+    g_vertex_y_offset = 0.0f;
+    g_track_world_transform_enabled = 0;
     draw_hud();
 
     /*
