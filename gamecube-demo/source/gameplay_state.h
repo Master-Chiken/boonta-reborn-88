@@ -454,9 +454,10 @@ static inline int boonta_rival_event(float rival_z,
     if (rival_z > -1.0f && rival_z < 1.8f) {
         float lateral_gap = player_lateral - rival_lateral;
         if (lateral_gap < 0.0f) lateral_gap = -lateral_gap;
-        return lateral_gap < 0.92f
-            ? BOONTA_RIVAL_EVENT_COLLISION
-            : BOONTA_RIVAL_EVENT_OVERTAKE;
+        if (lateral_gap < 0.92f) {
+            return BOONTA_RIVAL_EVENT_COLLISION;
+        }
+        return BOONTA_RIVAL_EVENT_NONE;
     }
     if (rival_z >= 1.8f) return BOONTA_RIVAL_EVENT_OVERTAKE;
     return BOONTA_RIVAL_EVENT_NONE;
