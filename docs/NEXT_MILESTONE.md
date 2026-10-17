@@ -1,6 +1,6 @@
 # Next milestone: Interactive validation of the clean-room racing slice
 
-Last updated: 2026-10-16
+Last updated: 2026-10-17
 
 ## Goal of this milestone
 
@@ -10,21 +10,22 @@ This is the gate before expanding the vertical slice.
 
 ## What is already verified (CI)
 
-- Host regression tests (speed, boost/overheat, steering, lap boundaries, rivals, pause/reset, finite-state guards, etc.)
-- Consistent 50/60 Hz cadence handling
-- Native `boonta_gc_demo.dol` / `.elf` build with devkitPPC/libogc
-- Bounded Dolphin null-video smoke
-- Visible Software Renderer capture (road, rails, markers, player + rival pods)
+- Host regression tests for gameplay state, steering, boost/heat, lap boundaries, rivals, pause/reset and numeric state guards.
+- Native `boonta_gc_demo.dol` / `.elf` build using devkitPPC/libogc with artifact validation.
+- Bounded Dolphin Null-backend process smoke.
+- Source-authored indexed twin-engine player mesh (275 vertices, 169 triangles) with an original 16×16 RGB8 texture source, validated and deterministically exported to GX-ready C headers.
+- Readable three-lap finish panel and varied procedural canyon skyline.
+- Exact-head Software Renderer diagnostics and visual detectors for steering/reset and the finished banner.
 
-These prove the tested code compiles, deterministic assertions pass, and scripted states can render. They do **not** yet prove live controller response or a manually driven three-lap race.
+These prove the tested code compiles, deterministic assertions pass, and the tested scripted states can render. They do **not** prove live controller response or a manually driven three-lap race.
 
-## Latest automated evidence (2026-10-16)
+## Latest automated evidence (2026-10-17)
 
-PR #180 was merged as main commit `e3adea9424268d7321113acc4ffc621242212dd9`. It adds reusable Software Renderer assertions for pause/resume and keeps the longer full-race DTM as an opt-in diagnostic.
+PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 (varied canyon) are now merged. The exact-head run [#39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) passed host tests, native build/artifact checks, Dolphin process smoke, and the Software Renderer diagnostic. Its scripted three-lap DTM frame passed both the centered finish-banner detector and orange `FINISH`-label detector.
 
-On the PR head, [run #38954611194](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194) passed host tests, native DOL/ELF build/artifact validation, Dolphin Null-backend smoke, scripted D-pad/analog steering checks, Y-reset HUD validation, pause icon detection, resume-with-throttle validation, and the optional 12,000-poll three-lap finish-banner check. The [captured frames, DTM movies and logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38954611194/artifacts/12070108432) preserve the evidence.
+Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. The current main commit `8b7c9a8a1e19e6a14eccc182103120e835400b4b` is a README-only update after that code-bearing commit.
 
-The post-merge mainline workflow for `e3adea9424268d7321113acc4ffc621242212dd9` is [run #38957249755](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38957249755); it was still running when this status was refreshed, so its final result must be checked. The optional scripted full-race run and all other DTM checks are not substitutes for manual controller acceptance. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller.
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
 
 ## Interactive acceptance checklist
 
