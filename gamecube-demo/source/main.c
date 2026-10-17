@@ -553,10 +553,22 @@ static void add_road(void)
 }
 
 /*
- * Original low-poly canyon walls give the test road a readable world silhouette.
- * The panels are deliberately simple, stable geometry rather than extracted game art.
- * Their bases sit just above the desert floor and remain outside the track rails.
+ * Original low-poly canyon walls use a deterministic ridge profile so the
+ * horizon reads as layered rock instead of a row of identical flat slabs.
+ * Adjacent panels share boundary heights; each wall stays aligned to the track.
  */
+static float canyon_ridge_height_for_phase(unsigned int phase)
+{
+    switch (phase % 10U) {
+    case 2U: return 5.20f;
+    case 3U: return 4.55f;
+    case 7U: return 5.55f;
+    case 8U: return 4.75f;
+    default:
+        return 3.30f + (float)((phase * 3U + 1U) % 4U) * 0.19f;
+    }
+}
+
 static void add_canyon_scenery(void)
 {
     const float wall_margin = 4.2f;
@@ -567,24 +579,27 @@ static void add_canyon_scenery(void)
 
     for (i = 0U; i < 18U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        /* More, shorter panels keep the canyon continuous around tight spline bends. */
+        /* Short panels keep the faceted cliffs continuous through spline bends. */
         const float z_near = -2.0f - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
         const float base_offset_near = road_half_width_at(z_near, g_distance) + wall_margin;
         const float base_offset_far = road_half_width_at(z_far, g_distance) + wall_margin;
-        /* Keep wall footings aligned with the matching spline-following floor ribbon. */
         const float base_y_near = road_height_at(z_near, g_distance) - 0.24f;
         const float base_y_far = road_height_at(z_far, g_distance) - 0.24f;
-        const float near_height = 3.8f + (float)(wall_phase % 4U) * 0.15f;
-        const float far_height = 3.8f + (float)((wall_phase + 1U) % 4U) * 0.15f;
-        const float near_top_offset = base_offset_near + 0.15f + (float)(wall_phase % 2U) * 0.08f;
-        const float far_top_offset = base_offset_far + 0.15f + (float)((wall_phase + 1U) % 2U) * 0.08f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
             const float side = side_index == 0U ? -1.0f : 1.0f;
+            /* Shift each side's profile, retaining a shared phase per panel edge. */
+            const unsigned int ridge_phase = wall_phase + side_index * 3U;
+            const float near_height = canyon_ridge_height_for_phase(ridge_phase);
+            const float far_height = canyon_ridge_height_for_phase(ridge_phase + 1U);
+            const float near_top_offset = base_offset_near + 0.15f
+                + (float)(ridge_phase % 2U) * 0.08f;
+            const float far_top_offset = base_offset_far + 0.15f
+                + (float)((ridge_phase + 1U) % 2U) * 0.08f;
             const Point3 base_near = {
                 center_near + side * base_offset_near, base_y_near, z_near
             };
@@ -598,7 +613,7 @@ static void add_canyon_scenery(void)
                 center_far + side * far_top_offset, base_y_far + far_height, z_far
             };
             GXColor face;
-            const unsigned int tone_phase = wall_phase + side_index;
+            const unsigned int tone_phase = ridge_phase + side_index;
 
             if ((tone_phase % 4U) == 0U) {
                 face = C_CANYON_LIGHT;
@@ -608,9 +623,40 @@ static void add_canyon_scenery(void)
                 face = C_CANYON_DARK;
             }
 
-            /* Same tone on both triangles avoids an oversized diagonal facet. */
+            /* Two wall triangles share their boundary heights; no top-edge gaps. */
             triangle_add(base_near, top_near, top_far, face);
             triangle_add(base_near, top_far, base_far, face);
+
+            /*
+             * Outward-leaning rock fins add a few readable peaks to the horizon.
+             * They're placed in local track coordinates and share the wall's
+             * spline transform; the contrasting triangles provide simple facets.
+             */
+            if ((ridge_phase % 6U) == 2U) {
+                const float ridge_z = (z_near + z_far) * 0.5f;
+                const float ridge_center = road_center_at(ridge_z, g_distance);
+                const float ridge_base_offset =
+                    road_half_width_at(ridge_z, g_distance) + wall_margin + 0.15f;
+                const float ridge_base_y = road_height_at(ridge_z, g_distance) - 0.24f;
+                const float base_height = (near_height + far_height) * 0.5f;
+                const float ridge_extra = 0.85f + (float)(ridge_phase % 3U) * 0.20f;
+                const Point3 ridge_peak = {
+                    ridge_center + side * (ridge_base_offset + 0.38f),
+                    ridge_base_y + base_height + ridge_extra,
+                    ridge_z
+                };
+                const Point3 ridge_shoulder = {
+                    ridge_center + side * (ridge_base_offset + 0.05f),
+                    ridge_base_y + base_height + ridge_extra * 0.42f,
+                    ridge_z - 0.85f
+                };
+                const GXColor ridge_face = (ridge_phase & 1U) == 0U
+                    ? C_CANYON_LIGHT : C_CANYON_MID;
+
+                triangle_add(top_near, ridge_peak, top_far, ridge_face);
+                triangle_add(top_near, ridge_shoulder, ridge_peak, C_CANYON_DARK);
+                triangle_add(ridge_peak, ridge_shoulder, top_far, C_CANYON_MID);
+            }
         }
     }
     g_track_world_transform_enabled = 0;
