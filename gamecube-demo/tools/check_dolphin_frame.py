@@ -390,6 +390,35 @@ def finish_label_visible(image: Image.Image) -> bool:
     return orange_pixels >= 12
 
 
+def neutral_steering_deltas(baseline: Image.Image,
+                            candidate: Image.Image) -> tuple[float, float]:
+    """Return absolute road-center and HUD-marker shifts for a near-neutral stick frame."""
+    baseline = baseline.convert("RGB")
+    candidate = candidate.convert("RGB")
+    if baseline.size != candidate.size:
+        raise ValueError(
+            f"Frame dimensions differ: candidate={candidate.size}, baseline={baseline.size}"
+        )
+    baseline_road_x, _ = road_center_from_asphalt(baseline)
+    candidate_road_x, _ = road_center_from_asphalt(candidate)
+    baseline_marker_x = steering_indicator_center(baseline)
+    candidate_marker_x = steering_indicator_center(candidate)
+    return abs(candidate_road_x - baseline_road_x), abs(candidate_marker_x - baseline_marker_x)
+
+
+def neutral_steering_stable(baseline: Image.Image, candidate: Image.Image,
+                            max_shift: float = 2.0) -> bool:
+    """Check that a small stick value causes no lateral HUD-state drift.
+
+    Road position can vary as the neutral car advances along a curved course, so the
+    HUD marker (which directly encodes player_lateral) is the deterministic gate.
+    """
+    if not (max_shift >= 0.0):
+        raise ValueError("max_shift must be non-negative")
+    _, marker_shift = neutral_steering_deltas(baseline, candidate)
+    return marker_shift <= max_shift
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
@@ -405,6 +434,10 @@ def main() -> int:
                         help="check that a Start input visibly leaves the game in paused state")
     parser.add_argument("--expect-resume", action="store_true",
                         help="check that the pause overlay is gone and throttle visibly moves the game after Start resumes")
+    parser.add_argument("--expect-neutral-steering", action="store_true",
+                        help="compare against baseline; a small analog deflection must not move the player-lateral HUD marker")
+    parser.add_argument("--max-neutral-shift", type=float, default=2.0,
+                        help="maximum absolute player-lateral HUD-marker shift for a near-deadzone analog input")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -416,8 +449,10 @@ def main() -> int:
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
     if sum((args.expect_finish, args.expect_finish_label, args.expect_reset,
-            args.expect_pause, args.expect_resume)) > 1:
-        parser.error("--expect-finish, --expect-finish-label, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+            args.expect_pause, args.expect_resume, args.expect_neutral_steering)) > 1:
+        parser.error("The --expect-* validation modes are mutually exclusive")
+    if args.max_neutral_shift < 0.0:
+        parser.error("--max-neutral-shift must be non-negative")
     if args.expect_finish_label:
         if args.baseline is not None:
             parser.error("--expect-finish-label cannot be combined with --baseline")
@@ -469,6 +504,20 @@ def main() -> int:
     baseline = Image.open(args.baseline).convert("RGB")
     if image.size != baseline.size:
         raise SystemExit(f"Frame dimensions differ: steered={image.size}, baseline={baseline.size}")
+    if args.expect_neutral_steering:
+        validate_scene(baseline, "Neutral baseline")
+        validate_scene(image, "Near-deadzone analog input")
+        road_shift, marker_shift = neutral_steering_deltas(baseline, image)
+        print(f"Near-deadzone absolute road-center shift={road_shift:.1f}px "
+              "(diagnostic only; track phase may vary between captures)")
+        print(f"Near-deadzone absolute HUD-marker shift={marker_shift:.1f}px "
+              f"(maximum {args.max_neutral_shift:.1f}px)")
+        if marker_shift > args.max_neutral_shift:
+            raise SystemExit(
+                "A near-deadzone analog input moved the player-lateral HUD marker."
+            )
+        print("Near-deadzone analog input produced no measurable steering response.")
+        return 0
     validate_scene(baseline, "Neutral baseline")
     validate_scene(image, "Steered")
     baseline_pod_x, baseline_left, baseline_right, baseline_pixels = player_pod_bounds(baseline)
