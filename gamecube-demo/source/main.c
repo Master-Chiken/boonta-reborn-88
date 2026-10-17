@@ -514,14 +514,14 @@ static void add_road(void)
                  track_frame_point(f1, w1, 0.018f),
                  track_frame_point(f1, w1 - 0.12f, 0.018f), C_EDGE_R);
 
-        quad_add(track_frame_point(f0, -w0 - 0.28f, 0.02f),
-                 track_frame_point(f0, -w0 - 0.28f, 0.52f),
-                 track_frame_point(f1, -w1 - 0.28f, 0.52f),
-                 track_frame_point(f1, -w1 - 0.28f, 0.02f), rail);
-        quad_add(track_frame_point(f0, w0 + 0.28f, 0.02f),
-                 track_frame_point(f0, w0 + 0.28f, 0.52f),
-                 track_frame_point(f1, w1 + 0.28f, 0.52f),
-                 track_frame_point(f1, w1 + 0.28f, 0.02f), rail);
+        quad_add(track_frame_point(f0, -w0 - BOONTA_RAIL_OUTER_OFFSET, 0.02f),
+                 track_frame_point(f0, -w0 - BOONTA_RAIL_OUTER_OFFSET, 0.52f),
+                 track_frame_point(f1, -w1 - BOONTA_RAIL_OUTER_OFFSET, 0.52f),
+                 track_frame_point(f1, -w1 - BOONTA_RAIL_OUTER_OFFSET, 0.02f), rail);
+        quad_add(track_frame_point(f0, w0 + BOONTA_RAIL_OUTER_OFFSET, 0.02f),
+                 track_frame_point(f0, w0 + BOONTA_RAIL_OUTER_OFFSET, 0.52f),
+                 track_frame_point(f1, w1 + BOONTA_RAIL_OUTER_OFFSET, 0.52f),
+                 track_frame_point(f1, w1 + BOONTA_RAIL_OUTER_OFFSET, 0.02f), rail);
 
         if ((section_phase % 2U) == 0U) {
             const TrackFrame mark0 = track_frame_at(distance0 + 0.35f);
@@ -1244,9 +1244,9 @@ int main(int argc, char **argv)
                 g_player_lateral, local_half_width);
             g_speed = boonta_speed_after_offroad_scaled(
                 g_speed, normalized_lateral, frame_scale);
-            if (boonta_is_past_rail(normalized_lateral)) {
+            if (boonta_is_past_rail(normalized_lateral, local_half_width)) {
                 const float resolved_lateral =
-                    boonta_lateral_after_rail_contact(normalized_lateral);
+                    boonta_lateral_after_rail_contact(normalized_lateral, local_half_width);
                 g_player_lateral = boonta_restore_road_lateral(
                     resolved_lateral, local_half_width);
                 g_lateral_velocity = boonta_lateral_velocity_after_rail_contact(
