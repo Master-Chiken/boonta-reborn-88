@@ -4,7 +4,7 @@ Last updated: 2026-10-17
 
 ## Current mainline and reproducible CI evidence
 
-- **Current main commit:** `8b7c9a8a1e19e6a14eccc182103120e835400b4b` — README-only follow-up. The most recent game-code merge is `72acf968e3214b086b00b77240bb20b889314917` (PR #204).
+- **Most recent code-bearing main commit:** `72acf968e3214b086b00b77240bb20b889314917` (PR #204). Later main commits update only README/project-status documentation and do not change the tested game code.
 - **Post-merge mainline CI:** [run #39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581) completed successfully on that game-code tree: native DOL/ELF build and artifact validation, host pause/reset tests, Dolphin Null-backend smoke, and the non-blocking Software Renderer diagnostic all passed.
 - **Player mesh/texture:** PR #203 is merged; it adds an original indexed twin-engine mesh, an original 16×16 RGB8 source texture, deterministic GX-ready headers and host-side format/quantization/tile-order tests. Its exact-head build, tests, and Dolphin diagnostics passed in [run #39051326423](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39051326423).
 - **Finish banner and canyon:** PR #202 adds the readable finish label and guarded GX quad writes; PR #204 adds the varied canyon profile/fins. The exact-head PR #204 Software Renderer workflow [run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) detected both the centered three-lap finish banner and orange `FINISH` label on a DTM-scripted completion frame.
