@@ -36,21 +36,43 @@ class GXColorPipelineTests(unittest.TestCase):
             SOURCE,
         )
 
-    def test_synthetic_mesh_submits_uvs_to_a_real_texture_stage(self) -> None:
-        draw = SOURCE.split("static int draw_synthetic_mesh(", 1)[1].split(
+    def test_player_mesh_uses_the_validated_texture_stage_and_track_frame(self) -> None:
+        draw = SOURCE.split("static int draw_player_pod_asset(", 1)[1].split(
             "static void append_screen_quad", 1
         )[0]
-        self.assertIn("GX_LoadTexObj(&g_mesh_texture, GX_TEXMAP0);", draw)
+        self.assertIn("boonta_mesh_validate(mesh) != BOONTA_MESH_VALID", draw)
+        self.assertIn("GX_LoadTexObj(&g_pod_texture, GX_TEXMAP0);", draw)
         self.assertIn("GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);", draw)
-        self.assertIn("GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);", draw)
         self.assertIn("GX_TexCoord2f32(v->u, v->v);", draw)
+        self.assertIn("track_vehicle_local_to_world(local);", draw)
         self.assertIn("GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);", draw)
         self.assertIn("GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);", draw)
 
-    def test_synthetic_texture_is_tiled_aligned_and_cache_flushed(self) -> None:
-        self.assertIn("static u16 g_mesh_texture_pixels[MESH_TEXTURE_SIZE * MESH_TEXTURE_SIZE] ATTRIBUTE_ALIGN(32);", SOURCE)
+    def test_source_texture_is_aligned_copied_cached_and_rgb565(self) -> None:
+        self.assertIn(
+            "static u16 g_pod_texture_pixels[POD_TEXTURE_WIDTH * POD_TEXTURE_HEIGHT] ATTRIBUTE_ALIGN(32);",
+            SOURCE,
+        )
+        self.assertIn("boonta_generated_texture_original_twin_engine_panel_pixels", SOURCE)
+        self.assertIn("memcpy(g_pod_texture_pixels,", SOURCE)
+        self.assertIn("DCFlushRange(g_pod_texture_pixels, sizeof(g_pod_texture_pixels));", SOURCE)
         self.assertIn("GX_TF_RGB565", SOURCE)
-        self.assertIn("DCFlushRange(g_mesh_texture_pixels, sizeof(g_mesh_texture_pixels));", SOURCE)
+        self.assertIn("GX_CLAMP, GX_CLAMP, GX_FALSE", SOURCE)
+
+    def test_player_source_mesh_replaces_side_debug_meshes(self) -> None:
+        frame = SOURCE.split("static void draw_frame(void)", 1)[1].split(
+            "int main(", 1
+        )[0]
+        self.assertIn('#include "generated_mesh_player_pod.h"', SOURCE)
+        self.assertIn('#include "generated_texture_player_pod.h"', SOURCE)
+        self.assertIn("add_player_exhaust();", frame)
+        self.assertIn(
+            "draw_player_pod_asset(&boonta_generated_mesh_original_twin_engine_racer_view)",
+            frame,
+        )
+        self.assertNotIn("draw_synthetic_mesh(", frame)
+        self.assertNotIn("boonta_generated_mesh_original_synthetic_triangle_view", frame)
+        self.assertNotIn("boonta_generated_mesh_original_synthetic_diamond_view", frame)
 
     def test_hud_binds_position_matrix_for_orthographic_vertices(self) -> None:
         hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
