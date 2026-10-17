@@ -39,6 +39,8 @@ try:
         pause_icon_visible,
         resumed_state_visible,
         road_center_from_asphalt,
+        neutral_steering_deltas,
+        neutral_steering_stable,
     )
 except ImportError:
     Image = None
@@ -50,6 +52,8 @@ except ImportError:
     pause_icon_visible = None
     resumed_state_visible = None
     road_center_from_asphalt = None
+    neutral_steering_deltas = None
+    neutral_steering_stable = None
 
 
 def record(blob: bytes, frame: int) -> bytes:
@@ -301,6 +305,33 @@ class DolphinDtmTests(unittest.TestCase):
     def test_full_race_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(10, steering="right", scenario="full-race")
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or neutral_steering_stable is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_neutral_steering_detector_accepts_stable_frames_and_rejects_shifts(self) -> None:
+        sky = (105, 170, 225)
+        asphalt = (37, 43, 59)
+        white = (238, 246, 255)
+
+        def make_frame(road_center: int = 400, marker_center: int = 400):
+            image = Image.new("RGB", (800, 480), sky)
+            draw = ImageDraw.Draw(image)
+            draw.rectangle((road_center - 150, 312, road_center + 150, 350), fill=asphalt)
+            draw.rectangle((marker_center - 2, 434, marker_center + 1, 449), fill=white)
+            return image
+
+        baseline = make_frame()
+        same_frame = make_frame()
+        self.assertEqual(neutral_steering_deltas(baseline, same_frame), (0.0, 0.0))
+        self.assertTrue(neutral_steering_stable(baseline, same_frame, max_shift=2.0))
+
+        moved_road = make_frame(road_center=404, marker_center=400)
+        self.assertFalse(neutral_steering_stable(baseline, moved_road, max_shift=2.0))
+
+        moved_marker = make_frame(road_center=400, marker_center=405)
+        self.assertFalse(neutral_steering_stable(baseline, moved_marker, max_shift=2.0))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
