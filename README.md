@@ -1,16 +1,33 @@
 # Boonta Reborn 88
 
-### An HD++ remaster/remake vision for Star Wars: Episode I – Racer (1999) on GameCube and Wii.
+### A remaster for Star Wars: Episode I – Racer (1999) on GameCube and/or Wii.
 
 [![GameCube demo CI](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml/badge.svg?branch=main)](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml)
 
-**Boonta Reborn 88 aims to become an enhanced fan-made remaster/remake of _Star Wars: Episode I – Racer_ (1999)** for Nintendo GameCube and Wii. The long-term vision goes beyond a straight port: HD-style visuals, a major presentation upgrade, refined racing, new tracks and pods, bonus modes, and future DLC-style content—while building console-specific versions around the strengths of the original hardware.
+**Boonta Reborn 88 aims to become a fan-made remaster of _Star Wars: Episode I – Racer_ (1999) for Nintendo GameCube and Wii.** The original 1999 release did not receive a dedicated native edition for either console; this project is building a new homebrew experience for those systems, not claiming that an existing GameCube/Wii port already exists. The immediate goal is one reliable, enjoyable racing experience; the larger goal is a substantial visual, gameplay, and content upgrade.
 
-The player-pod mesh/texture, varied canyon skyline, and readable finish banner are now integrated on `main` ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204)). The linked Dolphin captures are scripted diagnostics, not proof of manual-controller acceptance.
+## Development order: gameplay first, always
+
+The project follows this order without skipping ahead:
+
+1. **Gameplay — absolute priority:** make controls, handling, collisions, boost/heat, rivals, camera, laps, finish, pause, reset/restart, and stability work reliably. The playable slice is not accepted until a complete three-lap race is verified with a real controller in visible Dolphin.
+2. **Core original-game content:** establish the essential tracks, pods, racing flow, rivals, and progression, using only material with documented provenance and appropriate rights.
+3. **Graphics and remaster polish:** improve models, textures, scenery, effects, and UI after gameplay is accepted and core content is underway.
+4. **Bonus content and DLC-style expansions:** new tracks/pods, bonus modes, packs, and broader remake ideas come last and must not delay the core experience.
+
+Apply “Make it work, make it good, make it fast” in that order.
+
+## Long-term vision: HD++ Remaster, with HD+++ Premium as a stretch goal
+
+- **HD++ Remaster — a long-term quality goal:** a more polished presentation, more detailed original or rights-cleared pod and track assets, clearer scenery, improved effects and UI, richer audio, and eventually more racing content. Gameplay acceptance and the essential original-game experience come first.
+- **HD+++ Premium — the aspirational tier:** push presentation and content as far as the chosen platforms, performance budget, development time, and rights allow. The long-range wish list includes a broader track and pod roster, more elaborate environments and effects, expanded progression, special events, bonus modes, and DLC-style content packs.
+- **The ideal wider dream:** if it proves technically and practically feasible, grow beyond an _Episode I – Racer_-focused remaster toward a broader remake-style experience inspired by the wider _Star Wars Racer_ legacy. This is a long-term ambition, not a promise that other commercial games or their assets will be reproduced.
+
+**Hardware reality:** “HD++” and “HD+++ Premium” describe the quality, detail, presentation, and breadth we aspire to—not a promise of true HD video output from GameCube or Wii. Native builds must respect their original hardware and video-output limits. A genuine HD-resolution Premium edition would require a separate, more capable platform target and remains an optional future possibility, not a current commitment.
+
+The player-pod mesh/texture, varied canyon skyline, and readable finish banner are integrated on `main` ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204)). The linked Dolphin captures are scripted diagnostics, not proof of manual-controller acceptance.
 
 We're building it in public—and this is a great moment to join. Whether you enjoy low-level C, 3D art, gameplay feel, test automation, or technical research, **you can make a visible difference**. Contributors with experience in the original game, its modding scene, file formats, asset pipelines, or console development are particularly welcome; describe your experience and the workflow you can contribute to.
-
-> **The vision is a full HD++ Racer experience: a remaster/remake with upgraded visuals, bonus content, and room to grow through new tracks, pods, modes, and DLC-style expansions.** The immediate milestone remains the same: make one complete, enjoyable race work reliably before expanding the content.
 
 [Project roadmap](docs/ROADMAP.md) · [Current playable milestone](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) · [Build & test guide](docs/BUILD_GUIDE.md) · [Join the community](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474)
 
@@ -37,10 +54,10 @@ See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact sta
 We keep the work focused on a playable vertical slice rather than spreading effort across unfinished systems.
 
 1. **Prove the race is playable.** In visible Dolphin, verify steering, acceleration/braking, boost and overheating, off-road/rail response, pause/resume, three-lap finish, reset and restart. Record the emulator version, controller setup, results, and any evidence. Start with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-2. **Make the course and racer feel convincing.** Improve the track silhouette, camera, handling, and collision response as one coherent experience.
-3. **Build the remaster asset pipeline.** Extend the existing mesh/texture path toward richer models, textures, track data, and collision. Experience with the original game's modding scene, file formats, asset workflows, or reverse-engineering research is especially welcome. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
+2. **Build the essential original-game experience.** Define a provenance-cleared plan for recognizable tracks, pods, rivals, and racing progression before expanding into new content.
+3. **Polish graphics after the gameplay gate.** Extend the existing mesh/texture path toward richer models, textures, track data, and collision once the first race is accepted and core content is underway. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
 
-Once the first race is reliable, the roadmap opens up to the bigger remaster vision: upgraded visual presentation, more tracks and pods, expanded menus, audio, saves, progression, bonus modes, and DLC-style content packs. These are intended future features, not claims about the current prototype. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
+After the gameplay gate, prioritize the essential original-game content. Graphics and remaster polish follow as the core content takes shape. Only after those foundations should development consider new tracks/pods, bonus modes, DLC-style packs, HD+++ Premium ideas, or a wider Star Wars Racer-style remake. These are future ambitions, not claims about the current prototype. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
 
 ## Come build this with us
 
@@ -105,11 +122,15 @@ Boonta Reborn 88 is an unofficial fan project and is not affiliated with or endo
 
 ## About
 
-Research and homebrew development for an enhanced Star Wars: Episode I – Racer (1999) experience on Nintendo GameCube and Wii, with HD visuals, bonus features, and console-specific builds.
+Research and homebrew development toward a future native GameCube/Wii remaster of _Star Wars: Episode I – Racer_ (1999), with improved presentation, refined racing, new circuits and pods, bonus modes, and future DLC-style expansions.
 
-**Long-term goal:** create an HD++ remaster/remake that elevates the original racing experience with upgraded visuals and presentation, refined gameplay, bonus content, and future DLC-style expansions such as new circuits, pods, challenges, and game modes. GameCube and Wii-specific builds are part of the plan.
+**Primary ambition — HD++ Remaster:** raise visual clarity, asset detail, atmosphere, and overall polish as far as native GameCube/Wii hardware permits, then build out more racing content.
 
-The complete remaster, all bonus features, and DLC-style content are future goals—not a claim that they are already implemented. The current development status and the next playable milestone are documented above and in the [roadmap](docs/ROADMAP.md).
+**Stretch ambition — HD+++ Premium:** pursue a richer premium-quality presentation and broader content offering if technical feasibility, time, contributors, and rights allow it. A true HD-resolution build would require a separate, more capable platform target.
+
+**Ideal long-range dream:** explore a broader remake-style _Star Wars Racer_ experience, if a realistic and rights-compatible scope can be established.
+
+These are aspirations, not claims that the full remaster, bonus modes, new content, or Premium tier are already implemented. “HD++” and “HD+++ Premium” describe project ambition and do not imply native 720p/1080p output from GameCube/Wii. Current status and the next playable milestone are documented above and in the [roadmap](docs/ROADMAP.md).
 
 ---
 
