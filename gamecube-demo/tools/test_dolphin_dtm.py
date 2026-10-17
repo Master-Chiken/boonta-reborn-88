@@ -146,6 +146,36 @@ class DolphinDtmTests(unittest.TestCase):
                                  bytes((NEUTRAL_AXIS, NEUTRAL_AXIS)))
                 self.assertFalse(record(neutral_blob, frame)[1] & (DPAD_LEFT | DPAD_RIGHT))
 
+    def test_custom_stick_deflection_encodes_signed_offsets_and_releases(self) -> None:
+        # DTM stores analog axes as unsigned bytes; the game sees signed offsets from 128.
+        for deflection in (-128, -9, -8, -1, 0, 1, 7, 8, 9, 127):
+            with self.subTest(deflection=deflection):
+                blob = build_dtm(
+                    650, steering="none", steering_source="stick",
+                    stick_deflection=deflection,
+                )
+                self.assertEqual(record(blob, 30)[4], NEUTRAL_AXIS + deflection)
+                self.assertEqual(record(blob, 599)[4], NEUTRAL_AXIS + deflection)
+                self.assertEqual(record(blob, 600)[4], NEUTRAL_AXIS)
+                self.assertEqual(record(blob, 30)[5], NEUTRAL_AXIS)
+                self.assertFalse(record(blob, 30)[1] & (DPAD_LEFT | DPAD_RIGHT))
+
+    def test_custom_stick_deflection_rejects_invalid_scope_and_values(self) -> None:
+        for invalid in (True, -129, 128, 1.5, "8"):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(ValueError):
+                    build_dtm(10, steering="none", steering_source="stick",
+                              stick_deflection=invalid)  # type: ignore[arg-type]
+        with self.assertRaises(ValueError):
+            build_dtm(10, steering="none", steering_source="dpad",
+                      stick_deflection=8)
+        with self.assertRaises(ValueError):
+            build_dtm(10, steering="none", scenario="full-race",
+                      steering_source="stick", stick_deflection=8)
+        with self.assertRaises(ValueError):
+            build_dtm(10, steering="right", steering_source="stick",
+                      stick_deflection=8)
+
     def test_rejects_unknown_steering_source(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(10, steering_source="both")  # type: ignore[arg-type]
