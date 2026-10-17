@@ -38,6 +38,7 @@
 #define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
 #define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
 #define RACE_LAP_LIMIT       3U
+#define PLAYER_ANCHOR_LOCAL_Z 1.0f
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
 #define ROAD_Y             (-1.05f)
 #define PI_F               3.14159265358979323846f
@@ -663,7 +664,7 @@ static void add_canyon_scenery(void)
 }
 static void add_player_exhaust(void)
 {
-    const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
+    const float center = road_center_at(PLAYER_ANCHOR_LOCAL_Z, g_distance) + g_player_lateral;
     const float engine_offset = 0.82f;
     const float flame_length = 0.22f + 0.55f * g_speed + (g_boost_active ? 0.55f : 0.0f);
 
@@ -1106,7 +1107,7 @@ static void draw_frame(void)
         g_vertex_y_offset = 0.0f;
     }
     g_track_world_transform_enabled = 2;
-    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_local_z = PLAYER_ANCHOR_LOCAL_Z;
     g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
     g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
     g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
@@ -1239,7 +1240,9 @@ int main(int argc, char **argv)
          * clamped track widths cannot create a hidden collision/render mismatch.
          */
         {
-            const float local_half_width = track_half_width_at(g_distance);
+            /* Match the width at the player's rendered anchor, not the camera/distance origin. */
+            const float local_half_width = track_half_width_at(
+                g_distance + (4.0f - PLAYER_ANCHOR_LOCAL_Z));
             const float normalized_lateral = boonta_normalize_road_lateral(
                 g_player_lateral, local_half_width);
             g_speed = boonta_speed_after_offroad_scaled(
