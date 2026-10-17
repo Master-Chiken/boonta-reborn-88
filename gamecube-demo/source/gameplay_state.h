@@ -186,9 +186,21 @@ static inline float boonta_steering_input(float stick_x,
                                           int left_held,
                                           int right_held)
 {
-    /* Corrupt controller data must not poison lateral physics with NaN. */
+    const float deadzone = 8.0f;
+    float steering;
+
+    /* Recover from corrupt data, and prevent idle-stick noise from drifting the pod. */
     if (!isfinite(stick_x)) stick_x = 0.0f;
-    float steering = stick_x / 128.0f;
+    if (stick_x >= -deadzone && stick_x <= deadzone) {
+        steering = 0.0f;
+    } else if (stick_x > 0.0f) {
+        /* Rescale outside the deadzone so the full positive range still reaches +1. */
+        steering = (stick_x - deadzone) / (127.0f - deadzone);
+    } else {
+        /* The signed controller range has one extra negative value (-128). */
+        steering = (stick_x + deadzone) / (128.0f - deadzone);
+    }
+
     if (left_held) steering -= 0.7f;
     if (right_held) steering += 0.7f;
     if (steering < -1.0f) return -1.0f;
