@@ -42,7 +42,8 @@ NEUTRAL_AXIS = 128
 
 def _controller_state(frame: int, steering: str = "right",
                       scenario: str = "control-smoke",
-                      steering_source: str = "dpad") -> bytes:
+                      steering_source: str = "dpad",
+                      stick_deflection: int | None = None) -> bytes:
     """Return one packed controller poll with one explicit steering source."""
     if scenario == "reset-check":
         # First create a state that differs visibly from reset: accelerate, boost,
@@ -97,7 +98,10 @@ def _controller_state(frame: int, steering: str = "right",
             elif steering == "left":
                 flags |= DPAD_LEFT
         elif steering_source == "stick":
-            if steering == "right":
+            if stick_deflection is not None:
+                # The CLI uses signed deflection from center; DTM stores unsigned axes.
+                stick_x = NEUTRAL_AXIS + stick_deflection
+            elif steering == "right":
                 stick_x = 255
             elif steering == "left":
                 stick_x = 0
@@ -111,7 +115,8 @@ def _controller_state(frame: int, steering: str = "right",
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
               steering: str = "right", scenario: str = "control-smoke",
-              steering_source: str = "dpad") -> bytes:
+              steering_source: str = "dpad",
+              stick_deflection: int | None = None) -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -127,6 +132,16 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("steering_source must be one of: dpad, stick")
     if scenario == "full-race" and steering != "none":
         raise ValueError("full-race scenario requires --steering none")
+    if stick_deflection is not None:
+        if (not isinstance(stick_deflection, int) or isinstance(stick_deflection, bool)
+                or stick_deflection < -128 or stick_deflection > 127):
+            raise ValueError("stick_deflection must be a signed controller value between -128 and 127")
+        if steering_source != "stick":
+            raise ValueError("stick_deflection requires steering_source='stick'")
+        if scenario != "control-smoke":
+            raise ValueError("stick_deflection is only supported in control-smoke scenarios")
+        if steering != "none":
+            raise ValueError("set steering='none' when using a custom stick_deflection")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
@@ -147,7 +162,8 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame, steering, scenario, steering_source))
+        data.extend(_controller_state(frame, steering, scenario, steering_source,
+                                      stick_deflection))
     return bytes(data)
 
 
@@ -165,9 +181,11 @@ def main() -> int:
                         help="short control validation, full race, Y-reset, Start-pause, or Start-resume check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
+    parser.add_argument("--stick-deflection", type=int,
+                        help="explicit signed main-stick offset from center (-128..127); requires --steering-source stick, --steering none, and --scenario control-smoke")
     args = parser.parse_args()
     payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario,
-                        args.steering_source)
+                        args.steering_source, args.stick_deflection)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
     print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, "
