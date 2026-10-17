@@ -52,7 +52,8 @@ Once the first race is reliable, the roadmap opens up to the bigger remaster vis
 | C and gameplay | Improve steering feel, race-state transitions, collisions, lap timing, or reset/restart behavior—with regression tests. |
 | Graphics and 3D | Improve the GX scene, camera, course readability, or the validated mesh/texture path. |
 | Python and tooling | Strengthen format validators, synthetic fixtures, artifact checks, and reproducible diagnostics. |
-| Original-game modding and asset research | Investigate documented formats, modding workflows, compatibility, and model/texture conversion paths; share reproducible research. |\n| Research and documentation | Document observed behavior, clarify formats, improve setup instructions, or help maintain the test checklist. |
+| Original-game modding and asset research | Investigate documented formats, modding workflows, compatibility, and model/texture conversion paths; share reproducible research. |
+| Research and documentation | Document observed behavior, clarify formats, improve setup instructions, or help maintain the test checklist. |
 | GameCube/Wii hardware | Reproduce the same checks on real hardware and clearly record the hardware, video mode, controls, and results. |
 
 ### Good places to start
