@@ -1127,7 +1127,7 @@ static void draw_frame(void)
     GX_SetCurrentMtx(GX_PNMTX0);
     draw_vertex_buffer();
     g_track_world_transform_enabled = 2;
-    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_local_z = PLAYER_ANCHOR_LOCAL_Z;
     g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
     g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
     g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
