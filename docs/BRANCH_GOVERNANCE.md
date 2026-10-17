@@ -35,6 +35,6 @@ It does not impose a numeric cap, fail because of branch count, create an issue 
 
 ## Automated intake of branch work
 
-The companion documentation BRANCH_INTAKE.md describes how the branch intake queue compares candidate tips with the default branch and prepares reviewable PRs for small, distinct changes. It runs relevant tests and defers overlapping, oversized, and Step 102/source-import changes for manual review.
+The companion [Branch intake queue](BRANCH_INTAKE.md) compares candidate tips with the default branch and prepares reviewable PRs for small, distinct changes. It runs relevant tests and defers overlapping, oversized, and Step 102/source-import changes for manual review.
 
 The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it.
