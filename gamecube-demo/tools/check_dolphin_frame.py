@@ -397,6 +397,8 @@ def main() -> int:
                         help="matching frame rendered with --steering none")
     parser.add_argument("--expect-finish", action="store_true",
                         help="check for the three-lap finish flag instead of comparing steering frames")
+    parser.add_argument("--expect-finish-label", action="store_true",
+                        help="check for the orange FINISH label above the centered finish checkerboard")
     parser.add_argument("--expect-reset", action="store_true",
                         help="check that speed/lap/heat are empty and boost is refilled after Y reset")
     parser.add_argument("--expect-pause", action="store_true",
@@ -413,8 +415,16 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
-    if sum((args.expect_finish, args.expect_reset, args.expect_pause, args.expect_resume)) > 1:
-        parser.error("--expect-finish, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+    if sum((args.expect_finish, args.expect_finish_label, args.expect_reset,
+            args.expect_pause, args.expect_resume)) > 1:
+        parser.error("--expect-finish, --expect-finish-label, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+    if args.expect_finish_label:
+        if args.baseline is not None:
+            parser.error("--expect-finish-label cannot be combined with --baseline")
+        if not finish_label_visible(image):
+            raise SystemExit("The orange FINISH label was not detected in the expected top-center finish-banner region.")
+        print("Orange FINISH label detected in the visible Dolphin frame.")
+        return 0
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")
