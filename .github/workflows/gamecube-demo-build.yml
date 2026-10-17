@@ -252,9 +252,9 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          # Run the longer finish check automatically only for this spline-integration PR.
+          # Run the longer finish check only for selected acceptance-focused branches.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/steering-stick-deadzone-20261017')) }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
         run: |
