@@ -327,8 +327,10 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(neutral_steering_deltas(baseline, same_frame), (0.0, 0.0))
         self.assertTrue(neutral_steering_stable(baseline, same_frame, max_shift=2.0))
 
+        # Track phase can change road position between captures; only the player's
+        # lateral HUD tick is a deterministic no-steering signal.
         moved_road = make_frame(road_center=404, marker_center=400)
-        self.assertFalse(neutral_steering_stable(baseline, moved_road, max_shift=2.0))
+        self.assertTrue(neutral_steering_stable(baseline, moved_road, max_shift=2.0))
 
         moved_marker = make_frame(road_center=400, marker_center=405)
         self.assertFalse(neutral_steering_stable(baseline, moved_marker, max_shift=2.0))
