@@ -33,6 +33,9 @@ CHECKED_IN_HEADERS = {
     "original_synthetic_diamond.json": (
         ROOT / "gamecube-demo" / "source" / "generated_mesh_diamond.h"
     ),
+    "original_twin_engine_racer.json": (
+        ROOT / "gamecube-demo" / "source" / "generated_mesh_player_pod.h"
+    ),
 }
 EXPORTER = ROOT / "tools" / "mesh_format" / "export_mesh_header.py"
 
