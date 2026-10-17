@@ -254,7 +254,8 @@ jobs:
         env:
           # Run the longer finish check automatically only for this spline-integration PR.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017')) }}
+          CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && github.head_ref == 'feat/game-finish-banner-label-20261017' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -447,6 +448,10 @@ jobs:
                 capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                 echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
+                if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
+                  python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
+                  echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
+                fi
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi

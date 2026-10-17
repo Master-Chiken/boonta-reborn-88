@@ -31,7 +31,9 @@
 #include <string.h>
 
 #define GX_FIFO_SIZE       (256 * 1024)
-#define VERTEX_CAPACITY    4096U
+/* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
+ * Keep enough headroom so append operations don't silently drop the checkerboard. */
+#define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
@@ -160,7 +162,8 @@ static const u8 g_font5x7[128][7] = {
     ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
     ['C'] = {14,17,16,16,16,17,14}, ['D'] = {30,17,17,17,17,17,30},
     ['H'] = {17,17,17,31,17,17,17},
-    ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
+    ['E'] = {31,16,16,30,16,16,31}, ['F'] = {31,16,16,30,16,16,16},
+    ['I'] = {14,4,4,4,4,4,14}, ['N'] = {17,25,21,19,17,17,17},
     ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
     ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
     ['T'] = {31,4,4,4,4,4,4}, [':'] = {0,4,4,0,4,4,0},
@@ -445,6 +448,8 @@ static void triangle_add(Point3 a, Point3 b, Point3 c, GXColor color)
 
 static void quad_add(Point3 a, Point3 b, Point3 c, Point3 d, GXColor color)
 {
+    /* Reserve the entire quad before submitting either triangle. */
+    if ((unsigned int)g_vertex_count + 6U > VERTEX_CAPACITY) return;
     triangle_add(a, b, c, color);
     triangle_add(a, c, d, color);
 }
@@ -978,7 +983,7 @@ static void draw_hud(void)
                     g_slide_active ? boost_fill : empty);
     }
 
-    /* Symbolic finish banner: a checkered flag made from original GX quads. */
+    /* Finish banner: a readable FINISH label and checkered flag made from original GX quads. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
@@ -991,6 +996,7 @@ static void draw_hud(void)
         unsigned int col;
         append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
                            0.6f, finish_panel);
+        append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);
         for (row = 0; row < 3U; ++row) {
             for (col = 0; col < 4U; ++col) {
                 const GXColor square = (((row + col) & 1U) == 0U) ? white : black;
