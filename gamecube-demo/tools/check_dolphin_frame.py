@@ -361,6 +361,35 @@ def finish_banner_visible(image: Image.Image) -> bool:
     return False
 
 
+def finish_label_visible(image: Image.Image) -> bool:
+    """Detect the orange FINISH glyphs above the centered checkerboard.
+
+    Project the small HUD region from logical 800x480 coordinates into direct
+    framebuffer and Dolphin-window captures. Search only the narrow banner-top
+    ROI so orange boost/HUD elements elsewhere cannot satisfy this check.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    scale_x = width / 800.0
+    scale_y = viewport_height / 480.0
+    center_x = width / 2.0
+    center_y = viewport_top + viewport_height / 2.0
+    x0 = max(0, int(center_x - 21.0 * scale_x))
+    x1 = min(width, int(center_x + 21.0 * scale_x))
+    y0 = max(0, int(center_y - 35.0 * scale_y))
+    y1 = min(height, int(center_y - 20.0 * scale_y))
+    pixels = image.load()
+    orange_pixels = 0
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            r, g, b = pixels[x, y]
+            if r >= 220 and 120 <= g <= 190 and b <= 100:
+                orange_pixels += 1
+    return orange_pixels >= 12
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
@@ -368,6 +397,8 @@ def main() -> int:
                         help="matching frame rendered with --steering none")
     parser.add_argument("--expect-finish", action="store_true",
                         help="check for the three-lap finish flag instead of comparing steering frames")
+    parser.add_argument("--expect-finish-label", action="store_true",
+                        help="check for the orange FINISH label above the centered finish checkerboard")
     parser.add_argument("--expect-reset", action="store_true",
                         help="check that speed/lap/heat are empty and boost is refilled after Y reset")
     parser.add_argument("--expect-pause", action="store_true",
@@ -384,8 +415,16 @@ def main() -> int:
                         help="minimum road-edge shift opposite the requested steering direction")
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
-    if sum((args.expect_finish, args.expect_reset, args.expect_pause, args.expect_resume)) > 1:
-        parser.error("--expect-finish, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+    if sum((args.expect_finish, args.expect_finish_label, args.expect_reset,
+            args.expect_pause, args.expect_resume)) > 1:
+        parser.error("--expect-finish, --expect-finish-label, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+    if args.expect_finish_label:
+        if args.baseline is not None:
+            parser.error("--expect-finish-label cannot be combined with --baseline")
+        if not finish_label_visible(image):
+            raise SystemExit("The orange FINISH label was not detected in the expected top-center finish-banner region.")
+        print("Orange FINISH label detected in the visible Dolphin frame.")
+        return 0
     if args.expect_finish:
         if args.baseline is not None:
             parser.error("--expect-finish cannot be combined with --baseline")

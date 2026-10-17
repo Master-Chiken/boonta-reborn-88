@@ -4,7 +4,6 @@
 #include <math.h>
 
 #define BOONTA_RIVAL_COUNT 3U
-#define BOONTA_RIVAL_COUNT 3U
 
 /*
  * Resettable live race state. Kept separate from renderer/camera bookkeeping so
@@ -56,6 +55,8 @@ static inline float boonta_frame_scale_from_delta(float delta_seconds)
 static inline float boonta_sanitize_frame_scale(float frame_scale)
 {
     if (!isfinite(frame_scale) || frame_scale < 0.0f) return 0.0f;
+    /* Match the 50 ms frame-delta cap: 0.05 s * 60 Hz = 3 simulation frames. */
+    if (frame_scale > 3.0f) return 3.0f;
     return frame_scale;
 }
 
@@ -352,11 +353,25 @@ static inline unsigned int boonta_lap_count_after_frame(unsigned int lap_count,
                                                          float current_distance,
                                                          float lap_distance)
 {
-    if (boonta_lap_was_crossed(previous_distance, current_distance, lap_distance) &&
-        lap_count < 0xffffffffU) {
-        return lap_count + 1U;
+    double previous_lap_index;
+    double current_lap_index;
+    double crossed_laps;
+    unsigned int remaining_laps;
+
+    if (!isfinite(previous_distance) || !isfinite(current_distance) ||
+        !isfinite(lap_distance) || lap_distance <= 0.0f ||
+        previous_distance < 0.0f || current_distance < previous_distance) {
+        return lap_count;
     }
-    return lap_count;
+
+    previous_lap_index = floor((double)previous_distance / (double)lap_distance);
+    current_lap_index = floor((double)current_distance / (double)lap_distance);
+    crossed_laps = current_lap_index - previous_lap_index;
+    if (!(crossed_laps >= 1.0)) return lap_count;
+
+    remaining_laps = 0xffffffffU - lap_count;
+    if (crossed_laps >= (double)remaining_laps) return 0xffffffffU;
+    return lap_count + (unsigned int)crossed_laps;
 }
 
 static inline int boonta_race_is_finished(unsigned int lap_count, unsigned int lap_limit)

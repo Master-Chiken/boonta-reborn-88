@@ -1,9 +1,9 @@
 /*
  * Boonta Reborn 88 — clean-room GameCube rendering/input prototype.
  *
- * Original procedural geometry only. This small milestone validates a native
- * GX render path, controller-driven steering, throttle/brake, and a scrolling
- * test road. It does not include commercial game code, models, sounds, or data.
+ * Original authored mesh/texture sources plus procedural course/effects.
+ * Native GX renderer with controller-driven steering, throttle/brake and a
+ * scrolling closed-loop track. No commercial game code/assets are included.
  */
 #include <gccore.h>
 #include <ogc/pad.h>
@@ -15,6 +15,8 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "generated_track.h"
+#include "generated_mesh_player_pod.h"
+#include "generated_texture_player_pod.h"
 
 #if !BOONTA_TRACK_CLOSED_LOOP
 #error "The scrolling GameCube race runtime currently requires a closed-loop track."
@@ -29,7 +31,9 @@
 #include <string.h>
 
 #define GX_FIFO_SIZE       (256 * 1024)
-#define VERTEX_CAPACITY    4096U
+/* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
+ * Keep enough headroom so append operations don't silently drop the checkerboard. */
+#define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    3.6f
 #define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
@@ -67,6 +71,23 @@ static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 
+/* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
+#define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
+#define POD_TEXTURE_HEIGHT BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_HEIGHT
+static GXTexObj g_pod_texture;
+static u16 g_pod_texture_pixels[POD_TEXTURE_WIDTH * POD_TEXTURE_HEIGHT] ATTRIBUTE_ALIGN(32);
+
+static void initialise_pod_texture(void)
+{
+    memcpy(g_pod_texture_pixels,
+           boonta_generated_texture_original_twin_engine_panel_pixels,
+           sizeof(g_pod_texture_pixels));
+    DCFlushRange(g_pod_texture_pixels, sizeof(g_pod_texture_pixels));
+    GX_InitTexObj(&g_pod_texture, g_pod_texture_pixels,
+                  POD_TEXTURE_WIDTH, POD_TEXTURE_HEIGHT, GX_TF_RGB565,
+                  GX_CLAMP, GX_CLAMP, GX_FALSE);
+}
+
 /*
  * Keep the established runtime expressions readable while placing all state
  * cleared by reset into one host-testable object.
@@ -101,14 +122,9 @@ static const GXColor C_EDGE_R = { 50, 225, 246, 255 };
 static const GXColor C_RAIL_A = { 36, 98, 120, 255 };
 static const GXColor C_RAIL_B = { 50, 134, 150, 255 };
 static const GXColor C_MARKER = { 239, 230, 175, 255 };
-static const GXColor C_POD_TOP = { 33, 164, 220, 255 };
-static const GXColor C_POD_SIDE = { 17, 75, 139, 255 };
-static const GXColor C_POD_ACCENT = { 70, 231, 248, 255 };
 static const GXColor C_THRUST = { 255, 132, 45, 255 };
 static const GXColor C_THRUST_HOT = { 255, 215, 99, 255 };
 static const GXColor C_EXHAUST_CORE = { 255, 244, 190, 255 };
-static const GXColor C_TETHER = { 20, 43, 66, 255 };
-static const GXColor C_TETHER_HIGHLIGHT = { 67, 205, 231, 255 };
 static const GXColor C_CANYON_DARK = { 79, 48, 42, 255 };
 static const GXColor C_CANYON_MID = { 130, 75, 48, 255 };
 static const GXColor C_CANYON_LIGHT = { 170, 108, 62, 255 };
@@ -123,7 +139,8 @@ static const u8 g_font5x7[128][7] = {
     ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
     ['C'] = {14,17,16,16,16,17,14}, ['D'] = {30,17,17,17,17,17,30},
     ['H'] = {17,17,17,31,17,17,17},
-    ['E'] = {31,16,16,30,16,16,31}, ['I'] = {14,4,4,4,4,4,14},
+    ['E'] = {31,16,16,30,16,16,31}, ['F'] = {31,16,16,30,16,16,16},
+    ['I'] = {14,4,4,4,4,4,14}, ['N'] = {17,25,21,19,17,17,17},
     ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
     ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
     ['T'] = {31,4,4,4,4,4,4}, [':'] = {0,4,4,0,4,4,0},
@@ -408,6 +425,8 @@ static void triangle_add(Point3 a, Point3 b, Point3 c, GXColor color)
 
 static void quad_add(Point3 a, Point3 b, Point3 c, Point3 d, GXColor color)
 {
+    /* Reserve the entire quad before submitting either triangle. */
+    if ((unsigned int)g_vertex_count + 6U > VERTEX_CAPACITY) return;
     triangle_add(a, b, c, color);
     triangle_add(a, c, d, color);
 }
@@ -534,10 +553,22 @@ static void add_road(void)
 }
 
 /*
- * Original low-poly canyon walls give the test road a readable world silhouette.
- * The panels are deliberately simple, stable geometry rather than extracted game art.
- * Their bases sit just above the desert floor and remain outside the track rails.
+ * Original low-poly canyon walls use a deterministic ridge profile so the
+ * horizon reads as layered rock instead of a row of identical flat slabs.
+ * Adjacent panels share boundary heights; each wall stays aligned to the track.
  */
+static float canyon_ridge_height_for_phase(unsigned int phase)
+{
+    switch (phase % 10U) {
+    case 2U: return 5.20f;
+    case 3U: return 4.55f;
+    case 7U: return 5.55f;
+    case 8U: return 4.75f;
+    default:
+        return 3.30f + (float)((phase * 3U + 1U) % 4U) * 0.19f;
+    }
+}
+
 static void add_canyon_scenery(void)
 {
     const float wall_margin = 4.2f;
@@ -548,24 +579,27 @@ static void add_canyon_scenery(void)
 
     for (i = 0U; i < 18U; ++i) {
         const unsigned int wall_phase = i + passed_wall_sections;
-        /* More, shorter panels keep the canyon continuous around tight spline bends. */
+        /* Short panels keep the faceted cliffs continuous through spline bends. */
         const float z_near = -2.0f - (float)i * wall_length;
         const float z_far = z_near - wall_length;
         const float center_near = road_center_at(z_near, g_distance);
         const float center_far = road_center_at(z_far, g_distance);
         const float base_offset_near = road_half_width_at(z_near, g_distance) + wall_margin;
         const float base_offset_far = road_half_width_at(z_far, g_distance) + wall_margin;
-        /* Keep wall footings aligned with the matching spline-following floor ribbon. */
         const float base_y_near = road_height_at(z_near, g_distance) - 0.24f;
         const float base_y_far = road_height_at(z_far, g_distance) - 0.24f;
-        const float near_height = 3.8f + (float)(wall_phase % 4U) * 0.15f;
-        const float far_height = 3.8f + (float)((wall_phase + 1U) % 4U) * 0.15f;
-        const float near_top_offset = base_offset_near + 0.15f + (float)(wall_phase % 2U) * 0.08f;
-        const float far_top_offset = base_offset_far + 0.15f + (float)((wall_phase + 1U) % 2U) * 0.08f;
         unsigned int side_index;
 
         for (side_index = 0U; side_index < 2U; ++side_index) {
             const float side = side_index == 0U ? -1.0f : 1.0f;
+            /* Shift each side's profile, retaining a shared phase per panel edge. */
+            const unsigned int ridge_phase = wall_phase + side_index * 3U;
+            const float near_height = canyon_ridge_height_for_phase(ridge_phase);
+            const float far_height = canyon_ridge_height_for_phase(ridge_phase + 1U);
+            const float near_top_offset = base_offset_near + 0.15f
+                + (float)(ridge_phase % 2U) * 0.08f;
+            const float far_top_offset = base_offset_far + 0.15f
+                + (float)((ridge_phase + 1U) % 2U) * 0.08f;
             const Point3 base_near = {
                 center_near + side * base_offset_near, base_y_near, z_near
             };
@@ -579,7 +613,7 @@ static void add_canyon_scenery(void)
                 center_far + side * far_top_offset, base_y_far + far_height, z_far
             };
             GXColor face;
-            const unsigned int tone_phase = wall_phase + side_index;
+            const unsigned int tone_phase = ridge_phase + side_index;
 
             if ((tone_phase % 4U) == 0U) {
                 face = C_CANYON_LIGHT;
@@ -589,68 +623,50 @@ static void add_canyon_scenery(void)
                 face = C_CANYON_DARK;
             }
 
-            /* Same tone on both triangles avoids an oversized diagonal facet. */
+            /* Two wall triangles share their boundary heights; no top-edge gaps. */
             triangle_add(base_near, top_near, top_far, face);
             triangle_add(base_near, top_far, base_far, face);
+
+            /*
+             * Outward-leaning rock fins add a few readable peaks to the horizon.
+             * They're placed in local track coordinates and share the wall's
+             * spline transform; the contrasting triangles provide simple facets.
+             */
+            if ((ridge_phase % 6U) == 2U) {
+                const float ridge_z = (z_near + z_far) * 0.5f;
+                const float ridge_center = road_center_at(ridge_z, g_distance);
+                const float ridge_base_offset =
+                    road_half_width_at(ridge_z, g_distance) + wall_margin + 0.15f;
+                const float ridge_base_y = road_height_at(ridge_z, g_distance) - 0.24f;
+                const float base_height = (near_height + far_height) * 0.5f;
+                const float ridge_extra = 0.85f + (float)(ridge_phase % 3U) * 0.20f;
+                const Point3 ridge_peak = {
+                    ridge_center + side * (ridge_base_offset + 0.38f),
+                    ridge_base_y + base_height + ridge_extra,
+                    ridge_z
+                };
+                const Point3 ridge_shoulder = {
+                    ridge_center + side * (ridge_base_offset + 0.05f),
+                    ridge_base_y + base_height + ridge_extra * 0.42f,
+                    ridge_z - 0.85f
+                };
+                const GXColor ridge_face = (ridge_phase & 1U) == 0U
+                    ? C_CANYON_LIGHT : C_CANYON_MID;
+
+                triangle_add(top_near, ridge_peak, top_far, ridge_face);
+                triangle_add(top_near, ridge_shoulder, ridge_peak, C_CANYON_DARK);
+                triangle_add(ridge_peak, ridge_shoulder, top_far, C_CANYON_MID);
+            }
         }
     }
     g_track_world_transform_enabled = 0;
 }
-static void add_player_pod(void)
+static void add_player_exhaust(void)
 {
     const float center = road_center_at(1.0f, g_distance) + g_player_lateral;
     const float engine_offset = 0.82f;
     const float flame_length = 0.22f + 0.55f * g_speed + (g_boost_active ? 0.55f : 0.0f);
 
-    /*
-     * Twin engines need to read as two separate masses connected to a cockpit,
-     * rather than one blue block. Draw the narrow clean-room tether strips first
-     * so their anchors disappear naturally beneath the engine nacelles.
-     */
-    quad_add((Point3){ center - 0.51f, -0.41f, 0.25f },
-             (Point3){ center - 0.48f, -0.61f, 0.25f },
-             (Point3){ center - 0.16f, -0.51f, -0.38f },
-             (Point3){ center - 0.21f, -0.40f, -0.38f }, C_TETHER);
-    quad_add((Point3){ center + 0.48f, -0.61f, 0.25f },
-             (Point3){ center + 0.51f, -0.41f, 0.25f },
-             (Point3){ center + 0.21f, -0.40f, -0.38f },
-             (Point3){ center + 0.16f, -0.51f, -0.38f }, C_TETHER);
-    quad_add((Point3){ center - 0.49f, -0.43f, 0.23f },
-             (Point3){ center - 0.48f, -0.48f, 0.23f },
-             (Point3){ center - 0.20f, -0.43f, -0.36f },
-             (Point3){ center - 0.21f, -0.40f, -0.36f }, C_TETHER_HIGHLIGHT);
-    quad_add((Point3){ center + 0.48f, -0.48f, 0.23f },
-             (Point3){ center + 0.49f, -0.43f, 0.23f },
-             (Point3){ center + 0.21f, -0.40f, -0.36f },
-             (Point3){ center + 0.20f, -0.43f, -0.36f }, C_TETHER_HIGHLIGHT);
-
-    /* Longer, wider-spaced nacelles give the racer a stronger twin-engine silhouette. */
-    box_add(center - engine_offset, -0.62f, 1.08f,
-            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-    box_add(center + engine_offset, -0.62f, 1.08f,
-            0.31f, 0.25f, 0.85f, C_POD_TOP, C_POD_SIDE, C_THRUST);
-
-    /* Central body and raised canopy keep the cockpit visually separate from the engines. */
-    box_add(center, -0.49f, 0.23f, 0.35f, 0.09f, 0.20f,
-            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
-    box_add(center, -0.34f, -0.12f, 0.22f, 0.11f, 0.24f,
-            C_POD_ACCENT, C_POD_SIDE, C_POD_SIDE);
-
-    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
-                 (Point3){ center + 0.42f, -0.52f, 0.52f },
-                 (Point3){ center, -0.28f, -0.55f }, C_POD_TOP);
-    triangle_add((Point3){ center - 0.42f, -0.52f, 0.52f },
-                 (Point3){ center, -0.28f, -0.55f },
-                 (Point3){ center - 0.08f, -0.45f, -0.40f }, C_POD_ACCENT);
-    triangle_add((Point3){ center + 0.42f, -0.52f, 0.52f },
-                 (Point3){ center + 0.08f, -0.45f, -0.40f },
-                 (Point3){ center, -0.28f, -0.55f }, C_POD_SIDE);
-
-    /*
-     * Exhaust length follows speed, with an additional boost plume. This is
-     * intentionally simple original geometry, but its state is now readable
-     * in the scene instead of only in the HUD meters.
-     */
     if (g_speed > 0.12f) {
         const GXColor thrust = (g_boost_active || g_speed > 0.70f)
             ? C_THRUST_HOT : C_THRUST;
@@ -662,7 +678,6 @@ static void add_player_pod(void)
                 0.15f, 0.14f, flame_length * 0.5f,
                 thrust, C_THRUST, C_THRUST);
 
-        /* Small hot cores sit just behind the plume so boost has a brighter tip. */
         quad_add((Point3){ center - engine_offset - 0.065f, -0.68f, exhaust_end + 0.02f },
                  (Point3){ center - engine_offset + 0.065f, -0.68f, exhaust_end + 0.02f },
                  (Point3){ center - engine_offset + 0.065f, -0.56f, exhaust_end + 0.02f },
@@ -727,6 +742,50 @@ static void draw_vertex_buffer(void)
         GX_Color4u8(v->r, v->g, v->b, v->a);
     }
     GX_End();
+}
+
+/*
+ * Submit one original indexed mesh through the validated GX path. Each mesh is
+ * drawn separately so the existing procedural scene keeps its vertex budget;
+ * local offsets make the test fixtures distinguishable in the same camera view.
+ */
+static int draw_player_pod_asset(const BoontaMeshView *mesh)
+{
+    size_t i;
+
+    if (mesh == NULL || boonta_mesh_validate(mesh) != BOONTA_MESH_VALID) {
+        return 0;
+    }
+
+    GX_LoadTexObj(&g_pod_texture, GX_TEXMAP0);
+    GX_SetNumTexGens(1);
+    GX_SetNumTevStages(1);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+    GX_SetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY);
+    GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
+    GX_SetVtxAttrFmt(GX_VTXFMT0, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+
+    GX_Begin(GX_TRIANGLES, GX_VTXFMT0, (u16)mesh->index_count);
+    for (i = 0U; i < mesh->index_count; ++i) {
+        const BoontaMeshVertex *v = &mesh->vertices[mesh->indices[i]];
+        const Point3 local = {
+            g_vehicle_anchor_center_x + g_player_lateral + v->x,
+            v->y + g_vertex_y_offset,
+            v->z
+        };
+        const Point3 world = track_vehicle_local_to_world(local);
+        GX_Position3f32(world.x, world.y, world.z);
+        GX_Color4u8(v->r, v->g, v->b, v->a);
+        GX_TexCoord2f32(v->u, v->v);
+    }
+    GX_End();
+
+    GX_SetVtxDesc(GX_VA_TEX0, GX_NONE);
+    GX_SetNumTexGens(0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_PASSCLR);
+    GX_SetTevOrder(GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
+    return 1;
 }
 
 static void append_screen_quad(float x0, float y0, float x1, float y1,
@@ -896,7 +955,7 @@ static void draw_hud(void)
                     g_slide_active ? boost_fill : empty);
     }
 
-    /* Symbolic finish banner: a checkered flag made from original GX quads. */
+    /* Finish banner: a readable FINISH label and checkered flag made from original GX quads. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
@@ -909,6 +968,7 @@ static void draw_hud(void)
         unsigned int col;
         append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
                            0.6f, finish_panel);
+        append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);
         for (row = 0; row < 3U; ++row) {
             for (col = 0; col < 4U; ++col) {
                 const GXColor square = (((row + col) & 1U) == 0U) ? white : black;
@@ -968,6 +1028,7 @@ static void initialise_video_and_gx(void)
     if (g_video_mode->viTVMode & VI_NON_INTERLACE) VIDEO_WaitVSync();
 
     GX_Init(g_gx_fifo, GX_FIFO_SIZE);
+    initialise_pod_texture();
     GX_SetCopyClear(C_SKY, 0x00FFFFFF);
     GX_SetViewport(0.0f, 0.0f, (f32)g_video_mode->fbWidth,
                    (f32)g_video_mode->efbHeight, 0.0f, 1.0f);
@@ -1049,7 +1110,7 @@ static void draw_frame(void)
     g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
     g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
     g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
-    add_player_pod();
+    add_player_exhaust();
     g_track_world_transform_enabled = 0;
     g_vertex_y_offset = 0.0f;
 
@@ -1064,6 +1125,14 @@ static void draw_frame(void)
     GX_LoadPosMtxImm(view, GX_PNMTX0);
     GX_SetCurrentMtx(GX_PNMTX0);
     draw_vertex_buffer();
+    g_track_world_transform_enabled = 2;
+    g_vehicle_anchor_local_z = 1.0f;
+    g_vehicle_anchor_progress = g_distance + (4.0f - g_vehicle_anchor_local_z);
+    g_vehicle_anchor_center_x = road_center_at(g_vehicle_anchor_local_z, g_distance);
+    g_vertex_y_offset = road_height_at(g_vehicle_anchor_local_z, g_distance) - ROAD_Y;
+    (void)draw_player_pod_asset(&boonta_generated_mesh_original_twin_engine_racer_view);
+    g_vertex_y_offset = 0.0f;
+    g_track_world_transform_enabled = 0;
     draw_hud();
 
     /*

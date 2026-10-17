@@ -406,8 +406,24 @@ static void three_lap_finish_tests(void) {
  laps = boonta_lap_count_after_frame(laps, 360.01f, 360.01f, 120.0f);
  assert(laps == 3U);
 
+ /* A large distance correction must count every crossed lap, not only one. */
+ assert(boonta_lap_count_after_frame(0U, 10.0f, 370.0f, 120.0f) == 3U);
+ assert(boonta_lap_count_after_frame(2U, 119.0f, 361.0f, 120.0f) == 5U);
+ /* Invalid or backwards movement never creates lap progress. */
+ assert(boonta_lap_count_after_frame(2U, 121.0f, 119.0f, 120.0f) == 2U);
+ assert(boonta_lap_count_after_frame(2U, 0.0f, INFINITY, 120.0f) == 2U);
+
  /* Lap count saturates instead of wrapping at UINT_MAX. */
  assert(boonta_lap_count_after_frame(0xffffffffU, 119.0f, 121.0f, 120.0f) == 0xffffffffU);
+ /* Multi-boundary increments must saturate, never wrap the unsigned counter. */
+ assert(boonta_lap_count_after_frame(0xfffffffeU, 0.0f, 360.0f, 120.0f) == 0xffffffffU);
+ /* A boundary reached exactly counts once; remaining on it does not count again. */
+ assert(boonta_lap_count_after_frame(0U, 119.0f, 120.0f, 120.0f) == 1U);
+ assert(boonta_lap_count_after_frame(1U, 120.0f, 120.0f, 120.0f) == 1U);
+ /* Invalid lap lengths and negative distances must leave progress unchanged. */
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, 0.0f) == 2U);
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, NAN) == 2U);
+ assert(boonta_lap_count_after_frame(2U, -1.0f, 240.0f, 120.0f) == 2U);
 }
 
 
@@ -701,7 +717,9 @@ static void invalid_scaled_frame_tests(void) {
  for (i = 0U; i < sizeof(invalid_scales) / sizeof(invalid_scales[0]); ++i) {
   const float scale = invalid_scales[i];
   assert(nearf(boonta_sanitize_frame_scale(scale), 0.0f));
+  assert(nearf(boonta_sanitize_frame_scale(1000.0f), 3.0f));
   assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, scale), 0.5f));
+  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f), 0.536f));
   assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, scale), 0.04f));
@@ -710,6 +728,18 @@ static void invalid_scaled_frame_tests(void) {
   assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, scale), -18.0f));
   assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, scale), 0.5f));
  }
+
+ /* Every frame-scaled physics helper must apply the same upper bound. */
+ assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f), boonta_speed_after_input_scaled(0.5f, 1, 0, 3.0f)));
+ assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, 1000.0f), boonta_boost_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, 1000.0f), boonta_engine_heat_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 1000.0f), boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_lateral_position_after_frame(1.0f, 0.04f, 1000.0f), boonta_lateral_position_after_frame(1.0f, 0.04f, 3.0f)));
+ assert(nearf(boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 1000.0f), boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 3.0f)));
+ assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, 1000.0f), boonta_rival_z_after_frame(-18.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, 1000.0f), boonta_speed_after_offroad_scaled(0.5f, 4.0f, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 1000.0f), boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 3.0f)));
+ assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
 }
 
 int main(void) {
