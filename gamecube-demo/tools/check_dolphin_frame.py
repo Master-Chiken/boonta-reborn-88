@@ -361,6 +361,35 @@ def finish_banner_visible(image: Image.Image) -> bool:
     return False
 
 
+def finish_label_visible(image: Image.Image) -> bool:
+    """Detect the orange FINISH glyphs above the centered checkerboard.
+
+    Project the small HUD region from logical 800x480 coordinates into direct
+    framebuffer and Dolphin-window captures. Search only the narrow banner-top
+    ROI so orange boost/HUD elements elsewhere cannot satisfy this check.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    scale_x = width / 800.0
+    scale_y = viewport_height / 480.0
+    center_x = width / 2.0
+    center_y = viewport_top + viewport_height / 2.0
+    x0 = max(0, int(center_x - 21.0 * scale_x))
+    x1 = min(width, int(center_x + 21.0 * scale_x))
+    y0 = max(0, int(center_y - 35.0 * scale_y))
+    y1 = min(height, int(center_y - 20.0 * scale_y))
+    pixels = image.load()
+    orange_pixels = 0
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            r, g, b = pixels[x, y]
+            if r >= 220 and 120 <= g <= 190 and b <= 100:
+                orange_pixels += 1
+    return orange_pixels >= 12
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("frame", type=Path, help="frame rendered with steering input")
