@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 from statistics import median
 from PIL import Image
@@ -413,8 +414,8 @@ def neutral_steering_stable(baseline: Image.Image, candidate: Image.Image,
     Road position can vary as the neutral car advances along a curved course, so the
     HUD marker (which directly encodes player_lateral) is the deterministic gate.
     """
-    if not (max_shift >= 0.0):
-        raise ValueError("max_shift must be non-negative")
+    if not math.isfinite(max_shift) or max_shift < 0.0:
+        raise ValueError("max_shift must be finite and non-negative")
     _, marker_shift = neutral_steering_deltas(baseline, candidate)
     return marker_shift <= max_shift
 
@@ -451,8 +452,8 @@ def main() -> int:
     if sum((args.expect_finish, args.expect_finish_label, args.expect_reset,
             args.expect_pause, args.expect_resume, args.expect_neutral_steering)) > 1:
         parser.error("The --expect-* validation modes are mutually exclusive")
-    if args.max_neutral_shift < 0.0:
-        parser.error("--max-neutral-shift must be non-negative")
+    if not math.isfinite(args.max_neutral_shift) or args.max_neutral_shift < 0.0:
+        parser.error("--max-neutral-shift must be finite and non-negative")
     if args.expect_finish_label:
         if args.baseline is not None:
             parser.error("--expect-finish-label cannot be combined with --baseline")
