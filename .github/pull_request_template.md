@@ -27,6 +27,16 @@ If a stage was already satisfied or is not applicable, briefly explain why rathe
 **Why this advances the playable vertical slice:**
 
 
+## Independent review (required)
+
+- [ ] A contributor other than the author reviewed the actual diff; link or identify the review.
+- [ ] Reviewer checked the implementation and whether tests genuinely exercise the changed behavior, including relevant edge/boundary cases.
+- [ ] AI-generated summaries or test claims were verified against the source diff, actual CI results, and available evidence.
+- [ ] Any blocking review feedback is resolved; no material code change was made after approval without revalidation.
+- [ ] Unknowns and unrun checks are explicitly marked NOT VERIFIED; no claim exceeds the evidence.
+
+If no independent reviewer or required runtime evidence is available, leave the PR unmerged and state what is blocking acceptance.
+
 ## Validation evidence
 
 **Checks run (include links to CI runs/artifacts where possible):**
