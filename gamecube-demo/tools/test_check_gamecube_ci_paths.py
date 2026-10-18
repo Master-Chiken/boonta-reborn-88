@@ -30,6 +30,7 @@ class GameCubePathSelectorTests(unittest.TestCase):
             "gamecube-demo/data/player_mesh.json",
             "gamecube-demo/tools/export_mesh.py",
             "tools/mesh_format/validate.py",
+            "tests/test_track_format.py",
             ".github/workflows/gamecube-demo-build.yml",
         ):
             with self.subTest(path=path):
