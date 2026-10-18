@@ -4,18 +4,16 @@
 
 [![GameCube demo CI](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml/badge.svg?branch=main)](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml)
 
-**Boonta Reborn 88 aims to become a fan-made remaster of _Star Wars: Episode I – Racer_ (1999) for Nintendo GameCube and Wii.** The original 1999 release did not receive a dedicated native edition for either console; this project is building a new homebrew experience for those systems, not claiming that an existing GameCube/Wii port already exists. The immediate goal is one reliable, enjoyable racing experience; the larger goal is a substantial visual, gameplay, and content upgrade.
+**Boonta Reborn 88 aims to make _Star Wars: Episode I – Racer_ (1999) playable on GameCube and/or Wii through reverse engineering, decompilation, recovery and conversion of original game data, and native porting.** The original release did not receive a dedicated native edition for either console. This is primarily a recovery-and-porting effort—not a from-scratch remake: at least 80% of engineering effort should go toward understanding the original executable/data and reusing relevant community work, tools, and mods.
 
-## Development order: gameplay first, always
+## Development order: recover the original game first
 
-The project follows this order without skipping ahead:
+1. **Reverse engineering and data recovery — at least 80% of engineering effort:** inventory the original releases, understand executable/data formats, document decompilation findings, and build reproducible extraction/conversion tools.
+2. **Reuse community work:** prioritize compatible mods, public GitHub research, parsers, format specifications and tooling; record upstream provenance, license and tested revision before adapting anything.
+3. **Native integration and acceptance:** connect recovered data and understood runtime behavior to GameCube/Wii, then prove a complete manually controlled race in visible Dolphin.
+4. **Improvements — the remaining effort:** prefer existing community improvements and mods. New bespoke systems, extra content and visual polish are secondary and should only be added when the core port is working or they directly unblock it.
 
-1. **Gameplay — absolute priority:** make controls, handling, collisions, boost/heat, rivals, camera, laps, finish, pause, reset/restart, and stability work reliably. The playable slice is not accepted until a complete three-lap race is verified with a real controller in visible Dolphin.
-2. **Core original-game content:** establish the essential tracks, pods, racing flow, rivals, and progression, using only material with documented provenance and appropriate rights.
-3. **Graphics and remaster polish:** improve models, textures, scenery, effects, and UI after gameplay is accepted and core content is underway.
-4. **Bonus content and DLC-style expansions:** new tracks/pods, bonus modes, packs, and broader remake ideas come last and must not delay the core experience.
-
-Apply “Make it work, make it good, make it fast” in that order.
+The current procedural prototype is a temporary test harness, not a replacement for the original game's content and behavior. See the [reverse-engineering and native-port plan](docs/REVERSE_ENGINEERING_PLAN.md).
 
 ## Longer-term possibilities
 
