@@ -82,3 +82,16 @@ This is an unofficial fan project. Reverse-engineering notes and original tools 
 ## Current status
 
 This document defines the intended work strategy; it does not claim that the original executable has been decompiled, that commercial assets have been recovered, or that a complete native port already works. Each claim should be upgraded only when a reproducible artifact and test evidence exist.
+## Initial community-source inventory (research leads, not yet integrated)
+
+These projects are useful starting points discovered during the initial survey. None should be treated as a drop-in GameCube/Wii port; each must be inspected for its actual target, compatibility, license and upstream activity before code is adapted.
+
+| Project | Potential value | Important limitation / next action |
+|---|---|---|
+| [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) | The most relevant starting point for PC executable analysis, function/symbol research, Ghidra setup, file-format reverse engineering and the community renderer/modding work. Its README reports 71.2% function analysis as of 12 June 2026. | Its stated goal is to document/reimplement some functions for modding, **not** a complete decompilation or matching compilation. Audit the license and separate PC-specific behavior from the console-port requirements. |
+| [swe1r-assets](https://github.com/akopetsch/swe1r-assets) | .NET library for reading, modifying and bit-perfectly reserializing model, spline, sprite and texture block files; README lists an MIT license. | Confirm the supported game-version/input files and whether the intermediate output can be converted to GX-friendly structures. Preserve upstream attribution and test round-trip behavior. |
+| [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) | Small parsers/extractors for spline, sprite and texture blocks, save data and selected N64 model chunks; README lists GPL-2.0-or-later. | The OpenSWE1R organization marks this tools repository deprecated. Treat it as format documentation/reference unless a specific tool proves useful; review GPL implications before integrating code. |
+| [SWE1R-Mods](https://github.com/louriccia/SWE1R-Mods) | Existing texture/track mods and unpack/repack scripts built on earlier community tooling. | Primarily aimed at replacing PC/N64 game data in the original game's expected layout. Check each file's provenance/license and determine whether the data can be transformed for the native target. |
+| [swep1r_decomp](https://github.com/DeonPoncini/swep1r_decomp) | Additional Ghidra output and type/signature research for the Steam/PC executable. | The README describes it as reference work, not a completed port or production-ready implementation. Compare against the more active SW_RACER_RE work before duplicating effort. |
+
+**Immediate follow-up:** create a per-project compatibility matrix and inspect the existing repository for any prior integration of these tools. Do not bulk-copy repositories or assets. The first useful deliverable should be a reproducible inventory of one original data file, its format/decoder, its license/provenance status, and the exact conversion path toward the GameCube/Wii build.
