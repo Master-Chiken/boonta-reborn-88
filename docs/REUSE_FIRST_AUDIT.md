@@ -37,6 +37,8 @@ A tool is not reusable merely because it exists: verify its target platform, inp
 | [OpenSWE1R/openswe1r](https://github.com/OpenSWE1R/openswe1r) | Historical open-source port architecture and knowledge about game behavior. | Deprecated and GPL-2.0; old PC-oriented implementation, not proven to build for GameCube/Wii. | Study architecture and algorithms; do not transplant wholesale. |
 | [swep1r_decomp](https://github.com/DeonPoncini/swep1r_decomp) | Additional Ghidra-generated PC executable types/signatures and function notes. | PC-specific research; confirm provenance and license of each artifact. | Cross-reference only; compare against SW_RACER_RE before duplicating analysis. |
 
+| [OpenSWE1R/blender-swe1r](https://github.com/OpenSWE1R/blender-swe1r) | Existing Blender importer/exporter for model, spline, texture, mesh, collision, and vertex-color data in the PC game's `data/lev01` block files. | GPL-3.0; Blender 4.0 add-on, work-in-progress, and no verified GameCube/Wii target support. Keep it as a linked format/structure reference unless the project owner explicitly reviews the license and integration implications. | Add to the research comparison alongside `swe1r-assets`; do not port the add-on or assume its exports are console-ready. |
+
 ## First practical target
 
 Do **not** start by building another generic asset framework. First:
