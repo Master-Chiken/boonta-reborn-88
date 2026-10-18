@@ -39,23 +39,51 @@ if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 
 if "command = association === 'OWNER' ? 'approve' : 'approve-denied';" not in dispatch:
     errors.append("Only the repository owner may issue the /approve command")
 
-# An on-demand review must inspect the pull request candidate, not default-branch main.
-# issue_comment events expose a pull_request URL on the issue payload rather than
-# github.event.pull_request.head.sha; use refs/pull/<number>/head as the fallback.
-checkout_marker = "      - name: 'Checkout Code'"
-if checkout_marker not in invoke:
-    errors.append("Gemini invoke workflow must include a Checkout Code step")
+# The review prompt/tools must remain trusted, while candidate source lives in a
+# separate directory. The candidate head is checked against GitHub PR metadata so
+# a moving ref cannot silently produce a stale review.
+trusted_checkout_marker = "      - name: 'Checkout Code'"
+if trusted_checkout_marker not in invoke:
+    errors.append("Gemini invoke workflow must include the trusted Checkout Code step")
 else:
-    checkout_step = invoke.split(checkout_marker, 1)[1].split("      - name:", 1)[0]
+    trusted_checkout_step = invoke.split(trusted_checkout_marker, 1)[1].split("      - name:", 1)[0]
+    for required_phrase in ("ref: main", "persist-credentials: 'false'"):
+        if required_phrase not in trusted_checkout_step:
+            errors.append(
+                f"Gemini review instructions must come from trusted main: missing {required_phrase!r}"
+            )
+
+candidate_checkout_marker = "      - name: 'Checkout PR Candidate'"
+if candidate_checkout_marker not in invoke:
+    errors.append("Gemini invoke workflow must checkout PR source separately")
+else:
+    candidate_checkout_step = invoke.split(candidate_checkout_marker, 1)[1].split("      - name:", 1)[0]
     for required_phrase in (
-        "ref: ${{ github.event.pull_request.head.sha",
-        "refs/pull/{0}/head",
+        "if: ${{ github.event.pull_request || github.event.issue.pull_request }}",
+        "github.event.pull_request.head.repo.full_name || github.repository",
+        "github.event.pull_request.head.sha || format('refs/pull/{0}/head', github.event.issue.number)",
+        "path: candidate",
         "persist-credentials: 'false'",
     ):
-        if required_phrase not in checkout_step:
+        if required_phrase not in candidate_checkout_step:
             errors.append(
-                f"Gemini review checkout must pin the candidate PR head: missing {required_phrase!r}"
+                f"Gemini candidate checkout is missing required safety setting: {required_phrase!r}"
             )
+
+for required_phrase in (
+    "IS_PULL_REQUEST: '${{ !!(github.event.pull_request || github.event.issue.pull_request) }}'",
+    "PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || (github.event.issue.pull_request && github.event.issue.number) }}'",
+):
+    if required_phrase not in invoke:
+        errors.append(f"Gemini invoke context must detect/verify PR comments correctly: missing {required_phrase!r}")
+
+if 'gh api "repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}" --jq' not in invoke or "expected_sha" not in invoke:
+    errors.append("Gemini invoke workflow must read the current PR head SHA from GitHub")
+
+if 'checked_out_sha="$(git -C candidate rev-parse HEAD)"' not in invoke:
+    errors.append("Gemini invoke workflow must capture the actual candidate checkout SHA")
+if '--arg candidate_sha "${candidate_sha}"' not in invoke:
+    errors.append("Gemini context must record the verified candidate SHA")
 
 if r"/^@gemini-cli\s+\/approve(?:\s|$)/" not in dispatch:
     errors.append("The /approve command matcher must use a whitespace-aware, anchored expression")
