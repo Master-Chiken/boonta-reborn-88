@@ -38,6 +38,27 @@ if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 
     errors.append("Missing exact-true write gate in gemini-dispatch.yml")
 if "command = association === 'OWNER' ? 'approve' : 'approve-denied';" not in dispatch:
     errors.append("Only the repository owner may issue the /approve command")
+
+# An on-demand review must inspect the pull request candidate, not default-branch main.
+# issue_comment events expose a pull_request URL on the issue payload rather than
+# github.event.pull_request.head.sha; use refs/pull/<number>/head as the fallback.
+checkout_step_match = re.search(
+    r"(?ms)^      - name: 'Checkout Code'\\n(.*?)(?=^      - name:|\\Z)",
+    invoke,
+)
+if checkout_step_match is None:
+    errors.append("Gemini invoke workflow must include a Checkout Code step")
+else:
+    checkout_step = checkout_step_match.group(0)
+    for required_phrase in (
+        "ref: ${{ github.event.pull_request.head.sha",
+        "refs/pull/{0}/head",
+        "persist-credentials: 'false'",
+    ):
+        if required_phrase not in checkout_step:
+            errors.append(
+                f"Gemini review checkout must pin the candidate PR head: missing {required_phrase!r}"
+            )
 if r"/^@gemini-cli\s+\/approve(?:\s|$)/" not in dispatch:
     errors.append("The /approve command matcher must use a whitespace-aware, anchored expression")
 if "approval-denied:" not in dispatch or "The /approve command is restricted to the repository owner" not in dispatch:
