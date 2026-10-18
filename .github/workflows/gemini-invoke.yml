@@ -83,7 +83,7 @@ jobs:
             --arg pr "${IS_PULL_REQUEST}" \
             --arg num "${ISSUE_NUMBER}" \
             --arg repo "${REPOSITORY}" \
-            --arg candidate_sha "${CANDIDATE_SHA}" \
+            --arg candidate_sha "${candidate_sha}" \
             --arg context "${ADDITIONAL_CONTEXT}" \
             '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, candidate_sha: $candidate_sha, additional_context: $context}' > .gemini/context.json
         env:
@@ -95,7 +95,6 @@ jobs:
           ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number || (github.event.issue.pull_request && github.event.issue.number) }}'
           REPOSITORY: '${{ github.repository }}'
-          CANDIDATE_SHA: '${{ github.event.pull_request.head.sha || '' }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
 
       - name: 'Run Gemini CLI'
