@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 import struct
+import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from make_dolphin_dtm import (
     A,
@@ -41,6 +45,7 @@ try:
         road_center_from_asphalt,
         neutral_steering_deltas,
         neutral_steering_stable,
+        main as check_dolphin_frame_main,
     )
 except ImportError:
     Image = None
@@ -54,6 +59,7 @@ except ImportError:
     road_center_from_asphalt = None
     neutral_steering_deltas = None
     neutral_steering_stable = None
+    check_dolphin_frame_main = None
 
 
 def record(blob: bytes, frame: int) -> bytes:
@@ -337,6 +343,36 @@ class DolphinDtmTests(unittest.TestCase):
 
         moved_marker = make_frame(road_center=400, marker_center=405)
         self.assertFalse(neutral_steering_stable(baseline, moved_marker, max_shift=2.0))
+
+        for invalid_threshold in (float("nan"), float("inf"), float("-inf"), -0.1):
+            with self.subTest(invalid_threshold=invalid_threshold):
+                with self.assertRaises(ValueError):
+                    neutral_steering_stable(
+                        baseline, same_frame, max_shift=invalid_threshold
+                    )
+
+    @unittest.skipIf(
+        Image is None or check_dolphin_frame_main is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_neutral_steering_cli_rejects_non_finite_thresholds(self) -> None:
+        # The CLI must reject NaN/Infinity before they can disable the frame gate.
+        with tempfile.TemporaryDirectory() as temporary:
+            frame_path = Path(temporary) / "frame.png"
+            Image.new("RGB", (64, 64), (0, 0, 0)).save(frame_path)
+            for raw_threshold in ("nan", "inf", "-inf"):
+                with self.subTest(raw_threshold=raw_threshold):
+                    args = [
+                        "check_dolphin_frame.py",
+                        str(frame_path),
+                        "--baseline", str(frame_path),
+                        "--expect-neutral-steering",
+                        "--max-neutral-shift", raw_threshold,
+                    ]
+                    with patch.object(sys, "argv", args):
+                        with self.assertRaises(SystemExit) as raised:
+                            check_dolphin_frame_main()
+                    self.assertEqual(raised.exception.code, 2)
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
