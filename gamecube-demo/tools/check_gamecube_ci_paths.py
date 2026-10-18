@@ -28,6 +28,7 @@ DIRECTORY_PREFIXES = (
     "gamecube-demo/data/",
     "gamecube-demo/tools/",
     "tools/mesh_format/",
+    "tests/",
 )
 
 
