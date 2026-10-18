@@ -42,14 +42,11 @@ if "command = association === 'OWNER' ? 'approve' : 'approve-denied';" not in di
 # An on-demand review must inspect the pull request candidate, not default-branch main.
 # issue_comment events expose a pull_request URL on the issue payload rather than
 # github.event.pull_request.head.sha; use refs/pull/<number>/head as the fallback.
-checkout_step_match = re.search(
-    r"(?ms)^      - name: 'Checkout Code'\\n(.*?)(?=^      - name:|\\Z)",
-    invoke,
-)
-if checkout_step_match is None:
+checkout_marker = "      - name: 'Checkout Code'"
+if checkout_marker not in invoke:
     errors.append("Gemini invoke workflow must include a Checkout Code step")
 else:
-    checkout_step = checkout_step_match.group(0)
+    checkout_step = invoke.split(checkout_marker, 1)[1].split("      - name:", 1)[0]
     for required_phrase in (
         "ref: ${{ github.event.pull_request.head.sha",
         "refs/pull/{0}/head",
@@ -59,6 +56,7 @@ else:
             errors.append(
                 f"Gemini review checkout must pin the candidate PR head: missing {required_phrase!r}"
             )
+
 if r"/^@gemini-cli\s+\/approve(?:\s|$)/" not in dispatch:
     errors.append("The /approve command matcher must use a whitespace-aware, anchored expression")
 if "approval-denied:" not in dispatch or "The /approve command is restricted to the repository owner" not in dispatch:
