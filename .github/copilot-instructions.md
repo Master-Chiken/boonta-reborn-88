@@ -6,6 +6,14 @@
 
 Before editing, inspect current `main`, relevant source and tests, the README/status docs, related open issues, and existing pull requests/branches. Identify the concrete player-visible or developer-blocking outcome, smallest useful scope, assumptions/risks, tests and acceptance evidence. Avoid duplicate branches/PRs and speculative work. If a key behavior, format, platform, license or provenance is uncertain, investigate it before writing dependent code.
 
+## Primary method: reuse first
+
+Before proposing or implementing a new tool, parser, converter, data format, renderer subsystem, test harness or workflow, first inspect the existing Boonta implementation and search upstream/community work. Reuse an existing in-repository implementation where suitable; otherwise prefer a compatible maintained upstream tool, then a thin adapter or focused extension. Write new code only for a documented capability gap.
+
+For each candidate, record the upstream URL and revision, exact platform and input format/version, license, provenance/redistribution constraints, dependencies, compatibility evidence, tests and limitations. Do not assume a PC/N64 format or implementation works on GameCube/Wii. Do not copy third-party code or commercial assets before reviewing rights. If no existing solution is suitable, show what was searched and why it fails before proposing a replacement.
+
+Use `docs/REUSE_FIRST_AUDIT.md` as the inventory. Treat this rule as the primary method, not an optional optimization. Keep all work aligned to recovering/understanding original game data and making a native GameCube/Wii game playable; synthetic demo assets are harnesses, not proof of original-data support.
+
 ## Engineering order: Make it work, make it good, make it fast
 
 Follow this order for every task: first establish the smallest correct, end-to-end behavior and test it; next improve maintainability, edge cases, error handling and player experience without overengineering; only then profile and optimize demonstrated performance bottlenecks. Do not polish broken behavior or prematurely optimize speculative bottlenecks. For performance-focused tasks, prove the intended behavior and baseline first, keep the solution maintainable, then benchmark the measured optimization and re-run correctness tests. Follow the fuller rule in the repository-root [AGENTS.md](../AGENTS.md).
