@@ -45,9 +45,24 @@ jobs:
     outputs:
       gamecube: ${{ steps.paths.outputs.gamecube }}
     steps:
-      - name: Check out candidate files for the path-selector script
+      # Use the last trusted base version of the selector once it exists. This
+      # prevents a later PR from weakening the selector and then using the weakened
+      # copy to skip its own build/tests. During the initial rollout only, main does
+      # not contain this new tool yet, so we fall back to the candidate copy; the
+      # selector path itself is classified as GameCube-relevant and its tests run
+      # in the host test job.
+      - name: Check out trusted base selector
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted-base
+          persist-credentials: false
+
+      - name: Check out candidate selector for first rollout only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
           persist-credentials: false
 
       - name: Detect changed files through read-only PR metadata
@@ -59,7 +74,19 @@ jobs:
         run: |
           set -euo pipefail
           gh api --paginate --slurp "repos/${GH_REPO}/pulls/${PR_NUMBER}/files?per_page=100" > "$RUNNER_TEMP/pr-files-pages.json"
-          python3 gamecube-demo/tools/check_gamecube_ci_paths.py "$RUNNER_TEMP/pr-files-pages.json" >> "$GITHUB_OUTPUT"
+          trusted_selector="$GITHUB_WORKSPACE/trusted-base/gamecube-demo/tools/check_gamecube_ci_paths.py"
+          candidate_selector="$GITHUB_WORKSPACE/candidate/gamecube-demo/tools/check_gamecube_ci_paths.py"
+          if [[ -f "$trusted_selector" ]]; then
+            selector="$trusted_selector"
+            echo "Using trusted base selector."
+          elif [[ -f "$candidate_selector" ]]; then
+            selector="$candidate_selector"
+            echo "::warning::Using candidate selector for the initial rollout; main does not yet contain the selector."
+          else
+            echo "::error::No GameCube path selector was found in the trusted base or candidate checkout."
+            exit 2
+          fi
+          python3 "$selector" "$RUNNER_TEMP/pr-files-pages.json" >> "$GITHUB_OUTPUT"
 
   host-pause-state-tests:
     name: Host pause/resume state tests
