@@ -130,3 +130,13 @@ Treat these as future possibilities, not implemented features or commitments. Re
 - Current acceptance gate → `docs/NEXT_MILESTONE.md`
 - Build/runtime evidence → `docs/GAMECUBE_FIRST_RENDER_STATUS.md`
 - Overall plan and mandatory priority order → this file
+
+## Focused gameplay corrections currently under review
+
+As of 2026-10-18, these targeted fixes are open pull requests, not yet merged into `main`:
+
+- [PR #214 — width-aware rail collision](https://github.com/Master-Chiken/boonta-reborn-88/pull/214): make the collision/recovery boundary follow the rendered rail for narrow, reference-width and wide track segments.
+- [PR #215 — analog steering deadzone test reliability](https://github.com/Master-Chiken/boonta-reborn-88/pull/215): keep the DTM steering stimulus active long enough for the diagnostic to find the visible Dolphin window, with a regression test around the former 600-frame boundary.
+- [PR #216 — rival overtake/contact thresholds](https://github.com/Master-Chiken/boonta-reborn-88/pull/216): avoid premature overtake detection while a rival is still alongside and clarify the lateral-contact threshold.
+
+Their automated checks are useful evidence for the covered code paths, but they do not close the manual-controller acceptance gate in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Keep the PRs separate until they have been reviewed and the visible Dolphin test is recorded.
