@@ -3,7 +3,9 @@
 Last updated: 2026-10-18
 
 **Product goal**  
-Create a playable, enhanced fan-made remaster inspired by *Star Wars: Episode I – Racer* (1999), targeting GameCube and/or Wii. The original 1999 release did not receive a dedicated native edition for GameCube or Wii, so Boonta Reborn 88 aims to create a new homebrew experience rather than claim an existing port. The project is unofficial and clean-room first.
+Make *Star Wars: Episode I – Racer* (1999) playable on GameCube and/or Wii through reverse engineering, decompilation, original-data recovery/conversion, and native porting. The project is unofficial; the original release did not have a dedicated native GameCube/Wii edition.
+
+**Resource rule:** at least 80% of engineering effort is reserved for the reverse-engineering/recovery/porting path and reuse of community tools, research and mods. New bespoke improvements are secondary. See the [reverse-engineering and native-port plan](REVERSE_ENGINEERING_PLAN.md).
 
 **Longer-term possibilities**
 After the playable race and essential racing content are established, the project may pursue stronger visual presentation, additional original or rights-cleared tracks and pods, bonus modes, and optional content packs. “HD++ Remaster” and “HD+++ Premium” are internal ambition labels, not promises or descriptions of the current build. A broader Racer-inspired experience remains a distant possibility subject to feasibility and rights.
@@ -16,12 +18,13 @@ Unofficial fan/homebrew project, not affiliated with or endorsed by the original
 
 ## Non-negotiable development priority
 
-**Follow this order. Do not skip ahead because a later phase is more exciting:**
+**Follow this order. At least 80% of effort must support the original-game recovery and porting path:**
 
-1. **Gameplay first — absolute priority.** Make the game work and feel right: responsive controls, speed, steering, boost/heat, collisions, rival interactions, camera, lap logic, finish, pause, reset/restart, stability and frame pacing. Prove these in a visible, manually controlled Dolphin session before treating the vertical slice as accepted.
-2. **Original-game content second.** Recreate the essential *Episode I – Racer* experience: recognizable tracks, pods/vehicles, racing flow, rivals, progression and course identity, using only code/assets/data with documented provenance and lawful redistribution status. Prioritize the essential original experience over new material.
-3. **Graphics and remaster polish third.** Improve track readability, pod models, materials, effects, lighting, HUD and performance only after gameplay acceptance and a clear, working core-content foundation. “HD++” is a long-term quality vision, not a claim of native HD output on legacy hardware.
-4. **Bonus content and DLC-style expansions last.** New tracks/pods, bonus modes, extra packs, HD+++ Premium ideas and broader remake-style ambitions are stretch goals. They must not delay gameplay acceptance or the core original content.
+1. **Reverse-engineer and inventory.** Identify exact game versions, executable/data containers, file formats, runtime systems and existing project work; maintain a provenance/licensing ledger.
+2. **Recover and convert original data.** Build reproducible parsers/converters for real track, pod, texture, collision and race data, starting with the minimum needed for one course. Keep raw evidence separate from derived outputs.
+3. **Understand and port the runtime.** Use disassembly/decompilation and observed behavior to identify the minimum original-game systems needed for native GameCube/Wii integration. Reuse proven community tooling and compatible mod work before writing replacements.
+4. **Prove one complete race.** Use recovered original data and a configured controller in visible Dolphin to complete three laps, finish, reset and restart. Headless tests alone are not acceptance.
+5. **Improve only after the core path.** Prefer existing mods and upstream community work for visual/gameplay upgrades. New tracks, pods, modes or bespoke polish are stretch goals, not the main work.
 
 Use **“Make it work, make it good, make it fast”** in that order: first prove correct end-to-end behavior, then improve quality and maintainability, and only then optimize measured bottlenecks. This is a development gate, not permission to skip testing.
 
@@ -29,7 +32,7 @@ Use **“Make it work, make it good, make it fast”** in that order: first prov
 
 ## Phase 0 – Foundations
 
-**Status: prototype foundations and CI are in place; interactive acceptance is still open.**
+**Status: a procedural GX prototype and CI are in place; original-game data recovery, native integration and manual acceptance remain the central work.**
 
 - [x] Clean-room procedural GX prototype.
 - [x] Basic driving, boost/heat, rivals, lap system and HUD.
@@ -49,9 +52,9 @@ Automated movies and rendered frames prove only the specific scripted responses 
 
 ---
 
-## Phase 1 – Gameplay: complete, responsive, stable racing
+## Phase 1 – Reverse engineering and original-data pipeline
 
-**Absolute priority. No broad content expansion or graphics overhaul before this phase passes.**
+**Absolute priority. Build on existing community research before creating replacements.**
 
 - Responsive and correctly calibrated controls; acceleration, braking, steering inertia and coasting.
 - Boost, heat, cooldown and consistent speed response.
@@ -65,7 +68,7 @@ Automated movies and rendered frames prove only the specific scripted responses 
 
 ---
 
-## Phase 2 – Core original-game content
+## Phase 2 – Native runtime integration and playable race
 
 **Recreate the essential original racing experience before adding new content.**
 
@@ -80,7 +83,7 @@ Automated movies and rendered frames prove only the specific scripted responses 
 
 ---
 
-## Phase 3 – Graphics and remaster polish
+## Phase 3 – Community mods and remaster polish
 
 **Begin only after Phase 1 is accepted and Phase 2 has a clear, working content foundation.**
 
