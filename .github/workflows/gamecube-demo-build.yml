@@ -45,6 +45,11 @@ jobs:
     outputs:
       gamecube: ${{ steps.paths.outputs.gamecube }}
     steps:
+      - name: Check out candidate files for the path-selector script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Detect changed files through read-only PR metadata
         id: paths
         env:
@@ -54,52 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           gh api --paginate --slurp "repos/${GH_REPO}/pulls/${PR_NUMBER}/files?per_page=100" > "$RUNNER_TEMP/pr-files-pages.json"
-          python3 - "$RUNNER_TEMP/pr-files-pages.json" <<'PY'
-          import json
-          import os
-          import sys
-
-          with open(sys.argv[1], encoding="utf-8") as source:
-              pages = json.load(source)
-          file_records = [
-              item
-              for page in pages
-              for item in page
-              if isinstance(item, dict) and isinstance(item.get("filename"), str)
-          ]
-          filenames = [item["filename"] for item in file_records]
-          candidate_paths = [
-              path
-              for item in file_records
-              for path in (item.get("filename"), item.get("previous_filename"))
-              if isinstance(path, str)
-          ]
-
-          exact_paths = {
-              "gamecube-demo/Makefile",
-              ".github/workflows/gamecube-demo-build.yml",
-          }
-          directory_prefixes = (
-              "gamecube-demo/source/",
-              "gamecube-demo/tests/",
-              "gamecube-demo/include/",
-              "gamecube-demo/data/",
-              "gamecube-demo/tools/",
-              "tools/mesh_format/",
-          )
-          matching = sorted({
-              name for name in candidate_paths
-              if name in exact_paths or name.startswith(directory_prefixes)
-          })
-          # GitHub caps the pull-request files endpoint at 3,000 files.
-          # At that boundary, fail toward running GameCube CI, not skipping it.
-          relevant = not filenames or len(filenames) >= 3000 or bool(matching)
-          print(f"Changed-file records read: {len(filenames)}")
-          print(f"GameCube-relevant paths: {matching[:80]}")
-          print(f"GameCube CI required for this PR: {str(relevant).lower()}")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"gamecube={'true' if relevant else 'false'}\n")
-          PY
+          python3 gamecube-demo/tools/check_gamecube_ci_paths.py "$RUNNER_TEMP/pr-files-pages.json" >> "$GITHUB_OUTPUT"
 
   host-pause-state-tests:
     name: Host pause/resume state tests
