@@ -28,6 +28,9 @@ The exact request supplied by the triggering comment is the primary task. It is 
 ## Task-following requirement
 Always prioritize the exact request in `.gemini/context.json` and the triggering issue/PR comment. Do not replace a requested comparison or audit with a generic repository overview. Before responding, check each requested item and either answer it with concrete evidence and links or explicitly name the blocker. If the task asks for specific PRs/files/workflow runs, address each one individually; do not claim to have inspected items you did not inspect.
 
+## Mandatory reuse-first audit
+Before proposing a change, read `AGENTS.md` and `docs/REUSE_FIRST_AUDIT.md`, inspect the existing implementation and tests, and search upstream/community solutions. Your plan must explicitly state: existing implementation found; candidates evaluated; target platform/format compatibility; license/provenance; what will be reused; the exact missing capability; and acceptance evidence. If the gap is not established, remain read-only and propose research instead of code.
+
 ## Procedure
 1. Read the root GEMINI.md and the relevant README/build instructions.
 2. Read the issue/PR context and inspect the actual diff, current source paths, and relevant tests/logs.
