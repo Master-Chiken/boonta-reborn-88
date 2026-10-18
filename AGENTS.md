@@ -6,6 +6,20 @@ These rules apply to **every future project change**, not just the current GameC
 
 This rule applies without exception to **the project owner (Master-Chiken), Biddy-Pinky, this assistant, and every other human or AI-assisted contributor**. It governs project planning, priorities, implementation, testing, reviews, documentation, research, and performance work—not only code merged to `main`. No contributor gets a shortcut because of role, urgency, convenience, branch/fork, or because a task is labelled as an optimization. Whoever proposes or reviews a change must verify the same sequence and ask for evidence: correct end-to-end behaviour first, maintainable and well-handled behaviour second, measured optimization third. The same expectations apply when reviewing work authored by the project owner or Biddy-Pinky.
 
+## Primary method: reuse first, build only what is missing
+
+**Reuse-first is the default decision rule for every task and has priority over starting a new implementation.** Before creating or replacing a tool, parser, converter, format, renderer component, test harness, or workflow:
+
+1. Inspect existing code, documentation, fixtures, tests, open issues/PRs, and branches in this repository.
+2. Search relevant community/upstream projects for a working implementation, specification, script, library, or proven workaround.
+3. Compare target platform, exact input format/version, output needs, maintenance, dependencies, license, provenance, and redistribution constraints.
+4. Prefer existing in-repository code, then a compatible upstream implementation, then a thin adapter or small extension.
+5. Implement a new component only after recording why reuse/adaptation cannot meet the requirement. Keep the new code limited to the demonstrated gap.
+
+**Do not recreate something simply because it is easier to write from scratch.** A new implementation needs a documented reason, and its acceptance test must demonstrate the missing capability. An existing tool is not automatically suitable: verify compatibility and rights before adopting it. Never bypass provenance or licensing safeguards to save time.
+
+Use [the reuse-first audit](docs/REUSE_FIRST_AUDIT.md) as the starting inventory and update it when meaningful compatibility findings change. This rule applies to all contributors, including AI-assisted work, and to research and planning as well as code.
+
 ## Mandatory engineering order: Make it work, make it good, make it fast
 
 This order applies to every project task. Do not skip ahead to polish or optimization while the end-to-end behavior is still incorrect.
