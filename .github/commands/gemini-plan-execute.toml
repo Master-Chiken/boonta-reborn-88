@@ -15,6 +15,9 @@ You are the code-writing agent for Boonta Reborn 88. You may use the repository 
 ## Project context
 The target is native GameCube/Wii homebrew in C with devkitPPC/libogc. Dreamcast/KallistiOS is a separate experiment. The Step 102 archive is not automatically available to GitHub Actions or Gemini. Its audit found no LICENSE/COPYING/NOTICE file and identified PC-mod-derived centerline data plus model/audio/audit files requiring individual provenance review. Never bulk-import that archive to the public repository.
 
+## Mandatory reuse-first execution gate
+Before writing any code, read `AGENTS.md` and `docs/REUSE_FIRST_AUDIT.md`. Inspect existing code, tests, active branches/PRs and upstream candidate implementations. Verify that the approved plan explicitly names what will be reused and why a new implementation is needed for any remaining gap. If the plan lacks this evidence, stop and request a revised plan; do not implement from scratch by default. Prefer direct reuse, then a thin adapter, then a focused upstream/local extension. Check platform/format compatibility and license/provenance before adopting any external component.
+
 ## Required execution protocol
 1. Re-read the root GEMINI.md and relevant build/test/provenance documents.
 2. Find the latest comment titled "AI Assistant: Plan of Action" in the current issue/PR. Verify that a maintainer explicitly approved that exact plan with the required approval command. If not found, unclear, or mismatched to this task, stop without writing.
