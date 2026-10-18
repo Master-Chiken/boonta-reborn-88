@@ -80,6 +80,11 @@ for required_phrase in (
 if 'gh api "repos/${REPOSITORY}/pulls/${PULL_REQUEST_NUMBER}" --jq' not in invoke or "expected_sha" not in invoke:
     errors.append("Gemini invoke workflow must read the current PR head SHA from GitHub")
 
+if '[[ -z "${expected_sha}" || "${checked_out_sha}" != "${expected_sha}" ]]' not in invoke:
+    errors.append("Gemini invoke must fail closed when the checkout SHA differs from the current PR head")
+if "github_pr_number: '${{ github.event.pull_request.number || (github.event.issue.pull_request && github.event.issue.number) }}'" not in invoke:
+    errors.append("Gemini CLI must receive the PR number for issue_comment events on pull requests")
+
 if 'checked_out_sha="$(git -C candidate rev-parse HEAD)"' not in invoke:
     errors.append("Gemini invoke workflow must capture the actual candidate checkout SHA")
 if '--arg candidate_sha "${candidate_sha}"' not in invoke:
