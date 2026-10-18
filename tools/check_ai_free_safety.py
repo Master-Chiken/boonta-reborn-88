@@ -27,6 +27,8 @@ daily_prompt = read(".github/commands/gemini-daily-coordinator.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
+project_rules = read("AGENTS.md")
+pr_template = read(".github/pull_request_template.md")
 setup = read("docs/AI_AUTOMATION_SETUP.md")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
@@ -142,6 +144,27 @@ if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
     errors.append("Daily coordinator prompt must enforce read-only and €0 constraints")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Daily coordinator prompt must preserve branch and provenance safety")
+
+
+# Independent verification policy must remain explicit and visible to contributors.
+for required_phrase in (
+    "The author is not the sole verifier.",
+    "Review the diff, not the summary.",
+    "Tests can be wrong too.",
+    "Handle uncertainty explicitly.",
+    "No self-approval or automatic merge.",
+):
+    if required_phrase not in project_rules:
+        errors.append(f"AGENTS.md is missing independent-verification safeguard: {required_phrase!r}")
+
+for required_phrase in (
+    "A contributor other than the author reviewed the actual diff",
+    "tests genuinely exercise the changed behavior",
+    "NOT VERIFIED",
+    "leave the PR unmerged",
+):
+    if required_phrase not in pr_template:
+        errors.append(f"Pull request template is missing review safeguard: {required_phrase!r}")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
