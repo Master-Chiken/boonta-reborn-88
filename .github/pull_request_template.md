@@ -8,6 +8,9 @@
 
 ## Reuse-first review (required)
 
+Follow the shared [AI working protocol](../docs/AI_WORKING_PROTOCOL.md) and [reuse-first audit](../docs/REUSE_FIRST_AUDIT.md). Coordinate with open issues/PRs so agents do not duplicate work.
+
+
 - [ ] Existing Boonta code, tools, tests, related branches/PRs and upstream/community solutions were checked before creating anything new.
 - [ ] The PR reuses existing work where suitable, or explains the specific missing capability that requires new code.
 - [ ] Any external code/tool is checked for exact target/format compatibility, revision, license, provenance, dependencies and test evidence.
