@@ -54,32 +54,33 @@ Automated movies and rendered frames prove only the specific scripted responses 
 
 ## Phase 1 – Reverse engineering and original-data pipeline
 
-**Absolute priority. Build on existing community research before creating replacements.**
+**Current primary engineering phase. Reserve at least 80% of effort for this path and reuse community work wherever compatible.**
 
-- Responsive and correctly calibrated controls; acceleration, braking, steering inertia and coasting.
-- Boost, heat, cooldown and consistent speed response.
-- Reliable road boundaries, off-road slowdown, rail collisions/recovery and rival interactions.
-- Stable camera and clear sense of speed.
-- Correct lap timing/counting, finish state, pause, reset and restart.
-- Stable frame pacing (target 60 fps or a solid 30 fps, based on measured feasibility).
-- Basic gameplay-critical audio feedback where feasible.
+- [ ] Inventory the exact original release(s) available for analysis, platform/version, file layout and hashes; record the chosen first target (GameCube or Wii).
+- [ ] Audit this repository and relevant public GitHub/modding projects for existing parsers, decompilation notes, format documentation and conversion tools.
+- [ ] Maintain a source ledger with upstream URL/revision, license, provenance, relevant paths, dependencies and tested status.
+- [ ] Identify and document the original executable, data containers, compression, endianness, indexes and asset relationships.
+- [ ] Use Ghidra and suitable tools to map key runtime functions, strings, file loading, input, physics, track initialization, rendering and race progression; label findings confirmed/inferred/unknown.
+- [ ] Build reproducible read-only inspection and extraction tools, then convert one real race-critical data item into a documented intermediate format.
+- [ ] Keep proprietary game dumps/assets and unclear third-party material out of the public repository; use lawful local inputs where needed.
 
-**Exit criteria:** visible Dolphin session with a configured controller; complete manually driven three-lap race; finish, stop, reset and restart work; several minutes of play without sustained corruption or crash; exact tested commit and evidence recorded. Physical GameCube/Wii acceptance requires a separate real-hardware run.
+**Exit criteria:** a reproducible source/version inventory; a documented, tested parser or extractor for at least one real original data format; and a source-to-output trace showing exactly how a recovered item was identified and converted.
 
 ---
 
 ## Phase 2 – Native runtime integration and playable race
 
-**Recreate the essential original racing experience before adding new content.**
+**Use recovered original data and reverse-engineering evidence. Do not mistake the procedural test harness for the port itself.**
 
-- Establish a track-by-track content inventory and implementation plan for recognizable original circuits.
-- Reconstruct course layouts, landmarks, racing lines and course-specific hazards from documented, permitted references.
-- Implement the core roster of pods/vehicles and distinguish them through meaningful, tested handling/stat differences.
-- Improve rival behavior and race flow to support the intended course experience.
-- Build necessary menus, HUD, race selection, progression and core sound feedback.
-- Review every proposed source, model, texture, audio file and data set for provenance and redistribution rights before integration. Prefer clean-room reimplementation or original replacements where rights are unclear.
+- [ ] Load a recovered course layout or other race-critical data through the documented conversion pipeline.
+- [ ] Identify which original runtime behaviors can be reused, reconstructed from evidence, or temporarily substituted to unblock the target port.
+- [ ] Integrate the smallest useful end-to-end slice into the GameCube/Wii build: real recovered data, rendered track, controllable pod, collision and race progression.
+- [ ] Prefer adapting proven community tools/mods and existing code where their license, provenance and target compatibility are verified.
+- [ ] Keep format fixtures and conversion tests deterministic; track every generated asset back to its source and conversion step.
+- [ ] Validate controls, handling, boost/heat, rival interactions, laps, finish, pause, reset/restart and sustained stability in visible Dolphin with a human-controlled session.
+- [ ] Record exact tested commit, emulator version/backend, controller mapping, evidence and any known limitations. Physical hardware is a separate acceptance target.
 
-**Exit criteria:** the core race loop is reliable and a documented, coherent slice of original-game content is playable end to end. Do not treat unclear Step 102 archive content or commercial assets as cleared.
+**Exit criteria:** one recognizable race using data recovered through the documented pipeline; a complete manually controlled three-lap race; finish, reset and restart working; and reproducible evidence. CI/headless smoke or scripted DTM alone is insufficient.
 
 ---
 
