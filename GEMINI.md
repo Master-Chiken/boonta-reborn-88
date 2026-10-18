@@ -1,5 +1,13 @@
 # Boonta Reborn 88 — instructions for AI agents
 
+## Primary method: reuse first
+
+Before proposing or implementing a new tool, parser, converter, data format, renderer subsystem, test harness or workflow, first inspect the existing Boonta implementation and search upstream/community work. Reuse an existing in-repository implementation where suitable; otherwise prefer a compatible maintained upstream tool, then a thin adapter or focused extension. Write new code only for a documented capability gap.
+
+For each candidate, record the upstream URL and revision, exact platform and input format/version, license, provenance/redistribution constraints, dependencies, compatibility evidence, tests and limitations. Do not assume a PC/N64 format or implementation works on GameCube/Wii. Do not copy third-party code or commercial assets before reviewing rights. If no existing solution is suitable, show what was searched and why it fails before proposing a replacement.
+
+Use `docs/REUSE_FIRST_AUDIT.md` as the inventory. Treat this rule as the primary method, not an optional optimization. Keep all work aligned to recovering/understanding original game data and making a native GameCube/Wii game playable; synthetic demo assets are harnesses, not proof of original-data support.
+
 ## Project direction
 - Primary goal: develop a native Nintendo GameCube/Wii racing prototype in C using devkitPPC/libogc.
 - Treat the original PC and Nintendo 64 releases as separate research references; do not assume their code, assets, data, or formats are interchangeable.
