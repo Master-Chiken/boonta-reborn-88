@@ -160,7 +160,10 @@ class DolphinDtmTests(unittest.TestCase):
                 )
                 self.assertEqual(record(blob, 30)[4], NEUTRAL_AXIS + deflection)
                 self.assertEqual(record(blob, 599)[4], NEUTRAL_AXIS + deflection)
-                self.assertEqual(record(blob, 600)[4], NEUTRAL_AXIS)
+                # Keep custom-deflection movies active through the entire movie so
+                # slow Dolphin startup cannot leave the capture measuring neutral input.
+                self.assertEqual(record(blob, 600)[4], NEUTRAL_AXIS + deflection)
+                self.assertEqual(record(blob, 649)[4], NEUTRAL_AXIS + deflection)
                 self.assertEqual(record(blob, 30)[5], NEUTRAL_AXIS)
                 self.assertFalse(record(blob, 30)[1] & (DPAD_LEFT | DPAD_RIGHT))
 
