@@ -47,6 +47,10 @@ These are meaningful foundations, but they are **not yet proof of a fully playab
 
 See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact state and what still needs testing.
 
+### Focused gameplay fixes under review
+
+Three separate pull requests are addressing specific correctness issues: [rail collision aligned to track width (#214)](https://github.com/Master-Chiken/boonta-reborn-88/pull/214), [analog-stick deadzone test reliability (#215)](https://github.com/Master-Chiken/boonta-reborn-88/pull/215), and [rival overtake/contact thresholds (#216)](https://github.com/Master-Chiken/boonta-reborn-88/pull/216). These changes remain under review and are **not yet part of `main`**. Passing automated checks does not replace the required visible, manual Dolphin race acceptance.
+
 ## The next big wins
 
 We keep the work focused on a playable vertical slice rather than spreading effort across unfinished systems.
