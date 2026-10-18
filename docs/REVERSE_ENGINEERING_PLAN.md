@@ -34,7 +34,9 @@ The main engineering objective is to make *Star Wars: Episode I – Racer* playa
 - Prioritize file loading, track/pod initialization, physics/handling, race/lap progression, rendering, controller input and audio.
 - Separate facts about the original executable from assumptions in the current procedural prototype.
 
-### 4. Reuse community work first
+### 4. Reuse community work first — mandatory default
+
+**This is the primary working method, not a secondary optimization.** Before implementing anything new, consult the [reuse-first audit](REUSE_FIRST_AUDIT.md), inspect existing Boonta code and tests, and search upstream tools for a compatible solution. Prefer direct reuse, then a thin adapter, then a focused extension; build from scratch only for a documented gap. Record compatibility, license, provenance and test evidence.
 
 For every relevant public mod, repository or tool:
 
