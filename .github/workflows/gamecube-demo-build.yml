@@ -61,11 +61,18 @@ jobs:
 
           with open(sys.argv[1], encoding="utf-8") as source:
               pages = json.load(source)
-          filenames = [
-              item["filename"]
+          file_records = [
+              item
               for page in pages
               for item in page
               if isinstance(item, dict) and isinstance(item.get("filename"), str)
+          ]
+          filenames = [item["filename"] for item in file_records]
+          candidate_paths = [
+              path
+              for item in file_records
+              for path in (item.get("filename"), item.get("previous_filename"))
+              if isinstance(path, str)
           ]
 
           exact_paths = {
@@ -80,10 +87,10 @@ jobs:
               "gamecube-demo/tools/",
               "tools/mesh_format/",
           )
-          matching = [
-              name for name in filenames
+          matching = sorted({
+              name for name in candidate_paths
               if name in exact_paths or name.startswith(directory_prefixes)
-          ]
+          })
           # GitHub caps the pull-request files endpoint at 3,000 files.
           # At that boundary, fail toward running GameCube CI, not skipping it.
           relevant = len(filenames) >= 3000 or bool(matching)
