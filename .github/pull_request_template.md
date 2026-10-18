@@ -6,6 +6,13 @@
 - [ ] Platform/file-format assumptions and license/provenance risks have been checked; no uncleared assets or commercial game data are included.
 - [ ] Acceptance criteria and validation steps were identified before implementation.
 
+## Reuse-first review (required)
+
+- [ ] Existing Boonta code, tools, tests, related branches/PRs and upstream/community solutions were checked before creating anything new.
+- [ ] The PR reuses existing work where suitable, or explains the specific missing capability that requires new code.
+- [ ] Any external code/tool is checked for exact target/format compatibility, revision, license, provenance, dependencies and test evidence.
+- [ ] Any adapter or new implementation is the smallest change that closes the demonstrated gap; synthetic fixtures are not presented as original game data.
+
 ## Engineering order
 
 - [ ] **Make it work:** The smallest end-to-end behavior meets stated acceptance criteria and relevant correctness tests run.
