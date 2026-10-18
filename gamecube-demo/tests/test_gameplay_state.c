@@ -690,6 +690,7 @@ static void race_state_reset_tests(void) {
  BoontaRaceState state;
  unsigned int i;
 
+ /* Model the actual terminal state after crossing the third lap boundary. */
  state.distance = 3.0f * BOONTA_TRACK_LENGTH;
  state.lap_count = 3U;
  state.race_seconds = 88.0f;
