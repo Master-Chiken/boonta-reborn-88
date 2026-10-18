@@ -36,7 +36,6 @@ Use the engineering rule **“Make it work, make it good, make it fast”** in t
 - [x] Readable `FINISH` label and varied procedural canyon skyline are integrated ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204), merged).
 - [x] Scripted three-lap finish-banner and orange `FINISH`-label pixel checks passed on PR #204 head in [run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310); this was DTM-driven, not a manual race.
 - [ ] **Manual controller + live finish/reset/restart acceptance** — current and highest-priority gate.
-  → No gamepad required for the initial check: use [the Dolphin keyboard-only setup](DOLPHIN_KEYBOARD_TEST.md) to configure emulated GameCube Port 1, then test reset, throttle/brake, steering, boost and pause before attempting a full race.
   → See [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md) and [current test evidence/status](GAMECUBE_FIRST_RENDER_STATUS.md).
 
 Automated movies and rendered frames prove only the specific scripted responses they test. They do **not** establish live-controller playability, longer-session stability or physical-console compatibility.
