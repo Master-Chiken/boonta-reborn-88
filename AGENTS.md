@@ -85,3 +85,19 @@ Every task/PR should state:
 Update the relevant status/roadmap documentation when a change materially alters the project state. A task is not done merely because code was written or committed.
 
 **When in doubt, inspect first, reduce scope, protect the clean-room boundary, and prove the result before expanding.**
+
+## Independent verification — no blind trust in AI output
+
+AI output is an untrusted proposal until its claims are independently checked. This applies to code, tests, documentation, issue triage, reviews, and automation configuration.
+
+- **The author is not the sole verifier.** For code or behavior changes, seek review from a different contributor who did not author the change. An AI review can supplement but never substitute for required human approval or runtime evidence.
+- **Review the diff, not the summary.** Inspect every changed file and the relevant surrounding code. Check scope, assumptions, error paths, boundary conditions, compatibility, and whether the test actually detects the claimed failure.
+- **Verify test provenance.** Record the exact commands and results. Confirm the test ran on the latest PR head. Do not trust a pasted green result, an old CI run, or an AI's assertion that it executed a command.
+- **Tests can be wrong too.** Look for tests that mirror the implementation, omit negative/boundary cases, mock away the bug, or pass without exercising the changed path. Add a regression test for a reproduced defect.
+- **Use independent evidence.** For meaningful gameplay changes, compare baseline and candidate under the same inputs/environment. Prefer observable measurements and repeatable steps over subjective claims. Keep manual Dolphin/controller and physical-hardware claims separate from host tests and scripted automation.
+- **Handle uncertainty explicitly.** If a check cannot be run, evidence conflicts, a tool is unavailable, or the result is ambiguous, mark it NOT VERIFIED and explain the remaining risk. Never infer success from missing output.
+- **Changes after approval require re-checking.** If the diff changes after review, rerun affected checks and request a fresh review where the change affects reviewed behavior.
+- **No self-approval or automatic merge.** The authoring agent must not approve its own change, dismiss blocking feedback, or merge its own PR. AI automation may create a branch and propose a PR only within its explicit permissions; final integration remains subject to repository review policy.
+- **Keep an audit trail.** Every PR must state the problem, hypothesis, exact scope, checks actually run, evidence, untested paths, risks, and next step. Correct inaccurate reports openly.
+
+A passing CI run is necessary where checks apply, but it is not sufficient evidence of correct player experience. The reviewer must judge whether the tests and evidence actually support the claim.
