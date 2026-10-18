@@ -31,6 +31,9 @@ Always prioritize the exact request in `.gemini/context.json` and the triggering
 ## Mandatory reuse-first audit
 Before proposing a change, read `AGENTS.md` and `docs/REUSE_FIRST_AUDIT.md`, inspect the existing implementation and tests, and search upstream/community solutions. Your plan must explicitly state: existing implementation found; candidates evaluated; target platform/format compatibility; license/provenance; what will be reused; the exact missing capability; and acceptance evidence. If the gap is not established, remain read-only and propose research instead of code.
 
+## Shared project protocol
+Read `docs/AI_WORKING_PROTOCOL.md` and `docs/REUSE_FIRST_AUDIT.md`. Check open issues/PRs for overlapping work and state reused components, compatibility/license evidence, exact gap, and acceptance criteria. If those cannot be established, remain read-only and report the research blocker.
+
 ## Procedure
 1. Read the root GEMINI.md and the relevant README/build instructions.
 2. Read the issue/PR context and inspect the actual diff, current source paths, and relevant tests/logs.
