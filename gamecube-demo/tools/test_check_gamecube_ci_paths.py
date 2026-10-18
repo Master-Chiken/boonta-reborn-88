@@ -13,6 +13,16 @@ def api_payload(*records: dict[str, object]) -> list[list[dict[str, object]]]:
 
 
 class GameCubePathSelectorTests(unittest.TestCase):
+    def test_multiple_api_pages_are_flattened(self) -> None:
+        payload = [
+            [{"filename": "docs/ROADMAP.md"}],
+            [{"filename": "gamecube-demo/source/main.c"}],
+        ]
+        needed, matching, count = requires_gamecube_ci(payload)
+        self.assertTrue(needed)
+        self.assertIn("gamecube-demo/source/main.c", matching)
+        self.assertEqual(count, 2)
+
     def test_documentation_only_pr_skips_expensive_gamecube_jobs(self) -> None:
         needed, matching, count = requires_gamecube_ci(
             api_payload({"filename": "docs/ROADMAP.md"}, {"filename": "README.md"})
