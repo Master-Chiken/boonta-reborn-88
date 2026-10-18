@@ -93,7 +93,7 @@ jobs:
           })
           # GitHub caps the pull-request files endpoint at 3,000 files.
           # At that boundary, fail toward running GameCube CI, not skipping it.
-          relevant = len(filenames) >= 3000 or bool(matching)
+          relevant = not filenames or len(filenames) >= 3000 or bool(matching)
           print(f"Changed-file records read: {len(filenames)}")
           print(f"GameCube-relevant paths: {matching[:80]}")
           print(f"GameCube CI required for this PR: {str(relevant).lower()}")
