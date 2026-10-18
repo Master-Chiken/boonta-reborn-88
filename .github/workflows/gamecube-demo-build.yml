@@ -58,9 +58,22 @@ jobs:
           path: trusted-base
           persist-credentials: false
 
+      - name: Decide whether first-rollout fallback is needed
+        id: selector-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "$GITHUB_WORKSPACE/trusted-base/gamecube-demo/tools/check_gamecube_ci_paths.py" ]]; then
+            echo "candidate_fallback=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "candidate_fallback=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check out candidate selector for first rollout only
+        if: steps.selector-source.outputs.candidate_fallback == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha }}
           path: candidate
           persist-credentials: false
