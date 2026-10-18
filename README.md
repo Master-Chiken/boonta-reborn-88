@@ -17,11 +17,9 @@ The project follows this order without skipping ahead:
 
 Apply “Make it work, make it good, make it fast” in that order.
 
-## Long-term vision: HD++ Remaster, with HD+++ Premium as a stretch goal
+## Longer-term possibilities
 
-- **HD++ Remaster — a long-term quality goal:** a more polished presentation, more detailed original or rights-cleared pod and track assets, clearer scenery, improved effects and UI, richer audio, and eventually more racing content. Gameplay acceptance and the essential original-game experience come first.
-- **HD+++ Premium — the aspirational tier:** push presentation and content as far as the chosen platforms, performance budget, development time, and rights allow. The long-range wish list includes a broader track and pod roster, more elaborate environments and effects, expanded progression, special events, bonus modes, and DLC-style content packs.
-- **The ideal wider dream:** if it proves technically and practically feasible, grow beyond an _Episode I – Racer_-focused remaster toward a broader remake-style experience inspired by the wider _Star Wars Racer_ legacy. This is a long-term ambition, not a promise that other commercial games or their assets will be reproduced.
+The longer-term direction may include better visuals and presentation, additional original or rights-cleared tracks and pods, expanded progression, bonus modes, and optional DLC-style packs. “HD++ Remaster” and “HD+++ Premium” are internal ambition labels for possible levels of polish and scope—not current deliverables or promises. A broader _Star Wars Racer_-inspired experience is only a distant possibility, subject to feasibility and rights.
 
 **Hardware reality:** “HD++” and “HD+++ Premium” describe the quality, detail, presentation, and breadth we aspire to—not a promise of true HD video output from GameCube or Wii. Native builds must respect their original hardware and video-output limits. A genuine HD-resolution Premium edition would require a separate, more capable platform target and remains an optional future possibility, not a current commitment.
 
@@ -124,13 +122,7 @@ Boonta Reborn 88 is an unofficial fan project and is not affiliated with or endo
 
 Research and homebrew development toward a future native GameCube/Wii remaster of _Star Wars: Episode I – Racer_ (1999), with improved presentation, refined racing, new circuits and pods, bonus modes, and future DLC-style expansions.
 
-**Primary ambition — HD++ Remaster:** raise visual clarity, asset detail, atmosphere, and overall polish as far as native GameCube/Wii hardware permits, then build out more racing content.
-
-**Stretch ambition — HD+++ Premium:** pursue a richer premium-quality presentation and broader content offering if technical feasibility, time, contributors, and rights allow it. A true HD-resolution build would require a separate, more capable platform target.
-
-**Ideal long-range dream:** explore a broader remake-style _Star Wars Racer_ experience, if a realistic and rights-compatible scope can be established.
-
-These are aspirations, not claims that the full remaster, bonus modes, new content, or Premium tier are already implemented. “HD++” and “HD+++ Premium” describe project ambition and do not imply native 720p/1080p output from GameCube/Wii. Current status and the next playable milestone are documented above and in the [roadmap](docs/ROADMAP.md).
+Near-term work is focused on turning the current prototype into one reliable, enjoyable race, then expanding the essential racing experience. Better visuals, additional original or rights-cleared content, bonus modes, and broader remaster ideas are longer-term possibilities—not claims about what is implemented today. Any native GameCube/Wii build must respect the hardware's limits; true HD output would require a different platform target. See the [roadmap](docs/ROADMAP.md) for priorities and acceptance criteria.
 
 ---
 

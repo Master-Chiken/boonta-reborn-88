@@ -5,10 +5,8 @@ Last updated: 2026-10-18
 **Product goal**  
 Create a playable, enhanced fan-made remaster inspired by *Star Wars: Episode I – Racer* (1999), targeting GameCube and/or Wii. The original 1999 release did not receive a dedicated native edition for GameCube or Wii, so Boonta Reborn 88 aims to create a new homebrew experience rather than claim an existing port. The project is unofficial and clean-room first.
 
-**Long-term vision tiers**
-- **HD++ Remaster (long-term quality ambition):** improve visual clarity, original-made asset detail, handling/camera, UI/audio, and add original or rights-cleared tracks and pods as the core experience matures.
-- **HD+++ Premium (aspirational stretch goal):** potentially expand presentation, environments, effects, roster and bonus content if performance, development resources and rights permit. This is not a current feature list or commitment.
-- **Wider Racer-inspired remake:** a distant possibility only if technically feasible and rights-compatible; it does not authorize copying commercial code or assets.
+**Longer-term possibilities**
+After the playable race and essential racing content are established, the project may pursue stronger visual presentation, additional original or rights-cleared tracks and pods, bonus modes, and optional content packs. “HD++ Remaster” and “HD+++ Premium” are internal ambition labels, not promises or descriptions of the current build. A broader Racer-inspired experience remains a distant possibility subject to feasibility and rights.
 
 **Platform reality:** HD++ and HD+++ Premium describe quality and scope, not native HD video output on GameCube/Wii. Console builds must fit legacy hardware and video-output limits. A true-HD-resolution edition would require a separate, more capable target and remains optional.
 
