@@ -39,6 +39,9 @@ jobs:
       - name: 'Checkout Code'
         uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
         with:
+          # Review the actual PR candidate, not default-branch source.
+          # issue_comment events lack pull_request.head.sha, so use the PR head ref there.
+          ref: ${{ github.event.pull_request.head.sha || (github.event.issue.pull_request && format('refs/pull/{0}/head', github.event.issue.number)) || github.sha }}
           persist-credentials: 'false'
 
       - name: 'Prepare prompt context'
