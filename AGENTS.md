@@ -18,7 +18,7 @@ This rule applies without exception to **the project owner (Master-Chiken), Bidd
 
 **Do not recreate something simply because it is easier to write from scratch.** A new implementation needs a documented reason, and its acceptance test must demonstrate the missing capability. An existing tool is not automatically suitable: verify compatibility and rights before adopting it. Never bypass provenance or licensing safeguards to save time.
 
-Use [the reuse-first audit](docs/REUSE_FIRST_AUDIT.md) as the starting inventory and update it when meaningful compatibility findings change. This rule applies to all contributors, including AI-assisted work, and to research and planning as well as code.
+Use [the reuse-first audit](docs/REUSE_FIRST_AUDIT.md) as the starting inventory and [the shared AI working protocol](docs/AI_WORKING_PROTOCOL.md) to keep all contributors aligned. Update the audit when meaningful compatibility findings change. This rule applies to all contributors, including AI-assisted work, and to research and planning as well as code.
 
 ## Mandatory engineering order: Make it work, make it good, make it fast
 
