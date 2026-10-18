@@ -54,3 +54,16 @@ Every adopted tool or borrowed component needs a record of upstream URL/revision
 ## Important boundary
 
 The current mesh, texture and track formats demonstrate a working **synthetic test harness**. They are not proof that original Racer data has been extracted or converted. Progress toward the main objective requires a reproducible path from a documented original source format to a target-compatible asset and ultimately a manually playable race.
+
+## Local Step 102 validation — 2026-10-18
+
+The owner-supplied archive `Star_Wars_Racer_GameCube_Step102.zip` was tested locally in a temporary workspace. Its SHA-256 matched the existing source register: `85a1a1d82426399e48ac5a7e41bd7e9e45fda82e832284e573c358641df24b12` (359 files; 2,645,491 uncompressed bytes).
+
+- Restored the executable permission bits recorded in the ZIP metadata in the temporary extracted copy; this was necessary because the extraction method used for this audit did not preserve them.
+- Result: **91/91 Python unit tests passed**.
+- Portable C host regression checks passed for physics, SWC1 collision reading, race flow, rival AI, track/vehicle/item catalogues, race feedback, pod mesh/model, native-source syntax using mock libogc declarations, scene assets and OBJ export.
+- The wrapper then stopped with exit code 2 because `DEVKITPPC` is not configured in this environment. It explicitly did **not** start a real GameCube cross-build. Dolphin was also unavailable here, so this is not emulator or hardware acceptance.
+- This is evidence that the private archive's existing host-side pipeline is testable—not evidence that it is licensed for public redistribution, that its PC-derived spline data is original retail data, or that the prototype is a native playable port.
+
+**Reuse decision:** retain the Step 102 archive as a quarantined local research baseline for now. Do not import its source or assets into this public repository until the existing path-by-path provenance review clears each file. The next technical gate is to run the existing parser against one exact, locally available source block, record the source release/hash and parser output metadata, then compare its format coverage with `swe1r-assets` before writing any new decoder. A successful host suite does not remove the need for that real-input test.
+
