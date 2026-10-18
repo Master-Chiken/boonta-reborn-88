@@ -8,6 +8,8 @@ For each candidate, record the upstream URL and revision, exact platform and inp
 
 Use `docs/REUSE_FIRST_AUDIT.md` as the inventory. Treat this rule as the primary method, not an optional optimization. Keep all work aligned to recovering/understanding original game data and making a native GameCube/Wii game playable; synthetic demo assets are harnesses, not proof of original-data support.
 
+Read [AGENTS.md](AGENTS.md), [the shared AI working protocol](docs/AI_WORKING_PROTOCOL.md), and [the reuse-first audit](docs/REUSE_FIRST_AUDIT.md) before proposing or implementing substantial work. These define the shared project direction for every agent.
+
 ## Project direction
 - Primary goal: develop a native Nintendo GameCube/Wii racing prototype in C using devkitPPC/libogc.
 - Treat the original PC and Nintendo 64 releases as separate research references; do not assume their code, assets, data, or formats are interchangeable.
