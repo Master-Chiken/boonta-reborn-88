@@ -33,7 +33,7 @@ If you prefer WASD steering, rebind Control Stick left/right to `A`/`D` and up/d
 
 ## 3. Smallest useful first test
 
-Load the latest `main` DOL from the [GameCube first-render workflow](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml). Keep the first run short:
+For a quick control-only smoke, the latest `main` DOL is sufficient. **To test the rail fix proposed in PR #214, load the DOL artifact from the GameCube first-render workflow run for the exact current PR head**, not the `main` artifact; this fix is not merged yet. Open [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) → Checks, select the GameCube first-render run for the current head, and download the `boonta-reborn-gamecube-first-render` artifact. Record that commit SHA with your observations. Keep the first run short:
 
 1. Press keyboard `S` (GameCube Y) and confirm the HUD returns to the clean start state.
 2. Hold `X` (GameCube A) briefly, release it, then test `Z` (GameCube B).
@@ -49,7 +49,7 @@ Do not infer that controls work merely because the DOL starts or a CI movie rend
 
 Add a concise report to [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) with:
 
-- exact `main` commit SHA used for the DOL;
+- exact commit SHA used for the DOL (for the PR rail test, use the PR-head artifact, not the mainline DOL);
 - Dolphin version and video backend;
 - whether Port 1 was set to Standard Controller and which device was selected;
 - PASS / FAIL / NOT TESTED for reset, accelerate, brake, steering, boost, off-road/rail behavior, pause/resume, three-lap finish, and restart;
