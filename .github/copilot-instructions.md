@@ -1,5 +1,7 @@
 # Instructions for AI coding agents
 
+**Shared coordination:** Read [AGENTS.md](../AGENTS.md), [the AI working protocol](../docs/AI_WORKING_PROTOCOL.md), and [the reuse-first audit](../docs/REUSE_FIRST_AUDIT.md). Follow the common objective, avoid overlapping tasks already in progress, and document reused work and the exact remaining gap.
+
 ## Mandatory pre-flight
 
 **Read the repository-root [AGENTS.md](../AGENTS.md) before planning or implementing every task.** It applies to code, rendering, controls, parsers, collision, assets, UI, tests, CI, and documentation.
