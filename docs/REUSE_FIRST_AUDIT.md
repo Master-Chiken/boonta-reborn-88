@@ -49,6 +49,17 @@ Do **not** start by building another generic asset framework. First:
 4. If it works, wrap/reuse it and write a deterministic conversion adapter plus a small regression fixture that contains no proprietary asset data.
 5. If it fails, document the exact mismatch (platform/version, format, endianness, compression or missing feature) before extending the upstream tool or writing a small new component.
 
+## Step 102 archive contents checked — 2026-10-18
+
+The supplied `Star_Wars_Racer_GameCube_Step102.zip` was inspected by reading its ZIP directory only (no commercial game data was extracted). Its SHA-256 is `85a1a1d82426399e48ac5a7e41bd7e9e45fda82e832284e573c358641df24b12`; the archive contains 375 entries and 2,645,491 uncompressed bytes. It contains **no** `.bin`, `.iso`, `.gcm`, `.z64`, or `.dol` payloads. It does contain existing diagnostic tools such as `tools/inspect_blocks.py`, `tools/audit_pc_modelblock.py`, and `tools/scan_pc_assets.py`, plus PC-oriented model/spline audit reports and catalogues.
+
+Consequences for the next step:
+
+- Reuse `inspect_blocks.py` and `audit_pc_modelblock.py` first for **PC-format metadata validation** rather than creating a parallel block-table parser.
+- The tools explicitly expect user-supplied `out_modelblock.bin`, `out_splineblock.bin`, or `out_textureblock.bin`; those original block files are not present inside this Step 102 source archive.
+- Existing PC-derived spline/catalogue reports are useful research inputs but do not establish GameCube/Wii format compatibility or clear the underlying track data for redistribution.
+- The first real-input test is therefore **blocked until a lawful local source block is selected**. A PC block can validate the existing parser against the PC format only; it cannot, by itself, prove a GameCube/Wii data path. Record platform/version and hash locally, and publish only non-sensitive structural metadata and tests—not the block or extracted assets.
+
 ## Definition of an accepted reuse
 
 Every adopted tool or borrowed component needs a record of upstream URL/revision, license, relevant files, local changes, target compatibility evidence, test command/results and remaining limitations. Keep upstream code separable where possible. Never import commercial executables, disc images, ROMs or extracted proprietary assets into this public repository without clear redistribution authorization.
