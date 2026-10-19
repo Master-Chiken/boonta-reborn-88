@@ -1,0 +1,256 @@
+
+name: Archive-backed branch ref consolidation
+
+on:
+  push:
+    branches:
+      - archive/branch-heads-20261019
+    paths:
+      - ".github/workflows/archive-ref-consolidation.yml"
+      - "docs/branch-ref-archive-2026-10-19.json"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: archive-backed-branch-ref-consolidation
+  cancel-in-progress: false
+
+jobs:
+  consolidate:
+    if: github.ref == 'refs/heads/archive/branch-heads-20261019'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Check out the exact archive commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate archive graph and consolidate live refs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REPO" == "Master-Chiken/boonta-reborn-88" ]] || { echo "::error::Unexpected repository"; exit 1; }
+          [[ "$GITHUB_EVENT_NAME" == "push" ]] || { echo "::error::Expected push event"; exit 1; }
+          [[ "$GITHUB_REF" == "refs/heads/archive/branch-heads-20261019" ]] || { echo "::error::Unexpected ref"; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "$GITHUB_SHA" ]] || { echo "::error::Checkout SHA mismatch"; exit 1; }
+
+          manifest="docs/branch-ref-archive-2026-10-19.json"
+          [[ -s "$manifest" ]] || { echo "::error::Recovery manifest missing"; exit 1; }
+          main_sha="$(jq -r '.baseline_main_sha' "$manifest")"
+          snapshot_sha="$(jq -r '.snapshot_commit_sha' "$manifest")"
+          previous_archive_sha="$(jq -r '.archive_head_before_snapshot' "$manifest")"
+          baseline_count="$(jq -r '.baseline_branch_count' "$manifest")"
+          keeper_count="$(jq -r '.target_live_ref_count' "$manifest")"
+          [[ "$baseline_count" == "118" && "$(jq '.branches | length' "$manifest")" == "118" ]] || { echo "::error::Captured inventory must contain exactly 118 refs"; exit 1; }
+          [[ "$keeper_count" == "18" && "$(jq '.keepers | length' "$manifest")" == "18" ]] || { echo "::error::Expected exactly 18 keeper refs"; exit 1; }
+          [[ "$(git rev-parse "$GITHUB_SHA^1")" == "$snapshot_sha" ]] || { echo "::error::Archive commit first parent mismatch"; exit 1; }
+          [[ "$(git rev-parse "$snapshot_sha^1")" == "$previous_archive_sha" ]] || { echo "::error::Original archive ancestry mismatch"; exit 1; }
+
+          snapshot_parents="$(git show -s --format=%P "$snapshot_sha")"
+          snapshot_parent_count="$(awk '{print NF}' <<< "$snapshot_parents")"
+          [[ "$snapshot_parent_count" == "117" ]] || { echo "::error::Snapshot parent count mismatch: $snapshot_parent_count"; exit 1; }
+          workflow_parents="$(git show -s --format=%P "$GITHUB_SHA")"
+          workflow_parent_count="$(awk '{print NF}' <<< "$workflow_parents")"
+          [[ "$workflow_parent_count" == "117" ]] || { echo "::error::Current archive commit parent count mismatch: $workflow_parent_count"; exit 1; }
+          [[ "$(awk '{print $1}' <<< "$workflow_parents")" == "$snapshot_sha" ]] || { echo "::error::Current archive commit first parent mismatch"; exit 1; }
+
+          cat > "$RUNNER_TEMP/keepers.txt" <<'KEEPERS'
+          main
+          archive/branch-heads-20261019
+          governance/no-branch-cap-task-completion-20261017
+          test/dolphin-pause-state-acceptance-7679597746618456134
+          fix/width-aware-rail-collision-20261017
+          fix/steering-stick-deadzone-20261017
+          feat/game-finish-banner-label-20261017
+          feat/rocky-canyon-silhouette-20261017
+          feat/source-driven-racer-mesh-texture-20261017
+          test/dolphin-pause-state-acceptance
+          feature/gamecube-boost-meter
+          feature/gamecube-boost-overheat
+          feature/gamecube-lap-timing-hud
+          feature/gamecube-multi-rival-race-v2
+          fix/frame-rate-independent-gameplay-v3
+          feature/cleanroom-mesh-source
+          audit/step102-import-gate
+          import/step102-source-only
+          KEEPERS
+          LC_ALL=C sort -u "$RUNNER_TEMP/keepers.txt" -o "$RUNNER_TEMP/keepers.txt"
+          jq -r '.keepers[]' "$manifest" | LC_ALL=C sort -u > "$RUNNER_TEMP/manifest-keepers.txt"
+          diff -u "$RUNNER_TEMP/keepers.txt" "$RUNNER_TEMP/manifest-keepers.txt"
+
+          printf '%s\n' "$workflow_parents" | tr ' ' '\n' > "$RUNNER_TEMP/workflow-parents.txt"
+          while IFS=$'\t' read -r name expected_sha expected_protected; do
+            [[ -n "$name" ]] || continue
+            if [[ "$name" == "archive/branch-heads-20261019" ]]; then
+              [[ "$expected_sha" == "$snapshot_sha" ]] || { echo "::error::Archive manifest SHA mismatch"; exit 1; }
+            else
+              grep -Fqx "$expected_sha" "$RUNNER_TEMP/workflow-parents.txt" || { echo "::error::Current ref head is not preserved as an archive parent: $name"; exit 1; }
+            fi
+          done < <(jq -r '.branches[] | [.name,.sha,(.protected|tostring)] | @tsv' "$manifest")
+
+          inventory() {
+            gh api --paginate --slurp "repos/$REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches.json"
+            gh api --paginate --slurp "repos/$REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs.json"
+          }
+          inventory
+          live_count="$(jq 'length' "$RUNNER_TEMP/branches.json")"
+          [[ "$live_count" == "$baseline_count" ]] || { echo "::error::Live count changed since capture: $live_count vs $baseline_count"; exit 1; }
+          jq -r '.[].name' "$RUNNER_TEMP/branches.json" | LC_ALL=C sort > "$RUNNER_TEMP/live-names.txt"
+          jq -r '.branches[].name' "$manifest" | LC_ALL=C sort > "$RUNNER_TEMP/expected-names.txt"
+          diff -u "$RUNNER_TEMP/expected-names.txt" "$RUNNER_TEMP/live-names.txt"
+
+          live_main_sha="$(jq -r --arg name main '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+          [[ "$live_main_sha" == "$main_sha" ]] || { echo "::error::main moved since the audited snapshot; stopping"; exit 1; }
+          [[ "$(git rev-parse "$main_sha^{tree}")" == "$(jq -r '.baseline_main_tree_sha' "$manifest")" ]] || { echo "::error::main tree mismatch"; exit 1; }
+
+          while IFS=$'\t' read -r name expected_sha expected_protected; do
+            [[ -n "$name" ]] || continue
+            actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            actual_protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected|tostring) end' "$RUNNER_TEMP/branches.json")"
+            if [[ "$name" == "archive/branch-heads-20261019" ]]; then
+              [[ "$actual" == "$GITHUB_SHA" ]] || { echo "::error::Archive ref does not point to this workflow commit"; exit 1; }
+            else
+              [[ "$actual" == "$expected_sha" ]] || { echo "::error::SHA mismatch for $name; no refs will be retired"; exit 1; }
+            fi
+            [[ "$actual_protected" == "$expected_protected" ]] || { echo "::error::Protection status changed for $name; no refs will be retired"; exit 1; }
+          done < <(jq -r '.branches[] | [.name,.sha,(.protected|tostring)] | @tsv' "$manifest")
+
+          python3 - "$main_sha" "$manifest" "$RUNNER_TEMP/config-refs.json" <<'PY'
+          import json
+          import re
+          import subprocess
+          import sys
+
+          main_sha, manifest_path, output_path = sys.argv[1:]
+          with open(manifest_path, encoding="utf-8") as stream:
+              manifest = json.load(stream)
+          keepers = set(manifest["keepers"])
+          paths = subprocess.check_output(
+              ["git", "ls-tree", "-r", "--name-only", main_sha, ".github/workflows", ".github/commands"],
+              text=True,
+          ).splitlines()
+          lines = []
+          for path in paths:
+              try:
+                  body = subprocess.check_output(
+                      ["git", "show", f"{main_sha}:{path}"], text=True, errors="replace"
+                  )
+              except subprocess.CalledProcessError:
+                  continue
+              for line_number, line in enumerate(body.splitlines(), start=1):
+                  lines.append((path, line_number, line))
+          hits = {}
+          for branch in manifest["branches"]:
+              name = branch["name"]
+              if name in keepers:
+                  continue
+              token = re.compile(r"(?<![A-Za-z0-9_./-])" + re.escape(name) + r"(?![A-Za-z0-9_./-])")
+              references = [
+                  {"path": path, "line": number, "text": line.strip()[:240]}
+                  for path, number, line in lines if token.search(line)
+              ]
+              if references:
+                  hits[name] = references
+          with open(output_path, "w", encoding="utf-8") as stream:
+              json.dump(hits, stream, indent=2)
+          print(f"Exact-name refs in main workflow/command files: {len(hits)}")
+          PY
+
+          : > "$RUNNER_TEMP/retire.tsv"
+          : > "$RUNNER_TEMP/held.tsv"
+          while IFS=$'\t' read -r name expected_sha; do
+            [[ -n "$name" ]] || continue
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              printf '%s\t%s\n' "$name" "open PR head" >> "$RUNNER_TEMP/held.tsv"
+              continue
+            fi
+            if [[ "$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].protected | tostring' "$RUNNER_TEMP/branches.json")" != "false" ]]; then
+              printf '%s\t%s\n' "$name" "protected/unknown" >> "$RUNNER_TEMP/held.tsv"
+              continue
+            fi
+            if jq -e --arg name "$name" 'has($name)' "$RUNNER_TEMP/config-refs.json" >/dev/null; then
+              printf '%s\t%s\n' "$name" "referenced in main workflow/config" >> "$RUNNER_TEMP/held.tsv"
+              continue
+            fi
+            printf '%s\t%s\n' "$name" "$expected_sha" >> "$RUNNER_TEMP/retire.tsv"
+          done < <(jq -r '.branches[] | [.name,.sha] | @tsv' "$manifest" | while IFS=$'\t' read -r name sha; do
+            if ! grep -Fqx "$name" "$RUNNER_TEMP/keepers.txt"; then printf '%s\t%s\n' "$name" "$sha"; fi
+          done)
+
+          held_count="$(awk 'END {print NR+0}' "$RUNNER_TEMP/held.tsv")"
+          retire_count="$(awk 'END {print NR+0}' "$RUNNER_TEMP/retire.tsv")"
+          planned_final=$((keeper_count + held_count))
+          {
+            echo "# Archive-backed branch reference consolidation"
+            echo
+            echo "- Baseline refs audited: $baseline_count"
+            echo "- Branch tips preserved in archive commit graph: 118"
+            echo "- Fixed live keepers: $keeper_count"
+            echo "- Refs held by PR/config/protection dependencies: $held_count"
+            echo "- Refs eligible for retirement: $retire_count"
+            echo "- Planned final refs: $planned_final"
+            echo
+            echo "Retiring a ref does not claim its change is integrated into main; the exact SHA remains recoverable from the archive manifest."
+            echo
+            echo "## Held refs"
+            if [[ -s "$RUNNER_TEMP/held.tsv" ]]; then
+              awk -F '\t' '{print "- " $1 " — " $2}' "$RUNNER_TEMP/held.tsv"
+            else
+              echo "- None"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if (( planned_final >= 20 )); then
+            echo "::error::The fixed plan would leave $planned_final refs; no branch refs were deleted."
+            exit 1
+          fi
+
+          while IFS=$'\t' read -r name expected_sha; do
+            [[ -n "$name" ]] || continue
+            inventory
+            actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            actual_protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected|tostring) end' "$RUNNER_TEMP/branches.json")"
+            if [[ -z "$actual" ]]; then
+              echo "ALREADY ABSENT: $name"
+              continue
+            fi
+            [[ "$actual" == "$expected_sha" && "$actual_protected" == "false" ]] || { echo "::error::Last-moment SHA/protection mismatch for $name"; exit 1; }
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "::error::A PR now uses $name; stopping."
+              exit 1
+            fi
+            current_main="$(jq -r --arg name main '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            [[ "$current_main" == "$main_sha" ]] || { echo "::error::main changed during cleanup"; exit 1; }
+            git merge-base --is-ancestor "$expected_sha" "$GITHUB_SHA" || { echo "::error::Archive reachability changed for $name"; exit 1; }
+
+            if ! gh api --method DELETE "repos/$REPO/git/refs/heads/$name" >/dev/null; then
+              inventory
+              if jq -e --arg name "$name" 'any(.[]; .name == $name)' "$RUNNER_TEMP/branches.json" >/dev/null; then
+                echo "::error::GitHub rejected deleting $name; stop and preserve remaining refs."
+                exit 1
+              fi
+            fi
+            inventory
+            if jq -e --arg name "$name" 'any(.[]; .name == $name)' "$RUNNER_TEMP/branches.json" >/dev/null; then
+              echo "::error::GitHub still lists $name after deletion request"
+              exit 1
+            fi
+            echo "RETIRED AND VERIFIED: $name @ $expected_sha"
+          done < "$RUNNER_TEMP/retire.tsv"
+
+          inventory
+          final_count="$(jq 'length' "$RUNNER_TEMP/branches.json")"
+          jq -r '.[].name' "$RUNNER_TEMP/branches.json" | LC_ALL=C sort > "$RUNNER_TEMP/final-names.txt"
+          cat "$RUNNER_TEMP/keepers.txt" > "$RUNNER_TEMP/expected-final-names.txt"
+          cut -f1 "$RUNNER_TEMP/held.tsv" >> "$RUNNER_TEMP/expected-final-names.txt"
+          LC_ALL=C sort -u "$RUNNER_TEMP/expected-final-names.txt" -o "$RUNNER_TEMP/expected-final-names.txt"
+          diff -u "$RUNNER_TEMP/expected-final-names.txt" "$RUNNER_TEMP/final-names.txt"
+          [[ "$final_count" -lt 20 ]] || { echo "::error::Final live ref count is $final_count, not below 20."; exit 1; }
+          echo "SUCCESS: final live ref count is $final_count (<20); all retired refs remain recoverable from the archive graph and manifest."

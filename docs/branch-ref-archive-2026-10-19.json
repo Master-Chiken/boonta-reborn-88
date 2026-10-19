@@ -7,7 +7,7 @@
   "archive_branch": "archive/branch-heads-20261019",
   "archive_head_before_snapshot": "7c09c3a86900bded4fafaa4fed4fb5939e0d54ca",
   "target_live_ref_count": 18,
-  "retention_semantics": "The snapshot commit will have the previous archive SHA as first parent and every other distinct current branch-tip SHA as an additional parent. This preserves commit history and supports recovery, but does not merge any changes into main.",
+  "retention_semantics": "The snapshot commit preserves the baseline inventory. The current cleanup-workflow commit has the snapshot as first parent and each current non-archive branch tip as an additional parent before any live refs are retired. Every recorded tip remains recoverable by SHA from archive/branch-heads-20261019. Ref retirement is not integration into main.",
   "keepers": [
     "main",
     "archive/branch-heads-20261019",
@@ -74,18 +74,18 @@
       "title": "Consolidate branch governance and retire proven merged refs",
       "draft": false,
       "head": "governance/no-branch-cap-task-completion-20261017",
-      "head_sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3",
+      "head_sha": "4d1adf5c77282b68610293f72d67a1b7f5188c73",
       "base": "main"
     }
   ],
   "branches": [
     {
       "name": "archive/branch-heads-20261019",
-      "sha": "7c09c3a86900bded4fafaa4fed4fb5939e0d54ca",
+      "sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67",
       "protected": false,
       "open_prs": [],
       "disposition": "keep_live",
-      "reason": "Archive anchor; its new snapshot commit will connect all recorded branch heads as parents."
+      "reason": "Archive anchor. The cleanup workflow commit is a child of the captured snapshot SHA, which itself preserves all earlier branch heads."
     },
     {
       "name": "audit/step102-import-gate",
@@ -737,7 +737,7 @@
     },
     {
       "name": "governance/no-branch-cap-task-completion-20261017",
-      "sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3",
+      "sha": "4d1adf5c77282b68610293f72d67a1b7f5188c73",
       "protected": false,
       "open_prs": [
         {
@@ -745,7 +745,7 @@
           "title": "Consolidate branch governance and retire proven merged refs",
           "draft": false,
           "base": "main",
-          "head_sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3"
+          "head_sha": "4d1adf5c77282b68610293f72d67a1b7f5188c73"
         }
       ],
       "disposition": "keep_live",
@@ -1055,5 +1055,10 @@
       "disposition": "archive_then_retire_ref",
       "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
     }
-  ]
+  ],
+  "baseline_main_tree_sha": "f33721637bc214273c8057c4127fce7e8c815f86",
+  "snapshot_commit_sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67",
+  "snapshot_commit_parent_count": 117,
+  "cleanup_commit_expected_parent_count": 117,
+  "cleanup_commit_parent_sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67"
 }
