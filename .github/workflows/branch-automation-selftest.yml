@@ -46,6 +46,7 @@ jobs:
           docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           agents = Path("AGENTS.md").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          dependabot = Path(".github/dependabot.yml").read_text(encoding="utf-8")
 
           required_workflow = (
               "general_alert_threshold = 105",
@@ -90,6 +91,16 @@ jobs:
               raise SystemExit("Intake regression: workflow must reject batches larger than one")
           if "manual-dispatch only" not in docs:
               raise SystemExit("Governance docs must explain the manual-only intake behavior")
+
+          # Group routine action upgrades rather than flooding the solo review queue.
+          if "open-pull-requests-limit: 1" not in dependabot:
+              raise SystemExit("Dependabot regression: only one version-update PR may be open")
+          if "github-actions-major:" not in dependabot or "github-actions-minor-patch:" not in dependabot:
+              raise SystemExit("Dependabot regression: major and minor/patch action updates must be grouped")
+          if "weekly" not in dependabot or "day: monday" not in dependabot:
+              raise SystemExit("Dependabot regression: retain weekly update cadence")
+          if "Dependabot update-volume control" not in docs:
+              raise SystemExit("Governance docs must document Dependabot PR grouping and limit")
           forbidden = ("issues: write", "gh issue create", "hard_cap_exceeded", "cap_warning", "Fail audit if hard cap exceeded")
           for marker in forbidden:
               if marker in workflow:
