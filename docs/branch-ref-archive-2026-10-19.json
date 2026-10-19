@@ -1180,12 +1180,11 @@
       }
     ],
     "required_sequence": [
-      "Finish validation of current PR head d9cebeea374563d4eefa6ebad158add99499d792; do not substitute previous SHA results.",
-      "Update the archive manifest with current live SHAs and the fact that the current PR head still needs a parent anchor.",
-      "Create an archive-only commit with the archive's current tree and exact current PR head as an additional parent; move archive forward only, using expected_sha.",
-      "Verify the archive tree is unchanged by the anchor commit and the exact PR head is an ancestor of the archive head.",
-      "Create an active exact-ref archive ruleset blocking deletion and non-fast-forward updates.",
-      "Obtain independent approval and merge through normal protected GitHub flow; let cleanup run and verify exactly main plus archive remain."
+      "Confirm all required PR checks reach terminal-success on exact head d9cebeea374563d4eefa6ebad158add99499d792.",
+      "Create an active exact-ref archive ruleset that blocks deletion and non-fast-forward updates. Verify GitHub's live branch API returns protected=true for archive/branch-heads-20261019.",
+      "Obtain an independent approval of the exact current PR head; bot reports and COMMENTED reviews are not approvals.",
+      "Integrate only through normal protected GitHub flow. The current exact PR head is already preserved as an additional parent of the archive without adopting the PR tree.",
+      "Allow the reviewed cleanup workflow to run only from protected main; require its final inventory to verify exactly main plus archive remain."
     ],
     "safety_notes": [
       "This audit is documentation only and does not delete any branch refs.",
@@ -1224,15 +1223,15 @@
     },
     "latest_live_inventory_preflight": {
       "checked_at_utc_date": "2026-10-19",
-      "source": "GitHub git-ref API current branch SHAs plus direct GitHub Compare API to archive and main",
+      "source": "GitHub git-ref API, direct GitHub Compare API, and verified archive parent graph",
       "live_branch_count": 18,
       "keeper_count": 2,
       "non_keeper_count": 16,
-      "non_keeper_exact_tips_reachable_from_archive": 15,
+      "non_keeper_exact_tips_reachable_from_archive": 16,
       "main_tip_reachable_from_archive": true,
       "archive_tip_self_reachable": true,
       "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
-      "archive_tip_sha": "ca1e2241a6e37d7962badf284730ad333438f50e",
+      "archive_tip_sha": "f6b9edef7bb62ce9ea24de9d011e8405752be265",
       "sole_open_pr": {
         "number": 200,
         "head": "governance/no-branch-cap-task-completion-20261017",
@@ -1240,14 +1239,14 @@
         "state": "open",
         "mergeable_state": "blocked"
       },
-      "sha_reachability": "15 of 16 current non-keeper refs are reachable from archive. The exact current PR #200 head d9cebeea374563d4eefa6ebad158add99499d792 is 8 commits beyond the shared archive anchor and is NOT yet an ancestor of archive/main; a tree-preserving extra-parent archive commit is required before integration. This status is a precise live pre-anchor checkpoint, not authorization to delete refs.",
-      "protection_state": "main reports protected=true; archive reports protected=false; each candidate's protection and open-PR status must be rechecked live at cleanup time. Cleanup must fail closed until an exact-ref archive ruleset blocks deletion and force-push/non-fast-forward updates.",
+      "sha_reachability": "All 16 current non-keeper tips are now ancestors of the archive: 15 candidates remained reachable from the prior verified archive graph, and current PR #200 head d9cebeea374563d4eefa6ebad158add99499d792 is the exact second parent of archive anchor commit f6b9edef7bb62ce9ea24de9d011e8405752be265. The cleanup workflow still rechecks all live refs and their exact SHAs at runtime.",
+      "protection_state": "main reports protected=true; archive reports protected=false. Archive protection remains a hard blocker for retirement; cleanup must fail closed until an exact-ref ruleset blocks deletion and non-fast-forward updates. Candidate protection/open-PR status must be rechecked live.",
       "deletions_performed": false,
       "next_action": "Independent approval of the exact current PR #200 head, then normal protected integration and execution of the guarded cleanup workflow; verify the live inventory is exactly main and archive.",
       "refs": [
         {
           "branch": "archive/branch-heads-20261019",
-          "sha": "ca1e2241a6e37d7962badf284730ad333438f50e",
+          "sha": "f6b9edef7bb62ce9ea24de9d011e8405752be265",
           "keeper": true,
           "reachable_from_archive": true
         },
@@ -1327,7 +1326,7 @@
           "branch": "governance/no-branch-cap-task-completion-20261017",
           "sha": "d9cebeea374563d4eefa6ebad158add99499d792",
           "keeper": false,
-          "reachable_from_archive": false
+          "reachable_from_archive": true
         },
         {
           "branch": "import/step102-source-only",
@@ -1348,15 +1347,24 @@
           "reachable_from_archive": true
         }
       ],
-      "current_pr_head_anchor_pending": true
+      "current_pr_head_anchor_pending": false,
+      "archive_head_after_anchor_commit": "f6b9edef7bb62ce9ea24de9d011e8405752be265",
+      "archive_anchor_tree_sha": "20d4b9b0561ade0b5ed2e7e69feb813fae5854f3",
+      "archive_anchor_first_parent_tree_preserved": true
     },
     "current_pr_head_recoverability": {
       "name": "governance/no-branch-cap-task-completion-20261017",
       "sha": "d9cebeea374563d4eefa6ebad158add99499d792",
       "pull_request": 200,
-      "state": "pending_archive_anchor",
-      "reason": "The current PR head has advanced since the prior archive anchor. A commit must be appended to the archive using the archive's current tree, with the manifest commit as first parent and this exact PR head as an additional parent; the archive tree must not adopt the PR tree.",
-      "required_verification": "After the parent-anchor commit, compare the exact PR SHA against the new archive head and verify behind_by=0; re-read all live refs; do not merge or delete until current-head checks pass and archive protection is active."
+      "state": "preserved_as_additional_parent",
+      "reason": "The exact current PR head is the second parent of archive-only commit f6b9edef7bb62ce9ea24de9d011e8405752be265. The anchor commit reuses the exact tree of first parent a1138703c48d42c47fc1cf24ce0be2cd94ae68e3; it preserves commit ancestry without adopting the PR tree.",
+      "archive_anchor_commit_sha": "f6b9edef7bb62ce9ea24de9d011e8405752be265",
+      "archive_anchor_first_parent_sha": "a1138703c48d42c47fc1cf24ce0be2cd94ae68e3",
+      "archive_anchor_second_parent_sha": "d9cebeea374563d4eefa6ebad158add99499d792",
+      "archive_tree_sha": "20d4b9b0561ade0b5ed2e7e69feb813fae5854f3",
+      "archive_link_is_history_only": true,
+      "archive_tree_matches_first_parent": true,
+      "verification": "Direct Compare API: archive anchor vs PR head returns status behind, ahead_by=0, behind_by=840 and merge_base equal to the exact PR SHA; main SHA is reachable from archive. Live archive protection is still false, so no branch-ref deletion is allowed."
     }
   }
 }
