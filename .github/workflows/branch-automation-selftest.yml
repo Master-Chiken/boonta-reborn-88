@@ -107,6 +107,7 @@ jobs:
           docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           agents = Path("AGENTS.md").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          intake_docs = Path("docs/BRANCH_INTAKE.md").read_text(encoding="utf-8")
           dependabot = Path(".github/dependabot.yml").read_text(encoding="utf-8")
 
           required_workflow = (
@@ -161,6 +162,13 @@ jobs:
               raise SystemExit("Intake regression: workflow must reject batches larger than one")
           if "manual-dispatch only" not in docs:
               raise SystemExit("Governance docs must explain the manual-only intake behavior")
+
+          if "manual-dispatch only" not in intake_docs or "at most one draft PR per deliberate run" not in intake_docs:
+              raise SystemExit("Branch intake documentation must describe the manual one-PR-at-a-time queue.")
+          if "Runs twice daily" in intake_docs or "up to 5 draft pull requests per scheduled run" in intake_docs or "1, 3, 5, or 10" in intake_docs:
+              raise SystemExit("Branch intake documentation must not describe the retired scheduled multi-PR queue.")
+          if "Keep this permission disabled" not in intake_docs:
+              raise SystemExit("Branch intake documentation must not recommend enabling GitHub Actions PR creation for this task queue.")
 
           # Group routine action upgrades rather than flooding the solo review queue.
           if "open-pull-requests-limit: 1" not in dependabot:
