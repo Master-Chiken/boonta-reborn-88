@@ -1276,12 +1276,12 @@
           },
           {
             "run_id": 39284586859,
-            "status": "in_progress",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "success",
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39284586859"
           }
         ],
-        "note": "Four equivalent Trusted source-import path guard runs completed successfully on the same exact PR head. One later duplicate run is in progress; these are extra repeated workflow runs, not a new code revision and not a substitute for the independent PR review."
+        "note": "Five equivalent Trusted source-import path guard runs completed successfully on the same exact PR head. These are extra repeated workflow runs, not a new code revision and not a substitute for the independent PR review."
       }
     },
     "pr_200_head_recoverability": {
