@@ -19,6 +19,8 @@ STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to a
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
+FINISH_RESET_PRESS_FRAME = 5000
+FINISH_RESET_HOLD_FRAMES = 6
 PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
 PAUSE_HOLD_FRAMES = 6  # Hold Start for ~100 ms so the emulated input poll cannot miss a short tap.
 PAUSE_BOOST_END_FRAME = 30
@@ -52,6 +54,20 @@ def _controller_state(frame: int, steering: str = "right",
             if 1 <= frame < RESET_BOOST_END_FRAME:
                 buttons |= X
         elif RESET_PRESS_FRAME <= frame < RESET_PRESS_FRAME + RESET_HOLD_FRAMES:
+            buttons = Y
+        else:
+            buttons = 0
+    elif scenario == "finish-reset-check":
+        # Reset once a neutral-steering race has crossed all three lap gates.
+        # Frame 0 establishes a deterministic start; Y is pressed alone at frame
+        # 5000, safely after the current prototype's scripted three-lap finish.
+        if frame < FINISH_RESET_PRESS_FRAME:
+            buttons = A
+            if frame == 0:
+                buttons |= Y
+            if 1 <= frame < RESET_BOOST_END_FRAME:
+                buttons |= X
+        elif frame < FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES:
             buttons = Y
         else:
             buttons = 0
@@ -121,12 +137,12 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check"):
-        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check")
+    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check"):
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-reset-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
-    if scenario == "full-race" and steering != "none":
-        raise ValueError("full-race scenario requires --steering none")
+    if scenario in ("full-race", "finish-reset-check") and steering != "none":
+        raise ValueError(f"{scenario} scenario requires --steering none")
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
@@ -160,9 +176,9 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check"),
                         default="control-smoke",
-                        help="short control validation, full race, Y-reset, Start-pause, or Start-resume check")
+                        help="short controls, full race, Y-reset, Start-pause/resume, or post-finish Y-reset check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()

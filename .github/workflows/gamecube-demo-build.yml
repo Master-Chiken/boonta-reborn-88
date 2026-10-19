@@ -252,7 +252,7 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          # Run the longer finish check automatically only for this spline-integration PR.
+          # Run finish and post-finish reset checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
           RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017')) }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
@@ -297,6 +297,10 @@ jobs:
           export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
           export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
           export RACE_USER="$GITHUB_WORKSPACE/dolphin-full-race-user"
+          export FINISH_RESET_DTM="$GITHUB_WORKSPACE/dolphin-finish-reset.dtm"
+          export FINISH_RESET_LOG="$GITHUB_WORKSPACE/dolphin-finish-reset.log"
+          export FINISH_RESET_CAPTURE="$GITHUB_WORKSPACE/dolphin-finish-reset.png"
+          export FINISH_RESET_USER="$GITHUB_WORKSPACE/dolphin-finish-reset-user"
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
@@ -325,7 +329,7 @@ jobs:
           EOF
           done
           capture_timeout=160
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=720; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -440,18 +444,26 @@ jobs:
               fi
               echo "D-pad/stick steering passed; Y-reset produced a clean HUD; Start paused visibly, and a second Start resumed throttle-driven movement."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
-                echo "Starting optional full-race DTM; this may take around two to four minutes."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
+                echo "Starting full-race DTM; capture after 6000 frames."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 6000 --game-id ID-boo --steering none --scenario full-race
                 mkdir -p "$RACE_USER/Config"
                 chmod 700 "$RACE_USER"
-                printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
+                printf "%s\\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
+                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 250
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
-                echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
+                echo "The three-lap finish checkerboard was detected after the scripted race."
                 if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
                   echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
                 fi
+                echo "Starting a second DTM that resets after the finish window."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 6000 --game-id ID-boo --steering none --scenario finish-reset-check
+                mkdir -p "$FINISH_RESET_USER/Config"
+                chmod 700 "$FINISH_RESET_USER"
+                printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESET_USER/Config/Dolphin.ini"
+                capture_frame "$FINISH_RESET_DTM" "$FINISH_RESET_LOG" "$FINISH_RESET_CAPTURE" "$FINISH_RESET_USER" 250
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESET_CAPTURE" --expect-reset
+                echo "Post-finish Y reset restored a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
@@ -466,9 +478,10 @@ jobs:
           [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
           [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
           [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
+          [[ ! -f "$FINISH_RESET_LOG" ]] || cat "$FINISH_RESET_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" "$FINISH_RESET_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs" "$FINISH_RESET_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -500,6 +513,9 @@ jobs:
             dolphin-reset-state.dtm
             dolphin-pause-state.dtm
             dolphin-resume-state.dtm
+            dolphin-finish-reset.dtm
+            dolphin-finish-reset.png
+            dolphin-finish-reset.log
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
@@ -521,5 +537,6 @@ jobs:
             dolphin-left-stick-steered-user/Logs/**
             dolphin-reset-user/Logs/**
             dolphin-full-race-user/Logs/**
+            dolphin-finish-reset-user/Logs/**
           if-no-files-found: warn
           retention-days: 7

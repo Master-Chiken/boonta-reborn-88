@@ -12,6 +12,8 @@ from make_dolphin_dtm import (
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
+    FINISH_RESET_PRESS_FRAME,
+    FINISH_RESET_HOLD_FRAMES,
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
@@ -271,6 +273,43 @@ class DolphinDtmTests(unittest.TestCase):
     def test_full_race_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(10, steering="right", scenario="full-race")
+
+    def test_finish_reset_profile_reaches_race_window_then_presses_y_alone(self) -> None:
+        frames = 6000
+        blob = build_dtm(frames, steering="none", scenario="finish-reset-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+
+        start = record(blob, 0)
+        self.assertEqual(start[0], A | Y)  # Establish a clean initial state.
+        self.assertTrue(start[1] & IS_CONNECTED)
+        self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        early_boost = record(blob, 20)
+        self.assertEqual(early_boost[0], A | X)
+        before_reset = record(blob, FINISH_RESET_PRESS_FRAME - 1)
+        self.assertEqual(before_reset[0], A)
+        self.assertFalse(before_reset[0] & (B | START | X | Y))
+
+        for frame in range(FINISH_RESET_PRESS_FRAME,
+                           FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES):
+            with self.subTest(reset_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], Y)  # Reset is never combined with throttle.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES, 5500, frames - 1):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)  # Leave the restarted race stationary.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_finish_reset_profile_rejects_directional_steering(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(6000, steering="left", scenario="finish-reset-check")
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
