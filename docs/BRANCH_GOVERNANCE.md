@@ -51,6 +51,6 @@ It does not impose a numeric cap, fail because of branch count, create an issue 
 
 ## Automated intake of branch work
 
-The companion [Branch intake queue](BRANCH_INTAKE.md) compares candidate tips with the default branch and prepares reviewable PRs for small, distinct changes. It runs relevant tests and defers overlapping, oversized, and Step 102/source-import changes for manual review.
+The companion [Branch intake queue](BRANCH_INTAKE.md) is **manual-dispatch only**. It can surface at most **one draft PR per deliberate run**. It has no cron schedule and no push-triggered PR creation. This prevents the workflow from continuously adding review requests while the owner is already processing the active queue. It still screens stale bases, overlapping paths, oversized changes, patch-equivalent work, and Step 102/source-import provenance holds.
 
-The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it.
+The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it. Do not dispatch it again until the current candidate has been accepted, parked, or rejected in Issue #201.
