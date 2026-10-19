@@ -1190,8 +1190,8 @@
       "This audit is documentation only and does not delete any branch refs.",
       "Ref retirement is not proof that each branch's changes were integrated into main; the archived tips remain recoverable from the archive commit graph.",
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
-      "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f is being explicitly preserved as a second parent of an archive-only commit. The parent-link commit must use the same tree as its first parent; this preserves commit history for recovery but does not adopt the PR branch's file tree and is not integration into main.",
-      "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration."
+      "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration.",
+      "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1203,15 +1203,23 @@
       "auto_merge_method": "squash",
       "mergeable_state": "blocked",
       "independent_approval_recorded_for_exact_head": false,
-      "archive_parent_preservation_pending": true,
-      "safe_next_step": "Preserve the exact current head as an archive-only additional parent without adopting its tree, then wait for the independent approval. The configured squash merge remains blocked until approval; cleanup must still pass all live exact-SHA, protection, open-PR and reachability checks."
+      "archive_parent_preservation_pending": false,
+      "safe_next_step": "Independent approval of exact current head is still required. After approval and current-head checks, GitHub's configured squash auto-merge can integrate the reviewed PR diff; the original exact head is already preserved in the archive graph. If the PR head changes, anchor the new exact head before integration. The cleanup workflow must still pass every live safety check and verify exactly two refs.",
+      "archive_parent_preservation_commit": "cde61cea6d0689ec337728f267d101a810b7a7be",
+      "archive_parent_preservation_method": "additional-parent commit on archive ref; no PR-tree adoption",
+      "archive_tree_sha": "4261a19e8e564d129d38f2b9f3fb976f683caf20"
     },
     "pr_200_head_recoverability": {
       "name": "governance/no-branch-cap-task-completion-20261017",
       "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
       "pull_request": 200,
-      "status": "archive_parent_link_to_be_applied_in_following_commit",
-      "reason": "Preserve the exact current PR head as recoverable commit history without copying its file tree into the archive tree. This preserves the head SHA for cleanup reachability if repository auto-merge uses squash; it does not mean the PR's code is integrated into main."
+      "status": "preserved_as_additional_parent",
+      "reason": "The exact current PR head is an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. The archive-anchor commit uses the exact same tree as its first parent; it preserves commit ancestry for recovery/cleanup reachability without adopting the PR branch tree. This is not integration into main.",
+      "archive_anchor_commit_sha": "cde61cea6d0689ec337728f267d101a810b7a7be",
+      "archive_parent_sha": "370b273c17cdf6848dc53a86c127519bad89f",
+      "archive_tree_sha": "4261a19e8e564d129d38f2b9f3fb976f683caf20",
+      "archive_link_is_history_only": true,
+      "archive_tree_matches_first_parent": true
     }
   }
 }
