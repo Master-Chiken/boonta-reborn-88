@@ -146,10 +146,11 @@ jobs:
             gh issue comment "$existing" --repo "$GH_REPO" --body "Latest audit reports $TOTAL branches; hard cap 105, warning threshold 100."
           fi
 
-      - name: Report audit warning if hard cap exceeded
+      - name: Fail audit if hard cap exceeded
         if: steps.inventory.outputs.hard_cap_exceeded == 'true'
         run: |
-          echo "::warning::Repository has ${{ steps.inventory.outputs.total }} branches; advisory threshold is 105. No branches were deleted."
+          echo "::error::Repository has ${{ steps.inventory.outputs.total }} branches; hard cap is 105. No branches were deleted."
+          exit 1
       - name: Open a consolidation tracking issue when active branches exceed 30
         if: steps.inventory.outputs.over_target == 'true'
         env:
