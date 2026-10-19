@@ -67,7 +67,7 @@ jobs:
           # Prevent the project from drifting back into parallel-PR overload.
           queue_markers = (
               "Single-maintainer delivery queue",
-              "one active runtime implementation or integration candidate at a time",
+              "One active runtime implementation or integration candidate at a time",
               "Issue #201 is the single source of truth for the active integration queue",
           )
           for marker in queue_markers:
