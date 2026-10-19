@@ -33,7 +33,8 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
-            .github/workflows/branch-automation-selftest.yml
+            .github/workflows/branch-automation-selftest.yml \
+            .github/workflows/retire-verified-branch.yml
 
       - name: Verify two-branch workflow routing and safety exclusions
         shell: bash
@@ -47,6 +48,7 @@ jobs:
           governance = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           agents = Path("AGENTS.md").read_text(encoding="utf-8")
           audit = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
+          retire = Path(".github/workflows/retire-verified-branch.yml").read_text(encoding="utf-8")
 
           checks = {
               "intake explicitly targets dev": 'target_branch = "dev"' in queue,
@@ -63,6 +65,15 @@ jobs:
               "obsolete 30-active-branch target is removed": "target 30" not in audit and "over_target" not in audit and "Branch governance: consolidation needed" not in audit,
               "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
               "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
+              "retirement workflow is manually triggered only": "workflow_dispatch:" in retire and "\\n  push:" not in retire and "\\n  pull_request:" not in retire and "\\n  schedule:" not in retire,
+              "retirement restricted to owner from main": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in retire,
+              "retirement requires exact typed branch and SHA": "CONFIRM_BRANCH" in retire and "EXPECTED_SHA" in retire and "PINNED_SHA" in retire,
+              "retirement has exactly five pre-reviewed candidates": all(name in retire for name in ("recovery/branch-heads-20261019-verified", "feat/game-finish-banner-label-20261017", "feat/rocky-canyon-silhouette-20261017", "feat/source-driven-racer-mesh-texture-20261017", "test/dolphin-pause-state-acceptance")),
+              "retirement rejects protected refs and open PRs": ".protected // false" in retire and ".head.ref == $branch or .base.ref == $branch" in retire,
+              "retirement verifies reachability in recovery archive": 'git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019"' in retire,
+              "retirement repeats exact-SHA check immediately before delete": "Recheck immediately before deletion" in retire and retire.count('actual_sha="$(jq -r') >= 2,
+              "retirement does not force-push or merge": "git push --force" not in retire and "gh pr merge" not in retire and "git update-ref" not in retire,
+              "retirement has one delete-ref API call": retire.count('gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH_NAME"') == 1,
           }
           for label, ok in checks.items():
               print(f"{'PASS' if ok else 'FAIL'}: {label}")
