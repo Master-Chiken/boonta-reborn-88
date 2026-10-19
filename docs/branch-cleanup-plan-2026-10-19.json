@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "repository": "Master-Chiken/boonta-reborn-88",
+  "recorded_date": "2026-10-19",
+  "live_branch_count_at_checkpoint": 22,
+  "checkpoint_commit": "cf4978a17916c00eed8e25550bd9231354096993",
+  "checkpoint_parent_count": 22,
+  "checkpoint_verification": "Verified via GitHub API: the protected archive now points to the checkpoint commit, whose 22 parents include its previous archive tip and every one of the 21 other live branch heads. No head was omitted.",
+  "target_permanent_branches": [
+    "main",
+    "dev"
+  ],
+  "required_recovery_ref": "archive/branch-heads-20261019",
+  "active_open_pr_refs": [
+    {
+      "pr": 214,
+      "branch": "fix/width-aware-rail-collision-20261017",
+      "sha": "db1f9747b8193d6cc4e77e0f69a073cd5e210eb5",
+      "base": "dev",
+      "disposition": "retain until PR is merged or closed"
+    },
+    {
+      "pr": 225,
+      "branch": "docs/rea-research-workflow-20261019",
+      "sha": "6205161e4674022e082aea70efe85bafdcce50af",
+      "base": "main",
+      "disposition": "retain until PR is merged or closed"
+    }
+  ],
+  "cleanup_method": "Owner-only manually dispatched GitHub Actions workflow on main. Before each ref deletion, verify pinned SHA matches current branch head, branch is unprotected, there are no open PRs using it as head or base, and exact SHA is an ancestor of protected archive. No force updates, no merges, no deletion of main/dev/archive.",
+  "warning": "Branch ref retirement is not code integration. Unique and provenance-sensitive work listed below remains archived and can be restored from its exact SHA; do not merge Step 102 branches or old gameplay branches wholesale.",
+  "branches": [
+    {
+      "name": "archive/branch-heads-20261019",
+      "sha": "cf4978a17916c00eed8e25550bd9231354096993",
+      "protected": true,
+      "disposition": "keep",
+      "reason": "Protected recovery archive; current cleanup checkpoint contains every live branch tip as a parent."
+    },
+    {
+      "name": "audit/step102-import-gate",
+      "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "147 unique commits vs dev; source-import/provenance hold. Keep its commits in archive, not as active branch."
+    },
+    {
+      "name": "chore/two-branch-workflow",
+      "sha": "c6323e5ae26bf875aed8e6aab3f0c18cf088c0a8",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Its governance changes are now squashed into dev; this ref tip itself is preserved by checkpoint."
+    },
+    {
+      "name": "dev",
+      "sha": "c22bf27e0aca621ea735a85e9fedb92fd1933754",
+      "protected": true,
+      "disposition": "keep",
+      "reason": "Permanent integration branch."
+    },
+    {
+      "name": "docs/rea-research-workflow-20261019",
+      "sha": "6205161e4674022e082aea70efe85bafdcce50af",
+      "protected": false,
+      "disposition": "keep_open_pr",
+      "pr": 225,
+      "reason": "Open documentation PR; preserve the live head until PR #225 is merged or closed."
+    },
+    {
+      "name": "feat/game-finish-banner-label-20261017",
+      "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Zero unique commits/files vs dev; changes are already represented in the product branch."
+    },
+    {
+      "name": "feat/rocky-canyon-silhouette-20261017",
+      "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Zero unique commits/files vs dev; changes are already represented in the product branch."
+    },
+    {
+      "name": "feat/source-driven-racer-mesh-texture-20261017",
+      "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Zero unique commits/files vs dev; changes are already represented in the product branch."
+    },
+    {
+      "name": "feature/cleanroom-mesh-source",
+      "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Three unique commits across nine changed files; not merged. Retire only the live ref after exact SHA and recovery ancestry checks; code remains archived and recoverable."
+    },
+    {
+      "name": "feature/gamecube-boost-meter",
+      "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Nineteen unique commits across six changed files; not merged. Preserve in archive, not active branch list."
+    },
+    {
+      "name": "feature/gamecube-boost-overheat",
+      "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Five unique commits across five changed files; not merged. Preserve in archive."
+    },
+    {
+      "name": "feature/gamecube-lap-timing-hud",
+      "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Seven unique commits across five changed files; not merged. Preserve in archive."
+    },
+    {
+      "name": "feature/gamecube-multi-rival-race-v2",
+      "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Four unique commits across four changed files; not merged. Preserve in archive."
+    },
+    {
+      "name": "fix/frame-rate-independent-gameplay-v3",
+      "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Four unique commits across three changed files; not merged. Preserve in archive."
+    },
+    {
+      "name": "fix/steering-stick-deadzone-20261017",
+      "sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Closed PR #215 was not merged; preserve its 15-commit candidate history in archive for later selective integration."
+    },
+    {
+      "name": "fix/width-aware-rail-collision-20261017",
+      "sha": "db1f9747b8193d6cc4e77e0f69a073cd5e210eb5",
+      "protected": false,
+      "disposition": "keep_open_pr",
+      "pr": 214,
+      "reason": "Open gameplay PR #214 targets dev; keep its current head until manually accepted and merged/closed."
+    },
+    {
+      "name": "governance/no-branch-cap-task-completion-20261017",
+      "sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Closed PR #200 was not merged; archive the exact governance history but do not reintroduce its cleanup automation blindly."
+    },
+    {
+      "name": "import/step102-source-only",
+      "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "120 unique commits across 136 changed files; provenance HOLD. Preserve exact history only; do not merge blindly."
+    },
+    {
+      "name": "main",
+      "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "protected": true,
+      "disposition": "keep",
+      "reason": "Permanent stable/release branch and repository default."
+    },
+    {
+      "name": "recovery/branch-heads-20261019-verified",
+      "sha": "085ff1c9638650c279addcba5a04f839c414512b",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Its checkpoint commit is already a parent of the protected archive history."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance",
+      "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Zero unique commits/files vs dev; redundant reference."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance-7679597746618456134",
+      "sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+      "protected": false,
+      "disposition": "archive_then_retire",
+      "reason": "Closed PR #221 was not merged; preserve its five-commit pause-state test history in archive for future selective review."
+    }
+  ]
+}
