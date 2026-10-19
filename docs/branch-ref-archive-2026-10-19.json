@@ -1,0 +1,1059 @@
+{
+  "schema_version": 1,
+  "repository": "Master-Chiken/boonta-reborn-88",
+  "captured_at_utc": "2026-10-19",
+  "baseline_branch_count": 118,
+  "baseline_main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
+  "archive_branch": "archive/branch-heads-20261019",
+  "archive_head_before_snapshot": "7c09c3a86900bded4fafaa4fed4fb5939e0d54ca",
+  "target_live_ref_count": 18,
+  "retention_semantics": "The snapshot commit will have the previous archive SHA as first parent and every other distinct current branch-tip SHA as an additional parent. This preserves commit history and supports recovery, but does not merge any changes into main.",
+  "keepers": [
+    "main",
+    "archive/branch-heads-20261019",
+    "test/dolphin-pause-state-acceptance-7679597746618456134",
+    "fix/steering-stick-deadzone-20261017",
+    "fix/width-aware-rail-collision-20261017",
+    "governance/no-branch-cap-task-completion-20261017",
+    "feat/game-finish-banner-label-20261017",
+    "feat/rocky-canyon-silhouette-20261017",
+    "feat/source-driven-racer-mesh-texture-20261017",
+    "test/dolphin-pause-state-acceptance",
+    "feature/gamecube-boost-meter",
+    "feature/gamecube-boost-overheat",
+    "feature/gamecube-lap-timing-hud",
+    "feature/gamecube-multi-rival-race-v2",
+    "fix/frame-rate-independent-gameplay-v3",
+    "feature/cleanroom-mesh-source",
+    "audit/step102-import-gate",
+    "import/step102-source-only"
+  ],
+  "priority_keep_refs": [
+    "feature/gamecube-boost-meter",
+    "feature/gamecube-boost-overheat",
+    "feature/gamecube-lap-timing-hud",
+    "feature/gamecube-multi-rival-race-v2",
+    "fix/frame-rate-independent-gameplay-v3",
+    "feature/cleanroom-mesh-source",
+    "audit/step102-import-gate",
+    "import/step102-source-only"
+  ],
+  "temporarily_retained_proven_candidates": [
+    "feat/game-finish-banner-label-20261017",
+    "feat/rocky-canyon-silhouette-20261017",
+    "feat/source-driven-racer-mesh-texture-20261017",
+    "test/dolphin-pause-state-acceptance"
+  ],
+  "open_prs": [
+    {
+      "number": 221,
+      "title": "test: verify multi-step pause sequence transitions",
+      "draft": true,
+      "head": "test/dolphin-pause-state-acceptance-7679597746618456134",
+      "head_sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+      "base": "main"
+    },
+    {
+      "number": 215,
+      "title": "Reduce analog steering noise around stick center",
+      "draft": true,
+      "head": "fix/steering-stick-deadzone-20261017",
+      "head_sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+      "base": "main"
+    },
+    {
+      "number": 214,
+      "title": "Fix track-width-aware rail collision alignment",
+      "draft": true,
+      "head": "fix/width-aware-rail-collision-20261017",
+      "head_sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e",
+      "base": "main"
+    },
+    {
+      "number": 200,
+      "title": "Consolidate branch governance and retire proven merged refs",
+      "draft": false,
+      "head": "governance/no-branch-cap-task-completion-20261017",
+      "head_sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3",
+      "base": "main"
+    }
+  ],
+  "branches": [
+    {
+      "name": "archive/branch-heads-20261019",
+      "sha": "7c09c3a86900bded4fafaa4fed4fb5939e0d54ca",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Archive anchor; its new snapshot commit will connect all recorded branch heads as parents."
+    },
+    {
+      "name": "audit/step102-import-gate",
+      "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "automation/interactive-validation-roadmap",
+      "sha": "ef4ef7560cb27c779822f0996629d0bff08767a7",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "chore/required-ci-checks-main-20261018",
+      "sha": "591ad88337e3a14cbfd1ece432d222591498d669",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "ci/capture-dolphin-window-only",
+      "sha": "d723a9498ae45ed229363103f7a482fbd2791525",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "ci/capture-dolphin-window-only-v2",
+      "sha": "9f57f52f4973250e938652029517f19a6f545140",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/add-project-roadmap",
+      "sha": "a347bf705e0f73ad6479847b09459479c874dd26",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/align-next-milestone-pr-status",
+      "sha": "195c41e854288a6dbe7bf3c63d3ad7773908ffb0",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/clarify-gamecube-prototype-status",
+      "sha": "3293d3a7c7f7eba2cd938408fc123e939b6d31b9",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/clarify-runtime-tested-mainline",
+      "sha": "6682346f4af9bfde96d027188ce206a1e05f741d",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/current-gamecube-status",
+      "sha": "d59cee7cf9eb1797ce1cf599ba257e22916b16c4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/current-gamecube-timing-evidence",
+      "sha": "311b77a04860149877bec200e4da388ec1101abb",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/current-playable-milestone-and-research-map",
+      "sha": "d12629b6dc9c66d6af64e59ab2ce9c5c74360802",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/fix-status-after-status-merge",
+      "sha": "79e24e23469b5335c60c8b8ae897039e26680918",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/gameplay-first-development-order-20261018",
+      "sha": "23459e004a9bf2061ecfbe4cb30ac8cf53bff599",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/hd-remaster-vision-copyright-about-20261017",
+      "sha": "c5f899ecaf20d8b75406907fc6dc2eb3e2ee8738",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/interactive-validation-milestone",
+      "sha": "0c827d314eab0abfb0422313f62e88f11801b77a",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/mainline-acceptance-gate",
+      "sha": "d9b31e166e3e56aac1d4e467ad364d7f45aea483",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/mesh-source-format-contract",
+      "sha": "4d5557513d04e2160e9cd9c2b146d2d4adfd51a3",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/project-continuity-map",
+      "sha": "c7f3f83b41724e5dee4aa884b9a4375b3cf00ef2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/refresh-build-and-agent-status",
+      "sha": "c2ae3fd82a562f12a6ff0a9606bbf6cbc20f5668",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/refresh-gamecube-runtime-status-2026-10-16",
+      "sha": "e1d76fb4238db7417ec2143fcbe08e3d30a2eec7",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/refresh-racer-research-map",
+      "sha": "a0c935cef1e4edfb33a306d4d0b490788599c9e3",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/remaster-hd-premium-vision-20261017",
+      "sha": "4d55555231096b1c9e44063d2ad93a749f2cc5ab",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/source-import-gate",
+      "sha": "ead5e3d773c67cd6c09662bf0c2761f234f4ebda",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/stabilize-runtime-status-wording",
+      "sha": "7237ff11a04663178d732022fd1a3921f7c5e2ad",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/step102-provenance-evidence",
+      "sha": "db994cf784c24020fcf9dd8a3909d9ea82edcb69",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/update-agent-workflow-and-source-import",
+      "sha": "066c13b10981dbbdf1aa4ea5e0a4e760355a1187",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/wii64-archive-technical-review",
+      "sha": "ce296115ef80edd5689fe038c901e2c40e55d24a",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/wii64-episode1-racer-profile",
+      "sha": "6e8f37a10ee0d7b00d8a4b2eff1e2cc21a38cda9",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/wii64-reference-test-plan",
+      "sha": "5eacdb5855354b3075ed21a3df035d1d6f5c21d0",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "docs/wii64-variant-fingerprints",
+      "sha": "f9d964a5c61ac1e5bbb8f4bd32fedfe04c225623",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feat/game-finish-banner-label-20261017",
+      "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+    },
+    {
+      "name": "feat/rocky-canyon-silhouette-20261017",
+      "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+    },
+    {
+      "name": "feat/source-driven-racer-mesh-texture-20261017",
+      "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+    },
+    {
+      "name": "feature/cleanroom-mesh-source",
+      "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "feature/distant-canyon-ridges",
+      "sha": "b5f96ea8e5d65020bf2939f7f9af034db2480adf",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/dreamcast-visible-smoke-test",
+      "sha": "46844753b11cd5ab6576394a20fc8bab36bd4d87",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/gamecube-boost-meter",
+      "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "feature/gamecube-boost-overheat",
+      "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "feature/gamecube-lap-timing-hud",
+      "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "feature/gamecube-multi-rival-race",
+      "sha": "f8d252da19bdf3ee94273f384e2ef05494e18796",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/gamecube-multi-rival-race-v2",
+      "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "feature/gamecube-pause-and-docs",
+      "sha": "30125f6bde8be4d7421cf5e7610c6976936200d4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/gamecube-race-feel",
+      "sha": "86a3dbb4140d2dad423500301086703493593389",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/gamecube-rival-craft",
+      "sha": "6f34481ece6354385f0e1e956345aa37657a9f5e",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/gamecube-rival-interactions",
+      "sha": "7d8c3fb899514b9b24a27f25238e1c016b2511c9",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/mesh-uv-source-contract",
+      "sha": "502fe74d329789393fa299d362a28e6028599d74",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/two-synthetic-mesh-gx",
+      "sha": "0e4dd943b2b5c52d9d38365573a9f5a9b5c9fdb1",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "feature/validated-mesh-contract",
+      "sha": "2b22da23c84c51bf353938f83e4d5a53f9dbb510",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/branch-governance-commit-dates",
+      "sha": "6bb7cca349e5573a99438d22ab2b4f0beab83516",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/cap-excessive-frame-scale",
+      "sha": "e59af82e66a3bf15698736b9d165bc7efbc17613",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/cap-frame-scale-rebased",
+      "sha": "1ef8b6e597b3cdb85b470f244365b9d32e1978c2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/count-all-crossed-laps",
+      "sha": "5e4d2d9292ef2a1eba22c2cd10a0566257f5bd57",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/frame-rate-independent-gameplay",
+      "sha": "4d02bd7751eac7004e8b6cc121f9b23ef3b551a6",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/frame-rate-independent-gameplay-v2",
+      "sha": "7debd90014093b8a970f9c668807d76c7f6fd847",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/frame-rate-independent-gameplay-v3",
+      "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "fix/gamecube-hud-matrix-binding",
+      "sha": "6148c74409892a13802b02096b16c59b2edee942",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gamecube-reset-frame-isolation",
+      "sha": "58a3dedf84d6e5fc43de303bfd3587bef584cc91",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-context-injection",
+      "sha": "06eb68f4c149974dea671a9b66601e99121b0abc",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-context-shell-policy",
+      "sha": "626b20744f6329b0bb2b3d04e810bb864fc6ac8c",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-flash-lite-fallback",
+      "sha": "3a46c19080ec7da907966becaeebdd166152525b",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-free-flash-fallback",
+      "sha": "984821139976b95ecb0aa7d1b55a174858b8edc4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-publish-response",
+      "sha": "e03e9b0c572f0a9ffa26f4b0a09f99b66cd5234b",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-read-tools-allowlist",
+      "sha": "e026ead28dc91634d17deb7b2a3d9d2a4a976251",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gemini-request-args",
+      "sha": "f20462f2a7f1aaf60e5b8ec218e2df779d6252cd",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gx-test-signature-and-diamond-mesh-sync-17328665252802388751",
+      "sha": "e69658f02fc72ddf988216113543be14705801a4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gx-vertex-color-pipeline",
+      "sha": "1fdfc8d7448812c7fe741d35dd799dd3844baab0",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/gx-vertex-color-source",
+      "sha": "1d55d4d441ee2fb13c8f24166717cbb94f4edfd1",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/legacy-native-workflow-entrypoint",
+      "sha": "ed8004862342f9afe3b207632a10b9d2f78bc515",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/mainline-lap-indicator-docs",
+      "sha": "cfd7ffde0e606f124b66aa7562e3e35e41f66b0a",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/non-finite-speed-input",
+      "sha": "f692102d267b8076728e242ca58ac8c26ad184ce",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/nonfinite-lap-crossing-inputs",
+      "sha": "155d9fcedf99e2a28ef83ddec03a9e1adc700c0a",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/source-import-policy-casefold",
+      "sha": "7b82a1f650a5c82774aa1bd629d7a0fbbfb398b2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/steering-stick-deadzone-20261017",
+      "sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+      "protected": false,
+      "open_prs": [
+        {
+          "number": 215,
+          "title": "Reduce analog steering noise around stick center",
+          "draft": true,
+          "base": "main",
+          "head_sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c"
+        }
+      ],
+      "disposition": "keep_live",
+      "reason": "Open PR head retained for active review: #215."
+    },
+    {
+      "name": "fix/track-width-collision-alignment-20261017",
+      "sha": "308b2351dd40ae83c5a55be14ff2465cb2e7a518",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "fix/width-aware-rail-collision-20261017",
+      "sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e",
+      "protected": false,
+      "open_prs": [
+        {
+          "number": 214,
+          "title": "Fix track-width-aware rail collision alignment",
+          "draft": true,
+          "base": "main",
+          "head_sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e"
+        }
+      ],
+      "disposition": "keep_live",
+      "reason": "Open PR head retained for active review: #214."
+    },
+    {
+      "name": "fix-native-build-warnings",
+      "sha": "2f0d33c192dc5477d9024c9f3995de2a16a89a1a",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "gamecube/first-render",
+      "sha": "38fe7c9fb6cede0e02c55138aacfff995a211232",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "governance/independent-ai-review-20261018",
+      "sha": "e992ba57542e148bf0643aab4538764a2034770f",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "governance/no-branch-cap-task-completion-20261017",
+      "sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3",
+      "protected": false,
+      "open_prs": [
+        {
+          "number": 200,
+          "title": "Consolidate branch governance and retire proven merged refs",
+          "draft": false,
+          "base": "main",
+          "head_sha": "5327bbd34badc89f72068f420756b4c0ebfda6e3"
+        }
+      ],
+      "disposition": "keep_live",
+      "reason": "Open PR head retained for active review: #200."
+    },
+    {
+      "name": "import/step102-source-only",
+      "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+    },
+    {
+      "name": "jules-15774004275526793592-0b7895c1",
+      "sha": "7c334d1873743e9c8f9d78e55b93efb1623d87d4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "main",
+      "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "protected": true,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Protected default integration branch; never retire."
+    },
+    {
+      "name": "ops/retire-proven-merged-refs-20261019",
+      "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/dreamcast-visible-smoke-test",
+      "sha": "d228f163a64e3950a22b99362067039d9447f3b0",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/foreground-road-roi",
+      "sha": "06a170cf91afbb34200eae925efec4021bf7361b",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/import-pc-research-and-step102-audit",
+      "sha": "fe889f99d3f3a1edfe105140e296e446798ec7f3",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/import-platform-decision-and-path-register",
+      "sha": "2105221df0bb96b9865033ec58c2a8282ff43240",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/import-research-and-provenance-docs",
+      "sha": "ece3cc351708f17bbda16e3901fcd339271a8db7",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "recovery/refresh-free-tooling-guide",
+      "sha": "61a6a2eebd5ae0e4040567eab0678213b89aeaf8",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "security/add-security-policy",
+      "sha": "b5795970d6320438226e68d386ce7e492692e6bb",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "security/fix-ai-safety-check",
+      "sha": "81a9c36d0cdcb6e282a8209c8f2011ace6239928",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "security/remove-conflicting-openrouter-review",
+      "sha": "a2d213cdf779c4c4ff99ed6b10255b18d23f2118",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/cover-all-frame-scale-helpers",
+      "sha": "e829dc938dd4bd05707bf2a71bf9ac0c56a6b9ce",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/dolphin-analog-stick-input",
+      "sha": "f8ac2f3130426ad6be137e6edf3dd0313821db33",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance",
+      "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "keep_live",
+      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance-7679597746618456134",
+      "sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+      "protected": false,
+      "open_prs": [
+        {
+          "number": 221,
+          "title": "test: verify multi-step pause sequence transitions",
+          "draft": true,
+          "base": "main",
+          "head_sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6"
+        }
+      ],
+      "disposition": "keep_live",
+      "reason": "Open PR head retained for active review: #221."
+    },
+    {
+      "name": "test/dolphin-reset-state-acceptance",
+      "sha": "02f17e15d302ccf8b8c8b8a3b2eef5c944905173",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-dolphin-headless",
+      "sha": "73dae7b0b929066bfe9cf2dfb4a890fb40fa3209",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-offroad-rail-physics",
+      "sha": "71fa7ae4107736552c50dacd043ce26cc7a746d3",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-pause-state-host",
+      "sha": "59f48db28c011a99d7593b212f021adc61c685e1",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-rival-events",
+      "sha": "08f4546836dbceabf1906e6f827d92067a73c054",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-steering-inertia-host",
+      "sha": "b8857f397922fb9491de1edd627106520cc9d39e",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-steering-input-mapping",
+      "sha": "c6beaf38ffcd929bd161a2142c55d2de360ef5d4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gamecube-three-lap-simulation",
+      "sha": "ff9eb1bfd88fab56766b5b65d3ed0bc9c4073892",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gameplay-boundary-regressions",
+      "sha": "e41584c0defa56e4d7e4770b8b1b159ea5ea53cf",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/gameplay-state-host",
+      "sha": "cdc6a709d9aadcd04ebc11f63edc34002cef6e21",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/hold-dtm-steering-through-capture-window",
+      "sha": "70f8d54caa69fcb5c5e95f0d7303556366add110",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/mesh-boundaries-multiple-fixtures",
+      "sha": "bb173aafc805131e4d5c1fd60fb8f67105d1e7d1",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/non-finite-speed-regressions",
+      "sha": "3aa4ab39ecaaf729e875b001b2b82f54e9e31ede",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/nonfinite-rival-contact-clamp",
+      "sha": "d1c799206bfab579959f12ed853e44c7573be8d2",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/nonfinite-rival-contact-clamp-v2",
+      "sha": "25db9b20ab244cc1b223221e96ed77e4790d5587",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/nonfinite-speed-wrapper-regression",
+      "sha": "dfa39521a15f5c5a1a15425e64e674df40100304",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "test/reset-from-completed-three-lap-race",
+      "sha": "e3e3455da9da6b2052b8c1d7fe977927dafb70f5",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "tools/synthetic-mdl0-v11-header-probe",
+      "sha": "f4355d198978a25deca5898fdbf252225db860a4",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "tools/wii64-archive-verifier",
+      "sha": "e561387b0c9f108dfceb31e3053a60733ebdb907",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    },
+    {
+      "name": "work/step102-import-gate",
+      "sha": "455ce0b88bbe61e6c8a7b01c08f297bd6ae39692",
+      "protected": false,
+      "open_prs": [],
+      "disposition": "archive_then_retire_ref",
+      "reason": "Not selected as a live working ref. Exact tip and full commit history will be preserved by the archive snapshot commit's parent graph and this manifest. This is preservation, not proof of integration into main; recover by creating a branch from the recorded SHA."
+    }
+  ]
+}
