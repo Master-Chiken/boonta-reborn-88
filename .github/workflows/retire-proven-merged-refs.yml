@@ -1,0 +1,126 @@
+name: Retire four proven merged branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/retire-proven-merged-refs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: retire-four-proven-merged-branches
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Verify exact refs and retire only proven-integrated candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GH_REPO" == "Master-Chiken/boonta-reborn-88" ]] || { echo "::error::Unexpected repository"; exit 1; }
+          default_branch="$(gh api "repos/$GH_REPO" --jq '.default_branch')"
+          [[ "$default_branch" == "main" ]] || { echo "::error::Expected main as default branch"; exit 1; }
+
+          workdir="$RUNNER_TEMP/retirement-audit"
+          git clone --quiet --no-tags "https://github.com/$GH_REPO.git" "$workdir"
+          git -C "$workdir" fetch --quiet origin main
+          main_ref="refs/remotes/origin/main"
+          inventory() {
+            gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches.json"
+            gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs.json"
+          }
+          branch_count() {
+            jq 'length' "$RUNNER_TEMP/branches.json"
+          }
+          inventory
+          initial_count="$(branch_count)"
+          echo "Initial live branch count: $initial_count" >> "$GITHUB_STEP_SUMMARY"
+
+          names=(
+            "feat/game-finish-banner-label-20261017"
+            "feat/rocky-canyon-silhouette-20261017"
+            "feat/source-driven-racer-mesh-texture-20261017"
+            "test/dolphin-pause-state-acceptance"
+            "ops/retire-proven-merged-refs-20261019"
+          )
+          shas=(
+            "1385a83d2aa3ba263b1a06b567da9cfb60998428"
+            "b809c0a023ad0b551b3405e3298efae26a2b3d5e"
+            "b96fd97c56a34480e8e685ab2cc2a52460668a60"
+            "b398b652e39dd9bfc41cbe76bb41efd51bdfb687"
+            "f7f565cb76776457439573929f7b95af89c0496f"
+          )
+
+          # Guard the only known functional branch-name selectors before retiring their branch refs.
+          for name in "${names[@]:0:4}"; do
+            if git -C "$workdir" grep -F -n "$name" "$main_ref" -- .github/workflows/gamecube-demo-build.yml; then
+              echo "::error::The GameCube CI workflow still references $name; nothing will be deleted."
+              exit 1
+            fi
+          done
+
+          # Validate all five exact refs before deleting any.
+          for i in "${!names[@]}"; do
+            name="${names[$i]}"
+            expected="${shas[$i]}"
+            actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "::error::SHA mismatch or missing ref for $name; refusing the batch."
+              exit 1
+            fi
+            if [[ "$protected" != "false" ]]; then
+              echo "::error::$name is protected or protection status is unknown."
+              exit 1
+            fi
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "::error::An open PR uses $name; refusing the batch."
+              exit 1
+            fi
+            if ! git -C "$workdir" merge-base --is-ancestor "$expected" "$main_ref"; then
+              echo "::error::The exact tip of $name is not reachable from current main."
+              exit 1
+            fi
+            echo "PREFLIGHT OK: $name @ $actual; unprotected; no open PR; tip reachable from main."
+          done
+
+          retired=0
+          for i in "${!names[@]}"; do
+            name="${names[$i]}"
+            expected="${shas[$i]}"
+            inventory
+            actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
+            protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            git -C "$workdir" fetch --quiet origin main
+            if [[ "$actual" != "$expected" || "$protected" != "false" ]] ||
+               jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null ||
+               ! git -C "$workdir" merge-base --is-ancestor "$expected" "$main_ref"; then
+              echo "::error::Final pre-delete safety check failed for $name. Stopping."
+              exit 1
+            fi
+
+            gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$name" >/dev/null
+            inventory
+            if jq -e --arg name "$name" 'any(.[]; .name == $name)' "$RUNNER_TEMP/branches.json" >/dev/null; then
+              echo "::error::GitHub still lists $name after deletion request."
+              exit 1
+            fi
+            echo "DELETED AND VERIFIED: $name"
+            echo "- Retired `$name` after exact-SHA, unprotected, no-open-PR, and ancestry checks." >> "$GITHUB_STEP_SUMMARY"
+            retired=$((retired + 1))
+          done
+
+          final_count="$(branch_count)"
+          echo "Final live branch count: $final_count (retired $retired exact refs)." >> "$GITHUB_STEP_SUMMARY"
+          [[ "$retired" == "5" ]] || { echo "::error::Expected five exact refs to be retired; completed $retired."; exit 1; }
+          echo "SUCCESS: retired only the four audited merged branches and the temporary runner ref."
