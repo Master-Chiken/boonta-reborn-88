@@ -54,3 +54,12 @@ It does not impose a numeric cap, fail because of branch count, create an issue 
 The companion [Branch intake queue](BRANCH_INTAKE.md) is **manual-dispatch only**. It can surface at most **one draft PR per deliberate run**. It has no cron schedule and no push-triggered PR creation. This prevents the workflow from continuously adding review requests while the owner is already processing the active queue. It still screens stale bases, overlapping paths, oversized changes, patch-equivalent work, and Step 102/source-import provenance holds.
 
 The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it. Do not dispatch it again until the current candidate has been accepted, parked, or rejected in Issue #201.
+
+## Dependabot update-volume control
+
+- GitHub Actions version updates run weekly, not daily.
+- Group all major `actions/*` updates into one candidate PR; group minor/patch updates separately.
+- Keep `open-pull-requests-limit: 1` for version updates so Dependabot does not leave a queue of routine upgrade PRs waiting for one maintainer.
+- This is an update-PR workload limit, not a ban on updates. Security alerts/updates remain enabled and should still receive priority review; do not disable security updates to reduce noise.
+- Grouped dependency changes still need current-head CI and review; do not merge a group of major action upgrades just because Dependabot opened it.
+
