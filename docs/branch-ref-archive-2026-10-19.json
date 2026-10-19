@@ -1053,5 +1053,149 @@
   ],
   "current_live_ref_count_before_followup": 18,
   "followup_cleanup_status": "Pending independent review and normal merge of PR #200; no live refs are deleted by this manifest update.",
-  "followup_cleanup_policy": "Keep main and archive/branch-heads-20261019. A post-merge workflow may retire any other live branch only after preflighting its exact current SHA, unprotected status, absence of an open PR head, and proof that the exact tip is reachable from the archive ref or main. The entire batch preflight must pass before the first deletion. Retiring a branch ref is not integration into main; the archive graph preserves work for recovery."
+  "followup_cleanup_policy": "Keep main and archive/branch-heads-20261019. A post-merge workflow may retire any other live branch only after preflighting its exact current SHA, unprotected status, absence of an open PR head, and proof that the exact tip is reachable from the archive ref or main. The entire batch preflight must pass before the first deletion. Retiring a branch ref is not integration into main; the archive graph preserves work for recovery.",
+  "operational_audit": {
+    "audit_date_utc": "2026-10-19",
+    "live_inventory_checked_before_manifest_commit": {
+      "branch_count": 18,
+      "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "archive_branch": "archive/branch-heads-20261019",
+      "archive_head_sha_before_this_manifest_update": "fd7ba9b84f25c52d777a95e217bbccd39a03d4ae",
+      "sole_open_pull_request": {
+        "number": 200,
+        "head": "governance/no-branch-cap-task-completion-20261017",
+        "head_sha": "370b273c17cdf6848dc53a86c127519bad89f29f"
+      },
+      "target_live_branch_count": 2,
+      "target_keeper_branches": [
+        "main",
+        "archive/branch-heads-20261019"
+      ]
+    },
+    "verified_retirement_candidates": [
+      {
+        "name": "audit/step102-import-gate",
+        "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feat/game-finish-banner-label-20261017",
+        "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feat/rocky-canyon-silhouette-20261017",
+        "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feat/source-driven-racer-mesh-texture-20261017",
+        "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feature/cleanroom-mesh-source",
+        "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feature/gamecube-boost-meter",
+        "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feature/gamecube-boost-overheat",
+        "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feature/gamecube-lap-timing-hud",
+        "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "feature/gamecube-multi-rival-race-v2",
+        "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "fix/frame-rate-independent-gameplay-v3",
+        "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "fix/steering-stick-deadzone-20261017",
+        "sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "fix/width-aware-rail-collision-20261017",
+        "sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "import/step102-source-only",
+        "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "test/dolphin-pause-state-acceptance",
+        "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      },
+      {
+        "name": "test/dolphin-pause-state-acceptance-7679597746618456134",
+        "sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+        "unprotected": true,
+        "no_open_pr_head": true,
+        "exact_tip_reachable_from_archive": true
+      }
+    ],
+    "held_until_pr_200_normal_merge": {
+      "name": "governance/no-branch-cap-task-completion-20261017",
+      "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+      "pull_request": 200,
+      "reason": "This exact tip advanced after the archive snapshot. Keep it while PR #200 is open; a normal merge commit must make it reachable from main before retiring its ref."
+    },
+    "required_sequence": [
+      "Obtain an independent approval of PR #200; never bypass main protection.",
+      "Merge PR #200 with a normal merge commit so the exact reviewed head is reachable from main.",
+      "Allow .github/workflows/retire-proven-merged-refs.yml to run from protected main after the workflow changes are merged.",
+      "Require the cleanup workflow's final inventory check to verify exactly main and the archive remain."
+    ],
+    "safety_notes": [
+      "This audit is documentation only and does not delete any branch refs.",
+      "Ref retirement is not proof that each branch's changes were integrated into main; the archived tips remain recoverable from the archive commit graph.",
+      "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
+      "Repository auto-merge is disabled; the connected integration cannot enable that setting."
+    ]
+  }
 }
