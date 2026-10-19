@@ -37,6 +37,16 @@ The project is temporarily retaining recovery references while the migration is 
 - `recovery/branch-heads-20261019-verified` is a verified multi-parent checkpoint. Its checkpoint commit has the exact pre-cleanup live branch heads as parents and the accompanying snapshot manifest records their names and SHAs.
 - Keep these recovery references until the owner confirms the needed unique work has been accounted for and the branch cleanup is complete. They are temporary safety references, not permanent integration branches.
 
+## Manual verified ref-retirement workflow
+
+The `.github/workflows/retire-verified-branch.yml` workflow is an owner-operated tool for the **five refs explicitly reviewed in the inventory**. It is manual-only and is available for use after the workflow has been merged to `main` and `main` remains the repository default.
+
+Before it can retire a ref, it requires the repository owner account, a run from `main`, a selection from the fixed allowlist, the exact pinned SHA, and the branch name typed again as confirmation. It checks the current head SHA, rejects protected refs, rejects any open PR that uses the branch as head or base, and confirms that the exact tip is reachable from the protected recovery archive. It repeats the head/protection, open-PR, and archive-ancestry checks immediately before the single DELETE-ref operation, then verifies that GitHub no longer lists the branch.
+
+The allowlist is intentionally limited to `recovery/branch-heads-20261019-verified` and these four refs whose tips were verified as already represented in `main`: `feat/game-finish-banner-label-20261017`, `feat/rocky-canyon-silhouette-20261017`, `feat/source-driven-racer-mesh-texture-20261017`, and `test/dolphin-pause-state-acceptance`.
+
+This workflow does not retire arbitrary branches, does not run on push/schedule/PR events, and cannot merge or rewrite commits. A ref outside this allowlist requires a separate inventory, review, and owner-authorized retirement. Because deletion uses GitHub's ref API, there remains a tiny race between the final read and DELETE if someone moves a branch concurrently; avoid pushing to a retirement candidate during a run. If any check fails, the workflow stops before deletion.
+
 ## Automated audit and intake
 
 The `Branch governance audit` workflow reports branch count, open-PR references, recent activity, and candidates for review. It must not delete or merge branches.
