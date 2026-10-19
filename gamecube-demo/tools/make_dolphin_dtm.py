@@ -16,6 +16,14 @@ CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 12000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
+RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
+RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
+RESET_BOOST_END_FRAME = 60
+PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
+PAUSE_HOLD_FRAMES = 6  # Hold Start for ~100 ms so the emulated input poll cannot miss a short tap.
+PAUSE_BOOST_END_FRAME = 30
+RESUME_PRESS_FRAME = 160
+RESUME_HOLD_FRAMES = 6
 DEFAULT_GAME_ID = "ID-boo"  # Dolphin's MakeGameID("boonta_gc_demo.dol") prefix.
 
 # First byte: Start, A, B, X, Y, Z, D-pad up, D-pad down.
@@ -33,13 +41,43 @@ NEUTRAL_AXIS = 128
 
 
 def _controller_state(frame: int, steering: str = "right",
-                      scenario: str = "control-smoke") -> bytes:
-    """Return one packed controller poll with neutral analog axes."""
-    buttons = A  # Hold accelerator for the whole run.
-    if frame == 0:
-        buttons |= Y  # Reset to a deterministic starting position.
-    if 1 <= frame < 80:
-        buttons |= X  # Boost near the start.
+                      scenario: str = "control-smoke",
+                      steering_source: str = "dpad") -> bytes:
+    """Return one packed controller poll with one explicit steering source."""
+    if scenario == "reset-check":
+        # First create a state that differs visibly from reset: accelerate, boost,
+        # and steer. Y is pressed alone at frame 120; every later poll is neutral.
+        if frame < RESET_PRESS_FRAME:
+            buttons = A
+            if 1 <= frame < RESET_BOOST_END_FRAME:
+                buttons |= X
+        elif RESET_PRESS_FRAME <= frame < RESET_PRESS_FRAME + RESET_HOLD_FRAMES:
+            buttons = Y
+        else:
+            buttons = 0
+    elif scenario in ("pause-check", "resume-check"):
+        # Create some movement, then press Start alone to pause. The pause-check
+        # stays neutral afterward; resume-check presses Start a second time and
+        # accelerates again so CI can verify the game visibly resumes.
+        if frame < PAUSE_PRESS_FRAME:
+            buttons = A
+            if 1 <= frame < PAUSE_BOOST_END_FRAME:
+                buttons |= X
+        elif PAUSE_PRESS_FRAME <= frame < PAUSE_PRESS_FRAME + PAUSE_HOLD_FRAMES:
+            buttons = START
+        elif scenario == "resume-check" and (
+                RESUME_PRESS_FRAME <= frame < RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES):
+            buttons = START
+        elif scenario == "resume-check" and frame >= RESUME_PRESS_FRAME + RESUME_HOLD_FRAMES:
+            buttons = A
+        else:
+            buttons = 0
+    else:
+        buttons = A  # Hold accelerator for the normal control/race scenarios.
+        if frame == 0:
+            buttons |= Y  # Reset to a deterministic starting position.
+        if 1 <= frame < 80:
+            buttons |= X  # Boost near the start.
     if scenario == "control-smoke":
         if 100 <= frame < 140:
             buttons |= B  # Exercise a short brake pulse.
@@ -47,23 +85,33 @@ def _controller_state(frame: int, steering: str = "right",
             buttons |= START  # Pause, then resume with one-frame presses.
 
     flags = IS_CONNECTED
-    # Steering-capture input belongs to the short control smoke only. A full
-    # race stays centered so the scripted run tests progression, not off-road recovery.
-    if scenario == "control-smoke":
-        if steering == "right" and frame < STEERING_HOLD_FRAMES:
-            flags |= DPAD_RIGHT
-        elif steering == "left" and frame < STEERING_HOLD_FRAMES:
-            flags |= DPAD_LEFT
+    stick_x = NEUTRAL_AXIS
+    # Control-smoke movies exercise exactly one steering source at a time. A full
+    # race stays centered so it tests lap progression rather than steering response.
+    if ((scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
+            or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)
+            or (scenario in ("pause-check", "resume-check") and frame < PAUSE_PRESS_FRAME)):
+        if steering_source == "dpad":
+            if steering == "right":
+                flags |= DPAD_RIGHT
+            elif steering == "left":
+                flags |= DPAD_LEFT
+        elif steering_source == "stick":
+            if steering == "right":
+                stick_x = 255
+            elif steering == "left":
+                stick_x = 0
 
-    # DTM stores Dolphin's controller axes as unsigned bytes (0..255), centered at
-    # 128. The emulated controller layer converts that center to libogc's signed 0;
-    # writing 0 here would encode full-left/full-down, not a neutral baseline.
-    return bytes((buttons, flags, 0, 0, NEUTRAL_AXIS, NEUTRAL_AXIS,
+    # DTM ControllerState packs digital buttons first, then analog trigger bytes,
+    # then main-stick and C-stick axes. Neutral unsigned axes are centered at 128;
+    # 0 and 255 deliberately represent full-left and full-right for the main stick.
+    return bytes((buttons, flags, 0, 0, stick_x, NEUTRAL_AXIS,
                   NEUTRAL_AXIS, NEUTRAL_AXIS))
 
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
-              steering: str = "right", scenario: str = "control-smoke") -> bytes:
+              steering: str = "right", scenario: str = "control-smoke",
+              steering_source: str = "dpad") -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -73,8 +121,10 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race"):
-        raise ValueError("scenario must be one of: control-smoke, full-race")
+    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check"):
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check")
+    if steering_source not in ("dpad", "stick"):
+        raise ValueError("steering_source must be one of: dpad, stick")
     if scenario == "full-race" and steering != "none":
         raise ValueError("full-race scenario requires --steering none")
 
@@ -97,7 +147,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame, steering, scenario))
+        data.extend(_controller_state(frame, steering, scenario, steering_source))
     return bytes(data)
 
 
@@ -110,15 +160,19 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check"),
                         default="control-smoke",
-                        help="short control validation or a longer unsteered race run")
+                        help="short control validation, full race, Y-reset, Start-pause, or Start-resume check")
+    parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
+                        help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()
-    payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario)
+    payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario,
+                        args.steering_source)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
     print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, "
-          f"steering={args.steering}, scenario={args.scenario}, {len(payload)} bytes")
+          f"steering={args.steering}, source={args.steering_source}, scenario={args.scenario}, "
+          f"{len(payload)} bytes")
     return 0
 
 

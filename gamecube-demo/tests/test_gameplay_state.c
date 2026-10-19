@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "../source/gameplay_state.h"
+#include "../source/generated_track.h"
 
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
 
@@ -406,8 +407,24 @@ static void three_lap_finish_tests(void) {
  laps = boonta_lap_count_after_frame(laps, 360.01f, 360.01f, 120.0f);
  assert(laps == 3U);
 
+ /* A large distance correction must count every crossed lap, not only one. */
+ assert(boonta_lap_count_after_frame(0U, 10.0f, 370.0f, 120.0f) == 3U);
+ assert(boonta_lap_count_after_frame(2U, 119.0f, 361.0f, 120.0f) == 5U);
+ /* Invalid or backwards movement never creates lap progress. */
+ assert(boonta_lap_count_after_frame(2U, 121.0f, 119.0f, 120.0f) == 2U);
+ assert(boonta_lap_count_after_frame(2U, 0.0f, INFINITY, 120.0f) == 2U);
+
  /* Lap count saturates instead of wrapping at UINT_MAX. */
  assert(boonta_lap_count_after_frame(0xffffffffU, 119.0f, 121.0f, 120.0f) == 0xffffffffU);
+ /* Multi-boundary increments must saturate, never wrap the unsigned counter. */
+ assert(boonta_lap_count_after_frame(0xfffffffeU, 0.0f, 360.0f, 120.0f) == 0xffffffffU);
+ /* A boundary reached exactly counts once; remaining on it does not count again. */
+ assert(boonta_lap_count_after_frame(0U, 119.0f, 120.0f, 120.0f) == 1U);
+ assert(boonta_lap_count_after_frame(1U, 120.0f, 120.0f, 120.0f) == 1U);
+ /* Invalid lap lengths and negative distances must leave progress unchanged. */
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, 0.0f) == 2U);
+ assert(boonta_lap_count_after_frame(2U, 0.0f, 240.0f, NAN) == 2U);
+ assert(boonta_lap_count_after_frame(2U, -1.0f, 240.0f, 120.0f) == 2U);
 }
 
 
@@ -509,6 +526,37 @@ static void rival_event_tests(void) {
  assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
 }
 
+
+static void road_width_alignment_tests(void) {
+ /* The renderer's effective width stays within its documented runtime bounds. */
+ assert(nearf(boonta_effective_road_half_width(3.4f), 3.4f));
+ assert(nearf(boonta_effective_road_half_width(3.6f), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(0.5f), BOONTA_MIN_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(100.0f), BOONTA_MAX_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(NAN), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_effective_road_half_width(INFINITY), BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+
+ /* Road edges map to the same reference coordinate for narrow and broad tracks. */
+ assert(nearf(boonta_normalize_road_lateral(2.2f, 0.5f), 3.6f));
+ assert(nearf(boonta_normalize_road_lateral(4.8f, 100.0f), 3.6f));
+ assert(nearf(boonta_normalize_road_lateral(-2.2f, 0.5f), -3.6f));
+ assert(nearf(boonta_normalize_road_lateral(-4.8f, 100.0f), -3.6f));
+ assert(nearf(boonta_restore_road_lateral(3.6f, 0.5f), 2.2f));
+ assert(nearf(boonta_restore_road_lateral(-3.6f, 100.0f), -4.8f));
+
+ /* Rail recovery restores the effective visible edge, not the raw file width. */
+ {
+  const float narrow_rail = boonta_restore_road_lateral(3.85f, 0.5f);
+  const float broad_rail = boonta_restore_road_lateral(3.85f, 100.0f);
+  assert(nearf(narrow_rail, 3.85f * 2.2f / 3.6f));
+  assert(nearf(broad_rail, 3.85f * 4.8f / 3.6f));
+  assert(nearf(boonta_restore_road_lateral(
+      boonta_lateral_after_rail_contact(4.0f), 0.5f), narrow_rail));
+ }
+
+ assert(nearf(boonta_normalize_road_lateral(NAN, 3.6f), 0.0f));
+ assert(nearf(boonta_restore_road_lateral(INFINITY, 3.6f), 0.0f));
+}
 
 static void offroad_and_rail_tests(void) {
  /* No speed loss on the road, including the exact 3.15 boundary. */
@@ -638,6 +686,63 @@ static void non_finite_physics_state_tests(void) {
  assert(!boonta_boost_should_activate_with_heat(1, 1, 0.5f, NAN, 0));
 }
 
+static void race_state_reset_tests(void) {
+ BoontaRaceState state;
+ unsigned int i;
+
+ /* Model the actual terminal state after crossing the third lap boundary. */
+ state.distance = 3.0f * BOONTA_TRACK_LENGTH;
+ state.lap_count = 3U;
+ state.race_seconds = 88.0f;
+ state.lap_seconds = 22.0f;
+ state.last_lap_seconds = 21.0f;
+ state.best_lap_seconds = 19.0f;
+ state.speed = 0.9f;
+ state.pitch_down = 0.8f;
+ state.player_lateral = 2.2f;
+ state.lateral_velocity = -0.04f;
+ state.boost = 0.1f;
+ state.engine_heat = 0.99f;
+ state.boost_overheated = 1;
+ state.boost_active = 1;
+ state.slide_active = 1;
+ state.overtake_count = 7U;
+ state.paused = 1;
+ state.race_finished = 1;
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  state.rival_z[i] = 8.0f + (float)i;
+  state.rival_lateral[i] = -1.0f - (float)i;
+ }
+
+ boonta_race_state_reset(&state);
+
+ assert(nearf(state.distance, 0.0f));
+ assert(state.lap_count == 0U);
+ assert(nearf(state.race_seconds, 0.0f));
+ assert(nearf(state.lap_seconds, 0.0f));
+ assert(nearf(state.last_lap_seconds, 0.0f));
+ assert(nearf(state.best_lap_seconds, 0.0f));
+ assert(nearf(state.speed, 0.0f));
+ assert(nearf(state.pitch_down, 0.0f));
+ assert(nearf(state.player_lateral, 0.0f));
+ assert(nearf(state.lateral_velocity, 0.0f));
+ assert(nearf(state.boost, 1.0f));
+ assert(nearf(state.engine_heat, 0.0f));
+ assert(state.boost_overheated == 0);
+ assert(state.boost_active == 0);
+ assert(state.slide_active == 0);
+ assert(state.overtake_count == 0U);
+ assert(state.paused == 0);
+ assert(state.race_finished == 0);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
+  assert(nearf(state.rival_lateral[i], 0.0f));
+ }
+
+ /* Defensive no-op for a missing state pointer. */
+ boonta_race_state_reset(0);
+}
+
 static void invalid_scaled_frame_tests(void) {
  const float invalid_scales[] = { NAN, INFINITY, -INFINITY, -1.0f };
  unsigned int i;
@@ -645,7 +750,9 @@ static void invalid_scaled_frame_tests(void) {
  for (i = 0U; i < sizeof(invalid_scales) / sizeof(invalid_scales[0]); ++i) {
   const float scale = invalid_scales[i];
   assert(nearf(boonta_sanitize_frame_scale(scale), 0.0f));
+  assert(nearf(boonta_sanitize_frame_scale(1000.0f), 3.0f));
   assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, scale), 0.5f));
+  assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f), 0.536f));
   assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, scale), 0.5f));
   assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, scale), 0.04f));
@@ -654,9 +761,22 @@ static void invalid_scaled_frame_tests(void) {
   assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, scale), -18.0f));
   assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, scale), 0.5f));
  }
+
+ /* Every frame-scaled physics helper must apply the same upper bound. */
+ assert(nearf(boonta_speed_after_input_scaled(0.5f, 1, 0, 1000.0f), boonta_speed_after_input_scaled(0.5f, 1, 0, 3.0f)));
+ assert(nearf(boonta_boost_after_frame_scaled(0.5f, 1, 1000.0f), boonta_boost_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_engine_heat_after_frame_scaled(0.5f, 1, 1000.0f), boonta_engine_heat_after_frame_scaled(0.5f, 1, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 1000.0f), boonta_lateral_velocity_after_steering_scaled(0.04f, 1.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_lateral_position_after_frame(1.0f, 0.04f, 1000.0f), boonta_lateral_position_after_frame(1.0f, 0.04f, 3.0f)));
+ assert(nearf(boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 1000.0f), boonta_distance_after_frame_scaled(10.0f, 0.5f, 0, 3.0f)));
+ assert(nearf(boonta_rival_z_after_frame(-18.0f, 0.5f, 1000.0f), boonta_rival_z_after_frame(-18.0f, 0.5f, 3.0f)));
+ assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, 1000.0f), boonta_speed_after_offroad_scaled(0.5f, 4.0f, 3.0f)));
+ assert(nearf(boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 1000.0f), boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 3.0f)));
+ assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
 }
 
 int main(void) {
+ race_state_reset_tests();
  finite_clamp_tests();
  frame_scale_tests();
  non_finite_physics_state_tests();
@@ -679,7 +799,8 @@ int main(void) {
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
- offroad_and_rail_tests();
+  road_width_alignment_tests();
+  offroad_and_rail_tests();
  puts("gameplay-state tests passed");
  return 0;
 }

@@ -4,6 +4,34 @@
 #include <math.h>
 
 #define BOONTA_RIVAL_COUNT 3U
+
+/*
+ * Resettable live race state. Kept separate from renderer/camera bookkeeping so
+ * the exact Y-button restart transition can be exercised by host tests.
+ */
+typedef struct {
+    float distance;
+    unsigned int lap_count;
+    float race_seconds;
+    float lap_seconds;
+    float last_lap_seconds;
+    float best_lap_seconds;
+    float speed;
+    float pitch_down;
+    float player_lateral;
+    float lateral_velocity;
+    float boost;
+    float engine_heat;
+    int boost_overheated;
+    int boost_active;
+    int slide_active;
+    float rival_z[BOONTA_RIVAL_COUNT];
+    float rival_lateral[BOONTA_RIVAL_COUNT];
+    unsigned int overtake_count;
+    int paused;
+    int race_finished;
+} BoontaRaceState;
+
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 
 /* Clamp finite simulation state; recover NaN/infinity without propagating it. */
@@ -27,6 +55,8 @@ static inline float boonta_frame_scale_from_delta(float delta_seconds)
 static inline float boonta_sanitize_frame_scale(float frame_scale)
 {
     if (!isfinite(frame_scale) || frame_scale < 0.0f) return 0.0f;
+    /* Match the 50 ms frame-delta cap: 0.05 s * 60 Hz = 3 simulation frames. */
+    if (frame_scale > 3.0f) return 3.0f;
     return frame_scale;
 }
 
@@ -323,11 +353,25 @@ static inline unsigned int boonta_lap_count_after_frame(unsigned int lap_count,
                                                          float current_distance,
                                                          float lap_distance)
 {
-    if (boonta_lap_was_crossed(previous_distance, current_distance, lap_distance) &&
-        lap_count < 0xffffffffU) {
-        return lap_count + 1U;
+    double previous_lap_index;
+    double current_lap_index;
+    double crossed_laps;
+    unsigned int remaining_laps;
+
+    if (!isfinite(previous_distance) || !isfinite(current_distance) ||
+        !isfinite(lap_distance) || lap_distance <= 0.0f ||
+        previous_distance < 0.0f || current_distance < previous_distance) {
+        return lap_count;
     }
-    return lap_count;
+
+    previous_lap_index = floor((double)previous_distance / (double)lap_distance);
+    current_lap_index = floor((double)current_distance / (double)lap_distance);
+    crossed_laps = current_lap_index - previous_lap_index;
+    if (!(crossed_laps >= 1.0)) return lap_count;
+
+    remaining_laps = 0xffffffffU - lap_count;
+    if (crossed_laps >= (double)remaining_laps) return 0xffffffffU;
+    return lap_count + (unsigned int)crossed_laps;
 }
 
 static inline int boonta_race_is_finished(unsigned int lap_count, unsigned int lap_limit)
@@ -346,6 +390,41 @@ enum {
 static inline float boonta_rival_initial_z(unsigned int rival_index)
 {
     return -18.0f - (float)rival_index * 16.0f;
+}
+
+
+/*
+ * Reset every gameplay value affected by the Y-button restart, including the
+ * best-lap display and opponent spacing. Renderer/camera caches are derived again
+ * by draw_frame(); this helper intentionally owns only race simulation state.
+ */
+static inline void boonta_race_state_reset(BoontaRaceState *state)
+{
+    unsigned int i;
+    if (state == 0) return;
+
+    state->distance = 0.0f;
+    state->lap_count = 0U;
+    state->race_seconds = 0.0f;
+    state->lap_seconds = 0.0f;
+    state->last_lap_seconds = 0.0f;
+    state->best_lap_seconds = 0.0f;
+    state->speed = 0.0f;
+    state->pitch_down = 0.0f;
+    state->player_lateral = 0.0f;
+    state->lateral_velocity = 0.0f;
+    state->boost = 1.0f;
+    state->engine_heat = 0.0f;
+    state->boost_overheated = 0;
+    state->boost_active = 0;
+    state->slide_active = 0;
+    state->overtake_count = 0U;
+    state->paused = 0;
+    state->race_finished = 0;
+    for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+        state->rival_z[i] = boonta_rival_initial_z(i);
+        state->rival_lateral[i] = 0.0f;
+    }
 }
 
 static inline float boonta_rival_respawn_z(unsigned int rival_index, int collision)
@@ -413,6 +492,48 @@ static inline float boonta_lateral_velocity_after_rival_contact(float lateral_ve
         -0.085f, 0.085f);
 }
 
+
+/*
+ * The current GX demo intentionally bounds effective road width for readable
+ * geometry. Keep collision coordinates in the same width space as the rendered
+ * road; the neutral track format can legally contain widths outside this range.
+ */
+#define BOONTA_REFERENCE_ROAD_HALF_WIDTH 3.6f
+#define BOONTA_MIN_ROAD_HALF_WIDTH 2.2f
+#define BOONTA_MAX_ROAD_HALF_WIDTH 4.8f
+
+static inline float boonta_effective_road_half_width(float authored_half_width)
+{
+    if (!isfinite(authored_half_width)) return BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    if (authored_half_width < BOONTA_MIN_ROAD_HALF_WIDTH) {
+        return BOONTA_MIN_ROAD_HALF_WIDTH;
+    }
+    if (authored_half_width > BOONTA_MAX_ROAD_HALF_WIDTH) {
+        return BOONTA_MAX_ROAD_HALF_WIDTH;
+    }
+    return authored_half_width;
+}
+
+static inline float boonta_normalize_road_lateral(float lateral,
+                                                   float authored_half_width)
+{
+    float normalized;
+    if (!isfinite(lateral)) return 0.0f;
+    normalized = lateral * BOONTA_REFERENCE_ROAD_HALF_WIDTH /
+        boonta_effective_road_half_width(authored_half_width);
+    return isfinite(normalized) ? normalized : 0.0f;
+}
+
+static inline float boonta_restore_road_lateral(float normalized_lateral,
+                                                 float authored_half_width)
+{
+    float lateral;
+    if (!isfinite(normalized_lateral)) return 0.0f;
+    lateral = normalized_lateral *
+        boonta_effective_road_half_width(authored_half_width) /
+        BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    return isfinite(lateral) ? lateral : 0.0f;
+}
 
 /* Keep the demo's existing off-road and rail-edge response independently testable. */
 static inline float boonta_abs_float(float value)
