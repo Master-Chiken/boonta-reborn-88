@@ -1191,23 +1191,57 @@
       "Ref retirement is not proof that each branch's changes were integrated into main; the archived tips remain recoverable from the archive commit graph.",
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
       "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration.",
-      "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main."
+      "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main.",
+      "Current PR #200 exact head d9cebeea374563d4eefa6ebad158add99499d792 is preserved as second parent of archive-only commit f6b9edef7bb62ce9ea24de9d011e8405752be265. Anchor tree 20d4b9b0561ade0b5ed2e7e69feb813fae5854f3 equals its first-parent tree; archive manifest refresh commit 4d9ab5e5b8fbadf9ed1bacc442e68914182c2f1f records the live recoverability state. Current archive protection remains absent and five exact-head checks are queued, so no ref retirement is authorized yet."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
       "repository_allow_auto_merge": true,
       "pr_number": 200,
       "pr_state": "open",
-      "pr_head_sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+      "pr_head_sha": "d9cebeea374563d4eefa6ebad158add99499d792",
       "auto_merge_enabled": true,
       "auto_merge_method": "squash",
       "mergeable_state": "blocked",
       "independent_approval_recorded_for_exact_head": false,
       "archive_parent_preservation_pending": false,
-      "safe_next_step": "Independent approval of exact current head is still required. After approval and current-head checks, GitHub's configured squash auto-merge can integrate the reviewed PR diff; the original exact head is already preserved in the archive graph. If the PR head changes, anchor the new exact head before integration. The cleanup workflow must still pass every live safety check and verify exactly two refs.",
-      "archive_parent_preservation_commit": "cde61cea6d0689ec337728f267d101a810b7a7be",
+      "archive_parent_preservation_commit": "f6b9edef7bb62ce9ea24de9d011e8405752be265",
       "archive_parent_preservation_method": "additional-parent commit on archive ref; no PR-tree adoption",
-      "archive_tree_sha": "4261a19e8e564d129d38f2b9f3fb976f683caf20"
+      "archive_tree_sha": "20d4b9b0561ade0b5ed2e7e69feb813fae5854f3",
+      "archive_tree_matches_first_parent": true,
+      "archive_protection_active": false,
+      "current_head_required_checks": {
+        "status": "queued",
+        "head_sha": "d9cebeea374563d4eefa6ebad158add99499d792",
+        "runs": [
+          {
+            "name": "Branch automation self-test",
+            "run_id": 39280255359,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255359"
+          },
+          {
+            "name": "Wii64 tooling tests",
+            "run_id": 39280255354,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255354"
+          },
+          {
+            "name": "AI free-tier safety checks",
+            "run_id": 39280255517,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255517"
+          },
+          {
+            "name": "GameCube first-render prototype build",
+            "run_id": 39280255540,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255540"
+          },
+          {
+            "name": "Step 102 source-import provenance guard",
+            "run_id": 39280255557,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255557"
+          }
+        ]
+      },
+      "safe_next_step": "Keep PR #200 open; wait for terminal results from the exact-head checks, configure the active exact-ref archive ruleset blocking deletion and non-fast-forward updates, verify archive protected=true, and obtain independent approval. The current head is already recoverable from the archive; no branch deletion or protection bypass is permitted."
     },
     "pr_200_head_recoverability": {
       "name": "governance/no-branch-cap-task-completion-20261017",
