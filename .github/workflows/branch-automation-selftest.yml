@@ -45,6 +45,7 @@ jobs:
           workflow = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
           docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           agents = Path("AGENTS.md").read_text(encoding="utf-8")
+          intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
 
           required_workflow = (
               "general_alert_threshold = 105",
@@ -75,6 +76,18 @@ jobs:
                   raise SystemExit(f"Delivery-queue policy regression: branch docs missing {marker!r}")
               if marker not in agents:
                   raise SystemExit(f"Delivery-queue policy regression: AGENTS.md missing {marker!r}")
+
+          # Stop the scheduled intake workflow from flooding a solo maintainer with PRs.
+          if "\\n  schedule:" in intake or "\\n  push:" in intake:
+              raise SystemExit("Intake regression: draft PR creation must be manual-dispatch only")
+          if 'MAX_PRS: ${{ github.event.inputs.max_prs || \'1\' }}' not in intake:
+              raise SystemExit("Intake regression: default batch size must remain one")
+          if 'default: "1"' not in intake or 'options:\\n          - "1"' not in intake:
+              raise SystemExit("Intake regression: only a single draft PR may be requested per run")
+          if "1|3|5|10" in intake or 'case "$MAX_PRS" in\\n            1) ;;' not in intake:
+              raise SystemExit("Intake regression: workflow must reject batches larger than one")
+          if "manual-dispatch only" not in docs:
+              raise SystemExit("Governance docs must explain the manual-only intake behavior")
 
           forbidden = ("issues: write", "gh issue create", "hard_cap_exceeded", "cap_warning", "Fail audit if hard cap exceeded")
           for marker in forbidden:
