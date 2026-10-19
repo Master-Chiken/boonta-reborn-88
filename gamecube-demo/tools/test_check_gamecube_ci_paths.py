@@ -40,6 +40,9 @@ class GameCubePathSelectorTests(unittest.TestCase):
             "gamecube-demo/data/player_mesh.json",
             "gamecube-demo/tools/export_mesh.py",
             "tools/mesh_format/validate.py",
+            "tools/track_format/validate_track.py",
+            "tools/track_format/export_track_header.py",
+            "tools/track_format/example_track.json",
             "tests/test_track_format.py",
             ".github/workflows/gamecube-demo-build.yml",
         ):
@@ -53,6 +56,7 @@ class GameCubePathSelectorTests(unittest.TestCase):
             "gamecube-demo/source-old/main.c",
             "gamecube-demo/toolshed/script.py",
             "tools/mesh_format_backup/format.py",
+            "tools/track_format-backup/format.py",
             "docs/gamecube-demo/README.md",
         ):
             with self.subTest(path=path):

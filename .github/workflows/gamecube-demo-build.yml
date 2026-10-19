@@ -11,6 +11,8 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/track_format/**"
+      - "tests/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     branches: [main]
