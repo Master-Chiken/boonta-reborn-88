@@ -330,6 +330,9 @@ jobs:
           done
           capture_timeout=160
           if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
+          # Finish-label branches perform a separate 12,000-frame label capture
+          # before the finish/reset movie, so they need a longer overall window.
+          if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then capture_timeout=1450; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
