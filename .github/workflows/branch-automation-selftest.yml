@@ -46,6 +46,7 @@ jobs:
           build = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
           governance = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           agents = Path("AGENTS.md").read_text(encoding="utf-8")
+          audit = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
 
           checks = {
               "intake explicitly targets dev": 'target_branch = "dev"' in queue,
@@ -56,6 +57,10 @@ jobs:
               "prototype build runs on main and dev pushes": 'branches: [main, dev]' in build,
               "governance documents main/dev roles": "`main` — stable/release branch" in governance and "`dev` — integration branch" in governance,
               "agent rules direct ordinary work to dev": "targeting `dev`" in agents and "separate reviewed PR" in agents,
+              "audit distinguishes permanent branches from temporary work": 'permanent_names = {"main", "dev"}' in audit and "active_work" in audit,
+              "audit excludes archive/recovery refs from active work": 'startswith(("archive/", "recovery/"))' in audit,
+              "audit reports missing main/dev protection": "permanent_protection_missing" in audit and "protect main and dev" in audit,
+              "obsolete 30-active-branch target is removed": "target 30" not in audit and "over_target" not in audit and "Branch governance: consolidation needed" not in audit,
               "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
               "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
           }
