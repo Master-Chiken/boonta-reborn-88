@@ -1,52 +1,58 @@
-# AI agent workflow
+# GitHub AI agents — current operating rules
 
-This repository is designed for AI-assisted development with human approval at important checkpoints.
+Last reviewed: 2026-10-15
 
-## Current automation
+## What is available
 
-- GitHub Actions builds the Dreamcast KallistiOS starter when relevant files change and on manual dispatch.
-- The workflow uploads the ELF as an artifact only when compilation succeeds.
-- Build success proves compilation only; it does not prove the ELF runs in an emulator or on hardware.
-- Repository-specific coding guidance lives in `.github/copilot-instructions.md`.
+The repository has GitHub Actions workflows for:
+- **Gemini on-demand review/invocation:** triggered by an authorized issue/PR comment or review beginning with `@gemini-cli`. Read-only review requests have been tested and can post a report back to the PR.
+- **Gemini plan/execute:** a separate writer workflow exists, but code-writing is gated by an owner-only `@gemini-cli /approve` request and the repository Actions variable `GEMINI_WRITE_ENABLED=true`. The write path must remain disabled until the owner has deliberately verified main protection, the free-tier API setup, and the variable/secret configuration.
+- **Daily project coordination:** scheduled read-only reporting. This is a scheduled workflow, not a permanent agent that independently works on code all day.
+- **Deterministic CI failure triage:** summarizes failed workflow job/step metadata; it does not execute PR code or infer a root cause.
+- **OpenRouter Free reviewer:** a separate manual, comment-only reviewer is documented in the repository. It requires its own provider key and has no right to merge or write code.
 
-## Recommended agent loop
+A green AI workflow proves only that the workflow ran and published a response. It does not prove that a code suggestion is correct, that tests passed, or that a game is playable.
 
-1. **Planner** — select one small task from `docs/PROJECT_PLAN.md` and define acceptance criteria.
-2. **Coding agent** — implement the task in a branch and open a pull request. Prefer GitHub Copilot coding agent if it is enabled for this account/repository; another coding agent may be used if it can work directly with the GitHub repo.
-3. **CI** — let GitHub Actions build the changed Dreamcast code.
-4. **Reviewer** — inspect the diff, build logs, API choices, scope, and license/provenance risks.
-5. **Human approval** — merge only after reviewing the pull request and the checks. Do not grant an agent permission to merge its own changes.
-6. **Next task** — update the project plan and issue only after the previous task has evidence-backed results.
+## Safe request pattern
 
-## First task
+Start with a narrowly scoped read-only request:
 
-Use the existing issue: [Dreamcast: add a visible video-mode smoke test](https://github.com/Master-Chiken/boonta-reborn-88/issues/4).
+```text
+@gemini-cli Review this PR as read-only. Inspect the diff and tests, report concrete blockers only, and do not modify files, push commits, merge, change repository settings, or enable billing.
+```
 
-If GitHub Copilot coding agent is enabled:
-1. Open the issue.
-2. Use the issue's **Assignees** control to select **Copilot** (the exact label may vary by GitHub UI).
-3. Start the agent task and allow it to open a pull request.
-4. Review the pull request and CI result before merging.
+For substantial changes:
+1. Ask for a written plan with acceptance criteria.
+2. Keep implementation on a named branch and open a reviewable PR.
+3. Review changed files, license/provenance, dependencies, and test commands.
+4. Verify the relevant CI checks on the exact PR head before integration.
+5. Only the repository owner may choose to enable a writer path; an agent must never approve or merge its own work.
 
-If Copilot is not offered in the Assignees control, it is not currently available to this repository/account or requires setup. Do not create personal access tokens or paste secrets into an issue to work around this.
+## Current project context
 
-## Agent safety rules
+- The active technical milestone is the clean-room procedural GameCube demo in `gamecube-demo/`.
+- Host tests, a devkitPPC/libogc build, artifact checks, and a bounded Dolphin headless startup smoke have passed. A CI Software Renderer run captured a visible procedural scene.
+- Interactive controller response, a completed three-lap run/restart, long-session stability, and physical hardware behavior remain unverified.
+- The Step 102 source archive has not been imported into main. GitHub-hosted agents cannot automatically read files stored only in the ChatGPT conversation/library.
+- Research on SW_RACER_RE is Windows-PC reference material, not automatically reusable GameCube/Wii code. Respect its reported AGPL-3.0 license and keep PC observations separate from console assumptions.
 
-- Never commit ROMs, disc images, BIOS files, extracted proprietary assets, or copyrighted game data.
-- Never claim emulator or hardware support without actual runtime evidence.
-- Never disable or weaken CI just to get a green result.
-- Keep changes small and reviewable; prefer a pull request over direct commits to `main`.
-- Do not expose secrets in logs, prompts, issue comments, or commits.
-- Do not automatically merge agent-generated pull requests.
-- If toolchain APIs are uncertain, inspect the existing code and official KallistiOS documentation before implementing.
+## Free-only and data boundaries
 
-## Later automation options
+- Never attach billing, enter a payment method, or use a paid fallback to keep an agent working.
+- If a free quota is unavailable, stop and report the blocker.
+- Never send API keys, tokens, personal data, private game archives, ROMs/disc images, BIOS files, or extracted proprietary assets to an external reviewer.
+- Do not commit private/commercial game content or files of unclear provenance.
+- A source-import or license review must not be skipped just to get a green build.
 
-After the first agent-produced pull request has been reviewed successfully, consider adding:
-- automatic issue triage and labels;
-- CI summaries on pull requests;
-- dependency and secret scanning;
-- scheduled project-status summaries;
-- a second review agent that comments on pull requests.
+## Evidence and status language
 
-Do not add an autonomous workflow that executes arbitrary code from untrusted issues or merges changes without review.
+Always identify the exact commit and run link. Distinguish:
+- host regression tests;
+- native cross-compilation and artifact validation;
+- emulator process smoke;
+- visible frame capture;
+- interactive controller test;
+- complete race with finish/restart;
+- longer-session and physical-hardware tests.
+
+Do not report a lower-level check as proof of a higher-level outcome. No agent should push directly to main, delete branches/history, or merge its own code.

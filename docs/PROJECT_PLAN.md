@@ -2,82 +2,84 @@
 
 ## Objective
 
-Investigate a realistic path toward an enhanced Star Wars: Episode I — Racer experience on GameCube and Wii, without assuming that PC reverse-engineering work is directly portable to those consoles.
+Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star Wars: Episode I — Racer*. The current mainline prototype is an original clean-room technical slice, not a finished remaster or a completed port of the commercial game.
 
-## Guiding decisions
+## Source-of-truth tracks
 
-1. **Audit before implementation.** Check the prototype archive, its provenance, source code, dependencies, licenses, and existing build scripts before trusting or importing it.
-2. **Use a small proof of concept.** First prove the chosen toolchain and target environment with a minimal homebrew executable; do not start by promising a full remaster.
-3. **Keep two tracks distinct.**
-   - Track A: quick baseline using existing N64 emulation on Wii/Cube-compatible homebrew, if compatible with the user's own game copy.
-   - Track B: native port or reimplementation for GameCube/Wii, which requires separate engine, asset-format, input, audio, graphics, storage, and performance work.
-4. **Test evidence matters.** Record exact versions, commands, expected outputs, and actual results. Never label a build as working without a build/test result.
-5. **Keep copyrighted game content out of the public repository.** No ROMs, disc images, extracted proprietary assets, or copied code of unclear origin.
+1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural course/rival/effect GX rendering plus an original source-authored indexed player-pod mesh and 16×16 RGB8 texture exported to the native GX mesh/RGB565 path, controller input code, throttle/brake, boost and overheat/cooldown, inertial steering, off-road drag, rail recovery, three staggered procedural rivals, total/current-lap/best-lap clocks, a three-lap finish state with readable FINISH banner, pause/reset logic, elapsed-time-normalized 50/60 Hz gameplay updates, strict host regressions, and automated native-build/render checks.
+2. **Step 102 source archive:** a separate candidate for the fuller gameplay baseline. Do not merge its draft import PRs wholesale. Source authorship/license, generated track data, models/materials/audio, and dependencies require file-by-file review before redistribution.
+3. **SW_RACER_RE and other external projects:** research references only. Keep PC observations separate from GameCube/Wii hypotheses. Review licenses before copying code or data.
+4. **Dreamcast/KallistiOS starter and Wii64 tools:** separate research tracks; neither is the native GameCube release milestone.
 
-## Phases and acceptance criteria
+## Current acceptance status (2026-10-17)
 
-### Phase 0 — Repository and prototype audit
-- [x] Create public repository with README, .gitignore, and license.
-- [x] Add initial project plan, research notes, and build guide.
-- [ ] Inspect the existing prototype archive without modifying the only copy.
-- [ ] Identify language, source files, dependencies, licenses, and target platform.
-- [ ] Decide whether any part is safe and useful to import.
+### Verified in CI
+- [x] C99 host regressions for gameplay transitions, steering inertia, analog/D-pad mapping, lap boundaries, three-lap finish state, rival events, off-road response, and rail recovery.
+- [x] Deterministic host simulation reaches the configured three-lap finish using shared race-distance/lap helpers.
+- [x] Cadence regression compares one simulated second at 60 updates and 50 updates, covering acceleration/coasting/braking, boost/heat, steering movement, off-road drag, distance, and rival motion.
+- [x] Speed and lap-boundary helpers recover or reject non-finite values instead of propagating NaN/infinity into the race state.
+- [x] Native clean-room GameCube DOL and ELF build through devkitPPC/libogc.
+- [x] DOL/ELF artifact structure validation and DOL padding.
+- [x] Bounded Dolphin null-video process smoke test.
+- [x] Visible Software Renderer checks on exact PR #204 head detected the varied canyon, three-lap finish banner, and orange `FINISH` label ([run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310)).
+- [x] Latest post-merge GameCube run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581) passed native DOL/ELF build/artifact validation, host pause/reset tests, bounded Dolphin Null-backend smoke, and the mainline Software Renderer diagnostic. It ran on code-bearing merge commit `72acf968e3214b086b00b77240bb20b889314917`; the latest main commit `8b7c9a8a1e19e6a14eccc182103120e835400b4b` only updates the root README.
 
-**Exit criterion:** a file inventory and a concise assessment that distinguishes verified contents from assumptions.
+- [x] Original source-authored player mesh and source texture validate and match the checked-in generated GX headers; texture and mesh boundary tests passed on PR #203.
+- [x] Readable FINISH label and varied canyon silhouette are integrated and checked by a scripted visible finish-frame diagnostic on PR #204.
 
-### Phase 1 — Select the technical baseline
-- [ ] Confirm what executable/source material actually exists.
-- [ ] Compare a Wii N64-emulator baseline with a native homebrew baseline.
-- [ ] Establish the exact development toolchain and a minimal build procedure.
-- [ ] Review relevant third-party licenses before reusing code or tooling.
+### Still unverified
+- [ ] Interactive steering and acceleration/braking/boost behavior using a visible Dolphin controller profile or physical controller.
+- [ ] One complete three-lap run in the running game, including finish display, stopping, reset, and a second run.
+- [ ] Longer-session stability and sustained frame pacing.
+- [ ] Physical GameCube/Wii behavior.
+- [ ] General-purpose source-asset loading and an asset-backed course/collision path; current player mesh/texture path covers only the original fixture and does not parse commercial game formats.
+- [ ] A native build or gameplay claim for the separate Step 102 archive.
 
-**Exit criterion:** a documented architecture decision based on inspected files and a reproducible minimal build.
+## Work order
 
-### Phase 2 — First bootable test
-- [ ] Create the smallest homebrew test that can be launched on the selected target or emulator.
-- [ ] Record target, hardware/emulator version, build command, and result.
-- [ ] Keep generated binaries and images out of Git; attach only lawful logs or screenshots if needed.
+### A — Verify the running prototype
+- Use the checklist in [Next milestone](NEXT_MILESTONE.md) to exercise every control in visible Dolphin.
+- Record version/backend, controller profile, exact commit, outcomes, and evidence.
+- Add a regression test for any observed bug before changing gameplay behavior.
 
-**Exit criterion:** a reproducible test with documented evidence. A test app is not a game port.
+**Exit criterion:** reproducible interactive controls and a complete three-lap race have actual evidence attached to the tested commit.
 
-### Phase 3 — Feasibility of the game
-- [ ] Identify which game version and data formats are being studied.
-- [ ] Verify whether PC-oriented asset tools can parse any relevant console-format data; do not assume they can.
-- [ ] Map high-level subsystems: rendering, track geometry, vehicles/physics, controls, audio, menus, save data, and resource loading.
-- [ ] Estimate what must be reimplemented versus what could be reused lawfully.
+### B — Consolidate only validated behavior
+- Keep each behavior change isolated in a small PR with host tests and native CI.
+- Merge only after reviewing the diff and the exact-head required checks; an optional visible-render diagnostic is useful evidence but is separately labeled non-blocking.
+- Port unique behavior from old branches only if it is still missing from main and has tests. If a PR is fully superseded, close the PR but preserve its branch/commits.
+- Do not delete branches, source files, assets, or history as a way to reduce clutter.
 
-**Exit criterion:** subsystem inventory and an evidence-backed feasibility assessment.
+**Exit criterion:** one mainline implementation for each validated prototype subsystem and fewer redundant open PRs, with historical work preserved.
 
-### Phase 4 — Vertical slice
-Only after a viable architecture is selected:
-- [ ] Load one small test scene or track.
-- [ ] Display one vehicle and accept basic input.
-- [ ] Test stable frame timing and memory use.
-- [ ] Document known limitations before expanding scope.
+### C — Improve vertical-slice feel and stability
+- Verify control direction and steering calibration.
+- Exercise off-road/rail response and rival interaction over multiple frames.
+- Verify finish/reset behavior, camera framing, visible progress, and frame pacing together.
+- Keep the visible-render diagnostic and native build passing as changes land.
 
-**Exit criterion:** a repeatable, narrowly scoped playable slice.
+**Exit criterion:** repeatable, stable short races with one course, controllable pod, visible course, rival interaction, and finish/restart.
 
-### Phase 5 — Enhanced presentation and bonus features
-Potential later work, only once the base is stable:
-- improved textures/materials and rendering;
-- optional visual effects and quality settings;
-- additional time trials, unlockables, or challenge modes;
-- per-platform configuration and packaging.
+### D — Controlled Step 102 review and integration
+- Complete a file-path manifest with origins, license evidence, generated/copied data classification, redistribution decision, and reviewer.
+- Exclude unclear-provenance files rather than assuming the archive is wholly open source.
+- Integrate only the reviewed, cleared subset in a separate branch. Reconcile its tests and build requirements against the current demo without overwriting working mainline behavior.
+- Keep private game archives, ROMs/disc images, BIOS files, extracted commercial assets, and unresolved route data outside the public repository.
 
-Every feature must have a defined implementation and test plan. “HD” should be specified precisely (render resolution, assets, filtering, or emulator upscaling) rather than used as a vague label.
+**Exit criterion:** a reproducible import list whose every included file has a documented provenance/distribution disposition and whose CI tests/build pass.
 
-### Phase 6 — Packaging and release
-- [ ] Build and validate each platform target separately.
-- [ ] Determine whether a homebrew executable, installable app, or disc image is appropriate.
-- [ ] Treat Wii WBFS packaging and GameCube image packaging as separate tasks.
-- [ ] Test output in an emulator and, where available, on real hardware.
-- [ ] Publish only original code and material that the project is allowed to redistribute.
+### E — Packaging and enhancements
+Only after a stable playable slice exists:
+- define “HD” for each target separately (console output, replacement assets, rendering changes, or emulator upscaling are not equivalent);
+- measure GameCube and Wii performance separately;
+- expand courses, vehicles, rival logic, UI, audio, saves, and progression only with provenance-cleared assets/code;
+- validate any disc-image/homebrew packaging separately from building a DOL/ELF.
 
-## Definition of done for each task
+## Non-negotiable engineering rules
 
-A task is complete only when:
-- the changed files are committed;
-- the toolchain/command and target are recorded;
-- build/test results are reported truthfully;
-- third-party code/assets have provenance and license notes;
-- generated game images and copyrighted game content remain outside this repository.
+- Cloud-first and free-tier-first; no billing or paid fallback to keep an automation running.
+- No direct pushes to main; use scoped branches and pull requests.
+- Never remove history or branches to tidy up; close superseded PRs while preserving their source branches.
+- CI is evidence of only the tasks that actually ran. Host tests, compilation, headless startup, visible rendering, interactive input, a completed race, and hardware testing are different gates.
+- Do not import Step 102 or external PC source/assets until provenance and redistribution rights have been reviewed.
+- Each task should report changed paths, commit SHA, test command/result, runtime evidence, and remaining blocker.

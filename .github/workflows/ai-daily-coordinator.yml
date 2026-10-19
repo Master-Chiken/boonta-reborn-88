@@ -1,0 +1,120 @@
+name: Daily read-only AI project coordinator
+
+on:
+  schedule:
+    - cron: "15 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: ai-daily-coordinator
+  cancel-in-progress: true
+
+jobs:
+  daily-report:
+    name: Free-tier read-only project report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Prepare fixed report context
+        shell: bash
+        run: |
+          mkdir -p .gemini
+          jq -n \
+            --arg title "Daily project coordination report" \
+            --arg desc "Review current project state and recommend the single highest-value next task." \
+            --arg event "${GITHUB_EVENT_NAME}" \
+            --arg num "23" \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: "false", issue_number: $num, repository: $repo, additional_context: "Scheduled daily read-only report. Never modify code or create branches/PRs."}' > .gemini/context.json
+
+      - name: Run Gemini read-only coordinator
+        id: coordinator
+        uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489 # pinned action
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          gemini_model: "gemini-3.5-flash-lite"
+          upload_artifacts: "false"
+          workflow_name: "ai-daily-coordinator"
+          github_issue_number: "23"
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 15
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                  ],
+                  "includeTools": [
+                    "issue_read",
+                    "list_issues",
+                    "search_issues",
+                    "pull_request_read",
+                    "list_pull_requests",
+                    "search_pull_requests",
+                    "get_commit",
+                    "get_file_contents",
+                    "list_commits",
+                    "search_code"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "tools": {
+                "core": ["read_file", "glob", "grep_search", "list_directory"]
+              }
+            }
+          prompt: "/gemini-daily-coordinator"
+
+      - name: Publish report to the coordinator issue
+        if: always() && steps.coordinator.outcome != 'skipped'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          REPORT: ${{ steps.coordinator.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const report = (process.env.REPORT || '').trim();
+            const runUrl = process.env.RUN_URL;
+            const maxLength = 50000;
+            let body;
+            if (report) {
+              const safe = report.length > maxLength
+                ? report.slice(0, maxLength - 100) + '\n\n[Report truncated.]'
+                : report;
+              body = '## Daily AI project report\n\n' + safe + '\n\n---\n[Workflow logs](' + runUrl + ')';
+            } else {
+              body = '## Daily AI project report unavailable\n\nNo readable Gemini summary was produced. No code changes were made. Check [workflow logs](' + runUrl + ').';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 23,
+              body
+            });

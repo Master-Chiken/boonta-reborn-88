@@ -1,0 +1,155 @@
+name: '▶️ Gemini Invoke'
+
+on:
+  workflow_call:
+    inputs:
+      additional_context:
+        type: 'string'
+        description: 'Any additional context from the request'
+        required: false
+
+concurrency:
+  group: '${{ github.workflow }}-invoke-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  invoke:
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
+      issues: 'write'
+      pull-requests: 'write'
+    steps:
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ vars.APP_ID }}
+        uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'read'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Checkout Code'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: 'false'
+
+      - name: 'Prepare prompt context'
+        shell: 'bash'
+        run: |-
+          mkdir -p .gemini
+          jq -n \
+            --arg title "${TITLE}" \
+            --arg desc "${DESCRIPTION}" \
+            --arg event "${EVENT_NAME}" \
+            --arg pr "${IS_PULL_REQUEST}" \
+            --arg num "${ISSUE_NUMBER}" \
+            --arg repo "${REPOSITORY}" \
+            --arg context "${ADDITIONAL_CONTEXT}" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context}' > .gemini/context.json
+        env:
+          TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
+          DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          IS_PULL_REQUEST: '${{ !!github.event.pull_request }}'
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          REPOSITORY: '${{ github.repository }}'
+          ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+
+      - name: 'Run Gemini CLI'
+        id: 'run_gemini'
+        uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+        with:
+          # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
+          gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
+          gemini_model: 'gemini-3.5-flash-lite'
+          upload_artifacts: 'false'
+          workflow_name: 'gemini-invoke'
+          # Assistant workflows can be triggered by comments on either Issues or PRs.
+          # We explicitly map both fields so the CLI can correctly categorize the interaction.
+          github_pr_number: '${{ github.event.pull_request.number }}'
+          github_issue_number: '${{ github.event.issue.number }}'
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 25
+              },
+              "telemetry": {
+                "enabled": true,
+                "target": "local",
+                "outfile": ".gemini/telemetry.log"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment",
+                    "issue_read",
+                    "list_issues",
+                    "search_issues",
+                    "pull_request_read",
+                    "list_pull_requests",
+                    "search_pull_requests",
+                    "get_commit",
+                    "get_file_contents",
+                    "list_commits",
+                    "search_code"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "tools": {
+                "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
+              }
+            }
+          prompt: '/gemini-invoke ${{ inputs.additional_context }}'
+
+      - name: 'Publish Gemini response to the issue or PR'
+        if: always() && steps.run_gemini.outcome != 'skipped'
+        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
+        env:
+          GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+        with:
+          script: |
+            const summary = (process.env.GEMINI_SUMMARY || '').trim();
+            const maxLength = 60000;
+            let body;
+            if (summary) {
+              const safeSummary = summary.length > maxLength
+                ? `${summary.slice(0, maxLength - 140)}\n\n[Report shortened to fit GitHub's comment limit.]`
+                : summary;
+              body = `## Gemini report\n\n${safeSummary}\n\n---\n[Open GitHub Actions logs](${process.env.RUN_URL})`;
+            } else {
+              body = `## Gemini report unavailable\n\nThe Gemini CLI workflow finished without a readable text summary. No code change is confirmed by this run. [Open GitHub Actions logs](${process.env.RUN_URL}) to inspect the empty response or failure.`;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: Number(process.env.ISSUE_NUMBER),
+              body,
+            });
+

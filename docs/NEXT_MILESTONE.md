@@ -1,37 +1,85 @@
-# Next milestone: visible Dreamcast test scene
+# Next milestone: Interactive validation of the clean-room racing slice
 
-## Goal
+Last updated: 2026-10-17
 
-Turn the existing clean-room Dreamcast starter into a small, visible technical demo before attempting any game-specific features. This is a prototype milestone, not a claim that the original commercial game has been ported.
+## Goal of this milestone
 
-## Current verified baseline
+Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a real controller in a visible Dolphin session (and later on real hardware).
 
-- The repository README reports that the KallistiOS starter has compiled in CI.
-- The current starter is described as printing a console message and polling controller input.
-- Emulator or real-hardware behavior has not yet been verified.
-- The browser prototype is a separate track and must not be confused with the Dreamcast build.
+This is the gate before expanding the vertical slice.
 
-## Work sequence
+## What is already verified (CI)
 
-1. **Inspect the current build** — review `dreamcast/main.c`, `dreamcast/Makefile`, and the existing GitHub Actions workflow before changing code.
-2. **Add a visible screen** — draw an original title screen with a simple background, a project label, and a controller-input indicator using APIs supported by the installed KallistiOS version.
-3. **Show controller state** — display whether a controller is connected and which buttons are pressed, without assuming hardware has been tested.
-4. **Build in CI** — use the existing workflow and check the build log. Fix compile errors before adding more features.
-5. **Test the artifact** — run the generated ELF in a compatible Dreamcast emulator if one is available. Record emulator name/version and results; otherwise mark runtime testing as pending.
-6. **Start an original 3D scene** — only after the visible screen is verified, add a simple original track-like scene using placeholder geometry.
+- Host regression tests for gameplay state, steering, boost/heat, lap boundaries, rivals, pause/reset and numeric state guards.
+- Native `boonta_gc_demo.dol` / `.elf` build using devkitPPC/libogc with artifact validation.
+- Bounded Dolphin Null-backend process smoke.
+- Source-authored indexed twin-engine player mesh (275 vertices, 169 triangles) with an original 16×16 RGB8 texture source, validated and deterministically exported to GX-ready C headers.
+- Readable three-lap finish panel and varied procedural canyon skyline.
+- Exact-head Software Renderer diagnostics and visual detectors for steering/reset and the finished banner.
 
-## Acceptance criteria
+These prove the tested code compiles, deterministic assertions pass, and the tested scripted states can render. They do **not** prove live controller response or a manually driven three-lap race.
 
-- The existing CI build passes.
-- The screen-drawing code is based on documented APIs available in the project's KallistiOS environment.
-- Controller feedback is visible or its limitation is documented.
-- Build success and runtime testing are reported separately.
-- No commercial ROMs, disc images, BIOS files, or extracted proprietary assets are committed.
+## Latest automated evidence (2026-10-17)
 
-## What the project owner needs to do now
+PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 (varied canyon) are now merged. The exact-head run [#39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) passed host tests, native build/artifact checks, Dolphin process smoke, and the Software Renderer diagnostic. Its scripted three-lap DTM frame passed both the centered finish-banner detector and orange `FINISH`-label detector.
 
-No local download is required for this planning step. Open the [repository Actions page](../actions) and check the latest `Dreamcast build` workflow run. If it is green, the next coding task is the visible test screen. If it is red, open the failed run and share the error text so the build can be fixed first.
+Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. Subsequent main commits update documentation only; the code-bearing tree validated by run #39062005581 has not changed. The live-controller checklist below remains the outstanding acceptance gate.
 
-## Legal and scope note
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
 
-This is an unofficial research and original-code project. A technical prototype inspired by a racing game is not the same as a remaster of the original game. Use only original or appropriately licensed code and assets, and do not distribute copyrighted game data.
+## Interactive acceptance checklist
+
+Load the latest mainline DOL in a **visible** Dolphin session.  
+Record: Dolphin version, video backend, video mode, controller profile, and evidence (short video or screenshots + notes).
+
+Test in this exact order:
+
+1. **Reset (Y)**  
+   Pod returns to start position, speed and lap counters reset, rivals and overtake markers reset, boost refilled, pause/finish state cleared.
+
+2. **Throttle / Brake (A / B)**  
+   Acceleration and braking visibly change speed. Speed falls naturally when released.
+
+3. **Steering**  
+   Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
+
+4. **Off-road & rails**  
+   Drive off the road → speed loss visible. Rail recovery works without freezing or breaking rendering.
+
+5. **Boost (X + A)**  
+   Energy drains while boosting, recharges after release. Overheat lockout behaves correctly.
+
+6. **Pause (Start)**  
+   Pause icon appears, simulation freezes. Resume works. Reset (Y) while paused is clean.
+
+7. **Full three-lap race**  
+   Three lap crossings counted correctly. Finish flag appears. Movement stops after the race limit. Reset allows a new run.
+
+8. **Longer session**  
+   Several minutes of play. No sustained graphical corruption, crashes, or severe frame pacing issues.
+
+### Acceptance criteria
+
+- [ ] Scene starts without fatal error
+- [ ] All controls above behave as described
+- [ ] Three-lap race reaches finish and stops cleanly
+- [ ] Reset starts a fresh run
+- [ ] No sustained corruption or crash in longer session
+- [ ] CI host tests + native build still pass on the exact commit tested
+- [ ] Evidence recorded (video/screenshots + notes)
+
+Any item not tested remains **pending**. Do not claim hardware compatibility from Dolphin alone.
+
+## After this milestone
+
+Once the interactive checklist is fully green:
+
+1. Fix any bugs found during the session and add regression tests.
+2. Improve the procedural track, camera and collision as one coherent vertical slice.
+3. Only then expand content (more tracks, pods, AI, presentation, bonuses).
+
+## Parallel track (do not mix)
+
+Step 102 source archive remains on **import hold**.  
+See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
+Do not merge unclear-provenance code or any commercial assets.

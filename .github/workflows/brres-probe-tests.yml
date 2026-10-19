@@ -1,0 +1,22 @@
+name: Synthetic BRRES MDL0 probe
+
+on:
+  pull_request:
+    paths:
+      - "tools/brres_probe/**"
+      - ".github/workflows/brres-probe-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-mdl0-header-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run synthetic MDL0 header tests
+        run: python -m unittest discover -s tools/brres_probe -p 'test_*.py' -v
