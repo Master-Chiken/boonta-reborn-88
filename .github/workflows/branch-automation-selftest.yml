@@ -139,6 +139,15 @@ jobs:
               if marker not in agents:
                   raise SystemExit(f"Delivery-queue policy regression: AGENTS.md missing {marker!r}")
 
+          if "Issue #156" not in docs or "Issue #156" not in agents:
+              raise SystemExit("The active NOW/NEXT queue must reference canonical Issue #156 in docs and AGENTS.md.")
+          if "Issue #201" in docs or "Issue #201" in agents:
+              raise SystemExit("Stale Issue #201 queue references must be removed so contributors use canonical Issue #156.")
+          if "Controlled archive-backed branch-ref retirement" not in docs:
+              raise SystemExit("Branch governance docs must explain the guarded archive-backed retirement exception.")
+          if "active repository ruleset must target exactly" not in agents:
+              raise SystemExit("AGENTS.md must require explicit protection of the recovery archive before ref retirement.")
+
           # Stop the scheduled intake workflow from flooding a solo maintainer with PRs.
           import re
           if re.search(r"(?m)^  (?:schedule|push):", intake):
