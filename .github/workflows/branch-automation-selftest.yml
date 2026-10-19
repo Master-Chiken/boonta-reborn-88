@@ -6,6 +6,8 @@ on:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
       - ".github/workflows/branch-automation-selftest.yml"
+      - ".github/workflows/gamecube-demo-build.yml"
+      - ".github/workflows/retire-proven-merged-refs.yml"
   workflow_dispatch:
 
 permissions:
@@ -34,7 +36,56 @@ jobs:
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
             .github/workflows/branch-automation-selftest.yml \
+            .github/workflows/gamecube-demo-build.yml \
+            .github/workflows/retire-proven-merged-refs.yml \
             .github/dependabot.yml
+
+      - name: Verify branch retirement remains fixed and proof-based
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          retirement = Path(".github/workflows/retire-proven-merged-refs.yml").read_text(encoding="utf-8")
+          gamecube = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
+
+          fixed_refs = {
+              "feat/game-finish-banner-label-20261017": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+              "feat/rocky-canyon-silhouette-20261017": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+              "feat/source-driven-racer-mesh-texture-20261017": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+              "test/dolphin-pause-state-acceptance": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+              "ops/retire-proven-merged-refs-20261019": "f7f565cb76776457439573929f7b95af89c0496f",
+          }
+          for branch, sha in fixed_refs.items():
+              if retirement.count(f'"{branch}"') != 1:
+                  raise SystemExit(f"Retirement scope regression: expected one allowlist entry for {branch}")
+              if retirement.count(f'"{sha}"') != 1:
+                  raise SystemExit(f"Retirement scope regression: expected one fixed SHA for {branch}")
+
+          required_guards = (
+              "branch_count() {",
+              "protected",
+              "merge-base --is-ancestor",
+              "state=open&per_page=100",
+              "--method DELETE",
+              "Validate all five exact refs before deleting any.",
+              "git -C \"$workdir\" grep -F -n \"$name\" \"$main_ref\" -- .github/workflows/gamecube-demo-build.yml",
+          )
+          for marker in required_guards:
+              if marker not in retirement:
+                  raise SystemExit(f"Branch retirement safety regression: missing {marker!r}")
+
+          if len(fixed_refs) != 5:
+              raise SystemExit("Branch retirement scope regression: expected four proven project refs plus one temporary runner ref")
+          for retired_branch in tuple(fixed_refs)[:4]:
+              if retired_branch in gamecube:
+                  raise SystemExit(f"Stale CI branch selector remains for retirement candidate {retired_branch}")
+          if "check_finish_label:" not in gamecube or "inputs.check_finish_label" not in gamecube:
+              raise SystemExit("GameCube regression: explicit manual finish-label diagnostic input must remain available")
+
+          print("Branch retirement remains limited to four exact project refs plus its temporary runner, with fixed-SHA, protection, open-PR, ancestry, and CI-selector guards.")
+          PY
 
       - name: Verify branch coordination thresholds remain informational
         shell: bash
