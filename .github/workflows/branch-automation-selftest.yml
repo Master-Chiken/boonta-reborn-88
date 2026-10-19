@@ -35,6 +35,44 @@ jobs:
             .github/workflows/branch-intake-queue.yml \
             .github/workflows/branch-automation-selftest.yml
 
+      - name: Verify branch coordination thresholds remain informational
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
+          docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          agents = Path("AGENTS.md").read_text(encoding="utf-8")
+
+          required_workflow = (
+              "general_alert_threshold = 105",
+              "biddy_pinky_alert_threshold = 200",
+              "General-contributor coordination alert (105 total branches)",
+              "Biddy-Pinky coordination alert (200 total branches)",
+              "advisory only; no workflow failure or task interruption",
+          )
+          for marker in required_workflow:
+              if marker not in workflow:
+                  raise SystemExit(f"Branch alert regression: workflow missing {marker!r}")
+
+          if "105 total repository branches" not in docs or "200 total repository branches" not in docs:
+              raise SystemExit("Branch alert regression: documentation must preserve both thresholds")
+          if "rather than applying the general 105-branch alert" not in docs:
+              raise SystemExit("Branch alert regression: Biddy-Pinky's separate threshold is unclear")
+          if "informational alert at 105 total repository branches" not in agents or "200 total branches rather than 105" not in agents:
+              raise SystemExit("Branch alert regression: AGENTS.md must preserve both coordination thresholds")
+
+          forbidden = ("issues: write", "gh issue create", "hard_cap_exceeded", "cap_warning", "Fail audit if hard cap exceeded")
+          for marker in forbidden:
+              if marker in workflow:
+                  raise SystemExit(f"Branch governance must remain non-blocking; forbidden marker: {marker!r}")
+          if "  create:\n" in workflow:
+              raise SystemExit("Branch governance must not run a full audit on every branch-creation event")
+          print("Branch-count alerts are advisory at 105 / 200 branches; no cap, issue creation, or workflow failure.")
+          PY
+
       - name: Compile embedded Python scripts without executing network operations
         shell: bash
         run: |
