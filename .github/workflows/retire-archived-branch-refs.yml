@@ -1,0 +1,238 @@
+name: Retire archived branch refs
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run preflight only first; choose delete only after reviewing a green dry run"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - delete
+        default: dry-run
+      expected_checkpoint:
+        description: "Verified archive checkpoint commit (must match the pinned value)"
+        required: true
+        type: string
+        default: cf4978a17916c00eed8e25550bd9231354096993
+      confirmation:
+        description: "Use DRY RUN for a read-only check, or the exact deletion phrase for delete mode"
+        required: true
+        type: string
+        default: DRY RUN
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: retire-archived-branch-refs
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    name: Verify backup, then retire approved refs
+    if: github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      MODE: ${{ inputs.mode }}
+      EXPECTED_CHECKPOINT: ${{ inputs.expected_checkpoint }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      CANDIDATES_FILE: ${{ runner.temp }}/archived-branch-cleanup.tsv
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Preflight every branch without deleting anything
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$MODE" == "dry-run" || "$MODE" == "delete" ]] || {
+            echo "::error::Unsupported mode."
+            exit 1
+          }
+          [[ "$EXPECTED_CHECKPOINT" == "cf4978a17916c00eed8e25550bd9231354096993" ]] || {
+            echo "::error::Checkpoint SHA must match the reviewed recovery checkpoint."
+            exit 1
+          }
+          if [[ "$MODE" == "dry-run" ]]; then
+            [[ "$CONFIRMATION" == "DRY RUN" ]] || {
+              echo "::error::For dry-run mode, confirmation must be exactly DRY RUN."
+              exit 1
+            }
+          else
+            [[ "$CONFIRMATION" == "RETIRE 18 ARCHIVED BRANCH REFS" ]] || {
+              echo "::error::Deletion requires the exact confirmation phrase: RETIRE 18 ARCHIVED BRANCH REFS"
+              exit 1
+            }
+          fi
+
+          cat > "$CANDIDATES_FILE" <<'EOF'
+          audit/step102-import-gate b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25
+          chore/two-branch-workflow c6323e5ae26bf875aed8e6aab3f0c18cf088c0a8
+          feat/game-finish-banner-label-20261017 1385a83d2aa3ba263b1a06b567da9cfb60998428
+          feat/rocky-canyon-silhouette-20261017 b809c0a023ad0b551b3405e3298efae26a2b3d5e
+          feat/source-driven-racer-mesh-texture-20261017 b96fd97c56a34480e8e685ab2cc2a52460668a60
+          feature/cleanroom-mesh-source e0f8d864c8c659aa9058b79747dad8f0023edafb
+          feature/gamecube-boost-meter c0bb37a44c86a4b0b428602e8bcab913fe813dd2
+          feature/gamecube-boost-overheat e70f6ae5bd0127a6e4140632752f97dcc4212cd2
+          feature/gamecube-lap-timing-hud 8b70b2ab20b38200d717137e4a9940f562859d7b
+          feature/gamecube-multi-rival-race-v2 ef2d56788ee43ccf27707962da6ab2a94ff0057e
+          fix/frame-rate-independent-gameplay-v3 92a28b9567f362a7c5872bc9fe597796d40a5097
+          fix/steering-stick-deadzone-20261017 22528ece22c7d471e3da4e43b4f78ab22c944c4c
+          governance/no-branch-cap-task-completion-20261017 713c586f51a5ae240a7ddf7233b441d9e70295d6
+          import/step102-source-only dfa2a18da29f0e33b62aeefba41d419ae85ee4d3
+          recovery/branch-heads-20261019-verified 085ff1c9638650c279addcba5a04f839c414512b
+          test/dolphin-pause-state-acceptance b398b652e39dd9bfc41cbe76bb41efd51bdfb687
+          test/dolphin-pause-state-acceptance-7679597746618456134 9d8836a294420f7498898a30c4340cf0beb7a7b6
+          chore/archived-branch-ref-cleanup MAIN_ANCESTRY
+          EOF
+
+          fetch_recovery_refs() {
+            git fetch --no-tags origin \
+              "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" \
+              "+refs/heads/main:refs/remotes/origin/main"
+          }
+          fetch_recovery_refs
+          git merge-base --is-ancestor "$EXPECTED_CHECKPOINT" "refs/remotes/origin/archive/branch-heads-20261019" || {
+            echo "::error::The verified checkpoint is not reachable from the current protected archive."
+            exit 1
+          }
+
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs-preflight.json"
+          count=0
+          while read -r branch expected; do
+            [[ -n "$branch" ]] || continue
+            [[ "$branch" != "main" && "$branch" != "dev" && "$branch" != "archive/branch-heads-20261019" ]] || {
+              echo "::error::Permanent/recovery refs can never be retired by this workflow."
+              exit 1
+            }
+
+            branch_json="$(gh api "repos/$GH_REPO/branches/$branch")"
+            actual_sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+            protected="$(jq -r '.protected // false' <<< "$branch_json")"
+            [[ "$protected" == "false" ]] || {
+              echo "::error::$branch is protected; no refs have been deleted."
+              exit 1
+            }
+
+            if jq -e --arg branch "$branch" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' "$RUNNER_TEMP/open-prs-preflight.json" >/dev/null; then
+              echo "::error::An open PR uses $branch as its head or base; no refs have been deleted."
+              exit 1
+            fi
+
+            if [[ "$expected" == "MAIN_ANCESTRY" ]]; then
+              git merge-base --is-ancestor "$actual_sha" "refs/remotes/origin/main" || {
+                echo "::error::$branch is not fully integrated into main; no refs have been deleted."
+                exit 1
+              }
+            else
+              [[ "$actual_sha" == "$expected" ]] || {
+                echo "::error::$branch moved from its reviewed SHA; no refs have been deleted."
+                exit 1
+              }
+              git merge-base --is-ancestor "$expected" "refs/remotes/origin/archive/branch-heads-20261019" || {
+                echo "::error::$branch tip is not recoverable from the protected archive; no refs have been deleted."
+                exit 1
+              }
+            fi
+
+            echo "PASS preflight: $branch at $actual_sha; unprotected, no open PR reference, recovery/integration verified."
+            count=$((count + 1))
+          done < "$CANDIDATES_FILE"
+
+          [[ "$count" -eq 18 ]] || {
+            echo "::error::Expected exactly 18 reviewed candidates, found $count."
+            exit 1
+          }
+          echo "candidate_count=$count" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Branch cleanup preflight"
+            echo
+            echo "- Mode: **$MODE**"
+            echo "- Verified checkpoint: `$EXPECTED_CHECKPOINT`"
+            echo "- Candidate refs: $count"
+            echo "- Protected recovery archive contains every pinned candidate tip."
+            echo "- Main/dev/archive and both open-PR branches are excluded."
+            echo
+            echo "### Candidate list"
+            sed 's/ MAIN_ANCESTRY$/ (exact tip must be an ancestor of main)/' "$CANDIDATES_FILE" | sed -E 's/ [0-9a-f]{40}$//'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retire refs one by one after immediate recheck
+        if: inputs.mode == 'delete'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          retired=0
+          while read -r branch expected; do
+            [[ -n "$branch" ]] || continue
+
+            git fetch --no-tags origin \
+              "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" \
+              "+refs/heads/main:refs/remotes/origin/main"
+
+            branch_json="$(gh api "repos/$GH_REPO/branches/$branch")"
+            actual_sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+            protected="$(jq -r '.protected // false' <<< "$branch_json")"
+            [[ "$protected" == "false" ]] || {
+              echo "::error::$branch became protected. Stopping without deleting it."
+              exit 1
+            }
+
+            gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs-before-delete.json"
+            if jq -e --arg branch "$branch" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' "$RUNNER_TEMP/open-prs-before-delete.json" >/dev/null; then
+              echo "::error::An open PR now uses $branch. Stopping before deletion of this ref."
+              exit 1
+            fi
+
+            if [[ "$expected" == "MAIN_ANCESTRY" ]]; then
+              git merge-base --is-ancestor "$actual_sha" "refs/remotes/origin/main" || {
+                echo "::error::$branch tip is no longer reachable from main. Stopping."
+                exit 1
+              }
+            else
+              [[ "$actual_sha" == "$expected" ]] || {
+                echo "::error::$branch moved after preflight. Stopping."
+                exit 1
+              }
+              git merge-base --is-ancestor "$expected" "refs/remotes/origin/archive/branch-heads-20261019" || {
+                echo "::error::$branch no longer passes archive reachability. Stopping."
+                exit 1
+              }
+            fi
+
+            echo "Retiring ref $branch at $actual_sha"
+            gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch"
+
+            gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches-after-delete.json"
+            if jq -e --arg branch "$branch" 'any(.[]; .name == $branch)' "$RUNNER_TEMP/branches-after-delete.json" >/dev/null; then
+              echo "::error::GitHub still reports $branch after the delete request."
+              exit 1
+            fi
+
+            echo "- Retired `$branch` at `$actual_sha`." >> "$GITHUB_STEP_SUMMARY"
+            retired=$((retired + 1))
+          done < "$CANDIDATES_FILE"
+
+          gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches-final.json"
+          final_count="$(jq 'length' "$RUNNER_TEMP/branches-final.json")"
+          {
+            echo
+            echo "## Cleanup result"
+            echo
+            echo "- Retired refs in this run: $retired"
+            echo "- Live branch count after cleanup: $final_count"
+            echo "- Kept refs: `main`, `dev`, protected `archive/branch-heads-20261019`, and refs that still back open PRs."
+            echo "- The branch names were retired; unique commits were preserved in the recovery archive and were not merged into main/dev by this operation."
+          } >> "$GITHUB_STEP_SUMMARY"
