@@ -61,6 +61,14 @@ jobs:
             exit 1
           fi
 
+          # Protect both keeper refs before touching any candidate; archive protection
+          # is not a substitute for preserving main's independent merge protections.
+          main_protected="$(jq -r '[.[] | select(.name == "main")][0].protected // false' "$RUNNER_TEMP/branches.json")"
+          if [[ "$main_protected" != "true" ]]; then
+            echo "::error::Default branch main must be protected; refusing all ref deletion."
+            exit 1
+          fi
+
           # The archive is the only recovery shelf once the candidate refs are retired.
           # Require GitHub to report it as protected before the first deletion. The
           # maintainer must configure an active exact-ref ruleset blocking deletion
@@ -115,6 +123,11 @@ jobs:
           while IFS=$'\t' read -r name sha; do
             [[ -n "$name" ]] || continue
             inventory
+            main_protected="$(jq -r '[.[] | select(.name == "main")][0].protected // false' "$RUNNER_TEMP/branches.json")"
+            if [[ "$main_protected" != "true" ]]; then
+              echo "::error::Default branch protection disappeared during cleanup; stopping."
+              exit 1
+            fi
             archive_protected="$(jq -r --arg name "$archive_branch" '[.[] | select(.name == $name)][0].protected // false' "$RUNNER_TEMP/branches.json")"
             if [[ "$archive_protected" != "true" ]]; then
               echo "::error::Recovery archive protection disappeared during cleanup; stopping."
