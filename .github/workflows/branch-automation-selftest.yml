@@ -71,7 +71,7 @@ jobs:
           if "fixed_refs" in retirement or "Validate all five exact refs" in retirement:
               raise SystemExit("Branch cleanup must not remain restricted to the previous five-ref allowlist.")
           import re
-          if re.search(r"(?m)^  workflow_dispatch:\\s*$", retirement):
+          if re.search(r"(?m)^  workflow_dispatch:\s*$", retirement):
               raise SystemExit("Destructive branch retirement must only trigger from the reviewed protected-main push.")
           if "check_finish_label:" not in gamecube or "inputs.check_finish_label" not in gamecube:
               raise SystemExit("GameCube regression: explicit manual finish-label diagnostic input must remain available.")
