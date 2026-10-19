@@ -503,6 +503,22 @@ class DolphinDtmTests(unittest.TestCase):
         draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
         self.assertTrue(reset_state_visible(image))
 
+        # Reset HUD metrics must not pass while the finish checkerboard remains.
+        finish_overlay = image.copy()
+        overlay_draw = ImageDraw.Draw(finish_overlay)
+        cx, cy, tile_w, tile_h = 400.0, 280.0, 17.5, 11.7
+        left, top = cx - 2 * tile_w, cy - 1.5 * tile_h
+        for row in range(3):
+            for col in range(4):
+                color = (238, 246, 255) if (row + col) % 2 == 0 else (12, 18, 27)
+                x0 = round(left + col * tile_w)
+                y0 = round(top + row * tile_h)
+                x1 = round(left + (col + 1) * tile_w - 1)
+                y1 = round(top + (row + 1) * tile_h - 1)
+                overlay_draw.rectangle((x0, y0, x1, y1), fill=color)
+        self.assertTrue(finish_banner_visible(finish_overlay))
+        self.assertFalse(reset_state_visible(finish_overlay))
+
         accelerated = image.copy()
         ImageDraw.Draw(accelerated).rectangle((24, 444, 80, 455), fill=(64, 220, 243))
         self.assertFalse(reset_state_visible(accelerated))
