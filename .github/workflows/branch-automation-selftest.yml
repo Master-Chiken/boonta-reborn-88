@@ -81,7 +81,8 @@ jobs:
           import re
           if re.search(r"(?m)^  (?:schedule|push):", intake):
               raise SystemExit("Intake regression: draft PR creation must be manual-dispatch only")
-          if "MAX_PRS: ${{ github.event.inputs.max_prs || '1' }}" not in intake:
+          expected_max_prs = "MAX_PRS: " + chr(36) + "{{ github.event.inputs.max_prs || '1' }}"
+          if expected_max_prs not in intake:
               raise SystemExit("Intake regression: default batch size must remain one")
           if 'default: "1"' not in intake or not re.search(r'(?ms)^        options:\n          - "1"\n\npermissions:', intake):
               raise SystemExit("Intake regression: only a single draft PR may be requested per run")
