@@ -96,7 +96,7 @@ jobs:
           test/dolphin-pause-state-acceptance b398b652e39dd9bfc41cbe76bb41efd51bdfb687
           test/dolphin-pause-state-acceptance-7679597746618456134 9d8836a294420f7498898a30c4340cf0beb7a7b6
           chore/archived-branch-ref-cleanup MAIN_ANCESTRY
-fix/cleanup-runner-context-20261019 MAIN_ANCESTRY
+          fix/cleanup-runner-context-20261019 MAIN_ANCESTRY
           EOF
 
           fetch_recovery_refs() {
