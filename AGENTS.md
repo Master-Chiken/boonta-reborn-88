@@ -63,6 +63,16 @@ Do not start a converter, broad asset catalog, major rewrite, new renderer/platf
 - Do not push directly to main; integrate through reviewable PRs and preserve rollback options. Never delete useful branches, commits, or files automatically. Do not merge stale fork histories wholesale; compare unique diffs and integrate selectively.
 - Avoid parallel PRs that change the same behavior/files without a clear dependency plan. Keep each change focused so its purpose, risk, and evidence can be reviewed.
 
+## Single-maintainer delivery queue (work-in-progress control)
+
+- **Issue #201 is the single source of truth for the active integration queue.** Keep exactly one `NOW` item and one `NEXT` item; unrelated open issues/PRs remain parked and are not implicit work assignments.
+- **One active runtime implementation or integration candidate at a time.** This is a work-in-progress limit, not a branch-count cap. Preserve unique branches/PRs while queued; never delete or close useful work just to make a count smaller.
+- Do not start a new runtime PR while the current runtime PR is still being implemented, waiting for required validation/review, or ready for integration. Continue the existing PR for the same task. An urgent fix that blocks the current candidate may interrupt only after its blocker and scope are documented in #201.
+- Independent research/docs may be investigated without touching the runtime lane, but should be recorded as `NEXT` or `PARKED`; don't open another PR that requires maintainer attention until the `NOW` item is handed off, except for a security/provenance/build blocker that must be fixed immediately.
+- Before opening a PR, state its linked issue, player-visible/developer-blocking outcome, small file scope, exact-head checks, what is not tested, overlap/dependencies, and the next action. If it lacks that information, improve the existing issue/branch instead of creating another PR.
+- Move the queue forward serially: complete checks and self-review, obtain the appropriate review/integration decision, merge or explicitly park the `NOW` item, then promote `NEXT`. Never batch-merge overlapping runtime PRs; after one merge, rerun exact-head checks for every remaining PR that shares runtime, tests, or workflow files.
+- Each handoff to the owner should contain one recommended action, the evidence supporting it, and the single remaining decision/blocker. Do not hand the owner a large menu of parallel choices.
+
 ## Required validation and honest reporting
 
 Use the strongest practical level of validation for the claim being made, and report these separately:
