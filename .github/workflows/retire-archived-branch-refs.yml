@@ -42,7 +42,6 @@ jobs:
       MODE: ${{ inputs.mode }}
       EXPECTED_CHECKPOINT: ${{ inputs.expected_checkpoint }}
       CONFIRMATION: ${{ inputs.confirmation }}
-      CANDIDATES_FILE: ${{ runner.temp }}/archived-branch-cleanup.tsv
     steps:
       - name: Check out complete history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
@@ -53,6 +52,8 @@ jobs:
       - name: Preflight every branch without deleting anything
         id: preflight
         shell: bash
+        env:
+          CANDIDATES_FILE: ${{ runner.temp }}/archived-branch-cleanup.tsv
         run: |
           set -euo pipefail
 
@@ -171,6 +172,8 @@ jobs:
       - name: Retire refs one by one after immediate recheck
         if: inputs.mode == 'delete'
         shell: bash
+        env:
+          CANDIDATES_FILE: ${{ runner.temp }}/archived-branch-cleanup.tsv
         run: |
           set -euo pipefail
 
