@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "repository": "Master-Chiken/boonta-reborn-88",
+  "captured_at_utc": "2026-10-19",
+  "purpose": "Verified pre-cleanup inventory. This file is stored on a recovery branch whose checkpoint commit has every SHA below as a parent (except the archive branch, which is the first parent).",
+  "snapshot_commit": "d4811473c44b7fee63cb4b2b3fc704fedd7b38b9",
+  "snapshot_branch": "recovery/branch-heads-20261019-verified",
+  "branch_count_before_snapshot_branch": 20,
+  "target_permanent_branches": [
+    "main",
+    "dev"
+  ],
+  "temporary_recovery_anchor": "recovery/branch-heads-20261019-verified",
+  "cleanup_policy": {
+    "no_blind_deletions": true,
+    "no_automatic_deletion": true,
+    "no_merge_of_archive": true,
+    "merge_only_after_diff_review_and_required_checks": true,
+    "note": "Temporary task branches and open PR branches can exist as needed; two refers to permanent integration branches. The old archive branch remains until its protection/history is reconciled and retirement is possible."
+  },
+  "pull_requests": {
+    "open": [
+      {
+        "number": 214,
+        "title": "Fix track-width-aware rail collision alignment",
+        "head": "fix/width-aware-rail-collision-20261017",
+        "head_sha": "1b16f8f448a3d00a8121e80e38de91a69bffae89",
+        "base": "main",
+        "draft": true,
+        "action": "Keep draft/unmerged pending manual gameplay acceptance."
+      },
+      {
+        "number": 225,
+        "title": "docs: define evidence-led REA research workflow",
+        "head": "docs/rea-research-workflow-20261019",
+        "head_sha": "6205161e4674022e082aea70efe85bafdcce50af",
+        "base": "main",
+        "draft": false,
+        "action": "Review separately; do not conflate with gameplay acceptance."
+      }
+    ],
+    "closed_unmerged_to_preserve": [
+      {
+        "number": 200,
+        "head": "governance/no-branch-cap-task-completion-20261017",
+        "head_sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6"
+      },
+      {
+        "number": 215,
+        "head": "fix/steering-stick-deadzone-20261017",
+        "head_sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c"
+      },
+      {
+        "number": 221,
+        "head": "test/dolphin-pause-state-acceptance-7679597746618456134",
+        "head_sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6"
+      }
+    ]
+  },
+  "branches": [
+    {
+      "name": "archive/branch-heads-20261019",
+      "sha": "68a7f1eb682b9ab0321fa02ce95d3fbe3be20ff8",
+      "protected": true,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 910,
+        "behind": 0
+      },
+      "recommendation": "Existing recovery archive; do not merge wholesale. Protected. Keep until the new multi-parent checkpoint is verified."
+    },
+    {
+      "name": "audit/step102-import-gate",
+      "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 147,
+        "behind": 278,
+        "files": 38
+      },
+      "recommendation": "HOLD; preserve and review provenance-gated Step 102 work; do not merge blindly."
+    },
+    {
+      "name": "dev",
+      "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "protected": false,
+      "vs_main": {
+        "status": "identical",
+        "ahead": 0,
+        "behind": 0
+      },
+      "recommendation": "Permanent development branch; created from main and currently identical. Protect before directing PRs here."
+    },
+    {
+      "name": "docs/rea-research-workflow-20261019",
+      "sha": "6205161e4674022e082aea70efe85bafdcce50af",
+      "protected": false,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 1,
+        "behind": 0,
+        "files": 1
+      },
+      "recommendation": "Active open PR #225; preserve and review separately."
+    },
+    {
+      "name": "feat/game-finish-banner-label-20261017",
+      "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+      "protected": false,
+      "vs_main": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 31,
+        "files": 0
+      },
+      "recommendation": "Tip is behind main with no unique commits in compare; likely redundant, but retain until archive/checks and PR linkage are confirmed."
+    },
+    {
+      "name": "feat/rocky-canyon-silhouette-20261017",
+      "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+      "protected": false,
+      "vs_main": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 11,
+        "files": 0
+      },
+      "recommendation": "Tip is behind main with no unique commits; candidate for retirement only after safety checks."
+    },
+    {
+      "name": "feat/source-driven-racer-mesh-texture-20261017",
+      "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+      "protected": false,
+      "vs_main": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 15,
+        "files": 0
+      },
+      "recommendation": "Tip is behind main with no unique commits; candidate for retirement only after safety checks."
+    },
+    {
+      "name": "feature/cleanroom-mesh-source",
+      "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 3,
+        "behind": 46,
+        "files": 9
+      },
+      "recommendation": "Unique changes remain; compare file-by-file and cherry-pick/rebase deliberately if useful. Do not delete yet."
+    },
+    {
+      "name": "feature/gamecube-boost-meter",
+      "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 19,
+        "behind": 277,
+        "files": 6
+      },
+      "recommendation": "Substantial unique/history divergence; preserve and inspect patch before integration."
+    },
+    {
+      "name": "feature/gamecube-boost-overheat",
+      "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 5,
+        "behind": 209,
+        "files": 5
+      },
+      "recommendation": "Unique changes remain; review against current gameplay before integration or retirement."
+    },
+    {
+      "name": "feature/gamecube-lap-timing-hud",
+      "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 7,
+        "behind": 207,
+        "files": 5
+      },
+      "recommendation": "Unique changes remain; review against current gameplay before integration or retirement."
+    },
+    {
+      "name": "feature/gamecube-multi-rival-race-v2",
+      "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 4,
+        "behind": 205,
+        "files": 4
+      },
+      "recommendation": "Unique changes remain; review against current gameplay before integration or retirement."
+    },
+    {
+      "name": "fix/frame-rate-independent-gameplay-v3",
+      "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 4,
+        "behind": 204,
+        "files": 3
+      },
+      "recommendation": "Unique changes remain; compare with current main and related commits before integrating."
+    },
+    {
+      "name": "fix/steering-stick-deadzone-20261017",
+      "sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+      "protected": false,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 15,
+        "behind": 0,
+        "files": 6
+      },
+      "recommendation": "Closed PR #215 is not merged; retain the unique candidate changes for review."
+    },
+    {
+      "name": "fix/width-aware-rail-collision-20261017",
+      "sha": "1b16f8f448a3d00a8121e80e38de91a69bffae89",
+      "protected": false,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 25,
+        "behind": 0,
+        "files": 10
+      },
+      "recommendation": "Active draft PR #214; retain unmerged pending required review/interactive acceptance."
+    },
+    {
+      "name": "governance/no-branch-cap-task-completion-20261017",
+      "sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6",
+      "protected": false,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 58,
+        "behind": 0,
+        "files": 12
+      },
+      "recommendation": "Closed PR #200 not merged; inspect its deletion/automation behavior before considering reuse."
+    },
+    {
+      "name": "import/step102-source-only",
+      "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
+      "protected": false,
+      "vs_main": {
+        "status": "diverged",
+        "ahead": 120,
+        "behind": 277,
+        "files": 136
+      },
+      "recommendation": "HOLD; large provenance-sensitive divergence. Preserve unchanged, do not merge or delete."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance",
+      "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+      "protected": false,
+      "vs_main": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 67,
+        "files": 0
+      },
+      "recommendation": "Tip is behind main with no unique commits; candidate for retirement after PR linkage and checkpoint checks."
+    },
+    {
+      "name": "test/dolphin-pause-state-acceptance-7679597746618456134",
+      "sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+      "protected": false,
+      "vs_main": {
+        "status": "ahead",
+        "ahead": 5,
+        "behind": 0,
+        "files": 1
+      },
+      "recommendation": "Closed PR #221 is not merged; retain unique pause-state test changes for review."
+    },
+    {
+      "name": "main",
+      "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "protected": true,
+      "vs_main": {
+        "status": "default"
+      },
+      "recommendation": "Permanent production/stable branch. Keep protected."
+    }
+  ]
+}
