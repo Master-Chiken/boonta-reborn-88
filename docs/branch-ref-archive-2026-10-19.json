@@ -1195,7 +1195,19 @@
       "This audit is documentation only and does not delete any branch refs.",
       "Ref retirement is not proof that each branch's changes were integrated into main; the archived tips remain recoverable from the archive commit graph.",
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
-      "Repository auto-merge is disabled; the connected integration cannot enable that setting."
-    ]
+      "Repository auto-merge is enabled, and PR #200 is configured for squash auto-merge (checked 2026-10-19). The PR remains open and blocked pending an independent approval; because the cleanup plan requires the exact PR head to be reachable from main, do not allow squash auto-merge to proceed without correcting the merge method or adopting a separately reviewed recovery-safe procedure."
+    ],
+    "merge_configuration_check": {
+      "checked_at_utc_date": "2026-10-19",
+      "repository_allow_auto_merge": true,
+      "pr_number": 200,
+      "pr_state": "open",
+      "pr_head_sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+      "auto_merge_enabled": true,
+      "auto_merge_method": "squash",
+      "mergeable_state": "blocked",
+      "independent_approval_recorded_for_exact_head": false,
+      "safe_next_step": "Prevent squash auto-merge; wait for independent approval and merge with a normal merge commit, or approve a separately reviewed process that preserves exact-head recoverability."
+    }
   }
 }
