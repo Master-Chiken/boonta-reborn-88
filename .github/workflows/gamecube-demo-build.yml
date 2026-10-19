@@ -10,6 +10,7 @@ on:
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
+      - "tools/mesh_format/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "gamecube-demo/include/**"
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
+      - "tools/mesh_format/**"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
     inputs:
@@ -49,6 +51,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Compile and run bounded mesh-data validation tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_mesh_data.c -lm -o /tmp/test_mesh_data
+          /tmp/test_mesh_data
+
       - name: Compile and run gameplay-state unit tests
         run: |
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_gameplay_state.c -lm -o /tmp/test_gameplay_state
@@ -59,7 +66,7 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
-      - name: Test DOL padding and artifact validation utilities
+      - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
       - name: Validate clean-room track format and checked-in runtime header
@@ -197,7 +204,7 @@ jobs:
     continue-on-error: true
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: read
@@ -247,7 +254,8 @@ jobs:
         env:
           # Run the longer finish check automatically only for this spline-integration PR.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && github.head_ref == 'feature/runtime-track-spline') }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017')) }}
+          CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -259,12 +267,32 @@ jobs:
           export BASELINE_USER="$GITHUB_WORKSPACE/dolphin-neutral-user"
           export STEERED_USER="$GITHUB_WORKSPACE/dolphin-steered-user"
           export LEFT_USER="$GITHUB_WORKSPACE/dolphin-left-steered-user"
+          export STICK_USER="$GITHUB_WORKSPACE/dolphin-stick-steered-user"
+          export LEFT_STICK_USER="$GITHUB_WORKSPACE/dolphin-left-stick-steered-user"
+          export RESET_USER="$GITHUB_WORKSPACE/dolphin-reset-user"
+          export PAUSE_USER="$GITHUB_WORKSPACE/dolphin-pause-user"
+          export RESUME_USER="$GITHUB_WORKSPACE/dolphin-resume-user"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
           export LEFT_DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-left.dtm"
+          export STICK_DTM="$GITHUB_WORKSPACE/dolphin-scripted-stick-right.dtm"
+          export LEFT_STICK_DTM="$GITHUB_WORKSPACE/dolphin-scripted-stick-left.dtm"
+          export RESET_DTM="$GITHUB_WORKSPACE/dolphin-reset-state.dtm"
+          export PAUSE_DTM="$GITHUB_WORKSPACE/dolphin-pause-state.dtm"
+          export RESUME_DTM="$GITHUB_WORKSPACE/dolphin-resume-state.dtm"
           export DOLPHIN_LOG="$GITHUB_WORKSPACE/dolphin-render.log"
+          export RESET_LOG="$GITHUB_WORKSPACE/dolphin-reset-state.log"
+          export PAUSE_LOG="$GITHUB_WORKSPACE/dolphin-pause-state.log"
+          export RESUME_LOG="$GITHUB_WORKSPACE/dolphin-resume-state.log"
           export LEFT_LOG="$GITHUB_WORKSPACE/dolphin-left-render.log"
+          export STICK_LOG="$GITHUB_WORKSPACE/dolphin-stick-right-render.log"
+          export LEFT_STICK_LOG="$GITHUB_WORKSPACE/dolphin-stick-left-render.log"
           export CAPTURE="$GITHUB_WORKSPACE/dolphin-software-frame.png"
           export LEFT_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-left-frame.png"
+          export STICK_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-stick-right-frame.png"
+          export LEFT_STICK_CAPTURE="$GITHUB_WORKSPACE/dolphin-software-stick-left-frame.png"
+          export RESET_CAPTURE="$GITHUB_WORKSPACE/dolphin-reset-state.png"
+          export PAUSE_CAPTURE="$GITHUB_WORKSPACE/dolphin-pause-state.png"
+          export RESUME_CAPTURE="$GITHUB_WORKSPACE/dolphin-resume-state.png"
           export RACE_DTM="$GITHUB_WORKSPACE/dolphin-full-race.dtm"
           export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
           export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
@@ -272,22 +300,32 @@ jobs:
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$STICK_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_STICK_DTM" --frames 3600 --game-id ID-boo --steering left --steering-source stick
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESET_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick --scenario reset-check
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$PAUSE_DTM" --frames 3600 --game-id ID-boo --steering right --scenario pause-check
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESUME_DTM" --frames 3600 --game-id ID-boo --steering none --scenario resume-check
           test -s "$BASELINE_DTM"
           test -s "$DTM"
           test -s "$LEFT_DTM"
+          test -s "$STICK_DTM"
+          test -s "$LEFT_STICK_DTM"
+          test -s "$RESET_DTM"
+          test -s "$PAUSE_DTM"
+          test -s "$RESUME_DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config"
-          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config" "$STICK_USER/Config" "$LEFT_STICK_USER/Config" "$RESET_USER/Config" "$PAUSE_USER/Config" "$RESUME_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER"
           # Use isolated Dolphin profiles so the second capture cannot reuse
           # the first session's movie state, window or display configuration.
-          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER"; do
+          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER"; do
             cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
           EOF
           done
-          capture_timeout=100
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=520; fi
+          capture_timeout=160
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -367,9 +405,19 @@ jobs:
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
               capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
-              echo "Running bidirectional camera-follow diagnostic: green-ground road silhouette should shift opposite to each steering direction."
+              capture_frame "$STICK_DTM" "$STICK_LOG" "$STICK_CAPTURE" "$STICK_USER"
+              capture_frame "$LEFT_STICK_DTM" "$LEFT_STICK_LOG" "$LEFT_STICK_CAPTURE" "$LEFT_STICK_USER"
+              capture_frame "$RESET_DTM" "$RESET_LOG" "$RESET_CAPTURE" "$RESET_USER" 24
+              capture_frame "$PAUSE_DTM" "$PAUSE_LOG" "$PAUSE_CAPTURE" "$PAUSE_USER" 10
+              capture_frame "$RESUME_DTM" "$RESUME_LOG" "$RESUME_CAPTURE" "$RESUME_USER" 12
+              echo "Running D-pad and analog-stick camera-follow diagnostics: road silhouette should shift opposite to each steering direction."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$STICK_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_STICK_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$RESET_CAPTURE" --expect-reset
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$PAUSE_CAPTURE" --expect-pause
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$RESUME_CAPTURE" --expect-resume
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
@@ -390,7 +438,7 @@ jobs:
                 echo "The left-steered game viewport is predominantly near-white; GX scene colors may not be reaching the renderer."
                 exit 1
               fi
-              echo "Bidirectional camera-follow smoke passed: pod remained visible; road silhouette and HUD responded in the expected direction for left and right input."
+              echo "D-pad/stick steering passed; Y-reset produced a clean HUD; Start paused visibly, and a second Start resumed throttle-driven movement."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
                 echo "Starting optional full-race DTM; this may take around two to four minutes."
                 python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
@@ -400,6 +448,10 @@ jobs:
                 capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                 echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
+                if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
+                  python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
+                  echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
+                fi
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
@@ -408,9 +460,15 @@ jobs:
           set -e
           [[ ! -f "$BASELINE_LOG" ]] || cat "$BASELINE_LOG"
           [[ ! -f "$DOLPHIN_LOG" ]] || cat "$DOLPHIN_LOG"
+          [[ ! -f "$LEFT_LOG" ]] || cat "$LEFT_LOG"
+          [[ ! -f "$STICK_LOG" ]] || cat "$STICK_LOG"
+          [[ ! -f "$LEFT_STICK_LOG" ]] || cat "$LEFT_STICK_LOG"
+          [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
+          [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
+          [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -419,7 +477,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional bidirectional camera-follow/road-silhouette diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The optional Dolphin Software Renderer input/reset diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
             exit "$status"
           fi
 
@@ -431,19 +489,37 @@ jobs:
           path: |
             dolphin-software-frame.png
             dolphin-software-left-frame.png
+            dolphin-software-stick-right-frame.png
+            dolphin-software-stick-left-frame.png
+            dolphin-reset-state.png
+            dolphin-pause-state.png
+            dolphin-resume-state.png
+            dolphin-reset-state.log
+            dolphin-pause-state.log
+            dolphin-resume-state.log
+            dolphin-reset-state.dtm
+            dolphin-pause-state.dtm
+            dolphin-resume-state.dtm
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
+            dolphin-stick-right-render.log
+            dolphin-stick-left-render.log
             dolphin-neutral-baseline.log
             dolphin-flatpak-cli-capabilities.log
             dolphin-scripted-controller-input.dtm
             dolphin-scripted-controller-left.dtm
+            dolphin-scripted-stick-right.dtm
+            dolphin-scripted-stick-left.dtm
             dolphin-full-race.dtm
             dolphin-full-race.png
             dolphin-full-race.log
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
             dolphin-left-steered-user/Logs/**
+            dolphin-stick-steered-user/Logs/**
+            dolphin-left-stick-steered-user/Logs/**
+            dolphin-reset-user/Logs/**
             dolphin-full-race-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
