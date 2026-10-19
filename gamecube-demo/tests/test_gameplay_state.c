@@ -627,21 +627,31 @@ static void offroad_and_rail_tests(void) {
 
 static void wide_track_rail_reachability_tests(void) {
  const float road_width = BOONTA_MAX_ROAD_HALF_WIDTH;
- float lateral = boonta_lateral_position_after_frame(
-     5.0f, BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_FRAME_SCALE);
- float normalized_lateral;
+ float lateral = 0.0f;
+ int rail_reached = 0;
+ unsigned int frame;
 
- /* A single capped frame can pass the old +/-4 clamp but remains bounded. */
+ /*
+  * Simulate a sustained maximum outward motion starting from road center.
+  * The old runtime's +/-4 position clamp would hold at 4.0 and this test
+  * would never observe a rail contact on the widest supported road.
+  */
  assert(nearf(BOONTA_PLAYER_LATERAL_GUARD, 5.335f));
- lateral = boonta_clamp_player_lateral(lateral);
- assert(lateral > 4.0f);
- assert(lateral > road_width + BOONTA_RAIL_OUTER_OFFSET);
+ for (frame = 0U; frame < 32U; ++frame) {
+  float normalized_lateral;
+  lateral = boonta_clamp_player_lateral(
+      boonta_lateral_position_after_frame(
+          lateral, BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_FRAME_SCALE));
+  normalized_lateral = boonta_normalize_road_lateral(lateral, road_width);
+  if (boonta_is_past_rail(normalized_lateral, road_width)) {
+   lateral = boonta_restore_road_lateral(
+       boonta_lateral_after_rail_contact(normalized_lateral, road_width), road_width);
+   rail_reached = 1;
+   break;
+  }
+ }
 
- /* On the widest road, the runtime path can now reach and resolve its rail. */
- normalized_lateral = boonta_normalize_road_lateral(lateral, road_width);
- assert(boonta_is_past_rail(normalized_lateral, road_width));
- lateral = boonta_restore_road_lateral(
-     boonta_lateral_after_rail_contact(normalized_lateral, road_width), road_width);
+ assert(rail_reached);
  assert(nearf(lateral, road_width + BOONTA_RAIL_OUTER_OFFSET));
 
  /* Corrupt and extreme positions remain finite and bounded. */
