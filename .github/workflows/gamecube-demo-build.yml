@@ -11,17 +11,11 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/track_format/**"
+      - "tests/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
-    paths:
-      - "gamecube-demo/Makefile"
-      - "gamecube-demo/source/**"
-      - "gamecube-demo/tests/**"
-      - "gamecube-demo/include/**"
-      - "gamecube-demo/data/**"
-      - "gamecube-demo/tools/**"
-      - "tools/mesh_format/**"
-      - ".github/workflows/gamecube-demo-build.yml"
+    branches: [main]
   workflow_dispatch:
     inputs:
       full_race_diagnostic:
@@ -39,10 +33,80 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  detect-gamecube-changes:
+    name: Detect GameCube build-relevant changes
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      gamecube: ${{ steps.paths.outputs.gamecube }}
+    steps:
+      # Use the last trusted base version of the selector once it exists. This
+      # prevents a later PR from weakening the selector and then using the weakened
+      # copy to skip its own build/tests. During the initial rollout only, main does
+      # not contain this new tool yet, so we fall back to the candidate copy; the
+      # selector path itself is classified as GameCube-relevant and its tests run
+      # in the host test job.
+      - name: Check out trusted base selector
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted-base
+          persist-credentials: false
+
+      - name: Decide whether first-rollout fallback is needed
+        id: selector-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "$GITHUB_WORKSPACE/trusted-base/gamecube-demo/tools/check_gamecube_ci_paths.py" ]]; then
+            echo "candidate_fallback=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "candidate_fallback=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out candidate selector for first rollout only
+        if: steps.selector-source.outputs.candidate_fallback == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+          persist-credentials: false
+
+      - name: Detect changed files through read-only PR metadata
+        id: paths
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/${GH_REPO}/pulls/${PR_NUMBER}/files?per_page=100" > "$RUNNER_TEMP/pr-files-pages.json"
+          trusted_selector="$GITHUB_WORKSPACE/trusted-base/gamecube-demo/tools/check_gamecube_ci_paths.py"
+          candidate_selector="$GITHUB_WORKSPACE/candidate/gamecube-demo/tools/check_gamecube_ci_paths.py"
+          if [[ -f "$trusted_selector" ]]; then
+            selector="$trusted_selector"
+            echo "Using trusted base selector."
+          elif [[ -f "$candidate_selector" ]]; then
+            selector="$candidate_selector"
+            echo "::warning::Using candidate selector for the initial rollout; main does not yet contain the selector."
+          else
+            echo "::error::No GameCube path selector was found in the trusted base or candidate checkout."
+            exit 2
+          fi
+          python3 "$selector" "$RUNNER_TEMP/pr-files-pages.json" >> "$GITHUB_OUTPUT"
+
   host-pause-state-tests:
     name: Host pause/resume state tests
+    needs: [detect-gamecube-changes]
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.detect-gamecube-changes.outputs.gamecube == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -73,6 +137,8 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
 
   build-gamecube-demo:
+    needs: [detect-gamecube-changes]
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.detect-gamecube-changes.outputs.gamecube == 'true') }}
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitppc:latest
@@ -122,7 +188,8 @@ jobs:
 
   dolphin-process-smoke:
     name: Dolphin headless process smoke (not visual verification)
-    needs: [build-gamecube-demo, host-pause-state-tests]
+    needs: [detect-gamecube-changes, build-gamecube-demo, host-pause-state-tests]
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.detect-gamecube-changes.outputs.gamecube == 'true') && needs.build-gamecube-demo.result == 'success' && needs.host-pause-state-tests.result == 'success' }}
     runs-on: ubuntu-26.04
     container:
       image: ubuntu:26.04
@@ -202,7 +269,8 @@ jobs:
   dolphin-software-frame-diagnostic:
     name: Experimental Dolphin software-renderer frame diagnostic (non-blocking)
     continue-on-error: true
-    needs: [build-gamecube-demo, host-pause-state-tests]
+    needs: [detect-gamecube-changes, build-gamecube-demo, host-pause-state-tests]
+    if: ${{ always() && (github.event_name != 'pull_request' || needs.detect-gamecube-changes.outputs.gamecube == 'true') && needs.build-gamecube-demo.result == 'success' && needs.host-pause-state-tests.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

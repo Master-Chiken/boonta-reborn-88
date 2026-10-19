@@ -10,9 +10,7 @@ on:
       - "tools/**"
       - ".github/workflows/wii64-tool-tests.yml"
   pull_request:
-    paths:
-      - "tools/**"
-      - ".github/workflows/wii64-tool-tests.yml"
+    branches: [main]
   workflow_dispatch:
 
 permissions:
