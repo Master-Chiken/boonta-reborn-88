@@ -1,61 +1,86 @@
-# Build guide — native GameCube/Wii prototype
+# Build guide and validation evidence
 
-**Status as of 2026-10-14:** a source-only Step 102 subset has been imported on draft PR #17. GitHub Actions has passed host-side regression tests, a real devkitPPC/libogc cross-build, and a limited headless Dolphin process smoke test. This is the first recorded native build from the imported sources.
+Last reviewed: 2026-10-15
 
-## Verified CI path
+This guide separates the **clean-room procedural GameCube demo** currently built in `gamecube-demo/` from the fuller Step 102 source archive, which remains on a separate provenance/license review track.
 
-- [Latest completed validation run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432)
-- Build artifact: [swe1r-gc-step102-source-only](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432/artifacts/11926156448)
-- Output: swe1r_gc_port.dol, approximately 301 KiB.
-- Toolchain environment: devkitpro/devkitppc:latest in a GitHub Actions container.
-- Track mode: USE_IMPORTED_SPLINE=0, which uses the bundled demo/procedural track and does not enable the excluded PC-mod-derived centerline dataset.
-- Dolphin smoke test: dolphin-emu --batch --video_backend=Null --exec=dist/swe1r_gc_port.dol; Dolphin remained active until a 12-second timeout. This checks only that the process accepts the DOL and stays running briefly.
+## Current mainline state
 
-The native-build CI container currently uses the mutable latest tag, so the successful run link above is the historical evidence for that toolchain environment; the image is not yet pinned by digest.
+The clean-room demo now includes three staggered procedural rivals, race/current-lap/best-lap clocks, finite-state guards for speed/lap transitions, and elapsed-time-scaled gameplay updates that preserve the 60 Hz tuning while compensating for 50 Hz cadence. It has a native devkitPPC/libogc DOL/ELF build, artifact-structure validation, strict C99 gameplay/pause tests, and a bounded Dolphin headless process smoke test. A prior CI run captured a visible procedural scene using Dolphin's Software Renderer.
 
-## Host checks
+These checks are deliberately separate:
+- **Host tests** validate the named deterministic functions and state transitions.
+- **Native build** proves that the clean-room demo compiles and links for GameCube.
+- **Artifact validation** checks the DOL/ELF structures and DOL padding.
+- **Headless smoke** proves Dolphin boots the DOL and remains alive for the bounded null-video window; it does not prove graphics or controls.
+- **Visible frame capture** proves that a frame containing the expected procedural scene colors was captured in the CI renderer; it does not prove controller response.
+- **Interactive gameplay** requires a visible Dolphin session or hardware test with actual input and a complete race.
 
-Run these in a Linux-like shell with Python and a C compiler available:
+None of these results means the Step 102 archive itself has been imported or built.
 
-~~~sh
-python3 tools/check_source_import_policy.py
-bash tools/release_check.sh
-~~~
+## Reproduce the host checks
 
-The first rejects known excluded asset paths and formats. The second runs the portable C regression scripts and static/source checks. Neither alone proves correct native execution.
+From the repository root:
 
-## Local native build
+```sh
+cc -std=c99 -Wall -Wextra -Werror -pedantic \
+  gamecube-demo/tests/test_gameplay_state.c -lm -o /tmp/test_gameplay_state
+/tmp/test_gameplay_state
 
-A local build requires devkitPro/devkitPPC and libogc. With the toolchain already installed:
+cc -std=c99 -Wall -Wextra -Werror -pedantic \
+  gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
+/tmp/test_pause_state
 
-~~~sh
-export DEVKITPRO=/opt/devkitpro
-export DEVKITPPC="$DEVKITPRO/devkitPPC"
+python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
+```
+
+The gameplay tests cover speed/boost inputs, analog-stick and D-pad mapping, steering inertia/damping, 50/60 Hz cadence consistency (including accelerate/coast/brake), lap boundaries and finish state, a deterministic simulated three-lap progression, rival collision/overtake thresholds, off-road drag, rail recovery, and non-finite speed/lap input guards. The simulation is not a controller test.
+
+## Reproduce the native build
+
+Use a configured devkitPro/devkitPPC environment with libogc:
+
+```sh
+cd gamecube-demo
 make clean
-make USE_IMPORTED_SPLINE=0
-~~~
+make
+python3 tools/pad_dol.py boonta_gc_demo.dol
+cd ..
+python3 gamecube-demo/tools/validate_artifacts.py \
+  gamecube-demo/boonta_gc_demo.dol \
+  gamecube-demo/boonta_gc_demo.elf
+```
 
-A successful build should create a non-empty swe1r_gc_port.dol. Do not set USE_IMPORTED_SPLINE=1: the corresponding PC-mod-derived route data and import headers are deliberately excluded from this source-only branch.
+GitHub Actions runs the native build in the `devkitpro/devkitppc` container, pads the DOL for 32-byte-aligned section reads, validates the artifacts, and uploads the DOL/ELF plus build log as a short-retention artifact. The exact tested commit and the run URL should accompany any future release candidate.
 
-## Runtime validation still required
+## Evidence record
 
-The headless Dolphin job uses a null video backend. It does **not** prove visible output or playability. An experimental Xvfb/OpenGL job captured almost-black screenshots and failed its image-content check; the result is inconclusive because it may reflect the headless UI/graphics environment or a real startup/rendering issue. Before describing the game as playable, launch the DOL in Dolphin with video enabled or on hardware and test:
+| Evidence | Result | Boundary |
+|---|---|---|
+| Current mainline after PR #100, commit `7d46e90de0e9db4e9ed36f88012ac15ab2491f18` | [Post-merge CI run 38744031286](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286): host tests, native DOL/ELF build, artifact validation, and 12-second Dolphin null-video smoke succeeded; the optional Software Renderer job was still running when checked. | Confirms the required automated gates for the current timing/speed-guard mainline. It is not live-controller or complete-race proof. |
+| Mainline native build on commit `adf4b596f18affa68dd70f33fb90cdfc60821824` | [CI run 38738237495 passed](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38738237495) | Host tests, DOL/ELF build, artifact validation, and headless smoke for the code then on main. |
+| Visible procedural-scene capture | [CI run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531) | Visible road, edge rails, center markers, player pod, and rival pod in Dolphin Software Renderer. Not live input or a completed race. |
+| Steering-inertia regressions | [PR #84 / run 38737739411](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38737739411), merged | Deterministic host tests, native build, artifact validation, headless smoke, and optional frame diagnostic passed on the exact PR head. |
+| Distance/lap simulation | [PR #86 / run 38738545769](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38738545769), merged | Shared distance helper and a host simulation reach the three-lap finish using the prototype's transition helpers. This is not an actual interactive race. |
 
-- visible picture, track, pod, scenery and readable HUD;
-- controller detection, selection menus, acceleration, braking, steering and boost;
-- countdown, lap/checkpoint logic, race standings, finish prompt and reset/restart;
-- pause/resume, course changes, crash-free operation and sustained frame timing.
+## Still-required runtime evidence
 
-Record each observed result with screenshots/logs. Do not substitute the headless process smoke test for this review.
+The following remain open acceptance gates and must not be inferred from CI compilation or host simulation:
 
-## Provenance and licensing
+1. In a visible Dolphin session, test reset (Y), accelerate (A), brake (B), analog steering, D-pad steering, boost (X+A), pause/resume (Start), and reset while paused.
+2. Complete a real three-lap run, check the finish state, reset, and start another run.
+3. Run a longer session and check crashes, graphics corruption, and severe frame-pacing problems.
+4. Record Dolphin version/backend, controller profile, the exact tested commit, observed pass/fail results, and supporting screenshots/video/logs. Hardware compatibility remains unverified unless a physical GameCube/Wii test is performed.
 
-The supplied source ZIP has no license covering the source tree as a whole. Some course centerlines described by its README are based on an external modded PC spline dataset; those centerline files and related generated mesh/boundary exports are excluded. Before merging PR #17 publicly, confirm that the selected source files may be redistributed under this repository's license. This is a required review gate, not a build-tool requirement.
+See [the interactive milestone checklist](NEXT_MILESTONE.md) and the [current CI workflow](../.github/workflows/gamecube-demo-build.yml).
 
-## Build policy
+## Step 102 source/import boundary
 
-- Never upload commercial ROMs, original disc images, BIOS files, private dumps, or unclear copyrighted assets.
-- Do not commit generated DOL/ELF/map binaries; use the expiring Actions artifact instead.
-- Keep API keys in GitHub Actions secrets; never place credentials in source or logs.
-- Keep PR #17 in draft until licensing and visible runtime review are complete.
-- CI actions for this workflow do not call paid AI APIs or require billing.
+The fuller Step 102 source archive remains separate from the clean-room demo. Before importing any of it, complete the path-by-path provenance/license review, including generated track centerlines, demo route data, models, materials, audio, and external dependencies. No successful clean-room build grants permission to redistribute those files.
+
+## Repository safety
+
+- Do not commit commercial ROMs/disc images, BIOS files, extracted copyrighted assets, or uncertain third-party payloads.
+- Keep private game archives outside the repository, CI artifacts, and external AI review prompts.
+- Prefer free CI/model routes; if a free quota is unavailable, stop rather than enabling paid billing or a paid fallback.
+- Update this guide only with reproducible commands, exact commit SHAs, and observed CI/runtime results.

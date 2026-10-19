@@ -1,0 +1,113 @@
+name: CI failure triage (deterministic)
+
+on:
+  workflow_run:
+    workflows:
+      - GameCube first-render prototype build
+      - GameCube native build
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: ci-failure-triage-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  summarize-failure:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Report failed jobs and steps without checking out PR code
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # pinned GitHub Script v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            // Prefer the PR association supplied by GitHub, but verify the exact
+            // head SHA. Some workflow_run payloads have no pull_requests entry.
+            let candidate = (run.pull_requests || []).find(item =>
+              item && item.number && item.head && item.head.sha === run.head_sha
+            );
+            if (!candidate && run.head_branch && run.head_sha) {
+              const { data: candidates } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                base: 'main',
+                head: context.repo.owner + ':' + String(run.head_branch),
+                per_page: 100,
+              });
+              candidate = candidates.find(item => item.head.sha === run.head_sha);
+            }
+            if (!candidate) {
+              core.info('No open PR targeting main matches this exact workflow-run head SHA; no comment will be posted.');
+              return;
+            }
+
+            const prNumber = Number(candidate.number);
+            if (!Number.isInteger(prNumber) || prNumber < 1) {
+              core.warning('No valid pull request number found.');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.head.sha !== run.head_sha) {
+              core.info('PR is closed, does not target main, or no longer matches the failed run SHA; no comment will be posted.');
+              return;
+            }
+
+            const { data } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+            const failedJobs = data.jobs.filter(job =>
+              job.conclusion === 'failure' || job.conclusion === 'timed_out'
+            );
+            const lines = [];
+            for (const job of failedJobs) {
+              lines.push('- Job: ' + String(job.name).replace(/[\r\n]/g, ' ').slice(0, 180) +
+                ' (' + String(job.conclusion) + ')');
+              for (const step of (job.steps || []).filter(step =>
+                step.conclusion === 'failure' || step.conclusion === 'timed_out'
+              )) {
+                lines.push('  - Failed step: ' + String(step.name).replace(/[\r\n]/g, ' ').slice(0, 180) +
+                  ' (' + String(step.conclusion) + ')');
+              }
+            }
+
+            const runUrl = String(run.html_url || '');
+            const branch = String(run.head_branch || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180);
+            const details = lines.length ? lines.join('\n') : '- GitHub reported a failure but exposed no failed job/step summary.';
+            const body = [
+              '## Automated CI failure triage (deterministic)',
+              '',
+              'This report uses job/step status metadata only. It did not check out or execute pull-request code and did not call an AI provider.',
+              '',
+              '**Workflow:** ' + String(run.name || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180),
+              '**Branch:** ' + branch,
+              '**Run:** ' + runUrl,
+              '',
+              '**Failed jobs/steps:**',
+              details,
+              '',
+              'Next step: open the run logs and inspect the failing step. This report does not infer a root cause or claim tests passed.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body.slice(0, 12000),
+            });

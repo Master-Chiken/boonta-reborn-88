@@ -1,54 +1,85 @@
-# Next milestone: visible runtime verification and provenance sign-off
+# Next milestone: Interactive validation of the clean-room racing slice
 
-## Current state (2026-10-14)
+Last updated: 2026-10-17
 
-The Step 102 source-only subset now lives on draft PR #17 (branch import/step102-source-only). It has passed:
-- the path/asset import policy and host regression suite in GitHub Actions;
-- a devkitPPC/libogc cross-build that produced a non-empty swe1r_gc_port.dol of approximately 301 KiB;
-- a 12-second headless Dolphin process smoke test using the null video backend.
+## Goal of this milestone
 
-[Latest validation run and build artifact](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38629261432).
+Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a real controller in a visible Dolphin session (and later on real hardware).
 
-Nothing from this import has been merged into main. Do not call this a finished or playable port yet: visible rendering, controller response and gameplay remain unverified. The experimental Xvfb/OpenGL capture produced almost-black frames and failed its image-content check; diagnose the capture environment versus game startup before drawing conclusions about the renderer.
+This is the gate before expanding the vertical slice.
 
-## Immediate work
+## What is already verified (CI)
 
-1. **Source rights:** verify the origin/ownership and redistribution terms for the imported C source, headers, build files, tests and documentation. The supplied ZIP does not contain a license covering the source tree as a whole.
-2. **Visible emulator test:** open the generated DOL in Dolphin with a visible video backend and a mapped GameCube controller. Verify picture output, pod/track rendering, menus, steering, throttle, braking, boost, checkpoint/lap progression, finish, pause and restart.
-3. **Record runtime evidence:** capture video/screenshots and logs, list exactly what was tested, and distinguish verified behavior from untested behavior.
-4. **Fix only demonstrated issues:** preserve current host tests and CI gates. Add regression coverage for each gameplay or renderer defect discovered.
-5. **Review before merge:** keep PR #17 in draft until the licensing boundary and visible runtime test are satisfactorily reviewed. Never merge automatically.
+- Host regression tests for gameplay state, steering, boost/heat, lap boundaries, rivals, pause/reset and numeric state guards.
+- Native `boonta_gc_demo.dol` / `.elf` build using devkitPPC/libogc with artifact validation.
+- Bounded Dolphin Null-backend process smoke.
+- Source-authored indexed twin-engine player mesh (275 vertices, 169 triangles) with an original 16×16 RGB8 texture source, validated and deterministically exported to GX-ready C headers.
+- Readable three-lap finish panel and varied procedural canyon skyline.
+- Exact-head Software Renderer diagnostics and visual detectors for steering/reset and the finished banner.
 
-## Provenance exclusions
+These prove the tested code compiles, deterministic assertions pass, and the tested scripted states can render. They do **not** prove live controller response or a manually driven three-lap race.
 
-The first public source-only import intentionally excludes:
-- PC-mod-derived course centerlines and their manifest;
-- imported centerline and generated mesh/boundary headers;
-- voice/audio, model/texture exports and unreviewed asset files;
-- ROMs, disc images, extracted game data, binary dumps and PC/N64 extraction helpers.
+## Latest automated evidence (2026-10-17)
 
-Builds use USE_IMPORTED_SPLINE=0 with a demo/procedural track. The path guard is a safety net, not a license scanner.
+PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 (varied canyon) are now merged. The exact-head run [#39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) passed host tests, native build/artifact checks, Dolphin process smoke, and the Software Renderer diagnostic. Its scripted three-lap DTM frame passed both the centered finish-banner detector and orange `FINISH`-label detector.
 
-## Reproducible CI commands
+Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. Subsequent main commits update documentation only; the code-bearing tree validated by run #39062005581 has not changed. The live-controller checklist below remains the outstanding acceptance gate.
 
-Host checks:
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
 
-~~~sh
-python3 tools/check_source_import_policy.py
-bash tools/release_check.sh
-~~~
+## Interactive acceptance checklist
 
-Native build with devkitPro installed:
+Load the latest mainline DOL in a **visible** Dolphin session.  
+Record: Dolphin version, video backend, video mode, controller profile, and evidence (short video or screenshots + notes).
 
-~~~sh
-export DEVKITPRO=/opt/devkitpro
-export DEVKITPPC="$DEVKITPRO/devkitPPC"
-make clean
-make USE_IMPORTED_SPLINE=0
-~~~
+Test in this exact order:
 
-CI currently uses the container image devkitpro/devkitppc:latest; pinning the exact image digest is a future reproducibility improvement.
+1. **Reset (Y)**  
+   Pod returns to start position, speed and lap counters reset, rivals and overtake markers reset, boost refilled, pause/finish state cleared.
 
-## Later vertical-slice goal
+2. **Throttle / Brake (A / B)**  
+   Acceleration and braking visibly change speed. Speed falls naturally when released.
 
-Once visible rendering/controller behavior is confirmed, concentrate on one stable and satisfying race: one course, one controllable pod, functional camera follow, track boundaries/collision, reliable finish logic and stable frame timing. Only expand presentation, assets, additional courses and packaging after that vertical slice is verified.
+3. **Steering**  
+   Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
+
+4. **Off-road & rails**  
+   Drive off the road → speed loss visible. Rail recovery works without freezing or breaking rendering.
+
+5. **Boost (X + A)**  
+   Energy drains while boosting, recharges after release. Overheat lockout behaves correctly.
+
+6. **Pause (Start)**  
+   Pause icon appears, simulation freezes. Resume works. Reset (Y) while paused is clean.
+
+7. **Full three-lap race**  
+   Three lap crossings counted correctly. Finish flag appears. Movement stops after the race limit. Reset allows a new run.
+
+8. **Longer session**  
+   Several minutes of play. No sustained graphical corruption, crashes, or severe frame pacing issues.
+
+### Acceptance criteria
+
+- [ ] Scene starts without fatal error
+- [ ] All controls above behave as described
+- [ ] Three-lap race reaches finish and stops cleanly
+- [ ] Reset starts a fresh run
+- [ ] No sustained corruption or crash in longer session
+- [ ] CI host tests + native build still pass on the exact commit tested
+- [ ] Evidence recorded (video/screenshots + notes)
+
+Any item not tested remains **pending**. Do not claim hardware compatibility from Dolphin alone.
+
+## After this milestone
+
+Once the interactive checklist is fully green:
+
+1. Fix any bugs found during the session and add regression tests.
+2. Improve the procedural track, camera and collision as one coherent vertical slice.
+3. Only then expand content (more tracks, pods, AI, presentation, bonuses).
+
+## Parallel track (do not mix)
+
+Step 102 source archive remains on **import hold**.  
+See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
+Do not merge unclear-provenance code or any commercial assets.

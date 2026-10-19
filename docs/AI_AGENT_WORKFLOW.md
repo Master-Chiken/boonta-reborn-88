@@ -1,44 +1,58 @@
-# AI agent workflow
+# GitHub AI agents — current operating rules
 
-This repository uses GitHub-hosted Gemini for on-demand analysis and code assistance. The primary engineering goal is the native GameCube/Wii prototype; the original PC and Nintendo 64 releases are separate reference targets, and the Dreamcast/KallistiOS sample is a separate experiment.
+Last reviewed: 2026-10-15
 
-## Current automation
+## What is available
 
-- `@gemini-cli` comments on an issue or pull request trigger a GitHub Actions job.
-- The workflow uses the `GEMINI_API_KEY` repository secret and currently selects `gemini-3.5-flash-lite` for the free-tier trial configuration.
-- The Gemini response is published back to the triggering issue/PR. If no response is available, the workflow posts a diagnostic link to the Actions log.
-- The reusable workflows keep general shell commands disabled; only the limited tools needed for context and repository reading are enabled in the invoke workflow. The plan-execute workflow has a separately scoped GitHub MCP tool set for file changes and PR creation.
-- A successful Gemini workflow means only that the automation ran successfully. It does not prove a game build or runtime test succeeded.
+The repository has GitHub Actions workflows for:
+- **Gemini on-demand review/invocation:** triggered by an authorized issue/PR comment or review beginning with `@gemini-cli`. Read-only review requests have been tested and can post a report back to the PR.
+- **Gemini plan/execute:** a separate writer workflow exists, but code-writing is gated by an owner-only `@gemini-cli /approve` request and the repository Actions variable `GEMINI_WRITE_ENABLED=true`. The write path must remain disabled until the owner has deliberately verified main protection, the free-tier API setup, and the variable/secret configuration.
+- **Daily project coordination:** scheduled read-only reporting. This is a scheduled workflow, not a permanent agent that independently works on code all day.
+- **Deterministic CI failure triage:** summarizes failed workflow job/step metadata; it does not execute PR code or infer a root cause.
+- **OpenRouter Free reviewer:** a separate manual, comment-only reviewer is documented in the repository. It requires its own provider key and has no right to merge or write code.
 
-## How to request work
+A green AI workflow proves only that the workflow ran and published a response. It does not prove that a code suggestion is correct, that tests passed, or that a game is playable.
 
-Comment on an issue or pull request starting with `@gemini-cli`. Ask for one well-scoped task and tell the agent which files or behavior to investigate.
+## Safe request pattern
 
-For substantial code changes, the intended sequence is:
-1. Ask for a plan and acceptance criteria.
-2. Review the plan in the GitHub discussion.
-3. Approve only the intended work with `@gemini-cli /approve`.
-4. Review the proposed diff, test results, provenance risks and any PR before merging.
+Start with a narrowly scoped read-only request:
 
-Never ask the agent to merge its own code or bypass required tests. Start with read-only investigation until the source tree is imported.
+```text
+@gemini-cli Review this PR as read-only. Inspect the diff and tests, report concrete blockers only, and do not modify files, push commits, merge, change repository settings, or enable billing.
+```
 
-## Primary engineering blocker
+For substantial changes:
+1. Ask for a written plan with acceptance criteria.
+2. Keep implementation on a named branch and open a reviewable PR.
+3. Review changed files, license/provenance, dependencies, and test commands.
+4. Verify the relevant CI checks on the exact PR head before integration.
+5. Only the repository owner may choose to enable a writer path; an agent must never approve or merge its own work.
 
-The repository currently contains the Dreamcast starter but does **not** contain the Step 102 GameCube/Wii source tree. The existing native workflow checks for `Makefile` and `source/` and stops if they are missing. Gemini cannot inspect an archive that exists only in ChatGPT's file library; the required files have to be made available to the repository or to a controlled import process first.
+## Current project context
 
-## Safe source-import procedure
+- The active technical milestone is the clean-room procedural GameCube demo in `gamecube-demo/`.
+- Host tests, a devkitPPC/libogc build, artifact checks, and a bounded Dolphin headless startup smoke have passed. A CI Software Renderer run captured a visible procedural scene.
+- Interactive controller response, a completed three-lap run/restart, long-session stability, and physical hardware behavior remain unverified.
+- The Step 102 source archive has not been imported into main. GitHub-hosted agents cannot automatically read files stored only in the ChatGPT conversation/library.
+- Research on SW_RACER_RE is Windows-PC reference material, not automatically reusable GameCube/Wii code. Respect its reported AGPL-3.0 license and keep PC observations separate from console assumptions.
 
-1. Keep the original PC archive, Nintendo 64 ROM, and commercial disc images outside the public repository.
-2. Inventory the Step 102 archive by file path, type, license/provenance and whether the data is original, generated, placeholder, or copied from a commercial game.
-3. Review the route-centerline dataset, sample model/material files, audio samples and any generated data separately. Do not import unclear commercial content merely because it is bundled with source code.
-4. Import only cleared source code, headers, Makefile, tests and documentation to a review branch.
-5. Run the host tests in CI, then the devkitPPC/libogc build. Keep compile success separate from Dolphin/hardware runtime validation.
-6. If code has an incompatible license or source provenance cannot be established, leave it out and record the blocker instead.
+## Free-only and data boundaries
 
-## Safety and quality rules
+- Never attach billing, enter a payment method, or use a paid fallback to keep an agent working.
+- If a free quota is unavailable, stop and report the blocker.
+- Never send API keys, tokens, personal data, private game archives, ROMs/disc images, BIOS files, or extracted proprietary assets to an external reviewer.
+- Do not commit private/commercial game content or files of unclear provenance.
+- A source-import or license review must not be skipped just to get a green build.
 
-- Never commit or publish ROMs, disc images, BIOS files or unclear commercial assets (models, textures, audio or extracted data).
-- Never claim to have inspected a file unless its contents were actually accessible.
-- Never invent compiler or test results. Report commands, outcomes and evidence.
-- Never disable or weaken tests to obtain a green CI run.
-- Prefer small branches and pull requests with an explicit human review before merge.
+## Evidence and status language
+
+Always identify the exact commit and run link. Distinguish:
+- host regression tests;
+- native cross-compilation and artifact validation;
+- emulator process smoke;
+- visible frame capture;
+- interactive controller test;
+- complete race with finish/restart;
+- longer-session and physical-hardware tests.
+
+Do not report a lower-level check as proof of a higher-level outcome. No agent should push directly to main, delete branches/history, or merge its own code.

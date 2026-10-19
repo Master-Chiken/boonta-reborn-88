@@ -32,15 +32,18 @@ jobs:
     steps:
       - name: Extract command
         id: extract
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # pinned GitHub Script v7
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REQUEST: ${{ github.event.comment.body || github.event.review.body || '' }}
+          AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association || github.event.review.author_association || '' }}
         with:
           script: |
             const request = process.env.REQUEST || '';
+            const association = process.env.AUTHOR_ASSOCIATION || '';
             let command = 'fallthrough';
-            if (request.startsWith('@gemini-cli /approve')) {
-              command = 'approve';
+            if (/^@gemini-cli\s+\/approve(?:\s|$)/.test(request)) {
+              // Only the repository owner may authorize the write-capable workflow.
+              command = association === 'OWNER' ? 'approve' : 'approve-denied';
             } else if (request.startsWith('@gemini-cli')) {
               command = 'invoke';
             }
@@ -49,14 +52,43 @@ jobs:
 
       - name: Acknowledge request
         if: steps.extract.outputs.command == 'invoke'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          gh issue comment "$ISSUE_NUMBER" \
-            --repo "$REPOSITORY" \
-            --body "Gemini received your request. For substantial code changes it will post a plan first; no write task should run until you approve that plan with @gemini-cli /approve."
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+            if (!issueNumber) {
+              core.warning('Could not resolve the issue or pull request number.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'Gemini received your request. For substantial code changes it will post a plan first. Write execution remains locked until the repository owner protects main and enables the GEMINI_WRITE_ENABLED Actions variable.'
+            });
+
+  approval-denied:
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'approve-denied'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Explain owner-only approval
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+            if (!issueNumber) {
+              core.warning('Could not resolve the issue or pull request number.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'The /approve command is restricted to the repository owner. No code-writing task was run.'
+            });
 
   invoke:
     needs: dispatch
@@ -64,20 +96,41 @@ jobs:
     uses: ./.github/workflows/gemini-invoke.yml
     permissions:
       contents: read
-      id-token: write
       issues: write
       pull-requests: write
     with:
       additional_context: ${{ needs.dispatch.outputs.additional_context }}
     secrets: inherit
 
+  write-disabled:
+    needs: dispatch
+    if: needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Explain the write gate
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+            if (!issueNumber) {
+              core.warning('Could not resolve the issue or pull request number.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'Gemini write execution is still locked: no code-writing task was run. First protect the main branch from direct pushes and force pushes, then add the GEMINI_API_KEY repository secret without enabling Google billing, and only then set the repository Actions variable GEMINI_WRITE_ENABLED to the exact value true. Keep the budget at €0; if the free quota is unavailable, stop instead of upgrading. Nothing was merged.'
+            });
+
   plan-execute:
     needs: dispatch
-    if: needs.dispatch.outputs.command == 'approve'
+    if: needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 'true'
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
-      id-token: write
       issues: write
       pull-requests: write
     with:
