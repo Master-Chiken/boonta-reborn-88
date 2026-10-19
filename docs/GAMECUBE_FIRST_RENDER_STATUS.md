@@ -1,87 +1,54 @@
-# GameCube first-render build status
+# GameCube prototype status
 
-Last updated: 2026-10-15
+Last updated: 2026-10-17
 
-## Mainline state after timing and multi-rival integration
+## Current mainline and reproducible CI evidence
 
-- Current main commit: `7d46e90de0e9db4e9ed36f88012ac15ab2491f18`.
-- Post-merge run: [GameCube first-render prototype run 38744031286](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38744031286). The host gameplay/pause tests, native DOL/ELF build, artifact validation, and 12-second Dolphin null-video smoke succeeded. The optional visible Software Renderer diagnostic was still in progress when checked.
-- [PR #97](https://github.com/Master-Chiken/boonta-reborn-88/pull/97) added three staggered procedural rivals and per-rival collision/overtake/reset behavior; [PR #98](https://github.com/Master-Chiken/boonta-reborn-88/pull/98) added elapsed-time scaling for 50/60 Hz; [PR #100](https://github.com/Master-Chiken/boonta-reborn-88/pull/100) guards scaled speed input against NaN and infinities. PRs #93 and #94 supply race/lap clocks and defensive lap crossing.
-- The cadence tests compare one simulated second at 60 and 50 updates, including acceleration/coasting/braking, boost/heat, steering, off-road drag, route distance, and rival motion. Frame-scale is capped at 50 ms to limit physics jumps after a stall.
-- These checks still do not prove visible interactive controller response, a completed live three-lap run/restart, long-session stability, or physical-console behavior.
+- **Most recent code-bearing main commit:** `72acf968e3214b086b00b77240bb20b889314917` (PR #204). Later main commits update only README/project-status documentation and do not change the tested game code.
+- **Post-merge mainline CI:** [run #39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581) completed successfully on that game-code tree: native DOL/ELF build and artifact validation, host pause/reset tests, Dolphin Null-backend smoke, and the non-blocking Software Renderer diagnostic all passed.
+- **Player mesh/texture:** PR #203 is merged; it adds an original indexed twin-engine mesh, an original 16×16 RGB8 source texture, deterministic GX-ready headers and host-side format/quantization/tile-order tests. Its exact-head build, tests, and Dolphin diagnostics passed in [run #39051326423](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39051326423).
+- **Finish banner and canyon:** PR #202 adds the readable finish label and guarded GX quad writes; PR #204 adds the varied canyon profile/fins. The exact-head PR #204 Software Renderer workflow [run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) detected both the centered three-lap finish banner and orange `FINISH` label on a DTM-scripted completion frame.
+- **Headless smoke:** the 12-second Null-backend process check passed. This proves bounded startup/process behavior, not that a person can control the game.
+- **Evidence limits:** the full-race result is scripted; the mainline push diagnostic itself was the shorter capture/steering check. Neither is a live user-controlled race, long-session stability test, or physical-console acceptance.
 
-## Latest CI visible-render verification (2026-10-15)
+## What is now covered automatically
 
-- Native build and visible-render evidence: [GameCube first-render prototype run #69](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531).
-- Relevant merged fixes: [PR #53 — DOL 32-byte section padding and Dolphin diagnostic](https://github.com/Master-Chiken/boonta-reborn-88/pull/53) and [PR #60 — GX per-vertex color pipeline](https://github.com/Master-Chiken/boonta-reborn-88/pull/60).
-- Host gameplay/pause tests, DOL-padding tests, GX color-pipeline regression tests, native devkitPPC/libogc build, DOL/ELF structure validation and the 12-second Dolphin Null-backend process smoke: **success**.
-- The [Software Renderer/Xvfb frame and runtime logs](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38727969531/artifacts/11970040471) show the curved procedural road, alternating road sections, cyan/orange edge rails, center markers, blue/orange player pod and rival pod.
-- The DOL post-processing pads the final section from 139,932 to 139,936 bytes, satisfying Dolphin's 32-byte-rounded section reads.
-- The color issue was caused by selecting a material register color rather than the per-vertex color stream. The current GX configuration uses `GX_SRC_VTX` for material color while keeping lighting disabled. A host regression test checks the expected color-channel/vertex-descriptor/TEV configuration.
+The clean-room prototype now has:
+- native DOL/ELF compile and structural validation;
+- deterministic host tests for steering, speed, boost/heat, lap boundaries, rivals, pause/reset and numeric state handling;
+- a source-authored player mesh and RGB565 texture path with deterministic export and generated-header parity tests;
+- scripted D-pad/analog steering, Y-reset, pause/resume, and a separate full-race finish-label diagnostic on PR #204;
+- an original player mesh, rival craft, varied canyon skyline and readable finish panel visible in Software Renderer captures;
+- bounded Dolphin startup smoke and non-blocking renderer diagnostics.
 
-This validates startup and a visible scene in Dolphin's Software Renderer CI environment. It does **not** prove controller response, long-session frame pacing, a completed race, or behavior on physical GameCube/Wii hardware. The [merged visual quality gate in PR #62](https://github.com/Master-Chiken/boonta-reborn-88/pull/62) rejects screenshots where the lower game viewport is predominantly near-white.
+These checks cover only the behaviors and frames they assert; they do not establish manual playability.
 
-## Verified by GitHub Actions
+## Still pending — interactive acceptance
 
-- Workflow: [GameCube first-render prototype build](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38634127716)
-- Source commit: `e24446ecc454473ce4557502e471ba5ed4065abb`
-- Build result: **success**
-- Automated artifact validation: **success** (`gamecube-demo/tools/validate_artifacts.py` checked DOL section ranges/entry point and ELF32 big-endian PowerPC identity).
-- Toolchain: `devkitpro/devkitppc:latest` using libogc/GameCube rules
-- Artifacts: `boonta_gc_demo.dol`, `boonta_gc_demo.elf`, and `build.log`
-- Artifact size: 445,475 bytes (ZIP); DOL 135,180 bytes; ELF 876,488 bytes.
+The prototype has **not** been declared fully playable. A person must run the current mainline DOL in a visible Dolphin session with a configured controller, record the Dolphin version/backend/profile, and save the evidence described in [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md).
 
-The artifact was downloaded and inspected. The DOL has a 0x100-byte header, two populated loadable sections whose file ranges are within the artifact, and an entry point that falls within the text section. The ELF is recognized as a big-endian 32-bit PowerPC executable.
+Pending acceptance items:
+- [ ] Start the scene in a visible Dolphin session without a fatal error.
+- [ ] Use a real configured controller to verify reset (Y), including that all race state starts clean.
+- [ ] Verify throttle/brake/coasting (A/B) by hand.
+- [ ] Verify analog stick and D-pad directions, inertia and return-to-center by hand.
+- [ ] Verify off-road slowdown and rail recovery in live play.
+- [ ] Verify boost (X+A), energy recharge and overheat lockout in live play.
+- [ ] Verify Start pause/resume, plus reset while paused.
+- [ ] Complete a live three-lap race, confirm finish/stop, and reset into a new run.
+- [ ] Play for several minutes without crashes, sustained graphical corruption or severe frame pacing problems.
+- [ ] Record video/screenshots and notes including Dolphin version, video backend/mode and controller profile.
 
-DOL SHA-256: `88ea0fdb9ade47a305c3804c855be0363f157fb49d70df7bf909546a8e905a57`
+A CI-generated DTM, HUD assertion or rendered frame is valuable evidence, but does not satisfy the manual checklist. Dolphin results do not establish compatibility with physical GameCube/Wii hardware.
 
-ELF SHA-256: `a42cf06c5b7b9e8b93e1e5336d60bad93cfbde87d440409651251ed78116bf56`
+## Next engineering priorities
 
-## What this does and does not prove
+1. Complete the interactive acceptance checklist and turn any reproducible failure into a regression test.
+2. Keep extending automated tests only where they close a clear gap; do not substitute more scripted frames for live play evidence.
+3. Fix confirmed input, race-finish/reset, camera or collision defects.
+4. Improve track/camera/collision feel as one coherent playable vertical slice before adding more content.
+5. Review unique branch diffs against current `main`; never merge stale branch histories wholesale or delete branches automatically.
 
-This earlier run is the first confirmed native GameCube DOL build in the clean-room demonstration path. It verifies compilation/linking and basic artifact structure only. The latest CI runtime evidence is recorded above; it supersedes the historical statement below about Dolphin runtime testing not having been run. The remaining gaps are live controller validation, completed race validation, and hardware behavior.
+## Restricted parallel track: Step 102
 
-## Latest headless Dolphin smoke test (2026-10-15)
-
-- Workflow: [GameCube first-render prototype build — PR #49 run](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38722692467)
-- Source/PR: [PR #49](https://github.com/Master-Chiken/boonta-reborn-88/pull/49), merged to `main` as `5acd893c0c618f746f16cb6a0af388ecd128637d`.
-- Host gameplay-state tests: **success** (speed input, boost activation/energy bounds, lap-boundary crossing).
-- Host pause/reset tests: **success**.
-- Native devkitPPC/libogc DOL/ELF build: **success**.
-- DOL/ELF structure validation: **success**.
-- Dolphin process smoke: **success**; Dolphin remained active for the 12-second bounded window using `--batch --video_backend=Null`.
-- Runtime log message: “Dolphin remained active for the 12-second process smoke window (elapsed: 12s).”
-
-This smoke test establishes only that the built DOL can be launched and its Dolphin process remains active for the bounded test interval without the workflow's fatal/boot markers. Because the Null video backend is used, it does **not** verify visible GX output, controller response, race progression, frame pacing, or hardware behavior. The earlier experiment with the GUI/OpenGL capture remains inconclusive and is not upgraded to a pass by this headless result.
-
-## Runtime smoke-test checklist
-
-In Dolphin or compatible hardware, verify and record:
-
-- [x] DOL boots in Dolphin without a core-init error.
-- [x] The procedural road and placeholder craft are visible in a captured frame.
-- [ ] Control Stick or D-pad steers left/right (requires interactive input testing).
-- [ ] A accelerates and B brakes (requires interactive input testing).
-- [ ] Y resets the demo's distance, steering, and speed (requires interactive input testing).
-- [ ] No sustained graphical corruption or severe frame pacing issue (requires a longer session).
-
-Record emulator version, video backend, console/video mode, and any error log when the test is performed. Do not label compile success as a playable full racer.
-
-## Boost mechanic update (2026-10-15)
-
-The prototype includes a rechargeable boost meter. Hold **A + X** to consume energy while accelerating; release the combination to recharge. Boost heat now rises while engaged and cools when released; at 98% heat it enters a latched lockout until heat falls to 60% or below, avoiding frame-to-frame activation oscillation. Host regressions exercise the heat bounds, lockout and cooldown transitions. The HUD now records total race time and current/best lap times using elapsed-time deltas; clocks freeze during pause/finish and reset with Y, with host tests for invalid deltas and best-lap selection. Active boost increases the procedural course scroll rate and brightens the placeholder thrusters. The HUD shows the boost reserve separately from the speed meter. It now also stops after three counted lap crossings and shows a symbolic checkered flag; press **Y** to reset and start a fresh run. Rival contact/overtake thresholds and the collision speed/lateral response are covered by host unit tests.
-
-- Source commit: `58aa78b002eb47b1f7ddf09e59d1320b784aea83`
-- GitHub Actions run: [GameCube first-render prototype build #12](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38705937087)
-- Native DOL/ELF build: **success**
-- Automated artifact structure validation: **success**
-- Dolphin/console runtime test of the boost mechanic: **not run**
-
-The successful build establishes that the updated source compiles and produces structurally valid artifacts. It does not establish that the new meter renders correctly or that the controls behave as intended at runtime; those still require a visible emulator/console test.
-
-## Off-road drag and rail-contact regression coverage
-
-The existing driving loop's off-road speed loss (outside lateral position +/-3.15) and rail recovery (outside +/-3.85) are now factored into dependency-free gameplay helpers used by the live GameCube loop. Host tests cover exact boundaries, symmetric penalties, speed clamping, lateral-position clamping, and the attenuated velocity bounce-back.
-
-These tests verify the programmed transitions only. A visible Dolphin/console run is still required to confirm that the road-edge positions and collision response feel correct in the rendered scene.
-
+Step 102 source/archive imports remain on **provenance and licensing hold**. Keep that track separate from the clean-room runtime. Do not merge uncertain source or commercial assets until origin, authorship and redistribution rights have been established.

@@ -1,0 +1,11 @@
+{
+  "format": "boonta-mesh-v1",
+  "name": "original-synthetic-diamond",
+  "vertices": [
+    { "position": [0.0, 1.0, 0.0], "color": [255, 80, 80, 255] },
+    { "position": [1.0, 0.0, 0.0], "color": [80, 255, 120, 255] },
+    { "position": [0.0, -1.0, 0.0], "color": [80, 120, 255, 255] },
+    { "position": [-1.0, 0.0, 0.0], "color": [255, 220, 80, 255] }
+  ],
+  "indices": [0, 1, 2, 0, 2, 3]
+}
