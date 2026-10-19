@@ -1220,6 +1220,141 @@
       "archive_tree_sha": "4261a19e8e564d129d38f2b9f3fb976f683caf20",
       "archive_link_is_history_only": true,
       "archive_tree_matches_first_parent": true
+    },
+    "latest_live_inventory_preflight": {
+      "checked_at_utc_date": "2026-10-19",
+      "source": "GitHub git-ref API for exact branch tips plus Compare API against archive/branch-heads-20261019",
+      "live_branch_count": 18,
+      "keeper_count": 2,
+      "non_keeper_count": 16,
+      "non_keeper_exact_tips_reachable_from_archive": 16,
+      "main_tip_reachable_from_archive": true,
+      "archive_tip_self_reachable": true,
+      "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
+      "archive_tip_sha": "0c3dca64bbf73dbb2f6733cfe6696493677c43b0",
+      "sole_open_pr": {
+        "number": 200,
+        "head": "governance/no-branch-cap-task-completion-20261017",
+        "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+        "state": "open",
+        "mergeable_state": "blocked"
+      },
+      "sha_reachability": "All 16 non-keeper branch tips were compared to the archive by ref name and reported reachable (behind_by=0). Their exact live SHAs were then read from the Git refs API. The cleanup workflow must still repeat the checks against live refs at execution time.",
+      "protection_state": "Not inferred from the manifest; the cleanup workflow must re-check each candidate's current protected flag before any deletion.",
+      "deletions_performed": false,
+      "next_action": "Independent approval of the exact current PR #200 head, then normal protected integration and execution of the guarded cleanup workflow; verify the live inventory is exactly main and archive.",
+      "refs": [
+        {
+          "branch": "main",
+          "sha": "f7f565cb76776457439573929f7b95af89c0496f",
+          "keeper": true,
+          "reachable": true
+        },
+        {
+          "branch": "archive/branch-heads-20261019",
+          "sha": "0c3dca64bbf73dbb2f6733cfe6696493677c43b0",
+          "keeper": true,
+          "reachable": true
+        },
+        {
+          "branch": "audit/step102-import-gate",
+          "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feat/game-finish-banner-label-20261017",
+          "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feat/rocky-canyon-silhouette-20261017",
+          "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feat/source-driven-racer-mesh-texture-20261017",
+          "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feature/cleanroom-mesh-source",
+          "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feature/gamecube-boost-meter",
+          "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feature/gamecube-boost-overheat",
+          "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feature/gamecube-lap-timing-hud",
+          "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "feature/gamecube-multi-rival-race-v2",
+          "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "fix/frame-rate-independent-gameplay-v3",
+          "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "fix/steering-stick-deadzone-20261017",
+          "sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "fix/width-aware-rail-collision-20261017",
+          "sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "governance/no-branch-cap-task-completion-20261017",
+          "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+          "keeper": false,
+          "reachable": true,
+          "open_pr": 200
+        },
+        {
+          "branch": "import/step102-source-only",
+          "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "test/dolphin-pause-state-acceptance",
+          "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
+          "keeper": false,
+          "reachable": true
+        },
+        {
+          "branch": "test/dolphin-pause-state-acceptance-7679597746618456134",
+          "sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6",
+          "keeper": false,
+          "reachable": true,
+          "prior_open_pr": 221
+        }
+      ]
     }
   }
 }
