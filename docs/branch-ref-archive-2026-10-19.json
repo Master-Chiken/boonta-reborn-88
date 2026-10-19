@@ -1191,7 +1191,8 @@
       "Live preflight refresh (2026-10-19): active exact-ref archive ruleset verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 reached success. Fresh Compare API checks show all 16 live non-keeper branch tips are ancestors of archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16. Auxiliary duplicate Trusted source-import path guard runs 39281915575, 39282368148, and 39284586859 have not reached terminal status in the API; two equivalent runs on the same PR head are successful. These duplicate checks are documented separately; they do not substitute for the required independent PR review. No branch refs have been deleted.",
       "Latest live preflight refresh (2026-10-19): the active exact-ref archive ruleset is verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 are terminal-success. Fresh Compare API checks against archive tip 40918ffc20d51488be5006ef232a325c070274dc confirm all 16 live non-keeper tips are ancestors of the archive. Four equivalent auxiliary Trusted source-import path guard runs succeeded on the same head; one later duplicate run remains in progress. Independent review is still required, and no branch refs have been deleted.",
       "2026-10-19 17:07 UTC: strengthened PR #200 head 713c586f51a5ae240a7ddf7233b441d9e70295d6 adds a fail-closed check requiring main protection both before the initial cleanup preflight and before each deletion; branch-automation self-test now asserts both guards. New exact PR head preserved as second parent of archive-only commit 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b using the existing archive tree unchanged. Fresh direct Compare API checks against archive checkpoint 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b show 16/16 candidate tips reachable; no refs deleted. Four core workflows plus trusted-path guard succeeded; GameCube workflow remains in progress only for its optional software-renderer diagnostic.",
-      "2026-10-19 17:08 UTC: all five tracked required workflows on exact current PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 reached terminal-success; the optional software-renderer diagnostic also completed successfully. The main-protection guard and its regression assertions passed. Independent approval is still required; no branch refs were deleted."
+      "2026-10-19 17:08 UTC: all five tracked required workflows on exact current PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 reached terminal-success; the optional software-renderer diagnostic also completed successfully. The main-protection guard and its regression assertions passed. Independent approval is still required; no branch refs were deleted.",
+      "2026-10-19 17:10 UTC: refreshed PR #200 description to the verified current head and current run URLs; the resulting duplicate trusted-path guard run 39291879191 completed successfully on unchanged code head 713c586f51a5ae240a7ddf7233b441d9e70295d6. All required checks remain terminal-success; no branches deleted."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1313,10 +1314,18 @@
             "conclusion": "success",
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39290946749",
             "head_sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6"
+          },
+          {
+            "run_id": 39291879191,
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39291879191",
+            "head_sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6",
+            "note": "Retriggered by the necessary PR-description refresh; same unchanged code head."
           }
         ],
-        "note": "The current exact PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 has a successful Trusted source-import path guard run 39290946749. The eight older successful/repeated runs and the historical in-progress run were on earlier exact head d9cebeea374563d4eefa6ebad158add99499d792; they remain history only and are not used as current-head validation.",
-        "snapshot_at_utc": "2026-10-19T17:08:25Z",
+        "note": "Current PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 has successful Trusted source-import path guard runs 39290946749 and 39291879191. Run 39291879191 was retriggered by the essential PR-description refresh that replaced stale head/CI/anchor references; both ran against the same code head and succeeded. Earlier repeated runs listed in this manifest were on previous head d9cebeea374563d4eefa6ebad158add99499d792 and remain historical only.",
+        "snapshot_at_utc": "2026-10-19T17:10:45Z",
         "successful_duplicate_runs": 8,
         "duplicate_runs_remaining": [
           {
