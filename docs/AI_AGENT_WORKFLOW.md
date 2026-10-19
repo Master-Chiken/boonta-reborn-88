@@ -1,33 +1,58 @@
-# Workflow d'agent IA
+# GitHub AI agents — current operating rules
 
-La cible principale est un prototype natif GameCube/Wii. Le projet dispose d'un petit échantillon clean-room dans `gamecube/`; l'expérience Dreamcast/KallistiOS reste séparée. La branche publique ne doit recevoir que du contenu dont la provenance est acceptable.
+Last reviewed: 2026-10-15
 
-## Automatisation actuelle
+## What is available
 
-- `@gemini-cli` déclenche une action à la demande, pour les membres autorisés du dépôt.
-- Le workflow de lecture utilise le secret `GEMINI_API_KEY` et le modèle `gemini-3.5-flash-lite`, listé actuellement dans l'offre gratuite de Google. Le secret n'est pas encore configuré par défaut et l'agent n'est pas considéré comme connecté avant un test réussi.
-- Les réponses sont publiées sur l'issue ou la PR de départ. Un test réussi de Gemini prouve seulement que l'automatisation a répondu ; il ne prouve pas qu'un build ou le jeu fonctionne.
-- L'exécution qui peut modifier le dépôt est verrouillée tant que la variable Actions `GEMINI_WRITE_ENABLED` n'est pas exactement `true`.
-- La variable d'écriture ne doit être définie qu'après protection de `main` contre les pushes directs/forcés et les suppressions. Chaque changement de l'agent doit créer une nouvelle branche et une PR ; aucun workflow n'est autorisé à fusionner.
+The repository has GitHub Actions workflows for:
+- **Gemini on-demand review/invocation:** triggered by an authorized issue/PR comment or review beginning with `@gemini-cli`. Read-only review requests have been tested and can post a report back to the PR.
+- **Gemini plan/execute:** a separate writer workflow exists, but code-writing is gated by an owner-only `@gemini-cli /approve` request and the repository Actions variable `GEMINI_WRITE_ENABLED=true`. The write path must remain disabled until the owner has deliberately verified main protection, the free-tier API setup, and the variable/secret configuration.
+- **Daily project coordination:** scheduled read-only reporting. This is a scheduled workflow, not a permanent agent that independently works on code all day.
+- **Deterministic CI failure triage:** summarizes failed workflow job/step metadata; it does not execute PR code or infer a root cause.
+- **OpenRouter Free reviewer:** a separate manual, comment-only reviewer is documented in the repository. It requires its own provider key and has no right to merge or write code.
 
-## Utilisation recommandée
+A green AI workflow proves only that the workflow ran and published a response. It does not prove that a code suggestion is correct, that tests passed, or that a game is playable.
 
-1. Demande d'abord un audit en lecture seule commençant par `@gemini-cli`.
-2. Pour une tâche complexe, demande un plan d'action avec critères d'acceptation et fichiers concernés.
-3. Lis le plan ; l'approbation se fait par commentaire `@gemini-cli /approve`.
-4. Vérifie le diff, les tests, les risques de provenance et la PR créée.
-5. Décide manuellement si la PR peut être fusionnée. Ne configure pas l'auto-merge.
+## Safe request pattern
 
-## Build et source Step 102
+Start with a narrowly scoped read-only request:
 
-- `gamecube/` contient un prototype procédural original minimal qui compile en `boonta_demo.dol` grâce à `.github/workflows/gamecube-smoke.yml`. Le workflow lance aussi les tests hôtes de logique de course et une tentative de lancement de 12 secondes dans Dolphin en mode sans interface. Cette dernière vérifie seulement que le processus accepte le DOL et reste actif ; elle ne prouve pas l'affichage, les commandes ou une partie jouable.
-- Le workflow séparé `.github/workflows/native-build.yml` est destiné au port complet à partir de l'archive Step 102. Il attend la structure source racine et échoue tant que le source complet n'a pas été importé et nettoyé.
-- L'archive Step 102 n'est pas importée en bloc. Le propriétaire a déclaré sa provenance originale/générée pour le projet, mais l'audit existant signale un dataset de centreline dérivé d'un mod PC et aucune licence explicite. Il faut résoudre ces éléments fichier par fichier avant import public.
+```text
+@gemini-cli Review this PR as read-only. Inspect the diff and tests, report concrete blockers only, and do not modify files, push commits, merge, change repository settings, or enable billing.
+```
 
-## Règles de sécurité
+For substantial changes:
+1. Ask for a written plan with acceptance criteria.
+2. Keep implementation on a named branch and open a reviewable PR.
+3. Review changed files, license/provenance, dependencies, and test commands.
+4. Verify the relevant CI checks on the exact PR head before integration.
+5. Only the repository owner may choose to enable a writer path; an agent must never approve or merge its own work.
 
-- Aucun ROM, ISO, WBFS, BIOS ou payload commercial dans le dépôt public.
-- Ne jamais inventer un fichier, une source consultée, un résultat de compilation ou de test.
-- Ne jamais désactiver les tests pour obtenir un résultat vert.
-- Ne jamais modifier `main` directement, fusionner une PR ou activer l'auto-merge.
-- Ne jamais envoyer de secret ou d'information privée à Gemini. Google indique que les contenus de l'offre API gratuite peuvent être utilisés pour améliorer ses produits.
+## Current project context
+
+- The active technical milestone is the clean-room procedural GameCube demo in `gamecube-demo/`.
+- Host tests, a devkitPPC/libogc build, artifact checks, and a bounded Dolphin headless startup smoke have passed. A CI Software Renderer run captured a visible procedural scene.
+- Interactive controller response, a completed three-lap run/restart, long-session stability, and physical hardware behavior remain unverified.
+- The Step 102 source archive has not been imported into main. GitHub-hosted agents cannot automatically read files stored only in the ChatGPT conversation/library.
+- Research on SW_RACER_RE is Windows-PC reference material, not automatically reusable GameCube/Wii code. Respect its reported AGPL-3.0 license and keep PC observations separate from console assumptions.
+
+## Free-only and data boundaries
+
+- Never attach billing, enter a payment method, or use a paid fallback to keep an agent working.
+- If a free quota is unavailable, stop and report the blocker.
+- Never send API keys, tokens, personal data, private game archives, ROMs/disc images, BIOS files, or extracted proprietary assets to an external reviewer.
+- Do not commit private/commercial game content or files of unclear provenance.
+- A source-import or license review must not be skipped just to get a green build.
+
+## Evidence and status language
+
+Always identify the exact commit and run link. Distinguish:
+- host regression tests;
+- native cross-compilation and artifact validation;
+- emulator process smoke;
+- visible frame capture;
+- interactive controller test;
+- complete race with finish/restart;
+- longer-session and physical-hardware tests.
+
+Do not report a lower-level check as proof of a higher-level outcome. No agent should push directly to main, delete branches/history, or merge its own code.

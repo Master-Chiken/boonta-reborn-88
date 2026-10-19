@@ -2,11 +2,16 @@
 
 These notes summarize public starting points. They are not proof that any project or asset format works with the GameCube or Wii edition.
 
-## Research strategy for faithful reconstruction
+## Current implementation baseline (2026-10-15)
 
-The target is not merely a game inspired by the original: the target is to reconstruct its gameplay and content faithfully, then improve graphics and add bonus content on GameCube/Wii. Use the PC reverse-engineering repository as a source of documented functions and hypotheses; compare those hypotheses against the actual PC, Dreamcast and Nintendo 64 editions where available. Keep an evidence log that distinguishes observed behavior from assumptions. Console editions may use different engines, data formats, track representations, timing, rendering and controls; never assume that a PC format or extracted dataset is directly usable on GameCube/Wii.
+The clean-room GameCube prototype under `gamecube-demo/` is now part of `main` through [PR #134](https://github.com/Master-Chiken/boonta-reborn-88/pull/134). It provides a procedural desert course, arcade-style pod handling, pitch/slide controls, rival racers, boost/heat, lap/finish state, and automated regression and Dolphin diagnostics.
 
-The Step 102 GameCube/Wii-oriented source archive is currently the strongest existing implementation candidate, but its missing license and the flagged PC-mod-derived course data mean it is not cleared for wholesale import. Review source code, tools, generated data, and assets separately.
+The next test milestones passed after the latest gameplay-test additions in [PR #146](https://github.com/Master-Chiken/boonta-reborn-88/pull/146): native DOL/ELF build, host gameplay and pause/resume tests, Dolphin headless smoke, and the optional software-renderer diagnostic succeeded in [CI run 38812373296](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/38812373296). The subsequent mainline commit `29740df` only refreshes the bounded branch-cleanup allowlist; it does not change game source.
+
+These checks validate only the clean-room prototype and the specific test paths that ran. They do not prove subjective handling quality, a complete interactive race, parity with the commercial game, or a native build of the separate Step 102 archive. Actual controller playtesting remains outstanding, and the Step 102 source import stays on hold until provenance and redistribution decisions are documented file by file.
+
+Use the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) to map pinned PC observations to testable hypotheses without treating PC behavior or data as confirmed GameCube behavior. The [source and artifact register](SOURCE_AND_ARTIFACT_REGISTER.md) preserves the prior supplied-input inventory and public-repository handling boundaries; the [project status and continuity map](PROJECT_STATUS_AND_MAP.md) tracks current milestones and validation limits.
+
 
 ## Existing Star Wars: Episode I — Racer research
 
@@ -16,6 +21,8 @@ Repository: https://github.com/tim-tim707/SW_RACER_RE
 The project documents and reimplements selected functions from the **Windows** version to support research and modding. Its README reported 71.2% of analyzed functions on 12 June 2026. That figure is a dated status from the upstream project, not a measure of console-port completion. It is not a complete decompilation and is not itself a GameCube/Wii port.
 
 **Potential use:** learn game logic, symbols, resource handling, and research methodology. Before reusing any code, inspect the current license and file-level provenance, and confirm whether it is suitable for this project's intended license and targets.
+
+For a pinned, evidence-based subsystem review, see the [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [PC-to-console behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md). They record a reviewed upstream commit and keep PC observations separate from console hypotheses; they do not clear upstream code or asset reuse.
 
 ### OpenSWE1R
 Repository: https://github.com/OpenSWE1R/openswe1r
@@ -55,9 +62,16 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 
 ## Open questions to resolve
 
-1. What is inside the existing Step102 prototype archive, and what is its source/license?
-2. Is that archive source code, a prebuilt executable, documentation, or a mixture?
-3. Which target should be used for the first build: Wii homebrew, GameCube homebrew, or a PC research build?
-4. **Resolved:** the non-negotiable destination is a faithful, enhanced native GameCube/Wii reconstruction; simply running the N64 edition through an emulator is not the final solution.
-5. Which assets/data formats are actually present in the relevant console version?
-6. Which open-source components can be used without incompatible license or branding obligations?
+1. Which Step 102 files have verified authorship, license evidence, and a documented redistribution decision? Keep the source import blocked until each included file is cleared.
+2. Which PC-derived behavior observations can be mapped to Step 102 without copying upstream implementation code or data?
+3. What repeatable controller-driven race test proves steering, pitch/slide, rival interaction, lap completion, reset, and stable frame pacing in the current clean-room GameCube demo?
+4. Which console-specific resource formats and visual behaviors are confirmed from lawful GameCube/N64 evidence, rather than inferred from Windows PC research?
+5. Which assets or tools have file-level provenance and license terms suitable for the intended public project?
+
+
+## Recovered research and archive-audit references
+
+- [PC source findings](PC_SOURCE_FINDINGS.md) — pinned source-level observations and follow-up questions for the Windows PC research reference.
+- [PC technical map](PC_TECHNICAL_MAP.md) and [PC-first research plan](PC_FIRST_RESEARCH_PLAN.md) — subsystem map, external tooling, and a research-before-port workflow.
+- [Version comparison matrix](VERSION_COMPARISON_MATRIX.md) and [cross-platform reference matrix](CROSS_PLATFORM_REFERENCE_MATRIX.md) — keep PC, Dreamcast, N64, and GameCube/Wii assumptions separate and testable.
+- [Step 102 archive audit](STEP102_IMPORT_AUDIT.md) and [handoff/access boundaries](STEP102_HANDOFF_AND_ACCESS.md) — audit of the larger 359-file archive, distinct from the separate 123-file source-only bundle; both remain subject to provenance and redistribution review.

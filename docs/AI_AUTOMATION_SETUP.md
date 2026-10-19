@@ -1,62 +1,82 @@
-# Configurer l'agent Gemini sur GitHub Actions
+# Configurer l'agent Gemini dans GitHub Actions
 
-Cette intégration est facultative et déclenchée uniquement par des commentaires GitHub autorisés commençant par `@gemini-cli`. Elle n'exige aucune installation locale. La clé ne doit jamais être envoyée dans une issue, un commentaire, un commit ou cette conversation.
+Cette configuration permet de demander à Gemini d'auditer le dépôt, proposer un plan et, après approbation humaine et déverrouillage explicite, préparer une pull request. Elle n'exige aucune installation sur ton ordinateur.
 
-## Sécurité avant activation de l'écriture
+## Avant toute activation
 
-**Ne définis pas encore `GEMINI_WRITE_ENABLED=true` tant que la branche `main` n'est pas protégée.** C'est une protection supplémentaire : GitHub Actions n'est pas autorisé à écrire via le workflow d'exécution tant que cette variable n'est pas exactement `true`.
+**La règle du projet reste 0 € : aucun moyen de paiement, aucune facturation et aucun modèle payant de secours.**
 
 1. Ouvre [les règles du dépôt](https://github.com/Master-Chiken/boonta-reborn-88/settings/rules).
-2. Crée un nouveau *branch ruleset* appliqué à `main`.
-3. Active au minimum **Require a pull request before merging**, **Block force pushes** et **Restrict deletions**. Ne configure aucun contournement pour le bot. Enregistre et vérifie que la règle est active.
-4. N'active pas l'auto-merge. Aucun workflow du projet ne doit fusionner une PR ; la décision finale reste manuelle.
+2. Crée un *branch ruleset* ciblant `main`.
+3. Active au minimum **Require a pull request before merging**, **Block force pushes** et **Restrict deletions**. Ne configure aucun contournement pour le bot. Enregistre et vérifie la règle.
+4. N'active pas l'auto-merge.
 
-Si l'interface ne te permet pas d'enregistrer ces règles, garde `GEMINI_WRITE_ENABLED` absent ou différent de `true` et demande-moi d'adapter les possibilités sans ouvrir l'écriture de Gemini.
+Si les règles ne peuvent pas être enregistrées, n'ouvre pas l'écriture Gemini. Garde la variable `GEMINI_WRITE_ENABLED` absente ou différente de `true`.
 
-## Ajouter la clé de l'API gratuite
+## Ajouter la clé Gemini API gratuite
 
-1. Ouvre [Google AI Studio — clés API](https://aistudio.google.com/apikey) et crée une clé pour l'API Gemini.
-2. Vérifie que le projet utilise seulement l'offre gratuite et **qu'aucun compte de facturation n'est rattaché**. Ne saisis pas de moyen de paiement et n'active pas de facturation. Si Google exige une facturation pour créer/utiliser la clé dans ton compte, arrête-toi et ne continue pas avec cette méthode.
-3. Dans le dépôt, ouvre **Settings → Secrets and variables → Actions → New repository secret**.
-4. Nom exact : `GEMINI_API_KEY`. Colle la clé uniquement dans la valeur du secret et enregistre.
+1. Ouvre [Google AI Studio — clés API](https://aistudio.google.com/apikey).
+2. Crée une clé pour la Gemini API. Vérifie qu'elle fonctionne sur l'offre gratuite **sans compte de facturation ni moyen de paiement rattaché**. Si Google exige une facturation, arrête-toi.
+3. Dans le dépôt GitHub, va dans **Settings → Secrets and variables → Actions → New repository secret**.
+4. Nom exact : `GEMINI_API_KEY`. Colle la clé uniquement dans la valeur du secret.
 
-Le modèle configuré est `gemini-3.5-flash-lite`, qui est listé par Google dans l'offre gratuite actuelle de l'API. Les quotas peuvent changer ou être indisponibles. Au quota épuisé, le workflow doit échouer sans mise à niveau payante.
+Ne mets jamais la clé dans un fichier, une issue, un commentaire ou cette conversation. Les quotas gratuits peuvent évoluer ; lorsqu'ils sont épuisés, le workflow doit s'arrêter plutôt que de payer.
 
-Les deux workflows sont configurés en mode API-key uniquement : aucun chemin Vertex AI/Google Cloud/Code Assist ni clé Google secondaire n'est utilisé. N'ajoute pas ces options ou leurs secrets, car le projet reste strictement à 0 €.
+Google indique que le contenu de l'offre API gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure le code et les prompts du dépôt. Ne fournis jamais de secrets, données privées ou contenus que tu n'as pas le droit de transmettre.
 
-**Données :** Google indique que le contenu envoyé via l'offre gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure du code et du texte du dépôt fournis au modèle. Tu as choisi d'accepter ces conditions ; n'envoie malgré tout aucun secret, mot de passe, donnée personnelle privée ou fichier commercial non autorisé.
+## Contrôle automatique de la configuration
 
-## Déverrouiller l'écriture de l'agent
+Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml) se lance à chaque mise à jour de cette branche de sécurité. Il vérifie localement que le verrou d'écriture, le mode lecture seule et les interdictions de routes Google Cloud/Vertex sont toujours présents.
 
-Après avoir protégé `main` et ajouté `GEMINI_API_KEY` :
+Ce contrôle :
+- n'appelle aucune API d'IA et n'utilise aucune clé ;
+- ne consomme aucun quota Gemini ou OpenRouter ;
+- ne modifie pas le dépôt et ne fusionne rien ;
+- vérifie seulement la configuration écrite, pas la disponibilité du quota gratuit auprès du fournisseur.
 
-1. Ouvre **Settings → Secrets and variables → Actions → Variables → New repository variable**.
-2. Nom exact : `GEMINI_WRITE_ENABLED`.
-3. Valeur exacte : `true`.
+Un test réussi ne remplace pas la revue humaine de la pull request.
 
-Sans cette variable, Gemini peut répondre aux demandes de lecture et proposer un plan, mais `@gemini-cli /approve` n'exécute pas de tâche modifiant le dépôt. À la place, le workflow publie un commentaire expliquant que l'écriture est verrouillée.
+## Coordinateur automatique quotidien
 
-L'agent doit ensuite créer une nouvelle branche et une pull request. **Il ne doit jamais pousser vers `main`, fusionner une PR ou activer l'auto-merge.** Lis toujours les modifications, les tests, le diff et les limites avant toute décision humaine de fusion.
+Une fois cette PR de sécurité explicitement revue et fusionnée, le workflow [Daily read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) pourra publier un rapport quotidien dans [l'issue de coordination #23](https://github.com/Master-Chiken/boonta-reborn-88/issues/23).
 
-## Ajouter une deuxième IA gratuite pour la relecture
+- Horaire : une fois par jour à 07:15 UTC, plus un lancement manuel via **Actions → Daily read-only AI project coordinator → Run workflow**.
+- Le rapport inspecte les fichiers présents sur `main`, les issues/PR ouvertes et les éléments de CI, puis propose une seule prochaine tâche prioritaire.
+- Il est strictement en lecture seule : aucun outil de création de branche, de modification de fichier, de commit, de PR ou de fusion n'est fourni à l'agent.
+- Il utilise le même secret `GEMINI_API_KEY`, le modèle explicitement configuré et aucun fallback payant. Si le quota gratuit est épuisé, le rapport échoue plutôt que de facturer.
+- Il n'active pas l'écriture de Gemini. Les changements de code restent soumis à un plan approuvé et au verrou `GEMINI_WRITE_ENABLED`.
 
-Le workflow facultatif [OpenRouter Free PR review est proposé séparément dans la PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14). Il utilise seulement le routeur `openrouter/free` et poste un commentaire de relecture ; il ne modifie aucun code. Il exige un secret séparé, `OPENROUTER_API_KEY`. Le workflow ne pourra être lancé manuellement qu'après avoir été explicitement approuvé et fusionné dans la branche par défaut. Ne crédite pas le compte et n'ajoute aucune carte ; si la route gratuite est indisponible, il doit échouer plutôt que d'essayer un modèle payant.
+Le workflow ne sera pas actif avant fusion de cette PR et nécessite que le secret `GEMINI_API_KEY` soit configuré. Il ne peut pas inspecter les archives de la bibliothèque ChatGPT automatiquement.
 
-OpenRouter n'est pas Claude : sa route gratuite choisit des modèles gratuits disponibles, qui changent dans le temps. Claude reste exclu de l'automatisation API directe, car son API est facturée à l'usage.
+## Premier test : lecture seule
 
-## Premier test conseillé
-
-Sur la PR #13, après avoir configuré le secret, écris un commentaire en lecture seule, par exemple :
+Après validation et fusion explicite de cette PR de sécurité, et après l'ajout du secret, ouvre la [PR #13](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) et écris ce commentaire :
 
 ```text
-@gemini-cli Fais un audit en lecture seule de l'état actuel de Boonta Reborn 88. Résume les workflows actifs, les résultats CI disponibles, les fichiers Step 102 réellement présents dans le dépôt, les blocages de provenance et les prochaines étapes. Ne modifie aucun fichier et ne crée aucune PR.
+@gemini-cli Fais un audit en lecture seule. Inspecte uniquement les fichiers présents dans la branche actuelle, résume les workflows et résultats CI, identifie les sources réellement disponibles et les prochaines étapes. Ne modifie aucun fichier, ne crée aucune branche et ne crée aucune PR.
 ```
 
-Vérifie le résultat dans l'onglet [Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions). Ne poste jamais la valeur de la clé. Pour une vraie modification, demande d'abord un plan et n'approuve que le plan que tu as lu.
+Consulte ensuite l'onglet [GitHub Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions) et vérifie la réponse. Une réponse réussie de Gemini ne prouve pas que le jeu compile ni qu'il fonctionne.
 
-## Limites
+## Déverrouiller l'écriture — étape séparée
 
-- Gemini ne voit que les fichiers du dépôt et le contexte des issues/PR accessibles via GitHub. Il ne voit pas automatiquement les pièces jointes de ChatGPT.
-- Le petit prototype original de `gamecube/` compile en DOL via Actions. Il n'est ni le port complet Step 102 ni une preuve que le jeu est jouable.
-- Aucun workflow ne réalise la fusion pour toi. Le propriétaire décide après examen.
-- Les outils/quotas gratuits peuvent changer. Si le service demande une carte, de la facturation ou un forfait, n'active pas ce service et reste sur les vérifications GitHub Actions gratuites.
+Ne fais cette étape **qu'après** protection de `main` et vérification de `GEMINI_API_KEY`.
+
+1. Ouvre **Settings → Secrets and variables → Actions → Variables → New repository variable**.
+2. Nom : `GEMINI_WRITE_ENABLED`.
+3. Valeur exacte : `true`.
+
+Sans cette variable, le commentaire `@gemini-cli /approve` n'exécute pas de modifications. Une fois déverrouillé, Gemini doit vérifier le plan approuvé, travailler sur une branche séparée et ouvrir une PR. Il ne doit jamais pousser directement vers `main`, fusionner une PR ou activer l'auto-merge.
+
+## Limites du dépôt et des fichiers
+
+- Les workflows voient le dépôt GitHub et le contexte de la discussion déclenchante. Ils ne voient pas automatiquement les archives téléversées dans ChatGPT ni les dossiers de ton Mac.
+- Le grand ZIP Step 102 n'est pas automatiquement accessible à GitHub Actions. N'importe pas ce ZIP en bloc dans le dépôt public ; commence par examiner les sources et données séparément.
+- Inspecte la branche réellement utilisée. Ne suppose pas qu'un fichier proposé dans une PR en brouillon se trouve déjà sur `main`.
+- Distingue tests hôtes, compilation native DOL, smoke test Dolphin sans interface et validation visuelle/contrôleur.
+
+## Source officielle
+
+[Prix, quotas et conditions de données de Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
+
+Si une étape nécessite une carte, une facturation ou une mise à niveau payante, ne la réalise pas.

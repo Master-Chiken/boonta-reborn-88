@@ -37,7 +37,7 @@ jobs:
           permission-pull-requests: 'write'
 
       - name: 'Checkout Code'
-        uses: 'actions/checkout@v4' # ratchet:exclude
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
         with:
           persist-credentials: 'false'
 
@@ -124,11 +124,11 @@ jobs:
                 "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '/gemini-invoke'
+          prompt: '/gemini-invoke ${{ inputs.additional_context }}'
 
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
-        uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # pinned GitHub Script v7
+        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
