@@ -329,7 +329,7 @@ jobs:
           EOF
           done
           capture_timeout=160
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1500; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -535,19 +535,20 @@ jobs:
               fi
               echo "D-pad/stick steering passed; Y-reset produced a clean HUD; Start paused visibly, and a second Start resumed throttle-driven movement."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
-                echo "Starting full-race DTM; use the previously passing 12000-frame window."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
-                mkdir -p "$RACE_USER/Config"
-                chmod 700 "$RACE_USER"
-                printf "%s\\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
-                echo "The three-lap finish checkerboard was detected after the scripted race."
                 if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
+                  # Finish-label work needs a dedicated finish screenshot so the
+                  # orange text detector runs on the actual finish frame.
+                  echo "Capturing a dedicated finish-label frame for this branch."
+                  python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
+                  mkdir -p "$RACE_USER/Config"
+                  chmod 700 "$RACE_USER"
+                  printf "%s\\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
+                  capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
+                  python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
-                  echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
+                  echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
-                echo "Starting a longer DTM; finish the race first, then reset at frame 14000 and capture immediately."
+                echo "Running one finish/reset DTM; the live-frame poll checks finish and the first clean HUD after Y reset."
                 python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
                 mkdir -p "$FINISH_RESET_USER/Config"
                 chmod 700 "$FINISH_RESET_USER"
