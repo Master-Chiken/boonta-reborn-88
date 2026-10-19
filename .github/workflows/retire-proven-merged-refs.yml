@@ -60,6 +60,17 @@ jobs:
             echo "::error::The two required keeper refs are not both present; nothing will be deleted."
             exit 1
           fi
+
+          # The archive is the only recovery shelf once the candidate refs are retired.
+          # Require GitHub to report it as protected before the first deletion. The
+          # maintainer must configure an active exact-ref ruleset blocking deletion
+          # and non-fast-forward updates; an unprotected or missing archive fails closed.
+          archive_protected="$(jq -r --arg name "$archive_branch" '[.[] | select(.name == $name)][0].protected // false' "$RUNNER_TEMP/branches.json")"
+          if [[ "$archive_protected" != "true" ]]; then
+            echo "::error::Recovery archive must be protected against deletion and non-fast-forward updates; refusing all ref deletion."
+            exit 1
+          fi
+
           initial_count="$(branch_count)"
           echo "# Archive-backed branch-ref cleanup" >> "$GITHUB_STEP_SUMMARY"
           echo >> "$GITHUB_STEP_SUMMARY"
@@ -104,6 +115,11 @@ jobs:
           while IFS=$'\t' read -r name sha; do
             [[ -n "$name" ]] || continue
             inventory
+            archive_protected="$(jq -r --arg name "$archive_branch" '[.[] | select(.name == $name)][0].protected // false' "$RUNNER_TEMP/branches.json")"
+            if [[ "$archive_protected" != "true" ]]; then
+              echo "::error::Recovery archive protection disappeared during cleanup; stopping."
+              exit 1
+            fi
             current_sha="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
             protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
             if [[ "$current_sha" != "$sha" || "$protected" != "false" ]] || is_open_pr_head "$name"; then
