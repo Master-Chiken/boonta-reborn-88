@@ -6,44 +6,14 @@
   "baseline_main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
   "archive_branch": "archive/branch-heads-20261019",
   "archive_head_before_snapshot": "7c09c3a86900bded4fafaa4fed4fb5939e0d54ca",
-  "target_live_ref_count": 18,
+  "target_live_ref_count": 2,
   "retention_semantics": "The snapshot commit preserves the baseline inventory. The current cleanup-workflow commit has the snapshot as first parent and each current non-archive branch tip as an additional parent before any live refs are retired. Every recorded tip remains recoverable by SHA from archive/branch-heads-20261019. Ref retirement is not integration into main.",
   "keepers": [
     "main",
-    "archive/branch-heads-20261019",
-    "test/dolphin-pause-state-acceptance-7679597746618456134",
-    "fix/steering-stick-deadzone-20261017",
-    "fix/width-aware-rail-collision-20261017",
-    "governance/no-branch-cap-task-completion-20261017",
-    "feat/game-finish-banner-label-20261017",
-    "feat/rocky-canyon-silhouette-20261017",
-    "feat/source-driven-racer-mesh-texture-20261017",
-    "test/dolphin-pause-state-acceptance",
-    "feature/gamecube-boost-meter",
-    "feature/gamecube-boost-overheat",
-    "feature/gamecube-lap-timing-hud",
-    "feature/gamecube-multi-rival-race-v2",
-    "fix/frame-rate-independent-gameplay-v3",
-    "feature/cleanroom-mesh-source",
-    "audit/step102-import-gate",
-    "import/step102-source-only"
+    "archive/branch-heads-20261019"
   ],
-  "priority_keep_refs": [
-    "feature/gamecube-boost-meter",
-    "feature/gamecube-boost-overheat",
-    "feature/gamecube-lap-timing-hud",
-    "feature/gamecube-multi-rival-race-v2",
-    "fix/frame-rate-independent-gameplay-v3",
-    "feature/cleanroom-mesh-source",
-    "audit/step102-import-gate",
-    "import/step102-source-only"
-  ],
-  "temporarily_retained_proven_candidates": [
-    "feat/game-finish-banner-label-20261017",
-    "feat/rocky-canyon-silhouette-20261017",
-    "feat/source-driven-racer-mesh-texture-20261017",
-    "test/dolphin-pause-state-acceptance"
-  ],
+  "priority_keep_refs": [],
+  "temporarily_retained_proven_candidates": [],
   "open_prs": [
     {
       "number": 221,
@@ -85,15 +55,15 @@
       "protected": false,
       "open_prs": [],
       "disposition": "keep_live",
-      "reason": "Archive anchor. The cleanup workflow commit is a child of the captured snapshot SHA, which itself preserves all earlier branch heads."
+      "reason": "Permanent recovery anchor. Its commit graph preserves the captured branch tips; the workflow may retire other live refs only after exact-SHA and reachability checks."
     },
     {
       "name": "audit/step102-import-gate",
       "sha": "b0130cb14dcbd2dc6c8d90a09fbd9eb475e4dd25",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "automation/interactive-validation-roadmap",
@@ -340,32 +310,32 @@
       "sha": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feat/rocky-canyon-silhouette-20261017",
       "sha": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feat/source-driven-racer-mesh-texture-20261017",
       "sha": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/cleanroom-mesh-source",
       "sha": "e0f8d864c8c659aa9058b79747dad8f0023edafb",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/distant-canyon-ridges",
@@ -388,24 +358,24 @@
       "sha": "c0bb37a44c86a4b0b428602e8bcab913fe813dd2",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/gamecube-boost-overheat",
       "sha": "e70f6ae5bd0127a6e4140632752f97dcc4212cd2",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/gamecube-lap-timing-hud",
       "sha": "8b70b2ab20b38200d717137e4a9940f562859d7b",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/gamecube-multi-rival-race",
@@ -420,8 +390,8 @@
       "sha": "ef2d56788ee43ccf27707962da6ab2a94ff0057e",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "feature/gamecube-pause-and-docs",
@@ -532,8 +502,8 @@
       "sha": "92a28b9567f362a7c5872bc9fe597796d40a5097",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "fix/gamecube-hud-matrix-binding",
@@ -684,8 +654,8 @@
           "head_sha": "22528ece22c7d471e3da4e43b4f78ab22c944c4c"
         }
       ],
-      "disposition": "keep_live",
-      "reason": "Open PR head retained for active review: #215."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "fix/track-width-collision-alignment-20261017",
@@ -708,8 +678,8 @@
           "head_sha": "2c5956b698dba9f9eb5c189cd2120ab48548747e"
         }
       ],
-      "disposition": "keep_live",
-      "reason": "Open PR head retained for active review: #214."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "fix-native-build-warnings",
@@ -748,16 +718,16 @@
           "head_sha": "4d1adf5c77282b68610293f72d67a1b7f5188c73"
         }
       ],
-      "disposition": "keep_live",
-      "reason": "Open PR head retained for active review: #200."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "import/step102-source-only",
       "sha": "dfa2a18da29f0e33b62aeefba41d419ae85ee4d3",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Selected priority ref for near-term GameCube/provenance work. Other history remains recoverable from the archive manifest."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "jules-15774004275526793592-0b7895c1",
@@ -773,7 +743,7 @@
       "protected": true,
       "open_prs": [],
       "disposition": "keep_live",
-      "reason": "Protected default integration branch; never retire."
+      "reason": "Permanent project development/integration branch."
     },
     {
       "name": "ops/retire-proven-merged-refs-20261019",
@@ -876,8 +846,8 @@
       "sha": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
       "protected": false,
       "open_prs": [],
-      "disposition": "keep_live",
-      "reason": "Temporarily retained because current main's GameCube workflow has branch-name selectors; PR #200 removes those selectors, then the separate guarded retirement can remove these refs."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "test/dolphin-pause-state-acceptance-7679597746618456134",
@@ -892,8 +862,8 @@
           "head_sha": "9d8836a294420f7498898a30c4340cf0beb7a7b6"
         }
       ],
-      "disposition": "keep_live",
-      "reason": "Open PR head retained for active review: #221."
+      "disposition": "archive_then_retire_ref",
+      "reason": "Ref retirement is planned only after PR #200 is independently reviewed and merged. Before deletion, the workflow must prove the exact current tip and history remain reachable from the archive snapshot or main, verify the ref is unprotected, and confirm no open PR uses it. Ref retirement is not integration into main."
     },
     {
       "name": "test/dolphin-reset-state-acceptance",
@@ -1060,5 +1030,28 @@
   "snapshot_commit_sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67",
   "snapshot_commit_parent_count": 117,
   "cleanup_commit_expected_parent_count": 117,
-  "cleanup_commit_parent_sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67"
+  "cleanup_commit_parent_sha": "7c5788b2f1d6d50be3d9b280f0cb4f53a8d36c67",
+  "pre_followup_live_keeper_refs": [
+    "main",
+    "archive/branch-heads-20261019",
+    "test/dolphin-pause-state-acceptance-7679597746618456134",
+    "fix/steering-stick-deadzone-20261017",
+    "fix/width-aware-rail-collision-20261017",
+    "governance/no-branch-cap-task-completion-20261017",
+    "feat/game-finish-banner-label-20261017",
+    "feat/rocky-canyon-silhouette-20261017",
+    "feat/source-driven-racer-mesh-texture-20261017",
+    "test/dolphin-pause-state-acceptance",
+    "feature/gamecube-boost-meter",
+    "feature/gamecube-boost-overheat",
+    "feature/gamecube-lap-timing-hud",
+    "feature/gamecube-multi-rival-race-v2",
+    "fix/frame-rate-independent-gameplay-v3",
+    "feature/cleanroom-mesh-source",
+    "audit/step102-import-gate",
+    "import/step102-source-only"
+  ],
+  "current_live_ref_count_before_followup": 18,
+  "followup_cleanup_status": "Pending independent review and normal merge of PR #200; no live refs are deleted by this manifest update.",
+  "followup_cleanup_policy": "Keep main and archive/branch-heads-20261019. A post-merge workflow may retire any other live branch only after preflighting its exact current SHA, unprotected status, absence of an open PR head, and proof that the exact tip is reachable from the archive ref or main. The entire batch preflight must pass before the first deletion. Retiring a branch ref is not integration into main; the archive graph preserves work for recovery."
 }
