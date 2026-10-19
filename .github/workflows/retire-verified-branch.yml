@@ -1,0 +1,156 @@
+name: Retire verified branch reference
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: "One of the pre-reviewed branch refs below"
+        required: true
+        type: choice
+        options:
+          - recovery/branch-heads-20261019-verified
+          - feat/game-finish-banner-label-20261017
+          - feat/rocky-canyon-silhouette-20261017
+          - feat/source-driven-racer-mesh-texture-20261017
+          - test/dolphin-pause-state-acceptance
+      expected_sha:
+        description: "Paste the exact 40-character SHA recorded in the inventory"
+        required: true
+        type: string
+      confirm_branch:
+        description: "Type the complete branch name again to confirm retirement"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: retire-verified-branch-reference
+  cancel-in-progress: false
+
+jobs:
+  retire:
+    name: Verify recovery, then retire one ref
+    if: github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BRANCH_NAME: ${{ inputs.branch_name }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      CONFIRM_BRANCH: ${{ inputs.confirm_branch }}
+    steps:
+      - name: Check out complete Git history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Verify exact allowlist, branch head, protection, open PRs, and recovery reachability
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$CONFIRM_BRANCH" == "$BRANCH_NAME" ]] || {
+            echo "::error::Confirmation text must exactly match the selected branch."
+            exit 1
+          }
+
+          case "$BRANCH_NAME" in
+            "recovery/branch-heads-20261019-verified")
+              PINNED_SHA="085ff1c9638650c279addcba5a04f839c414512b" ;;
+            "feat/game-finish-banner-label-20261017")
+              PINNED_SHA="1385a83d2aa3ba263b1a06b567da9cfb60998428" ;;
+            "feat/rocky-canyon-silhouette-20261017")
+              PINNED_SHA="b809c0a023ad0b551b3405e3298efae26a2b3d5e" ;;
+            "feat/source-driven-racer-mesh-texture-20261017")
+              PINNED_SHA="b96fd97c56a34480e8e685ab2cc2a52460668a60" ;;
+            "test/dolphin-pause-state-acceptance")
+              PINNED_SHA="b398b652e39dd9bfc41cbe76bb41efd51bdfb687" ;;
+            *)
+              echo "::error::Branch is not in the fixed reviewed allowlist."
+              exit 1 ;;
+          esac
+
+          [[ "$EXPECTED_SHA" == "$PINNED_SHA" ]] || {
+            echo "::error::Expected SHA does not match the reviewed inventory. Refresh and review the inventory before trying again."
+            exit 1
+          }
+
+          branch_json="$(gh api "repos/$GH_REPO/branches/$BRANCH_NAME")"
+          actual_sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+          protected="$(jq -r '.protected // false' <<< "$branch_json")"
+          [[ "$actual_sha" == "$EXPECTED_SHA" ]] || {
+            echo "::error::Branch head moved. No deletion performed."
+            exit 1
+          }
+          [[ "$protected" == "false" ]] || {
+            echo "::error::Branch is protected. No deletion performed."
+            exit 1
+          }
+
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          if jq -e --arg branch "$BRANCH_NAME" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' /tmp/open-prs.json >/dev/null; then
+            echo "::error::An open PR uses this branch as its head or base. No deletion performed."
+            exit 1
+          fi
+
+          git fetch --no-tags origin \
+            "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
+          git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019" || {
+            echo "::error::Exact branch tip is not reachable from the protected recovery archive. No deletion performed."
+            exit 1
+          }
+
+          echo "verified_sha=$actual_sha" >> "$GITHUB_OUTPUT"
+          echo "protected=$protected" >> "$GITHUB_OUTPUT"
+          echo "Recovery ancestry, exact SHA, open-PR, branch-protection, actor and confirmation checks passed."
+
+      - name: Recheck immediately before deletion
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch_json="$(gh api "repos/$GH_REPO/branches/$BRANCH_NAME")"
+          actual_sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+          protected="$(jq -r '.protected // false' <<< "$branch_json")"
+          [[ "$actual_sha" == "$EXPECTED_SHA" && "$protected" == "false" ]] || {
+            echo "::error::Branch changed or became protected after the first check. No deletion performed."
+            exit 1
+          }
+
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs-before-delete.json
+          if jq -e --arg branch "$BRANCH_NAME" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' /tmp/open-prs-before-delete.json >/dev/null; then
+            echo "::error::An open PR started using this branch. No deletion performed."
+            exit 1
+          fi
+
+          git fetch --no-tags origin \
+            "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
+          git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019" || {
+            echo "::error::Recovery ancestry check no longer passes. No deletion performed."
+            exit 1
+          }
+
+      - name: Delete only the re-verified branch reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Retiring $BRANCH_NAME at verified SHA $EXPECTED_SHA"
+          gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH_NAME"
+          if gh api "repos/$GH_REPO/branches/$BRANCH_NAME" >/dev/null 2>&1; then
+            echo "::error::GitHub still reports the branch after deletion."
+            exit 1
+          fi
+          {
+            echo "## Branch ref retired"
+            echo
+            echo "- Branch: `$BRANCH_NAME`"
+            echo "- Exact verified SHA: `$EXPECTED_SHA`"
+            echo "- Recovery: ancestor of protected `archive/branch-heads-20261019`"
+            echo "- Open PR reference: none at the time of retirement"
+            echo "- Scope: only this branch ref was deleted; commits were not rewritten."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -25,7 +25,7 @@ Before starting any change, answer these questions:
 3. **Smallest useful change:** What is the smallest end-to-end improvement that can be built and verified? Avoid speculative refactors, unrelated tooling, new platforms, and feature creep.
 4. **Dependencies and risks:** Are platform, file format, toolchain, license, provenance, performance, or compatibility assumptions confirmed? Identify unknowns and investigate them before depending on them.
 5. **Acceptance and tests:** What observable result will prove success? Decide the relevant automated and manual tests before implementation, and state what they cannot prove.
-6. **Safe integration:** Which existing branch/PR should carry the change? Check its diff against current `main`, avoid duplicate/stale work, and preserve a clear review and rollback path.
+6. **Safe integration:** Which existing task branch/PR should carry the change? Start from current `dev`, compare with `dev` to avoid duplicate/stale work, and preserve a clear review and rollback path. For a release promotion, compare `dev` with `main` and use a separate PR.
 
 **Do not start implementation until the goal, scope, risks, and acceptance test are clear.** If a key format, license, or behavior is uncertain, make the next task a focused investigation with explicit evidence—not a guess-based implementation.
 
@@ -53,11 +53,14 @@ Do not start a converter, broad asset catalog, major rewrite, new renderer/platf
 
 ## Branches, pull requests, and integration
 
-- Do not push directly to `main`; make changes reviewable through pull requests and preserve rollback options.
-- Prefer an appropriate existing branch/PR over creating another branch. Respect the project branch ceiling and any active branch-governance issue.
-- Never delete useful branches, commits, or files automatically. Do not merge stale fork histories wholesale; compare unique diffs and integrate selectively.
-- Avoid parallel PRs that change the same behavior/files without a clear dependency plan.
-- Keep the change focused. Separate unrelated work so that each review can explain its purpose, risk, and evidence.
+- **Permanent integration branches:** `main` is the stable/release branch and remains the repository default; `dev` is the integration branch.
+- For ordinary work, create/reuse a focused temporary branch from the current `dev` and open a PR targeting `dev`. Do not push directly to `dev`.
+- Promote validated work from `dev` to `main` with a separate reviewed PR. Do not push directly to `main`.
+- Keep task branches short-lived. Two permanent branches does not mean removing the source branch of an open PR; open PR branches are temporary review refs.
+- Never merge `archive/*` or `recovery/*` branches wholesale into `main` or `dev`. Their multi-parent ancestry exists for recovery, not product integration.
+- Never delete useful branches, commits, or files automatically. Before a maintainer retires a ref, verify the exact current SHA, check for open PRs, compare unique changes, and confirm its history is reachable from `main`, `dev`, or the verified recovery archive.
+- Do not merge stale fork histories wholesale; compare unique diffs and integrate selectively. Preserve provenance holds, especially the Step 102/source-import work.
+- Avoid parallel PRs that change the same behavior/files without a clear dependency plan. Keep the change focused so each review can explain its purpose, risk, and evidence.
 
 ## Required validation and honest reporting
 

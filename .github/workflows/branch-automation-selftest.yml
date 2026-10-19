@@ -6,6 +6,7 @@ on:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
       - ".github/workflows/branch-automation-selftest.yml"
+      - ".github/workflows/retire-verified-branch.yml"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +34,54 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
-            .github/workflows/branch-automation-selftest.yml
+            .github/workflows/branch-automation-selftest.yml \
+            .github/workflows/retire-verified-branch.yml
+
+      - name: Verify two-branch workflow routing and safety exclusions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          queue = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          build = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
+          governance = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          agents = Path("AGENTS.md").read_text(encoding="utf-8")
+          audit = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
+          retire = Path(".github/workflows/retire-verified-branch.yml").read_text(encoding="utf-8")
+
+          checks = {
+              "intake explicitly targets dev": 'target_branch = "dev"' in queue,
+              "candidate comparisons use the integration target": 'compare/{target_branch}...{sha}' in queue,
+              "created PRs target the integration branch": '"--base", target_branch' in queue,
+              "main is never treated as an intake candidate": 'item.get("name") not in {"main", target_branch}' in queue,
+              "archive and recovery refs are excluded": 'startswith(("archive/", "recovery/"))' in queue,
+              "prototype build runs on main and dev pushes": 'branches: [main, dev]' in build,
+              "governance documents main/dev roles": "`main` — stable/release branch" in governance and "`dev` — integration branch" in governance,
+              "agent rules direct ordinary work to dev": "targeting `dev`" in agents and "separate reviewed PR" in agents,
+              "audit distinguishes permanent branches from temporary work": 'permanent_names = {"main", "dev"}' in audit and "active_work" in audit,
+              "audit excludes archive/recovery refs from active work": 'startswith(("archive/", "recovery/"))' in audit,
+              "audit reports missing main/dev protection": "permanent_protection_missing" in audit and "protect main and dev" in audit,
+              "obsolete 30-active-branch target is removed": "target 30" not in audit and "over_target" not in audit and "Branch governance: consolidation needed" not in audit,
+              "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
+              "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
+              "retirement workflow is manually triggered only": "workflow_dispatch:" in retire.split("permissions:", 1)[0] and all(trigger not in retire.split("permissions:", 1)[0] for trigger in ("push:", "pull_request:", "schedule:")),
+              "retirement restricted to owner from main": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in retire,
+              "retirement requires exact typed branch and SHA": "CONFIRM_BRANCH" in retire and "EXPECTED_SHA" in retire and "PINNED_SHA" in retire,
+              "retirement has exactly five pre-reviewed candidates": all(name in retire for name in ("recovery/branch-heads-20261019-verified", "feat/game-finish-banner-label-20261017", "feat/rocky-canyon-silhouette-20261017", "feat/source-driven-racer-mesh-texture-20261017", "test/dolphin-pause-state-acceptance")),
+              "retirement rejects protected refs and open PRs": ".protected // false" in retire and ".head.ref == $branch or .base.ref == $branch" in retire,
+              "retirement verifies reachability in recovery archive": 'git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019"' in retire,
+              "retirement repeats exact-SHA check immediately before delete": "Recheck immediately before deletion" in retire and retire.count('actual_sha="$(jq -r') >= 2,
+              "retirement does not force-push or merge": "git push --force" not in retire and "gh pr merge" not in retire and "git update-ref" not in retire,
+              "retirement has one delete-ref API call": retire.count('gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH_NAME"') == 1,
+          }
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          failures = [label for label, ok in checks.items() if not ok]
+          if failures:
+              raise SystemExit("Two-branch workflow safety validation failed: " + "; ".join(failures))
+          PY
 
       - name: Compile embedded Python scripts without executing network operations
         shell: bash
