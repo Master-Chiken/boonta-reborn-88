@@ -64,9 +64,8 @@ jobs:
           from pathlib import Path
 
           repo = os.environ["GH_REPO"]
-          default_branch = subprocess.check_output(
-              ["gh", "api", f"repos/{repo}", "--jq", ".default_branch"], text=True
-          ).strip()
+          # Keep main as the repository default, but route candidate intake to dev.
+          target_branch = "dev"
           branches = json.loads(Path("/tmp/branches.json").read_text())
           open_prs = json.loads(Path("/tmp/open-prs.json").read_text())
           max_prs = int(os.environ["MAX_PRS"])
@@ -78,9 +77,9 @@ jobs:
               ))
 
           def branch_unique_patch_count(branch_name, expected_sha):
-              """Return count of patch-unique non-merge commits vs main, or fail closed."""
+              """Return patch-unique non-merge commits vs the integration target, or fail closed."""
               branch_ref = f"refs/heads/{branch_name}"
-              main_ref = f"refs/heads/{default_branch}"
+              target_ref = f"refs/heads/{target_branch}"
               actual = subprocess.run(
                   ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", branch_ref],
                   text=True, capture_output=True
@@ -89,22 +88,22 @@ jobs:
                   raise RuntimeError("branch did not exist in the history mirror snapshot")
               if actual.stdout.strip() != expected_sha:
                   raise RuntimeError("branch tip moved between inventory and history mirror")
-              mirrored_main = subprocess.run(
-                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", main_ref],
+              mirrored_target = subprocess.run(
+                  ["git", "-C", "/tmp/racer-intake.git", "rev-parse", "--verify", target_ref],
                   text=True, capture_output=True
               )
-              if mirrored_main.returncode != 0 or mirrored_main.stdout.strip() != main_sha:
-                  raise RuntimeError("main moved between inventory and history mirror")
+              if mirrored_target.returncode != 0 or mirrored_target.stdout.strip() != target_sha:
+                  raise RuntimeError("integration target moved between inventory and history mirror")
               merge_count = int(subprocess.check_output(
                   ["git", "-C", "/tmp/racer-intake.git", "rev-list", "--count", "--merges",
-                   f"{main_ref}..{branch_ref}"], text=True
+                   f"{target_ref}..{branch_ref}"], text=True
               ).strip())
               if merge_count:
                   raise RuntimeError(
                       f"branch has {merge_count} merge commit(s); requires explicit review"
                   )
               result = subprocess.run(
-                  ["git", "-C", "/tmp/racer-intake.git", "cherry", main_ref, branch_ref],
+                  ["git", "-C", "/tmp/racer-intake.git", "cherry", target_ref, branch_ref],
                   text=True, capture_output=True
               )
               if result.returncode != 0:
@@ -136,24 +135,24 @@ jobs:
               return blobs
 
           try:
-              main_commit = api_json(f"repos/{repo}/commits/{default_branch}")
-              main_sha = main_commit.get("sha")
-              main_tree_sha = main_commit.get("commit", {}).get("tree", {}).get("sha")
-              if not main_sha or not main_tree_sha:
-                  raise RuntimeError("default branch commit/tree metadata is incomplete")
-              main_tree_obj = api_json(f"repos/{repo}/git/trees/{main_tree_sha}?recursive=1")
-              if main_tree_obj.get("truncated"):
+              target_commit = api_json(f"repos/{repo}/commits/{target_branch}")
+              target_sha = target_commit.get("sha")
+              target_tree_sha = target_commit.get("commit", {}).get("tree", {}).get("sha")
+              if not target_sha or not target_tree_sha:
+                  raise RuntimeError("integration branch commit/tree metadata is incomplete")
+              target_tree_obj = api_json(f"repos/{repo}/git/trees/{target_tree_sha}?recursive=1")
+              if target_tree_obj.get("truncated"):
                   raise RuntimeError("default branch tree is truncated")
-              main_tree_blobs = {
+              target_tree_blobs = {
                   item["path"]: (item.get("sha"), item.get("mode"), item.get("type"))
-                  for item in main_tree_obj.get("tree", [])
+                  for item in target_tree_obj.get("tree", [])
                   if item.get("type") == "blob" and item.get("path")
               }
-              tree_cache[main_sha] = main_tree_blobs
+              tree_cache[target_sha] = target_tree_blobs
           except Exception as exc:
-              # Do not create PRs when we cannot establish the current main tree.
+              # Do not create PRs when we cannot establish the current integration tree.
               raise SystemExit(
-                  f"Cannot safely compare final branch trees to {default_branch}: {str(exc)[:160]}"
+                  f"Cannot safely compare final branch trees to {target_branch}: {str(exc)[:160]}"
               )
 
           def priority(name):
@@ -232,7 +231,8 @@ jobs:
               item.get("commit", {}).get("sha", "")
               for item in branches
               if item.get("name")
-              and item.get("name") != default_branch
+              and item.get("name") not in {"main", target_branch}
+              and not item.get("name", "").startswith(("archive/", "recovery/"))
               and item.get("name") not in open_heads
               and item.get("commit", {}).get("sha")
               and item.get("commit", {}).get("sha") not in open_shas
@@ -244,7 +244,7 @@ jobs:
           def fetch_compare(sha):
               request_started = time.monotonic()
               try:
-                  endpoint = f"repos/{repo}/compare/{default_branch}...{sha}"
+                  endpoint = f"repos/{repo}/compare/{target_branch}...{sha}"
                   return sha, api_json(endpoint), None, time.monotonic() - request_started
               except Exception as exc:
                   return sha, None, str(exc)[:120], time.monotonic() - request_started
@@ -261,8 +261,9 @@ jobs:
           for branch_info in branches:
               name = branch_info.get("name", "")
               sha = branch_info.get("commit", {}).get("sha", "")
-              if not name or name == default_branch or not sha:
-                  skips["default or missing ref"] += 1
+              if (not name or name in {"main", target_branch}
+                      or name.startswith(("archive/", "recovery/")) or not sha):
+                  skips["permanent/recovery/missing ref"] += 1
                   continue
               if name in open_heads:
                   skips["already has an open PR"] += 1
@@ -291,7 +292,7 @@ jobs:
                   deferred.append((name, "GitHub comparison is too large for safe automatic intake"))
                   continue
               if ahead <= 0 or not paths:
-                  skips["no unique file changes versus main"] += 1
+                  skips["no unique file changes versus integration target"] += 1
                   continue
               hold = source_hold(name, paths)
               if hold:
@@ -302,7 +303,7 @@ jobs:
               # branch stays intact for deliberate rebase/cherry-pick review.
               if behind > 10:
                   stale_base_deferred += 1
-                  deferred.append((name, f"stale base: {behind} commits behind main (>10); rebase or cherry-pick manually"))
+                  deferred.append((name, f"stale base: {behind} commits behind {target_branch} (>10); rebase or cherry-pick manually"))
                   continue
               if ahead > 10:
                   deferred.append((name, f"large scope needs a deliberate review ({ahead} commits ahead)"))
@@ -320,7 +321,7 @@ jobs:
                   skips["all branch commits already present or patch-equivalent to main"] += 1
                   continue
 
-              # Then filter paths whose final blob/mode is identical to current main.
+              # Then filter paths whose final blob/mode is identical to current integration tree.
               try:
                   branch_tree_blobs = tree_blobs_for_commit(sha)
               except Exception as exc:
@@ -328,10 +329,10 @@ jobs:
                   continue
               effective_paths = sorted(
                   path for path in paths
-                  if main_tree_blobs.get(path) != branch_tree_blobs.get(path)
+                  if target_tree_blobs.get(path) != branch_tree_blobs.get(path)
               )
               if not effective_paths:
-                  skips["reported paths already match main tree (superseded work)"] += 1
+                  skips["reported paths already match integration tree (superseded work)"] += 1
                   continue
               paths = effective_paths
 
@@ -379,8 +380,8 @@ jobs:
 
           - Source branch: {name}
           - Head SHA at inventory time: {candidate['sha']} (verify that it still matches the current PR head)
-          - Commits ahead of {default_branch}: {ahead}
-          - Commits behind {default_branch}: {behind}
+          - Commits ahead of {target_branch}: {ahead}
+          - Commits behind {target_branch}: {behind}
           - Changed paths: {len(paths)}
           - Compare status: {candidate['status']}
 
@@ -388,19 +389,19 @@ jobs:
           {path_list}
 
           ### Required before merge
-          - Review the complete diff against the current {default_branch}; resolve conflicts rather than bypassing them.
+          - Review the complete diff against the current {target_branch}; resolve conflicts rather than bypassing them.
           - Confirm the relevant checks passed on this exact head SHA.
           - Add or update regression tests for behavior changes.
           - Verify source provenance and redistribution rights for imported code/data/assets.
           - Follow docs/MAINLINE_ACCEPTANCE_GATE.md and keep claims limited to evidence actually collected.
 
-          This automation does not push to {default_branch}, merge, force-push, or delete branches. The original branch and its history are preserved. Large changes, overlapping changes, and Step 102/source-import candidates are deliberately held for manual review.
+          This automation does not push to {target_branch}, merge, force-push, or delete branches. The original branch and its history are preserved. Large changes, overlapping changes, and Step 102/source-import candidates are deliberately held for manual review.
           """
               body_path = Path("/tmp/branch-intake-pr.md")
               body_path.write_text(body)
               title = f"intake: {name}"
               result = subprocess.run(
-                  ["gh", "pr", "create", "--repo", repo, "--base", default_branch,
+                  ["gh", "pr", "create", "--repo", repo, "--base", target_branch,
                    "--head", name, "--draft", "--title", title,
                    "--body-file", str(body_path)],
                   text=True, capture_output=True
@@ -463,14 +464,14 @@ jobs:
           lines = [
               "# Branch intake queue",
               "",
-              f"- Default branch: {default_branch}",
+              f"- Integration target: {target_branch}",
               f"- Total branch refs scanned: {len(branches)}",
               f"- Existing open PRs at start: {len(open_prs)}",
               f"- Open-PR changed-file inventory wall time: {open_pr_paths_wall_seconds:.2f}s",
               f"- Open-PR serial-equivalent request wait: {open_pr_paths_request_seconds:.2f}s",
               f"- Estimated open-PR inventory speedup: {open_pr_paths_request_seconds / max(open_pr_paths_wall_seconds, 0.001):.1f}x",
               f"- Branches with a small, distinct diff identified: {len(candidates)}",
-              f"- Candidates deferred for stale base (>10 commits behind main): {stale_base_deferred}",
+              f"- Candidates deferred for stale base (>10 commits behind dev): {stale_base_deferred}",
               f"- Unique tip comparisons attempted: {len(comparison_shas)}",
               f"- Comparison phase wall time: {comparison_wall_seconds:.2f}s",
               f"- Serial-equivalent request wait: {comparison_request_seconds:.2f}s",
@@ -478,7 +479,7 @@ jobs:
               f"- Draft PRs created this run: {len(created)} / {max_prs} requested",
               f"- GitHub Actions PR-creation permission: {'BLOCKED' if permission_blocked else 'not blocked by this run'}",
               f"- Candidates deferred for manual review or overlap: {len(deferred)}",
-              "- Automatic merge, direct-to-main push, force-push, and branch deletion: **disabled**",
+              "- Automatic merge, direct-to-main/dev push, force-push, and branch deletion: **disabled**",
               "",
               "## Draft PRs created",
               "",
