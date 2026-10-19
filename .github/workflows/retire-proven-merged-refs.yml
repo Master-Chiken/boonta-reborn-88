@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - .github/workflows/retire-proven-merged-refs.yml
-  workflow_dispatch:
+# Deliberately no workflow_dispatch: this destructive job must only run from the
+# protected main-branch push that introduces the reviewed workflow. Re-running a
+# main-branch Actions run remains available without selecting an untrusted branch.
 
 permissions:
   contents: write
