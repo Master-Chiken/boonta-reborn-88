@@ -21,6 +21,7 @@ This is a navigation index. Treat each status as time-bound and follow the linke
 ## Canonical documents
 
 - [Technical research](TECHNICAL_RESEARCH.md) — public research references, platform distinctions, and current implementation caveats.
+- [Free tooling guide](FREE_TOOLING.md) — budget constraints, CI evidence, optional AI automation guardrails, and source-import holds.
 - [Source and artifact register](SOURCE_AND_ARTIFACT_REGISTER.md) — previously supplied input inventory and rules for keeping private/commercial materials out of the public repository.
 - [SW_RACER_RE study plan](SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](SW_RACER_RE_BEHAVIOR_MATRIX.md) — PC research mapped to testable hypotheses without assuming console equivalence.
 - [Next milestone](NEXT_MILESTONE.md) — interactive validation checklist and acceptance criteria.

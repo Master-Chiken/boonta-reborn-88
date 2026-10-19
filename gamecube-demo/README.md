@@ -5,8 +5,9 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 ## Current scope
 
 - Native GameCube GX initialization and 3D colored-vertex rendering.
-- A genuinely scrolling procedural desert course: curved asphalt segments, lane markers, and faceted canyon walls advance continuously with race distance; the start/finish stripe approaches once per lap instead of receding. The environment uses a warm desert floor, daylight sky, and original low-poly canyon geometry.
-- An original procedural twin-engine racer with separated engine nacelles, visible tether strips, a raised cockpit canopy, and exhaust plumes that lengthen with speed and boost.
+- A genuinely scrolling procedural desert course:  curved asphalt segments, lane markers, and faceted canyon walls advance continuously with race distance; the start/finish stripe approaches once per lap instead of receding. The environment uses a warm desert floor, daylight sky, and original low-poly canyon geometry.
+- A spline-aligned desert canyon with a deterministic staggered rock-ridge silhouette and faceted outcrops, avoiding uniform wall tops.
+- An original low-poly twin-engine racer authored in `boonta-mesh-v1` JSON, exported to a validated C mesh and textured through the native GX RGB565 path; its exhaust plumes still lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle, brake, pitch, and slide. Pitching nose-down increases forward progress at the cost of steering authority; pitching nose-up slows progress but improves steering. Holding L initiates a low-grip slide: it increases turn impulse while retaining sideways drift, so releasing it early is part of cornering. Pitch/slide state is exposed in the HUD and covered by deterministic host tests.
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
@@ -14,6 +15,12 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
 This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and a full physics model are not implemented.
+
+## Original player mesh and texture
+
+The player's hull is an original source-authored indexed mesh. The project validates its positions, UVs and indices on the host, exports a deterministic C header, and checks that the generated header matches the source. The matching 16×16 RGB8 texture source is validated and quantized to GX-tiled RGB565 by a small host-side exporter; aligned texels are copied and cache-flushed before GX upload. This is an owned test asset, not extracted game content. Runtime filesystem loading and proprietary model/texture parsing are not implemented.
+
+The procedural course, rival craft, controls, dynamic exhaust and HUD remain separate from this asset. Successful rendering in Dolphin is evidence for this one original mesh/texture path, not proof of full game-asset compatibility or manual-controller acceptance.
 
 ## Controls
 

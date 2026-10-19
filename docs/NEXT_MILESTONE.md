@@ -1,6 +1,6 @@
 # Next milestone: Interactive validation of the clean-room racing slice
 
-Last updated: 2026-10-16
+Last updated: 2026-10-17
 
 ## Goal of this milestone
 
@@ -10,14 +10,22 @@ This is the gate before expanding the vertical slice.
 
 ## What is already verified (CI)
 
-- Host regression tests (speed, boost/overheat, steering, lap boundaries, rivals, pause/reset, finite-state guards, etc.)
-- Consistent 50/60 Hz cadence handling
-- Native `boonta_gc_demo.dol` / `.elf` build with devkitPPC/libogc
-- Bounded Dolphin null-video smoke
-- Visible Software Renderer capture (road, rails, markers, player + rival pods)
+- Host regression tests for gameplay state, steering, boost/heat, lap boundaries, rivals, pause/reset and numeric state guards.
+- Native `boonta_gc_demo.dol` / `.elf` build using devkitPPC/libogc with artifact validation.
+- Bounded Dolphin Null-backend process smoke.
+- Source-authored indexed twin-engine player mesh (275 vertices, 169 triangles) with an original 16×16 RGB8 texture source, validated and deterministically exported to GX-ready C headers.
+- Readable three-lap finish panel and varied procedural canyon skyline.
+- Exact-head Software Renderer diagnostics and visual detectors for steering/reset and the finished banner.
 
-These prove the code compiles, the deterministic logic works, and a scene can render.  
-They do **not** yet prove live controller response or a completed three-lap race.
+These prove the tested code compiles, deterministic assertions pass, and the tested scripted states can render. They do **not** prove live controller response or a manually driven three-lap race.
+
+## Latest automated evidence (2026-10-17)
+
+PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 (varied canyon) are now merged. The exact-head run [#39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310) passed host tests, native build/artifact checks, Dolphin process smoke, and the Software Renderer diagnostic. Its scripted three-lap DTM frame passed both the centered finish-banner detector and orange `FINISH`-label detector.
+
+Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. Subsequent main commits update documentation only; the code-bearing tree validated by run #39062005581 has not changed. The live-controller checklist below remains the outstanding acceptance gate.
+
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
 
 ## Interactive acceptance checklist
 

@@ -6,12 +6,12 @@ Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star W
 
 ## Source-of-truth tracks
 
-1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural GX rendering, controller input code, throttle/brake, boost and overheat/cooldown, inertial steering, off-road drag, rail recovery, three staggered procedural rivals, total/current-lap/best-lap clocks, a three-lap finish state, pause/reset logic, elapsed-time-normalized 50/60 Hz gameplay updates, strict host regressions, and automated native-build/render checks.
+1. **Mainline clean-room GameCube demo:** `gamecube-demo/`. It currently has procedural course/rival/effect GX rendering plus an original source-authored indexed player-pod mesh and 16×16 RGB8 texture exported to the native GX mesh/RGB565 path, controller input code, throttle/brake, boost and overheat/cooldown, inertial steering, off-road drag, rail recovery, three staggered procedural rivals, total/current-lap/best-lap clocks, a three-lap finish state with readable FINISH banner, pause/reset logic, elapsed-time-normalized 50/60 Hz gameplay updates, strict host regressions, and automated native-build/render checks.
 2. **Step 102 source archive:** a separate candidate for the fuller gameplay baseline. Do not merge its draft import PRs wholesale. Source authorship/license, generated track data, models/materials/audio, and dependencies require file-by-file review before redistribution.
 3. **SW_RACER_RE and other external projects:** research references only. Keep PC observations separate from GameCube/Wii hypotheses. Review licenses before copying code or data.
 4. **Dreamcast/KallistiOS starter and Wii64 tools:** separate research tracks; neither is the native GameCube release milestone.
 
-## Current acceptance status (2026-10-15)
+## Current acceptance status (2026-10-17)
 
 ### Verified in CI
 - [x] C99 host regressions for gameplay transitions, steering inertia, analog/D-pad mapping, lap boundaries, three-lap finish state, rival events, off-road response, and rail recovery.
@@ -21,13 +21,18 @@ Deliver a reproducible, playable GameCube/Wii vertical slice inspired by *Star W
 - [x] Native clean-room GameCube DOL and ELF build through devkitPPC/libogc.
 - [x] DOL/ELF artifact structure validation and DOL padding.
 - [x] Bounded Dolphin null-video process smoke test.
-- [x] A visible procedural frame captured through Dolphin Software Renderer in CI.
+- [x] Visible Software Renderer checks on exact PR #204 head detected the varied canyon, three-lap finish banner, and orange `FINISH` label ([run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310)).
+- [x] Latest post-merge GameCube run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581) passed native DOL/ELF build/artifact validation, host pause/reset tests, bounded Dolphin Null-backend smoke, and the mainline Software Renderer diagnostic. It ran on code-bearing merge commit `72acf968e3214b086b00b77240bb20b889314917`; the latest main commit `8b7c9a8a1e19e6a14eccc182103120e835400b4b` only updates the root README.
+
+- [x] Original source-authored player mesh and source texture validate and match the checked-in generated GX headers; texture and mesh boundary tests passed on PR #203.
+- [x] Readable FINISH label and varied canyon silhouette are integrated and checked by a scripted visible finish-frame diagnostic on PR #204.
 
 ### Still unverified
 - [ ] Interactive steering and acceleration/braking/boost behavior using a visible Dolphin controller profile or physical controller.
 - [ ] One complete three-lap run in the running game, including finish display, stopping, reset, and a second run.
 - [ ] Longer-session stability and sustained frame pacing.
 - [ ] Physical GameCube/Wii behavior.
+- [ ] General-purpose source-asset loading and an asset-backed course/collision path; current player mesh/texture path covers only the original fixture and does not parse commercial game formats.
 - [ ] A native build or gameplay claim for the separate Step 102 archive.
 
 ## Work order
