@@ -40,7 +40,7 @@ jobs:
             .github/workflows/retire-proven-merged-refs.yml \
             .github/dependabot.yml
 
-      - name: Verify branch retirement remains fixed and proof-based
+      - name: Verify branch retirement is archive-backed and targets two live refs
         shell: bash
         run: |
           set -euo pipefail
@@ -50,41 +50,42 @@ jobs:
           retirement = Path(".github/workflows/retire-proven-merged-refs.yml").read_text(encoding="utf-8")
           gamecube = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
 
-          fixed_refs = {
-              "feat/game-finish-banner-label-20261017": "1385a83d2aa3ba263b1a06b567da9cfb60998428",
-              "feat/rocky-canyon-silhouette-20261017": "b809c0a023ad0b551b3405e3298efae26a2b3d5e",
-              "feat/source-driven-racer-mesh-texture-20261017": "b96fd97c56a34480e8e685ab2cc2a52460668a60",
-              "test/dolphin-pause-state-acceptance": "b398b652e39dd9bfc41cbe76bb41efd51bdfb687",
-              "ops/retire-proven-merged-refs-20261019": "f7f565cb76776457439573929f7b95af89c0496f",
-          }
-          for branch, sha in fixed_refs.items():
-              if retirement.count(f'"{branch}"') != 1:
-                  raise SystemExit(f"Retirement scope regression: expected one allowlist entry for {branch}")
-              if retirement.count(f'"{sha}"') != 1:
-                  raise SystemExit(f"Retirement scope regression: expected one fixed SHA for {branch}")
-
-          required_guards = (
-              "branch_count() {",
-              "protected",
-              "merge-base --is-ancestor",
+          required_markers = (
+              "archive/branch-heads-20261019",
+              "target_count=2",
               "state=open&per_page=100",
+              "protected",
+              'merge-base --is-ancestor "$sha" "$archive_ref"',
+              'merge-base --is-ancestor "$sha" "$main_ref"',
+              "Preflight all non-keeper refs before deleting any.",
+              "Final ref-state check changed",
               "--method DELETE",
-              "Validate all five exact refs before deleting any.",
-              "git -C \"$workdir\" grep -F -n \"$name\" \"$main_ref\" -- .github/workflows/gamecube-demo-build.yml",
+              "branch_count()",
           )
-          for marker in required_guards:
+          for marker in required_markers:
               if marker not in retirement:
-                  raise SystemExit(f"Branch retirement safety regression: missing {marker!r}")
+                  raise SystemExit(f"Archive-backed cleanup safety regression: missing {marker!r}")
 
-          if len(fixed_refs) != 5:
-              raise SystemExit("Branch retirement scope regression: expected four proven project refs plus one temporary runner ref")
-          for retired_branch in tuple(fixed_refs)[:4]:
-              if retired_branch in gamecube:
-                  raise SystemExit(f"Stale CI branch selector remains for retirement candidate {retired_branch}")
+          if 'target_count=2' not in retirement or 'name != "main"' not in retirement:
+              raise SystemExit("Branch cleanup must preserve main and target exactly two live refs.")
+          if "fixed_refs" in retirement or "Validate all five exact refs" in retirement:
+              raise SystemExit("Branch cleanup must not remain restricted to the previous five-ref allowlist.")
+          if "workflow_dispatch:" in retirement:
+              raise SystemExit("Destructive branch retirement must only trigger from the reviewed protected-main push.")
           if "check_finish_label:" not in gamecube or "inputs.check_finish_label" not in gamecube:
-              raise SystemExit("GameCube regression: explicit manual finish-label diagnostic input must remain available")
+              raise SystemExit("GameCube regression: explicit manual finish-label diagnostic input must remain available.")
 
-          print("Branch retirement remains limited to four exact project refs plus its temporary runner, with fixed-SHA, protection, open-PR, ancestry, and CI-selector guards.")
+          retired_ci_selectors = (
+              "feat/game-finish-banner-label-20261017",
+              "feat/rocky-canyon-silhouette-20261017",
+              "feat/source-driven-racer-mesh-texture-20261017",
+              "test/dolphin-pause-state-acceptance",
+          )
+          for retired_branch in retired_ci_selectors:
+              if retired_branch in gamecube:
+                  raise SystemExit(f"Stale CI branch selector remains for retired ref {retired_branch}")
+
+          print("Branch cleanup targets exactly main plus the recovery archive; every other ref must pass exact-head, unprotected, no-open-PR, and archive/main reachability checks before retirement.")
           PY
 
       - name: Verify branch coordination thresholds remain informational
