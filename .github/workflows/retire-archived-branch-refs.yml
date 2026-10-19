@@ -71,8 +71,8 @@ jobs:
               exit 1
             }
           else
-            [[ "$CONFIRMATION" == "RETIRE 18 ARCHIVED BRANCH REFS" ]] || {
-              echo "::error::Deletion requires the exact confirmation phrase: RETIRE 18 ARCHIVED BRANCH REFS"
+            [[ "$CONFIRMATION" == "RETIRE 19 ARCHIVED BRANCH REFS" ]] || {
+              echo "::error::Deletion requires the exact confirmation phrase: RETIRE 19 ARCHIVED BRANCH REFS"
               exit 1
             }
           fi
@@ -96,6 +96,7 @@ jobs:
           test/dolphin-pause-state-acceptance b398b652e39dd9bfc41cbe76bb41efd51bdfb687
           test/dolphin-pause-state-acceptance-7679597746618456134 9d8836a294420f7498898a30c4340cf0beb7a7b6
           chore/archived-branch-ref-cleanup MAIN_ANCESTRY
+          fix/cleanup-runner-context-20261019 MAIN_ANCESTRY
           EOF
 
           fetch_recovery_refs() {
@@ -151,8 +152,8 @@ jobs:
             count=$((count + 1))
           done < "$CANDIDATES_FILE"
 
-          [[ "$count" -eq 18 ]] || {
-            echo "::error::Expected exactly 18 reviewed candidates, found $count."
+          [[ "$count" -eq 19 ]] || {
+            echo "::error::Expected exactly 19 reviewed candidates, found $count."
             exit 1
           }
           echo "candidate_count=$count" >> "$GITHUB_OUTPUT"
@@ -162,7 +163,7 @@ jobs:
             echo "- Mode: **$MODE**"
             echo "- Verified checkpoint: `$EXPECTED_CHECKPOINT`"
             echo "- Candidate refs: $count"
-            echo "- Protected recovery archive contains every pinned candidate tip."
+            echo "- Every candidate tip is recoverable from the protected archive or already fully integrated into main."
             echo "- Main/dev/archive and both open-PR branches are excluded."
             echo
             echo "### Candidate list"
@@ -237,5 +238,5 @@ jobs:
             echo "- Retired refs in this run: $retired"
             echo "- Live branch count after cleanup: $final_count"
             echo "- Kept refs: `main`, `dev`, protected `archive/branch-heads-20261019`, and refs that still back open PRs."
-            echo "- The branch names were retired; unique commits were preserved in the recovery archive and were not merged into main/dev by this operation."
+            echo "- Branch refs were retired only after reachability checks; historical commits remain reachable from the recovery archive or main. This operation did not merge any branch into main/dev."
           } >> "$GITHUB_STEP_SUMMARY"
