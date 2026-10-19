@@ -11,6 +11,16 @@
 - Do not push directly to main. Use focused pull requests, review the full diff, and validate exact-head CI before merge. No automatic merge, force-push, history rewriting, or automatic deletion of useful branches.
 - Keep the budget at €0. Never enable billing or use paid tools. Preserve clean-room and source-provenance restrictions.
 
+## Single-maintainer delivery queue (work-in-progress control)
+
+- `Issue #201` is the single source of truth for the active integration queue. It must contain one `NOW` item, one `NEXT` item, and a short parked list; other open issues/PRs do not automatically become active tasks.
+- **One active runtime implementation or integration candidate at a time.** This limits in-flight decision/review work, not the total number of branches. Preserve unique queued work and do not delete branches or close useful PRs merely to reduce counts.
+- Do not start a new runtime PR while the current runtime PR is being implemented, waiting on required checks/review, or ready for integration. Reuse its branch/PR for follow-up fixes.
+- Independent documentation/research can be recorded as `NEXT` or `PARKED`, but should not generate another PR requiring maintainer attention until the current `NOW` item has a reviewable handoff. The exception is an urgent security, provenance, or blocking build/CI issue.
+- Every active PR must have a narrow scope, linked issue, exact-head CI evidence, explicit manual checks still needed, overlap/dependency note, and one next action.
+- Integrate sequentially. After a runtime or workflow PR is merged, retest every remaining PR that overlaps the changed files against its exact current head/base. Don't batch-merge and don't merge merely to reduce open counts.
+- When the maintainer is blocked or unavailable, agents should complete the current task's tests/self-review and leave a truthful handoff, not open unrelated PRs to appear busy.
+
 ## Coordination alerts (not caps)
 
 - **General contributors:** show an informational coordination alert at **105 total repository branches**. At that point, finish and hand off the current task before starting an unrelated task; do not abandon or interrupt the task already in progress.
