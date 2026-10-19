@@ -1,37 +1,58 @@
-# Gemini coding agent — safe operating procedure
+# GitHub AI agents — current operating rules
 
-## What the agent can do
-- Read the current repository checkout and the issue/PR context.
-- Respond to an `@gemini-cli` comment with an audit or plan.
-- After explicit plan approval and owner-only setup, propose source changes on a separate branch and open a PR.
-- It must never merge code or push directly to `main`.
+Last reviewed: 2026-10-15
 
-## Activation gates
-1. This security-hardening PR must be reviewed and explicitly merged into the default branch.
-2. The owner must create a Gemini API key under Google's free tier without linking billing, then store it as the GitHub Actions repository secret `GEMINI_API_KEY`.
-3. The owner must protect `main` against direct pushes, force pushes, and deletion.
-4. Only after those protections above are confirmed should the owner set the repository Actions variable `GEMINI_WRITE_ENABLED=true`.
-5. If a free quota is unavailable, stop; never activate paid billing or a paid fallback.
+## What is available
 
-The write workflow checks `GEMINI_WRITE_ENABLED` in the dispatcher. Without it, `@gemini-cli /approve` does not execute file changes and posts a note that writing remains locked.
+The repository has GitHub Actions workflows for:
+- **Gemini on-demand review/invocation:** triggered by an authorized issue/PR comment or review beginning with `@gemini-cli`. Read-only review requests have been tested and can post a report back to the PR.
+- **Gemini plan/execute:** a separate writer workflow exists, but code-writing is gated by an owner-only `@gemini-cli /approve` request and the repository Actions variable `GEMINI_WRITE_ENABLED=true`. The write path must remain disabled until the owner has deliberately verified main protection, the free-tier API setup, and the variable/secret configuration.
+- **Daily project coordination:** scheduled read-only reporting. This is a scheduled workflow, not a permanent agent that independently works on code all day.
+- **Deterministic CI failure triage:** summarizes failed workflow job/step metadata; it does not execute PR code or infer a root cause.
+- **OpenRouter Free reviewer:** a separate manual, comment-only reviewer is documented in the repository. It requires its own provider key and has no right to merge or write code.
 
-## Start read-only
-After the hardened workflows are on the default branch and the secret exists, comment on a repository issue or PR with a focused read-only request beginning with `@gemini-cli`. For example:
+A green AI workflow proves only that the workflow ran and published a response. It does not prove that a code suggestion is correct, that tests passed, or that a game is playable.
+
+## Safe request pattern
+
+Start with a narrowly scoped read-only request:
 
 ```text
-@gemini-cli Fais un audit en lecture seule. Lis l'arborescence réellement présente, résume les workflows et résultats CI, signale les chemins Step 102 absents et propose les 3 prochaines tâches avec critères d'acceptation. Ne modifie aucun fichier et ne crée aucune PR.
+@gemini-cli Review this PR as read-only. Inspect the diff and tests, report concrete blockers only, and do not modify files, push commits, merge, change repository settings, or enable billing.
 ```
 
-## Project context and boundaries
-- Main engineering target: GameCube/Wii using C, devkitPPC and libogc.
-- The Step 102 archive uploaded to ChatGPT is not automatically visible to Gemini in GitHub Actions.
-- Inspect the actual checked-out branch; do not claim files from unmerged PRs are present.
-- Do not commit ROMs, disc images, BIOS files or assets of unclear provenance.
-- The archive audit records no explicit LICENSE/COPYING/NOTICE file and identifies PC-mod-derived centerline data plus voice/model/assets needing separate provenance review.
-- Report what was actually tested. A host test is not proof of a native build; a Dolphin headless process test is not proof of rendering or gameplay.
+For substantial changes:
+1. Ask for a written plan with acceptance criteria.
+2. Keep implementation on a named branch and open a reviewable PR.
+3. Review changed files, license/provenance, dependencies, and test commands.
+4. Verify the relevant CI checks on the exact PR head before integration.
+5. Only the repository owner may choose to enable a writer path; an agent must never approve or merge its own work.
 
-## Free-only requirement
-Google currently offers a free tier for some Gemini API models, with quotas and data-use terms. Verify the current pricing page before activation:
-https://ai.google.dev/gemini-api/docs/pricing
+## Current project context
 
-Do not attach billing, enter a payment method, or switch to a paid tier. Free-tier Google API content may be used to improve Google products. Never send secrets or private personal information.
+- The active technical milestone is the clean-room procedural GameCube demo in `gamecube-demo/`.
+- Host tests, a devkitPPC/libogc build, artifact checks, and a bounded Dolphin headless startup smoke have passed. A CI Software Renderer run captured a visible procedural scene.
+- Interactive controller response, a completed three-lap run/restart, long-session stability, and physical hardware behavior remain unverified.
+- The Step 102 source archive has not been imported into main. GitHub-hosted agents cannot automatically read files stored only in the ChatGPT conversation/library.
+- Research on SW_RACER_RE is Windows-PC reference material, not automatically reusable GameCube/Wii code. Respect its reported AGPL-3.0 license and keep PC observations separate from console assumptions.
+
+## Free-only and data boundaries
+
+- Never attach billing, enter a payment method, or use a paid fallback to keep an agent working.
+- If a free quota is unavailable, stop and report the blocker.
+- Never send API keys, tokens, personal data, private game archives, ROMs/disc images, BIOS files, or extracted proprietary assets to an external reviewer.
+- Do not commit private/commercial game content or files of unclear provenance.
+- A source-import or license review must not be skipped just to get a green build.
+
+## Evidence and status language
+
+Always identify the exact commit and run link. Distinguish:
+- host regression tests;
+- native cross-compilation and artifact validation;
+- emulator process smoke;
+- visible frame capture;
+- interactive controller test;
+- complete race with finish/restart;
+- longer-session and physical-hardware tests.
+
+Do not report a lower-level check as proof of a higher-level outcome. No agent should push directly to main, delete branches/history, or merge its own code.
