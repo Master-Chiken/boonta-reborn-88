@@ -1052,7 +1052,7 @@
     "import/step102-source-only"
   ],
   "current_live_ref_count_before_followup": 18,
-  "followup_cleanup_status": "Archive protection confirmed active at live verification; no branch refs have been deleted. Waiting for terminal-success of current-head GameCube first-render checks and independent approval of PR #200.",
+  "followup_cleanup_status": "Archive protection verified active; all five tracked required current-head workflows reached terminal success on PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. A fresh compare-API preflight confirmed all 16 non-keeper live branch tips are reachable from archive. No branch refs have been deleted. PR #200 remains blocked by required independent review and last-push approval.",
   "followup_cleanup_policy": "Keep main and archive/branch-heads-20261019. A post-merge workflow may retire any other live branch only after preflighting its exact current SHA, unprotected status, absence of an open PR head, and proof that the exact tip is reachable from the archive ref or main. The entire batch preflight must pass before the first deletion. Retiring a branch ref is not integration into main; the archive graph preserves work for recovery.",
   "operational_audit": {
     "audit_date_utc": "2026-10-19",
@@ -1187,7 +1187,7 @@
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
       "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration.",
       "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main.",
-      "Current PR #200 exact head d9cebeea374563d4eefa6ebad158add99499d792 is preserved as second parent of archive-only commit f6b9edef7bb62ce9ea24de9d011e8405752be265. The anchor tree matches its first-parent tree. On 2026-10-19, the exact-ref archive ruleset became active and the live branch API reported protected=true. At the latest check, four required CI workflows were successful and the GameCube first-render build remained in progress; independent approval is still missing. No ref retirement has occurred."
+      "Live preflight refresh (2026-10-19): active exact-ref archive ruleset verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 reached success. Fresh Compare API checks show all 16 live non-keeper branch tips are ancestors of archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16. Auxiliary duplicate Trusted source-import path guard runs 39281915575, 39282368148, and 39284586859 have not reached terminal status in the API; two equivalent runs on the same PR head are successful. These duplicate checks are documented separately; they do not substitute for the required independent PR review. No branch refs have been deleted."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1206,7 +1206,7 @@
       "archive_tree_matches_first_parent": true,
       "archive_protection_active": true,
       "current_head_required_checks": {
-        "status": "in_progress",
+        "status": "success",
         "head_sha": "d9cebeea374563d4eefa6ebad158add99499d792",
         "runs": [
           {
@@ -1234,8 +1234,8 @@
             "name": "GameCube first-render prototype build",
             "run_id": 39280255540,
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280255540",
-            "status": "in_progress",
-            "conclusion": null
+            "status": "completed",
+            "conclusion": "success"
           },
           {
             "name": "Step 102 source-import provenance guard",
@@ -1246,7 +1246,42 @@
           }
         ]
       },
-      "safe_next_step": "Wait for the GameCube first-render build to reach terminal-success and obtain independent approval of exact PR head d9cebeea374563d4eefa6ebad158add99499d792. Archive protection is active and live API reports protected=true; no branch-ref deletion is authorized until normal protected integration and workflow preflight."
+      "safe_next_step": "All five tracked required workflow runs have terminal-success on exact current PR head d9cebeea374563d4eefa6ebad158add99499d792, and the archive ruleset is active/protection is verified. The remaining protected-merge gate is independent reviewer approval for the current last push. Do not self-approve or bypass protections. Once an independent approval is recorded, let GitHub's squash auto-merge and the guarded post-merge workflow operate normally, then verify the final two-branch inventory.",
+      "auxiliary_check_runs": {
+        "trusted_source_import_path_guard": [
+          {
+            "run_id": 39280250318,
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39280250318"
+          },
+          {
+            "run_id": 39281072155,
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39281072155"
+          },
+          {
+            "run_id": 39281915575,
+            "status": "in_progress",
+            "conclusion": null,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39281915575"
+          },
+          {
+            "run_id": 39282368148,
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39282368148"
+          },
+          {
+            "run_id": 39284586859,
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39284586859"
+          }
+        ],
+        "note": "These duplicate pull_request_target runs all use the same PR head; at least two completed successfully. The latest duplicate runs remain non-terminal in the Actions API and are recorded separately from the five tracked required workflow runs."
+      }
     },
     "pr_200_head_recoverability": {
       "name": "governance/no-branch-cap-task-completion-20261017",
@@ -1262,7 +1297,7 @@
     },
     "latest_live_inventory_preflight": {
       "checked_at_utc_date": "2026-10-19",
-      "source": "GitHub git-ref API, direct GitHub Compare API, and verified archive parent graph",
+      "source": "Live Git refs inventory and direct GitHub Compare API against archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16",
       "live_branch_count": 18,
       "keeper_count": 2,
       "non_keeper_count": 16,
@@ -1270,7 +1305,7 @@
       "main_tip_reachable_from_archive": true,
       "archive_tip_self_reachable": true,
       "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
-      "archive_tip_sha": "5cbab5e66db04eac3a266d568db2c7ae2ac7c01d",
+      "archive_tip_sha": "3148752ddfc33770d270d8fc4bfce09bdd963d16",
       "sole_open_pr": {
         "number": 200,
         "head": "governance/no-branch-cap-task-completion-20261017",
@@ -1278,14 +1313,14 @@
         "state": "open",
         "mergeable_state": "blocked"
       },
-      "sha_reachability": "All 16 current non-keeper tips are now ancestors of the archive: 15 candidates remained reachable from the prior verified archive graph, and current PR #200 head d9cebeea374563d4eefa6ebad158add99499d792 is the exact second parent of archive anchor commit f6b9edef7bb62ce9ea24de9d011e8405752be265. The cleanup workflow still rechecks all live refs and their exact SHAs at runtime.",
-      "protection_state": "main reports protected=true; archive/branch-heads-20261019 reports protected=true. Active exact-ref ruleset Protect recovery archive 1 (id 25417291) includes refs/heads/archive/branch-heads-20261019, has deletion and non_fast_forward rules enabled, and has no bypass actors. Cleanup workflow still must recheck candidate refs and exact SHAs at runtime.",
+      "sha_reachability": "Fresh direct Compare API against current archive tip confirmed all 16 live non-keeper branch exact tips are ancestors of the archive (each comparison returned ahead_by=0). This includes PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. This is recoverability only, not proof that all branch changes are integrated into main.",
+      "protection_state": "main reports protected=true; archive/branch-heads-20261019 reports protected=true. Active exact-ref ruleset Protect recovery archive 1 (id 25417291) targets refs/heads/archive/branch-heads-20261019, enables deletion restriction and blocks force pushes, and has no bypass actors. Runtime cleanup must recheck all candidate refs and exact SHAs.",
       "deletions_performed": false,
-      "next_action": "Wait for current-head checks to finish, obtain independent approval, proceed through normal protected integration, then verify guarded cleanup and final two-ref inventory.",
+      "next_action": "Obtain independent approval and last-push approval for current PR #200 head through normal GitHub review; then allow protected auto-squash integration and guarded cleanup workflow, and verify exactly main plus archive remain.",
       "refs": [
         {
           "branch": "archive/branch-heads-20261019",
-          "sha": "5cbab5e66db04eac3a266d568db2c7ae2ac7c01d",
+          "sha": "3148752ddfc33770d270d8fc4bfce09bdd963d16",
           "keeper": true,
           "reachable_from_archive": true
         },
@@ -1403,7 +1438,7 @@
       "archive_tree_sha": "20d4b9b0561ade0b5ed2e7e69feb813fae5854f3",
       "archive_link_is_history_only": true,
       "archive_tree_matches_first_parent": true,
-      "verification": "Direct Compare API previously verified current PR head d9cebeea374563d4eefa6ebad158add99499d792 is reachable as the second parent of archive-only commit f6b9edef7bb62ce9ea24de9d011e8405752be265; anchor tree matches its first-parent tree. Latest live branch API confirms archive protected=true under active exact-ref deletion/non-fast-forward ruleset. No branch-ref deletion has occurred."
+      "verification": "Direct Compare API preflight on 2026-10-19 confirmed exact current PR head d9cebeea374563d4eefa6ebad158add99499d792 and all 15 other non-keeper live branch tips have ahead_by=0 versus archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16, so all 16 live non-keeper tips are reachable from archive. The active exact-ref archive ruleset has protected=true. No branch refs have been deleted."
     }
   }
 }
