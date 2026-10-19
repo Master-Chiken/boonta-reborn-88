@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           case "$MAX_PRS" in
             1) ;;
-            *) echo "::error::max_prs must be 1, 3, 5, or 10"; exit 1 ;;
+            *) echo "::error::max_prs is fixed at 1 draft PR per run"; exit 1 ;;
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
