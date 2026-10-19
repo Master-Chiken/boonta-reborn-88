@@ -70,6 +70,13 @@ jobs:
               raise SystemExit("Branch cleanup must preserve main and target exactly two live refs.")
           if "fixed_refs" in retirement or "Validate all five exact refs" in retirement:
               raise SystemExit("Branch cleanup must not remain restricted to the previous five-ref allowlist.")
+
+          if "archive_protected" not in retirement:
+              raise SystemExit("Branch cleanup must verify that the recovery archive is actively protected before any deletion.")
+          if "Recovery archive must be protected against deletion and non-fast-forward updates; refusing all ref deletion." not in retirement:
+              raise SystemExit("Branch cleanup must fail closed when archive protection is missing.")
+          if "Recovery archive protection disappeared during cleanup; stopping." not in retirement:
+              raise SystemExit("Branch cleanup must recheck archive protection before every deletion.")
           import re
           if re.search(r"(?m)^  workflow_dispatch:\s*$", retirement):
               raise SystemExit("Destructive branch retirement must only trigger from the reviewed protected-main push.")
