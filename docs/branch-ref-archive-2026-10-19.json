@@ -1052,7 +1052,7 @@
     "import/step102-source-only"
   ],
   "current_live_ref_count_before_followup": 18,
-  "followup_cleanup_status": "Archive protection verified active; all five tracked required current-head workflows reached terminal success on PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. A fresh compare-API preflight confirmed all 16 non-keeper live branch tips are reachable from archive. No branch refs have been deleted. PR #200 remains blocked by required independent review and last-push approval.",
+  "followup_cleanup_status": "Archive protection is active and verified; all five tracked current-head workflow runs succeeded on PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. Fresh compare-API checks against archive tip 40918ffc20d51488be5006ef232a325c070274dc confirmed all 16 live non-keeper exact tips are reachable. No branch refs have been deleted. PR #200 remains blocked only by independent approval and last-push approval.",
   "followup_cleanup_policy": "Keep main and archive/branch-heads-20261019. A post-merge workflow may retire any other live branch only after preflighting its exact current SHA, unprotected status, absence of an open PR head, and proof that the exact tip is reachable from the archive ref or main. The entire batch preflight must pass before the first deletion. Retiring a branch ref is not integration into main; the archive graph preserves work for recovery.",
   "operational_audit": {
     "audit_date_utc": "2026-10-19",
@@ -1061,7 +1061,7 @@
       "branch_count": 18,
       "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
       "archive_branch": "archive/branch-heads-20261019",
-      "archive_head_sha_before_this_manifest_update": "5cbab5e66db04eac3a266d568db2c7ae2ac7c01d",
+      "archive_head_sha_before_this_manifest_update": "40918ffc20d51488be5006ef232a325c070274dc",
       "sole_open_pull_request": {
         "number": 200,
         "head": "governance/no-branch-cap-task-completion-20261017",
@@ -1187,7 +1187,8 @@
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
       "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration.",
       "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main.",
-      "Live preflight refresh (2026-10-19): active exact-ref archive ruleset verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 reached success. Fresh Compare API checks show all 16 live non-keeper branch tips are ancestors of archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16. Auxiliary duplicate Trusted source-import path guard runs 39281915575, 39282368148, and 39284586859 have not reached terminal status in the API; two equivalent runs on the same PR head are successful. These duplicate checks are documented separately; they do not substitute for the required independent PR review. No branch refs have been deleted."
+      "Live preflight refresh (2026-10-19): active exact-ref archive ruleset verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 reached success. Fresh Compare API checks show all 16 live non-keeper branch tips are ancestors of archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16. Auxiliary duplicate Trusted source-import path guard runs 39281915575, 39282368148, and 39284586859 have not reached terminal status in the API; two equivalent runs on the same PR head are successful. These duplicate checks are documented separately; they do not substitute for the required independent PR review. No branch refs have been deleted.",
+      "Latest live preflight refresh (2026-10-19): the active exact-ref archive ruleset is verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 are terminal-success. Fresh Compare API checks against archive tip 40918ffc20d51488be5006ef232a325c070274dc confirm all 16 live non-keeper tips are ancestors of the archive. Four equivalent auxiliary Trusted source-import path guard runs succeeded on the same head; one later duplicate run remains queued. Independent review is still required, and no branch refs have been deleted."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1246,7 +1247,7 @@
           }
         ]
       },
-      "safe_next_step": "All five tracked required workflow runs have terminal-success on exact current PR head d9cebeea374563d4eefa6ebad158add99499d792, and the archive ruleset is active/protection is verified. The remaining protected-merge gate is independent reviewer approval for the current last push. Do not self-approve or bypass protections. Once an independent approval is recorded, let GitHub's squash auto-merge and the guarded post-merge workflow operate normally, then verify the final two-branch inventory.",
+      "safe_next_step": "All five tracked required workflow runs have terminal-success on exact current PR head d9cebeea374563d4eefa6ebad158add99499d792. Archive protection is active and verified, and all 16 candidate tips are reachable from the archive. The remaining protected merge gate is an independent approval for the exact current last push. Do not self-approve or bypass protections; after approval, let GitHub's squash auto-merge and guarded post-merge cleanup run normally.",
       "auxiliary_check_runs": {
         "trusted_source_import_path_guard": [
           {
@@ -1263,14 +1264,14 @@
           },
           {
             "run_id": 39281915575,
-            "status": "in_progress",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "success",
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39281915575"
           },
           {
             "run_id": 39282368148,
-            "status": "queued",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "success",
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39282368148"
           },
           {
@@ -1280,7 +1281,7 @@
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39284586859"
           }
         ],
-        "note": "These duplicate pull_request_target runs all use the same PR head; at least two completed successfully. The latest duplicate runs remain non-terminal in the Actions API and are recorded separately from the five tracked required workflow runs."
+        "note": "Four equivalent Trusted source-import path guard runs have succeeded on the same exact PR head. One later duplicate run remains queued; no source commit changed, and this duplicate is recorded separately from the five tracked required workflow runs."
       }
     },
     "pr_200_head_recoverability": {
@@ -1297,7 +1298,7 @@
     },
     "latest_live_inventory_preflight": {
       "checked_at_utc_date": "2026-10-19",
-      "source": "Live Git refs inventory and direct GitHub Compare API against archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16",
+      "source": "Live Git ref inventory and direct Compare API against current archive branch tip 40918ffc20d51488be5006ef232a325c070274dc",
       "live_branch_count": 18,
       "keeper_count": 2,
       "non_keeper_count": 16,
@@ -1305,7 +1306,7 @@
       "main_tip_reachable_from_archive": true,
       "archive_tip_self_reachable": true,
       "main_sha": "f7f565cb76776457439573929f7b95af89c0496f",
-      "archive_tip_sha": "3148752ddfc33770d270d8fc4bfce09bdd963d16",
+      "archive_tip_sha": "40918ffc20d51488be5006ef232a325c070274dc",
       "sole_open_pr": {
         "number": 200,
         "head": "governance/no-branch-cap-task-completion-20261017",
@@ -1313,14 +1314,14 @@
         "state": "open",
         "mergeable_state": "blocked"
       },
-      "sha_reachability": "Fresh direct Compare API against current archive tip confirmed all 16 live non-keeper branch exact tips are ancestors of the archive (each comparison returned ahead_by=0). This includes PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. This is recoverability only, not proof that all branch changes are integrated into main.",
-      "protection_state": "main reports protected=true; archive/branch-heads-20261019 reports protected=true. Active exact-ref ruleset Protect recovery archive 1 (id 25417291) targets refs/heads/archive/branch-heads-20261019, enables deletion restriction and blocks force pushes, and has no bypass actors. Runtime cleanup must recheck all candidate refs and exact SHAs.",
+      "sha_reachability": "Fresh direct Compare API checks against archive tip 40918ffc20d51488be5006ef232a325c070274dc confirmed all 16 live non-keeper exact branch tips are ancestors of the archive; each comparison returned ahead_by=0. This includes current PR #200 head d9cebeea374563d4eefa6ebad158add99499d792. Recoverability is not proof that all branch changes are integrated into main.",
+      "protection_state": "main reports protected=true; archive/branch-heads-20261019 reports protected=true. Active exact-ref ruleset Protect recovery archive 1 (id 25417291) targets refs/heads/archive/branch-heads-20261019, enables deletion restriction and blocks force pushes, with no bypass actors. Workflow must recheck all candidate refs and exact SHAs immediately before deletion.",
       "deletions_performed": false,
-      "next_action": "Obtain independent approval and last-push approval for current PR #200 head through normal GitHub review; then allow protected auto-squash integration and guarded cleanup workflow, and verify exactly main plus archive remain.",
+      "next_action": "Obtain independent approval and last-push approval for current PR #200 head through normal GitHub review. Then allow normal protected auto-squash integration and guarded cleanup; verify exactly main and archive remain.",
       "refs": [
         {
           "branch": "archive/branch-heads-20261019",
-          "sha": "3148752ddfc33770d270d8fc4bfce09bdd963d16",
+          "sha": "40918ffc20d51488be5006ef232a325c070274dc",
           "keeper": true,
           "reachable_from_archive": true
         },
@@ -1438,7 +1439,7 @@
       "archive_tree_sha": "20d4b9b0561ade0b5ed2e7e69feb813fae5854f3",
       "archive_link_is_history_only": true,
       "archive_tree_matches_first_parent": true,
-      "verification": "Direct Compare API preflight on 2026-10-19 confirmed exact current PR head d9cebeea374563d4eefa6ebad158add99499d792 and all 15 other non-keeper live branch tips have ahead_by=0 versus archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16, so all 16 live non-keeper tips are reachable from archive. The active exact-ref archive ruleset has protected=true. No branch refs have been deleted."
+      "verification": "Fresh direct Compare API preflight on 2026-10-19 confirmed that all 16 non-keeper live branch tips, including exact PR #200 head d9cebeea374563d4eefa6ebad158add99499d792, have ahead_by=0 versus archive tip 40918ffc20d51488be5006ef232a325c070274dc. Active exact-ref archive ruleset is verified and GitHub reports archive protected=true. No branch refs have been deleted."
     }
   }
 }
