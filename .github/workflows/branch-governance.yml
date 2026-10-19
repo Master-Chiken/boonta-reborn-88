@@ -43,7 +43,8 @@ jobs:
           default_branch = info["default_branch"]
           now = datetime.datetime.now(datetime.timezone.utc)
           pr_heads = {p["head"]["ref"] for p in prs}
-          active, inactive = [], []
+          permanent_names = {"main", "dev"}
+          permanent, active_work, preservation, inactive = [], [], [], []
           unknown_dates = 0
 
           # Resolve each unique tip SHA once, concurrently. The previous loop
@@ -93,12 +94,35 @@ jobs:
               # active pending review rather than wrongly treating it as stale.
               unknown = not date
               item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
-                      "unknown_date": unknown}
-              (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
+                      "unknown_date": unknown, "protected": bool(b.get("protected", False))}
+              if name.startswith(("archive/", "recovery/")):
+                  preservation.append(item)
+              elif name in permanent_names:
+                  permanent.append(item)
+              elif name in pr_heads or recent or unknown:
+                  active_work.append(item)
+              else:
+                  inactive.append(item)
+
+          by_name = {b["name"]: b for b in branches}
+          main_ref = by_name.get("main")
+          dev_ref = by_name.get("dev")
+          main_protection_missing = not main_ref or not main_ref.get("protected", False)
+          dev_protection_missing = not dev_ref or not dev_ref.get("protected", False)
+
+          def branch_health(name, ref):
+              if not ref:
+                  return "MISSING"
+              return "present/protected" if ref.get("protected", False) else "present/**UNPROTECTED**"
+
           lines = ["# Branch governance audit", "",
-              f"- **Total branches:** {len(branches)}",
-              f"- **Hard cap:** 105 branches; status: {'EXCEEDED' if len(branches) > 105 else ('AT LIMIT' if len(branches) == 105 else 'within limit')}",
-              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target 30",
+              f"- **Total refs:** {len(branches)}",
+              f"- **Permanent branch model:** `main` (stable/release) + `dev` (integration)",
+              f"- **`main`:** {branch_health('main', main_ref)}",
+              f"- **`dev`:** {branch_health('dev', dev_ref)}",
+              f"- **Active task branches** (30-day/open-PR heuristic; unknown dates count active): {len(active_work)}",
+              f"- **Preservation refs** (`archive/*` and `recovery/*`): {len(preservation)}; excluded from active task count",
+              f"- **Inactive task refs for review:** {len(inactive)}",
               f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
               f"- Unique tip dates requested: {len(tip_shas)}",
@@ -106,15 +130,25 @@ jobs:
               f"- Serial-equivalent request wait: {date_lookup_request_seconds:.2f}s",
               f"- Estimated lookup-stage speedup: {date_lookup_request_seconds / max(date_lookup_wall_seconds, 0.001):.1f}x",
               f"- **Default branch:** `{default_branch}`",
-              "- **Automatic deletion:** disabled by project policy.", "", "## Active branches", ""]
-          lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active, key=lambda x: x["name"])]
-          lines += ["", "## Inactive candidates for human/AI review", "",
-              "These branches are only candidates for review. They have not been deleted or modified."]
+              "- **Automatic deletion and merging:** disabled by project policy.",
+              "- **Hard cap:** 105 refs (warning at 100), retained only as an emergency GitHub-limit safeguard.",
+              "", "## Permanent integration branches", ""]
+          lines += [f"- `{x['name']}` — {branch_health(x['name'], by_name.get(x['name']))}" for x in sorted(permanent, key=lambda x: x["name"])]
+          lines += ["", "## Active task branches", ""]
+          lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active_work, key=lambda x: x["name"])]
+          lines += ["", "## Preservation refs (not product branches)", "",
+              "Keep these outside normal intake. Never merge an archive/recovery ref wholesale into `main` or `dev`."]
+          lines += [f"- `{x['name']}` — last commit: {x['date']}" for x in sorted(preservation, key=lambda x: x["name"])]
+          lines += ["", "## Inactive task refs for human/AI review", "",
+              "These branches are candidates for individual review only; they have not been deleted or modified."]
           lines += [f"- `{x['name']}` — last commit: {x['date']}" for x in sorted(inactive, key=lambda x: x["name"])]
           report = "\n".join(lines) + "\n"
           Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(report)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"total={len(branches)}\nactive={len(active)}\nover_target={'true' if len(active) > 30 else 'false'}\n")
+              out.write(f"total={len(branches)}\nactive_work={len(active_work)}\n")
+              out.write(f"main_protection_missing={'true' if main_protection_missing else 'false'}\n")
+              out.write(f"dev_protection_missing={'true' if dev_protection_missing else 'false'}\n")
+              out.write(f"permanent_protection_missing={'true' if main_protection_missing or dev_protection_missing else 'false'}\n")
               out.write(f"cap_warning={'true' if len(branches) >= 100 else 'false'}\n")
               out.write(f"hard_cap_exceeded={'true' if len(branches) > 105 else 'false'}\n")
           PY
@@ -151,35 +185,33 @@ jobs:
         run: |
           echo "::error::Repository has ${{ steps.inventory.outputs.total }} branches; hard cap is 105. No branches were deleted."
           exit 1
-      - name: Open a consolidation tracking issue when active branches exceed 30
-        if: steps.inventory.outputs.over_target == 'true'
+      - name: Open a tracking issue when a permanent branch is missing or unprotected
+        if: steps.inventory.outputs.permanent_protection_missing == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TOTAL: ${{ steps.inventory.outputs.total }}
-          ACTIVE: ${{ steps.inventory.outputs.active }}
+          MAIN_MISSING: ${{ steps.inventory.outputs.main_protection_missing }}
+          DEV_MISSING: ${{ steps.inventory.outputs.dev_protection_missing }}
         shell: bash
         run: |
           set -euo pipefail
-          title="Branch governance: consolidation needed"
+          title="Branch governance: protect main and dev"
           existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\"" --json number,title --jq '.[0].number // empty')"
+          {
+            echo "## Two-permanent-branch protection prerequisite"
+            echo
+            echo "- main missing/unprotected: **$MAIN_MISSING**"
+            echo "- dev missing/unprotected: **$DEV_MISSING**"
+            echo
+            echo "### Required owner action"
+            echo "Open Settings → Rules → Rulesets and ensure both `refs/heads/main` and `refs/heads/dev` have active rulesets."
+            echo "Block deletion and force-pushes; require pull requests before merging. Keep main as the repository default branch."
+            echo "The audit only reports missing protection. It does not mutate rulesets or delete refs."
+            echo
+            echo "Generated by the Branch governance audit workflow."
+          } > /tmp/issue.md
           if [ -z "$existing" ]; then
-            {
-              echo "## Active branch target exceeded"
-              echo
-              echo "- Total branches: **$TOTAL** (historical/inactive branches may remain)"
-              echo "- Active branches (30-day/open-PR heuristic): **$ACTIVE**"
-              echo "- Target: **30 active branches or fewer**"
-              echo
-              echo "### Required actions"
-              echo "1. Review branch purposes, open PRs, recent commits, and whether work is already in `main`."
-              echo "2. Consolidate useful work through reviewed pull requests and CI."
-              echo "3. Do not delete branches automatically. Preserve all branch contents and commits; historical branches may remain."
-              echo "4. Update this issue with the remaining active count and blockers."
-              echo
-              echo "Generated by the Branch governance audit workflow."
-            } > /tmp/issue.md
             gh issue create --repo "$GH_REPO" --title "$title" --body-file /tmp/issue.md
           else
-            echo "Tracking issue #$existing is already open; no duplicate created."
+            gh issue comment "$existing" --repo "$GH_REPO" --body-file /tmp/issue.md
           fi
