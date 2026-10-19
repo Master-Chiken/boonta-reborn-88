@@ -1190,7 +1190,8 @@
       "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f was preserved as an additional parent of archive commit cde61cea6d0689ec337728f267d101a810b7a7be. Its tree SHA 4261a19e8e564d129d38f2b9f3fb976f683caf20 matches its first parent, so this operation did not adopt the PR branch tree. This is recoverability metadata, not integration into main.",
       "Live preflight refresh (2026-10-19): active exact-ref archive ruleset verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 reached success. Fresh Compare API checks show all 16 live non-keeper branch tips are ancestors of archive tip 3148752ddfc33770d270d8fc4bfce09bdd963d16. Auxiliary duplicate Trusted source-import path guard runs 39281915575, 39282368148, and 39284586859 have not reached terminal status in the API; two equivalent runs on the same PR head are successful. These duplicate checks are documented separately; they do not substitute for the required independent PR review. No branch refs have been deleted.",
       "Latest live preflight refresh (2026-10-19): the active exact-ref archive ruleset is verified; all five tracked required workflows on exact PR head d9cebeea374563d4eefa6ebad158add99499d792 are terminal-success. Fresh Compare API checks against archive tip 40918ffc20d51488be5006ef232a325c070274dc confirm all 16 live non-keeper tips are ancestors of the archive. Four equivalent auxiliary Trusted source-import path guard runs succeeded on the same head; one later duplicate run remains in progress. Independent review is still required, and no branch refs have been deleted.",
-      "2026-10-19 17:07 UTC: strengthened PR #200 head 713c586f51a5ae240a7ddf7233b441d9e70295d6 adds a fail-closed check requiring main protection both before the initial cleanup preflight and before each deletion; branch-automation self-test now asserts both guards. New exact PR head preserved as second parent of archive-only commit 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b using the existing archive tree unchanged. Fresh direct Compare API checks against archive checkpoint 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b show 16/16 candidate tips reachable; no refs deleted. Four core workflows plus trusted-path guard succeeded; GameCube workflow remains in progress only for its optional software-renderer diagnostic."
+      "2026-10-19 17:07 UTC: strengthened PR #200 head 713c586f51a5ae240a7ddf7233b441d9e70295d6 adds a fail-closed check requiring main protection both before the initial cleanup preflight and before each deletion; branch-automation self-test now asserts both guards. New exact PR head preserved as second parent of archive-only commit 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b using the existing archive tree unchanged. Fresh direct Compare API checks against archive checkpoint 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b show 16/16 candidate tips reachable; no refs deleted. Four core workflows plus trusted-path guard succeeded; GameCube workflow remains in progress only for its optional software-renderer diagnostic.",
+      "2026-10-19 17:08 UTC: all five tracked required workflows on exact current PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 reached terminal-success; the optional software-renderer diagnostic also completed successfully. The main-protection guard and its regression assertions passed. Independent approval is still required; no branch refs were deleted."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1209,7 +1210,7 @@
       "archive_tree_matches_first_parent": true,
       "archive_protection_active": true,
       "current_head_required_checks": {
-        "status": "in_progress",
+        "status": "success",
         "head_sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6",
         "runs": [
           {
@@ -1236,8 +1237,8 @@
           {
             "name": "GameCube first-render prototype build",
             "run_id": 39290953833,
-            "status": "in_progress",
-            "conclusion": null,
+            "status": "completed",
+            "conclusion": "success",
             "url": "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39290953833"
           },
           {
@@ -1249,7 +1250,7 @@
           }
         ]
       },
-      "safe_next_step": "The main-protection guard has been added to cleanup workflow and asserted by the branch-automation self-test. On exact PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6, branch automation self-test, Wii64 tooling, AI safety, provenance, and the trusted path guard have succeeded; the GameCube workflow's native DOL build, host tests, and headless smoke have succeeded but its non-blocking Dolphin software-renderer diagnostic is still running. Wait for that workflow to reach terminal status, then request independent approval for 713c586f51a5ae240a7ddf7233b441d9e70295d6. Do not self-approve or bypass protection. Auto-squash and guarded cleanup remain the intended path.",
+      "safe_next_step": "All five tracked required workflow runs have terminal-success on exact PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6; the GameCube DOL build, host tests, headless Dolphin smoke, and optional software-renderer frame diagnostic all completed successfully. The archive is protected and all 16 candidate branch tips remain recoverable. Independent approval for this exact last push is the only remaining protected merge gate. Do not self-approve or bypass protections; let the configured squash auto-merge and guarded cleanup run only after approval.",
       "auxiliary_check_runs": {
         "trusted_source_import_path_guard": [
           {
@@ -1314,8 +1315,8 @@
             "head_sha": "713c586f51a5ae240a7ddf7233b441d9e70295d6"
           }
         ],
-        "note": "Current head 713c586f51a5ae240a7ddf7233b441d9e70295d6 has an auxiliary Trusted source-import path guard success (run 39290946749). The older duplicate runs listed earlier in this manifest were executed against previous PR head d9cebeea374563d4eefa6ebad158add99499d792 and are historical only; they do not count toward current-head validation.",
-        "snapshot_at_utc": "2026-10-19T17:07:00Z",
+        "note": "The current exact PR head 713c586f51a5ae240a7ddf7233b441d9e70295d6 has a successful Trusted source-import path guard run 39290946749. The eight older successful/repeated runs and the historical in-progress run were on earlier exact head d9cebeea374563d4eefa6ebad158add99499d792; they remain history only and are not used as current-head validation.",
+        "snapshot_at_utc": "2026-10-19T17:08:25Z",
         "successful_duplicate_runs": 8,
         "duplicate_runs_remaining": [
           {
@@ -1361,7 +1362,7 @@
       "sha_reachability": "Direct Compare API checks against archive checkpoint 6979eb1704bb6174493ee1cb0d24cf50dfcdb37b confirmed that all 16 current candidate tips are ancestors of the archive (ahead_by=0), including the new exact PR #200 head 713c586f51a5ae240a7ddf7233b441d9e70295d6. This proves recoverability, not that gameplay commits are integrated into main.",
       "protection_state": "main reports protected=true; archive/branch-heads-20261019 reports protected=true. Active exact-ref ruleset Protect recovery archive 1 (id 25417291) targets refs/heads/archive/branch-heads-20261019, restricts deletion and non-fast-forward updates, and has no bypass actors. The cleanup workflow now also explicitly requires main protection before cleanup and rechecks it before every deletion.",
       "deletions_performed": false,
-      "next_action": "Wait for all exact-head required workflow runs to reach terminal success, then request independent review of this exact PR head. After normal protected auto-squash integration, let the guarded cleanup run and verify exactly main plus archive remain.",
+      "next_action": "All five exact-head checks are terminal-success; obtain independent approval of current PR #200 head 713c586f51a5ae240a7ddf7233b441d9e70295d6, then let protected squash auto-merge and guarded cleanup run. Verify exactly main + archive remain.",
       "refs": [
         {
           "branch": "archive/branch-heads-20261019",
