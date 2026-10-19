@@ -110,7 +110,32 @@ jobs:
           echo "protected=$protected" >> "$GITHUB_OUTPUT"
           echo "Recovery ancestry, exact SHA, open-PR, branch-protection, actor and confirmation checks passed."
 
-      - name: Delete only the verified branch reference
+      - name: Recheck immediately before deletion
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch_json="$(gh api "repos/$GH_REPO/branches/$BRANCH_NAME")"
+          actual_sha="$(jq -r '.commit.sha // empty' <<< "$branch_json")"
+          protected="$(jq -r '.protected // false' <<< "$branch_json")"
+          [[ "$actual_sha" == "$EXPECTED_SHA" && "$protected" == "false" ]] || {
+            echo "::error::Branch changed or became protected after the first check. No deletion performed."
+            exit 1
+          }
+
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs-before-delete.json
+          if jq -e --arg branch "$BRANCH_NAME" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' /tmp/open-prs-before-delete.json >/dev/null; then
+            echo "::error::An open PR started using this branch. No deletion performed."
+            exit 1
+          fi
+
+          git fetch --no-tags origin \
+            "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
+          git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019" || {
+            echo "::error::Recovery ancestry check no longer passes. No deletion performed."
+            exit 1
+          }
+
+      - name: Delete only the re-verified branch reference
         shell: bash
         run: |
           set -euo pipefail
