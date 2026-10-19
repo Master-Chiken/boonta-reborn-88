@@ -75,16 +75,20 @@ jobs:
             expected="${shas[$i]}"
             actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
             protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "::error::An open PR uses $name; refusing the batch."
+              exit 1
+            fi
+            if [[ -z "$actual" ]]; then
+              echo "ALREADY ABSENT: $name; archive manifest preserves its recorded SHA $expected."
+              continue
+            fi
             if [[ "$actual" != "$expected" ]]; then
-              echo "::error::SHA mismatch or missing ref for $name; refusing the batch."
+              echo "::error::SHA mismatch for $name; refusing the batch."
               exit 1
             fi
             if [[ "$protected" != "false" ]]; then
               echo "::error::$name is protected or protection status is unknown."
-              exit 1
-            fi
-            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
-              echo "::error::An open PR uses $name; refusing the batch."
               exit 1
             fi
             if ! git -C "$workdir" merge-base --is-ancestor "$expected" "$main_ref"; then
@@ -95,6 +99,7 @@ jobs:
           done
 
           retired=0
+          already_absent=0
           for i in "${!names[@]}"; do
             name="${names[$i]}"
             expected="${shas[$i]}"
@@ -102,8 +107,16 @@ jobs:
             actual="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0].commit.sha // empty' "$RUNNER_TEMP/branches.json")"
             protected="$(jq -r --arg name "$name" '[.[] | select(.name == $name)][0] | if . == null then empty else (.protected | tostring) end' "$RUNNER_TEMP/branches.json")"
             git -C "$workdir" fetch --quiet origin main
+            if jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null; then
+              echo "::error::An open PR now uses $name; stopping before its deletion."
+              exit 1
+            fi
+            if [[ -z "$actual" ]]; then
+              echo "ALREADY ABSENT: $name; no deletion needed."
+              already_absent=$((already_absent + 1))
+              continue
+            fi
             if [[ "$actual" != "$expected" || "$protected" != "false" ]] ||
-               jq -e --arg name "$name" 'any(.[]; .head.ref == $name)' "$RUNNER_TEMP/open-prs.json" >/dev/null ||
                ! git -C "$workdir" merge-base --is-ancestor "$expected" "$main_ref"; then
               echo "::error::Final pre-delete safety check failed for $name. Stopping."
               exit 1
@@ -122,5 +135,6 @@ jobs:
 
           final_count="$(branch_count)"
           echo "Final live branch count: $final_count (retired $retired exact refs)." >> "$GITHUB_STEP_SUMMARY"
-          [[ "$retired" == "5" ]] || { echo "::error::Expected five exact refs to be retired; completed $retired."; exit 1; }
-          echo "SUCCESS: retired only the four audited merged branches and the temporary runner ref."
+          processed=$((retired + already_absent))
+          [[ "$processed" == "5" ]] || { echo "::error::Expected five fixed refs to be processed; processed $processed."; exit 1; }
+          echo "SUCCESS: retired $retired refs; $already_absent were already absent. Scope remained limited to the four audited branches and the temporary runner ref."
