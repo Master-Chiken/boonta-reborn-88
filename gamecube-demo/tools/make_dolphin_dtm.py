@@ -14,12 +14,12 @@ from pathlib import Path
 HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
-MAX_FRAMES = 12000
+MAX_FRAMES = 16000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
-FINISH_RESET_PRESS_FRAME = 10000
+FINISH_RESET_PRESS_FRAME = 14000
 FINISH_RESET_HOLD_FRAMES = 6
 PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
 PAUSE_HOLD_FRAMES = 6  # Hold Start for ~100 ms so the emulated input poll cannot miss a short tap.
@@ -60,7 +60,7 @@ def _controller_state(frame: int, steering: str = "right",
     elif scenario == "finish-reset-check":
         # Reset once a neutral-steering race has crossed all three lap gates.
         # Frame 0 establishes a deterministic start; Y is pressed alone at frame
-        # 5000, safely after the current prototype's scripted three-lap finish.
+        # 14000, with a margin beyond the 12000-frame finish capture.
         if frame < FINISH_RESET_PRESS_FRAME:
             buttons = A
             if frame == 0:
@@ -143,6 +143,12 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("steering_source must be one of: dpad, stick")
     if scenario in ("full-race", "finish-reset-check") and steering != "none":
         raise ValueError(f"{scenario} scenario requires --steering none")
+    if (scenario == "finish-reset-check" and
+            frame_count < FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES + 1):
+        raise ValueError(
+            "finish-reset-check needs enough frames to finish the race, press Y, "
+            "and record at least one neutral frame after reset"
+        )
 
     header = bytearray(HEADER_SIZE)
     header[0:4] = b"DTM\x1a"
