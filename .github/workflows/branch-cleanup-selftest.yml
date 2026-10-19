@@ -78,6 +78,7 @@ jobs:
               "test/dolphin-pause-state-acceptance-7679597746618456134",
               "chore/archived-branch-ref-cleanup",
               "fix/cleanup-runner-context-20261019",
+              "fix/cleanup-final-allowlist-20261019",
           }
 
           checks = {
@@ -85,12 +86,12 @@ jobs:
               "owner and main-branch gate": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in workflow,
               "runner context only used in step-level env": "runner.temp" not in job_env and workflow.count("CANDIDATES_FILE: " + runner_temp_expression + "/archived-branch-cleanup.tsv") == 2,
               "dry-run is the default": "default: dry-run" in workflow and 'CONFIRMATION" == "DRY RUN"' in workflow,
-              "deletion needs explicit phrase": "RETIRE 19 ARCHIVED BRANCH REFS" in workflow,
+              "deletion needs explicit phrase": "RETIRE 20 ARCHIVED BRANCH REFS" in workflow,
               "pinned checkpoint and ancestry check": "cf4978a17916c00eed8e25550bd9231354096993" in workflow and "git merge-base --is-ancestor" in workflow,
               "exact SHA verification for archived refs": '[[ "$actual_sha" == "$expected" ]]' in workflow,
               "reject protected refs": ".protected // false" in workflow,
               "reject open PR head or base": '.head.ref == $branch or .base.ref == $branch' in workflow,
-              "exact allowlist contains 19 unique reviewed refs": len(names) == 19 and len(set(names)) == 19 and set(names) == expected,
+              "exact allowlist contains 20 unique reviewed refs": len(names) == 20 and len(set(names)) == 20 and set(names) == expected,
               "never retire permanent refs": '[[ "$branch" != "main" && "$branch" != "dev" && "$branch" != "archive/branch-heads-20261019" ]]' in workflow,
               "only one Git ref delete operation": workflow.count('gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch"') == 1,
               "no force updates or merges": all(x not in workflow for x in ("git push --force", "gh pr merge", "git update-ref", "force=true")),
