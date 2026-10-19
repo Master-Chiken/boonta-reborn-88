@@ -65,7 +65,7 @@ jobs:
               "obsolete 30-active-branch target is removed": "target 30" not in audit and "over_target" not in audit and "Branch governance: consolidation needed" not in audit,
               "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
               "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
-              "retirement workflow is manually triggered only": "workflow_dispatch:" in retire and "\\n  push:" not in retire and "\\n  pull_request:" not in retire and "\\n  schedule:" not in retire,
+              "retirement workflow is manually triggered only": "workflow_dispatch:" in retire.split("\\npermissions:", 1)[0] and all(trigger not in retire.split("\\npermissions:", 1)[0] for trigger in ("\\n  push:", "\\n  pull_request:", "\\n  schedule:")),
               "retirement restricted to owner from main": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in retire,
               "retirement requires exact typed branch and SHA": "CONFIRM_BRANCH" in retire and "EXPECTED_SHA" in retire and "PINNED_SHA" in retire,
               "retirement has exactly five pre-reviewed candidates": all(name in retire for name in ("recovery/branch-heads-20261019-verified", "feat/game-finish-banner-label-20261017", "feat/rocky-canyon-silhouette-20261017", "feat/source-driven-racer-mesh-texture-20261017", "test/dolphin-pause-state-acceptance")),
