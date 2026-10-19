@@ -275,7 +275,7 @@ class DolphinDtmTests(unittest.TestCase):
             build_dtm(10, steering="right", scenario="full-race")
 
     def test_finish_reset_profile_reaches_race_window_then_presses_y_alone(self) -> None:
-        frames = 6000
+        frames = 12000
         blob = build_dtm(frames, steering="none", scenario="finish-reset-check")
         self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
 
@@ -300,7 +300,7 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertEqual(state[2:4], bytes((0, 0)))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
-        for frame in (FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES, 5500, frames - 1):
+        for frame in (FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES, 11000, frames - 1):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
                 self.assertEqual(state[0], 0)  # Leave the restarted race stationary.
@@ -309,7 +309,7 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_finish_reset_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
-            build_dtm(6000, steering="left", scenario="finish-reset-check")
+            build_dtm(12000, steering="left", scenario="finish-reset-check")
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
