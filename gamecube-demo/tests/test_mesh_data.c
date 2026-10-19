@@ -97,6 +97,22 @@ static void test_nonfinite_positions(void)
     assert(boonta_mesh_validate(&mesh) == BOONTA_MESH_NONFINITE_POSITION);
 }
 
+static void test_nonfinite_uvs(void)
+{
+    BoontaMeshView mesh = boonta_test_triangle();
+    BoontaMeshVertex vertices[3];
+
+    memcpy(vertices, boonta_test_triangle_vertices, sizeof(vertices));
+    vertices[1].u = NAN;
+    mesh.vertices = vertices;
+    assert(boonta_mesh_validate(&mesh) == BOONTA_MESH_NONFINITE_POSITION);
+
+    memcpy(vertices, boonta_test_triangle_vertices, sizeof(vertices));
+    vertices[2].v = INFINITY;
+    mesh.vertices = vertices;
+    assert(boonta_mesh_validate(&mesh) == BOONTA_MESH_NONFINITE_POSITION);
+}
+
 static void test_invalid_indices_and_degenerate_triangles(void)
 {
     BoontaMeshView mesh = boonta_test_triangle();
@@ -153,6 +169,7 @@ int main(void)
     test_invalid_arguments_and_counts();
     test_truncated_views_and_size_overflow();
     test_nonfinite_positions();
+    test_nonfinite_uvs();
     test_invalid_indices_and_degenerate_triangles();
     test_maximum_accepted_counts();
     puts("mesh-data tests passed");

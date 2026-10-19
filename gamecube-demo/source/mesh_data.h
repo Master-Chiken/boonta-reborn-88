@@ -7,7 +7,7 @@
 
 /*
  * This contract is deliberately limited to the attributes currently submitted
- * by the GameCube GX renderer: XYZ positions and RGBA8 vertex colour.
+ * by the GameCube GX renderer: XYZ positions, RGBA8 vertex colour and UVs.
  *
  * The existing renderer can expand at most 4096 vertices. For an indexed
  * triangle list, the expanded index count must be a multiple of three and
@@ -26,6 +26,8 @@ typedef struct {
     uint8_t g;
     uint8_t b;
     uint8_t a;
+    float u;
+    float v;
 } BoontaMeshVertex;
 
 /*
@@ -75,8 +77,8 @@ static inline int boonta_mesh_size_bytes(size_t count,
 /*
  * Validate a non-empty indexed triangle list before reading its contents for
  * conversion/submission. Degenerate (zero-area) triangles are rejected.
- * This is a data contract only; it performs no allocation and does not submit
- * the fixture to GX.
+ * Validation performs no allocation or copy. Callers may submit data to GX
+ * only after the complete view has passed this validator.
  */
 static inline BoontaMeshValidation
 boonta_mesh_validate(const BoontaMeshView *mesh)
@@ -114,7 +116,9 @@ boonta_mesh_validate(const BoontaMeshView *mesh)
     for (i = 0U; i < mesh->vertex_count; ++i) {
         if (!isfinite(mesh->vertices[i].x) ||
             !isfinite(mesh->vertices[i].y) ||
-            !isfinite(mesh->vertices[i].z)) {
+            !isfinite(mesh->vertices[i].z) ||
+            !isfinite(mesh->vertices[i].u) ||
+            !isfinite(mesh->vertices[i].v)) {
             return BOONTA_MESH_NONFINITE_POSITION;
         }
     }
