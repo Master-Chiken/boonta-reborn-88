@@ -23,10 +23,20 @@ on:
         type: boolean
         required: false
         default: false
+      check_finish_label:
+        description: "Also verify the visible FINISH label on the full-race frame"
+        type: boolean
+        required: false
+        default: false
   workflow_call:
     inputs:
       full_race_diagnostic:
         description: "Run the slower, opt-in three-lap Dolphin finish check"
+        type: boolean
+        required: false
+        default: false
+      check_finish_label:
+        description: "Also verify the visible FINISH label on the full-race frame"
         type: boolean
         required: false
         default: false
@@ -322,8 +332,8 @@ jobs:
         env:
           # Run the longer finish check automatically only for this spline-integration PR.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && github.head_ref == 'feature/runtime-track-spline') }}
-          # CHECK_FINISH_LABEL branch-specific smoke test retired with its integrated candidate branches.
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || inputs.check_finish_label || (github.event_name == 'pull_request' && github.head_ref == 'feature/runtime-track-spline') }}
+          CHECK_FINISH_LABEL: ${{ inputs.check_finish_label || false }}
         shell: bash
         run: |
           set -euo pipefail
