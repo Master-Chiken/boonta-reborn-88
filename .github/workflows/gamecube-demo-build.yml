@@ -456,12 +456,12 @@ jobs:
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
                   echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
                 fi
-                echo "Starting a second 12000-frame DTM and resetting well after the finish window."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 12000 --game-id ID-boo --steering none --scenario finish-reset-check
+                echo "Starting a longer DTM; finish the race first, then reset at frame 14000 and capture immediately."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
                 mkdir -p "$FINISH_RESET_USER/Config"
                 chmod 700 "$FINISH_RESET_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESET_USER/Config/Dolphin.ini"
-                capture_frame "$FINISH_RESET_DTM" "$FINISH_RESET_LOG" "$FINISH_RESET_CAPTURE" "$FINISH_RESET_USER" 480
+                capture_frame "$FINISH_RESET_DTM" "$FINISH_RESET_LOG" "$FINISH_RESET_CAPTURE" "$FINISH_RESET_USER" 600
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESET_CAPTURE" --expect-reset
                 echo "Post-finish Y reset restored a clean visible HUD state."
               else
