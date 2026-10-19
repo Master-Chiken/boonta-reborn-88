@@ -1179,23 +1179,19 @@
         "exact_tip_reachable_from_archive": true
       }
     ],
-    "held_until_pr_200_normal_merge": {
-      "name": "governance/no-branch-cap-task-completion-20261017",
-      "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
-      "pull_request": 200,
-      "reason": "This exact tip advanced after the archive snapshot. Keep it while PR #200 is open; a normal merge commit must make it reachable from main before retiring its ref."
-    },
     "required_sequence": [
-      "Obtain an independent approval of PR #200; never bypass main protection.",
-      "Merge PR #200 with a normal merge commit so the exact reviewed head is reachable from main.",
-      "Allow .github/workflows/retire-proven-merged-refs.yml to run from protected main after the workflow changes are merged.",
-      "Require the cleanup workflow's final inventory check to verify exactly main and the archive remain."
+      "Keep PR #200 blocked until an independent approving review of the exact current head is recorded; never bypass main protection.",
+      "Before integration, ensure the current exact PR head SHA is reachable from archive/branch-heads-20261019 through an explicitly documented archive parent link. If the PR head changes, anchor the new exact SHA first; the archive parent-link commit must retain the archive tree and must not adopt the PR's tree.",
+      "Integrate PR #200 only after approval and current-head checks are terminal-success, using the repository's configured merge path. Current GitHub auto-merge is configured as squash; this is recoverable for branch-ref cleanup only because the original exact PR head is preserved in the archive graph.",
+      "Allow .github/workflows/retire-proven-merged-refs.yml to run from protected main after its reviewed change reaches main.",
+      "Require the cleanup workflow's final inventory check to verify exactly main and archive/branch-heads-20261019 remain."
     ],
     "safety_notes": [
       "This audit is documentation only and does not delete any branch refs.",
       "Ref retirement is not proof that each branch's changes were integrated into main; the archived tips remain recoverable from the archive commit graph.",
       "The cleanup workflow blob inspected on the PR branch was d30af780c938e7a6ed91c588c588c95e398b4f00.",
-      "Repository auto-merge is enabled, and PR #200 is configured for squash auto-merge (checked 2026-10-19). The PR remains open and blocked pending an independent approval; because the cleanup plan requires the exact PR head to be reachable from main, do not allow squash auto-merge to proceed without correcting the merge method or adopting a separately reviewed recovery-safe procedure."
+      "PR #200 exact head 370b273c17cdf6848dc53a86c127519bad89f is being explicitly preserved as a second parent of an archive-only commit. The parent-link commit must use the same tree as its first parent; this preserves commit history for recovery but does not adopt the PR branch's file tree and is not integration into main.",
+      "GitHub currently has PR #200 auto-merge enabled with method squash and the PR is blocked pending independent approval. The original exact head must remain reachable from the archive before this configured squash merge can be allowed to trigger archive-backed cleanup. If the PR head changes, re-anchor the new exact head before integration."
     ],
     "merge_configuration_check": {
       "checked_at_utc_date": "2026-10-19",
@@ -1207,7 +1203,15 @@
       "auto_merge_method": "squash",
       "mergeable_state": "blocked",
       "independent_approval_recorded_for_exact_head": false,
-      "safe_next_step": "Prevent squash auto-merge; wait for independent approval and merge with a normal merge commit, or approve a separately reviewed process that preserves exact-head recoverability."
+      "archive_parent_preservation_pending": true,
+      "safe_next_step": "Preserve the exact current head as an archive-only additional parent without adopting its tree, then wait for the independent approval. The configured squash merge remains blocked until approval; cleanup must still pass all live exact-SHA, protection, open-PR and reachability checks."
+    },
+    "pr_200_head_recoverability": {
+      "name": "governance/no-branch-cap-task-completion-20261017",
+      "sha": "370b273c17cdf6848dc53a86c127519bad89f29f",
+      "pull_request": 200,
+      "status": "archive_parent_link_to_be_applied_in_following_commit",
+      "reason": "Preserve the exact current PR head as recoverable commit history without copying its file tree into the archive tree. This preserves the head SHA for cleanup reachability if repository auto-merge uses squash; it does not mean the PR's code is integrated into main."
     }
   }
 }
