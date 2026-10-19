@@ -163,11 +163,12 @@ jobs:
           if "manual-dispatch only" not in docs:
               raise SystemExit("Governance docs must explain the manual-only intake behavior")
 
-          if "manual-dispatch only" not in intake_docs or "at most one draft PR per deliberate run" not in intake_docs:
+          intake_docs_lower = intake_docs.lower()
+          if "manual-dispatch only" not in intake_docs_lower or "at most one draft pr per deliberate run" not in intake_docs_lower:
               raise SystemExit("Branch intake documentation must describe the manual one-PR-at-a-time queue.")
-          if "Runs twice daily" in intake_docs or "up to 5 draft pull requests per scheduled run" in intake_docs or "1, 3, 5, or 10" in intake_docs:
+          if "runs twice daily" in intake_docs_lower or "up to 5 draft pull requests per scheduled run" in intake_docs_lower or "1, 3, 5, or 10" in intake_docs_lower:
               raise SystemExit("Branch intake documentation must not describe the retired scheduled multi-PR queue.")
-          if "Keep this permission disabled" not in intake_docs:
+          if "keep this permission disabled" not in intake_docs_lower:
               raise SystemExit("Branch intake documentation must not recommend enabling GitHub Actions PR creation for this task queue.")
 
           # Group routine action upgrades rather than flooding the solo review queue.
