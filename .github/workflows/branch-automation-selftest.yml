@@ -64,6 +64,18 @@ jobs:
           if "informational alert at 105 total repository branches" not in agents or "200 total branches rather than 105" not in agents:
               raise SystemExit("Branch alert regression: AGENTS.md must preserve both coordination thresholds")
 
+          # Prevent the project from drifting back into parallel-PR overload.
+          queue_markers = (
+              "Single-maintainer delivery queue",
+              "one active runtime implementation or integration candidate at a time",
+              "Issue #201 is the single source of truth for the active integration queue",
+          )
+          for marker in queue_markers:
+              if marker not in docs:
+                  raise SystemExit(f"Delivery-queue policy regression: branch docs missing {marker!r}")
+              if marker not in agents:
+                  raise SystemExit(f"Delivery-queue policy regression: AGENTS.md missing {marker!r}")
+
           forbidden = ("issues: write", "gh issue create", "hard_cap_exceeded", "cap_warning", "Fail audit if hard cap exceeded")
           for marker in forbidden:
               if marker in workflow:
