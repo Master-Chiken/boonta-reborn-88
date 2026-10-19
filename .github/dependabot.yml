@@ -7,6 +7,19 @@ updates:
       day: monday
       time: "07:00"
       timezone: "UTC"
-    open-pull-requests-limit: 5
+    # One open version-update PR at a time; group majors to avoid separate review requests.
+    open-pull-requests-limit: 1
+    groups:
+      github-actions-major:
+        patterns:
+          - "actions/*"
+        update-types:
+          - "major"
+      github-actions-minor-patch:
+        patterns:
+          - "actions/*"
+        update-types:
+          - "minor"
+          - "patch"
     commit-message:
       prefix: "ci(deps)"
