@@ -35,6 +35,37 @@ jobs:
             .github/workflows/branch-intake-queue.yml \
             .github/workflows/branch-automation-selftest.yml
 
+      - name: Verify two-branch workflow routing and safety exclusions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          queue = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          build = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
+          governance = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          agents = Path("AGENTS.md").read_text(encoding="utf-8")
+
+          checks = {
+              "intake explicitly targets dev": 'target_branch = "dev"' in queue,
+              "candidate comparisons use the integration target": 'compare/{target_branch}...{sha}' in queue,
+              "created PRs target the integration branch": '"--base", target_branch' in queue,
+              "main is never treated as an intake candidate": 'item.get("name") not in {"main", target_branch}' in queue,
+              "archive and recovery refs are excluded": 'startswith(("archive/", "recovery/"))' in queue,
+              "prototype build runs on main and dev pushes": 'branches: [main, dev]' in build,
+              "governance documents main/dev roles": "`main` — stable/release branch" in governance and "`dev` — integration branch" in governance,
+              "agent rules direct ordinary work to dev": "targeting `dev`" in agents and "separate reviewed PR" in agents,
+              "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
+              "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
+          }
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          failures = [label for label, ok in checks.items() if not ok]
+          if failures:
+              raise SystemExit("Two-branch workflow safety validation failed: " + "; ".join(failures))
+          PY
+
       - name: Compile embedded Python scripts without executing network operations
         shell: bash
         run: |
