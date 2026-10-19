@@ -1,0 +1,30 @@
+name: AI free-tier safety checks
+
+on:
+  push:
+    branches:
+      - main
+      - ai/gemini-agent-hardening
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-free-safety-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-guardrails:
+    name: Verify Gemini free-only guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+
+      - name: Run static AI safety checks (no API calls)
+        run: python3 tools/check_ai_free_safety.py

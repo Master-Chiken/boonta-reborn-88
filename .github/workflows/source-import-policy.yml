@@ -1,0 +1,36 @@
+name: Step 102 source-import provenance guard
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-import-policy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-import-policy:
+    name: Reject known held assets and data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Scan tracked and proposed paths
+        run: python3 tools/check_source_import_policy.py
+
+      - name: Run policy unit tests
+        working-directory: tools
+        run: python3 -m unittest -v test_check_source_import_policy.py
+
+      - name: Run proposed-path guard unit tests
+        working-directory: tools
+        run: python3 -m unittest -v test_check_proposed_source_paths.py
