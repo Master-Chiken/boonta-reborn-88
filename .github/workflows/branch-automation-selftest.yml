@@ -6,6 +6,7 @@ on:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
       - ".github/workflows/branch-automation-selftest.yml"
+      - ".github/workflows/retire-verified-branch.yml"
   workflow_dispatch:
 
 permissions:
