@@ -8,12 +8,12 @@
 - A task is handed off when its PR is reviewable and relevant CI checks are complete, or when a concrete external blocker is explicitly recorded. Human review and merge remain separate; Jules does not merge automatically.
 - Unlimited branches do **not** mean unlimited simultaneous tasks, duplicate branches, or speculative work. Each branch must correspond to a concrete task, a clearly scoped workstream, or preserved historical work. Prefer one focused branch per task and continue an existing branch for the same task.
 - Branch count does not control concurrency. Jules has one active implementation task at a time. Biddy-Pinky may run up to two genuinely independent workstreams under the project’s existing policy: at most one runtime implementation plus one non-overlapping research/documentation/tooling/review task.
-- Do not push directly to main. Use focused pull requests, review the full diff, and validate exact-head CI before merge. No automatic merge, force-push, history rewriting, or automatic deletion of useful branches.
+- Do not push directly to main. Use focused pull requests, review the full diff, and validate exact-head CI before merge. No automatic merge, force-push, or history rewriting. Do not automatically delete useful or uncertain branches; the one controlled exception is the archive-backed ref-retirement workflow described below, which removes only a ref whose exact current tip is recoverable from the protected archive or main.
 - Keep the budget at €0. Never enable billing or use paid tools. Preserve clean-room and source-provenance restrictions.
 
 ## Single-maintainer delivery queue (work-in-progress control)
 
-- `Issue #201` is the single source of truth for the active integration queue. It must contain one `NOW` item, one `NEXT` item, and a short parked list; other open issues/PRs do not automatically become active tasks.
+- `Issue #156` is the single source of truth for the active integration queue. It must contain one `NOW` item, one `NEXT` item, and a short parked list; other open issues/PRs do not automatically become active tasks.
 - **One active runtime implementation or integration candidate at a time.** This limits in-flight decision/review work, not the total number of branches. Preserve unique queued work and do not delete branches or close useful PRs merely to reduce counts.
 - Do not start a new runtime PR while the current runtime PR is being implemented, waiting on required checks/review, or ready for integration. Reuse its branch/PR for follow-up fixes.
 - Independent documentation/research can be recorded as `NEXT` or `PARKED`, but should not generate another PR requiring maintainer attention until the current `NOW` item has a reviewable handoff. The exception is an urgent security, provenance, or blocking build/CI issue.
@@ -49,11 +49,19 @@ It does not impose a numeric cap, fail because of branch count, create an issue 
 4. Test and integrate useful work through reviewed PRs.
 5. Preserve historical or uncertain branches until their contents and dependencies are understood. Do not clean up branches merely to reach a number.
 
+## Controlled archive-backed branch-ref retirement
+
+The only allowed automatic branch-ref retirement path is [`.github/workflows/retire-proven-merged-refs.yml`](../.github/workflows/retire-proven-merged-refs.yml), integrated through the normally reviewed PR flow. This removes branch names only; it does not merge their trees into `main` or discard commit objects.
+
+**Before the workflow can run**, a repository admin must create an active ruleset targeting exactly `refs/heads/archive/branch-heads-20261019` and block both deletion and non-fast-forward updates. The workflow intentionally fails closed unless GitHub reports the archive branch as protected; it checks this before deleting anything and again before each individual deletion. The API's boolean protection flag is the runtime guard, while the exact ruleset settings must be confirmed in repository settings.
+
+The workflow preserves `main` and the archive, inventories all refs and open PR heads, refuses protected/unknown candidate refs, refuses any open-PR head, verifies each exact tip is an ancestor of the archive or `main`, rechecks the live SHA/protection/open-PR status and reachability before each deletion, verifies each deletion, and checks that the final inventory is exactly those two keepers. Any failed check stops the job; never work around a failed guard by forcing a deletion. If archive protection is absent, the target of two is not yet safe to execute.
+
 ## Automated intake of branch work
 
 The companion [Branch intake queue](BRANCH_INTAKE.md) is **manual-dispatch only**. It can surface at most **one draft PR per deliberate run**. It has no cron schedule and no push-triggered PR creation. This prevents the workflow from continuously adding review requests while the owner is already processing the active queue. It still screens stale bases, overlapping paths, oversized changes, patch-equivalent work, and Step 102/source-import provenance holds.
 
-The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it. Do not dispatch it again until the current candidate has been accepted, parked, or rejected in Issue #201.
+The intake queue does not merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must pass exact-head checks and the mainline acceptance gate before a maintainer merges it. Do not dispatch it again until the current candidate has been accepted, parked, or rejected in Issue #156.
 
 ## Dependabot update-volume control
 
