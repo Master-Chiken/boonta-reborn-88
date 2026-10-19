@@ -21,7 +21,7 @@ int main(void)
     assert(boonta_pause_state_next(1, 1, 1) == 0);
     assert(boonta_pause_state_next(0, 1, 1) == 0);
 
-    /* Test full sequence: initial (0) -> pause (1) -> continue paused (1) -> unpause (0) -> pause (1) -> reset (0). */
+    /* Test full sequence: initial (0) -> pause (1) -> continue paused (1) -> unpause (0) -> release/running (0) -> pause (1) -> reset (0). */
     {
         int state = 0;
         state = boonta_pause_state_next(state, 1, 0); /* Start pressed -> paused */
@@ -29,6 +29,8 @@ int main(void)
         state = boonta_pause_state_next(state, 0, 0); /* No buttons -> remains paused */
         assert(state == 1);
         state = boonta_pause_state_next(state, 1, 0); /* Start pressed again -> unpaused */
+        assert(state == 0);
+        state = boonta_pause_state_next(state, 0, 0); /* No buttons -> remains running */
         assert(state == 0);
         state = boonta_pause_state_next(state, 1, 0); /* Start pressed -> paused */
         assert(state == 1);
