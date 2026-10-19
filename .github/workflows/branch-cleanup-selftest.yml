@@ -84,7 +84,7 @@ jobs:
               "deletion needs explicit phrase": "RETIRE 18 ARCHIVED BRANCH REFS" in workflow,
               "pinned checkpoint and ancestry check": "cf4978a17916c00eed8e25550bd9231354096993" in workflow and "git merge-base --is-ancestor" in workflow,
               "exact SHA verification for archived refs": '[[ "$actual_sha" == "$expected" ]]' in workflow,
-              "reject protected refs": '".protected // false"' in workflow,
+              "reject protected refs": ".protected // false" in workflow,
               "reject open PR head or base": '.head.ref == $branch or .base.ref == $branch' in workflow,
               "exact allowlist contains 18 unique reviewed refs": len(names) == 18 and len(set(names)) == 18 and set(names) == expected,
               "never retire permanent refs": '[[ "$branch" != "main" && "$branch" != "dev" && "$branch" != "archive/branch-heads-20261019" ]]' in workflow,
