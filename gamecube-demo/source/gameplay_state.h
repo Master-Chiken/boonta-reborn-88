@@ -4,6 +4,8 @@
 #include <math.h>
 
 #define BOONTA_RIVAL_COUNT 3U
+#define BOONTA_MAX_FRAME_SCALE 3.0f
+#define BOONTA_MAX_LATERAL_VELOCITY 0.085f
 
 /*
  * Resettable live race state. Kept separate from renderer/camera bookkeeping so
@@ -56,7 +58,7 @@ static inline float boonta_sanitize_frame_scale(float frame_scale)
 {
     if (!isfinite(frame_scale) || frame_scale < 0.0f) return 0.0f;
     /* Match the 50 ms frame-delta cap: 0.05 s * 60 Hz = 3 simulation frames. */
-    if (frame_scale > 3.0f) return 3.0f;
+    if (frame_scale > BOONTA_MAX_FRAME_SCALE) return BOONTA_MAX_FRAME_SCALE;
     return frame_scale;
 }
 
@@ -209,8 +211,8 @@ static inline float boonta_lateral_velocity_after_steering_scaled(float lateral_
     lateral_velocity += steering * (0.0018f + speed * 0.0030f) * frame_scale;
     lateral_velocity *= powf(0.92f, frame_scale);
     if (!isfinite(lateral_velocity)) return 0.0f;
-    if (lateral_velocity < -0.085f) return -0.085f;
-    if (lateral_velocity > 0.085f) return 0.085f;
+    if (lateral_velocity < -BOONTA_MAX_LATERAL_VELOCITY) return -BOONTA_MAX_LATERAL_VELOCITY;
+    if (lateral_velocity > BOONTA_MAX_LATERAL_VELOCITY) return BOONTA_MAX_LATERAL_VELOCITY;
     return lateral_velocity;
 }
 
@@ -242,7 +244,7 @@ static inline float boonta_lateral_velocity_after_steering_slide_scaled(
                         1.35f * frame_scale;
     lateral_velocity *= powf(0.965f, frame_scale);
     if (!isfinite(lateral_velocity)) return 0.0f;
-    return boonta_clamp_finite_float(lateral_velocity, -0.085f, 0.085f);
+    return boonta_clamp_finite_float(lateral_velocity, -BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_LATERAL_VELOCITY);
 }
 
 static inline float boonta_lateral_velocity_after_steering_slide(
@@ -485,11 +487,11 @@ static inline float boonta_lateral_velocity_after_rival_contact(float lateral_ve
 {
     if (!isfinite(lateral_velocity)) lateral_velocity = 0.0f;
     if (!isfinite(player_lateral) || !isfinite(rival_lateral)) {
-        return boonta_clamp_finite_float(lateral_velocity, -0.085f, 0.085f);
+        return boonta_clamp_finite_float(lateral_velocity, -BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_LATERAL_VELOCITY);
     }
     return boonta_clamp_finite_float(
         lateral_velocity + boonta_rival_contact_nudge(player_lateral, rival_lateral),
-        -0.085f, 0.085f);
+        -BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_LATERAL_VELOCITY);
 }
 
 
@@ -603,7 +605,24 @@ static inline float boonta_lateral_after_rail_contact(float player_lateral,
 static inline float boonta_lateral_velocity_after_rail_contact(float lateral_velocity)
 {
     if (!isfinite(lateral_velocity)) return 0.0f;
-    return boonta_clamp_finite_float(lateral_velocity * -0.35f, -0.085f, 0.085f);
+    return boonta_clamp_finite_float(lateral_velocity * -0.35f, -BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_LATERAL_VELOCITY);
+}
+
+/*
+ * Keep one maximum simulated lateral step beyond the widest rendered rail.
+ * This is a temporary safety bound only: width-aware collision resolves the
+ * position back to the local rail line in the same frame. A fixed +/-4 bound
+ * makes the rails unreachable when road half-width exceeds four units.
+ */
+#define BOONTA_PLAYER_LATERAL_GUARD \
+    (BOONTA_MAX_ROAD_HALF_WIDTH + BOONTA_RAIL_OUTER_OFFSET + \
+     BOONTA_MAX_LATERAL_VELOCITY * BOONTA_MAX_FRAME_SCALE)
+
+static inline float boonta_clamp_player_lateral(float lateral_position)
+{
+    if (!isfinite(lateral_position)) return 0.0f;
+    return boonta_clamp_finite_float(
+        lateral_position, -BOONTA_PLAYER_LATERAL_GUARD, BOONTA_PLAYER_LATERAL_GUARD);
 }
 
 #endif

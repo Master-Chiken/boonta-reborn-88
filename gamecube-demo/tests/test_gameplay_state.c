@@ -625,6 +625,30 @@ static void offroad_and_rail_tests(void) {
  assert(nearf(boonta_lateral_velocity_after_rail_contact(-0.08f), 0.028f));
 }
 
+static void wide_track_rail_reachability_tests(void) {
+ const float road_width = BOONTA_MAX_ROAD_HALF_WIDTH;
+ float lateral = boonta_lateral_position_after_frame(
+     5.0f, BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_FRAME_SCALE);
+ float normalized_lateral;
+
+ /* A single capped frame can pass the old +/-4 clamp but remains bounded. */
+ assert(nearf(BOONTA_PLAYER_LATERAL_GUARD, 5.335f));
+ lateral = boonta_clamp_player_lateral(lateral);
+ assert(lateral > 4.0f);
+ assert(lateral > road_width + BOONTA_RAIL_OUTER_OFFSET);
+
+ /* On the widest road, the runtime path can now reach and resolve its rail. */
+ normalized_lateral = boonta_normalize_road_lateral(lateral, road_width);
+ assert(boonta_is_past_rail(normalized_lateral, road_width));
+ lateral = boonta_restore_road_lateral(
+     boonta_lateral_after_rail_contact(normalized_lateral, road_width), road_width);
+ assert(nearf(lateral, road_width + BOONTA_RAIL_OUTER_OFFSET));
+
+ /* Corrupt and extreme positions remain finite and bounded. */
+ assert(nearf(boonta_clamp_player_lateral(NAN), 0.0f));
+ assert(nearf(boonta_clamp_player_lateral(100.0f), BOONTA_PLAYER_LATERAL_GUARD));
+}
+
 static void distance_progression_tests(void) {
  assert(nearf(boonta_distance_after_frame(0.0f, 0.5f, 0), 0.07f));
  assert(nearf(boonta_distance_after_frame(0.0f, 0.5f, 1), 0.11f));
@@ -842,6 +866,7 @@ int main(void) {
  rival_event_tests();
   road_width_alignment_tests();
   offroad_and_rail_tests();
+  wide_track_rail_reachability_tests();
  puts("gameplay-state tests passed");
  return 0;
 }

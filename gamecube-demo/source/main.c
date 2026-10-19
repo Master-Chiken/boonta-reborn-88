@@ -1230,10 +1230,10 @@ int main(int argc, char **argv)
         /* Steering has inertia: quick direction changes need a moment to settle. */
         g_lateral_velocity = boonta_lateral_velocity_after_steering_slide_scaled(
             g_lateral_velocity, steering, g_speed, g_slide_active, frame_scale);
-        g_player_lateral = clampf_local(
+        /* Preserve enough overshoot to detect contact with the widest rail. */
+        g_player_lateral = boonta_clamp_player_lateral(
             boonta_lateral_position_after_frame(
-                g_player_lateral, g_lateral_velocity, frame_scale),
-            -4.0f, 4.0f);
+                g_player_lateral, g_lateral_velocity, frame_scale));
 
         /*
          * Off-road and rail limits use the effective rendered half-width, so
