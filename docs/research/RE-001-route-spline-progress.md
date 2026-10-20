@@ -1040,3 +1040,26 @@ The clean-room engine should keep these concerns separate in any future neutral 
 
 This is a design target, not permission to start a broad rewrite now. First satisfy the active one-course playable acceptance gate; then prototype these components against **synthetic graph fixtures** with deterministic tests for split/rejoin choice, open endpoints, closed-loop wrap, backward travel, and lap crossing. Keep N64/PC coordinates and extracted mesh/course payloads local and excluded from public tests.
 
+
+### N64 container reconnaissance — preliminary local scan
+
+**Reviewed:** 2026-10-20. **Scope:** private, read-only analysis of the locally supplied US Nintendo 64 image. The image, decompressed chunks, model/texture payloads, and course-coordinate records are not included in this repository.
+
+A scan identified 92 `CompWolf`-prefixed blocks. An independently written local checker used the published `Comp`-block format as a lead and verified that each decoded stream reached its declared output length and terminator. The first four bytes of the decoded blocks grouped as follows:
+
+| Decoded four-byte tag | Block count |
+|---|---:|
+| `Trak` | 19 |
+| `Pupp` | 27 |
+| `Part` | 44 |
+| `Scen` | 2 |
+
+Across these blocks, the checker produced 11,975,612 bytes of decoded data from 5,870,259 bytes consumed by the encoded block streams. These counts are format-validation results, not an asset export or proof that every record's semantics are known.
+
+The `Trak` blocks are heterogeneous. Some contain a leading `Data` section with repeated `LStr` records; each observed `LStr` record is 16 bytes in the sampled layouts and is followed by three values that decode as finite big-endian floats. Other `Trak` blocks have no `LStr` record in the scan. In one sampled block, the stored records separate into spatially discontinuous groups. Therefore, the label and coordinates are **not yet enough to assert that these records are a single ordered spline or centerline**, and the 19 `Trak` blocks must not be treated as 19 distinct race courses.
+
+This does add a concrete N64-specific format lead: the route/track investigation should first resolve the `Trak` header, the offset/index tables, the `Data`/ `LStr` record type, and the relationship to the `Anim` and `HEnd` markers. Only then can a relationship to the PC spline representation be tested. No PC/N64 byte-layout equivalence is assumed.
+
+The public `[swe1r-tools decompressor](https://github.com/OpenSWE1R/swe1r-tools/blob/master/decompress.c)` and its `[README](https://github.com/OpenSWE1R/swe1r-tools)` note that `Comp` chunks also occur in the N64 edition. That is a useful external format reference, not permission to copy its GPL-licensed implementation or any game data into this project. This scan records structure and counts only; it does not publish an extractor, ROM-derived course geometry, or game assets.
+
+**Next evidence needed:** reconcile the observed block/tag structure with the historical N64 audit notes where available, and establish whether `LStr` is a route/path record, another spatial marker type, or something else. Keep this result marked preliminary until the record links and their runtime use are supported by independent evidence.
