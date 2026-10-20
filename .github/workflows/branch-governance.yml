@@ -8,6 +8,10 @@ on:
       - ".github/workflows/branch-governance.yml"
   create:
     branches: ["**"]
+  workflow_run:
+    workflows: ["Retire archived branch refs"]
+    types: [completed]
+    branches: ["main"]
   schedule:
     - cron: "23 9 * * 1"
 
