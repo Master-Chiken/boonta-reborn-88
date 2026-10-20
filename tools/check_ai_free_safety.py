@@ -128,7 +128,7 @@ if "payment method" not in instructions.lower():
 daily_trigger = daily.split("permissions:", 1)[0]
 if "workflow_dispatch:" not in daily_trigger:
     errors.append("Project coordinator must be explicitly manually triggerable")
-if re.search(r"(?m)^\\s*(schedule|cron)\\s*:", daily_trigger) or re.search(r"(?m)^\\s*-\\s*cron\\s*:", daily_trigger):
+if re.search(r"(?m)^\s*(schedule|cron)\s*:", daily_trigger) or re.search(r"(?m)^\s*-\s*cron\s*:", daily_trigger):
     errors.append("Project coordinator must not run on a schedule")
 if "contents: write" in daily or "pull-requests: write" in daily:
     errors.append("Project coordinator must not have repository/code write permissions")
@@ -143,7 +143,7 @@ if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
     errors.append("Project coordinator must keep the explicitly selected free-tier model")
 if '--arg num "156"' not in daily or 'github_issue_number: "156"' not in daily or 'issue_number: 156,' not in daily:
     errors.append("Project coordinator must publish reports to the canonical issue #156")
-if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.search(r"(?m)^\\s*issue_number:\\s*23,?\\s*$", daily):
+if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.search(r"(?m)^\s*issue_number:\s*23,?\s*$", daily):
     errors.append("Project coordinator must not post current reports to stale/closed issue #23")
 if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
     errors.append("Project coordinator prompt must enforce read-only and €0 constraints")
