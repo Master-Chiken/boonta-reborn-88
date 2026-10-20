@@ -173,3 +173,15 @@ This file documents the **Windows PC executable's** model-load path, not an N64 
 **What this changes:** we now have source-level evidence for a PC model-block entry path where the offset table identifies a payload chunk and the payload itself may carry a `Comp` wrapper. The older N64 tool README says the `Comp` chunks are only found in N64, while this PC decompilation note's code checks for `Comp` too. This is a real discrepancy in the available documentation, not something to smooth over: the PC note may be describing a generic/observed path that can handle compressed chunks, rather than proving the checked PC build actually contains any. We must not state “Comp is exclusive to N64” as a universal format rule until sample/version evidence resolves this.
 
 **Refined active question:** compare the PC note's three-offset model-entry structure against the N64 decoder's input contract and identify exactly which offsets delimit the compressed bytes, uncompressed output, and neighboring entry. Then verify whether PC retail/demo samples ever actually contain the `Comp` magic. Dreamcast remains unverified at the payload level. No implementation change yet.
+
+
+### Confirmation from the newer PC decompilation source
+
+Pinned source: `tim-tim707/SW_RACER_RE/src/Swr/swrModel.c`, commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`:
+https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrModel.c
+
+The `swrModel_LoadFromId` implementation explicitly reads three big-endian offsets (`mask_offset`, `model_offset`, `next_model_offset`) from the model table. It computes mask length as `model_offset - mask_offset` and model chunk length as `next_model_offset - model_offset`. It reads 12 bytes at `model_offset`, checks `Comp`, takes the decompressed size from word 2, reads the remaining compressed payload from `model_offset + 12`, and calls `swrLoader_DecompressLZSS`. If the marker is absent, it loads the entire model chunk directly. The source explicitly marks this load path as “TODO broken...” and the decompressor itself remains `HANG("TODO")`, so this is reconstructed source/intent, not a validated implementation.
+
+This independently corroborates the older PC reverse-engineering notes' entry boundaries and makes the layering much clearer: the generic model-block table contains a per-model mask region and a per-model payload region; the payload may have a `Comp` wrapper. It still does **not** prove whether a particular PC retail/demo asset contains compressed models, and does not establish N64 or Dreamcast offset-table compatibility. The earlier tool README's “only found in N64” claim should be treated as an observation about known samples, not as proof the PC loader cannot recognize the marker.
+
+Next verification target: find version-tagged evidence for whether PC retail/demo model entries actually use `Comp`; meanwhile do not infer DC/N64 layout from the PC source.
