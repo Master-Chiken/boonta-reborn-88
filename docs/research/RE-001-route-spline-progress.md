@@ -1080,7 +1080,23 @@ Pinned public reference: [akopetsch/swe1r-assets, commit 922ef535f6598a1330ff93d
 - The N64 spline block is present at ROM file offset 0x012C7F30, length 428,212 bytes (end-exclusive offset 0x013307E4).
 - Its SHA-1 is a18f0c66301cf0e11feedafadc1b374fa3b40ed6, exactly matching the public metadata row for the big-endian N64 spline block (n64, 91 items, 428,212 bytes). This exact outer-block hash is the key identity check: the parser is not merely finding a plausible byte pattern.
 - The public block container layout is directly visible in Block.cs: big-endian item count, one big-endian offset per spline item, a declared end size, followed by item payloads. For 91 items, the container header is 372 bytes; the remaining 427,840 bytes are the item payloads.
-- All 91 records passed the structural size check record_size == 16 + 84 * point_count. Across them, 5,076 point records were parsed; coordinate/control-vector floats were finite; link counts and indices were in range; every point was reachable from point 0 by following outgoing links; and outgoing/incoming links were reciprocal under the field interpretation used by the public Blender parser. The reader remains a format reference, not proof that every field name reflects the retail runtime's semantics.
+- All 91 records passed the structural size check record_size == 16 + 84 * point_count. Across them, 5,076 candidate point records were parsed; coordinate/control-vector floats were finite. Under the public Blender parser's field interpretation, link counts/indices are in range, every point is reachable from point 0 and incoming/outgoing links are reciprocal. These are **parser-derived topology checks, not yet an independently confirmed semantic result**: see the cross-reader disagreement below.
+
+### Cross-reader disagreement: raw record layout is stronger evidence than field semantics
+
+
+
+The MIT reader and the GPL Blender parser agree on the outer N64 block hash, count/size, 84-byte segment record size, position vector at byte 16 and two control vectors at bytes 40 and 52. They **do not independently confirm the full field semantics**:
+
+
+
+- The Blender parser interprets the first eight 16-bit words (bytes 0–15) as outgoing/incoming link counts and link indices; it reads a 3-float rotation starting at byte 28; then labels the 10 halfwords at bytes 64–83 as progress/branch metadata.
+
+- The MIT `SplineSegmentData.cs` instead names those first eight halfwords mostly as unknown words, with `PreviousNodeId` at byte 8. It models a position/knot vector at byte 16, leaves bytes 28–35 without a decoded field, interprets the float at byte 36 separately, models the control vectors at bytes 40 and 52, and names the 32-bit word at byte 64 `Unk_40`. It then models the 16-byte `SplineSegmentHeader` after the 68-byte data record. See the pinned [MIT data model](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentData.cs), [header model](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentHeader.cs), and [Blender parser](https://github.com/louriccia/blender-swe1r/blob/b0d4019addb97d51523019ca1233411fae0508d6/splineblock.py).
+
+
+
+This mismatch may mean one tool's semantic guesses are incomplete or wrong; it must not be papered over by assuming names align. The strong conclusions are the exact **block identity and record sizes**, plus stable vector-shaped fields at the noted byte ranges. The 180-point/187-link topology for value ID 110 remains a **candidate interpretation according to the Blender parser**, not a field-by-field cross-validated fact. Before implementing route traversal from these fields, trace the N64 code that reads them or perform a controlled runtime observation. Preserve the raw words and unknown fields in any research representation.
 
 ### Record interpretation and the Boonta Classic candidate
 
@@ -1115,7 +1131,7 @@ decomp.anything remains useful for code-path analysis (which code reads and uses
 
 - The MIT swe1r-assets source and GPL-3.0 blender-swe1r parser were read as independent references; no third-party parser implementation was copied into Boonta.
 - The retail ROM and its derived geometry remain local. Public repository changes are documentation only.
-- Confidence: high for the block identity, entry count, length accounting, fixed 84-byte point-record shape and link-index consistency under the cited parser; medium-high for value ID 110 being the N64 variant in Boonta Classic's logical slot; unconfirmed for the precise runtime meaning of every progress/unknown field and for any GameCube/Wii serialization parity.
+- Confidence: high for block identity, entry count and 84-byte record accounting; medium-high for value ID 110 being in Boonta Classic's logical slot; medium for the position/control-vector byte ranges shared by both readers; **provisional** for the branching topology derived from the Blender parser; unconfirmed for exact link/progress/orientation semantics, runtime use, and GameCube/Wii serialization parity.
 
 ## New independent runtime-validation lead — N64 spline-marker debug option (2026-10-20)
 
