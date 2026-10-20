@@ -64,3 +64,10 @@ The older 27-ref inventory in issue #235 is stale. The earlier 6-ref count is al
 - Keep the stated project priority: 80% reverse engineering, 20% everything else; one active RE question at a time.
 - Never merge #233 wholesale. Never enable or run destructive branch-retirement automation without independent review, explicit owner approval, and a verified checkpoint.
 - No merge, branch deletion, force-push, or manual workflow dispatch was performed in this audit refresh.
+
+
+## Evidence update — 2026-10-20: scripted Dolphin artifact inspected
+
+- On current #214 head `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, workflow [39327379050](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39327379050) completed all four jobs successfully. Its software-renderer diagnostic artifact [12223576295](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39327379050/artifacts/12223576295) includes scripted left/right frames, reset/pause/resume captures, finish/reset detector outputs, and a full-race DTM/log set. The job log shows the built DOL was booted and the artifact uploaded.
+- This strengthens automated evidence, but does not satisfy human interactive acceptance: controller/keyboard feel, driving behavior, and full manual three-lap completion/stability remain unverified by a human. Issue #126 has been updated with this exact-head evidence and the explicit distinction.
+- The exact-head visible workflows for #242 remain successful (runs `39476180227` and `39476180096`); the separate `pull_request_target` guard run still needs confirmation via its Actions page.
