@@ -815,3 +815,27 @@ A direct read of the frozen Steam-PC decompilation's [src/_text23.c](https://git
 - Do not treat proposed boundary cases as executed tests. They are a future test design only.
 
 **Next action:** stop work on RE-001 for now and retain this dossier as the recorded result. No RE-002 work, no gameplay-code change, no new parallel task, and no PR merge as part of this closeout.
+
+
+## Platform-source search pass — N64 and Dreamcast boundary (2026-10-20)
+
+This pass searched public project/repository descriptions for an N64- or Dreamcast-specific decompilation/reimplementation of *Star Wars Episode I: Racer*, then checked the known OpenSWE1R project descriptions to avoid misclassifying PC work as console evidence.
+
+### Results that can be stated
+
+- The principal public reverse-engineering project surfaced, [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE), explicitly targets the Windows PC game and says its aim is selected-function documentation/reimplementation, not a complete decompilation. Its reported analysis percentage is not completed engine coverage. The Steam Ghidra snapshot is also explicitly from the Steam PC version.
+- [OpenSWE1R](https://github.com/OpenSWE1R/openswe1r) describes itself as a Windows-PC implementation using a subset of Windows API emulation and x86 emulation, and says Mac/Dreamcast/N64 support might be added later. It is not evidence of an existing N64 or Dreamcast route implementation.
+- [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) does contain a utility described as decompressing a model-block chunk found in the N64 version. That is a narrow format/tool lead, **not** an N64 engine decompilation, a spline parser, or proof of route behavior.
+- The public search pass did **not** surface a dedicated N64 or Dreamcast decompilation with route/spline source. This is a search result, not proof that no private, unindexed, forum-hosted, or differently named research exists.
+
+### Decision for RE-001
+
+Do not infer console route topology, progress fields, endianness, cursor stepping, or lap-crossing behavior from the PC source or a generic N64 model-block decompressor. Current evidence supports a PC graph/cursor model and a separate Boonta closed-loop test harness; **the GameCube/Wii/N64/Dreamcast mapping remains unverified**.
+
+The next highest-value action is to inspect available, lawfully obtained target-version metadata and file headers locally, if a clear-provenance sample is available, without uploading or committing the binary/assets. The goal would be to establish whether a route/spline structure can be identified on the target platform before attempting any parser or runtime change. If no suitable target-specific sample is available, keep the uncertainty explicit and finish the PC-derived route behavior matrix rather than inventing console facts.
+
+Sources checked during this pass:
+- [SW_RACER_RE README](https://github.com/tim-tim707/SW_RACER_RE)
+- [OpenSWE1R README](https://github.com/OpenSWE1R/openswe1r)
+- [OpenSWE1R tools README](https://github.com/OpenSWE1R/swe1r-tools)
+- [Frozen Steam PC decompilation README](https://github.com/DeonPoncini/swep1r_decomp)
