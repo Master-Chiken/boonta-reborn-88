@@ -119,3 +119,26 @@ References:
 - External CLI documentation: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.CommandLine/README.md
 - External spline round-trip tests: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original.Tests/Reserialization/SplineBlockItemsReserializationTest.cs
 - External license: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/LICENSE
+
+
+## Mesh/texture capability gap check — 2026-10-20
+
+This follow-up inspects the actual Boonta validators/exporters and their tests against the pinned external CLI/library docs. It remains documentation-only.
+
+| Capability | Boonta's current contract | External PC asset tooling | Gap / decision |
+|---|---|---|---|
+| Mesh geometry | Positions, RGBA8 vertex colours, optional UVs (defaulted to zero), indexed triangles; strict finite/range/count/index/degenerate checks; deterministic C header output | `swe1r-assets` advertises model-block parsing and model/texture export; the CLI includes a vertex-alpha modification command | No evidence that the external tool emits Boonta's `boonta-mesh-v1` JSON or the exact GX-ready `BoontaMeshVertex` layout. Keep formats separate; consider a converter only after an actual source asset and output mapping are legally and technically verified. |
+| Texture representation | RGB triples only; dimensions are powers of two, multiples of 4, 4–256; exporter quantizes to RGB565 and reorders 4×4 GX tiles | External tooling advertises sprite and model-texture PNG export and texture-block parsing | The current Boonta format does not represent alpha/transparency or palette/material metadata. PNG export may help inspection, but cannot by itself preserve PC texture semantics or prove correct GX encoding. |
+| Regression evidence | Python tests compare authored JSON to checked-in generated headers; texture tests cover RGB565 primaries, tile ordering and malformed inputs; C tests validate mesh views at runtime | External library has per-item binary reserialization tests using its own original-asset provider | Different contracts and fixtures. These test suites are complementary, not interchangeable; external bit-perfect PC round-trip does not validate Boonta's exporter or console assets. |
+| Runtime integration | Generated C headers are compiled into the native demo; no runtime filesystem dependency is added | External CLI is a .NET offline asset utility | No reason to add a runtime dependency. If needed, keep any future bridge as a separate offline conversion tool and preserve source/license/provenance metadata. |
+
+### Specific boundary discovered
+
+The present Boonta formats are intentionally narrow *authoring formats*, not comprehensive game-asset schemas. In particular, the mesh schema does not describe normals, materials, multiple texture references, or animation/skeleton data; the texture schema has no alpha channel. These are potential conversion gaps only if the target game content and a permitted source dataset require them. Do not expand the runtime format spec speculatively.
+
+### Next validation inside active RE-001 / reuse audit
+
+1. Keep the existing original synthetic fixtures as regression baselines.
+2. If a lawful, locally available sample with clear provenance is selected, run the external CLI in read-only export/list mode and record exact version, input format, output files and hashes privately; do not publish extracted commercial assets.
+3. Compare exported metadata and geometry/texture semantics with the Boonta schemas before writing any adapter. A successful PNG/OBJ export alone is not evidence of full fidelity.
+4. Do not add a package, copy external source, change gameplay code, or open a new task until a concrete missing capability and compatible reuse path are demonstrated.
