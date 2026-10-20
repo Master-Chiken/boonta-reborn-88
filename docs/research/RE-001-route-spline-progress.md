@@ -561,3 +561,44 @@ For any future authorized, provenance-identified PC fixture, test separately:
 Do not create fake golden bytes or import the upstream serializer into Boonta. This source inspection is reference research only; no serializer tests were executed in the Boonta repository.
 
 **Disposition:** an additional model-level risk is identified: spline list count is header-bound and its synchronization helper is explicit, not visibly invoked by `Save()`. Empirical result remains **NOT RUN**; PC fixture provenance is blocked; GameCube/Wii parity remains **UNKNOWN**.
+
+
+## Follow-up source pass — PC lap-progress and finish-line invariants (2026-10-20)
+
+Pinned source: [`tim-tim707/SW_RACER_RE` commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab), principally [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c), [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c), and [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/types.h). This is PC reverse-engineering source, not console evidence.
+
+### Directly visible behavior
+
+| Area | Source-level rule | Boundary or caveat |
+|---|---|---|
+| Progress mapping | `swrRace_LapProgress` reads the cursor's control point and computes `segmentT * span + base` from `spline_progress_values[cp]`. | Correctness depends on cursor-to-control-point binding and baked base/span values; these are not reconstructed by this function. |
+| Closed vs. open route | When `swrSpline_finishNodeIdx < 0`, progress at or above 1 is clamped to `0.9999`; for an open route, values strictly above 1 are clamped to 1.0. | The source's condition means an open-route value exactly equal to 1 remains 1; a value below 1 remains unchanged. |
+| Previous-frame state | `swrRace_LapCompletion` copies current `lapComp` into `lapCompPrev` before calculating the new progress. | The first call's behavior depends on initialization of `lapComp`; initialization parity needs separate tracing. |
+| Remote racer | In multiplayer, a remote racer takes progress, high-water mark, and lap count from indexed remote arrays; local racers derive progress from their spline cursor. | Slot validity/index bounds and network update timing are not established by this function alone. |
+| Crossing gate | Crossing logic runs only when `checkCrossing != 0` and either current progress is at most 0.8 or previous progress is at least 0.1. | This gate deliberately excludes some frames near a high-to-low wrap; it is not simply a generic “progress decreased” detector. |
+| Wrap normalization | If current progress is below 0.1, a previous high value above 0.8 and/or high-water mark above 0.8 is shifted down by 1.0 for the crossing comparison. | These thresholds create a defined wrap window (0.8/0.1), not a universal tolerance for arbitrary teleports. |
+| Open-route completion | On the crossing-check path, an open route completes when current progress is at least 1.0, then resets idle time and assigns `lapCompMax = lapComp`. | If the crossing gate is not entered, this function does not take that completion branch on that call. |
+| Closed-route completion | A closed-route crossing requires the normalized high-water mark to be overtaken, with previous progress within 0.01 of that mark; completion is true only when the normalized high-water mark is negative. The function then resets idle time and updates the high-water mark to current progress. | This is a high-water-mark/wrap test, not a pure position-plane intersection. A true result is not established solely by crossing from a high fraction to a low fraction. |
+| Dead racer | A racer with the DEAD flag forces `checkCrossing = 1`. | This overrides the caller's crossing-check request, but does not bypass the later progress and wrap conditions. |
+| Per-frame caller | `swrRace_UpdateRaceProgress` asks for crossing checks when the spline cursor moved forward or binding reports 1; backward movement increments `checkpointCount` and resets `moveTick`, while forward movement clears `checkpointCount`. | Cursor advance, binding, and track-mesh lookup are TODOs in this source tree; end-to-end runtime behavior is therefore incomplete in the reconstruction. |
+
+### Falsifiable regression vectors
+
+These are proposed tests derived from the source, **not tests executed here**:
+
+1. **Progress clamp:** closed route at raw progress 0.9999, 1.0, and above 1.0; open route just below, exactly at, and just above 1.0. Assert the precise outputs above.
+2. **Closed-route wrap:** previous progress near 0.99, current progress near 0.02, and high-water mark near 0.99. Check normalization and the `previous - 0.01 <= max` condition independently; do not assume this alone proves a lap.
+3. **Backward teleport across the line:** previous progress near 0.02, current progress near 0.99. Verify the gate and normalization do not award a lap merely because the numeric value jumped high.
+4. **High-water mark threshold:** normalized maximum just below, exactly at, and just above zero. The source's final condition is strict (`maxComp < 0`), so equality at zero should not complete a closed-route lap.
+5. **Crossing request:** identical progress values with `checkCrossing` false versus true; separately force the DEAD flag and verify it changes the effective request.
+6. **Open finish:** progress exactly 1.0 with crossing checks enabled and disabled; verify the open-route branch is gated, and verify the high-water mark update on the enabled path.
+7. **Remote/local parity:** feed equivalent synthetic progress histories through local and remote data paths, while separately checking that the remote arrays' lap count and high-water mark are sampled consistently. This would validate the reimplementation contract, not console parity.
+
+### Evidence classification and remaining unknowns
+
+- **Direct PC-source evidence:** the formulas, constants, branch order and state writes listed above are visible in the pinned source.
+- **Derived test hypotheses:** the seven vectors above are deductions from that source and must be validated against an executable reference before being called observed game behavior.
+- **Known reconstruction holes:** `swrRace_AdvanceSplineCursor`, `swrRace_GetTrackMeshAtCursor`, `swrRace_UpdateSplineBinding`, and `swrRace_ComputeTrackOffset` are TODOs. The per-frame chain that supplies cursor movement and crossing eligibility is therefore not fully reconstructed.
+- **Not established:** actual GameCube/Wii progress encoding, finish-line thresholds, multiplayer behavior, or parity with PC. No console executable or game-derived asset was used, and no gameplay test was run in this pass.
+
+**Disposition:** the PC finish-line logic is now specified as a small set of source-backed invariants and boundary tests. Next priority is to trace initialization and consumers of `lapComp` / `lapCompMax` (including standings and lap-count updates), then convert the highest-confidence invariants into independent tests for Boonta's normalized route-progress layer. Keep target-console behavior marked **UNKNOWN** until independently supported.
