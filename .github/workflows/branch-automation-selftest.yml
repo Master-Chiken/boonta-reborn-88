@@ -78,6 +78,7 @@ jobs:
               "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
               "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
               "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
+              "audit reconciles inventory after branch cleanup": '  workflow_run:\n    workflows: ["Retire archived branch refs"]' in governance and 'branches: ["main"]' in governance,
               "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
               "actual auto-delete setting is reported": "delete_branch_on_merge" in governance,
               "single deduplicated branch-budget issue": governance.count('title="Branch governance: branch budget"') == 2,
