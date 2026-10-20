@@ -746,3 +746,37 @@ Follow-up to the cursor matrix: the pinned Steam-PC decompilation's `FUN_0048054
 **Caveat:** the routine has alternate timing/freeze branches, and the double-global reconstruction plus decompiler typing needs care. This establishes the variable's write path, not a universal guarantee that every cursor call receives a raw elapsed delta under every mode. Test proposals should compare ordinary, long-frame/clamped, paused/frozen and alternate timing modes before naming this input simply `rawDelta`.
 
 No gameplay code changed; this is source-level evidence only.
+
+
+## Cross-platform source audit — PC, Nintendo 64, and platform documentation (2026-10-20)
+
+This audit adds sources relevant to the original game and its platform context without treating a manual, a general SDK manual, or a PC decompilation as proof of N64/GameCube internals. It extends RE-001's evidence ledger; it does not open a second implementation task.
+
+### Source hierarchy and what each source can establish
+
+| Source | Source class | Evidence usable for this dossier | Does **not** establish |
+|---|---|---|---|
+| [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab) at pinned commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab` | Public PC decompilation/reimplementation research | PC spline structures, cursor routines, known TODO boundaries and named symbols at that revision | Retail N64 or GameCube implementation parity; fully functional end-to-end PC route advancement |
+| [Frozen Steam-PC Ghidra decompilation](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef) at pinned commit `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef` | Secondary, frozen binary-analysis artifact | Additional PC function bodies and hypotheses to cross-check against the readable PC reconstruction | An authoritative original source tree, console behavior, or permission to copy implementation; no root license was identified in the earlier audit |
+| [N64 instruction booklet scan listing](https://emulation64.fr/?id=Star+Wars+Episode+I+-+Racer&page=notices) | Scan of a retail user manual hosted by a third party | The manual's contents can ground player-facing controls, modes and published game descriptions after page-level inspection | Internal route data, collision logic, AI implementation, or exact code equivalence with PC |
+| [StarWars.com / Lucasfilm interview with producer James Vicari](https://www.starwars.com/news/star-wars-episode-i-racer-interview) (2020-04-16) | Official editorial interview | Confirms the N64 game's place in the release history and that the later Switch/PS4 rerelease deliberately modernized controls | The precise N64 route/progress algorithm; it is not a technical design document |
+| [Nintendo 64 Programming Manual archive](https://ultra64.ca/resources/documentation-test/) and [execution overview](https://ultra64.ca/files/documentation/online-manuals/man/pro-man/pro03/03-01.html) | Archived Nintendo SDK documentation | General N64 CPU/RCP architecture and development constraints that may contextualize a future binary/hardware investigation | Any Racer-specific spline, AI, lap counter, collision or asset format |
+| [N64 Advanced Player's Reference](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/faqs/22256) | Community-authored guide (dated 1999; author disclaims affiliation and accuracy guarantee) | Candidate player-observable differences to reproduce and verify in the actual N64 game; the guide says some material was derived from the game using a cheat code | Official documentation or source-level certainty; statements must be verified against a real game session before becoming acceptance criteria |
+
+### Confirmed platform-level observations
+
+1. The official StarWars.com interview identifies *Episode I: Racer* as a Nintendo 64 title and describes the 2020 rerelease's controls as intentionally modernized. This confirms that control behavior is a platform/release dimension worth tracking; it says nothing about spline internals.
+2. The N64 manual scan's table of contents includes controller configuration, gameplay, game setup, two-player mode, planets and podracer characteristics. These are appropriate sources for a future **observable-behavior** checklist, not for inferring internal algorithms.
+3. The 1999 N64 player reference reports at least one gameplay difference between N64 and PC on the Abyss course: on N64, competitors reportedly remain on the upper scaffold route if the player drops to the lower route, whereas on PC competitors reportedly follow the player down. This is a useful **unverified test candidate** only. It is community documentation, not an official assertion; confirm in retail builds before using it as a compatibility requirement.
+4. The same community guide describes N64-only dual-controller mode and rumble behavior. Treat these as candidate N64-specific observable features, not as requirements for the clean-room GameCube prototype unless the project's target scope explicitly includes them.
+5. The archived Nintendo SDK manuals explain generic platform architecture. They cannot bridge the evidence gap between the PC source and the retail N64/GameCube binaries by themselves.
+
+### Consequence for RE-001
+
+- **PC implementation model:** linked spline graph, branch-aware cursor and sampled progress tables are supported by the pinned PC research sources, with unresolved callback and end-to-end execution gaps already recorded above.
+- **N64 behavior:** no N64 executable, disassembly, symbol map, or game-specific technical source has yet been examined in this dossier. Manual and community-guide evidence is limited to player-visible behavior.
+- **GameCube/Wii behavior:** no source-specific parity has been demonstrated. The existing prototype remains a clean-room comparison target, not a proxy for the original console implementation.
+- **No cross-platform transplant:** do not copy PC spline structures or assumptions into Boonta's GameCube code merely because the games share a title. First gather version-specific evidence and state exactly what it proves.
+- **Next step within the existing RE-001:** finish the current PC cursor/binding evidence review and record unresolved items; then, if the dossier's completion criteria still require it, perform a controlled player-visible comparison against a legally obtained N64 copy and record build/region, hardware or emulator/version, course, starting conditions, observations and repeatability. Do not start that comparison by changing gameplay code.
+
+No game ROM, executable, asset, or proprietary implementation was copied into Boonta during this source audit.
