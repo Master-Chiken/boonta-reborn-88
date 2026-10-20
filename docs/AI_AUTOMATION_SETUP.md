@@ -16,6 +16,10 @@ Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml
 
 Un contrôle réussi ne remplace pas la revue d'une PR.
 
+## Protection de main avant toute écriture IA
+
+Avant d'envisager l'activation de `GEMINI_WRITE_ENABLED`, vérifie dans **Settings → Rules → Rulesets** qu'une règle protège `main` contre les mises à jour directes, les force-push et la suppression, et qu'une pull request est exigée avant fusion. Ne configure pas de contournement pour un agent IA. Si cette protection n'est pas en place ou ne peut pas être vérifiée, laisse l'écriture IA verrouillée.
+
 ## Coordinateur en lecture seule — lancement manuel uniquement
 
 Le workflow [Manual read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) **n'a plus de déclenchement planifié**. Il ne consomme le quota Gemini que lorsque le propriétaire clique volontairement sur **Actions → Manual read-only AI project coordinator → Run workflow**.
