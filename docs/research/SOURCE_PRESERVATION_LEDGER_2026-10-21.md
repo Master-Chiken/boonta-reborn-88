@@ -85,3 +85,12 @@ Continue the N64-only trace from the local reference note. The best established 
 - Private local follow-up note: `RE-001_N64_HUD_LAP_FIELD_CROSSCHECK_2026-10-21.md` (kept in the owner's ChatGPT Library; not committed with ROM-derived data).
 - The main remaining gap is the HUD writer for `LAP` / `FINAL LAP` and its current/configured value pair. Keep the source string data and ROM-derived output local.
 
+
+
+## G. Official agent-workflow documentation checked 2026-10-21
+
+- [Jules documentation](https://jules.google/docs/) — current setup guide says Jules works in a cloud VM, produces a plan before changes, and automatically reads root AGENTS.md. Use this to ground task routing; Jules still cannot see files that exist only in the owner's ChatGPT Library/computer.
+- [Jules changelog](https://jules.google/docs/changelog/) — current product changelog. Consult before relying on newer agent behavior such as GitHub integration or CI-failure handling.
+- [GitHub Copilot cloud agent task guide](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task) — states cloud agent access is available on paid Copilot plans. The project default stays €0 and therefore excludes it unless the owner already has access and explicitly elects to use it.
+- [Boonta shared agent playbook](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/docs/MULTI_AGENT_RESEARCH_PLAYBOOK.md) — repository-specific task routing, current roles, exact boundaries, and the three overlapping steering-deadzone PRs used as a concrete duplicate-work example.
+- [Boonta AI workflow rules](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/docs/AI_AGENT_WORKFLOW.md) and [root agent instructions](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/AGENTS.md) — authoritative local rules for Gemini CLI, data/privacy, write gates, and every contributor's handoff expectations.
