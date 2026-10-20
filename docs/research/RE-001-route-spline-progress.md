@@ -1224,3 +1224,32 @@ Current interpretation by evidence strength:
 - node key at `+0x40`: directly used to construct a key-to-node lookup, high confidence as a progress/order/group key;
 - eight shorts at `+0x42..+0x50`: directly consulted by the progress/section-to-cursor helper, precise meaning still unknown;
 - reverse/incoming links at `+0x02` and `+0x08..+0x0E`, rotation-like bytes `+0x1C..+0x27`, and lap/finish semantics: still require dedicated cross-reference.
+
+## Cursor/runtime route-association path — next layer beyond graph preparation (2026-10-20)
+
+Read-only local MIPS disassembly now ties the graph-format work to a likely per-object route-association subsystem. The original US ROM remains local; this section records addresses/relations only.
+
+### Runtime object and cursor refresh
+
+- In the public symbol map, `func_80080BEC` spans a large auto-discovered region. Its opening code saves object fields at `+0xEC`/`+0xF0`, updates a cursor-like subobject at `object + 0xAC`, stores lookup outputs at `+0xF8` and `+0x100`, and calls helper bodies at `0x800807E0`, `0x800808E0` and `0x80080A1C`. If the primary cursor value changes, it clears a state word at `+0x1EE4`. These are strong signs of per-object route/cursor state refresh, but the structure offsets have not yet been assigned stable source-level field names.
+- `0x800807E0` calls `0x8007EE4C` to initialize/inspect a route cursor and calls `0x8007F22C` / `0x8007F23C` with output storage at object offsets `+0xF4` and `+0xFC`; this is consistent with the cursor/query mechanism described above. The exact meaning of each output remains provisional.
+- The broad symbol range `func_80080BEC` contains several apparent helper bodies, including a routine beginning near `0x80080DB4`. The public symbol table's auto-discovered function boundaries therefore cannot be assumed to match every true function boundary; any future naming should preserve this caveat.
+
+### Position-to-spline association candidate at `0x80080DB4`
+
+- The routine beginning at `0x80080DB4` takes a spline-like object, checks its type/count fields, and iterates the point count while advancing through node records by 84 bytes.
+- For each node it uses `0x8003A4A0` to read the node's 3D position, subtracts a query/world position, tests geometric relationships against candidate edges, and calls helpers including `0x8003B02C`. The loop reads the outgoing-edge count from offset `+0x00`, the target node index from `+0x04/+0x06`, and resolves those targets with the same `index * 0x54` stride.
+- This is strong evidence of a world-position-to-route/spline association or nearest-curve operation: the engine is not just exporting curves for the debug renderer; it performs geometric queries over the route graph. The exact metric, edge selection, and returned cursor/progress representation have not yet been fully proven.
+- `0x80080BEC` also uses the result of these helper paths to refresh values on the runtime object, including cursor-related outputs, so the code appears to be on the regular object update path. I have not yet isolated a verified callsite proving which racer types use this exact path (player, AI, or both).
+
+### Lap-count / finish-line finding remains open
+
+Search of this call path has **not** yet revealed a confirmed increment of the race lap counter or a finish-line crossing predicate. The words `LAP`, `FINAL LAP`, `LAP TIME` and `Laps:` exist in game text, but their presence alone does not identify the update function. The route-order key at node offset `+0x40`, the eight trailing shorts, the route cursor values at object offsets `+0xEC..+0x100`, and race-lap state must be kept separate until an actual consumer proves their relationship.
+
+### Next focused trace
+
+1. Trace all callers of the position-to-spline helper body near `0x80080DB4` and determine whether its output is used for racer progress, AI route following, collision or all of these.
+2. Follow the caller-side object fields it writes and compare them with known HUD race-state reads/writes, looking for a monotonic lap counter and a wrap/finish condition.
+3. Where static references stay ambiguous, use the documented N64 debug spline-marker GameShark switch in a local emulator and compare an observed marker path on a known track. No emulator is installed in the current analysis container, so that visual test remains pending.
+
+This remains research-only. It adds no parser, ROM content, point coordinates, control handles, extracted geometry, or gameplay code to Boonta.
