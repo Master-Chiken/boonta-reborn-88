@@ -185,3 +185,20 @@ The `swrModel_LoadFromId` implementation explicitly reads three big-endian offse
 This independently corroborates the older PC reverse-engineering notes' entry boundaries and makes the layering much clearer: the generic model-block table contains a per-model mask region and a per-model payload region; the payload may have a `Comp` wrapper. It still does **not** prove whether a particular PC retail/demo asset contains compressed models, and does not establish N64 or Dreamcast offset-table compatibility. The earlier tool README's “only found in N64” claim should be treated as an observation about known samples, not as proof the PC loader cannot recognize the marker.
 
 Next verification target: find version-tagged evidence for whether PC retail/demo model entries actually use `Comp`; meanwhile do not infer DC/N64 layout from the PC source.
+
+
+### Cross-check with the PC source's format-analysis notes
+
+Pinned file: `tim-tim707/SW_RACER_RE/archive/block_format_RE/modelblock_code.pat`, commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`:
+https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/archive/block_format_RE/modelblock_code.pat
+
+The notes model each entry as three offsets (`begin`, `headerBegin`, `end`), with region 1 before the header and region 2 beginning at the header. They explicitly label the `Comp` branch `TODO`; the non-`Comp` branch is also not fully specified there. This agrees with the structure in `swrModel_LoadFromId`, but it does not provide a finished compression specification or prove actual `Comp` use in a named PC release.
+
+The PC source therefore gives us the clearest map of the *expected entry layout*, but not an executable reference implementation of the decompressor. The N64 tool contains a decoder, yet its sample/version provenance is not sufficient to claim every N64 release uses the same chunk encoding.
+
+### Evidence boundary / current result
+
+- **Supported:** PC source and its analysis notes agree on three offsets and a possible `Comp` header at the selected model payload.
+- **Supported:** the N64-oriented tool documents and implements a `Comp` decoder; its README says the chunks it targets are only found in N64 model blocks.
+- **Not yet supported:** which exact PC retail/demo build has `Comp` chunks; whether N64 uses an identical offset-table layout; whether Dreamcast's payload format matches either.
+- **No binary samples were downloaded or embedded.** Next work should stay source-first: inspect asset-library metadata/checksum catalogue and Dreamcast extracted inventory metadata, then look for a trustworthy version-specific test report. Do not invent hashes or treat a generic release selector as proof of byte identity.
