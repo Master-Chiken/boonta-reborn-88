@@ -142,3 +142,8 @@ The present Boonta formats are intentionally narrow *authoring formats*, not com
 2. If a lawful, locally available sample with clear provenance is selected, run the external CLI in read-only export/list mode and record exact version, input format, output files and hashes privately; do not publish extracted commercial assets.
 3. Compare exported metadata and geometry/texture semantics with the Boonta schemas before writing any adapter. A successful PNG/OBJ export alone is not evidence of full fidelity.
 4. Do not add a package, copy external source, change gameplay code, or open a new task until a concrete missing capability and compatible reuse path are demonstrated.
+
+
+## Source preservation ledger — 2026-10-21
+
+The detailed continuity index now lives in [`docs/research/SOURCE_PRESERVATION_LEDGER_2026-10-21.md`](research/SOURCE_PRESERVATION_LEDGER_2026-10-21.md). It preserves the known owner-supplied Dreamcast method/tool links (including `tbg-decomp`, `recv-dc-decomp`, `gditools3`, Flycast and the Dreamcast RE diaries), the N64 `decomp.anything` / `sp00nznet/racer` leads, pinned PC references, related secondary sources, license caveats, unresolved `borer.lol` lead, and the canonical Boonta research documents. Treat it as an append-only source index: future URLs should be added instead of replacing older references. The ledger stores public links and research notes only; ROMs, commercial game archives, extracted assets and binary payloads remain local.
