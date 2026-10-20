@@ -57,3 +57,24 @@ The public asset-tool repository has a version-labelled SHA-1 catalog for select
 2. Inspect the N64-specific model-block decompressor and compare its stated input assumptions with the generic block reader; document only the format boundary, not extracted game data.
 3. Find a Dreamcast-specific primary source or reproducible tool/parser before claiming shared formats. Until then, Dreamcast model/spline format stays **unknown**.
 4. Do not compare hash values across labels unless the source proves they were produced from equivalent extraction pipelines and matching release inputs.
+
+
+## N64 compression: concrete format boundary from public tooling
+
+Source: https://github.com/OpenSWE1R/swe1r-tools/blob/master/decompress.c
+
+The tool's source documents a Comp chunk with:
+- a four-byte Comp magic checked after byte-order conversion;
+- an output-size field read from the header;
+- a compressed stream beginning after a 12-byte header;
+- a 0x1000-byte history window;
+- LZ77-style literals and back-references, with a zero source offset terminating the stream;
+- an assertion that the produced output size matches the header's declared output size.
+
+The tool README explicitly scopes this decompressor to model-block chunks found only in the N64 version. This is meaningful platform-specific evidence for the model-block chunk path, but not a claim that every N64 asset is compressed or that the whole N64 file system differs. The implementation also has a notable input contract: it allocates a 0x1000-byte window before the input pointer, so a future independent parser must reproduce that memory model safely rather than copy the pointer arithmetic blindly.
+
+The asset library's release-labelled checksum list includes separate N64 US and EU/JP model-block variants, while the model-block documentation describes an archive of 323 model entries for its documented sample. Those details should not be combined into a claim that every region has the same count or layout: the sample/release identity must be pinned first.
+
+### Practical consequence
+
+Boonta's asset pipeline should keep container format, compression wrapper, and model payload as three separate layers. A parser should identify the platform/build from grounded metadata, validate lengths and bounds before decompression, and round-trip only formats for which the tool's support is demonstrated. Do not assume a PC block reader can accept an N64 Comp chunk, and do not label Dreamcast support as present until there is a Dreamcast-specific sample or primary parser evidence.
