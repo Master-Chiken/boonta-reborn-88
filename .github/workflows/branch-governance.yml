@@ -8,6 +8,10 @@ on:
       - ".github/workflows/branch-governance.yml"
   create:
     branches: ["**"]
+  workflow_run:
+    workflows: ["Retire archived branch refs"]
+    types: [completed]
+    branches: ["main"]
   schedule:
     - cron: "23 9 * * 1"
 
@@ -152,7 +156,7 @@ jobs:
             echo "- Open pull requests: **$OPEN_PRS**"
             echo
             echo "### Required actions"
-            echo "1. Keep only `main`, `dev`, the protected recovery archive, and branches needed by live pull requests."
+            echo "1. Keep only main, dev, the protected recovery archive, and branches needed by live pull requests."
             echo "2. Turn on automatic deletion of merged PR head branches in **Settings → General → Pull Requests**."
             echo "3. Review stale branches without an open PR. Preserve history in the recovery archive; do not bulk-delete unverified refs."
             echo
