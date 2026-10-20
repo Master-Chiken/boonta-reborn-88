@@ -1,75 +1,81 @@
 # Project operating rules
 
-This document is the operating agreement for the public Racer repository. The canonical live dashboard and engineering queue is [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156). These rules are intended to keep a solo maintainer in control while using AI tools and GitHub automation.
+This is the operating agreement for the public Racer repository. The canonical dashboard is [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
-## 1. Product priority
+## 1. Work allocation: 80% reverse engineering
 
-The goal is a credible, interactive GameCube racing slice before speculative features or broad ports.
+The intended engineering effort is **80% reverse engineering and evidence-led research, 20% implementation, testing, integration, and project management combined**.
 
-1. Finish and validate the existing gameplay changes in the approved queue.
-2. Complete the visible Dolphin acceptance checklist in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-3. Only after that acceptance gate, choose one controlled handling or fidelity improvement at a time.
-4. Keep research and asset conversion work parked when it does not unblock the playable slice.
-5. Do not present host tests, a native build, a headless Dolphin smoke test, or a scripted movie as proof that a person can drive a complete race.
+Measure this in comparable work blocks, not vague intentions: for every ten 45–60 minute blocks, target eight research blocks and at most two combined implementation/testing/management blocks. If a week has less time, keep the same ratio; do not create extra work to meet a quota. Record the block's task ID and result in the active issue. This is an effort target, not a claim that reverse engineering alone makes the game playable.
 
-## 2. One task, one responsible writer
+Reverse-engineering work includes:
+- investigating the reviewed PC source/decompilation or an authorized local binary/runtime artifact;
+- mapping symbols, functions, structures, formats, state transitions, physics, route/spline systems, and timing assumptions;
+- comparing the PC reference with the candidate Step 102 source and the current clean-room GameCube implementation;
+- creating evidence-linked behavior specifications with confidence levels, platform boundaries, unknowns, and reproducible follow-up tests.
 
-- Keep **one active implementation task** at a time. Other open PRs may remain parked, but they must not receive competing edits.
-- A substantial task must have a single written goal, a bounded list of files, observable acceptance criteria, and named verification steps before code is changed.
-- Use **one write-capable AI agent at a time**. Do not ask Jules, Gemini, Codex or another agent to edit overlapping files concurrently.
-- Read-only audits may inspect the repository, but they do not authorize code changes.
-- An AI proposal is not approval. The repository owner must approve the specific plan and scope before a write-capable agent starts.
-- If two PRs touch the same runtime code or tests, choose the active one first. Park the other; do not merge both blindly.
+Reading generic documentation, changing CI, mass-producing reports, and speculative coding do **not** count as reverse engineering. Install or use a tool such as REA/Ghidra only when a specific question requires binary/runtime evidence and the actual target format is supported. Do not spend a work block configuring a tool before confirming that it can analyze the chosen artifact.
 
-## 3. Branch and pull-request rules
+## 2. Prevent overload: a one-item work queue
 
-- main is the stable integration/release branch. Never push directly to it.
-- dev is the normal target for gameplay changes. A later promotion of validated work from dev to main is a separate decision.
-- archive/branch-heads-20261019 is a protected recovery archive, not a development base. Never merge it wholesale into main or dev.
-- One task normally means one short-lived branch and one PR. Base new task branches on the current intended target, not on an unrelated open PR or stale branch.
-- Documentation and repository-policy changes may target main; gameplay changes target dev.
-- AI agents may open PRs but must not merge PRs, enable auto-merge, bypass branch rules, change repository settings, force-push, or delete branch refs.
-- GitHub's **Automatically delete head branches** setting is enabled. A merged task branch should normally disappear automatically.
-- Branch budget: warning at 10 refs, red line above 20, active-work target 10 or fewer. A budget alert triggers review; it is not permission to delete unreviewed refs.
+- Keep **one active task** at a time. Only one research question may be in progress; other ideas stay in the backlog.
+- Keep at most **three next-up items** visible in issue #156. Close or park duplicates instead of opening more tracking issues.
+- Each research item must answer one concrete question and produce one bounded dossier. Do not begin implementation while the evidence is still ambiguous.
+- A research dossier must record: question, exact source/revision, evidence links, observed facts, inferences, target-platform caveats, unknowns, Step 102 mapping status, and the next reproducible test.
+- Finish each work block with a small note: what was established, what was not established, and the next action. Do not start an unrelated task mid-session.
+- Do not create a branch for every note. Gather research evidence in the active issue/dossier; make one focused documentation PR when a coherent result is ready.
+- No new CI/AI workflow or repository policy change unless it removes a demonstrated blocker to the active task. No scheduled AI coordination reports.
 
-## 4. AI and workflow controls
+## 3. Evidence-led study → map → implement → validate
 
-- The project budget is **€0**. Do not enable paid models, billing, payment methods, paid fallbacks, paid cloud resources, or upgrades. If the available free quota is exhausted, stop.
-- The read-only Gemini coordinator is **manual-only**. It must not run on a schedule and must post a requested report only to the canonical tracking issue #156.
-- The @gemini-cli planning path must remain read-only. Code-writing execution is separate and may run only after the owner approves the exact plan and GEMINI_WRITE_ENABLED is deliberately set to the exact value true.
-- Recommended current setting: keep GEMINI_WRITE_ENABLED absent or not equal to true while the existing gameplay PRs and Dolphin acceptance gate are being completed. Enable it only for one explicit, bounded task, and return to the locked state afterward.
-- The branch-intake queue is manual-only and defaults to one candidate. Do not run it while existing PRs have not been reviewed.
-- Never treat an agent-generated summary, successful prompt run, or green static guard as evidence that the game is playable.
-- Never paste secrets, credentials, commercial game archives, ROMs, disc images, BIOS files, extracted models, textures, audio, or unclear-provenance data into AI prompts, public issues, CI artifacts, or the repository.
+1. **Study:** inspect the exact source, binary, format or observed runtime behavior needed to answer one question.
+2. **Map:** compare findings against the actual candidate Step 102 files and the current GameCube prototype. Mark absent/unavailable inputs explicitly; never pretend a mapping was checked if the archive is unavailable.
+3. **Specify:** write the behavior independently, state what is fact vs inference, and choose a measurable acceptance test.
+4. **Implement only when justified:** spend part of the 20% engineering allocation on the smallest implementation that follows the evidence. A finding does not automatically require a code change.
+5. **Validate:** run exact-head host tests and the native DOL/ELF build. Use visible Dolphin/controller checks for gameplay behavior and mark physical GameCube/Wii results separately.
+6. **Record:** link the dossier, commits, tests and unresolved questions to the canonical issue #156.
 
-## 5. Verification required before merge
+## 4. Product direction and active tasks
 
-For code changes, checks must refer to the exact current PR head, not an older commit.
+The goal remains a credible native GameCube racing slice with behavior informed by reverse engineering, not an endless procedural mock-up or speculative port.
 
-- **Host tests:** confirm portable state logic, regression tests, and tooling.
-- **Native build:** confirm the actual GameCube DOL/ELF builds with the intended toolchain.
-- **Dolphin process smoke:** proves only that the emulator process/build starts; a null-video run is not visual proof.
-- **Visible Dolphin/controller acceptance:** proves observable controls and race behavior only for the exact tested build and setup.
-- **Physical hardware:** claims about GameCube/Wii hardware require separate hardware evidence.
-- A non-blocking or continue-on-error diagnostic does not become a required passing gate just because the overall workflow succeeds.
-- If a test is pending, missing, failed, or not run on the exact head, record it as such. Do not merge around it to clear the queue.
+- Active reverse-engineering queue: [RE-001 — map route/spline progression between the PC reference and the current GameCube prototype](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
+- Existing validation gate: [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). The owner can run this one-time check on PR #214 when convenient; it does not authorize parallel gameplay coding.
+- Parked implementation candidates: [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) and [PR #233](https://github.com/Master-Chiken/boonta-reborn-88/pull/233). Do not merge either just to clear the queue. PR #233 contains unrelated historical maintenance commits and must not be merged as-is.
+- Next research topics only after RE-001 is recorded: map the candidate Step 102 source, if available, then study race state/laps and pod control/traction as separate dossiers. Do not run them concurrently.
 
-## 6. Clean-room and provenance boundaries
+## 5. One responsible writer, no branch sprawl
 
-- The Step 102 source archive remains on hold until every proposed file has a recorded origin, license/provenance decision, and redistribution disposition.
-- Research from the PC release, N64 release, or a third-party reverse-engineered repository is a reference, not permission to copy code or data into the GameCube/Wii project.
-- Keep platform findings separate: PC source evidence does not confirm GameCube/Wii behavior.
-- Prefer original implementations, synthetic test fixtures, and evidence-linked behavioral specifications. If provenance is uncertain, stop and document the exact blocker.
+- Use **one write-capable AI/agent at a time**. Read-only research can be parallelized only when it has non-overlapping, explicit questions; to avoid overload, prefer one investigator and one synthesis.
+- A substantial change requires an approved scope, bounded file list, and observable acceptance criteria before writing begins.
+- One implementation task normally means one short-lived branch and one PR. Base new branches on the current intended target.
+- `main` is stable/release integration and must not receive direct pushes. Gameplay changes target protected `dev`; docs/policy may target `main`.
+- `archive/branch-heads-20261019` is a protected recovery archive, never a development base and never merged wholesale.
+- AI agents may open PRs but must not merge them, enable auto-merge, bypass branch rules, alter repository settings, force-push, or delete branch refs.
+- Automatic deletion of merged PR head branches is enabled. Target a branch budget of 10 refs or fewer; a warning is a review trigger, not permission for unattended deletion.
 
-## 7. Definition of done
+## 6. AI and budget controls
 
-A task is done only when:
+- Project budget: **€0**. No paid model, billing, payment method, paid fallback, paid cloud resource or upgrade. If free quota is exhausted, stop.
+- The read-only Gemini coordinator is manual-only and posts requested reports to the canonical issue #156.
+- Planning mode is read-only. Keep `GEMINI_WRITE_ENABLED` absent or not equal to `true` unless the owner deliberately approves one exact implementation plan and decides to unlock the separate write workflow.
+- One agent-generated summary or green configuration check is not evidence that the game works.
+- Never send secrets, ROMs, disc images, BIOS, commercial archives, extracted proprietary models/textures/audio, or uncertain-provenance data to hosted AI services, public issues, CI artifacts, or the repository.
 
-1. The requested behavior or policy is implemented within the approved scope.
-2. The diff is small enough to review and contains no unrelated cleanup.
-3. The relevant exact-head checks have completed successfully, with limitations recorded.
-4. Required human/controller acceptance has been recorded as PASS, FAIL, or NOT TESTED.
-5. The PR is merged normally or intentionally closed with the reason documented.
-6. The owner can see one clear next action in issue #156.
+## 7. Source, platform and licensing boundaries
 
-These rules favour a verified playable build over more branches, more automation, or more AI-generated work.
+- `SW_RACER_RE` is a Windows-PC reverse-engineering/decompilation reference, not a verified GameCube implementation. Its documented analysis coverage is not the same as complete implementation.
+- Upstream `SW_RACER_RE` code is licensed AGPL-3.0 according to its repository; link to source and summarize observations by default. Do not copy/adapt source into the project's existing license without a deliberate license review and owner decision.
+- Step 102 remains on hold until proposed files have a documented origin, license/provenance decision and redistribution disposition. Do not bulk-import its archive.
+- Keep PC facts, Step 102 facts, and GameCube/Wii hypotheses in separate fields. A PC finding alone never proves console behavior.
+
+## 8. Definition of done
+
+A task is complete only when:
+1. its question has been answered with traceable evidence, or the exact blocker is recorded;
+2. its fact/inference/unknown distinctions and platform boundaries are explicit;
+3. the dossier links to the relevant sources and next reproducible check;
+4. any approved code change stays within scope and has exact-head tests;
+5. the outcome and one next action are recorded in issue #156.
+
+These rules prioritize deep understanding over parallel coding, automation churn, and a growing backlog.
