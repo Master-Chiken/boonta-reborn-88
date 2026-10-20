@@ -1067,3 +1067,52 @@ A second cross-check makes the interpretation more specific. The same public PC-
 This cross-check also clarifies the next boundary: the PC game loads route splines from a separate `out_splineblock.bin` file, as documented in [OpenSWE1R's level-data access notes](https://github.com/OpenSWE1R/swe1r-re/blob/master/swep1rcr.exe/Level-data-access.md) and [spline loader notes](https://github.com/OpenSWE1R/swe1r-re/blob/master/swep1rcr.exe/Splines.md). The 92 N64 `CompWolf` chunks inspected here are model records; they have not yet revealed the route-point/control structure. The next research target is the N64 executable's course-following path and its data source, not further reinterpretation of the `LStr` lights.
 
 **Next evidence needed:** recover the historical N64 audit notes/tool candidate listed in the earlier Step 102 archive documentation (especially `export_n64_track.py` and the related ROM-track audit reports), or independently trace the N64 route/progress code and its data references. Keep all ROMs and extracted proprietary assets local; publish only the structural findings and independently authored code.
+
+
+## Strong N64 evidence — native spline block located and structurally validated (2026-10-20)
+
+This pass used the already supplied local US N64 ROM read-only. No ROM bytes, extracted points, coordinates, or track assets were added to the repository.
+
+### Independent block identity
+
+Pinned public reference: [akopetsch/swe1r-assets, commit 922ef535f6598a1330ff93d6b07258956f990b34](https://github.com/akopetsch/swe1r-assets/tree/922ef535f6598a1330ff93d6b07258956f990b34), especially its [block metadata](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Block.csv), [item-to-value mapping](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/BlockItem.csv), and [spline-item metadata](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/SplineBlockItem.csv).
+
+- The N64 spline block is present at ROM file offset 0x012C7F30, length 428,212 bytes (end-exclusive offset 0x013307E4).
+- Its SHA-1 is a18f0c66301cf0e11feedafadc1b374fa3b40ed6, exactly matching the public metadata row for the big-endian N64 spline block (n64, 91 items, 428,212 bytes). This exact outer-block hash is the key identity check: the parser is not merely finding a plausible byte pattern.
+- The public block container layout is directly visible in Block.cs: big-endian item count, one big-endian offset per spline item, a declared end size, followed by item payloads. For 91 items, the container header is 372 bytes; the remaining 427,840 bytes are the item payloads.
+- All 91 records passed the structural size check record_size == 16 + 84 * point_count. Across them, 5,076 point records were parsed; coordinate/control-vector floats were finite; link counts and indices were in range; every point was reachable from point 0 by following outgoing links; and outgoing/incoming links were reciprocal under the field interpretation used by the public Blender parser. The reader remains a format reference, not proof that every field name reflects the retail runtime's semantics.
+
+### Record interpretation and the Boonta Classic candidate
+
+The item mapping provides a useful, qualified candidate for the N64 Boonta Classic spline:
+
+- In the common/default metadata, spline block index 10 maps to value ID 10, named Trak_Tatooine_Boonta_Classic, with a record size of 15,136 bytes.
+- In the N64 block, index 10 maps to value ID 110. Its record is also 15,136 bytes and its metadata name is the generic placeholder __SPLINE__110, so the N64 metadata itself does not certify the track name.
+- The N64 index-10 record's item hash matches the public value-ID-110 hash when the library's actual hash convention is followed. The library calculates a BlockItem hash by hashing the part-hash bytes; for this one-part record that is SHA-1 of the SHA-1 of the raw record. Comparing the raw record SHA-1 directly with SplineBlockItem.csv would incorrectly look like a mismatch.
+- The same slot and size, combined with the default slot's explicit Boonta Classic label, make N64 value ID 110 a strong Boonta Classic candidate, but I leave the semantic name provisional until another source or runtime observation confirms it. This remains a structural association, not an assertion about GameCube/Wii bytes.
+
+### N64 value-ID-110 graph facts (no geometry disclosed)
+
+The N64 index-10 candidate has:
+- 180 point records and a header-declared 187 segments;
+- exactly 187 outgoing links, with 7 points having two outgoing links and 7 points having two incoming links;
+- no invalid point indices; every directed outgoing link has the matching incoming link;
+- a link back to point 0 (the cycle-closing edge is from point 134 to point 0 in this parser's numbering);
+- parser-labelled progress values spanning 0 through 135, with 136 distinct values.
+
+These values support a graph-based route model with alternate branches, not a single unbranched array or a circle generated solely from distance. The progress field name is the Blender parser's interpretation; its exact retail-runtime semantics still need to be confirmed from code and/or controlled play observation. No actual positions, handles, route geometry, or exported asset files are part of this public finding.
+
+### What this changes
+
+The immediate blocker is no longer “locate the N64 spline block.” That question is now resolved at the container/hash/record-structure level. The remaining work is to:
+1. correlate N64 value ID 110 to Boonta Classic independently of the shared index/size clue;
+2. trace the N64 code path that loads these records and consumes links/progress for cursor movement, finish crossing, and AI;
+3. use the N64 findings to specify a clean-room route graph API and synthetic tests, while keeping GameCube/Wii format parity explicitly unverified.
+
+decomp.anything remains useful for code-path analysis (which code reads and uses these records); it is not required to locate or structurally parse this block and is not a one-click circuit exporter. Its N64 code splitter's documented main-segment limitation also means a missing caller is not proof the behavior is absent. No gameplay implementation change is justified by this data-only pass.
+
+### Provenance and implementation boundary
+
+- The MIT swe1r-assets source and GPL-3.0 blender-swe1r parser were read as independent references; no third-party parser implementation was copied into Boonta.
+- The retail ROM and its derived geometry remain local. Public repository changes are documentation only.
+- Confidence: high for the block identity, entry count, length accounting, fixed 84-byte point-record shape and link-index consistency under the cited parser; medium-high for value ID 110 being the N64 variant in Boonta Classic's logical slot; unconfirmed for the precise runtime meaning of every progress/unknown field and for any GameCube/Wii serialization parity.
