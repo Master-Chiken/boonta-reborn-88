@@ -932,3 +932,23 @@ For every payload, the generic header/section parser reached `HEnd`; the scene-g
 - The GPL-3.0-or-later Blender add-on remains a read-only reference. No code from it was copied into Boonta; the decoded commercial game assets remain local and are not committed.
 - The next implementation-sized experiment, if a visual conversion is needed, is to run the existing tool locally against one legal N64-derived `Trak` sample and record import/render errors without republishing the asset. In parallel, continue looking for a distinct route/progress structure instead of repurposing `LStr` light-streak positions.
 
+## N64 spline schema cross-check and extraction gap (2026-10-20)
+
+The critical new source is [`akopetsch/swe1r-assets`](https://github.com/akopetsch/swe1r-assets), pinned at commit `922ef535f6598a1330ff93d6b07258956f990b34`. The repository is MIT licensed and has an explicit `SplineBlockItem` reader that deserializes and reserializes `out_splineblock.bin`. Its metadata enumerates a dedicated **N64** spline-block variant; its original-resource manifest lists `out_splineblock.bin/n64.bin` with SHA-1 `a18f0c66301cf0e11feedafadc1b374fa3b40ed6`. That manifest proves the community has identified a named N64 spline-block reference, not that the block is already located in the supplied ROM or that its bytes may be copied into this project.
+
+### Cross-check of the per-point record
+
+Pinned source files:
+- [Spline root](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/Spline.cs)
+- [Spline segment data](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentData.cs)
+- [Spline segment header](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentHeader.cs)
+- [Spline-block deserializer/serializer](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineBlockItem.cs)
+
+The schema's serialized `Spline` root has a header followed by a list whose count is read from `Header.ElementsCount`. Each `SplineSegment` serializes a data record and a 16-byte segment header. The data portion contains eight 16-bit words at offsets `0x00..0x0e`, a three-float vector at `0x10`, one explicitly positioned float at `0x24`, two three-float control vectors at `0x28` and `0x34`, and a 32-bit field at `0x40`. Together the declared data and segment-header fields occupy `0x54` (84) bytes. A separate read-only community parser independently uses a 16-byte spline header followed by 84-byte point records and exposes next/previous link counts, position, orientation, two control handles and progress-related words; see [`SWE1R-Mods/tools/block.js`](https://github.com/louriccia/SWE1R-Mods/blob/a0c55e301a01ce0212b2146a280782cacab155e6/tools/block.js). This is good layout-level corroboration. The field names/semantics are not perfectly settled across the two parsers, so do not promote every word to a confirmed meaning.
+
+### The actual extraction gap
+
+The public unpack script in `SWE1R-Mods` explicitly expects an already-extracted `out_splineblock.bin` from the PC-style `data/lev01` folder. The MIT `swe1r-assets` deserializer also accepts the block file; neither one, as inspected here, supplies the missing **retail N64 ROM → extracted spline-block** stage. The N64-specific checksum/metadata entry is a strong evidence lead, not a license to use its bundled game-derived bytes as Boonta content.
+
+**Therefore the next task is narrowed to a read-only extractor investigation:** determine whether the N64 spline block can be recovered from the user's supplied ROM via the known asset/index layout, a ROM-specific offset table, or a documented community extractor. Do not infer that the 92 top-level `CompWolf` model chunks include the spline block; they have model-block signatures, and the route data has not been found inside them. If no extraction path is evidenced, implement only a small clean-room scanner over the user's local ROM with conservative bounds checks and tests against the documented 84-byte schema; do not import commercial asset bytes or GPL parser code.
+
