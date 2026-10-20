@@ -125,3 +125,39 @@ PC source cross-check: pinned `tim-tim707/SW_RACER_RE` file `src/Swr/swrLoader.c
 ### Updated decision
 
 We now have two independent kinds of Dreamcast evidence for the four block files: (1) executable string listings and (2) extracted disc filesystem inventories, for both USA and Europe. Still missing: trustworthy per-block hashes/sizes, format parser tested against a provenance-identified Dreamcast block, and source-level confirmation of compression/endian/record-layout details. The next high-value task is a format comparison using metadata/provenance and parser source—not guessing from shared filenames or metadata IDs.
+
+
+## 2026-10-20 — Format parser comparison (source-level, not runtime-validated)
+
+### PC-style generic block container
+
+Pinned source: `OpenSWE1R/blender-swe1r/block.py`, commit `b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce`:
+https://github.com/OpenSWE1R/blender-swe1r/blob/b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce/block.py
+
+The importer reads a big-endian 32-bit asset count at byte 0. It then walks a table of big-endian 32-bit offsets, using `sub_chunks` entries per asset. Payloads are sliced from each nonzero start offset to a following offset; when the immediately following offset is zero, it tries the next offset as the end. The writer builds an offset table and concatenates payloads. This is concrete evidence for the parser's assumed *generic block layout* on the files it supports; it is not proof that the same layout applies unchanged to N64 or Dreamcast.
+
+Important implementation caveats in this reference:
+- The reader has no explicit bounds/monotonic-offset validation before slicing.
+- It infers an end offset from neighbouring table entries and a final sentinel; malformed/truncated input needs stricter checks in a new parser.
+- The writer emits a compact table based on `asset_count * sub_chunks`; it should not be treated as a universal canonical serializer for every release without no-op round-trip tests.
+- The project is GPL-3.0. Treat it as a format reference, not code to copy into Boonta without a licensing decision.
+
+### N64 model-block compression wrapper
+
+Pinned source: `OpenSWE1R/swe1r-tools/decompress.c`, commit `239911513834e19d1530fc908b6dc40eabea25fc`:
+https://github.com/OpenSWE1R/swe1r-tools/blob/239911513834e19d1530fc908b6dc40eabea25fc/decompress.c
+
+The tool checks the first 32-bit word (after its byte-swap conversion) for `Comp`. If present, it reads the output size from header offset 8 and starts the LZ77-style stream after a 12-byte header. If absent, it copies the input unchanged. The decoder uses a 0x1000-byte circular history window; a back-reference with source offset zero terminates the stream, and the tool asserts decoded length equals the header output size. The repository README scopes this to `Comp` model-block chunks only found in the N64 version.
+
+**Safe conclusion:** evidence supports an N64-specific compression wrapper around some model-block chunks. It does not establish that every N64 model is compressed, that the whole block uses this wrapper, or that decompressed payloads are byte-for-byte the same as PC/DC records. The reference decoder expects a 0x1000-byte window before the input pointer; a new implementation must model that explicitly and validate input/output bounds rather than reproducing unchecked pointer arithmetic.
+
+### What the comparison currently establishes
+
+1. The Blender importer documents a big-endian offset-table container for the PC files it targets.
+2. The N64 utility recognizes an optional `Comp` wrapper on its input and documents it as N64 model-block chunk decompression.
+3. These observations are compatible with a layered design (container plus compressed payload chunks), but **the source examined so far does not prove that exact layering**. Need trace where N64 chunk extraction occurs and compare offset-table parsing before making that claim.
+4. Dreamcast executable strings and USA/Europe filesystem inventories establish the four familiar `OUT_*BLOCK.BIN` filenames, but no trustworthy per-file size/hash or Dreamcast parser has yet been established. Shared names alone are not format compatibility.
+
+### Next research question (keep one active)
+
+**Where in the N64 data path are `Comp` chunks located relative to the generic asset-offset table?** Trace the N64 model-block extraction/iteration call path in available source and compare with the PC block reader. Do not start implementation until the nesting/order is supported by source or a provenance-identified sample. Step 102 remains parked and is not a dependency.
