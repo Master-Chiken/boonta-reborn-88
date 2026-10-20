@@ -1254,3 +1254,25 @@ Search of this call path has **not** yet revealed a confirmed increment of the r
 3. Where static references stay ambiguous, use the documented N64 debug spline-marker GameShark switch in a local emulator and compare an observed marker path on a known track. No emulator is installed in the current analysis container, so that visual test remains pending.
 
 This remains research-only. It adds no parser, ROM content, point coordinates, control handles, extracted geometry, or gameplay code to Boonta.
+
+## Graph-preparation helper chain and per-edge callbacks
+
+One additional control-flow pass clarifies how the game uses the graph-preparation helper. `0x800801B8` is an apparent real function boundary inside the oversized public symbol range beginning at `0x8007FDC0` (a symptom of the public auto-symbol map joining several functions). The code:
+
+- receives a spline-like object with count fields at `+0x04` and `+0x08` and a node-array pointer at `+0x0C`;
+- checks the node-count/point-array shape and initializes a scratch/output structure;
+- calls `0x8007FDC0` with scalar `100.0` to initialize a key-to-node table for the current spline;
+- calls `0x8007F560` with scalar `10.0` and callback `0x8007F098`, and conditionally calls it again with callback `0x8007F430` when a global option is enabled.
+
+`0x8007F560` is now high-confidence graph traversal: it loops over the point count, reads each node's outgoing-link count at `+0x00`, walks the destination indices from `+0x04/+0x06`, resolves nodes by the `0x54` stride, and invokes the supplied callback for the resulting edges. The callbacks at `0x8007F098` and `0x8007F430` consume sampled values and mutate or submit associated state; their complete semantic contracts remain unresolved.
+
+**Interpretation:** this establishes a graph preprocessing/sampling callback chain beyond simply parsing one point at a time. The `100.0` and `10.0` arguments are literal parameter values, not confirmed sample counts or game-world units—the callers and callback math must be fully traced before giving them those meanings. Because the helper range is used around object/cursor and render plumbing, do not label this as a player-lap initializer without an independently established caller.
+
+### Current strongest architecture boundary
+
+At this point static evidence supports three separate subsystems:
+1. a node graph keyed by the halfword at `+0x40`, with outgoing edges and position/control vectors;
+2. graph traversal and geometric sample/position-association utilities that work over that graph;
+3. generic runtime-object cursor/transform update and render callbacks that can consume route-like spline data.
+
+The remaining gap is linking these mechanisms to the specific player/AI race state that increments a lap and reports race progress. No code path found so far proves that relationship, so the current GameCube demo's distance-based lap logic must not be described as a faithful port.
