@@ -110,3 +110,10 @@ Continue the N64-only trace from the local reference note. The best established 
 - **Interpretation:** high confidence that the cheat listings intend these two addresses to set/hold the corresponding player's lap value; the `0x88` address difference is consistent with corresponding player-state locations but is not proof of a shared struct layout. Exact retail revision, native writer/increment routine, finish crossing and HUD consumer remain unknown.
 - Keep the source links and version caveats in future updates; do not upload a ROM, full memory dump, local disassembly or extracted game data.
 
+
+## J. PC HUD analogue preserved as a non-parity reference
+
+- tim-tim707/SW_RACER_RE, pinned at a9863edd4caaa573f89ff634fa7d1cd6d41738ab (https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab) — PC/Windows only.
+- src/Swr/swrRace.c, function swrRace_InRaceTimer / PC address 0x00460950: source of the PC in-race HUD's lap fraction, lap-time popup, LAP TIME, FINAL LAP, LAP, POS and text resource identifiers.
+- src/Swr/swrObj.c, function swrObjJdge_F2 / PC address 0x0045EA30: reference for how the PC implementation increments the lap counter after a route-progress crossing and handles the configured lap threshold.
+- Use limit: these PC functions are comparison leads only. They do not prove N64 implementation, resource IDs, structure layouts, or control-flow parity. N64-specific claims must stay based on N64 local static/dynamic evidence and the independently labelled public GameShark documentation.
