@@ -7,6 +7,7 @@
 - Inspect the actual checked-out branch and files before making claims. Do not assume files from draft PRs or ChatGPT uploads are present in the current checkout.
 - The full Step 102 archive is not automatically available to GitHub Actions or Gemini just because it was uploaded to ChatGPT. Request a controlled, reviewed import if needed.
 - Do not claim native compilation, Dolphin boot, graphics, controls, or gameplay have been validated unless the corresponding run/log/evidence exists.
+- Follow `docs/PROJECT_OPERATING_RULES.md`: one active implementation task, one write-capable agent at a time, explicit owner approval for writes, no scheduled AI work, and no agent-driven merges or branch deletions.
 
 ## Provenance and assets
 - Assume the repository is public. Never commit ROMs, disc images, BIOS files, or complete commercial game payloads.
