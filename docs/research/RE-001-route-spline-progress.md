@@ -492,3 +492,39 @@ The loader uses the terminal size to capture the block, but the save path derive
 5. **GameCube/Wii parity:** unknown; no console block sample or console-specific parser validation established.
 
 **Disposition:** next source-level work should inspect how spline item parts are divided and whether unknown/padding bytes survive inside each part. Keep this strictly as PC reader evidence; do not transplant its header assumptions into the console adapter without independent evidence.
+
+
+## Follow-up source pass — what spline item round-trip actually exercises (2026-10-20)
+
+Pinned upstream reference: `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`. Relevant files:
+- [`SplineBlockItem.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineBlockItem.cs)
+- [`Spline.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/Spline.cs)
+- [`SplineSegment.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegment.cs)
+- [`BlockItemsTestBase.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.TestUtils/BlockItemsTestBase.cs)
+- [`BlockItemsReserializationTestBase.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.TestUtils/BlockItemsReserializationTestBase.cs)
+
+### Confirmed round-trip path
+
+The spline block item is represented by one `SplineBlockItemPart`. The generic block loader stores each part's original byte slice in `BlockItemPart.Bytes`. The test then:
+1. obtains an item from the provider and clones it while it still holds the raw part bytes;
+2. calls `item.Load()`, which deserializes the bytes into a structured `Spline`;
+3. calls `item.Save()`, which serializes that structured object and replaces the part's byte array;
+4. compares the clone's original item bytes with the newly serialized item bytes.
+
+Therefore, the test is not merely comparing a clone of the raw bytes with itself: it exercises structured deserialize → serialize. This is a meaningful item-level regression test.
+
+### What the test can and cannot tell us
+
+The data model explicitly represents the spline header, a count-governed list of segments, each segment's data record and segment header. Unknown-looking values such as `Word_00`, `Unk_0a`, `Unk_40`, `Word_0`, and `UnknownCount` are still serialized fields, so the serializer can preserve them as values if its mapping is correct.
+
+But the inspected model does not show a separate raw-byte field for arbitrary unmodeled padding or gaps *inside* the spline part. Since saving replaces the original raw part with bytes generated from the structured model, any unmodeled bytes would be at risk unless the serializer's own format/context rules explicitly preserve them. The source inspected here does not establish that arbitrary extra bytes are retained. This is a code-level risk hypothesis, not a demonstrated loss: only a real round-trip test can show whether it occurs for a given input.
+
+This also sharpens the test's meaning: passing cases would support exact reconstruction of the modeled spline item bytes for those selected fixtures, not a general guarantee for every spline, every release, every padding pattern, the outer block container, or any console format.
+
+### Next falsifiable checks
+
+- Inspect the serializer's handling of trailing bytes and count-driven lists, without importing its implementation into Boonta.
+- If authorized input later becomes available, record original item length, decoded segment count, serialized item length, byte diff ranges, and before/after SHA-256; report separately whether all unknown fields and any trailing region survive.
+- Do not synthesize a “real” game fixture. Without provenance-identified input, mark empirical preservation tests **BLOCKED**, and continue documenting the model-level hypotheses only.
+
+**Disposition:** upstream tests do exercise structured spline deserialize/serialize and compare original versus regenerated item bytes. No such test was executed for Boonta in this session; unknown padding preservation and GameCube/Wii parity remain **UNKNOWN**.
