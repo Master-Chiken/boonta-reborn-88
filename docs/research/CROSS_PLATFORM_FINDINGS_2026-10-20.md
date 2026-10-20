@@ -94,3 +94,19 @@ The schema defines four selectors: ModelBlockId, SplineBlockId, SpriteBlockId, a
 Interpretation: the library's metadata explicitly routes Dreamcast through the same generic block selections as Windows International/Mac. This is more specific than inferring similarity from a filename, but it remains the tool author's mapping, not independent proof from a Dreamcast disc. The checksum catalogue names a combined win_de__mac__dc sprite variant but does not separately list Dreamcast model, spline, or texture hashes. Thus byte identity of all Dreamcast assets, identical loaders, and identical renderer/physics remain unproven. N64 region-specific selection is explicitly represented and must remain part of asset provenance.
 
 Next question: find independent Dreamcast-specific evidence for model/spline/texture handling (a parser, version-pinned format note, or provenance-labelled inventory). Until then, mark Dreamcast model/spline/texture runtime behavior UNKNOWN and do not start a port based solely on matching metadata IDs.
+
+
+## Dreamcast executable string evidence: four named asset files
+
+GitHub code search found string-extraction reports for both USA and Europe Dreamcast builds in `lhsazevedo/dc-redump-extracted-data`, pinned at commit `832abe37573642c56298d3efd006f72416391755`:
+- USA: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(USA)/bins/1ST_READ.BIN.strings.txt
+- Europe: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(Europe)/bins/1ST_READ.BIN.strings.txt
+
+Both string reports contain `OUT_SPRITEBLOCK.BIN`, `OUT_SPLINEBLOCK.BIN`, `OUT_TEXTUREBLOCK.BIN`, and `OUT_MODELBLOCK.BIN`, followed by an error string for a missing named file. This is independent Dreamcast-specific evidence that the executable expects the familiar four block filenames in those builds. It does **not** establish that their binary layouts, compression, byte order, item IDs, or contents match PC/Mac: filenames are not a format specification. Treat this as a useful loader-level clue, not a validated Dreamcast parser.
+
+### Revised Dreamcast evidence ladder
+
+1. **Observed:** USA and Europe executable string reports contain all four expected block filenames.
+2. **Observed:** the asset library's release metadata assigns Dreamcast the same block IDs as Windows International/Mac.
+3. **Still unknown:** whether that mapping is based on verified byte-identical Dreamcast blocks, shared logical formats with different payloads, or an assumption made for tool convenience.
+4. **Next research action:** find source-level Dreamcast loading logic or a provenance-documented Dreamcast block inventory; compare metadata and format structure only after provenance is established. Do not infer file compatibility from names alone.
