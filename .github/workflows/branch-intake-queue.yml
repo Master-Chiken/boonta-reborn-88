@@ -1,26 +1,18 @@
 name: Branch intake queue
 
 on:
-  # Run once after this workflow definition changes on main so new intake logic
-  # is exercised against the live branch inventory. Output remains draft PRs only.
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/branch-intake-queue.yml"
+  # Solo-maintainer mode: intake is manual-only and defaults to one draft PR.
+  # Run it deliberately after reviewing the active task and existing open PRs.
   workflow_dispatch:
     inputs:
       max_prs:
-        description: "Maximum draft PRs to prepare (1, 3, 5, or 10)"
+        description: "Maximum draft PRs to prepare (1 or 2; default 1)"
         required: false
-        default: "5"
+        default: "1"
         type: choice
         options:
           - "1"
-          - "3"
-          - "5"
-          - "10"
-  schedule:
-    - cron: "17 9,17 * * *"
+          - "2"
 
 permissions:
   actions: write
@@ -39,15 +31,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      MAX_PRS: ${{ github.event.inputs.max_prs || '5' }}
+      MAX_PRS: ${{ github.event.inputs.max_prs || '1' }}
     steps:
       - name: Inventory branches and open pull requests
         shell: bash
         run: |
           set -euo pipefail
           case "$MAX_PRS" in
-            1|3|5|10) ;;
-            *) echo "::error::max_prs must be 1, 3, 5, or 10"; exit 1 ;;
+            1|2) ;;
+            *) echo "::error::max_prs must be 1 or 2"; exit 1 ;;
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
