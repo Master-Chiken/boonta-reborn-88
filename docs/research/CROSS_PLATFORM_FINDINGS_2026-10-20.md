@@ -161,3 +161,15 @@ The tool checks the first 32-bit word (after its byte-swap conversion) for `Comp
 ### Next research question (keep one active)
 
 **Where in the N64 data path are `Comp` chunks located relative to the generic asset-offset table?** Trace the N64 model-block extraction/iteration call path in available source and compare with the PC block reader. Do not start implementation until the nesting/order is supported by source or a provenance-identified sample. Step 102 remains parked and is not a dependency.
+
+
+### Follow-up: the N64 wrapper sits inside an indexed model entry (PC reverse-engineering notes)
+
+Pinned reference: `OpenSWE1R/swe1r-re/swep1rcr.exe/Models.md`, commit `57638c19ed092d52c152d8119e0cfe55e9c9f129`:
+https://github.com/OpenSWE1R/swe1r-re/blob/57638c19ed092d52c152d8119e0cfe55e9c9f129/swep1rcr.exe/Models.md
+
+This file documents the **Windows PC executable's** model-load path, not an N64 executable. It reads a model count, then three consecutive 32-bit values for the selected model at offset `8 * modelIndex + 4`; the notes interpret these as adjacent boundaries (`v23`, `v24`, `v25`). It derives a preceding region length as `v24 - v23` and the model payload length as `v25 - v24`. At `v24`, it reads a 12-byte header and checks for `Comp`; if present it takes the output size from header word 2 and invokes the decompressor on data starting at `v24 + 12`. Otherwise it loads the chunk directly.
+
+**What this changes:** we now have source-level evidence for a PC model-block entry path where the offset table identifies a payload chunk and the payload itself may carry a `Comp` wrapper. The older N64 tool README says the `Comp` chunks are only found in N64, while this PC decompilation note's code checks for `Comp` too. This is a real discrepancy in the available documentation, not something to smooth over: the PC note may be describing a generic/observed path that can handle compressed chunks, rather than proving the checked PC build actually contains any. We must not state “Comp is exclusive to N64” as a universal format rule until sample/version evidence resolves this.
+
+**Refined active question:** compare the PC note's three-offset model-entry structure against the N64 decoder's input contract and identify exactly which offsets delimit the compressed bytes, uncompressed output, and neighboring entry. Then verify whether PC retail/demo samples ever actually contain the `Comp` magic. Dreamcast remains unverified at the payload level. No implementation change yet.
