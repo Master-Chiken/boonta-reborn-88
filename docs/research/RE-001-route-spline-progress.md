@@ -394,3 +394,29 @@ Use the MIT reader's documented bit-perfect no-op round-trip capability as a **r
 
 **Disposition:** the PC/tooling raw-record hypothesis is better constrained; target-console binary layout and the semantics of several words remain **UNKNOWN**.
 
+
+
+## New source pass — audit of upstream spline reserialization tests (2026-10-20)
+
+Pinned references at `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`:
+
+- [Spline reserialization test cases](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original.Tests/Reserialization/SplineBlockItemsReserializationTest.cs)
+- [Shared reserialization test implementation](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.TestUtils/BlockItemsReserializationTestBase.cs)
+- [Test fixture/provider](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/OriginalBlocksProvider.cs)
+
+### What the tests actually establish
+
+The test suite defines individual spline-item round-trip cases for value IDs 0–90 and a set of selected IDs up to 190. The shared test logic deserializes an item, clones it, serializes the current item again, then compares the original and reserialized byte arrays; if they differ, it reports the differing item-part types. The provider loads named block files as embedded assembly resources, and the test fixture calls that provider during setup.
+
+This is stronger evidence than a README statement alone that the author has implemented and authored a byte-equality regression harness for selected PC/tooling spline items. However, the source inspection here is **not a fresh execution of those tests**: no run result was verified in this project session, and the fact that the fixture uses embedded resources does not independently establish the provenance/release/platform of every embedded block. These upstream cases must not be reported as our own round-trip pass or as console-format validation.
+
+### Consequence for Boonta's next experiment
+
+The experiment design is now precise enough to avoid rebuilding the test harness from scratch:
+
+1. Keep the upstream test implementation as a read-only reference; do not copy code or embed upstream game-derived resources.
+2. For any future private, provenance-identified PC input, record the release/file identity and hash locally, run a no-op deserialize/serialize, and compare the whole-file bytes—not only decoded fields.
+3. If only individual items are reserialized, also compare the outer block/table bytes separately; item equality alone does not establish container-level byte identity.
+4. Record test command, tool revision, input identity, before/after hashes, and result. Then keep PC evidence separate from any target-console comparison.
+
+**Disposition:** a credible upstream item-level test pattern exists. The current project still has no independently executed, provenance-recorded round-trip result, and GameCube/Wii parity remains **UNKNOWN**.
