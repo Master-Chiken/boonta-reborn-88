@@ -12,6 +12,14 @@ Treat SW_RACER_RE as a **Tier 1 technical and behavioral research reference** fo
 
 It is **not** the native GameCube source of truth and is not a drop-in console port. The upstream README explicitly says its goal is to document and re-implement selected functions for modding, not to obtain matching compilation or decompile the entire game. Its current documented progress (71.2%, 1,518 of 2,132 functions analyzed on 2026-06-12) is a dated upstream figure and means functions analyzed, not necessarily functions fully reimplemented.
 
+## Project-wide 80/20 work rule
+
+The intended allocation is **80% reverse-engineering research and 20% implementation, testing, integration and project management combined**. Track comparable 45–60 minute work blocks: eight of ten blocks are research, no more than two are all other engineering work. Do not manufacture tasks to hit the ratio; if time is limited, preserve the ratio and finish one bounded question.
+
+Only one research question is active at a time. Each question must end in an evidence dossier that separates observed source facts, inference, target-platform hypothesis and unknowns. Do not code while the source evidence or Step 102 mapping is still ambiguous. Tool setup and generic documentation do not count as reverse engineering unless they directly unblock the chosen question.
+
+The first active research item is **RE-001: compare the PC spline/cursor route model with the current GameCube prototype's track sampling and distance-based lap progress**. See [the dossier](research/RE-001-route-spline-progress.md). Mapping to the private Step 102 archive remains explicitly unverified until that candidate source can be inspected.
+
 ## Why it matters
 
 The project offers a better evidence base than guessing from screenshots or treating a minimal procedural prototype as representative of the original game. Its code, symbols, notes, and PC renderer/modding work can help the team form precise questions about:
@@ -48,17 +56,17 @@ This repository primarily studies the **Windows PC executable**. Its hook is a 3
 
 Boonta Reborn's primary target is native GameCube/Wii homebrew (PowerPC/libogc/GX). PC functions, addresses, calling conventions, DirectX paths, PC asset files, and hook code cannot be assumed to compile or behave the same on GameCube/Wii. Use the PC research to derive a testable *behavioral specification*, then implement or adapt that behavior separately for the console target. Validate every platform-specific assumption.
 
-## Required workflow: study → map → implement → test
+## Required workflow: study → map → specify → implement only if justified → test
 
 For each important feature:
 
-1. **Record the upstream evidence.** Link to the exact upstream file/function/note and the reviewed commit. State whether the finding is confirmed, inferred, or still uncertain.
-2. **Map it to Step 102.** Identify the corresponding source module, function, data structure, test, or the fact that no equivalent currently exists. Candidate source files already named in the archive handoff include `source/main.c`, `source/racer_physics.c`, `source/rival_ai.c`, and `source/track_catalog.c`; confirm exact mapping from the archive before making changes.
-3. **Separate PC fact from console hypothesis.** Record what appears true of the Windows game separately from what must be tested on the GameCube/N64 version.
-4. **Specify independent behavior.** Write down inputs, state transitions, equations/parameters where verified, edge cases, timing assumptions, and an observable pass/fail result.
-5. **Implement on a review branch.** Prefer independently written code that follows the behavioral specification; do not copy or adapt upstream code unless licensing and compatibility have been reviewed and the project owner explicitly chooses the consequences.
-6. **Add tests.** Unit-test portable logic first, then compile with the native console toolchain and test actual behavior in an interactive emulator/hardware environment.
-7. **Record evidence.** Link test logs and CI runs; do not call a PC behavior proven on console merely because the PC implementation or host tests pass.
+1. **Study the exact evidence.** Link the exact upstream file/function/note and the reviewed commit. State whether the finding is confirmed, inferred or uncertain.
+2. **Map to the actual target sources.** If Step 102 is available, identify the corresponding file/function/data/test. If it is unavailable in the current work surface, say so and leave the mapping unverified; do not infer it from filenames in an old handoff note.
+3. **Separate platform claims.** Record Windows-PC source facts separately from Step 102 findings and GameCube/Wii hypotheses.
+4. **Write an independent behavior specification.** Include inputs, state transitions, timing assumptions, edge cases and an observable pass/fail result.
+5. **Decide whether code is needed.** A research result can be the deliverable; do not force an implementation just to show activity.
+6. **If justified, implement on a review branch.** Keep the change small and independently written. Do not copy or adapt upstream code without a deliberate license review and owner decision.
+7. **Validate and report.** Use exact-head host tests, a native console build, and interactive testing where applicable. Link evidence and preserve unknowns; a PC finding never alone proves console behavior.
 
 ## Priority study matrix
 
@@ -88,9 +96,11 @@ For each important feature:
 - **SW_RACER_RE** is the priority reference for PC-side reverse engineering and behavior research. It does not remove the need to inspect GameCube-specific code/data or test differences in the console version.
 - **The Dreamcast folder** remains a separate experiment and is not a GameCube/Wii implementation path.
 
-## Next concrete task
+## Next concrete task — RE-001 only
 
-Create a versioned feature mapping table for the first three items above (race/laps, pod physics/control, and spline/track format), then use it to guide the Step 102 audit and the first playable GameCube vertical slice. Start read-only. Do not bulk-import either archive or merge a code change just because this research exists.
+Finish the route/spline progression dossier at [research/RE-001-route-spline-progress.md](research/RE-001-route-spline-progress.md). The bounded question is: **how does the reviewed PC source represent route position and advance a spline cursor, and how does that differ from the current GameCube prototype's track sampling and lap counter?**
+
+Required output: exact source links, current-prototype mapping, facts vs unknowns, a Step 102 mapping status, and one next research question. Do not start handling/traction, AI, assets, rendering or another subsystem in parallel. Do not bulk-import either archive or make a code change merely because a behavior has been documented.
 
 ## Sources
 
