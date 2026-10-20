@@ -736,3 +736,12 @@ Pinned evidence: `DeonPoncini/swep1r_decomp` commit `d988c6408a91aaf8a0e65dbdbe3
 ### Implementation boundary
 
 This matrix is sufficient to design a small, source-derived PC contract harness, but not to implement console-faithful traversal yet. Before coding traversal, resolve the aliased output arguments in `0x0047ffb0`, map the frame/global `_DAT_00e22a48`, and establish a typed representation for cursor fields. Keep this as reverse-engineering work (80% of effort); no gameplay implementation is authorized by this note. No proprietary code or game assets are copied into Boonta.
+
+
+## Timing-global provenance check (2026-10-20)
+
+Follow-up to the cursor matrix: the pinned Steam-PC decompilation's `FUN_00480540` in `c/FUN_00480540.c` writes the double `dVar1` into the global pair `_DAT_00e22a4c:_DAT_00e22a48`. On the ordinary timing path, `dVar1` is computed from `timeGetTime() - DAT_0050cb60` multiplied by `_DAT_004adf80`; the separate frame-delta variable `_DAT_00e22a40` is clamped to at most approximately `0.1` and floored to approximately `0.002` on the normal path. The cursor-crossing formula casts `_DAT_00e22a48` to float, so the best current interpretation is that it uses the stored, un-clamped elapsed-time value rather than the separately clamped frame delta.
+
+**Caveat:** the routine has alternate timing/freeze branches, and the double-global reconstruction plus decompiler typing needs care. This establishes the variable's write path, not a universal guarantee that every cursor call receives a raw elapsed delta under every mode. Test proposals should compare ordinary, long-frame/clamped, paused/frozen and alternate timing modes before naming this input simply `rawDelta`.
+
+No gameplay code changed; this is source-level evidence only.
