@@ -8,6 +8,25 @@ Unofficial fan / homebrew project. Clean-room first.
 
 ---
 
+## Product strategy — reconstruct first, enhance second
+
+The intended order is now explicit: **use reverse engineering to reconstruct a faithful, playable baseline of the original game before adding the HD++ improvements.** The current procedural GameCube demo is a technical harness, not the intended substitute for the original courses, route system, handling or race flow.
+
+### Stage A — original-faithful playable baseline
+
+- Reverse-engineer the original's route/course representation, pod handling, lap/race state, rivals, collision/recovery, camera, HUD and race flow from version-tagged PC, N64 and Dreamcast evidence where available.
+- Implement those behaviors independently for native GameCube/Wii, keeping platform-specific assumptions explicit.
+- Establish how original course and model data can be read; use only content the owner can lawfully supply locally, and do not publish or redistribute proprietary assets.
+- Validate one representative course from start to finish, then reset and start another race. Do not call the baseline complete while the route/course remains only a procedural placeholder.
+
+### Stage B — improve after the baseline works
+
+- Improve visuals, presentation, handling quality-of-life and performance without silently changing the reference behavior.
+- Add extra original or provenance-cleared courses, pods, modes and bonus content as separate, testable work.
+- Keep every enhancement distinguishable from the reconstructed baseline so regressions can be identified.
+
+The research target is not “copy PC code into GameCube.” PC source is a source of behavioral evidence; N64/Dreamcast evidence must be evaluated independently, and gaps remain unknown until supported. Upstream code licenses and the project's clean-room policy still apply. Reverse engineering can establish behavior and formats, but it does not itself grant rights to redistribute the original game executable or proprietary assets.
+
 ## Phase 0 – Foundations
 
 **Status: prototype foundations and CI are in place; interactive acceptance is still open.**
