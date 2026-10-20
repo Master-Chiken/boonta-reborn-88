@@ -74,3 +74,27 @@ The next useful step is to make a small evidence matrix, not start porting PC co
 ## Next action (one active task)
 
 **Inspect the PC spline-following / progress routines only**: `swrRace_UpdateSplineCursor`, `swrRace_PlaceOnTrack`, `swrRace_GetLapProgressIfAvailable`, and `swrObjJdge_GetRacerProgress`. Record inputs, outputs, coordinate/progress conventions, and unknowns. After that, compare only externally observable progress behavior against identified N64 and Dreamcast releases. No implementation changes until that comparison reveals a specific Boonta mismatch.
+
+
+## Follow-up: race progress and standings inspected
+
+Source: https://github.com/tim-tim707/SW_RACER_RE/blob/master/src/Swr/swrObj.c
+
+Static inspection of `swrRace_GetLapProgressIfAvailable`, `swrObjJdge_GetRacerProgress`, `swrObjJdge_GetRacerRankValue`, and `swrObjJdge_UpdateStandings` adds these specific observations:
+
+- The lap-progress helper returns `-1.0` when there is no active race object or no first local player; otherwise it delegates to the local player's spline cursor progress.
+- The standing-progress value combines completed laps with a current-lap fraction and applies a wrap correction around the start/finish boundary. Negative output is clamped to zero.
+- A racer that is not marked finished is ranked by progress. A finished racer is initially ranked using `maxRaceTime - total_time`, then the standings pass normalizes finished entries back to progress for gap calculations.
+- The standings pass resets position and AI-tether flags, assigns ranks, and records progress gaps to leader, local players, and pace-setter. The source comments identify `-100.0` as the no-local-player sentinel for player gap fields.
+- The implementation shown uses a repeated maximum-selection pass rather than a library sort. Equal-rank/tie behavior should be tested rather than assumed.
+
+### Boonta test candidates derived from this evidence
+
+1. No active race / no local player: progress query must return an explicit unavailable state rather than accidentally report zero progress.
+2. Start/finish wrap: just-before and just-after boundary samples must not produce a near-one-lap discontinuity.
+3. Lap count plus fraction: same lap, different spline fractions; then adjacent lap with equivalent fractions.
+4. Finished versus unfinished racers: verify final ordering and displayed gap remain coherent when finishers cross the line at different times.
+5. Missing local player: gap display should not confuse the source's `-100.0` sentinel with a real distance.
+6. Equal progress / equal finish-time edge cases: document tie behavior from a controlled test before choosing a Boonta rule.
+
+These are **PC-source-derived test hypotheses**, not claims about N64/Dreamcast implementation. The next source pass remains focused on spline cursor updates and placement; then compare externally observable behavior on the console releases.
