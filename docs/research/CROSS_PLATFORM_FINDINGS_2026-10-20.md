@@ -78,3 +78,19 @@ The asset library's release-labelled checksum list includes separate N64 US and 
 ### Practical consequence
 
 Boonta's asset pipeline should keep container format, compression wrapper, and model payload as three separate layers. A parser should identify the platform/build from grounded metadata, validate lengths and bounds before decompression, and round-trip only formats for which the tool's support is demonstrated. Do not assume a PC block reader can accept an N64 Comp chunk, and do not label Dreamcast support as present until there is a Dreamcast-specific sample or primary parser evidence.
+
+
+## Release metadata audit: Dreamcast mapping evidence boundary
+
+Pinned source snapshot: `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`.
+
+Sources:
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Metadata/ReleaseMetadata.cs
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/Resources/checksums.sha1
+
+The schema defines four selectors: ModelBlockId, SplineBlockId, SpriteBlockId, and TextureBlockId. Release.csv maps Windows International, Mac, and Dreamcast to the same IDs (0,0,3,0); N64 USA to (2,1,2,1); N64 Europe to (1,1,0,1); N64 Japan to (1,1,1,1); and Windows Demo to (3,0,4,2).
+
+Interpretation: the library's metadata explicitly routes Dreamcast through the same generic block selections as Windows International/Mac. This is more specific than inferring similarity from a filename, but it remains the tool author's mapping, not independent proof from a Dreamcast disc. The checksum catalogue names a combined win_de__mac__dc sprite variant but does not separately list Dreamcast model, spline, or texture hashes. Thus byte identity of all Dreamcast assets, identical loaders, and identical renderer/physics remain unproven. N64 region-specific selection is explicitly represented and must remain part of asset provenance.
+
+Next question: find independent Dreamcast-specific evidence for model/spline/texture handling (a parser, version-pinned format note, or provenance-labelled inventory). Until then, mark Dreamcast model/spline/texture runtime behavior UNKNOWN and do not start a port based solely on matching metadata IDs.
