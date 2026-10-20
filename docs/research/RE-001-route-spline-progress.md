@@ -1298,3 +1298,16 @@ This is a separate N64 evidence thread; do not merge its conclusions with the Wi
 ### Minimal next verification
 
 On the owner's lawful local US ROM in a compatible emulator/debugger, observe writes to `0x8011900A` and `0x80119092` during an ordinary race, or use the known lap-setting cheat as a controlled intervention. Record the runtime address/function and visible result only. Keep the ROM, full memory dump, and extracted proprietary data local; no such emulator observation is claimed as completed here.
+
+## PC-only HUD analogue — target for N64 cross-check (2026-10-21)
+
+This subsection deliberately records PC evidence only. It must not be cited as proof that the N64 build shares its lap fields, state machine, text IDs, or call paths.
+
+At pinned commit [a9863edd4caaa573f89ff634fa7d1cd6d41738ab](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab):
+
+- src/Swr/swrRace.c, function swrRace_InRaceTimer (PC function address 0x00460950) formats the in-race HUD. The lap fraction uses the current completed-lap counter plus one, clamped to the configured lap count, and the configured lap count as the second number. It then renders the LAP caption using /SCREENTEXT_424/. The same routine handles a completed-lap time popup, LAP TIME (SCREENTEXT_420), New Record (SCREENTEXT_538), the FINAL LAP banner (SCREENTEXT_526), and POS (SCREENTEXT_426).
+- src/Swr/swrObj.c, function swrObjJdge_F2 (PC function address 0x0045EA30) increments the per-player completed-lap counter only after swrRace_UpdateRaceProgress reports a crossing. Equality with the configured number of laps enters the finish path and sets the PC score/pod state accordingly.
+
+Why this helps the N64 trace: the N64 ROM's local text scan showed a cluster in the same apparent ordering — LAP TIME, New Record, FINAL LAP, TIME, two %d/%d templates, LAP, POS. The PC implementation gives us specific comparison targets: one fraction should pair current lap + 1 with configured laps, while the other may be position / number of racers; the final-lap banner is selected at the transition into the last lap in this PC implementation.
+
+Do not promote this to an N64 conclusion yet. The PC text IDs and N64 resource indices may differ, and identical labels/order do not establish shared code. The next local-only N64 step remains mapping the resource/string lookup and draw caller, then validating whether the FINAL LAP selector and lap fraction have the analogous data flow.
