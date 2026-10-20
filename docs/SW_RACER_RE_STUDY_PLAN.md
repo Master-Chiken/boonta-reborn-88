@@ -8,7 +8,7 @@
 
 ## Decision
 
-Treat SW_RACER_RE as a **Tier 1 technical and behavioral research reference** for understanding the original PC game's systems. It must be linked to the Step 102 work and reviewed before implementing important gameplay, track, asset-format, or rendering behavior.
+Treat SW_RACER_RE as a **Tier 1 technical and behavioral research reference** for understanding the original PC game's systems. Compare findings with the current Boonta Reborn code and tests. The historical Step 102 bundle is optional background material, not an authoritative source or a prerequisite.
 
 It is **not** the native GameCube source of truth and is not a drop-in console port. The upstream README explicitly says its goal is to document and re-implement selected functions for modding, not to obtain matching compilation or decompile the entire game. Its current documented progress (71.2%, 1,518 of 2,132 functions analyzed on 2026-06-12) is a dated upstream figure and means functions analyzed, not necessarily functions fully reimplemented.
 
@@ -16,9 +16,9 @@ It is **not** the native GameCube source of truth and is not a drop-in console p
 
 The intended allocation is **80% reverse-engineering research and 20% implementation, testing, integration and project management combined**. Track comparable 45–60 minute work blocks: eight of ten blocks are research, no more than two are all other engineering work. Do not manufacture tasks to hit the ratio; if time is limited, preserve the ratio and finish one bounded question.
 
-Only one research question is active at a time. Each question must end in an evidence dossier that separates observed source facts, inference, target-platform hypothesis and unknowns. Do not code while the source evidence or Step 102 mapping is still ambiguous. Tool setup and generic documentation do not count as reverse engineering unless they directly unblock the chosen question.
+Only one research question is active at a time. Each question must end in an evidence dossier that separates observed source facts, inference, target-platform hypothesis and unknowns. Do not code while the relevant source evidence is still ambiguous. An unavailable historical archive is not a blocker by itself; use the current repository, pinned public references, and tests. Tool setup and generic documentation do not count as reverse engineering unless they directly unblock the chosen question.
 
-The first active research item is **RE-001: compare the PC spline/cursor route model with the current GameCube prototype's track sampling and distance-based lap progress**. See [the dossier](research/RE-001-route-spline-progress.md). Mapping to the private Step 102 archive remains explicitly unverified until that candidate source can be inspected.
+The first active research item is **RE-001: compare the PC spline/cursor route model with the current GameCube prototype's track sampling and distance-based lap progress**. See [the dossier](research/RE-001-route-spline-progress.md). Step 102 is a legacy research bundle assembled early in the project from collected reference materials. It is not the game, not a canonical source tree, and not required to progress; consult it only if a specific detail cannot be answered from current code or stronger references.
 
 ## Why it matters
 
@@ -61,8 +61,8 @@ Boonta Reborn's primary target is native GameCube/Wii homebrew (PowerPC/libogc/G
 For each important feature:
 
 1. **Study the exact evidence.** Link the exact upstream file/function/note and the reviewed commit. State whether the finding is confirmed, inferred or uncertain.
-2. **Map to the actual target sources.** If Step 102 is available, identify the corresponding file/function/data/test. If it is unavailable in the current work surface, say so and leave the mapping unverified; do not infer it from filenames in an old handoff note.
-3. **Separate platform claims.** Record Windows-PC source facts separately from Step 102 findings and GameCube/Wii hypotheses.
+2. **Map to the actual project.** Identify the corresponding current Boonta source/function/test. Compare with the pinned PC reference and label platform differences. Consult the old Step 102 notes only if they provide a specific traceable lead; do not treat them as source code or as a gate.
+3. **Separate platform claims.** Record Windows-PC source facts separately from current Boonta implementation/tests and any GameCube/Wii hypotheses.
 4. **Write an independent behavior specification.** Include inputs, state transitions, timing assumptions, edge cases and an observable pass/fail result.
 5. **Decide whether code is needed.** A research result can be the deliverable; do not force an implementation just to show activity.
 6. **If justified, implement on a review branch.** Keep the change small and independently written. Do not copy or adapt upstream code without a deliberate license review and owner decision.
@@ -91,7 +91,7 @@ For each important feature:
 
 ## Relationship to Step 102 and the current demo
 
-- **Step 102** remains the candidate source baseline for native GameCube/Wii work, subject to the separate path-by-path provenance and redistribution gate. Its existing PC-derived route centerline data remains on hold until its own provenance is resolved.
+- **Step 102** is a historical, user-created research bundle assembled early from game references, manuals, and reverse-engineering materials. It is not the game itself and is not an authoritative GameCube/Wii source tree. Do not treat it as a baseline or blocker. Any individual data item from it must be independently checked for provenance and usefulness before reuse; no need to preserve or integrate the bundle merely because it exists.
 - **The clean-room demo in gamecube-demo/ is on main.** It now builds a native DOL/ELF and has a CI Software Renderer capture showing a visible procedural scene. Host tests cover selected prototype logic, but live controller response, a completed three-lap run, sustained stability, and physical-hardware behavior remain unverified. Treat it as the immediate interactive-validation target, not as a faithful reconstruction of the full game.
 - **SW_RACER_RE** is the priority reference for PC-side reverse engineering and behavior research. It does not remove the need to inspect GameCube-specific code/data or test differences in the console version.
 - **The Dreamcast folder** remains a separate experiment and is not a GameCube/Wii implementation path.
@@ -100,7 +100,7 @@ For each important feature:
 
 Finish the route/spline progression dossier at [research/RE-001-route-spline-progress.md](research/RE-001-route-spline-progress.md). The bounded question is: **how does the reviewed PC source represent route position and advance a spline cursor, and how does that differ from the current GameCube prototype's track sampling and lap counter?**
 
-Required output: exact source links, current-prototype mapping, facts vs unknowns, a Step 102 mapping status, and one next research question. Do not start handling/traction, AI, assets, rendering or another subsystem in parallel. Do not bulk-import either archive or make a code change merely because a behavior has been documented.
+Required output: exact source links, current-prototype mapping, facts vs unknowns, and one next research question. Step 102 status is included only if the dossier directly uses a specific item from that historical bundle. Do not start handling/traction, AI, assets, rendering or another subsystem in parallel. Do not bulk-import either archive or make a code change merely because a behavior has been documented.
 
 ## Sources
 
