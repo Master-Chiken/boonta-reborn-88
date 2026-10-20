@@ -359,3 +359,38 @@ A pinned cross-check of the MIT-licensed `akopetsch/swe1r-assets` repository at 
 
 Keep the logical route schema platform-tagged, but add a separate **format adapter / release profile** for N64 rather than treating PC spline data as the canonical serialized representation. Keep field semantics unknown until supported by a pinned parser description, controlled runtime observation or a verified local round-trip. Dreamcast remains a separate unresolved case: its shared `SplineBlockId = 0` mapping is the asset-tool author's mapping, not independent proof that its spline bytes or runtime behavior are identical to PC.
 
+## New source pass — independent spline-block record layout (2026-10-20)
+
+Pinned references:
+- [MIT SWE1R asset reader: spline record model](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentData.cs)
+- [MIT SWE1R asset reader: spline record header](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentHeader.cs)
+- [GPL-3.0 Blender tool: splineblock.py](https://github.com/louriccia/blender-swe1r/blob/b0d4019addb97d51523019ca1233411fae0508d6/splineblock.py)
+
+### What the independent reader adds
+
+The MIT reader models each spline block item as a header followed by a count-governed list of segment records. Each segment record is a data record followed by a separate segment header. The data record model labels:
+- six initial 16-bit words, including a field named `PreviousNodeId` at offset `0x08`;
+- a three-float vector at offset `0x10`;
+- a float at `0x24`;
+- two three-float control-point vectors at offsets `0x28` and `0x34`;
+- a 32-bit field at offset `0x40`.
+
+The segment header model labels 16-bit words at `0x00`, `0x02`, `0x0c`, and `0x0e`, with 32-bit fields at `0x04` and `0x08`. Several names are explicitly placeholders such as `Word_00` and `Unk_40`; these are offsets and widths, not decoded semantics. The record field layout and offset attributes are useful independent evidence for a **PC/tooling schema**, but do not prove this is the layout consumed by N64, Dreamcast, GameCube or Wii builds.
+
+The Blender parser independently describes a different-looking 0x50-byte point record using big-endian struct format `>8h48x10h`: outgoing-link count, incoming-link count, up to two outgoing indices, up to four incoming indices, a progress band, eight branch/route metadata values and an unknown field. It reads position, rotation and two Bezier handles at offsets `0x10`, `0x1c`, `0x28`, and `0x34`. Its tool comments explicitly impose exporter limits and its writer normalizes/pads the link arrays. Those implementation details are evidence of the tool's understood PC representation, not proof that the unknown words in the MIT model map one-to-one onto the Blender names.
+
+### Important schema correction
+
+Keep two representations separate:
+
+1. **Raw serialized record** — platform/release-specific fields, offsets, endianness, unknown words and counts. Preserve unknown fields without assigning semantics.
+2. **Normalized runtime route graph** — decoded node links, positions, curve controls, progress mapping, branch state and optional orientation data, populated only where the selected platform adapter has evidence.
+
+In particular, the runtime PC reverse-engineering notes describe per-node progress base/span, while the Blender raw point model exposes a progress band plus `unk_set` metadata. These may be related through derived/build-time tables, but the sources do not establish that they are identical fields or that a console record stores PC's base/span directly. Treating them as one field would overstate the evidence.
+
+### Next verification target
+
+Use the MIT reader's documented bit-perfect no-op round-trip capability as a **reference experiment**, not as code to import: for a legally available, provenance-identified PC spline block, verify byte-identical deserialize/serialize output before using it to test field hypotheses. Then compare only independently sourced target-platform samples if available. Without a verified sample, do not create synthetic “golden” binary bytes or claim cross-platform format parity.
+
+**Disposition:** the PC/tooling raw-record hypothesis is better constrained; target-console binary layout and the semantics of several words remain **UNKNOWN**.
+
