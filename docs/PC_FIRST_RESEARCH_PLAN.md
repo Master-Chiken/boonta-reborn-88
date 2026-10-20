@@ -38,8 +38,8 @@ This snapshot separates what has a direct implementation or test artifact from w
 
 - **Implemented:** `gamecube-demo/` contains native GX rendering, an original procedural track and pod, state-based driving controls, boost/heat, laps, HUD, pause/reset and host regression tests. Root `LICENSE` is MIT for the repository's own code; it does not grant rights to Star Wars game content.
 - **Automated evidence:** the project documents native devkitPPC/libogc DOL/ELF builds, host tests, DOL/ELF validation, and Dolphin process/render diagnostics. A visible procedural frame and scripted finish diagnostic are useful evidence, but neither proves a human can control and complete the race.
-- **Still unverified:** manual-controller end-to-end race acceptance; physical GameCube/Wii behavior; integration of the private Step 102 candidate; compatibility with original commercial models/textures/audio. The Step 102 ZIP/manifest and its path/license evidence remain gating inputs, not something to bypass.
-- **Rule:** preserve this working clean-room slice. Do not replace it wholesale with a third-party project or mix it with the unreviewed Step 102 bundle.
+- **Still unverified:** manual-controller end-to-end race acceptance; physical GameCube/Wii behavior; compatibility with original commercial models/textures/audio. Step 102 was an early, user-created research bundle, not the game or an authoritative source archive; its absence does not gate the clean-room prototype.
+- **Rule:** preserve this working clean-room slice. Do not replace it wholesale with a third-party project. Treat the old Step 102 bundle as optional historical notes; don't import it wholesale, and don't spend time reconstructing it unless a concrete question depends on a traceable item.
 
 ### 2. External projects and best use
 
@@ -66,7 +66,7 @@ Classify each candidate with one of these states, and keep the exact hash/commit
 - **TARGET-VERIFIED** — that behavior/resource format was matched to the actual GameCube/Wii target evidence.
 - **HELD** — provenance, licence, build/runtime evidence, or platform mapping is insufficient.
 
-Current high-level triage: Boonta's clean-room prototype has build/test/render evidence but lacks manual race acceptance; SW_RACER_RE is the leading **PC research** source but its reviewed tip was not confirmed green by the most recent CI run found; asset parsers are promising for PC block files but have not been round-trip tested in this project. Step 102 is **out of the critical path** unless it later answers a specific technical question. PC/N64/Dreamcast data is not treated as GameCube data without direct evidence.
+Current high-level triage: Boonta's clean-room prototype has build/test/render evidence but lacks manual race acceptance; SW_RACER_RE is the leading **PC research** source but its reviewed tip was not confirmed green by the most recent CI run found; asset parsers are promising for PC block files but have not been round-trip tested in this project. Step 102 is a historical bundle of collected references, manuals, and early research notes—not a canonical source archive. It is optional context and out of the critical path; do not spend effort recovering or maintaining it unless a specific traceable note answers a defined question. PC/N64/Dreamcast data is not treated as GameCube data without direct evidence.
 
 ### 4. First experiments — no game implementation yet
 
@@ -92,7 +92,7 @@ The governing sequence is **MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST**: fi
 - Do not commit game executables, ROMs, disc images, BIOS files, extracted proprietary models/textures/audio, or unclear mod-derived track geometry.
 - Do not treat “open source”, “public GitHub repository”, or a tool's license as permission to redistribute the original game or its assets.
 - Do not describe an existing partial decompilation as a complete source port.
-- Step 102 is not a current milestone or blocker; leave it untouched unless it becomes directly relevant to a defined research question.
+- Step 102 is an early user-created research bundle, not the game and not a source-of-truth codebase. It is not a current milestone or blocker; leave it untouched unless a specific note is directly relevant to a defined research question. Deletion is a separate housekeeping decision and is unnecessary for current progress.
 - Do not import external code or original-game content into main without a separate license/provenance review.
 - Keep all work within the project's free-only constraint: no paid APIs, no billing, no paid CI services.
 
