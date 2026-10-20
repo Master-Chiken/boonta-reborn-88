@@ -71,3 +71,9 @@ The older 27-ref inventory in issue #235 is stale. The earlier 6-ref count is al
 - On current #214 head `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, workflow [39327379050](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39327379050) completed all four jobs successfully. Its software-renderer diagnostic artifact [12223576295](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39327379050/artifacts/12223576295) includes scripted left/right frames, reset/pause/resume captures, finish/reset detector outputs, and a full-race DTM/log set. The job log shows the built DOL was booted and the artifact uploaded.
 - This strengthens automated evidence, but does not satisfy human interactive acceptance: controller/keyboard feel, driving behavior, and full manual three-lap completion/stability remain unverified by a human. Issue #126 has been updated with this exact-head evidence and the explicit distinction.
 - The exact-head visible workflows for #242 remain successful (runs `39476180227` and `39476180096`); the separate `pull_request_target` guard run still needs confirmation via its Actions page.
+
+
+### Latest PR #243 test update — 2026-10-20 20:47 CEST
+
+- Focused branch advanced to `6b31321294e8238b836e7d1807c0ef006835f377`; PR still changes exactly two files: `gamecube-demo/source/gameplay_state.h` and `gamecube-demo/tests/test_gameplay_state.c`.
+- Added explicit tests for the deadzone boundary at +16/-16 and first values outside it at +17/-17. Workflow run `39477710458` was still `in_progress` when checked. Human controller-feel acceptance and independent review remain open.
