@@ -1152,3 +1152,19 @@ This provides a possible independent check on the strong slot/size association b
 ### Static cross-reference check of the GameShark address (limited, not a negative proof)
 
 On the local US ROM, a lightweight instruction-pattern scan of the main code span given by the pinned `sp00nznet/racer` reference (ROM `0x1000` to `0x99000`, mapped from VRAM `0x80000400`) found several accesses to nearby global offsets `0x800A52D0`, `0x800A52D4`, `0x800A52D8` and `0x800A52DC`; it did not find a direct main-segment load/store with immediate offset `0x52D3` using the simple `lui 0x800A` + memory-access pattern. This scan was not a full decompiler or whole-ROM overlay scan. The byte may be addressed through a pointer, a `$gp`-relative symbol, or code loaded from another segment; therefore this result is **not evidence that the cheat code is wrong or that the flag is unused**. It only means static identification of the reader remains open and the emulator-visible toggle is the cleanest next check.
+
+## Strong static link from GameShark flag to a conditional render helper (main N64 code)
+
+Using the local US ROM and an ephemeral ELF wrapper for the main MIPS code span (ROM `0x1000`–`0x99000`, mapped to VRAM `0x80000400`), LLVM's MIPS disassembler confirms this call path:
+
+- At VRAM `0x80054124`, the code loads `0x800A0000` into a register; at `0x80054128`, it executes `lw` from offset `0x52D0`, reading the **word at `0x800A52D0`**.
+- At `0x80054134`, it branches around the helper when that word is zero.
+- When nonzero, at `0x8005413C` the code calls `0x80053AD4`. This is the only direct `jal` to `0x80053AD4` found by scanning the main code span.
+- `0x80053AD4` has its own conventional function prologue/epilogue embedded inside the broad auto-generated symbol range `func_80053384`. It runs a render-object preparation loop and calls `render_submit` at `0x800181BC` from inside that loop. The public [symbol table](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/symbols.toml) names `0x800181BC` as `render_submit`.
+- Almar's community cheat listing calls the byte write `800A52D3 0001` “Spline Markers On”. On big-endian N64, address `0x800A52D3` is byte `+3` of the word read at `0x800A52D0`; so the cheat byte and the word-tested by the caller line up without requiring code to read address `...52D3` as a separate byte.
+
+**Interpretation:** This is strong static evidence that the community's “Spline Markers On” cheat flag gates an additional rendering helper. The helper is therefore a high-confidence candidate for spline-marker visualization, not just an unrelated string near debug labels. It gives us a direct runtime experiment to perform. We still have not observed rendered markers in an emulator, so it does not by itself prove that the markers are route centerline points, control handles, AI paths or exactly spline item 110.
+
+**What remains unresolved:** the helper consumes an object supplied by its caller and submits render objects; it doesn't in this pass expose a reliable name or struct definition for the route-node payload. Next static step is to trace which object type and data fields arrive in `$a1` at `0x80053AD4`, and compare those accesses against the byte offsets of the 84-byte candidate records. Runtime marker observation is likely to be the faster independent check.
+
+Research hygiene: disassembly was performed locally against the supplied ROM and was not uploaded. No instruction dumps, code, ROM, or derived coordinates were committed; only the addresses and grounded call relationship are documented.
