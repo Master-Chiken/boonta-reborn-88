@@ -67,3 +67,11 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 3. Keep #242 in review: on the latest checked head `870cf9219c947e692097d5ed42f33007c96fc9df`, `AI free-tier safety checks` and `Step 102 source-import provenance guard` passed. The trusted source-import path guard was not visible for this exact SHA, so do not describe all required checks as green. Review the broad history/base carefully and finish only the already-scoped RE-001 documentation work.
 4. Split cleanup automation out of #233 into a separately reviewed proposal; do not automatically carry over its deletion workflow.
 5. Re-run this inventory after any merge, then propose branch retirement candidates with evidence. No deletion is authorized by this document.
+
+
+### Follow-up verification — 2026-10-20 19:24 CEST
+
+- A fresh PR metadata fetch shows #242 has advanced beyond the previously recorded `870cf9219c947e692097d5ed42f33007c96fc9df`: current head is `963c14f4a7322dacd9d0f6627bd379f30ad59302`, base is `fa8cee047ae8e74c30c87cd94977c434bb1c7398`, with 81 commits and 15 changed files.
+- Exact-SHA workflow-run lookup for `963c14f4a7322dacd9d0f6627bd379f30ad59302` confirms two successful runs: Step 102 source-import provenance guard (run `39465154135`) and AI free-tier safety checks (run `39465154137`). The trusted source-import path guard is not present in the returned workflow-run list, so the full required gate is still not confirmed for this head. No workflow was dispatched or rerun.
+- Review metadata for #214, #243, and #242 currently shows no submitted reviews and no inline review threads. This is evidence that independent review remains outstanding, not evidence of approval.
+- Issue #126 remains open. Its interactive three-lap checklist is still a human-operated acceptance gate; CI and scripted frame diagnostics cannot substitute for actual input feel and a manually driven full race.
