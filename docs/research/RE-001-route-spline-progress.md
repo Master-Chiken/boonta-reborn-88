@@ -115,6 +115,8 @@ That difference makes route/cursor mapping a high-value reverse-engineering ques
 
 **Not verified in this pass.** The project register references a private `Star_Wars_Racer_GameCube_Step102.zip` candidate and a separate manifest, but those files were not available in the connected file workspace for this research pass, and they are not checked into the public repository. Therefore, no Step 102 filename/function is claimed as inspected.
 
+**Availability re-check (2026-10-20):** Rechecked the connected conversation-file list and Library metadata; the named Step 102 source ZIP and its manifest still are not available for inspection. No console source file/function is claimed as mapped. This is an input blocker, not a reason to start implementation or substitute a commercial game ROM/disc image.
+
 The next Step 102 task is to inspect only the candidate source archive's route/race files and tests locally, match actual file contents to the PC observations above, and record each file's provenance/license status. Do not upload commercial game archives/ROMs/disc images or extracted assets to hosted tools; do not publish the Step 102 archive or bulk-import it.
 
 ## Next question (not active until RE-001 is reviewed)
