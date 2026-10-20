@@ -56,3 +56,18 @@ Always identify the exact commit and run link. Distinguish:
 - longer-session and physical-hardware tests.
 
 Do not report a lower-level check as proof of a higher-level outcome. No agent should push directly to main, delete branches/history, or merge its own code.
+
+
+## Multi-agent routing — reviewed 2026-10-21
+
+Use [the shared playbook](MULTI_AGENT_RESEARCH_PLAYBOOK.md) as the project-specific handoff contract. Jules is already able to create PRs in this repository (see [PR #247](https://github.com/Master-Chiken/boonta-reborn-88/pull/247)), but that steering-deadzone patch overlaps [PR #243](https://github.com/Master-Chiken/boonta-reborn-88/pull/243) and [PR #233](https://github.com/Master-Chiken/boonta-reborn-88/pull/233). This is a demonstrated duplicate-work failure: no additional coding task should be launched until the three diffs/checks have been compared and one canonical candidate chosen. Keep the current RE-001 question active; allow Jules to research only public sources and Gemini to independently challenge the evidence read-only. Local N64 ROM analysis stays in the owner's local environment.
+
+### Free-only role selection
+
+- **Jules:** use one bounded task; review its existing PRs before starting another. Jules reads root AGENTS.md automatically according to its documentation: https://jules.google/docs/.
+- **Gemini CLI:** request independent review by posting a comment beginning with @gemini-cli. For this RE task, ask for contradictions/unsupported inference only, no files or code changes, no billing, and no merge decisions.
+- **Copilot cloud agent:** do not make it part of the default plan; GitHub documents it as available on paid Copilot plans (https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task).
+- **OpenRouter Free:** optional and only if the manual reviewer is configured; text opinions cannot substitute for code, emulator or hardware validation.
+- **Biddy-Pinky:** human independent review after a single candidate diff and exact-head CI are ready.
+
+Do not add a scheduled coordinator or expand CI for this. The owner already has a manual read-only coordination workflow; the blocker is task routing and duplicate detection, not missing automation.
