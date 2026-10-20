@@ -907,3 +907,28 @@ The N64 `Trak` outer model/scene-graph grammar is structurally compatible with t
 
 Keep the research question narrow: identify a separate route/progress representation or locate route-related structures among the N64's remaining decoded payloads without guessing that `Trak`/`LStr` means spline. Any future parser should be independently authored, host-tested on at least two blocks and several malformed cases, and keep decoded proprietary assets local.
 
+## N64 model-block and mesh-reference validation across all decoded chunks (2026-10-20)
+
+A further clean-room validator was run over all 92 decoded model payloads, without exporting geometry or copying third-party code. It follows the block and mesh field layout described in the same pinned, GPL-3.0-or-later reference file. This is an offset/bounds validation, not a visual import test.
+
+### Aggregate result
+
+| Block extension | Count | Group/model nodes walked | Mesh records referenced |
+|---|---:|---:|---:|
+| `Trak` | 19 | 5,694 | 9,536 |
+| `Pupp` | 27 | 1,418 | 772 |
+| `Part` | 44 | 134 | 1,129 |
+| `Scen` | 2 | 278 | 57 |
+| **Total** | **92** | **7,524** | **11,494** |
+
+For every payload, the generic header/section parser reached `HEnd`; the scene-graph walk found recognized node types and in-bounds child lists. For all **11,494** mesh records, the validator checked the 64-byte mesh-header boundary and bounds for non-null material headers, texture/shader headers, collision tags, strip tables, collision-vertex buffers, visual-vertex buffers, texture sub-chunk pointers, and visual index streams. All index streams encountered used the command types supported by the reference reader (`1`, `3`, `5`, `6`) and had an in-block terminator (`223`); the tested triangle indices and vertex-buffer starts stayed within their referenced visual-vertex buffers. The 9,305 non-null texture references were also checked against the decoded block bounds.
+
+**Outcome: zero structural, pointer-boundary, unknown-node-type, or index-stream errors in this validator.** That is strong evidence that the N64's 92 decoded `CompWolf` payloads use the same broad model-block/node/mesh representation expected by the PC-oriented reader. It supports a local conversion feasibility experiment far more strongly than a matching FourCC alone would.
+
+### Evidence limits and use decision
+
+- This validation does **not** instantiate Blender, render an imported model, compare exported geometry visually, or prove that every material/shader/texture payload has identical semantics on PC and N64.
+- It does not identify the race spline/route graph or prove that N64 lap progress is stored in these model blocks.
+- The GPL-3.0-or-later Blender add-on remains a read-only reference. No code from it was copied into Boonta; the decoded commercial game assets remain local and are not committed.
+- The next implementation-sized experiment, if a visual conversion is needed, is to run the existing tool locally against one legal N64-derived `Trak` sample and record import/render errors without republishing the asset. In parallel, continue looking for a distinct route/progress structure instead of repurposing `LStr` light-streak positions.
+
