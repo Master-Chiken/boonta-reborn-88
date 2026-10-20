@@ -14,7 +14,7 @@ It does **not** remove the current data-format problem by itself. The project co
 
 ### N64 ROM path
 
-Sources: [N64 guide](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/app/guide/n64.md), [ROM split pipeline](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f709884c1fdbeac1405c/src/decompnet/rom/split.py), [import pipeline](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f709884c1fdbeac1405c/src/decompnet/app/engine.py).
+Sources: [N64 guide](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/app/guide/n64.md), [ROM split pipeline](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/rom/split.py), [import pipeline](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/app/engine.py).
 
 - The import code recognizes `.z64`, `.n64` and `.v64` byte orders and normalizes the image to big-endian.
 - The ROM split pipeline invokes `splat`, reads its assembly/data output into function and data records, and records segment bounds and compiler guess.
@@ -25,7 +25,7 @@ Sources: [N64 guide](https://github.com/giveen/decomp.anything/blob/fd8c15ea9756
 
 ### GameCube/Wii path
 
-Sources: [GameCube/Wii project creation](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f709884c1fdbeac1405c/src/decompnet/forks/scratch_dtk.py), [CodeWarrior guide](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f709884c1fdbeac1405c/src/decompnet/app/guide/mwcc.md).
+Sources: [GameCube/Wii project creation](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/forks/scratch_dtk.py), [CodeWarrior guide](https://github.com/giveen/decomp.anything/blob/fd8c15ea975678ae32f70988440c1fdbeac1405c/src/decompnet/app/guide/mwcc.md).
 
 - This is a separate route: it recognizes a GameCube/Wii DOL or disc image, uses `dtk-template`/decomp-toolkit, and sets up CodeWarrior builds with a hash check.
 - For disc images, it also looks for REL modules and adds readable modules to the project. The code explicitly reports that modules packed with the noted `SaCompGC` format cannot currently be analysed.
