@@ -73,8 +73,12 @@ class ProposedPathTests(unittest.TestCase):
             ["source/track_centerline.generated.h"],
         )
 
-    def test_rejects_empty_or_malformed_api_payloads(self) -> None:
-        for payload in ([], {}, [[{}]], [["not-a-file-object"]]):
+    def test_allows_empty_api_payloads(self) -> None:
+        self.assertEqual(proposed.proposed_filenames([]), [])
+        self.assertEqual(proposed.proposed_filenames([[]]), [])
+
+    def test_rejects_malformed_api_payloads(self) -> None:
+        for payload in ({}, [[{}]], [["not-a-file-object"]]):
             with self.subTest(payload=payload):
                 with self.assertRaises(ValueError):
                     proposed.proposed_filenames(payload)

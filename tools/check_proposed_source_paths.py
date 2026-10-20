@@ -50,8 +50,6 @@ def proposed_filenames(payload: object) -> list[str]:
     if not isinstance(payload, list):
         raise ValueError("Expected a JSON array from GitHub's files API")
     visit(payload)
-    if not filenames:
-        raise ValueError("GitHub files API returned no filenames; refusing to pass empty input")
     return sorted(set(filenames))
 
 
