@@ -1116,3 +1116,15 @@ decomp.anything remains useful for code-path analysis (which code reads and uses
 - The MIT swe1r-assets source and GPL-3.0 blender-swe1r parser were read as independent references; no third-party parser implementation was copied into Boonta.
 - The retail ROM and its derived geometry remain local. Public repository changes are documentation only.
 - Confidence: high for the block identity, entry count, length accounting, fixed 84-byte point-record shape and link-index consistency under the cited parser; medium-high for value ID 110 being the N64 variant in Boonta Classic's logical slot; unconfirmed for the precise runtime meaning of every progress/unknown field and for any GameCube/Wii serialization parity.
+
+## New independent runtime-validation lead — N64 spline-marker debug option (2026-10-20)
+
+A read-only ASCII string scan of the local US N64 ROM found UI labels “Spline Markers On” and “Spline Markers Off” at ROM offsets 0x000A9050 and 0x000A9064. They sit beside debug-menu labels for AI level/spread, death-speed controls, invincibility, mirrored mode, and vehicle-stat editing. This is evidence that the retail N64 build contains a spline-marker debug toggle; it does not yet prove precisely what the toggle renders or which spline indices it visualizes.
+
+Public secondary reference: [GameFAQs N64 cheats/debug notes](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/cheats) documents the RRDEBUG code and the in-race D-pad sequence used to reveal debug/cheat options. Treat that guide as an operational lead, not as authoritative format documentation.
+
+### Controlled observation to close the identity gap
+
+On a legally owned ROM in an emulator, try the documented debug route and see whether the menu exposes the spline-marker toggle. On a known course, record only observations: whether markers appear, whether they trace the drivable centerline or alternate branches, whether the display changes when toggled, and whether the N64 index-10 candidate follows the expected Boonta Classic course. Do not infer a raw record index from screen order alone; the binary still does not label value ID 110 with a course name.
+
+This provides a possible independent check on the strong slot/size association between N64 value ID 110 and the default Boonta Classic entry. It may also reveal whether the markers show centerline points, Bezier controls, AI routes, or some other spline family. Until tested, those possibilities remain hypotheses. No screenshots, ROM strings beyond short menu labels, marker coordinates or assets were added to the public repository.
