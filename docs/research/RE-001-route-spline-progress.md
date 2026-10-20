@@ -602,3 +602,42 @@ These are proposed tests derived from the source, **not tests executed here**:
 - **Not established:** actual GameCube/Wii progress encoding, finish-line thresholds, multiplayer behavior, or parity with PC. No console executable or game-derived asset was used, and no gameplay test was run in this pass.
 
 **Disposition:** the PC finish-line logic is now specified as a small set of source-backed invariants and boundary tests. Next priority is to trace initialization and consumers of `lapComp` / `lapCompMax` (including standings and lap-count updates), then convert the highest-confidence invariants into independent tests for Boonta's normalized route-progress layer. Keep target-console behavior marked **UNKNOWN** until independently supported.
+
+
+## Follow-up source pass — lap-count timing and standings consumer (2026-10-20)
+
+Pinned reference remains PC source commit [`a9863edd4caaa573f89ff634fa7d1cd6d41738ab`](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab). The inspected consumer path is [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c), especially `swrObjJdge_F2`, `swrObjJdge_GetRacerProgress`, `swrObjJdge_GetRacerRankValue`, and `swrObjJdge_UpdateStandings`.
+
+### Lap completion is also a timing split
+
+In the active race-state branch, `swrObjJdge_F2` calls `swrRace_UpdateRaceProgress` for each active racer. When it reports a crossing:
+
+1. The returned `crossTime` is added to total race time and to the currently indexed lap-time slot. The source comment describes it as the portion of the frame before the crossing.
+2. The current lap index is incremented and written to `results_P1_Lap`.
+3. If the new lap index equals `jdge->num_laps`, the racer is marked finished and local-player control/boost flags are changed. Otherwise, the next lap-time slot is reset to zero.
+4. If the racer is not finished, the remainder of the frame, `swrRace_dt_raw_d - crossTime`, is added to the new lap and total time, with a 3000-second cap.
+
+This means a faithful reimplementation cannot merely increment a lap counter when progress wraps: it must also split the frame's time across the old and new lap at the crossing. The source uses the **raw** frame delta for the remainder, not the clamped `swrRace_deltaTimeSecs`; the exact value and quality of `crossTime` depend on the unfinished cursor-advance path.
+
+### Standings use lap count plus a wrap-corrected fractional metric
+
+For unfinished racers, `swrObjJdge_GetRacerProgress` computes a placement metric from the integer lap count and `lapCompMax`, correcting the difference between `lapCompMax` and current `lapComp` by taking the absolute difference and folding values above 0.5 around the loop. Negative final progress is clamped to zero. The source therefore uses the high-water mark and current fractional progress together; the result is not simply `lap + lapComp`.
+
+The rank helper uses this progress metric for racers whose finished flag is clear. Finished racers instead receive `maxRaceTime - total_time` as the rank value. The standings routine then repeatedly selects the highest remaining rank value and assigns positions, while also deriving gaps to the leader, local players and AI pace-setter. It writes `-100.0` to the local-player gap when no local player is available. These are source-backed PC rules; tie behavior should not be generalized beyond the exact selection/comparison logic.
+
+### Regression vectors added to the test plan
+
+These are proposed cases, not executed tests:
+
+- **Frame split:** crossing at fractions 0, 0.25, 0.99 of a frame; verify the old lap receives `crossTime` and the next lap receives the remainder, without double-counting.
+- **Last lap:** for `num_laps - 1` before the crossing, verify the increment reaches `num_laps` and takes the finish branch; verify the non-final branch zeroes the next lap slot.
+- **Raw versus clamped delta:** choose a test where raw and clamped deltas differ, and assert which value is added to the remainder.
+- **Wrap-corrected placement:** current progress and high-water mark close together, then across the 0/1 boundary; test differences on either side of the 0.5 fold threshold.
+- **Finished ranking:** compare rank ordering before and after the finished flag is set, with distinct total times; test equal values separately without inventing a stable tie order.
+- **No-local-player sentinel:** verify the standings gap field is `-100.0` only on the no-local-player branch.
+
+### Evidence boundary
+
+The timing split, lap counter update and standings formula are directly visible in the pinned PC source. The actual crossing fraction depends on `swrRace_AdvanceSplineCursor`, which remains a TODO/HANG in this source reconstruction, so the end-to-end trigger timing has not been runtime-validated. Neither these rules nor the PC data structures establish GameCube/Wii behavior. No binary, ROM, game asset, or console test was used.
+
+**Disposition:** RE-001 now covers the PC route-progress formula, finish-line crossing conditions, lap-time split, lap-count update, and placement metric as separate contracts. Before implementation, reconcile these observations with the frozen Steam-PC decompilation and keep all target-console assumptions explicitly unresolved.
