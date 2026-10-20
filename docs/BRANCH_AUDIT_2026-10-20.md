@@ -41,7 +41,7 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 - Open; explicitly returned to draft pending review.
 - Current head recorded as `515a195701261d5c106797f4025cf62c6b7368c1`; base is `main`.
 - The comparison to `main` reports 76 commits ahead and 14 changed files. Comparison to `dev` is a substantially divergent history, so its base must not be casually changed.
-- On this current head, `AI free-tier safety checks` and `Step 102 source-import provenance guard` completed successfully (runs `39464341867` and `39464342039`). The trusted source-import path guard was not visible for this SHA; confirm or rerun it before treating the required gate as complete. Earlier passing checks on older SHAs do not validate this head.
+- The latest head observed on 2026-10-20 is `870cf9219c947e692097d5ed42f33007c96fc9df`. On this exact SHA, `Step 102 source-import provenance guard` (run `39464702684`) and `AI free-tier safety checks` (run `39464702995`) completed successfully. The trusted source-import path guard was not visible for this SHA; the required gate is therefore not fully confirmed. Earlier passing checks on older SHAs do not validate this head.
 - Reviewer requested: `Biddy-Pinky`.
 
 ### PR #233 — combined deadzone and cleanup automation
@@ -64,6 +64,6 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 
 1. Finish PR #214 first: obtain independent review and record the human-operated visible-Dolphin acceptance checklist in issue #126 against the exact tested SHA. Keep it draft/unmerged until that gate is recorded.
 2. Only after #214 is accepted, handle #243 as the focused follow-up; preserve its two-file scope and do not revive the combined #233 branch.
-3. Keep #242 in review: its three required exact-head checks are green, but review its broad history/base carefully and finish only the already-scoped RE-001 documentation work.
+3. Keep #242 in review: on the latest checked head `870cf9219c947e692097d5ed42f33007c96fc9df`, `AI free-tier safety checks` and `Step 102 source-import provenance guard` passed. The trusted source-import path guard was not visible for this exact SHA, so do not describe all required checks as green. Review the broad history/base carefully and finish only the already-scoped RE-001 documentation work.
 4. Split cleanup automation out of #233 into a separately reviewed proposal; do not automatically carry over its deletion workflow.
 5. Re-run this inventory after any merge, then propose branch retirement candidates with evidence. No deletion is authorized by this document.
