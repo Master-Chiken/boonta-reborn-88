@@ -82,3 +82,8 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 - Re-fetched live PR metadata: #214 remains draft at `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, and #243 remains draft at `d1c5bf755a587765908a152fbf8874231bf6fe75`; both target `dev` at base SHA `c22bf27e0aca621ea735a85e9fedb92fd1933754`.
 - Re-inspected workflow jobs for exact heads: #214 run `39327379050` and #243 run `39459255221` each have all four jobs completed successfully (host pause/resume tests, native GameCube build, Dolphin headless smoke, and non-blocking software-renderer diagnostic). This does not substitute for independent review or human interactive acceptance.
 - #242 remains draft at `963c14f4a7322dacd9d0f6627bd379f30ad59302`; the current exact-head workflow-run listing confirms two successes only. No repeated CI was launched.
+
+
+### Review focus — PR #214 scope
+
+The current #214 patch includes gameplay collision/width handling, tests, Dolphin diagnostic tooling, milestone documentation, and edits to the shared `.github/workflows/gamecube-demo-build.yml` (including longer diagnostic timeouts and enabling the full-race diagnostic for this branch). These workflow changes are visible in the PR and should be explicitly included in independent review; passing the current workflow does not by itself validate the changed workflow behavior for future events. Do not split or edit the PR without reviewer direction, but do not treat it as a gameplay-only diff.
