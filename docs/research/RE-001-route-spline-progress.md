@@ -839,3 +839,44 @@ Sources checked during this pass:
 - [OpenSWE1R README](https://github.com/OpenSWE1R/openswe1r)
 - [OpenSWE1R tools README](https://github.com/OpenSWE1R/swe1r-tools)
 - [Frozen Steam PC decompilation README](https://github.com/DeonPoncini/swep1r_decomp)
+
+## Supplemental N64 sample probe — local ROM container evidence (2026-10-20)
+
+**Scope and handling.** A locally available, user-supplied N64 image was inspected for header/container metadata only. The commercial ROM, decoded art/audio/geometry, and any derived assets were not written into the repository. This is a narrow continuation of RE-001's stated next step (inspect a target-version sample), not evidence that the GameCube/Wii format is now understood.
+
+### Header identification
+
+- File size: 33,554,432 bytes (32 MiB).
+- Header magic: `80 37 12 40`, the canonical big-endian `.z64` representation described by the public [N64 `tool64.c` header/format code](https://github.com/DylanJ/n64/blob/master/tool64.c).
+- Internal title: `STAR WARS EP1 RACER`.
+- Cartridge/game ID: `EP`; country code: `E`; revision byte: `0`. The public header reference maps `E` to North America/USA; see [the cartridge-ID and region notes](https://sources.debian.org/src/mame/0.251%2Bdfsg.1-1/hash/n64.xml).
+- This identifies the supplied file as an N64 release candidate for analysis. It does not establish parity with PC, Dreamcast, retail GameCube, or Wii runtime behavior.
+
+### `CompWolf` block-framing result
+
+The ROM scan found **92** `CompWolf` markers. A temporary in-memory decoder following the framing and 4 KiB LZ77-window behavior documented in [`swe1r-tools/decompress.c`](https://github.com/OpenSWE1R/swe1r-tools/blob/master/decompress.c) successfully reached each block terminator, and every decoded output length matched the length declared in that block's header. Decoded payloads were not exported to files or committed.
+
+Reading only each decoded payload's first four-byte tag yields:
+
+| Tag | Blocks | Total decoded bytes |
+|---|---:|---:|
+| `Trak` | 19 | 9,385,848 |
+| `Pupp` | 27 | 1,789,844 |
+| `Part` | 44 | 680,588 |
+| `Scen` | 2 | 119,332 |
+| **Total** | **92** | **11,975,612** |
+
+The `Trak` payloads have structured-looking internal headers and repeated labels including `Data`, `LStr`, `Anim`, and `HEnd`. These are observations about chunk framing, not semantic field names. The top-level scan did not identify a dedicated `Spli`/`Spline` chunk tag; route data may still be embedded in binary sections of a `Trak` payload.
+
+### What this does and does not establish
+
+**Established:** the supplied N64 image contains many correctly framed `CompWolf`-compressed blocks; the published decompression routine is a credible component for processing a block once its start is known; and 19 top-level payloads are tagged `Trak`.
+
+**Not established:** a ROM-level file/index table, the mapping from those 19 chunks to named courses, the internal `Trak` section schemas, which substructure stores route-control points, or any equivalence to PC `out_splineblock.bin`. The public utility is a **single-chunk decompressor**, not a complete ROM unpacker or N64 spline parser. A tag named `Trak` must not by itself be equated with route logic.
+
+### Next step within RE-001
+
+Continue read-only analysis of the `Trak` section/offset tables and validate any candidate structure across at least two differently sized `Trak` chunks. Only then decide whether a small, clean-room metadata parser is justified. Keep the sample ROM and all decoded assets outside Git; no new implementation or asset-import PR is justified by this probe alone.
+
+**Emulator clarification:** Wii64 is an N64 emulator, not a separate native edition of *Episode I: Racer*. A Wii64 compatibility-list entry is evidence only of an emulation test under the named emulator/configuration, not of a native Wii port or identical internal data layout; see the [community Wii64 compatibility list](https://wiki.gbatemp.net/wiki/Wii64_Compatibility_List).
+
