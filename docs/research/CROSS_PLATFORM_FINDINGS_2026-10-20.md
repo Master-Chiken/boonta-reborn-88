@@ -110,3 +110,18 @@ Both string reports contain `OUT_SPRITEBLOCK.BIN`, `OUT_SPLINEBLOCK.BIN`, `OUT_T
 2. **Observed:** the asset library's release metadata assigns Dreamcast the same block IDs as Windows International/Mac.
 3. **Still unknown:** whether that mapping is based on verified byte-identical Dreamcast blocks, shared logical formats with different payloads, or an assumption made for tool convenience.
 4. **Next research action:** find source-level Dreamcast loading logic or a provenance-documented Dreamcast block inventory; compare metadata and format structure only after provenance is established. Do not infer file compatibility from names alone.
+
+
+## Dreamcast disc inventory cross-check + PC loader gap
+
+Pinned Dreamcast inventory source: `lhsazevedo/dc-redump-extracted-data` commit `832abe37573642c56298d3efd006f72416391755`.
+- USA inventory: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(USA)/files.txt
+- Europe inventory: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(Europe)/files.txt
+
+Both inventories list all four OUT_*BLOCK.BIN files at the disc root, corroborating the executable strings with filesystem-level evidence. The two region inventories also differ in other files (for example Europe lists DP2.INI, DPETC/DPFONT/DPSS/DPTEX-related files, SAVEDATA.BIN, and SW1RACER.H00; USA has a different ancillary file set). Do not attribute those differences to the race engine without further analysis: the inventory alone does not identify which files are consumed by the game executable, and it provides no hashes or byte sizes for the four block files.
+
+PC source cross-check: pinned `tim-tim707/SW_RACER_RE` file `src/Swr/swrLoader.c` declares `swrLoader_DecompressLZSS` but its body is still `HANG("TODO")`; `swrLoader_OpenBlock` opens the four PC `data/lev01/out_*block.bin` paths. This source therefore confirms the PC block-loading entry points and file names, but it does not yet give us a usable PC LZSS implementation to compare with the N64 `Comp` decoder. It also contains TODO/crash notes in nearby file I/O routines, so treat this file as analysis progress, not a tested loader implementation.
+
+### Updated decision
+
+We now have two independent kinds of Dreamcast evidence for the four block files: (1) executable string listings and (2) extracted disc filesystem inventories, for both USA and Europe. Still missing: trustworthy per-block hashes/sizes, format parser tested against a provenance-identified Dreamcast block, and source-level confirmation of compression/endian/record-layout details. The next high-value task is a format comparison using metadata/provenance and parser source—not guessing from shared filenames or metadata IDs.
