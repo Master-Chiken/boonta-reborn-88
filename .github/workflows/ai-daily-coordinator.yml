@@ -1,8 +1,6 @@
-name: Daily read-only AI project coordinator
+name: Manual read-only AI project coordinator
 
 on:
-  schedule:
-    - cron: "15 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,7 +14,7 @@ concurrency:
 
 jobs:
   daily-report:
-    name: Free-tier read-only project report
+    name: Manual free-tier read-only project report
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -31,12 +29,12 @@ jobs:
         run: |
           mkdir -p .gemini
           jq -n \
-            --arg title "Daily project coordination report" \
+            --arg title "Project coordination report" \
             --arg desc "Review current project state and recommend the single highest-value next task." \
             --arg event "${GITHUB_EVENT_NAME}" \
-            --arg num "23" \
+            --arg num "156" \
             --arg repo "${GITHUB_REPOSITORY}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: "false", issue_number: $num, repository: $repo, additional_context: "Scheduled daily read-only report. Never modify code or create branches/PRs."}' > .gemini/context.json
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: "false", issue_number: $num, repository: $repo, additional_context: "Manually requested read-only report. Never modify code or create branches/PRs."}' > .gemini/context.json
 
       - name: Run Gemini read-only coordinator
         id: coordinator
@@ -49,7 +47,7 @@ jobs:
           gemini_model: "gemini-3.5-flash-lite"
           upload_artifacts: "false"
           workflow_name: "ai-daily-coordinator"
-          github_issue_number: "23"
+          github_issue_number: "156"
           settings: |-
             {
               "model": {
@@ -92,7 +90,7 @@ jobs:
             }
           prompt: "/gemini-daily-coordinator"
 
-      - name: Publish report to the coordinator issue
+      - name: Publish the requested report to the canonical project issue
         if: always() && steps.coordinator.outcome != 'skipped'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -108,13 +106,13 @@ jobs:
               const safe = report.length > maxLength
                 ? report.slice(0, maxLength - 100) + '\n\n[Report truncated.]'
                 : report;
-              body = '## Daily AI project report\n\n' + safe + '\n\n---\n[Workflow logs](' + runUrl + ')';
+              body = '## AI project report\n\n' + safe + '\n\n---\n[Workflow logs](' + runUrl + ')';
             } else {
-              body = '## Daily AI project report unavailable\n\nNo readable Gemini summary was produced. No code changes were made. Check [workflow logs](' + runUrl + ').';
+              body = '## AI project report unavailable\n\nNo readable Gemini summary was produced. No code changes were made. Check [workflow logs](' + runUrl + ').';
             }
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: 23,
+              issue_number: 156,
               body
             });

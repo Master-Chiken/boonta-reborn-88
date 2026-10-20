@@ -2,6 +2,8 @@
 
 This repository uses three permanent references and short-lived task branches.
 
+AI coordination, testing gates, provenance rules and the one-task queue are defined in [`PROJECT_OPERATING_RULES.md`](PROJECT_OPERATING_RULES.md).
+
 ## Permanent references
 
 - `main`: stable, release-ready integration branch.

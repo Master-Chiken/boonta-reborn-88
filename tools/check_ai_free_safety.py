@@ -124,24 +124,31 @@ if "GEMINI_WRITE_ENABLED" not in instructions or "exactly true" not in instructi
 if "payment method" not in instructions.lower():
     errors.append("GEMINI.md must forbid adding a payment method")
 
-# The scheduled coordinator must remain read-only and run no more than once daily.
-if 'cron: "15 7 * * *"' not in daily:
-    errors.append("Daily coordinator must have one fixed daily schedule")
+# The project coordinator is manual-only, read-only, and comments on the canonical tracking issue.
+daily_trigger = daily.split("permissions:", 1)[0]
+if "workflow_dispatch:" not in daily_trigger:
+    errors.append("Project coordinator must be explicitly manually triggerable")
+if re.search(r"(?m)^\s*(schedule|cron)\s*:", daily_trigger) or re.search(r"(?m)^\s*-\s*cron\s*:", daily_trigger):
+    errors.append("Project coordinator must not run on a schedule")
 if "contents: write" in daily or "pull-requests: write" in daily:
-    errors.append("Daily coordinator must not have repository/code write permissions")
-if 'issues: write' not in daily:
-    errors.append("Daily coordinator needs issue-comment permission to publish its report")
+    errors.append("Project coordinator must not have repository/code write permissions")
+if "issues: write" not in daily:
+    errors.append("Project coordinator needs issue-comment permission to publish a manually requested report")
 for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', '"delete_file"', '"create_pull_request"', '"merge_pull_request"'):
     if forbidden in daily:
-        errors.append(f"Daily coordinator must not expose write tool {forbidden}")
+        errors.append(f"Project coordinator must not expose write tool {forbidden}")
 if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
-    errors.append("Daily coordinator must use the existing Gemini API-key secret only")
+    errors.append("Project coordinator must use the existing Gemini API-key secret only")
 if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
-    errors.append("Daily coordinator must keep the explicitly selected free-tier model")
+    errors.append("Project coordinator must keep the explicitly selected free-tier model")
+if '--arg num "156"' not in daily or 'github_issue_number: "156"' not in daily or 'issue_number: 156,' not in daily:
+    errors.append("Project coordinator must publish reports to the canonical issue #156")
+if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.search(r"(?m)^\s*issue_number:\s*23,?\s*$", daily):
+    errors.append("Project coordinator must not post current reports to stale/closed issue #23")
 if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
-    errors.append("Daily coordinator prompt must enforce read-only and €0 constraints")
+    errors.append("Project coordinator prompt must enforce read-only and €0 constraints")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
-    errors.append("Daily coordinator prompt must preserve branch and provenance safety")
+    errors.append("Project coordinator prompt must preserve branch and provenance safety")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
@@ -156,3 +163,4 @@ print("- OpenRouter and legacy Google Cloud / paid-auth routes are absent from w
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
 print("- Project instructions retain the strict €0 requirement.")
+print("- Project coordinator is on-demand only and posts to canonical issue #156.")
