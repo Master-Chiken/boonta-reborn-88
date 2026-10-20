@@ -33,9 +33,9 @@ The older 27-ref inventory in issue #235 is stale. The earlier 6-ref count is al
 
 ### #243 — fix: filter analog steering deadzone
 
-- Open, draft, targets `dev`; head `d1c5bf755a587765908a152fbf8874231bf6fe75`; two files changed.
+- Open, draft, targets `dev`; head `6b31321294e8238b836e7d1807c0ef006835f377`; two files changed.
 - Patch remains scoped to `gamecube-demo/source/gameplay_state.h` and `gamecube-demo/tests/test_gameplay_state.c`.
-- Exact-head workflow run [39459255221](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39459255221) completed with four successful jobs.
+- Previous head `d1c5bf755a587765908a152fbf8874231bf6fe75` had four successful jobs in run [39459255221](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39459255221). The new head adds explicit tests for the inclusive ±16 deadzone boundary and ±17 first nonzero values (commit `6b31321294e8238b836e7d1807c0ef006835f377`). The commit-run query returned no runs for this new SHA at the time of the audit; recheck PR Checks before claiming CI green.
 - No review submission or inline review thread was returned. Controller-feel/interactive acceptance remains outstanding.
 - Do not revive or merge the older combined #233 branch; its cleanup workflow changes are unrelated and require separate security review.
 
