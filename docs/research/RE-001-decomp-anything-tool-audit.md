@@ -74,3 +74,20 @@ The decomp.anything repository itself declares MIT. Its dependencies/toolchains 
 - [ ] Establish any N64 route-data layout from verified evidence before implementing the runtime cursor.
 
 No game code, ROM, extracted payload, asset or binary was added to the Boonta repository by this research item.
+
+
+## Additional target-specific lead: sp00nznet/racer (N64 static-recomp analysis)
+
+Pinned upstream revision: [sp00nznet/racer at 11f6f70469f995304422f2209a47e9c2df5ff6d0](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0). This was discovered via the static-recomp course's [N64 MIPS module](https://github.com/sp00nznet/recompclass/blob/master/units/unit-6-console-architectures/module-20-n64-mips/lecture.md), then inspected directly at the repository and pinned revision.
+
+Why it is more directly relevant to our reference ROM than a generic tool:
+- It targets the US N64 version of Star Wars Episode I: Racer itself and checks in a `symbols.toml` with 878 named/addressed functions. The README additionally reports roughly 500 more automatically detected static functions, a simple function disassembler (`tools/func_differ.py`), ROM analyzer (`tools/rom_analyzer.py`), string dumper and progress tool.
+- `func_differ.py` is a small Python MIPS disassembler that accepts a named function or VRAM address plus the user's local ROM. It can provide a practical route to inspect candidate call paths without first setting up all of decomp.anything's larger stack. `symbols.toml` includes addresses for `racer_update_speed` (0x80030154) and `collision_check` (0x8003EC40); these are reference points for gameplay code, not identified spline-progress routines.
+- The repository is a static recompilation/runtime project, not a source decompilation. Its README, at the inspected revision, says the game boots, loads assets through DMA, and submits graphics display lists to RT64, while visible-frame output and a playable build are still in progress. Treat those as the project author's status statements, not independently reproduced results.
+- Its [MIT license](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/LICENSE) explicitly limits the license to that repo's own code and excludes the retail game and code generated from it. Do not import generated C into Boonta or assume the MIT notice grants rights to the game payload.
+
+Search of its public symbol names did **not** find a semantically named spline/route-progress/lap routine. So it is a promising MIPS address/disassembly workbench, not an answer in itself. Pair its symbol map and local disassembly with the N64 spline-block finding above: identify candidate callers/loaders from assembly, then correlate them with the 84-byte graph records. Keep every function hypothesis provisional until the instructions and cross-references support it.
+
+Environment constraint for this pass: the current container has no `splat`, `spimdisasm`, `rabbitizer`, Capstone or Ghidra, and cannot resolve raw.githubusercontent.com. Consequently I inspected the public code and symbol metadata but did not execute the upstream disassembler against the local ROM. No claim of a successful run or a newly identified route-progress function is made.
+
+**Updated tool decision:** use `sp00nznet/racer` as the narrower, target-specific lead for N64 function addressing/disassembly; use `decomp.anything` if its richer agent workflow adds value; continue using `swe1r-assets` / the independent structural scan for spline-block format. None replaces the others, and none establishes N64-to-GameCube format parity.
