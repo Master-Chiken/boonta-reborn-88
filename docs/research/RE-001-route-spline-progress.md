@@ -457,3 +457,38 @@ Report the two results independently. If the library only exposes item serializa
 The current session has no provenance-identified PC block input available for a fresh round-trip, and we have not established a lawful, reproducible local test fixture. Do not manufacture a binary fixture that pretends to be a real game block. Mark the binary experiment blocked on input provenance/access, and continue with source-level reverse engineering that can still yield falsifiable hypotheses—next, trace the PC spline block loader's container framing and distinguish fields consumed from fields merely preserved, while maintaining a strict PC-versus-console evidence boundary.
 
 **Disposition:** item/container test coverage is now explicitly separated. Whole-container round-trip for our own evidence remains **NOT RUN**; GameCube/Wii format and behavior parity remains **UNKNOWN**.
+
+
+## Follow-up source pass — PC block framing and save-path behavior (2026-10-20)
+
+Pinned source: `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`, especially [`Block.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Block.cs), [`BlockLoader.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/BlockLoader.cs), and [`BlockItem.cs`](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/BlockItem.cs).
+
+### Observed container structure in this PC reader
+
+The generic block loader:
+- reads a 32-bit item count;
+- advances over `count × parts-per-item` 32-bit offset entries;
+- reads a 32-bit terminal size;
+- returns to the stream start and captures that many bytes as the complete block;
+- parses the count, offsets and terminal size, then slices each item's parts using adjacent offsets and the terminal size.
+
+The generic save path does not preserve the original header/table bytes verbatim. It recalculates the count, emits offsets in item/part order from the newly calculated header size, writes the new terminal size, then concatenates each item's bytes. This means an item-level byte-equality result is logically insufficient to prove full-block byte equality. A no-op save might still reproduce the original container, but that must be tested against a real input; the code path alone does not establish that result.
+
+### Preservation risks to test, not assume
+
+The source's save path makes these falsifiable questions important:
+- Does the original table use exactly the same item/part order and offset policy that the writer regenerates?
+- Are gaps, alignment bytes, unusual offset values, unused regions or trailing bytes represented in the parsed item parts, or could a rebuild omit/canonicalize them?
+- Does each platform/release use this same container schema and endianness? Current evidence supports only the pinned PC/tooling reader's model.
+
+The loader uses the terminal size to capture the block, but the save path derives a new terminal size from the generated header plus item-part lengths. Therefore, byte-for-byte equality of the complete block must be measured, not inferred from equal semantic fields or item payloads.
+
+### Revised evidence ladder
+
+1. **Source-level PC hypothesis:** the reader models a count + offset table + terminal-size header and reconstructs that header on save.
+2. **Upstream item tests:** selected items are compared byte-for-byte after item-level serialization.
+3. **Upstream whole-block claim:** README advertises bit-perfect reserialization, but the inspected tests do not independently demonstrate whole-block equality.
+4. **Boonta experiment:** not run; no provenance-identified input or locally recorded before/after hash is available in this session.
+5. **GameCube/Wii parity:** unknown; no console block sample or console-specific parser validation established.
+
+**Disposition:** next source-level work should inspect how spline item parts are divided and whether unknown/padding bytes survive inside each part. Keep this strictly as PC reader evidence; do not transplant its header assumptions into the console adapter without independent evidence.
