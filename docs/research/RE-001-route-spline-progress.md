@@ -952,3 +952,31 @@ The public unpack script in `SWE1R-Mods` explicitly expects an already-extracted
 
 **Therefore the next task is narrowed to a read-only extractor investigation:** determine whether the N64 spline block can be recovered from the user's supplied ROM via the known asset/index layout, a ROM-specific offset table, or a documented community extractor. Do not infer that the 92 top-level `CompWolf` model chunks include the spline block; they have model-block signatures, and the route data has not been found inside them. If no extraction path is evidenced, implement only a small clean-room scanner over the user's local ROM with conservative bounds checks and tests against the documented 84-byte schema; do not import commercial asset bytes or GPL parser code.
 
+## Exact N64 spline-block recovery from the supplied ROM (2026-10-20)
+
+**The extraction question from the preceding section is now resolved for this supplied N64 ROM.** A read-only scan found the full N64 spline-block archive in-place inside the user's ROM, and the SHA-1 of that region exactly matches the public reference checksum in the pinned `swe1r-assets` [original-resource checksum manifest](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/Resources/checksums.sha1).
+
+| Check | Verified result |
+|---|---|
+| ROM archive start | `0x012C7F30` |
+| End (exclusive) | `0x013307E4` |
+| Archive length | 428,212 bytes |
+| SHA-1 of that ROM region | `a18f0c66301cf0e11feedafadc1b374fa3b40ed6` |
+| Pinned public reference | `a18f0c66301cf0e11feedafadc1b374fa3b40ed6  out_splineblock.bin/n64.bin` |
+| Archive items | 91 |
+| Total route points | 5,076 |
+| Outgoing point-to-point links | 5,174 |
+| Structural/link issues in the scan | 0 |
+
+The archive table's first data offset is 372 bytes, exactly `(91 + 2) * 4` for a count word, 91 item-start offsets, and a final end offset. Each of the 91 item spans matched `16 + 84 * point_count` exactly. Across all points, next/previous counts were within the schema bounds, active next/previous indices were in-range, every outgoing edge had the corresponding reciprocal incoming link, all parsed coordinates/handles were finite and reasonably bounded, and all point rotations were `(0, 0, 1)`. The candidate contained no malformed sizes, invalid active links, or non-reciprocal links in these checks.
+
+The matching checksum is decisive identification of the public N64 spline-block asset—not just a plausible byte pattern. It confirms that the game-specific route/control-point data is present in the supplied ROM at this location, and the MIT parser's block/record schema is applicable. The earlier section's extraction-gap assessment is superseded for this exact N64 image.
+
+### Handling and remaining validation
+
+The scanner and checksum calculation worked directly against the user's local ROM bytes. The spline archive or individual point/track assets were **not exported as files, committed, or added to Boonta**. Future work may create an independently implemented, bounds-checked, metadata-only reader and tests; do not copy GPL code from `blender-swe1r` / `swe1r-tools`, and do not copy or redistribute the bundled game-derived binary in the reference repository. Attribute the MIT schema source if its parser code is reused.
+
+### Next technical milestone
+
+Use point-level coordinates and adjacency metadata to validate route layout against the corresponding N64 `Trak` geometry, first on one course and then on additional courses. This should produce evidence about route-to-mesh alignment and branch topology. Keep route-path semantics, checkpoint/lap progression, and cross-platform equivalence labeled separately: structure and checksum are confirmed, but gameplay has not been tested from this parser output.
+
