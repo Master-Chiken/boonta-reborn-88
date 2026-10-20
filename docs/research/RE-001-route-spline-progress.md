@@ -1086,7 +1086,7 @@ Pinned public reference: [akopetsch/swe1r-assets, commit 922ef535f6598a1330ff93d
 
 
 
-The MIT reader and the GPL Blender parser agree on the outer N64 block hash, count/size, 84-byte segment record size, position vector at byte 16 and two control vectors at bytes 40 and 52. They **do not independently confirm the full field semantics**:
+The MIT reader and the GPL Blender parser have separate implementations of the serialized structure and align on the outer N64 block hash, count/size, 84-byte segment record size, position vector at byte 16 and control vectors at bytes 40 and 52. However, the MIT `SplineSegmentData.cs` and `SplineSegmentHeader.cs` comments explicitly cite the Blender parser as their reference, so they are **not two independent reverse-engineering discoveries**. This is a cross-implementation/layout comparison, not independent confirmation of every field semantic:
 
 
 
@@ -1173,3 +1173,6 @@ Research hygiene: disassembly was performed locally against the supplied ROM and
 The caller at `0x80054048` is processing a list of runtime objects. It tests each object's flags at `+0x08`, updates/queries the object through `func_80080BEC`, then conditionally calls `0x80053AD4` when the GameShark-controlled word is nonzero. The helper reads an attached pointer at object offset `+0x84`, then passes a structure at `attached_pointer + 0xAC` through `func_8003B184` with varying float parameters. It prepares six attached render objects and submits them through `render_submit` (`0x800181BC`). `func_8003B184` in turn copies a 0x30-byte transform-like payload, changes a float parameter and calls a matrix/transform construction helper; this is compatible with sampling a runtime spline/transform representation, but not enough to equate that structure byte-for-byte with the 84-byte ROM item record.
 
 That distinction matters: **the current static evidence has identified the debug rendering path and a spline/transform-bearing runtime object, not yet the player race cursor or lap-progress code**. The next static question is which object instances point at the course-route records and whether this attached `+0xAC` data contains centerline samples, animation paths, or another spline family.
+## Source-independence caveat (2026-10-20)
+
+The MIT asset library is a distinct serialization implementation, but its comments explicitly link the corresponding segment-data and segment-header models to `blender-swe1r/splineblock.py`. Its field names/unknown fields must therefore not be counted as an independent reverse-engineering source. The exact match of the local ROM's *whole spline block SHA-1* with published metadata remains a strong identity/length check; it does not independently validate the 84-byte record semantics. The Blender-derived graph/link interpretation stays provisional until corroborated by N64 code or runtime observation.
