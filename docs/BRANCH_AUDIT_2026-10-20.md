@@ -76,4 +76,11 @@ The older 27-ref inventory in issue #235 is stale. The earlier 6-ref count is al
 ### Latest PR #243 test update — 2026-10-20 20:47 CEST
 
 - Focused branch advanced to `6b31321294e8238b836e7d1807c0ef006835f377`; PR still changes exactly two files: `gamecube-demo/source/gameplay_state.h` and `gamecube-demo/tests/test_gameplay_state.c`.
-- Added explicit tests for the deadzone boundary at +16/-16 and first values outside it at +17/-17. Workflow run `39477710458` was still `in_progress` when checked. Human controller-feel acceptance and independent review remain open.
+- Added explicit tests for the deadzone boundary at +16/-16 and first values outside it at +17/-17. Workflow run [39477710458](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39477710458) subsequently completed successfully. Human controller-feel acceptance and independent review remain open.
+
+
+### Latest verification — 2026-10-20 20:52 CEST
+
+- Refreshed live PR metadata: #214 remains draft on `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`; #243 remains draft on `6b31321294e8238b836e7d1807c0ef006835f377`; #242 remains draft on `92e82dfc9c246663d9301ea666602b20b1f6bbdf`. No submitted reviews are present for any of the three.
+- #243 exact-head workflow `39477710458` completed successfully. The test boundary addition is now covered by green CI, but manual controller-feel validation and independent review are still open.
+- Branch inventory remains eight refs. No deletions, merges, force pushes, or manual workflow dispatches were performed.
