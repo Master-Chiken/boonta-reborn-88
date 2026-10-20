@@ -1,82 +1,57 @@
-# Configurer l'agent Gemini dans GitHub Actions
+# Configurer l'automatisation IA de Racer
 
-Cette configuration permet de demander à Gemini d'auditer le dépôt, proposer un plan et, après approbation humaine et déverrouillage explicite, préparer une pull request. Elle n'exige aucune installation sur ton ordinateur.
+Cette page décrit les automatismes disponibles dans le dépôt. **La règle de fonctionnement actuelle est volontairement conservatrice : audit à la demande, une seule tâche d'écriture autorisée à la fois, et aucune fusion automatique.**
 
-## Avant toute activation
+## Budget et données
 
-**La règle du projet reste 0 € : aucun moyen de paiement, aucune facturation et aucun modèle payant de secours.**
+- Budget strict : **0 €**. Aucun compte de facturation, moyen de paiement, modèle payant de secours ou service cloud payant.
+- Utiliser uniquement le chemin Gemini API explicitement configuré. Si le quota gratuit est épuisé ou que l'outil réclame une facturation, arrêter.
+- Ne jamais mettre une clé dans un fichier, une issue, un commentaire ou cette conversation. Les clés restent dans les secrets GitHub.
+- Ne jamais envoyer à un service IA hébergé les ROMs, images disque, BIOS, archives commerciales, modèles/textures/audio extraits, secrets ou données dont les droits ne sont pas établis.
+- Le dépôt est public. Une réussite de tests de configuration ne prouve ni que le quota gratuit est disponible, ni que les comportements de jeu sont corrects.
 
-1. Ouvre [les règles du dépôt](https://github.com/Master-Chiken/boonta-reborn-88/settings/rules).
-2. Crée un *branch ruleset* ciblant `main`.
-3. Active au minimum **Require a pull request before merging**, **Block force pushes** et **Restrict deletions**. Ne configure aucun contournement pour le bot. Enregistre et vérifie la règle.
-4. N'active pas l'auto-merge.
+## Contrôle statique
 
-Si les règles ne peuvent pas être enregistrées, n'ouvre pas l'écriture Gemini. Garde la variable `GEMINI_WRITE_ENABLED` absente ou différente de `true`.
+Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml) exécute \`tools/check_ai_free_safety.py\`. Ce contrôle est local au runner, ne lance aucun modèle, n'utilise aucune clé et vérifie notamment le verrou d'écriture, le budget gratuit et les permissions du coordinateur.
 
-## Ajouter la clé Gemini API gratuite
+Un contrôle réussi ne remplace pas la revue d'une PR.
 
-1. Ouvre [Google AI Studio — clés API](https://aistudio.google.com/apikey).
-2. Crée une clé pour la Gemini API. Vérifie qu'elle fonctionne sur l'offre gratuite **sans compte de facturation ni moyen de paiement rattaché**. Si Google exige une facturation, arrête-toi.
-3. Dans le dépôt GitHub, va dans **Settings → Secrets and variables → Actions → New repository secret**.
-4. Nom exact : `GEMINI_API_KEY`. Colle la clé uniquement dans la valeur du secret.
+## Coordinateur en lecture seule — lancement manuel uniquement
 
-Ne mets jamais la clé dans un fichier, une issue, un commentaire ou cette conversation. Les quotas gratuits peuvent évoluer ; lorsqu'ils sont épuisés, le workflow doit s'arrêter plutôt que de payer.
+Le workflow [Manual read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) **n'a plus de déclenchement planifié**. Il ne consomme le quota Gemini que lorsque le propriétaire clique volontairement sur **Actions → Manual read-only AI project coordinator → Run workflow**.
 
-Google indique que le contenu de l'offre API gratuite peut être utilisé pour améliorer ses produits. Cela peut inclure le code et les prompts du dépôt. Ne fournis jamais de secrets, données privées ou contenus que tu n'as pas le droit de transmettre.
+- Il lit l'état de \`main\`, les issues/PR et les résultats CI.
+- Il publie son rapport dans l'issue canonique [#156 — priorité produit](https://github.com/Master-Chiken/boonta-reborn-88/issues/156), pas dans l'ancienne issue #23, qui est fermée.
+- Il ne peut pas écrire de code, créer de branche ou de PR, fusionner ou modifier les paramètres. Seul le commentaire final du rapport nécessite \`issues: write\`.
+- Le rapport donne une recommandation, pas une autorisation de coder. Il faut examiner la proposition et décider de la prochaine tâche.
 
-## Contrôle automatique de la configuration
+Il n'y a plus de rapport IA quotidien automatique. Aucun rapport ne doit être considéré comme un contrôle d'avancement de fond ou comme une validation de jeu.
 
-Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml) se lance à chaque mise à jour de cette branche de sécurité. Il vérifie localement que le verrou d'écriture, le mode lecture seule et les interdictions de routes Google Cloud/Vertex sont toujours présents.
+## Gemini à la demande
 
-Ce contrôle :
-- n'appelle aucune API d'IA et n'utilise aucune clé ;
-- ne consomme aucun quota Gemini ou OpenRouter ;
-- ne modifie pas le dépôt et ne fusionne rien ;
-- vérifie seulement la configuration écrite, pas la disponibilité du quota gratuit auprès du fournisseur.
+Un commentaire qui commence par \`@gemini-cli\` peut déclencher l'agent de planification en lecture seule. Ce mode peut répondre sur l'issue/PR, mais il ne doit pas modifier le code.
 
-Un test réussi ne remplace pas la revue humaine de la pull request.
+Le chemin de modification est séparé et verrouillé :
+- seul le propriétaire peut demander exactement \`@gemini-cli /approve\` ;
+- le workflow exige une approbation correspondant au plan explicite et la variable Actions \`GEMINI_WRITE_ENABLED\` exactement égale à \`true\` ;
+- il doit créer une branche dédiée puis ouvrir une PR ;
+- il ne doit jamais pousser sur \`main\`, fusionner une PR, activer l'auto-merge ou supprimer des branches.
 
-## Coordinateur automatique quotidien
+**Règle de gestion actuelle : laisse \`GEMINI_WRITE_ENABLED\` absent ou différent de \`true\` pendant que nous finissons les PR existantes et la validation Dolphin.** Ne l'active que pour une tâche précise, après revue du plan et décision explicite du propriétaire. Un seul agent capable d'écrire doit travailler à la fois.
 
-Une fois cette PR de sécurité explicitement revue et fusionnée, le workflow [Daily read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) pourra publier un rapport quotidien dans [l'issue de coordination #23](https://github.com/Master-Chiken/boonta-reborn-88/issues/23).
+Je ne peux pas confirmer depuis la connexion de cette conversation la valeur actuelle de cette variable Actions ; elle doit être vérifiée dans les paramètres du dépôt.
 
-- Horaire : une fois par jour à 07:15 UTC, plus un lancement manuel via **Actions → Daily read-only AI project coordinator → Run workflow**.
-- Le rapport inspecte les fichiers présents sur `main`, les issues/PR ouvertes et les éléments de CI, puis propose une seule prochaine tâche prioritaire.
-- Il est strictement en lecture seule : aucun outil de création de branche, de modification de fichier, de commit, de PR ou de fusion n'est fourni à l'agent.
-- Il utilise le même secret `GEMINI_API_KEY`, le modèle explicitement configuré et aucun fallback payant. Si le quota gratuit est épuisé, le rapport échoue plutôt que de facturer.
-- Il n'active pas l'écriture de Gemini. Les changements de code restent soumis à un plan approuvé et au verrou `GEMINI_WRITE_ENABLED`.
+## Limites de visibilité
 
-Le workflow ne sera pas actif avant fusion de cette PR et nécessite que le secret `GEMINI_API_KEY` soit configuré. Il ne peut pas inspecter les archives de la bibliothèque ChatGPT automatiquement.
+Les workflows voient le contenu GitHub et le contexte de la demande. Ils ne voient pas automatiquement les fichiers téléversés dans la bibliothèque ChatGPT ni les dossiers d'un ordinateur local. N'importe pas l'archive Step 102 en bloc dans le dépôt public : la provenance et la licence doivent être vérifiées fichier par fichier.
 
-## Premier test : lecture seule
+Distinguer systématiquement :
+- tests hôtes et tests unitaires ;
+- compilation native DOL/ELF ;
+- smoke test Dolphin sans preuve visuelle ;
+- test visuel avec contrôleur émulé ;
+- test sur matériel GameCube/Wii réel.
 
-Après validation et fusion explicite de cette PR de sécurité, et après l'ajout du secret, ouvre la [PR #13](https://github.com/Master-Chiken/boonta-reborn-88/pull/13) et écris ce commentaire :
+Références : [instructions des agents](../GEMINI.md), [règles de fonctionnement du projet](PROJECT_OPERATING_RULES.md), [priorité et critères d'acceptation](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
-```text
-@gemini-cli Fais un audit en lecture seule. Inspecte uniquement les fichiers présents dans la branche actuelle, résume les workflows et résultats CI, identifie les sources réellement disponibles et les prochaines étapes. Ne modifie aucun fichier, ne crée aucune branche et ne crée aucune PR.
-```
-
-Consulte ensuite l'onglet [GitHub Actions](https://github.com/Master-Chiken/boonta-reborn-88/actions) et vérifie la réponse. Une réponse réussie de Gemini ne prouve pas que le jeu compile ni qu'il fonctionne.
-
-## Déverrouiller l'écriture — étape séparée
-
-Ne fais cette étape **qu'après** protection de `main` et vérification de `GEMINI_API_KEY`.
-
-1. Ouvre **Settings → Secrets and variables → Actions → Variables → New repository variable**.
-2. Nom : `GEMINI_WRITE_ENABLED`.
-3. Valeur exacte : `true`.
-
-Sans cette variable, le commentaire `@gemini-cli /approve` n'exécute pas de modifications. Une fois déverrouillé, Gemini doit vérifier le plan approuvé, travailler sur une branche séparée et ouvrir une PR. Il ne doit jamais pousser directement vers `main`, fusionner une PR ou activer l'auto-merge.
-
-## Limites du dépôt et des fichiers
-
-- Les workflows voient le dépôt GitHub et le contexte de la discussion déclenchante. Ils ne voient pas automatiquement les archives téléversées dans ChatGPT ni les dossiers de ton Mac.
-- Le grand ZIP Step 102 n'est pas automatiquement accessible à GitHub Actions. N'importe pas ce ZIP en bloc dans le dépôt public ; commence par examiner les sources et données séparément.
-- Inspecte la branche réellement utilisée. Ne suppose pas qu'un fichier proposé dans une PR en brouillon se trouve déjà sur `main`.
-- Distingue tests hôtes, compilation native DOL, smoke test Dolphin sans interface et validation visuelle/contrôleur.
-
-## Source officielle
-
-[Prix, quotas et conditions de données de Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
-
-Si une étape nécessite une carte, une facturation ou une mise à niveau payante, ne la réalise pas.
+[Documentation officielle des tarifs et conditions de données de Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
