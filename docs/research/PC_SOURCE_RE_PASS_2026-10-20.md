@@ -127,3 +127,37 @@ The same source marks several central routines as `HANG("TODO")`: `swrRace_Advan
 ### Cross-platform limitation
 
 These findings are specific to the inspected PC source. They do not prove that N64/Dreamcast use the same progress representation, control-point sampling, wrap thresholds, or multiplayer path. For console comparison, use controlled observations (lap counter, finish trigger, ranking and respawn behavior) tied to an identified release. No console ROM/disc data should be committed.
+
+
+## Goal alignment — research must unblock the first complete race
+
+The final goal is not to produce an endless archive of format notes. Boonta Reborn 88 aims to become an enhanced GameCube/Wii remaster/remake; the immediate proof point is **one complete, enjoyable three-lap race that can be driven manually, finishes correctly, resets, and starts again**. The broader vision (upgraded presentation, content and bonus modes) depends on this foundation.
+
+### Why this source pass matters to that goal
+
+Pinned PC reference:
+https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c
+
+The current PC source has a useful lap-progress model:
+- `swrRace_LapProgress` combines a baked progress base/span for the current spline control point with `segmentT`.
+- Closed tracks clamp progress below 1.0; open tracks can reach 1.0.
+- `swrRace_LapCompletion` tracks previous and high-water progress, unwraps progress around the start/finish seam, suppresses a likely backward jump across the line, and has a distinct open-track completion rule.
+- `swrRace_UpdateRaceProgress` sequences cursor advance, track-mesh lookup, spline projection/binding, track offset, lap completion and forward/backward checkpoint counters.
+- `outCrossTime` is intended to locate the fraction of the frame before a start/finish crossing, so lap timing can be sub-frame accurate.
+
+**Critical limit:** `swrRace_AdvanceSplineCursor`, `swrRace_GetTrackMeshAtCursor`, `swrRace_UpdateSplineBinding`, and `swrRace_ComputeTrackOffset` remain `HANG("TODO")` in this reconstructed PC source. Therefore the lap-completion logic is informative, but the full spline-following pipeline is not a finished, runnable oracle. Do not blindly port its logic or assume console versions use the same representation.
+
+### Revised research priority
+
+The asset-container/PC-N64-DC format question remains documented but is no longer the only focus. It should not delay the playable-race milestone unless asset loading is actually blocking it.
+
+**Active research question:** what is the smallest evidence-backed race-progress/finish contract that Boonta needs to pass a manual three-lap race, and which parts are supported by the PC reference versus still unknown for N64/Dreamcast?
+
+1. Map the current GameCube implementation and acceptance checks to PC source concepts: spline progress, start/finish crossing, lap timing, finish order, reset/restart.
+2. Mark each behavior as **PC source-supported**, **console-unverified**, **Boonta currently implemented**, or **manually tested**. Never conflate these statuses.
+3. Inspect N64/Dreamcast-specific source/evidence for differences where available; absent evidence stays unknown, not “same as PC”.
+4. Only after the comparison, spend the remaining 20% on one bounded test/fix with regression coverage and visible Dolphin evidence. Do not make broad gameplay changes from source notes alone.
+
+### Exit gate for this research thread
+
+This thread is useful only if it produces a short acceptance matrix for: start, crossing the finish line once per lap, lap count, timing, finish placement, pause/resume, reset, and second race start. Every row must say PASS / FAIL / NOT TESTED and identify whether the evidence is automated, visible Dolphin, or physical hardware. The immediate milestone remains manual three-lap acceptance (issue #126); a build or headless test alone is not proof of a complete race.
