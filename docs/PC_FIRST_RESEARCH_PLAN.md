@@ -66,7 +66,7 @@ Classify each candidate with one of these states, and keep the exact hash/commit
 - **TARGET-VERIFIED** — that behavior/resource format was matched to the actual GameCube/Wii target evidence.
 - **HELD** — provenance, licence, build/runtime evidence, or platform mapping is insufficient.
 
-Current high-level triage: Boonta's clean-room prototype has build/test/render evidence but lacks manual race acceptance; SW_RACER_RE is the leading **PC research** source but its reviewed tip was not confirmed green by the most recent CI run found; asset parsers are promising for PC block files but have not been round-trip tested in this project; Step 102 remains **HELD** for provenance and availability; PC/N64 data is not treated as GameCube data.
+Current high-level triage: Boonta's clean-room prototype has build/test/render evidence but lacks manual race acceptance; SW_RACER_RE is the leading **PC research** source but its reviewed tip was not confirmed green by the most recent CI run found; asset parsers are promising for PC block files but have not been round-trip tested in this project. Step 102 is **out of the critical path** unless it later answers a specific technical question. PC/N64/Dreamcast data is not treated as GameCube data without direct evidence.
 
 ### 4. First experiments — no game implementation yet
 
@@ -92,5 +92,47 @@ The governing sequence is **MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST**: fi
 - Do not commit game executables, ROMs, disc images, BIOS files, extracted proprietary models/textures/audio, or unclear mod-derived track geometry.
 - Do not treat “open source”, “public GitHub repository”, or a tool's license as permission to redistribute the original game or its assets.
 - Do not describe an existing partial decompilation as a complete source port.
-- Do not merge the Step 102 candidate or external code into main until provenance and runtime checks are resolved.
+- Step 102 is not a current milestone or blocker; leave it untouched unless it becomes directly relevant to a defined research question.
+- Do not import external code or original-game content into main without a separate license/provenance review.
 - Keep all work within the project's free-only constraint: no paid APIs, no billing, no paid CI services.
+
+
+## Cross-platform research focus — PC, Nintendo 64, Dreamcast
+
+**Purpose:** use the original retail game versions as private, local behavioral/format references and use public GitHub research as the primary index of what is already understood. This is research for an independent GameCube/Wii implementation, not a plan to copy commercial game code or assets.
+
+### Evidence and comparison matrix
+
+| Reference | Best use first | Important caveat | First evidence to collect |
+|---|---|---|---|
+| PC Windows retail version | Highest-priority code/behavior reference because SW_RACER_RE and the frozen Steam Ghidra view expose functions, symbols, globals and function addresses | Windows x86 behavior is not console behavior; exact executable/build hash matters | Pin executable hash locally; map handling/physics, route progression, lap/finish, track loading and AI functions to the public function map |
+| Nintendo 64 retail version | Console-side track/asset format and gameplay comparison; check N64-specific model compression, texture limits and console-specific mechanics | N64 is a distinct build/asset pipeline; never treat an N64 ROM or extracted payload as a PC file or GameCube source | Record cartridge/revision identity privately; compare track layout, route branches, lap rules, pod handling and visual simplifications against PC |
+| Dreamcast retail version | Cross-check console behavior and the closer-to-PC feature set, rendering, track data and sound/cinematic differences | Dreamcast binaries and disc contents have not been publicly established as a reusable source tree; do not assume PC parity in every subsystem | Record disc/revision identity privately; test a short, repeatable set of gameplay observations against PC and N64 |
+| GameCube/Wii target prototype | Acceptance target for the clean-room port | Emulator success is not manual gameplay acceptance; no PC/N64/Dreamcast evidence automatically proves target parity | Record build hash, emulator/version/settings, input method, capture, and reproducible race scenario |
+
+### GitHub research hierarchy
+
+1. **Primary PC function map:** [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE), pin every finding to a commit and function/address. Its own README says it analyzes and re-implements selected functions; the percentage reported is analysis progress, not a complete port.
+2. **PC implementation/architecture reference:** [OpenSWE1R](https://github.com/OpenSWE1R/openswe1r) and [OpenSWE1R reverse-engineering notes](https://github.com/OpenSWE1R/swe1r-re). These are useful for architecture and historic analysis, but both projects are marked deprecated by their organization and focus on Windows x86, not N64/Dreamcast ports.
+3. **Independent PC cross-check:** [frozen Steam decompilation](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef). Read-only reference for types and function behavior; do not copy its source.
+4. **Asset-format cross-check:** [swe1r-assets](https://github.com/akopetsch/swe1r-assets), [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools), and [SWE1R-Mods tooling/docs](https://github.com/louriccia/SWE1R-Mods). Treat format/platform claims per block; the tools do not establish that every format works across PC/N64/Dreamcast.
+5. **Console-specific research gap:** do not assume that a GitHub project mentioning “N64 textures” is a complete N64 reverse-engineering effort, or that any current PC decompilation documents Dreamcast. Search for explicit console-build evidence, format descriptions, symbol/function maps, and reproducible tests before elevating a repository.
+
+### First research sprint (one question at a time)
+
+1. **Freeze the reference inventory:** repository URL, commit SHA, license, platform/build identified, relevant paths/functions, test status, and confidence.
+2. **PC behavior dossier:** continue RE-001 with one concrete subsystem at a time. Prioritize movement/steering and acceleration/boost/heat, then track/spline progression and lap completion, then AI/race state.
+3. **Cross-platform observation sheet:** for one short track and one pod, record the same reproducible sequence on PC, N64 and Dreamcast: acceleration, steering response, wall contact, jump/landing, boost/overheat, lap transition and finish. Keep captures/notes private where they include proprietary assets.
+4. **Format triangulation:** document each block/container signature and parser support separately by platform; test synthetic fixtures first. Only attempt a private local no-op round trip when a legal local input and a concrete question exist.
+5. **Port decision:** implement only after the behavior is sufficiently specified and compared against the existing GameCube code. Keep the research-to-implementation ratio at **8 of every 10 focused work blocks**, and do not start a second subsystem while the active question is unresolved.
+
+### Evidence labels for every finding
+
+- **DOCUMENTED** — public repository/document says it; no independent test.
+- **STATIC-ANALYZED** — code, symbols or binary metadata inspected.
+- **RUNTIME-OBSERVED** — the identified original version was run and the observation recorded.
+- **CROSS-PLATFORM-COMPARED** — same scenario measured on at least two identified versions.
+- **TARGET-ACCEPTED** — corresponding behavior passed a repeatable GameCube/Wii test.
+- **UNKNOWN** — platform/build/provenance or evidence is missing.
+
+Never promote a finding from DOCUMENTED to RUNTIME-OBSERVED or TARGET-ACCEPTED without the corresponding evidence.
