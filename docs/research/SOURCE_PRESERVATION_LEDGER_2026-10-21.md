@@ -94,3 +94,9 @@ Continue the N64-only trace from the local reference note. The best established 
 - [GitHub Copilot cloud agent task guide](https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/kick-off-a-task) — states cloud agent access is available on paid Copilot plans. The project default stays €0 and therefore excludes it unless the owner already has access and explicitly elects to use it.
 - [Boonta shared agent playbook](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/docs/MULTI_AGENT_RESEARCH_PLAYBOOK.md) — repository-specific task routing, current roles, exact boundaries, and the three overlapping steering-deadzone PRs used as a concrete duplicate-work example.
 - [Boonta AI workflow rules](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/docs/AI_AGENT_WORKFLOW.md) and [root agent instructions](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/AGENTS.md) — authoritative local rules for Gemini CLI, data/privacy, write gates, and every contributor's handoff expectations.
+
+
+## H. N64 CPU address-space reference verified during RE-001 (2026-10-21)
+
+- [Nintendo 64 Introductory Manual — CPU address map](https://ultra64.ca/files/documentation/online-manuals/man/kantan/step1/1-4.html): source for the 32-bit KUSEG, KSEG0 (direct-mapped/cacheable), KSEG1 (direct-mapped/non-cacheable), KSSEG and KSEG3 ranges. Used to correct the shorthand in the Gemini audit: KSEG0 is the wider 0x80000000–0x9FFFFFFF segment, while 0x80000000–0x803FFFFF is only a narrow 4 MiB RAM-range assumption. Keep this technical clarification separate from lap-field semantics.
+- [n64docs virtual memory map](https://n64.readthedocs.io/): accessible explanatory reference for the same address-space distinction.
