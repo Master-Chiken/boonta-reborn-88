@@ -71,8 +71,8 @@ jobs:
               exit 1
             }
           else
-            [[ "$CONFIRMATION" == "RETIRE 20 ARCHIVED BRANCH REFS" ]] || {
-              echo "::error::Deletion requires the exact confirmation phrase: RETIRE 20 ARCHIVED BRANCH REFS"
+            [[ "$CONFIRMATION" == "RETIRE 21 ARCHIVED BRANCH REFS" ]] || {
+              echo "::error::Deletion requires the exact confirmation phrase: RETIRE 21 ARCHIVED BRANCH REFS"
               exit 1
             }
           fi
@@ -98,6 +98,7 @@ jobs:
           chore/archived-branch-ref-cleanup MAIN_ANCESTRY
           fix/cleanup-runner-context-20261019 MAIN_ANCESTRY
           fix/cleanup-final-allowlist-20261019 MAIN_ANCESTRY
+          chore/branch-budget-policy-20261020 MAIN_ANCESTRY
           EOF
 
           fetch_recovery_refs() {
@@ -153,8 +154,8 @@ jobs:
             count=$((count + 1))
           done < "$CANDIDATES_FILE"
 
-          [[ "$count" -eq 20 ]] || {
-            echo "::error::Expected exactly 20 reviewed candidates, found $count."
+          [[ "$count" -eq 21 ]] || {
+            echo "::error::Expected exactly 21 reviewed candidates, found $count."
             exit 1
           }
           echo "candidate_count=$count" >> "$GITHUB_OUTPUT"
