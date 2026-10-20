@@ -1,7 +1,7 @@
 # RE-001 — Route/spline progression: PC reference vs current GameCube prototype
 
 **Research date:** 2026-10-20  
-**Status:** PC-source evidence recorded; current prototype mapped; Step 102 mapping **not verified**.  
+**Status:** PC-source evidence recorded; current prototype mapped. The historical Step 102 bundle is optional background material, not a required source baseline.  
 **Scope limit:** This dossier investigates route representation and progress only. It does not determine the correct console implementation, prove the complete original-PC progress path is functional in this reconstruction, or approve any code/data import.
 
 ## The question
@@ -96,7 +96,7 @@ A targeted check of the frozen snapshot's source and assembly inventory narrows 
 - In the public file inventory at the pinned commit, code/assembly searches for `LAB_0047ea20` and `LAB_0047ece0` locate their call sites in the builder, but there is no standalone `c/FUN_0047ea20.c`, `asm/FUN_0047ea20.s`, `c/FUN_0047ece0.c` or `asm/FUN_0047ece0.s`. Nearby identified functions end at their own returns; the labels remain orphaned code labels in the checked-in source view. This explains why a normal per-function source lookup cannot recover them; it does **not** prove what the callback code does in the executable.
 - The cursor-to-mesh lookup reader, [`FUN_0047f890`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c), reads from the global table at `0x00e23240` using a ten-slots-per-control-point index. This makes that table the likely destination read by the mesh-association stage, but the callback write mapping remains a hypothesis until its instructions or table writes are recovered. Do not label the individual slot fields or the `0x0047ece0` pass as validated behavior.
 
-**Decision:** no further PC-only inference can responsibly close the table-write gap from the checked-in named functions alone. Keep the reader/layout as mapped, keep both callback bodies explicitly unresolved, and proceed only with source/trace evidence that exposes the raw label code. The Step 102 console archive remains a separate blocker.
+**Decision:** no further PC-only inference can responsibly close the table-write gap from the checked-in named functions alone. Keep the reader/layout as mapped, keep both callback bodies explicitly unresolved, and proceed only with source/trace evidence that exposes the raw label code. The old Step 102 bundle is not a blocker; it was an early research compilation, not a canonical console source archive. GameCube/Wii behavior remains unknown until supported by actual target-specific source or runtime evidence.
 
 These observations are frozen-Steam-PC evidence only. They do not establish GameCube/Wii parity or justify porting the PC implementation.
 
@@ -125,10 +125,10 @@ The branch conditions in `FUN_0047fdd0` imply the following targeted tests for a
 
 Boundary values matter: the wrap normalization uses strict `< 0.1` for current progress and strict `> 0.8` for the stored high-water/previous progress; the backward-jump guard allows the check only when current progress is `<= 0.8` or previous progress is `>= 0.1`. The `0.01` comparison is also explicit. A dead-state flag can force the crossing-check argument on, and the normal race-update caller enables it on a forward node crossing or successful cursor rebind.
 
-Use these cases to build a small test sheet only after the actual Step 102 source or a named runtime target is available. Do not mark them as GameCube acceptance criteria until the console-specific progress representation and state transitions are mapped.
+Use these cases as PC-derived hypotheses. A small Boonta test sheet can be built against the current prototype independently; do not label PC predictions as GameCube acceptance criteria until target-specific behavior is supported by code or runtime evidence.
 This provides a substantially better **PC-side behavioral reference** for the missing route lifecycle: build the cursor graph/progress tables → sample and associate spline points with track meshes → advance the cursor across track-node planes → rebind it when the active mesh changes → compute the local track offset → detect lap crossing from normalized progress. It also explains why reading `swrRace_LapProgress` alone was insufficient: that helper consumes progress-table entries prepared by the spline-build stage and a cursor maintained by the race-update path.
 
-**Limits:** these are decompiler-derived observations for the frozen Steam PC executable. The current `SW_RACER_RE` source remains stubbed in these places, and exact source/build parity between these PC references is not established. None of this verifies GameCube/Wii behavior or the candidate Step 102 source. It improves the PC hypothesis and identifies what to compare once the console source is available; it does not justify copying the code or porting this architecture to the current prototype.
+**Limits:** these are decompiler-derived observations for the frozen Steam PC executable. The current `SW_RACER_RE` source remains stubbed in these places, and exact source/build parity between these PC references is not established. None of this verifies GameCube/Wii behavior. It improves the PC hypothesis and identifies what to compare against the current prototype; it does not justify copying code or porting this architecture to the prototype.
 
 ### Current GameCube prototype — closed curve and scalar distance
 
@@ -169,13 +169,13 @@ The prototype's current route is a compact, controllable test-course model. The 
 
 That difference makes route/cursor mapping a high-value reverse-engineering question before a large implementation decision. It does **not** prove that the GameCube version uses the same graph layout, the same PC format, the same route data or the same lap-trigger logic. Nor does it prove that porting the PC design is automatically correct for GameCube. The original console candidate must be inspected before choosing an architecture.
 
-## Step 102 mapping status
+## Step 102 — historical context, not a source gate
 
-**Not verified in this pass.** The project register references a private `Star_Wars_Racer_GameCube_Step102.zip` candidate and a separate manifest, but those files were not available in the connected file workspace for this research pass, and they are not checked into the public repository. Therefore, no Step 102 filename/function is claimed as inspected.
+The user clarified on 2026-10-20 that “Step 102” was an early research bundle assembled collaboratively from collected game references, manuals, and reverse-engineering material to help start Boonta Reborn. It is not the game itself, not a verified native GameCube source tree, and not more authoritative than the current project or stronger version-pinned references. Its absence must not block RE-001 or future work.
 
-**Availability re-check (2026-10-20):** Rechecked the connected conversation-file list and Library metadata; the named Step 102 source ZIP and its manifest still are not available for inspection. No console source file/function is claimed as mapped. This is an input blocker, not a reason to start implementation or substitute a commercial game ROM/disc image.
+No file from that historical bundle was inspected for this dossier, so no claims are made about its contents, completeness, or redistribution status. Do not spend effort recovering it, recreating it, or integrating it wholesale. If a specific note is later useful, trace that individual claim to a reliable source and assess any data's provenance separately. Deleting the bundle is not required for progress; make no destructive change without an explicit request.
 
-The next Step 102 task is to inspect only the candidate source archive's route/race files and tests locally, match actual file contents to the PC observations above, and record each file's provenance/license status. Do not upload commercial game archives/ROMs/disc images or extracted assets to hosted tools; do not publish the Step 102 archive or bulk-import it.
+GameCube/Wii parity remains **unknown** because the available PC evidence and the current clean-room prototype do not establish original console behavior. Resolve that uncertainty through the current code/tests and any lawful, version-specific console evidence that is actually available—not by treating the old bundle as a missing dependency.
 
 ## Next question (not active until RE-001 is reviewed)
 
@@ -186,7 +186,8 @@ After the route/cursor comparison is accepted, take a separate evidence block fo
 - [x] PC source functions inspected at the pinned revision.
 - [x] Current prototype route sampling and lap counter mapped to exact source lines.
 - [x] Facts separated from console hypotheses.
-- [ ] Step 102 route/race source mapping — blocked until the private candidate source archive is available to inspect.
+- [x] Step 102 dependency removed from the critical path after owner clarification; no archive recovery or import is required.
+- [ ] GameCube/Wii route/race behavior — still unverified; requires target-specific evidence, not the historical bundle.
 - [x] PC lap-progress / finish-crossing logic traced at function level.
 - [ ] End-to-end PC route advancement proven; the required cursor/binding helpers are TODO/HANG stubs in the reviewed revision.
 - [ ] Any implementation decision — deliberately deferred.
@@ -208,7 +209,7 @@ For Boonta, that means a staged goal:
 
 The immediate research deliverable is not “make the current distance counter more sophisticated.” It is to determine what the original route system must represent, which details are actually supported by PC evidence, and what source/binary evidence is still required from N64 or Dreamcast before claiming target-platform parity. The current prototype uses an authored closed-loop curve and travelled-distance lap count; this is enough to test the rendering/input loop but does not yet reconstruct the original game's route graph, course data or lap-crossing mechanism.
 
-The PC reverse-engineering repository is a behavioral reference, not a complete port or full decompilation: its README explicitly says it targets selected function documentation/reimplementation rather than full decompilation. See https://github.com/tim-tim707/SW_RACER_RE. The project's existing clean-room rule and source-license review still apply. A source archive or original assets can be inspected only when provenance, access and license boundaries are clear; do not use the missing Step 102 archive as an assumed dependency, and do not replace it with an unauthorized ROM/disc dump.
+The PC reverse-engineering repository is a behavioral reference, not a complete port or full decompilation: its README explicitly says it targets selected function documentation/reimplementation rather than full decompilation. See https://github.com/tim-tim707/SW_RACER_RE. The project's existing clean-room rule and source-license review still apply. The historical Step 102 bundle is optional context, not an assumed dependency. Any game-derived data must be checked for provenance and licensing; do not substitute unauthorized ROM/disc material.
 
 ### Updated completion criterion for this research thread
 
