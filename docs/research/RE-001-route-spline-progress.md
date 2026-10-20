@@ -420,3 +420,40 @@ The experiment design is now precise enough to avoid rebuilding the test harness
 4. Record test command, tool revision, input identity, before/after hashes, and result. Then keep PC evidence separate from any target-console comparison.
 
 **Disposition:** a credible upstream item-level test pattern exists. The current project still has no independently executed, provenance-recorded round-trip result, and GameCube/Wii parity remains **UNKNOWN**.
+
+
+
+## Follow-up source pass — item equality versus container equality (2026-10-20)
+
+Pinned upstream reference remains `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`.
+
+Sources inspected:
+- [Upstream README: stated bit-perfect block-file capability](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/README.md)
+- [Item-level round-trip base](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.TestUtils/BlockItemsReserializationTestBase.cs)
+- [Original block provider](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/OriginalBlocksProvider.cs)
+- [Spline item test cases](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original.Tests/Reserialization/SplineBlockItemsReserializationTest.cs)
+
+### Finding
+
+The README states that the library supports bit-perfect reserialization of block files. But the inspected spline regression harness does **not**, by itself, prove whole-container equality: it takes an item returned by the provider, clones that item, serializes the item through the item-level helper, and compares `BlockItem.Bytes` with the reserialized item's bytes. The provider separately loads whole named blocks from embedded resources through `BlockLoader.Load`. The inspected test base does not compare the original complete block stream against a complete reserialized block stream, nor assert equality of the outer block header/table/index regions.
+
+This distinguishes three claims that must not be collapsed:
+- **Item-level regression coverage:** explicitly present in source for selected spline item IDs.
+- **Library-level whole-block capability:** claimed by the upstream README, but not independently executed or proven by the item test inspected here.
+- **Boonta/target-console validation:** not established.
+
+A broad search of the pinned repository for block-level reserialization test names did not surface a dedicated whole-container no-op equality test. This is a bounded source search, not proof that no such test exists anywhere in the repository or in another revision.
+
+### Experiment design update
+
+If a provenance-identified, legally available PC block becomes available for private analysis, use two separate assertions:
+1. **Item invariant:** every selected spline item's serialized bytes match its original item bytes.
+2. **Container invariant:** complete output block bytes match the input byte-for-byte, including header/table/offsets/padding/unknown regions.
+
+Report the two results independently. If the library only exposes item serialization in the chosen harness, container equality remains untested; do not infer it from passing item tests. Record input release/platform/file identity, SHA-256 before and after, exact command, tool revision, and result. No game-derived input or extracted asset should be committed to Boonta or CI.
+
+### Current blocker and next priority
+
+The current session has no provenance-identified PC block input available for a fresh round-trip, and we have not established a lawful, reproducible local test fixture. Do not manufacture a binary fixture that pretends to be a real game block. Mark the binary experiment blocked on input provenance/access, and continue with source-level reverse engineering that can still yield falsifiable hypotheses—next, trace the PC spline block loader's container framing and distinguish fields consumed from fields merely preserved, while maintaining a strict PC-versus-console evidence boundary.
+
+**Disposition:** item/container test coverage is now explicitly separated. Whole-container round-trip for our own evidence remains **NOT RUN**; GameCube/Wii format and behavior parity remains **UNKNOWN**.
