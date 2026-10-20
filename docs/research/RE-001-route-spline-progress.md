@@ -1054,7 +1054,7 @@ A scan identified 92 `CompWolf`-prefixed blocks. An independently written local 
 | `Part` | 44 |
 | `Scen` | 2 |
 
-Across these blocks, the checker produced 11,975,612 bytes of decoded data from 5,870,259 bytes consumed by the encoded block streams. These counts are format-validation results, not an asset export or proof that every record's semantics are known.
+Across these blocks, the checker produced 11,975,612 bytes of decoded data. The encoded streams consumed 5,869,155 bytes after their headers; the 12-byte `CompWolf` wrapper headers add another 1,104 bytes, for 5,870,259 ROM bytes across the 92 complete block records. These counts are format-validation results, not an asset export or proof that every record's semantics are known.
 
 The `Trak` blocks are heterogeneous. Some contain a leading `Data` section with repeated `LStr` records; each observed `LStr` record is 16 bytes (a four-byte marker plus three finite big-endian floats). Other `Trak` blocks have no `LStr` record in the scan. An initial hypothesis was that these records might describe route geometry, but a follow-up cross-check found public PC-format documentation in [SWE1R-Mods' model-block reference](https://github.com/louriccia/SWE1R-Mods/blob/main/docs/modelblock.md): in PC `Trak` data, `Data` / repeated `LStr` records are documented as light-flare coordinates, not a course centerline. The N64 records match that layout, making **light-flare data the leading interpretation**, while PC-to-N64 semantic equivalence remains unconfirmed. Some sampled record groups are spatially discontinuous, which is also inconsistent with assuming they form one ordered centerline. The 19 `Trak` blocks must not be treated as 19 distinct race courses.
 
