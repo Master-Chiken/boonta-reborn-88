@@ -163,10 +163,10 @@ jobs:
             echo "## Branch cleanup preflight"
             echo
             echo "- Mode: **$MODE**"
-            echo "- Verified checkpoint: `$EXPECTED_CHECKPOINT`"
+            echo "- Verified checkpoint: \`$EXPECTED_CHECKPOINT\`"
             echo "- Candidate refs: $count"
             echo "- Every candidate tip is recoverable from the protected archive or already fully integrated into main."
-            echo "- Main/dev/archive and both open-PR branches are excluded."
+            echo "- Main/dev/archive and every open-PR head/base branch are excluded."
             echo
             echo "### Candidate list"
             sed 's/ MAIN_ANCESTRY$/ (exact tip must be an ancestor of main)/' "$CANDIDATES_FILE" | sed -E 's/ [0-9a-f]{40}$//'
