@@ -780,3 +780,28 @@ This audit adds sources relevant to the original game and its platform context w
 - **Next step within the existing RE-001:** finish the current PC cursor/binding evidence review and record unresolved items; then, if the dossier's completion criteria still require it, perform a controlled player-visible comparison against a legally obtained N64 copy and record build/region, hardware or emulator/version, course, starting conditions, observations and repeatability. Do not start that comparison by changing gameplay code.
 
 No game ROM, executable, asset, or proprietary implementation was copied into Boonta during this source audit.
+
+
+## RE-001 closeout — evidence status (2026-10-20)
+
+**Disposition: PC-reference analysis documented; dossier closed for this pass. Console parity and several PC internals remain explicitly unverified.** Closing this pass means the current evidence has been organized and its limits recorded; it does not mean the original game's route system has been fully reconstructed.
+
+| Item | Status | Closure statement |
+|---|---|---|
+| PC spline data, curve families and linked cursor model | **Documented from pinned PC sources** | The PC reference supports linked control-point traversal, branch selection, position/tangent/up evaluation, and multiple curve families. |
+| PC progress-table build | **Documented at algorithm level** | The frozen Steam-PC decompilation supports sampled-distance progress tracing and a separate cursor-parameter sampling pass. Exact semantics of some fields remain inferred. |
+| PC cursor advance / mesh binding / track offset | **Partially documented** | Branch conditions, increments, thresholds and call relationships are recorded. Decompiled aliases, unnamed fields, and callback writes remain unresolved where noted above. |
+| End-to-end original PC route-progress execution | **Not confirmed** | The readable reconstruction contains TODO/HANG stubs in the progress path; source-level helper logic is not proof of a working end-to-end runtime. |
+| Current clean-room GameCube prototype | **Mapped for comparison** | The prototype's sampled closed curve and distance/lap model are identified. They are comparison facts about this repository, not proof of original GameCube behavior. |
+| Retail N64/GameCube/Wii route algorithm | **Unverified** | No platform-specific executable/disassembly or controlled retail runtime observation in this pass establishes internal parity. Manuals and community guides only provide limited player-visible leads. |
+| Step 102 archive | **Non-blocking historical context** | It is not the original game or an authoritative platform source tree; recovery or deletion is not needed to close this research pass. |
+| Implementation / tests | **No gameplay changes authorized or made** | Keep this pass research-only. Any future contract harness must be labeled PC-reference testing, not console acceptance testing. |
+
+### Remaining uncertainty boundaries
+
+- Do not resolve the caller's aliased output parameters in address 0x0047ffb0 by guessing semantic names; retain the aliasing caveat until a typed reference or unambiguous data-flow evidence is available.
+- Do not claim the writes performed by callbacks at 0x0047ea20 or 0x0047ece0; their standalone bodies remain unavailable in the pinned snapshot.
+- Do not claim N64/GameCube/Wii parity from PC code, manuals, generic SDK documentation, or a community guide.
+- Do not treat proposed boundary cases as executed tests. They are a future test design only.
+
+**Next action:** stop work on RE-001 for now and retain this dossier as the recorded result. No RE-002 work, no gameplay-code change, no new parallel task, and no PR merge as part of this closeout.
