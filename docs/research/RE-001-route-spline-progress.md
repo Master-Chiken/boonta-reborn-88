@@ -292,3 +292,58 @@ The table defines test questions/contracts to settle; it does not claim all expe
 ### Current recommendation
 
 Do **not** replace the procedural curve or the distance-based lap counter in the same change. First create a platform-tagged, versioned route representation and a host-testable route-cursor module independent of rendering. Its interface should expose position, tangent/up, segment parameter, route progress, branch state, and lap-crossing events. The existing oval remains the integration harness until that module has golden tests and the GameCube/Wii evidence gap is explicitly documented.
+
+## Route schema proposal — logical contract, not a binary-format claim (2026-10-20)
+
+This closes the next design deliverable without pretending the GameCube/Wii binary format has been identified. The schema below is a **logical, platform-tagged model** for later fixtures and tests. It is not a proposed byte-for-byte serialization and must not be used to parse an original asset until a named platform/release sample validates it.
+
+### Asset-level model
+
+| Field | Purpose | Evidence / confidence |
+|---|---|---|
+| `source_platform`, `source_release`, `source_revision` | Keep PC, N64, Dreamcast and any future GameCube/Wii evidence separate | Required project provenance rule; exact console revisions remain unknown |
+| `route_id`, `curve_type`, `closed_loop` | Identify the route, interpolation family and cyclic/open behavior | Curve families and cyclic/non-cyclic routes are documented in PC source/tooling; target distribution unknown |
+| `points[]` | Ordered control-point records | PC parser/source evidence; target record layout unknown |
+| `points[].position`, `handle_in`, `handle_out`, `orientation_or_up` | Evaluate position and orientation | PC source uses positions, Bezier handles and orientation/up data; not every curve type uses every field |
+| `points[].next[]`, `points[].previous[]` | Represent branches, joins and reverse traversal | PC cursor uses outgoing/incoming links; do not bake exporter limits into the schema |
+| `points[].progress_base`, `progress_span` | Convert cursor segment parameter to normalized progress | Present in the PC progress path; not confirmed for console data |
+| `points[].branch_metadata` | Preserve branch-selection/history data without assigning unknown semantics | PC code consults `unk_set`; exact meaning is not fully established |
+| `mesh_association` (optional, unresolved) | Link sampled route locations to track geometry | PC code has a density-10 lookup table, but the writer callback is unresolved; do not fabricate its format |
+
+Unknown or absent fields must remain explicitly unknown/optional; they must not be filled from assumptions about PC-to-console parity.
+
+### Runtime cursor contract
+
+A platform-neutral cursor should be able to represent:
+
+- current control-point/node identity and the required curve-type-specific lookahead;
+- normalized segment parameter `t`, movement direction, chosen branch and traversal history;
+- endpoint/dead-end state for open routes;
+- evaluated world position, tangent and up vector;
+- route progress and a separate lap-crossing event/state.
+
+Keep **route evaluation**, **world-position projection/rebinding**, **track-mesh association**, and **lap/race state** as separate responsibilities. The PC source identifies these as distinct operations, and several reconstructed end-to-end functions remain TODO/HANG stubs. A single “advance distance and increment lap” function would hide the unresolved behavior rather than model it.
+
+### Required invariants for synthetic host fixtures
+
+1. Every referenced node index is validated before dereference; invalid counts, offsets and links fail safely.
+2. Forward and reverse traversal use explicit graph links; reverse traversal must not emit a forward lap event.
+3. A branch choice is deterministic for a given cursor state and input; rejoining a shared node does not duplicate that node or invent progress.
+4. Closed-loop lap crossing is a separate event from position wrap and can occur at most once for one forward crossing.
+5. Open routes have a terminal state; reaching the endpoint must not wrap unless the route is marked cyclic.
+6. Curve evaluation returns finite position/tangent/up values; degenerate tangent/up inputs are handled explicitly.
+7. Binary-format decoding is behind a platform/release-specific adapter; the logical route model contains no hard-coded PC byte order or assumed N64/Dreamcast layout.
+
+These are **clean-room safety and consistency invariants**, not claims that the original game handles malformed data the same way.
+
+### Gate before implementation
+
+Do not add a route-cursor implementation to the GameCube runtime until all of the following are available:
+
+- a provenance-identified target-platform route sample or source-level evidence that supports the target data model;
+- numeric expected-value fixtures for at least one normal segment, one reverse boundary transition, one branch/rejoin and one finish crossing;
+- a clear decision on the current test oval's role as an integration harness;
+- host tests that pass independently of GX rendering, followed by a target-specific integration test.
+
+**Current disposition:** schema proposal recorded; binary layout and console parity remain **UNKNOWN**. The next research action is to obtain stronger target-platform evidence for route representation—not to infer it from PC field names or begin replacing the runtime.
+
