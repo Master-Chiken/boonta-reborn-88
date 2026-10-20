@@ -880,3 +880,30 @@ Continue read-only analysis of the `Trak` section/offset tables and validate any
 
 **Emulator clarification:** Wii64 is an N64 emulator, not a separate native edition of *Episode I: Racer*. A Wii64 compatibility-list entry is evidence only of an emulation test under the named emulator/configuration, not of a native Wii port or identical internal data layout; see the [community Wii64 compatibility list](https://wiki.gbatemp.net/wiki/Wii64_Compatibility_List).
 
+## N64 Trak block-grammar cross-check against the PC model reader (2026-10-20)
+
+This is a follow-on to the local N64 container probe above. It strengthens the structural result while deliberately stopping short of claiming that the N64 route/spline system has been found.
+
+### Cross-check result
+
+The 19 N64 `Trak` payloads were checked with an independent, read-only structural validator based on the *documented grammar* in the pinned [`blender-swe1r/modelblock.py`](https://github.com/OpenSWE1R/blender-swe1r/blob/b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce/modelblock.py). No third-party implementation was copied into Boonta.
+
+- **19/19** payloads matched the model header envelope: a `Trak` signature, six 32-bit header-offset slots followed by the `0xFFFFFFFF` sentinel, optional `Data`, `Anim` pointer list(s), and `HEnd`.
+- **11/19** contain a `Data` section. Its declared size is counted in 32-bit words, matching the reference reader's convention. The sections contain **220 `LStr` records in total**, each occupying 16 bytes, with no unrecognized four-byte words in those sections.
+- The `Anim` lists are terminated by a zero pointer. This check validates list framing and pointer bounds, not the semantic meaning or correctness of every animation payload.
+- The post-`HEnd` tree walk encountered **5,694 unique group/model nodes** and **9,536 references from mesh-group nodes to mesh records** across the 19 blocks. All visited node types fell within the type set recognized by the pinned reference reader; no node, child-list, or mesh-reference address crossed its containing decoded `Trak` block boundary.
+
+Reference source locations: [accepted model extensions and offset-table / section reader](https://github.com/OpenSWE1R/blender-swe1r/blob/b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce/modelblock.py#L1000) and [`LStr` / `ModelData` handling](https://github.com/OpenSWE1R/blender-swe1r/blob/b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce/modelblock.py#L900). The specific line anchors are navigation aids to the pinned file; the source revision is the commit named above.
+
+### Important semantic correction: `LStr` is not a race spline
+
+The reference reader's `LStr` class reads three big-endian floats and its display routine creates a Blender point light named `lightstreak`. Therefore, in this tool's documented interpretation, `LStr` represents a light-streak position—not a route-control point. This evidence explicitly **does not** identify route centreline, branch, lap-progress, or checkpoint data inside these `Trak` `Data` records.
+
+### Decision
+
+The N64 `Trak` outer model/scene-graph grammar is structurally compatible with the grammar described by this PC-oriented reader for the portions tested. This is a strong format-reuse lead for a **local, non-redistributed N64 track-model inspection/conversion experiment**, but it does not prove full geometry/animation conversion, runtime equivalence, or that the game's route spline format is shared. The parser is GPL-3.0-or-later and remains read-only; do not copy/adapt it into Boonta without a separate licensing decision. Keep the commercial ROM and any decoded game assets out of Git.
+
+### Next evidence target
+
+Keep the research question narrow: identify a separate route/progress representation or locate route-related structures among the N64's remaining decoded payloads without guessing that `Trak`/`LStr` means spline. Any future parser should be independently authored, host-tested on at least two blocks and several malformed cases, and keep decoded proprietary assets local.
+
