@@ -1176,3 +1176,33 @@ That distinction matters: **the current static evidence has identified the debug
 ## Source-independence caveat (2026-10-20)
 
 The MIT asset library is a distinct serialization implementation, but its comments explicitly link the corresponding segment-data and segment-header models to `blender-swe1r/splineblock.py`. Its field names/unknown fields must therefore not be counted as an independent reverse-engineering source. The exact match of the local ROM's *whole spline block SHA-1* with published metadata remains a strong identity/length check; it does not independently validate the 84-byte record semantics. The Blender-derived graph/link interpretation stays provisional until corroborated by N64 code or runtime observation.
+
+## Runtime cross-reference — 84-byte node records are used by route/spline code (2026-10-20)
+
+A deeper local disassembly of the US N64 main code materially improves confidence in the point-record interpretation. The facts below are from the supplied local ROM disassembled with LLVM's MIPS backend; no instruction dump or game data was committed. Function names are still address labels except for public symbols noted elsewhere.
+
+### Position, controls, and node-key lookup
+
+- At `0x8003A4A0`, code computes `point_array + index * 0x54` (84 bytes), then reads floats at node offsets `+0x10`, `+0x14`, `+0x18` and writes a three-float output. This confirms that a runtime node array with the same 84-byte stride uses the vector at `+0x10` as a 3D position-like value.
+- At `0x8003A4E8`, a second accessor uses the same 84-byte stride and reads a signed halfword at `+0x40`.
+- At `0x8003A50C`, code iterates the spline object's point count (`+0x04`), walks its point pointer (`+0x0C`) in 84-byte steps, and compares each node's halfword at `+0x40` to a requested value, returning the matching node index. Therefore the first halfword of the final 20-byte node tail is runtime-consumed as a key/identifier; whether its precise meaning is the Blender parser's name `progress` remains unproven.
+- At `0x8003A5D0`, a numeric parameter is expanded into powers and combined with three-component vectors loaded from adjacent 84-byte records at offsets corresponding to node position (`+0x10`) and control vectors (`+0x28`, `+0x34`). The resulting three float outputs are a cubic curve sample or closely related cubic interpolation. This independently establishes that the position/control-vector portions are actively used by the runtime, though the exact curve basis/axis/scale still needs mathematical validation.
+
+### Outgoing graph edges are directly traversed
+
+- At `0x8007F560`, code loops over the spline's point count and advances each point pointer by `0x54`. It reads a signed halfword at node offset `+0x00` as a loop count, then reads the corresponding halfwords starting at `+0x04` as point indices, resolves those target nodes using the same `index * 0x54` calculation, and walks the resulting outgoing relationships. This is strong runtime evidence for the outgoing-edge count and destination-index interpretation at the start of the 84-byte record (consistent with Blender's `next_count` and `next` fields). The incoming count and all four previous-link words still deserve an equivalent direct cross-reference before each is called fully validated.
+- The same routine iterates across nodes and outgoing edges while updating traversal/sample state and calling a supplied callback; it is not merely a file editor or debug-only code path. It confirms the native spline is consumed as a graph of linked nodes, so flattening all routes into one ordered polyline can lose real branching behavior.
+
+### Runtime use of the tail metadata for route/section lookup
+
+- At `0x8007EE98`, code follows a cursor object's spline pointer, reads the spline point count and node-array pointer, divides an incoming integer by 10, then scans up to eight halfwords beginning at node offset `+0x42` for that value. A match stores node and sub-entry indices and calculates a fractional remainder for the cursor state. The helper is called from the larger route/spline routines at `0x8007F430` and `0x8008080C` paths.
+- This confirms that the eight shorts at `+0x42` through `+0x50` are not safely dismissible padding: the runtime consults them for a progress/section-like lookup. It **does not yet reveal each word's full meaning or prove that the incoming integer represents race-lap progress**.
+- The separate `+0x40` lookup helper and the `+0x42`–`+0x50` lookup can serve distinct roles. Keep both sets of raw values until the consumer logic is understood; do not collapse them into a single `checkpoint` boolean.
+
+### Revised confidence
+
+- **High:** the 84-byte stride is the actual runtime node stride; `+0x10..+0x18` supplies 3D position-like values; `+0x28..+0x33` and `+0x34..+0x3F` provide control-vector-like data for cubic sampling; the first halfword is consumed as an outgoing edge count and following halfwords as destination indices; and the `+0x40` key plus eight shorts starting at `+0x42` are consumed by runtime lookup code.
+- **Medium:** the `+0x40` word's semantic name is `progress`, that the eight following shorts are exactly alternate progress IDs, and the particular N64 item ID 110 is Boonta Classic.
+- **Still open:** the meaning of all incoming-link fields, coordinate axis and world scale, exact cubic basis, how the graph is selected for player vs AI vs visual/debug objects, race cursor state transitions, the finish-line/lap-crossing condition, and N64/GameCube/Wii format parity.
+
+This changes the next step: there is now enough evidence to write synthetic tests for an engine-neutral **branch-capable route graph** and a cubic-sampling API, but not enough to implement a faithful retail-game progress/lap state machine. Keep `boonta-track-v1` unchanged and keep original-ROM records local until the remaining semantics and provenance are resolved.
