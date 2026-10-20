@@ -641,3 +641,47 @@ These are proposed cases, not executed tests:
 The timing split, lap counter update and standings formula are directly visible in the pinned PC source. The actual crossing fraction depends on `swrRace_AdvanceSplineCursor`, which remains a TODO/HANG in this source reconstruction, so the end-to-end trigger timing has not been runtime-validated. Neither these rules nor the PC data structures establish GameCube/Wii behavior. No binary, ROM, game asset, or console test was used.
 
 **Disposition:** RE-001 now covers the PC route-progress formula, finish-line crossing conditions, lap-time split, lap-count update, and placement metric as separate contracts. Before implementation, reconcile these observations with the frozen Steam-PC decompilation and keep all target-console assumptions explicitly unresolved.
+
+
+## Follow-up source pass — crossing trigger versus reconstructed implementation (2026-10-20)
+
+Pinned PC reference: [`swrRace.c` at `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c) and [`swrRace.h` at the same commit](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.h).
+
+### Important evidence distinction
+
+The source has a useful mismatch between declarations/comments and executable reconstruction:
+
+- `swrRace_AdvanceSplineCursor` is currently `HANG("TODO")`. Its nearby comment describes stepping the cursor over node planes in `segmentT += 0.01` increments and computing `outCrossTime` by line-plane interpolation of previous/current position, multiplied by the raw frame delta. This describes intended/recovered behavior, but the function body does not implement it.
+- `swrRace_GetTrackMeshAtCursor`, `swrRace_UpdateSplineBinding`, and `swrRace_ComputeTrackOffset` are also `HANG("TODO")`.
+- `swrRace_UpdateRaceProgress` calls those functions before `swrRace_LapCompletion`. It requests crossing evaluation when cursor movement reports forward progress or spline binding returns exactly 1. Therefore the full lap trigger cannot be validated end-to-end by running this reconstructed source as-is.
+- The same update function calls `swrSpline_ProjectPointStub` twice and `swrSpline_GetSampleSpacing`; source comments describe these as retail stubs/vestigial state. Do not build a new projection algorithm around these calls without separate evidence from the original executable.
+
+### Directly visible lap-completion state machine
+
+The implemented `swrRace_LapCompletion` body supports these exact rules:
+
+1. A DEAD flag forces the local `checkCrossing` argument to 1.
+2. It snapshots the old `lapComp` into `lapCompPrev`, then reads current progress from the spline cursor for local racers or the multiplayer arrays for remote racers. Remote racers also copy their high-water mark and lap count from remote arrays.
+3. It updates `idleTick`: accumulate frame delta while `moveTick < 9`; otherwise reset idle time to zero.
+4. It skips crossing evaluation unless `checkCrossing != 0` and (`lapComp <= 0.8` or `lapCompPrev >= 0.1`). The comment identifies the excluded case as jumping backward across the line, where progress snaps high just after the previous frame was near the line.
+5. When current progress is below 0.1, it subtracts 1 from the high-water mark if that mark is above 0.8, and independently subtracts 1 from previous progress if previous progress is above 0.8.
+6. For an open route (`swrSpline_finishNodeIdx >= 0`), the crossing result is `lapComp >= 1.0`; on this path idle time is reset and `lapCompMax` is set to current progress even when the result is false.
+7. For a closed route, the outer condition requires `maxComp < lapComp` and `lapCompPrev - 0.01 <= maxComp`. Only then is the result assigned from the strict condition `maxComp < 0`; idle time is reset and the high-water mark is updated to current progress. If the outer condition fails, the function returns false without that high-water-mark update.
+
+This narrows the earlier shorthand: the high-water mark is **not updated on every frame**. Its write is on the open-route crossing-check path or the closed-route path that passes the overtaking/previous-progress guard. This update cadence should be preserved in any independent implementation or explicitly tested as a deliberate divergence.
+
+### New boundary tests to prioritize
+
+All are test proposals, not executed results:
+
+- Hold `checkCrossing = 0` while current progress changes; verify `lapComp`/previous state changes but no crossing branch writes the high-water mark.
+- Exercise the gate boundaries at current progress exactly 0.8 and just above, with previous progress exactly 0.1 and just below.
+- For a closed route, vary `maxComp` around 0.8 before unwrapping, then around 0 after unwrapping; check both the outer comparison and strict negative test.
+- Make the outer condition fail after the current progress wraps; verify the high-water mark remains unchanged on that call.
+- For open routes, test `lapComp` just below and exactly 1.0, with crossing enabled; verify high-water mark and idle-time writes even when completion is false.
+- Verify the DEAD override independently from the crossing gate, while retaining the remaining conditions.
+- Do not claim the sub-frame crossing time is accurate until `swrRace_AdvanceSplineCursor` has a trustworthy executable/reference implementation or an independently observed oracle.
+
+### Consequence for Boonta
+
+The best near-term deliverable is a small, engine-independent unit-test suite for the *specified lap-completion state machine*, with source-derived test fixtures and no game assets. It must be labelled as a PC-reference contract test, not GameCube/Wii parity. Cursor traversal and sub-frame crossing-time interpolation remain a separate, higher-risk RE task. No Boonta code, assets, ROMs, or executables were changed or added in this pass.
