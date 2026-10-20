@@ -192,3 +192,31 @@ After the route/cursor comparison is accepted, take a separate evidence block fo
 - [ ] Any implementation decision — deliberately deferred.
 
 No game code or game assets were changed by this research item.
+
+## Product-direction clarification — reconstruct first, enhance second
+
+**Owner's direction (2026-10-20):** use reverse engineering to obtain/reconstruct the game first, then improve it. This supersedes any interpretation of the procedural demo as the intended end product.
+
+For Boonta, that means a staged goal:
+
+1. **Faithful playable baseline:** reconstruct the original game's core systems from evidence—track/route representation, pod movement and handling, lap/race state, rivals, collisions/recovery, camera, HUD and race flow—using an independently implemented GameCube/Wii codebase. The current procedural oval is a development harness, not a substitute for the original game's course structure or behavior.
+2. **Original-content compatibility:** establish how the target game version represents and loads course/model/texture/spline data. Keep any commercial assets local and user-supplied from a lawful copy; do not commit or redistribute them. Shared filenames or PC formats alone do not prove GameCube compatibility.
+3. **Parity validation:** compare a behavior or data claim against the relevant PC, N64 and Dreamcast evidence where available. Label each claim by platform and confidence; never silently treat PC behavior as console fact.
+4. **Enhancement phase:** only after the faithful baseline is playable, add the HD++ presentation, improved controls/quality-of-life, extra pods/tracks/modes and other new content as clearly separated changes.
+
+### Consequence for the active route/spline question
+
+The immediate research deliverable is not “make the current distance counter more sophisticated.” It is to determine what the original route system must represent, which details are actually supported by PC evidence, and what source/binary evidence is still required from N64 or Dreamcast before claiming target-platform parity. The current prototype uses an authored closed-loop curve and travelled-distance lap count; this is enough to test the rendering/input loop but does not yet reconstruct the original game's route graph, course data or lap-crossing mechanism.
+
+The PC reverse-engineering repository is a behavioral reference, not a complete port or full decompilation: its README explicitly says it targets selected function documentation/reimplementation rather than full decompilation. See https://github.com/tim-tim707/SW_RACER_RE. The project's existing clean-room rule and source-license review still apply. A source archive or original assets can be inspected only when provenance, access and license boundaries are clear; do not use the missing Step 102 archive as an assumed dependency, and do not replace it with an unauthorized ROM/disc dump.
+
+### Updated completion criterion for this research thread
+
+Before closing RE-001, the dossier must answer:
+- what route representation the PC reference demonstrably uses;
+- which GameCube prototype assumptions differ;
+- what can be said about N64 and Dreamcast from source-backed evidence;
+- what remains unproven without platform-specific executable/data evidence;
+- which one next investigation most directly unlocks an original-faithful playable baseline.
+
+No implementation change is justified solely by the PC-vs-prototype difference while the target-platform mapping remains unknown.
