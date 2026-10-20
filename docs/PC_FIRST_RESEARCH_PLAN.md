@@ -136,3 +136,8 @@ The governing sequence is **MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST**: fi
 - **UNKNOWN** — platform/build/provenance or evidence is missing.
 
 Never promote a finding from DOCUMENTED to RUNTIME-OBSERVED or TARGET-ACCEPTED without the corresponding evidence.
+
+
+## Cross-platform source research
+
+The platform-by-platform source inventory is maintained in [`docs/research/PLATFORM_SOURCE_MATRIX_2026-10-20.md`](research/PLATFORM_SOURCE_MATRIX_2026-10-20.md). Step 102 is parked and is not a critical-path dependency. Current research should prioritize identified original PC, N64 and Dreamcast versions, official feature references, and version-pinned GitHub reverse-engineering projects. Do not assume PC findings apply to consoles without a cross-platform comparison.
