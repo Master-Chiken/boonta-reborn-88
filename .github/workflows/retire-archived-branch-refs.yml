@@ -227,7 +227,7 @@ jobs:
               exit 1
             fi
 
-            echo "- Retired `$branch` at `$actual_sha`." >> "$GITHUB_STEP_SUMMARY"
+            echo "- Retired ref: $branch at $actual_sha." >> "$GITHUB_STEP_SUMMARY"
             retired=$((retired + 1))
           done < "$CANDIDATES_FILE"
 
@@ -239,6 +239,6 @@ jobs:
             echo
             echo "- Retired refs in this run: $retired"
             echo "- Live branch count after cleanup: $final_count"
-            echo "- Kept refs: `main`, `dev`, protected `archive/branch-heads-20261019`, and refs that still back open PRs."
+            echo "- Kept refs: main, dev, protected archive/branch-heads-20261019, and refs that still back open PRs."
             echo "- Branch refs were retired only after reachability checks; historical commits remain reachable from the recovery archive or main. This operation did not merge any branch into main/dev."
           } >> "$GITHUB_STEP_SUMMARY"
