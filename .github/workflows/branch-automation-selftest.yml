@@ -65,6 +65,36 @@ jobs:
           print(f"Validated {checked} embedded Python block(s).")
           PY
 
+      - name: Enforce conservative branch budget and lifecycle policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
+          checks = {
+              "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
+              "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
+              "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
+              "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
+              "actual auto-delete setting is reported": "delete_branch_on_merge" in governance,
+              "single deduplicated branch-budget issue": governance.count('title="Branch governance: branch budget"') == 2,
+              "existing alert gets edited instead of comment spam": "gh issue edit" in governance and 'gh issue comment "$existing"' not in governance,
+              "alert closes when inventory is back in budget": "gh issue close" in governance and "below the 10-branch warning threshold" in governance,
+              "no automatic branch-ref deletion": "gh api --method DELETE" not in governance and "git push --force" not in governance,
+              "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
+              "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
+          }
+
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          failed = [label for label, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit("Branch budget policy validation failed: " + "; ".join(failed))
+          PY
+
       - name: Verify Git patch-equivalence detection with a local fixture
         shell: bash
         run: |
