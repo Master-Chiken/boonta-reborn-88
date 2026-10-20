@@ -1276,3 +1276,25 @@ At this point static evidence supports three separate subsystems:
 3. generic runtime-object cursor/transform update and render callbacks that can consume route-like spline data.
 
 The remaining gap is linking these mechanisms to the specific player/AI race state that increments a lap and reports race progress. No code path found so far proves that relationship, so the current GameCube demo's distance-based lap logic must not be described as a faithful port.
+
+## N64 lap-state addresses — public cheat-code semantics cross-check (2026-10-21)
+
+This is a separate N64 evidence thread; do not merge its conclusions with the Windows-PC route-progress analysis above.
+
+### Direct public evidence
+
+- [TheForce.Net's N64 Episode I: Racer codes](https://www.theforce.net/videogames/codes/n64/racer.asp) explicitly lists `8111900A 00??` under both “Start on Lap … Player 1” and “Always on Lap … Player 1”, with values `00–04` labelled Lap 1 through Lap 5. The same page labels `81119092 00??` as the corresponding Player 2 codes, with the same value mapping.
+- [GameRevolution's N64 cheat list](https://www.gamerevolution.com/guides/28992-star-wars-episode-1-racer-cheats) independently lists `8111900A0002` as “Start On Lap 3” for Player 1.
+- The two player-specific target addresses differ by `0x88`. Their documented cheat semantics support interpreting these as N64 lap-state write targets; the spacing is consistent with corresponding per-player state locations, but spacing alone does not prove a C struct layout.
+
+**Updated confidence:** high that the public cheat listings intend these addresses to set/hold the corresponding player's lap value. This is stronger than treating the addresses as arbitrary participant-state candidates. It does **not** by itself identify the native reader/writer instructions or prove the exact field layout.
+
+### Important limits on the inference
+
+- These are community cheat listings, not source-level symbols or instruction cross-references; the pages do not establish the exact ROM checksum/revision to which every code applies.
+- The public [`sp00nznet/racer` reference at commit `11f6f70469f995304422f2209a47e9c2df5ff6d0`](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0) is a static-recompilation project. Its [README](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/README.md) explicitly says that no N64 decompilation exists for the game; the checked-in `symbols.toml` is a function/VROM-symbol map, not a source-level lap-field definition. The [IDA handoff](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/docs/IDA_ANALYSIS_HANDOFF.md) references a decompiler output on a local Windows path that is not present in this public repository.
+- Therefore, the public source set inspected here does not yet establish the normal runtime code path that increments the lap, handles finish-line crossing, or writes the HUD's LAP / FINAL LAP state. Keep those questions open and do not map the PC `Jdge` data or the prototype's own counters onto these addresses without a separate proof.
+
+### Minimal next verification
+
+On the owner's lawful local US ROM in a compatible emulator/debugger, observe writes to `0x8011900A` and `0x80119092` during an ordinary race, or use the known lap-setting cheat as a controlled intervention. Record the runtime address/function and visible result only. Keep the ROM, full memory dump, and extracted proprietary data local; no such emulator observation is claimed as completed here.
