@@ -347,3 +347,15 @@ Do not add a route-cursor implementation to the GameCube runtime until all of th
 
 **Current disposition:** schema proposal recorded; binary layout and console parity remain **UNKNOWN**. The next research action is to obtain stronger target-platform evidence for route representation—not to infer it from PC field names or begin replacing the runtime.
 
+## Follow-up source check — N64 spline-block selection is a distinct variant (2026-10-20)
+
+A pinned cross-check of the MIT-licensed `akopetsch/swe1r-assets` repository at commit `922ef535f6598a1330ff93d6b07258956f990b34` provides one additional platform-specific fact:
+
+- Its release metadata maps Windows International, Windows Demo, Mac and Dreamcast to `SplineBlockId = 0`, while Nintendo 64 USA, Europe and Japan use `SplineBlockId = 1`. See the [release matrix](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv).
+- The library's generic spline object model includes a segment header (two 16-bit words, element count, unknown count and two further 16-bit words) and segment data with several unknown 16-bit fields, a previous-node ID, a knot vector, two control-point vectors and additional unknown fields. See [SplineSegmentHeader.cs](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentHeader.cs) and [SplineSegmentData.cs](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/SplineBlock/SplineSegmentData.cs).
+- This is evidence that the library author selects a distinct N64 spline-block metadata variant; it is **not** proof that the PC runtime's in-memory node structure matches N64 records, nor does the metadata alone tell us the meaning of the unknown fields. The public README advertises support for four block types and bit-perfect no-op reserialization, but this pass did not execute a round-trip against a provenance-identified N64 input.
+
+### Consequence for the route schema
+
+Keep the logical route schema platform-tagged, but add a separate **format adapter / release profile** for N64 rather than treating PC spline data as the canonical serialized representation. Keep field semantics unknown until supported by a pinned parser description, controlled runtime observation or a verified local round-trip. Dreamcast remains a separate unresolved case: its shared `SplineBlockId = 0` mapping is the asset-tool author's mapping, not independent proof that its spline bytes or runtime behavior are identical to PC.
+
