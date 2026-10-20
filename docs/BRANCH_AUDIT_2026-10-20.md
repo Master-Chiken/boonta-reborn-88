@@ -11,12 +11,12 @@ Record a read-only inventory before reducing remote branches. This document is a
 | `main` | Primary branch | Protect |
 | `dev` | Integration branch; current target for gameplay PRs #214 and #243 | Protect |
 | `archive/branch-heads-20261019` | Archived branch-head snapshot | Preserve until its checkpoint and recovery value are verified |
-| `docs/reverse-engineering-80-20-20261020` | Head for PR #242; 69 commits ahead of `main`, 0 behind `main`; 14 files changed | Keep pending review and exact-head required checks |
+| `docs/reverse-engineering-80-20-20261020` | Current PR #242 head `515a195701261d5c106797f4025cf62c6b7368c1`; 76 commits ahead of `main`, 0 behind; 14 files changed | Keep draft; current exact-head safety and provenance workflows passed, but the trusted source-import path guard was not visible and must be confirmed on this SHA |
 | `fix/steering-stick-deadzone-20261019-14221623089412890411` | Compared with `dev`: 16 commits ahead, 1 behind; 4 files changed (two gameplay files and two cleanup workflows) | Do not merge as a gameplay-only change; split and review workflow changes independently |
 | `fix/steering-stick-deadzone-clean-20261020` | Compared with `dev`: 2 commits ahead, 0 behind; only `gamecube-demo/source/gameplay_state.h` and `gamecube-demo/tests/test_gameplay_state.c` changed | Keep while PR #243 is under review |
 | `fix/width-aware-rail-collision-20261017` | Compared with `dev`: 26 commits ahead, 1 behind; 10 files changed across gameplay, tests, Dolphin tooling, docs, and workflow | Keep while PR #214 is under review |
 
-Branch search returned seven branches; a follow-up cursor page was empty.
+A fresh live branch search on 2026-10-20 returned eight refs (single page): the seven branches above plus this audit branch, `docs/branch-audit-20261020`. The branch-budget issue #235 still contains an older 27-ref snapshot; do not treat that alert body as the current inventory.
 
 ## Pull request gates
 
@@ -39,9 +39,9 @@ Branch search returned seven branches; a follow-up cursor page was empty.
 ### PR #242 — research-first documentation and workflow changes
 
 - Open; explicitly returned to draft pending review.
-- Head recorded as `a8961406723c453bc44e8d81b24d7a6d3b88451e`; base is `main`.
-- The comparison to `main` reports 69 commits ahead and 14 changed files. Comparison to `dev` reports a substantially larger/diverged history, so its base must not be casually changed.
-- On the exact current head, all three required check-runs are confirmed completed successfully: `Verify Gemini free-only guardrails` (run `39460241728`), `Reject known held assets and data` (run `39460241723`), and `Check proposed source paths using trusted base policy` (run `39460237366`). The PR-triggered workflow list alone omitted the third check, but the exact-SHA check-run record confirms it passed.
+- Current head recorded as `515a195701261d5c106797f4025cf62c6b7368c1`; base is `main`.
+- The comparison to `main` reports 76 commits ahead and 14 changed files. Comparison to `dev` is a substantially divergent history, so its base must not be casually changed.
+- On this current head, `AI free-tier safety checks` and `Step 102 source-import provenance guard` completed successfully (runs `39464341867` and `39464342039`). The trusted source-import path guard was not visible for this SHA; confirm or rerun it before treating the required gate as complete. Earlier passing checks on older SHAs do not validate this head.
 - Reviewer requested: `Biddy-Pinky`.
 
 ### PR #233 — combined deadzone and cleanup automation
