@@ -41,7 +41,7 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 - Open; explicitly returned to draft pending review.
 - Current head is `a3ad603f09848d8334f696341b5eb9e4765f6a79`; base is `main`.
 - Current PR metadata reports 84 commits and 15 changed files. A historical comparison to `main` reported 76 commits ahead and 14 changed files; that comparison is stale for the current head. Comparison to `dev` is a substantially divergent history, so its base must not be casually changed.
-- A fresh metadata check at 2026-10-20 19:34 CEST reports head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, 84 commits, and 15 changed files. Exact-SHA workflow runs `39467346565` (Step 102 source-import provenance guard) and `39467346690` (AI free-tier safety checks) have now completed successfully. The trusted source-import path guard is still not present in the returned workflow-run list, so the complete required gate remains unconfirmed for this SHA. Earlier passing checks on older SHAs do not validate this head.
+- A fresh metadata check at 2026-10-20 19:34 CEST reports head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, 84 commits, and 15 changed files. Exact-SHA workflow runs `39467346565` (Step 102 source-import provenance guard) and `39467346690` (AI free-tier safety checks) have now completed successfully. The trusted source-import path guard is implemented as `.github/workflows/source-import-trusted-path-guard.yml` and triggers on `pull_request_target` for PRs targeting `main`. The `fetch_commit_workflow_runs` connector explicitly filters to pull-request-triggered runs, so its omission is not evidence that the guard did not run. Its actual run result must be checked through an all-events workflow-run query or the Actions UI before calling the gate green. Earlier passing checks on older SHAs do not validate this head.
 - Reviewer requested: `Biddy-Pinky`.
 
 ### PR #233 — combined deadzone and cleanup automation
@@ -81,7 +81,7 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 
 - Re-fetched live PR metadata: #214 remains draft at `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, and #243 remains draft at `d1c5bf755a587765908a152fbf8874231bf6fe75`; both target `dev` at base SHA `c22bf27e0aca621ea735a85e9fedb92fd1933754`.
 - Re-inspected workflow jobs for exact heads: #214 run `39327379050` and #243 run `39459255221` each have all four jobs completed successfully (host pause/resume tests, native GameCube build, Dolphin headless smoke, and non-blocking software-renderer diagnostic). This does not substitute for independent review or human interactive acceptance.
-- #242 remains draft at `a3ad603f09848d8334f696341b5eb9e4765f6a79`; the current exact-head workflow-run listing confirms two successes only; the trusted source-import path guard remains unconfirmed. No repeated CI was launched.
+- #242 remains draft at `a3ad603f09848d8334f696341b5eb9e4765f6a79`; the current exact-head workflow-run listing confirms two successes only; the trusted source-import path guard uses `pull_request_target` on PRs targeting `main`; because the connector filters workflow-run lookup to `pull_request` events, omission from this list does not establish whether it ran. Verify the actual run separately before declaring all gates green. No repeated CI was launched.
 
 
 ### Review focus — PR #214 scope
@@ -99,4 +99,10 @@ The current #214 patch includes gameplay collision/width handling, tests, Dolphi
 ### Current inventory and CI follow-up — 2026-10-20 19:40 CEST
 
 - A fresh branch search again returns 8 refs total: `main`, `dev`, `archive/branch-heads-20261019`, `docs/branch-audit-20261020`, `docs/reverse-engineering-80-20-20261020`, `fix/steering-stick-deadzone-20261019-14221623089412890411`, `fix/steering-stick-deadzone-clean-20261020`, and `fix/width-aware-rail-collision-20261017`. The older 27-ref snapshot in issue #235 is stale; no branch deletion is warranted from that count alone.
-- For #242 exact head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, the two visible runs `39467346565` and `39467346690` have now completed successfully. The third expected trusted source-import path guard still does not appear in the connector's exact-commit workflow-run results, so required-check completeness remains unresolved.
+- For #242 exact head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, the two visible runs `39467346565` and `39467346690` have now completed successfully. The trusted source-import path guard is configured for `pull_request_target` on PRs targeting `main`. The workflow-run connector filters to `pull_request` events, so its absence from that result is an observability limitation, not proof of a missing run. Confirm its actual run status through an all-events run listing or the Actions UI.
+
+
+### Workflow-event correction — 2026-10-20 19:45 CEST
+
+- Inspected `.github/workflows/source-import-trusted-path-guard.yml` on `main`: it runs on `pull_request_target` for PRs targeting `main` and checks proposed filenames using trusted `main` policy plus unit tests.
+- The GitHub connector's `fetch_commit_workflow_runs` description explicitly says it filters to pull-request-triggered runs. Therefore, the guard's absence from that result does **not** prove it is missing or failed; this lookup may exclude `pull_request_target` events. Its actual run must be checked with an all-events workflow-run listing or GitHub Actions UI. Do not dispatch a duplicate run just to fill the evidence gap.
