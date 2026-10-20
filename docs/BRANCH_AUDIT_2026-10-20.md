@@ -62,7 +62,8 @@ Branch search returned seven branches; a follow-up cursor page was empty.
 
 ## Recommended next steps
 
-1. Complete review and acceptance gates for #214 and #243.
-2. Keep #242 in review: its three required exact-head checks are green, but review its broad history/base carefully and finish only the already-scoped RE-001 documentation work.
-3. Split cleanup automation out of #233 into a separately reviewed proposal; do not automatically carry over its deletion workflow.
-4. Re-run this inventory after any merge, then propose branch retirement candidates with evidence. No deletion is authorized by this document.
+1. Finish PR #214 first: obtain independent review and record the human-operated visible-Dolphin acceptance checklist in issue #126 against the exact tested SHA. Keep it draft/unmerged until that gate is recorded.
+2. Only after #214 is accepted, handle #243 as the focused follow-up; preserve its two-file scope and do not revive the combined #233 branch.
+3. Keep #242 in review: its three required exact-head checks are green, but review its broad history/base carefully and finish only the already-scoped RE-001 documentation work.
+4. Split cleanup automation out of #233 into a separately reviewed proposal; do not automatically carry over its deletion workflow.
+5. Re-run this inventory after any merge, then propose branch retirement candidates with evidence. No deletion is authorized by this document.
