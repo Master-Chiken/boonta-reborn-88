@@ -93,3 +93,29 @@ Create or complete a dedicated path-by-path manifest before importing:
 - reviewer and date.
 
 Acceptance condition: every file being imported has a recorded disposition, and the approved list can be reproduced from the archive without relying on memory or on an undocumented ChatGPT session.
+
+## Reuse audit against current Boonta tooling — 2026-10-20
+
+This is a bounded comparison of the pinned `swe1r-assets` revision (`922ef535f6598a1330ff93d6b07258956f990b34`) against the current `main` tree (`fa8cee047ae8e74c30c87cd94977c434bb1c7398`). It records reuse candidates; it does not import code or assets.
+
+| Need | Already present in Boonta | Existing external work | Decision |
+|---|---|---|---|
+| Original track authoring / validation | `tools/track_format/`, `tests/test_track_format.py`, generated `gamecube-demo/source/generated_track.h` | `swe1r-assets` models PC game's binary spline blocks; `blender-swe1r` edits PC game splines | Keep the clean-room JSON track pipeline for original tracks. Evaluate external tools only as research/conversion aids; do not mistake a PC binary parser for a GameCube/Wii runtime parser. |
+| Model and mesh data | `tools/mesh_format/`, `gamecube-demo/tests/test_mesh_data.c` | `swe1r-assets` has model types, mesh/vertex/material code, importers/exporters and format tests | Reuse as a PC-format reference or offline converter only after format and license checks; not drop-in GameCube/Wii asset support. |
+| Texture conversion | `tools/texture_format/`, `gamecube-demo/tools/test_texture_format.py` | External command-line tools export model textures and sprites; the library includes texture/sprite structures | Prefer existing local validator and tests for the current demo. Compare conversion outputs before adopting any external dependency. |
+| Binary round-trip assurance | Current tests validate Boonta's own neutral formats and native demo data | External repository includes dedicated model, spline and sprite re-serialization tests | Reuse the *test strategy* as a template. External test fixtures reference that project's original asset provider and are not proof that Boonta or console files round-trip. |
+| Runtime route progression | Current prototype samples its own closed-loop track and uses distance-based lap counting | External PC reverse engineering documents a different original-game spline/cursor implementation | Keep RE-001 active. Do not replace the prototype route model until a console-relevant behavior comparison is evidenced. |
+
+### Immediate conclusions
+
+1. **There is already a substantial clean-room toolchain in Boonta.** Before adding a dependency, compare the exact input/output contract of the existing validator, exporter and tests with the external tool's capabilities.
+2. **The external MIT library is a strong offline research candidate, not a ready-made console engine.** Its command-line interface lists models, splines, sprites and textures, and exports sprites/model textures. Its own spline re-serialization tests compare parsed PC-format items; they do not demonstrate GameCube/Wii compatibility.
+3. **Do not import commercial game files or external test assets into the public repository.** Run format experiments only with legally obtained local files where permitted, or with already-public synthetic fixtures. Record file provenance separately from code license.
+4. **No code has been copied and no dependency has been added by this audit.** The next validation should be a read-only capability/format comparison, then a minimal isolated experiment only if a concrete gap remains.
+
+References:
+- Boonta track format and validation: `tools/track_format/README.md`, `tests/test_track_format.py`.
+- Boonta mesh and texture tooling: `tools/mesh_format/`, `tools/texture_format/`, `gamecube-demo/tests/`.
+- External CLI documentation: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.CommandLine/README.md
+- External spline round-trip tests: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original.Tests/Reserialization/SplineBlockItemsReserializationTest.cs
+- External license: https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/LICENSE
