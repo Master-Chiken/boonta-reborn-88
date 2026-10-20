@@ -980,3 +980,34 @@ The scanner and checksum calculation worked directly against the user's local RO
 
 Use point-level coordinates and adjacency metadata to validate route layout against the corresponding N64 `Trak` geometry, first on one course and then on additional courses. This should produce evidence about route-to-mesh alignment and branch topology. Keep route-path semantics, checkpoint/lap progression, and cross-platform equivalence labeled separately: structure and checksum are confirmed, but gameplay has not been tested from this parser output.
 
+## Route-graph validation and compatibility with Boonta's neutral track schema (2026-10-20)
+
+A deeper in-memory topology pass was performed on the recovered archive. No per-point coordinates or source asset files were written to disk or committed.
+
+### Graph invariants
+
+- **91 spline items:** 50 are closed graphs and 41 are open, with exactly one source point and one terminal point in each open item.
+- **5,076 points** overall; every item length exactly fits its header count and the 84-byte record size.
+- **5,174 outgoing adjacency edges** were read. Every active edge index is within the corresponding spline's point range, and each outgoing edge appears exactly once in the destination point's incoming-list slots. There were no malformed counts, non-finite vectors, broken reciprocal links, or out-of-range active indices.
+- The root header's `segment_count` needs careful interpretation: on the 50 closed graphs it equals the outgoing-edge count; on each of the 41 open graphs it equals the point count, one more than the outgoing-edge count. Across the archive the header counts total 5,215, while the adjacency lists contain 5,174 edges. Do **not** treat the field as a universal edge counter without considering open vs closed topology.
+- The first 8 shorts of a point record encode the link counts and indices plus two not-yet-unambiguously named slots; points carry a position vector and two 3D curve handles. All rotations in the recovered sample were `(0, 0, 1)`, consistent with the public parser's documented interpretation. That does not prove every runtime use of the fields.
+
+For the route item whose public block metadata labels it `Trak_Tatooine_Boonta_Classic`, the corresponding size/count structure is 180 points and 187 outgoing links. The graph has **7 split points and 7 matching join points**. This is the first strong example for designing/test-driving branch support. The label is a cross-reference to community metadata, not a claim that cross-platform gameplay semantics have been confirmed.
+
+### Compatibility gap in the current Boonta format
+
+The clean-room `boonta-track-v1` schema is a single ordered point array with world-space `x/y/z`, `half_width`, optional `checkpoint`, and a `closed_loop` flag. The current GameCube demo samples that list as a Catmull–Rom curve. It does not encode explicit directed next/previous links, alternative branch/join topology, the two source curve handles, or the source's per-point progress metadata. Therefore the recovered course graph cannot be represented losslessly by `boonta-track-v1`; flattening it would remove shortcuts and merge behavior.
+
+There is also no verified scale/axis transform from the N64 route-coordinate system to `boonta-track-v1` metres yet. Do not copy numeric coordinates into the public `example_track.json` or generated header.
+
+### Next smallest implementation target
+
+Once the current first playable circuit acceptance gate is met, use **synthetic, original test fixtures only** to prototype a platform-neutral route graph representation with:
+1. explicit point IDs and directed links;
+2. closed-loop vs point-to-point detection;
+3. curve handles and interpolation type kept distinct from link topology;
+4. a normalized progress/checkpoint abstraction decoupled from raw source field names;
+5. malformed-graph tests (missing target, duplicate edge, mismatch between counts and lists, open endpoint, cycle wrap and split/rejoin).
+
+Do not import this ROM-derived graph or extracted coordinates into the public project; this milestone is schema/behavior research, not an asset import. Preserve the existing `boonta-track-v1` oval for the first playable vertical slice until there is a tested migration plan.
+
