@@ -39,9 +39,9 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 ### PR #242 — research-first documentation and workflow changes
 
 - Open; explicitly returned to draft pending review.
-- Current head recorded as `515a195701261d5c106797f4025cf62c6b7368c1`; base is `main`.
-- The comparison to `main` reports 76 commits ahead and 14 changed files. Comparison to `dev` is a substantially divergent history, so its base must not be casually changed.
-- A fresh metadata check at 2026-10-20 19:34 CEST reports head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, 84 commits, and 15 changed files. Exact-SHA workflow runs `39467346565` (Step 102 source-import provenance guard) and `39467346690` (AI free-tier safety checks) are currently queued, not passed. Their results and the trusted source-import path guard must be checked before claiming the required gate is green. Earlier passing checks on older SHAs do not validate this head.
+- Current head is `a3ad603f09848d8334f696341b5eb9e4765f6a79`; base is `main`.
+- Current PR metadata reports 84 commits and 15 changed files. A historical comparison to `main` reported 76 commits ahead and 14 changed files; that comparison is stale for the current head. Comparison to `dev` is a substantially divergent history, so its base must not be casually changed.
+- A fresh metadata check at 2026-10-20 19:34 CEST reports head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, 84 commits, and 15 changed files. Exact-SHA workflow runs `39467346565` (Step 102 source-import provenance guard) and `39467346690` (AI free-tier safety checks) have now completed successfully. The trusted source-import path guard is still not present in the returned workflow-run list, so the complete required gate remains unconfirmed for this SHA. Earlier passing checks on older SHAs do not validate this head.
 - Reviewer requested: `Biddy-Pinky`.
 
 ### PR #233 — combined deadzone and cleanup automation
@@ -81,7 +81,7 @@ A fresh live branch search on 2026-10-20 returned eight refs (single page): the 
 
 - Re-fetched live PR metadata: #214 remains draft at `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, and #243 remains draft at `d1c5bf755a587765908a152fbf8874231bf6fe75`; both target `dev` at base SHA `c22bf27e0aca621ea735a85e9fedb92fd1933754`.
 - Re-inspected workflow jobs for exact heads: #214 run `39327379050` and #243 run `39459255221` each have all four jobs completed successfully (host pause/resume tests, native GameCube build, Dolphin headless smoke, and non-blocking software-renderer diagnostic). This does not substitute for independent review or human interactive acceptance.
-- #242 remains draft at `a3ad603f09848d8334f696341b5eb9e4765f6a79`; the current exact-head workflow-run listing confirms two successes only. No repeated CI was launched.
+- #242 remains draft at `a3ad603f09848d8334f696341b5eb9e4765f6a79`; the current exact-head workflow-run listing confirms two successes only; the trusted source-import path guard remains unconfirmed. No repeated CI was launched.
 
 
 ### Review focus — PR #214 scope
@@ -94,3 +94,9 @@ The current #214 patch includes gameplay collision/width handling, tests, Dolphi
 - #243 remains a clean, two-file draft on `d1c5bf755a587765908a152fbf8874231bf6fe75`; its patch changes only `gamecube-demo/source/gameplay_state.h` and `gamecube-demo/tests/test_gameplay_state.c`. Its exact-head workflow run `39459255221` had four successful jobs.
 - #126 currently names #214 head `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`, matching live PR metadata; do not use the older SHAs listed in historical issue comments as the test target.
 - #242 advanced again to `a3ad603f09848d8334f696341b5eb9e4765f6a79` (84 commits, 15 files). Exact-head runs `39467346565` and `39467346690` are queued at this check. No workflow was dispatched manually.
+
+
+### Current inventory and CI follow-up — 2026-10-20 19:40 CEST
+
+- A fresh branch search again returns 8 refs total: `main`, `dev`, `archive/branch-heads-20261019`, `docs/branch-audit-20261020`, `docs/reverse-engineering-80-20-20261020`, `fix/steering-stick-deadzone-20261019-14221623089412890411`, `fix/steering-stick-deadzone-clean-20261020`, and `fix/width-aware-rail-collision-20261017`. The older 27-ref snapshot in issue #235 is stale; no branch deletion is warranted from that count alone.
+- For #242 exact head `a3ad603f09848d8334f696341b5eb9e4765f6a79`, the two visible runs `39467346565` and `39467346690` have now completed successfully. The third expected trusted source-import path guard still does not appear in the connector's exact-commit workflow-run results, so required-check completeness remains unresolved.
