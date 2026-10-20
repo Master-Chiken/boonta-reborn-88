@@ -1206,3 +1206,21 @@ A deeper local disassembly of the US N64 main code materially improves confidenc
 - **Still open:** the meaning of all incoming-link fields, coordinate axis and world scale, exact cubic basis, how the graph is selected for player vs AI vs visual/debug objects, race cursor state transitions, the finish-line/lap-crossing condition, and N64/GameCube/Wii format parity.
 
 This changes the next step: there is now enough evidence to write synthetic tests for an engine-neutral **branch-capable route graph** and a cubic-sampling API, but not enough to implement a faithful retail-game progress/lap state machine. Keep `boonta-track-v1` unchanged and keep original-ROM records local until the remaining semantics and provenance are resolved.
+
+### Stronger interpretation of the `+0x40` key: runtime builds a progress-to-node index
+
+Follow-up inspection of the caller at `0x8007FDC0` clarifies the use of the `+0x40` field:
+
+- The function reads the spline runtime header at `+0x04` and `+0x08` as two separate counts, initializes a short lookup table to `-1` using the second count, then iterates the node count.
+- For each integer key beginning at zero, it calls `0x8003A50C` with the spline object and that key. That accessor searches node records by the halfword at `+0x40`, returning a node index; the caller records the result and walks the node's outgoing links, preparing traversal/sample state.
+- This gives **high confidence** that the halfword at node offset `+0x40` is a route-progress/order/group key used to index the spline's node graph. It is consistent with Blender naming the field `progress`, but its exact lifecycle and meaning in race standings (as opposed to spline segment grouping/path reconstruction) are still not proved.
+- The top-level runtime counts also line up with the public 16-byte `Spline` header model: one count for nodes, a second count for spline segments/route groups, followed by a runtime pointer to the node array. The raw N64 block's exact top-level field meanings should still be treated separately from this runtime structure, since the loader may normalize or repack it.
+
+`0x8007EE98` provides a second, distinct lookup: it divides its input by 10 and scans the eight shorts at `+0x42..+0x50` within each node, storing a node/sub-entry and fractional value in a cursor structure. Together these show that the tail metadata participates in runtime route indexing. They do **not** establish that these fields encode lap count or that crossing a particular edge ends a lap.
+
+Current interpretation by evidence strength:
+- outgoing-link count at `+0x00` and outgoing node IDs at `+0x04/+0x06`: directly used by runtime graph traversal;
+- 3D position at `+0x10..+0x18` and control vectors at `+0x28..+0x3F`: directly used by runtime lookup/interpolation;
+- node key at `+0x40`: directly used to construct a key-to-node lookup, high confidence as a progress/order/group key;
+- eight shorts at `+0x42..+0x50`: directly consulted by the progress/section-to-cursor helper, precise meaning still unknown;
+- reverse/incoming links at `+0x02` and `+0x08..+0x0E`, rotation-like bytes `+0x1C..+0x27`, and lap/finish semantics: still require dedicated cross-reference.
