@@ -58,3 +58,7 @@ A future adapter should have two distinct stages: (1) preserve and validate the 
 ## Safety / licensing boundary
 
 This document describes format fields, metadata and research steps only. No ROM bytes, extracted coordinates, handles, geometry, copyrighted asset data or third-party implementation code is included. Third-party parsers are read-only research references; license review is required before any future code reuse.
+
+## Runtime consumer scope caveat
+
+The direct call sites currently tied to `func_80080BEC` are inside the generic N64 object-update/render loop at `func_80054048`; the caller passes a pointer obtained from a containing object at offset `+0x84`, and the spline-marker cheat flag gates another renderer helper in this same loop. This supports active runtime consumption of spline/cursor data, but **does not yet prove that this particular call path tracks the player's race progress or AI lap state**. Before attributing these cursor fields to player standings, identify a caller or data link from the racer/AI update path. Route graph, geometric spline evaluation, generic object-animation cursors and race-lap progression must remain separate concepts until their relationship is demonstrated.
