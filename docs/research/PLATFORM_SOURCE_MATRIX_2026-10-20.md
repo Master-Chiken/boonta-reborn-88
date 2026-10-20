@@ -75,3 +75,8 @@ Never promote a documented or static finding to runtime-verified. Never treat PC
 ## Follow-up note — PC opponent pacing
 
 Static PC AI / catch-up analysis is recorded separately in [PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md](./PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md). It documents the pinned `SW_RACER_RE` source path and compares it with the prototype's synthetic rivals. This is not evidence of N64 or Dreamcast parity; those remain UNKNOWN. No implementation change is justified from this source comparison alone.
+
+
+## Follow-up note — PC controls, speed and traction
+
+The next static source comparison is recorded in [PC_POD_CONTROL_SPEED_TRACTION_2026-10-20.md](./PC_POD_CONTROL_SPEED_TRACTION_2026-10-20.md). It separates input mapping, target turn rate, stateful forward-speed calculation and velocity-direction traction. The prototype currently uses scalar speed and lateral velocity; this is an architecture difference, not proof of incorrect gameplay. N64/Dreamcast parity remains UNKNOWN, and no implementation change is justified yet.
