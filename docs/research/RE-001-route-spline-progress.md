@@ -797,9 +797,19 @@ No game ROM, executable, asset, or proprietary implementation was copied into Bo
 | Step 102 archive | **Non-blocking historical context** | It is not the original game or an authoritative platform source tree; recovery or deletion is not needed to close this research pass. |
 | Implementation / tests | **No gameplay changes authorized or made** | Keep this pass research-only. Any future contract harness must be labeled PC-reference testing, not console acceptance testing. |
 
+### Targeted output-parameter alias audit — continuation (2026-10-20)
+
+A direct read of the frozen Steam-PC decompilation's [src/_text23.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c) makes the aliasing more precise:
+
+- In `FUN_0047ffb0` (the per-racer progress caller), `FUN_0047f8e0` receives the frame-crossing output pointer plus `&param_2` and `&param_1` as its two integer output pointers. Those two output destinations are distinct local parameter slots. The caller first preserves the racer pointer in `iVar1`, so later writes to the local `param_1` do not replace the preserved racer reference. Do **not** describe these two output destinations as aliasing each other.
+- In `FUN_0047fbb0` (the spline-binding routine), the same helper is called with `&param_1` for **both** integer output pointers. This is genuine output-target aliasing. The helper initializes both outputs to zero and can set the forward and backward indicators to one; because both pointers target the same local slot, the separate indicators cannot be recovered from this call. The binding routine does not subsequently read those local indicators, so this observation does not establish a gameplay defect.
+- The helper's frame-crossing output remains a separate float output; its line-plane calculation and the direction flags are not interchangeable concepts.
+
+**Evidence boundary:** the frozen PC decompilation establishes these call-site storage relationships. It does not prove that the same ABI, callers, or behavior exist in N64/GameCube/Wii builds. This narrows the aliasing description but does not justify assigning semantic names to every recovered field or changing gameplay code.
+
 ### Remaining uncertainty boundaries
 
-- Do not resolve the caller's aliased output parameters in address 0x0047ffb0 by guessing semantic names; retain the aliasing caveat until a typed reference or unambiguous data-flow evidence is available.
+- Keep the two call sites distinct: 0x0047ffb0 passes two distinct local output slots; 0x0047fbb0 passes the same local slot for both direction outputs. Preserve uncertainty about semantic field names and platform parity.
 - Do not claim the writes performed by callbacks at 0x0047ea20 or 0x0047ece0; their standalone bodies remain unavailable in the pinned snapshot.
 - Do not claim N64/GameCube/Wii parity from PC code, manuals, generic SDK documentation, or a community guide.
 - Do not treat proposed boundary cases as executed tests. They are a future test design only.
