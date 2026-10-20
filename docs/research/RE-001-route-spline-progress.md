@@ -1011,3 +1011,32 @@ Once the current first playable circuit acceptance gate is met, use **synthetic,
 
 Do not import this ROM-derived graph or extracted coordinates into the public project; this milestone is schema/behavior research, not an asset import. Preserve the existing `boonta-track-v1` oval for the first playable vertical slice until there is a tested migration plan.
 
+## PC runtime route traversal: branch cursor and lap-progress evidence (2026-10-20)
+
+Reference snapshot: [`SW_RACER_RE/src/Swr/swrSpline.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/Swr/swrSpline.c), [`swrSpline.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/Swr/swrSpline.h), and [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/Swr/swrRace.c). This public codebase is a partial reverse-engineering/reimplementation, not a complete verified retail source; the notes below separate implemented-looking reconstructed functions from explicit TODO/HANG stubs.
+
+### Route cursor behavior visible in the reviewed code
+
+- A runtime cursor carries four look-ahead node IDs, a segment parameter `segmentT`, a signed velocity, start/end flags, a branch selector and branch flags. The layout is declared in [`src/types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caa/src/types.h).
+- The cursor-step routine follows the indexed outgoing or incoming links and shifts the look-ahead window at each node crossing. For Bezier-style segments, the interpolator uses the current point's outgoing handle and the next point's incoming handle; B-spline mode instead uses four successive point positions. It also computes tangent/up vectors used to form the racer orientation. This supports a **graph + interpolation + cursor** model, not a simple polyline as the full runtime representation.
+- The branch selector chooses among available next links. The AI section of `swrRace.c` assigns a random binary choice and contains signature-track scripts that force main-line or alternate choices in lap-progress windows. That is evidence about the reconstructed PC AI path, not proof the N64 release uses the same policy.
+- `swrRace_LapProgress` combines a baked per-node base-progress value with the segment parameter times that segment's progress span. On closed tracks it caps progress below 1.0 so the finish-line wrap can be detected; open tracks can clamp to 1.0. `swrRace_LapCompletion` compares current/previous/high-water progress and unwraps values around the start/finish boundary to recognize crossings.
+- `swrSpline_CursorSeekToProgress` uses `progress / 10` as a band/node index and the remainder as the segment parameter, with a branch-field lookup for progress bands that exceed direct point indices. Treat this as a serialized/runtime progress mapping in the PC code under review; do not assume the same scale directly applies to N64 or GameCube without tests.
+
+### Critical limitations in the public PC source
+
+The following relevant functions remain explicit TODO/HANG stubs in this reviewed snapshot: `swrSpline_ProjectPointStub`, `swrSpline_CollectNearbyPoints`, `swrRace_AdvanceSplineCursor`, `swrRace_UpdateSplineBinding`, `swrRace_ComputeTrackOffset`, and `swrRace_GetTrackMeshAtCursor`. The `swrSpline.h` declares `swrSpline_TraceProgress` and `swrSpline_BuildProgressTable`, but their bodies are not present in the reviewed `swrSpline.c` file. A few functions also deliberately preserve known retail stubs, e.g. project-point projection always returns zero in this source's model of retail behavior.
+
+**Conclusion:** branch cursor and lap-completion *structure* is well evidenced in the PC research snapshot; the full algorithm that advances a vehicle cursor through a track and bakes per-node progress is **not yet verified end-to-end** from this public source alone. Do not treat the comments around these stubbed call sites as completed executable proof.
+
+### Implementation consequence for Boonta
+
+The clean-room engine should keep these concerns separate in any future neutral schema:
+1. route topology (directed point IDs, next/previous edges, open/closed paths);
+2. interpolation mode and control handles;
+3. a cursor (active segment, parameter, branch choice/history, endpoint state);
+4. normalized progress/high-water tracking and start/finish-crossing logic;
+5. collision/mesh-binding and off-track/recovery behavior.
+
+This is a design target, not permission to start a broad rewrite now. First satisfy the active one-course playable acceptance gate; then prototype these components against **synthetic graph fixtures** with deterministic tests for split/rejoin choice, open endpoints, closed-loop wrap, backward travel, and lap crossing. Keep N64/PC coordinates and extracted mesh/course payloads local and excluded from public tests.
+
