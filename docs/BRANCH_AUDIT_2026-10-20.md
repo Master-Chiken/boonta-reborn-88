@@ -26,22 +26,22 @@ Branch search returned seven branches; a follow-up cursor page was empty.
 - Current head recorded as `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`.
 - Reviewer requested: `Biddy-Pinky`; no review submission was found in the latest review-list query.
 - Manual visible-Dolphin acceptance remains outstanding: rail/edge feel, boost drain and recharge, overheat, manual three-lap completion, restart, and longer-session stability.
-- A recent exact-SHA workflow lookup showed only one PR-triggered workflow run; do not infer from that lookup alone that every historical CI job was rerun on the current SHA.
+- The exact-SHA workflow run `39327379050` completed successfully with four jobs: host pause/resume and gameplay tests, native GameCube DOL/ELF build, Dolphin headless smoke, and non-blocking software-renderer diagnostic. The connector's workflow-run listing showed one workflow run, but its job details confirm all four jobs passed on this SHA.
 
 ### PR #243 — analog steering deadzone
 
 - Open, draft, targets `dev`.
 - Current head recorded as `d1c5bf755a587765908a152fbf8874231bf6fe75`.
 - Reviewer requested: `Master-Chiken`; no review submission was found in the latest review-list query.
-- Automated tests/build/diagnostics were previously reported green, but manual controller-feel acceptance is still outstanding.
-- A recent exact-SHA workflow lookup showed only one PR-triggered workflow run; recheck all required jobs on the current SHA before treating the full CI gate as newly confirmed.
+- Exact-SHA workflow run `39459255221` completed successfully with four jobs: host pause/resume and gameplay tests, native GameCube DOL/ELF build, Dolphin headless smoke, and non-blocking software-renderer diagnostic.
+- Manual controller-feel acceptance is still outstanding; CI does not prove the stick deadzone feels correct on a real controller or in interactive Dolphin.
 
 ### PR #242 — research-first documentation and workflow changes
 
 - Open; explicitly returned to draft pending review.
 - Head recorded as `a8961406723c453bc44e8d81b24d7a6d3b88451e`; base is `main`.
 - The comparison to `main` reports 69 commits ahead and 14 changed files. Comparison to `dev` reports a substantially larger/diverged history, so its base must not be casually changed.
-- On the current head, the latest workflow lookup showed success for `AI free-tier safety checks` and `Step 102 source-import provenance guard`; `trusted source-import path guard` was not visible for that exact SHA. Confirm or rerun it before considering the required gate complete.
+- On the exact current head, all three required check-runs are confirmed completed successfully: `Verify Gemini free-only guardrails` (run `39460241728`), `Reject known held assets and data` (run `39460241723`), and `Check proposed source paths using trusted base policy` (run `39460237366`). The PR-triggered workflow list alone omitted the third check, but the exact-SHA check-run record confirms it passed.
 - Reviewer requested: `Biddy-Pinky`.
 
 ### PR #233 — combined deadzone and cleanup automation
@@ -63,6 +63,6 @@ Branch search returned seven branches; a follow-up cursor page was empty.
 ## Recommended next steps
 
 1. Complete review and acceptance gates for #214 and #243.
-2. Verify the missing exact-head check on #242 and review its broad history/base carefully.
+2. Keep #242 in review: its three required exact-head checks are green, but review its broad history/base carefully and finish only the already-scoped RE-001 documentation work.
 3. Split cleanup automation out of #233 into a separately reviewed proposal; do not automatically carry over its deletion workflow.
 4. Re-run this inventory after any merge, then propose branch retirement candidates with evidence. No deletion is authorized by this document.
