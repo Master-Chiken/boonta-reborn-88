@@ -40,6 +40,30 @@ These links connect the uploaded snapshots and earlier research to their origina
 | [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) | Related asset-format and PC research tooling. | Review each tool's license/dependencies and validate against the actual target data format. |
 | [Wii64 / Cube64](https://github.com/emukidid/Wii64) | Possible separate test of N64-version compatibility in a Wii homebrew environment. | Emulation is not a native port or HD enhancement; any test ROM must remain user-provided and private. |
 
+## Reuse-first index — existing public tools checked 2026-10-20
+
+This is a navigation aid to avoid rebuilding capabilities that already exist. It is not a license clearance or a recommendation to import whole repositories.
+
+| Need | Existing candidate | What it already provides | Reuse decision for Boonta |
+|---|---|---|---|
+| Read/write PC game asset blocks | [swe1r-assets](https://github.com/akopetsch/swe1r-assets), reviewed at commit `922ef535f6598a1330ff93d6b07258956f990b34) | .NET object models for model, spline, sprite and texture blocks; documents bit-perfect no-op reserialization | **First format cross-check.** Read its model and tests before designing a new parser. MIT license applies to its code, not to game assets or proof of target-console format parity. |
+| Import/edit/export game assets and route splines in 3D | [blender-swe1r](https://github.com/OpenSWE1R/blender-swe1r), pinned parser/README references are linked in RE-001 | Blender import/export workflow for models and spline data; describes route roles, cyclic/open routes and alternate paths | **Reference for route semantics and authoring limitations.** Treat its constraints as tool/exporter constraints unless independently proven to be engine limits. Do not import the add-on code without a separate license review. |
+| Extract PC spline, sprite and texture blocks; parse save/string formats | [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) | Existing Python/C utilities including spline-to-OBJ, sprite/texture extraction, N64 model-block decompression, save-data parsing and string extraction | **Prefer existing tool as a read-only experiment** before implementing another extractor. GPL-2.0-or-later terms and exact target format must be checked before adapting code. |
+| Inspect community asset modifications and repacking scripts | [SWE1R-Mods](https://github.com/louriccia/SWE1R-Mods) | Unpack/repack scripts and examples of track/texture modifications; README identifies dependencies on existing tools | **Use as a discovery index only.** Mods and extracted content have separate provenance; do not copy assets or scripts until each file's terms and origin are clear. |
+| Recover missing PC function bodies/types | [swep1r_decomp](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef) | Frozen Steam-PC Ghidra decompilation with addresses, assembly and C-like function bodies | **Read-only evidence source.** No root license was found in the reviewed snapshot; do not copy/adapt code. Continue pinning the exact function URL and address in the existing RE-001 dossier. |
+| Understand the larger PC engine and hooks | [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab) | Function/symbol map, PC subsystem research, tests, and mod-hook references for race state, physics, spline, objects, camera, assets and rendering | **Primary behavioral research index, not a port.** AGPL-3.0 review is required before any code reuse; many important route-advance functions remain stubs in the reviewed source. |
+| Community-only observations and undocumented edge cases | [Star Wars Episode I: Racer community Discord](https://discord.com/servers/441839750555369474), [Racer Wiki](https://starwars-racer.fandom.com/wiki/Star_Wars_Episode_1:_Racer_Wiki), [PCGamingWiki](https://www.pcgamingwiki.com/wiki/SWE1R) | Modding discussions, version quirks, player observations and technical compatibility notes | **Lead generation only.** Record the specific claim, version/platform and independent corroboration before treating it as fact. Do not rely on community anecdotes alone for console parity. |
+
+### Retrieval order before creating anything new
+
+1. Search the existing Boonta docs and source register for the topic first; the project already has a study plan, behavior matrix, technical map, platform matrix and the RE-001 route dossier.
+2. Check the pinned public sources above for an existing parser, test, symbol, function body or documented constraint.
+3. If a relevant supplied/private archive is available, verify its identity and path-level provenance locally; do not assume the historical Step 102 bundle is a canonical source tree.
+4. Record the exact source URL, commit/release, platform, what was observed, and confidence in the existing dossier/register.
+5. Only then decide whether a small clean-room implementation or test is genuinely missing. Do not copy game assets, ROM/disc data, unclear source, or third-party code by default.
+
+**Coverage boundary:** this pass verifies the existence and advertised purpose of these public tools; it does not run them against a target-platform binary, clear third-party licenses, or establish that PC/N64/Dreamcast formats match GameCube/Wii.
+
 ## Source-of-truth and transfer rules
 
 - The intended primary target is native GameCube/Wii homebrew. The Step 102 source archive is the candidate source baseline described in the planning documents.
