@@ -2,6 +2,10 @@ name: Branch governance audit
 
 on:
   workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/branch-governance.yml"
   create:
     branches: ["**"]
   schedule:
@@ -45,6 +49,9 @@ jobs:
           pr_heads = {p["head"]["ref"] for p in prs}
           active, inactive = [], []
           unknown_dates = 0
+          BRANCH_WARNING_THRESHOLD = 10
+          BRANCH_REDLINE = 20
+          ACTIVE_BRANCH_TARGET = 10
 
           # Resolve each unique tip SHA once, concurrently. The previous loop
           # waited on each GitHub API request serially; a bounded pool reduces
@@ -95,18 +102,21 @@ jobs:
               item = {"name": name, "date": date or "unknown", "open_pr": name in pr_heads,
                       "unknown_date": unknown}
               (active if name == default_branch or name in pr_heads or recent or unknown else inactive).append(item)
+          budget_status = ("RED LINE EXCEEDED" if len(branches) > BRANCH_REDLINE
+                            else ("WARNING" if len(branches) >= BRANCH_WARNING_THRESHOLD else "within budget"))
+          auto_delete = "enabled" if info.get("delete_branch_on_merge", False) else "DISABLED — enable in Settings → General → Pull Requests"
           lines = ["# Branch governance audit", "",
               f"- **Total branches:** {len(branches)}",
-              f"- **Hard cap:** 105 branches; status: {'EXCEEDED' if len(branches) > 105 else ('AT LIMIT' if len(branches) == 105 else 'within limit')}",
-              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target 30",
+              f"- **Branch budget:** warning at {BRANCH_WARNING_THRESHOLD}; red line above {BRANCH_REDLINE}; status: {budget_status}",
+              f"- **Active branches (30-day/open-PR heuristic; unknown dates count active):** {len(active)} / target {ACTIVE_BRANCH_TARGET}",
               f"- **Branches with unresolved tip dates:** {unknown_dates}",
               f"- **Open pull requests:** {len(prs)}",
+              f"- **Automatically delete merged PR head branches:** {auto_delete}",
               f"- Unique tip dates requested: {len(tip_shas)}",
               f"- Tip-date lookup wall time: {date_lookup_wall_seconds:.2f}s",
               f"- Serial-equivalent request wait: {date_lookup_request_seconds:.2f}s",
               f"- Estimated lookup-stage speedup: {date_lookup_request_seconds / max(date_lookup_wall_seconds, 0.001):.1f}x",
-              f"- **Default branch:** `{default_branch}`",
-              "- **Automatic deletion:** disabled by project policy.", "", "## Active branches", ""]
+              f"- **Default branch:** `{default_branch}`", "", "## Active branches", ""]
           lines += [f"- `{x['name']}` — last commit: {x['date']}" + ("; open PR" if x["open_pr"] else "") for x in sorted(active, key=lambda x: x["name"])]
           lines += ["", "## Inactive candidates for human/AI review", "",
               "These branches are only candidates for review. They have not been deleted or modified."]
@@ -114,72 +124,67 @@ jobs:
           report = "\n".join(lines) + "\n"
           Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(report)
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"total={len(branches)}\nactive={len(active)}\nover_target={'true' if len(active) > 30 else 'false'}\n")
-              out.write(f"cap_warning={'true' if len(branches) >= 100 else 'false'}\n")
-              out.write(f"hard_cap_exceeded={'true' if len(branches) > 105 else 'false'}\n")
+              out.write(f"total={len(branches)}\nactive={len(active)}\nopen_prs={len(prs)}\nover_target={'true' if len(active) > ACTIVE_BRANCH_TARGET else 'false'}\n")
+              out.write(f"cap_warning={'true' if len(branches) >= BRANCH_WARNING_THRESHOLD else 'false'}\n")
+              out.write(f"hard_cap_exceeded={'true' if len(branches) > BRANCH_REDLINE else 'false'}\n")
           PY
 
-      - name: Warn when approaching or exceeding the 105-branch hard cap
+      - name: Warn when branch budget is reached or exceeded
         if: steps.inventory.outputs.cap_warning == 'true' || steps.inventory.outputs.hard_cap_exceeded == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TOTAL: ${{ steps.inventory.outputs.total }}
+          ACTIVE: ${{ steps.inventory.outputs.active }}
+          OPEN_PRS: ${{ steps.inventory.outputs.open_prs }}
         shell: bash
         run: |
           set -euo pipefail
-          title="Branch governance: 105-branch hard cap"
+          title="Branch governance: branch budget"
           existing="$(gh issue list --repo "$GH_REPO" --state open --search "$title" --json number,title --jq '.[0].number // empty')"
+          {
+            echo "## Branch budget alert"
+            echo
+            echo "- Current total: **$TOTAL branch refs**"
+            echo "- Warning threshold: **10 branches**"
+            echo "- Red line: **more than 20 branches**"
+            echo "- Active branch estimate (recent tip or open PR): **$ACTIVE**; target **10 or fewer**"
+            echo "- Open pull requests: **$OPEN_PRS**"
+            echo
+            echo "### Required actions"
+            echo "1. Keep only `main`, `dev`, the protected recovery archive, and branches needed by live pull requests."
+            echo "2. Turn on automatic deletion of merged PR head branches in **Settings → General → Pull Requests**."
+            echo "3. Review stale branches without an open PR. Preserve history in the recovery archive; do not bulk-delete unverified refs."
+            echo
+            echo "This is an alert, not a hard block: GitHub Actions runs after a branch is created and cannot retroactively prevent that creation. This audit does not delete branches."
+            echo
+            echo "Updated by the Branch governance audit workflow."
+          } > /tmp/issue.md
           if [ -z "$existing" ]; then
-            {
-              echo "## Branch count hard cap"
-              echo
-              echo "- Current total: **$TOTAL**"
-              echo "- Hard cap: **105 branches**"
-              echo "- Early warning: **100 branches**"
-              echo "Stop creating branches at 100; do not exceed 105."
-              echo "Preserve all branch history. Never delete automatically."
-              echo "GitHub Actions reports after creation; it cannot retroactively block the create event."
-            } > /tmp/issue.md
             gh issue create --repo "$GH_REPO" --title "$title" --body-file /tmp/issue.md
           else
-            gh issue comment "$existing" --repo "$GH_REPO" --body "Latest audit reports $TOTAL branches; hard cap 105, warning threshold 100."
+            gh issue edit "$existing" --repo "$GH_REPO" --body-file /tmp/issue.md
+            echo "Updated existing branch-budget issue #$existing instead of adding a duplicate comment."
           fi
 
-      - name: Fail audit if hard cap exceeded
-        if: steps.inventory.outputs.hard_cap_exceeded == 'true'
-        run: |
-          echo "::error::Repository has ${{ steps.inventory.outputs.total }} branches; hard cap is 105. No branches were deleted."
-          exit 1
-      - name: Open a consolidation tracking issue when active branches exceed 30
-        if: steps.inventory.outputs.over_target == 'true'
+      - name: Close branch-budget issue when the repository is back within budget
+        if: steps.inventory.outputs.cap_warning == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TOTAL: ${{ steps.inventory.outputs.total }}
-          ACTIVE: ${{ steps.inventory.outputs.active }}
         shell: bash
         run: |
           set -euo pipefail
-          title="Branch governance: consolidation needed"
-          existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\"" --json number,title --jq '.[0].number // empty')"
-          if [ -z "$existing" ]; then
-            {
-              echo "## Active branch target exceeded"
-              echo
-              echo "- Total branches: **$TOTAL** (historical/inactive branches may remain)"
-              echo "- Active branches (30-day/open-PR heuristic): **$ACTIVE**"
-              echo "- Target: **30 active branches or fewer**"
-              echo
-              echo "### Required actions"
-              echo "1. Review branch purposes, open PRs, recent commits, and whether work is already in `main`."
-              echo "2. Consolidate useful work through reviewed pull requests and CI."
-              echo "3. Do not delete branches automatically. Preserve all branch contents and commits; historical branches may remain."
-              echo "4. Update this issue with the remaining active count and blockers."
-              echo
-              echo "Generated by the Branch governance audit workflow."
-            } > /tmp/issue.md
-            gh issue create --repo "$GH_REPO" --title "$title" --body-file /tmp/issue.md
+          title="Branch governance: branch budget"
+          existing="$(gh issue list --repo "$GH_REPO" --state open --search "$title" --json number,title --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue close "$existing" --repo "$GH_REPO" --comment "The latest branch audit is back below the 10-branch warning threshold. Closing this alert; the next audit will reopen it if the budget is exceeded again."
           else
-            echo "Tracking issue #$existing is already open; no duplicate created."
+            echo "No open branch-budget alert to close."
           fi
+
+      - name: Fail audit if branch red line exceeded
+        if: steps.inventory.outputs.hard_cap_exceeded == 'true'
+        run: |
+          echo "::error::Repository has ${{ steps.inventory.outputs.total }} branches; red line is 20. No branches were deleted."
+          exit 1
