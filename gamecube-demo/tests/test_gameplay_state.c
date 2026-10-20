@@ -177,6 +177,11 @@ static void steering_input_tests(void) {
  assert(nearf(boonta_steering_input(0.0f, 0, 0), 0.0f));
  assert(nearf(boonta_steering_input(12.0f, 0, 0), 0.0f));
  assert(nearf(boonta_steering_input(-15.0f, 0, 0), 0.0f));
+ /* The deadzone is inclusive; the first value outside it scales continuously. */
+ assert(nearf(boonta_steering_input(16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(-16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(17.0f, 0, 0), 1.0f / 111.0f));
+ assert(nearf(boonta_steering_input(-17.0f, 0, 0), -1.0f / 112.0f));
  assert(nearf(boonta_steering_input(71.5f, 0, 0), 0.5f));
  assert(nearf(boonta_steering_input(-72.0f, 0, 0), -0.5f));
  assert(nearf(boonta_steering_input(127.0f, 0, 0), 1.0f));
