@@ -98,3 +98,32 @@ Static inspection of `swrRace_GetLapProgressIfAvailable`, `swrObjJdge_GetRacerPr
 6. Equal progress / equal finish-time edge cases: document tie behavior from a controlled test before choosing a Boonta rule.
 
 These are **PC-source-derived test hypotheses**, not claims about N64/Dreamcast implementation. The next source pass remains focused on spline cursor updates and placement; then compare externally observable behavior on the console releases.
+
+
+## Follow-up: spline progress and lap completion
+
+Source: https://github.com/tim-tim707/SW_RACER_RE/blob/master/src/Swr/swrRace.c
+
+### Verified in the reconstructed PC source
+
+- `swrRace_LapProgress` computes normalized progress from the current spline control point's baked base/span values plus `segmentT` times the span.
+- For a closed-loop track, progress is clamped to `0.9999` instead of reaching `1.0`; the start/finish wrap is handled by the lap-completion logic. For an open point-to-point spline, progress may reach `1.0`.
+- `swrRace_LapCompletion` uses previous/current progress and a high-water mark (`lapCompMax`) to detect forward crossing. Near the start/finish line it unwraps values around zero by subtracting one from high progress, so crossing the line can be tested without treating a backward snap as a valid lap.
+- If the racer is dead, crossing checks are forced on. Remote racers use multiplayer progress arrays rather than the local spline cursor.
+- `swrRace_UpdateRaceProgress` orchestrates cursor advance, current track-mesh lookup, sample-spacing/projection state, and lap-completion processing.
+
+### Important holes in the reference
+
+The same source marks several central routines as `HANG("TODO")`: `swrRace_AdvanceSplineCursor`, `swrRace_GetTrackMeshAtCursor`, `swrRace_UpdateSplineBinding`, and `swrRace_ComputeTrackOffset`. The comments give some intended semantics, but these bodies are not reconstructed here. The header separately documents `swrRace_UpdateSplineCursor` as advancing by speed or re-synchronizing from position and `swrRace_PlaceOnTrack` as initial placement, but the existence of those declarations does not supply their algorithms.
+
+### More precise Boonta regression cases
+
+- Closed-loop progress never returns exactly `1.0`; open-route progress can.
+- Lap completion occurs on forward crossing, not merely because a pod's current progress is lower than its previous progress near wrap.
+- Test crossing with previous progress around 0.8–1.0 and current progress around 0.0–0.1, plus a backward teleport/snap across the line.
+- Test the dead-racer and remote-racer branches independently.
+- Keep normalized spline progress separate from world-space distance; the PC source's standings gaps are expressed in lap units.
+
+### Cross-platform limitation
+
+These findings are specific to the inspected PC source. They do not prove that N64/Dreamcast use the same progress representation, control-point sampling, wrap thresholds, or multiplayer path. For console comparison, use controlled observations (lap counter, finish trigger, ranking and respawn behavior) tied to an identified release. No console ROM/disc data should be committed.
