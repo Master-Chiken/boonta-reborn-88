@@ -70,3 +70,8 @@ Never promote a documented or static finding to runtime-verified. Never treat PC
 ## First research question
 
 **Platform parity inventory:** establish which tracks, racers, race modes, split-screen options, upgrade systems, shortcuts and hazards are confirmed across PC, N64 and Dreamcast, using official product material first and version-pinned repository/runtime evidence second. Create a parity table with columns for platform/build, feature, evidence/source, confidence and unresolved questions. Do not begin a new implementation until the inventory reveals a concrete gap in Boonta.
+
+
+## Follow-up note — PC opponent pacing
+
+Static PC AI / catch-up analysis is recorded separately in [PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md](./PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md). It documents the pinned `SW_RACER_RE` source path and compares it with the prototype's synthetic rivals. This is not evidence of N64 or Dreamcast parity; those remain UNKNOWN. No implementation change is justified from this source comparison alone.
