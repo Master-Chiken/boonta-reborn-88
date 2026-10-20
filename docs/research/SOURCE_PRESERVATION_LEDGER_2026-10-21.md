@@ -100,3 +100,13 @@ Continue the N64-only trace from the local reference note. The best established 
 
 - [Nintendo 64 Introductory Manual — CPU address map](https://ultra64.ca/files/documentation/online-manuals/man/kantan/step1/1-4.html): source for the 32-bit KUSEG, KSEG0 (direct-mapped/cacheable), KSEG1 (direct-mapped/non-cacheable), KSSEG and KSEG3 ranges. Used to correct the shorthand in the Gemini audit: KSEG0 is the wider 0x80000000–0x9FFFFFFF segment, while 0x80000000–0x803FFFFF is only a narrow 4 MiB RAM-range assumption. Keep this technical clarification separate from lap-field semantics.
 - [n64docs virtual memory map](https://n64.readthedocs.io/): accessible explanatory reference for the same address-space distinction.
+
+
+## I. N64 lap-state cheat-code evidence added 2026-10-21
+
+- [TheForce.Net — Episode I: Racer N64 codes](https://www.theforce.net/videogames/codes/n64/racer.asp): explicitly labels `8111900A 00??` as Player 1 “Start on Lap” / “Always on Lap” and `81119092 00??` as the corresponding Player 2 codes; values `00–04` are labelled laps 1–5. Treat this as public documentation of cheat-target semantics, not source-level disassembly.
+- [GameRevolution — Star Wars: Episode I: Racer N64 cheats](https://www.gamerevolution.com/guides/28992-star-wars-episode-1-racer-cheats): independent corroboration of `8111900A0002` as Player 1 “Start On Lap 3.”
+- [sp00nznet/racer pinned at `11f6f70469f995304422f2209a47e9c2df5ff6d0`](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0): public N64 static recompilation reference. The checked-in [README](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/README.md) says no N64 decompilation exists; `symbols.toml` is not a source-level definition of lap state. The [IDA handoff](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/docs/IDA_ANALYSIS_HANDOFF.md) names a local Windows decompilation path that is not included in the public repository.
+- **Interpretation:** high confidence that the cheat listings intend these two addresses to set/hold the corresponding player's lap value; the `0x88` address difference is consistent with corresponding player-state locations but is not proof of a shared struct layout. Exact retail revision, native writer/increment routine, finish crossing and HUD consumer remain unknown.
+- Keep the source links and version caveats in future updates; do not upload a ROM, full memory dump, local disassembly or extracted game data.
+
