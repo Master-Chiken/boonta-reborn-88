@@ -1,39 +1,38 @@
-# OpenRouter Free PR review — retired integration
+# OpenRouter Free — relecture manuelle des pull requests
 
-**Status checked: 2026-10-21 — NOT ACTIVE on `main`.**
+**État de cette proposition :** le workflow est ajouté dans la PR de travail [#251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il n'est pas encore actif sur `main` ; GitHub ne permet le lancement manuel que lorsque le workflow est présent sur la branche par défaut et que la clé secrète du dépôt est configurée.
 
-This file documents a historical experiment. Do not follow the old setup instructions below; the workflow is not present on the current default branch.
+## Ce que fait le workflow
 
-## What it was designed to do
+Le fichier `.github/workflows/openrouter-free-review.yml` prépare une deuxième opinion IA, à la demande seulement.
 
-The workflow added by historical [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14) was designed as an optional, manual, read-only second opinion on a pull request targeting `main`. Its diff was capped at 30,000 bytes, it blocked several common credential patterns, and it was configured to use the `openrouter/free` route. It could publish a review comment but could not change files, push branches, or merge pull requests.
+- Le propriétaire choisit le numéro d'une PR ouverte qui cible `main` et provient du même dépôt.
+- Le workflow transmet au maximum les 30 000 premiers octets du diff public, après un contrôle de motifs courants de clés et de secrets.
+- La requête fixe le modèle-routeur `openrouter/free`. Il choisit parmi les modèles gratuits disponibles ; le modèle précis peut varier.
+- Le résultat est publié en commentaire GitHub. Le workflow ne peut pas modifier le code, pousser une branche, créer une PR ou fusionner.
+- Le contrôle statique du dépôt autorise les références OpenRouter dans ce seul workflow et vérifie ses protections. Les autres workflows ne peuvent pas appeler OpenRouter.
 
-PR #14 was merged on 2026-10-14. The workflow was subsequently removed by [PR #31](https://github.com/Master-Chiken/boonta-reborn-88/pull/31), whose changes removed `.github/workflows/openrouter-free-review.yml`. The current `main` workflow directory does not contain that workflow.
+## Coût et limites
 
-## Why it is not enabled
+La documentation officielle affiche actuellement le routeur `openrouter/free` à 0 $ par token et l'offre Free avec un quota annoncé de 50 requêtes par jour. Les modèles disponibles, quotas et conditions peuvent changer. **En cas d'erreur ou de quota épuisé, le workflow s'arrête ; il n'essaie aucun modèle payant en secours.** N'achète pas de crédits et n'ajoute aucun moyen de paiement.
 
-The current [AI safety guard](../tools/check_ai_free_safety.py) explicitly rejects GitHub Actions workflows that reference `OPENROUTER_API_KEY` or `openrouter.ai` under the project's strict €0 setup. Do not reintroduce the workflow, weaken the guard, create an API key, or add a repository secret as part of ordinary project work.
+## Données et limites du contrôle
 
-This is a deliberate configuration boundary, not evidence that a review job is currently waiting or running. The present AI workflow configuration uses a manual read-only Gemini coordinator, with a separate gated workflow for any write-capable plan/execute path. A successful CI safety check does not mean an AI agent is continuously working.
+Le diff est transmis à OpenRouter puis au fournisseur du modèle choisi. La vérification de secrets ne reconnaît que certains formats courants et ne peut pas garantir qu'un diff est dépourvu de toute donnée sensible. Avant de lancer le workflow, vérifie la PR toi-même. Ne l'utilise jamais sur du contenu privé, des données personnelles, des secrets, des archives commerciales, des ROMs/images disque/BIOS, des ressources extraites ou des fichiers dont les droits ou la provenance ne sont pas établis.
 
-## What OpenRouter is — for reference only
+Le résultat IA est une suggestion de revue, pas la preuve d'un bug ou d'une correction. Le modèle n'exécute pas le jeu et ne peut pas prétendre avoir lancé les tests.
 
-OpenRouter is a hosted API service that routes requests to language models from different providers using a common interface. The old integration used `openrouter/free`, which selects from available free models; it was not a direct Claude/Anthropic API integration and could not guarantee which model would answer.
+## Activation après revue de la PR
 
-The official pricing page currently lists free model access and a limit of 50 requests/day for the Free offering, but models and limits may change. Free usage is not a guarantee of stable availability or a privacy guarantee. Any request would send the included pull-request diff to OpenRouter and the selected model provider. Never send private, secret, commercial, or unclear-provenance data to an external model service.
+1. Examiner puis fusionner explicitement la PR #251 seulement si son diff et ses contrôles te conviennent. Cette proposition ne la fusionne pas.
+2. Dans [OpenRouter — clés API](https://openrouter.ai/keys), créer une clé pour l'accès gratuit. Ne pas acheter de crédits et ne pas ajouter de carte ou autre moyen de paiement. Si l'interface impose un paiement, arrêter.
+3. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**, avec le nom exact `OPENROUTER_API_KEY`. La clé doit rester dans la valeur du secret, jamais dans un fichier, une issue, un commentaire ou cette conversation.
+4. Ouvrir [Actions — OpenRouter Free PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), choisir **Run workflow**, saisir le numéro d'une PR ouverte et lancer l'analyse.
 
-## Current decision
+Le lancement est manuel et n'implique aucune activité de fond. La fusion, la création de la clé et l'ajout du secret ne sont pas réalisés par cette proposition.
 
-- **OpenRouter PR review:** retired; no active workflow on `main`.
-- **API key/secret:** not required for the current workflow set; do not create one for this project task.
-- **Budget:** remain at €0; no paid fallback, billing, or payment method.
-- **Future reconsideration:** only after the owner explicitly revisits the architecture and free-only policy, with a new security review. Do not alter the current guard to make the old workflow pass.
+## Références officielles
 
-## Historical references
-
-- [PR #14 — original workflow](https://github.com/Master-Chiken/boonta-reborn-88/pull/14)
-- [PR #31 — free-only AI safety hardening and workflow removal](https://github.com/Master-Chiken/boonta-reborn-88/pull/31)
-- [Current AI safety guard](../tools/check_ai_free_safety.py)
-- [OpenRouter pricing](https://openrouter.ai/pricing)
-- [OpenRouter free-model route](https://openrouter.ai/openrouter/free/)
-- [OpenRouter privacy policy](https://openrouter.ai/privacy/)
+- [Tarifs et limites OpenRouter](https://openrouter.ai/pricing)
+- [Routeur officiel des modèles gratuits](https://openrouter.ai/openrouter/free/)
+- [Exécution manuelle d'un workflow GitHub Actions](https://docs.github.com/fr/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
