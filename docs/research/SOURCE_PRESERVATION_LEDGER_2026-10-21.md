@@ -218,11 +218,11 @@ Pinned Ares code revision: [`9408cb43d4948fc3ea6e152a307a34348df3fe04`](https://
 
 ## W. Concrete GDB watchpoint procedure — prepared, not executed (2026-10-21)
 
-A local-only test checklist was added to the RE-001 dossier. It uses the reviewed Ares default debug port \`9123\` as a starting value, but requires the operator to read the actual configured port. The Ares UI warns that **Use IPv4** binds to any device and may expose the debug server to the network; prefer its local-only mode unless the host setup specifically requires IPv4, and restrict access if used.
+A local-only test checklist was added to the RE-001 dossier. It uses the reviewed Ares default debug port `9123` as a starting value, but requires the operator to read the actual configured port. The Ares UI warns that **Use IPv4** binds to any device and may expose the debug server to the network; prefer its local-only mode unless the host setup specifically requires IPv4, and restrict access if used.
 
-First reproduce Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) with its small public \`ctest.z64\`/\`ctest.elf\` test case; record whether attach → breakpoint at \`main\` → continue/continue works. Only after that passes, a lawful local game copy may be tested with:
+First reproduce Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) with its small public `ctest.z64`/`ctest.elf` test case; record whether attach → breakpoint at `main` → continue/continue works. Only after that passes, a lawful local game copy may be tested with:
 
-\`\`\`text
+```text
 gdb-multiarch
 (gdb) set architecture mips:4000
 (gdb) target extended-remote localhost:9123
@@ -230,7 +230,7 @@ gdb-multiarch
 (gdb) watch *(unsigned short *)0x8011900a
 (gdb) info watchpoints
 (gdb) continue
-\`\`\`
+```
 
-Capture PC/registers and the observed value around each stop, then follow the writer/reader chain. The 16-bit expression is a trial based on the public cheat-code encoding, not a verified native type. Official GDB documentation says \`watch\` fires when the expression value changes; absence of a stop alone cannot prove absence of writes. Ares source supports read/write/access watchpoint packets, but live attach, packet negotiation, stop timing and SWE1R behavior remain **untested**. See dossier section W for the full guardrails and exact file/line links. No game was run or binary/assets uploaded in this pass.
+Capture PC/registers and the observed value around each stop, then follow the writer/reader chain. The 16-bit expression is a trial based on the public cheat-code encoding, not a verified native type. Official GDB documentation says `watch` fires when the expression value changes; absence of a stop alone cannot prove absence of writes. Ares source supports read/write/access watchpoint packets, but live attach, packet negotiation, stop timing and SWE1R behavior remain **untested**. See dossier section W for the full guardrails and exact file/line links. No game was run or binary/assets uploaded in this pass.
 
