@@ -26,23 +26,6 @@ jobs:
       pull-requests: 'write'
 
     steps:
-      - name: 'Mint identity token'
-        id: 'mint_identity_token'
-        if: |-
-          ${{ vars.APP_ID }}
-        uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
-        with:
-          app-id: '${{ vars.APP_ID }}'
-          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
-          permission-contents: 'write'
-          permission-issues: 'write'
-          permission-pull-requests: 'write'
-
-      - name: 'Checkout Code'
-        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
-        with:
-          persist-credentials: 'false'
-
       - name: Require explicit free-tier attestation before model call
         id: free_tier_guard
         shell: bash
@@ -71,7 +54,26 @@ jobs:
             echo "Free-tier attestation and API key are present; no provider or paid fallback is configured." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: 'Mint identity token'
+        id: 'mint_identity_token'
+        if: |-
+          ${{ steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID }}
+        uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: '${{ vars.APP_ID }}'
+          private-key: '${{ secrets.APP_PRIVATE_KEY }}'
+          permission-contents: 'write'
+          permission-issues: 'write'
+          permission-pull-requests: 'write'
+
+      - name: 'Checkout Code'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: 'false'
+
       - name: 'Prepare prompt context'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: 'bash'
         run: |-
           mkdir -p .gemini

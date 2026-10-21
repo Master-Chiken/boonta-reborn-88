@@ -134,9 +134,15 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         "id: free_tier_guard" not in content
         or "GEMINI_FREE_TIER_CONFIRMED" not in content
         or "if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
-        or content.find("id: free_tier_guard") > content.find("name: 'Run Gemini CLI'")
+        or content.find("id: free_tier_guard") > content.find("name: 'Mint identity token'")
+        or content.find("name: 'Mint identity token'") > content.find("name: 'Checkout Code'")
+        or content.find("name: 'Checkout Code'") > content.find("name: 'Prepare prompt context'")
+        or content.find("name: 'Prepare prompt context'") > content.find("name: 'Run Gemini CLI'")
+        or "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" not in content
+        or "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
     ):
-        errors.append(f"{label} must gate its Gemini model call on explicit free-tier confirmation")
+        errors.append(f"{label} must fail closed before token mint, checkout, prompt preparation, and Gemini model call")
     if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
