@@ -17,7 +17,7 @@ La démo clean-room est intégrée sous `gamecube-demo/`. L'exécution [CI #3890
 Cela ne prouve **pas** encore que les commandes sont validées de façon interactive, qu'une course de trois tours a été terminée par un joueur, ni que le comportement a été testé sur matériel réel. Voir [le jalon interactif](NEXT_MILESTONE.md).
 
 - Workflow principal : [GameCube demo build](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml).
-- Le dépôt dispose d'une branche `main` protégée ; continuer à passer par des PR et ne pas forcer de push.
+- La protection de `main` n'a pas pu être confirmée par l'API utilisée (l'accès à l'endpoint de protection a échoué avec 403). Vérifier manuellement **Settings → Rules → Rulesets** avant d'autoriser toute écriture par un agent ; continuer à utiliser des PR et ne pas forcer de push.
 - Le DOL/ELF et les rapports CI sont des preuves de compilation ou de diagnostic, pas une déclaration de jeu terminé.
 
 ## Automatisation IA : rester verrouillé par défaut
@@ -27,7 +27,7 @@ Les workflows d'assistance sont facultatifs et ne doivent jamais devenir une con
 - Le workflow Gemini est gouverné par `.github/workflows/gemini-dispatch.yml`. Les tâches d'écriture doivent rester bloquées tant que le propriétaire n'a pas explicitement activé le verrou de dépôt prévu à cet effet. Ne pas activer ce verrou automatiquement.
 - Une clé API est un secret GitHub, jamais un texte à mettre dans une issue, un commit, un fichier suivi ou cette conversation.
 - Si un quota gratuit est épuisé, arrêter l'appel concerné et continuer avec les outils GitHub disponibles ; ne pas activer une facturation de secours.
-- **OpenRouter Free PR review:** the manual-only, read-only reviewer is being restored in [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). It uses only `openrouter/free`, caps the transmitted diff at 30,000 bytes, checks common secret patterns, and has no code-write permission or paid fallback. It will not be runnable from the Actions tab until this PR is explicitly merged to `main`; the `OPENROUTER_API_KEY` secret is configured separately by the owner, without credits or a payment method. External model providers receive the selected public diff, so never submit secrets, private data, commercial assets, or unclear-provenance files.
+- **OpenRouter Free PR review:** merged into `main` via [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). The reviewer is manual-only, owner-only, read-only for code, capped at a 30,000-byte diff, scans for common secret patterns, uses only `openrouter/free`, and has no paid fallback. It appears in Actions; however, do not consider it operational until the owner configures `OPENROUTER_API_KEY` as a repository secret and a manual test succeeds. Do not add credits or a payment method. External model providers receive the selected public diff, so never submit secrets, private data, commercial assets, or unclear-provenance files.
 - Les limites, modèles gratuits et conditions de traitement des données changent : vérifier la documentation officielle au moment d'une activation.
 
 ## Import Step 102 : blocage explicite
