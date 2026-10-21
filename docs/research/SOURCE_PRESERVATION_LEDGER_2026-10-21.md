@@ -154,3 +154,11 @@ Continue the N64-only trace from the local reference note. The best established 
 - Decision: do not assign results semantics from a generic function name or transfer the pinned Windows-PC result-state model to N64. The PC source is a comparison checklist only.
 - Next local check: follow the exact manager state/phase field write after the all-local-participants-done predicate; enumerate readers of that field; trace onward to a positively identified result UI/resource/scene selector. If no positive destination appears, keep the blocker explicit.
 - No ROM, disc image, extracted asset, raw local disassembly, or private binary offset is included in this public ledger. No gameplay code was changed and no runtime test is claimed.
+
+## P. Runtime-debugging method reference — methodology only (2026-10-21)
+
+- [Finding Jingle Town: Debugging an N64 Game without Symbols](https://blog.chrislewis.au/finding-jingle-town-debugging-an-n64-game-without-symbols/) documents an Ares + GDB remote-debugging workflow that tests a hypothesis using breakpoints and observed state values.
+- [Using Coding Agents to Decompile Nintendo 64 Games](https://blog.chrislewis.au/using-coding-agents-to-decompile-nintendo-64-games/) explains that matching a function's assembly is distinct from understanding its role; cross-references and call-site behavior are needed for semantic naming.
+- Scope warning: both articles concern Snowboard Kids 2, not SWE1R. They are methodology references only, not evidence of any SWE1R function's semantics and not source code to import.
+- Proposed test, if a suitable lawful local setup is available: break at the locally identified all-local-done branch, record the manager field write, inspect readers of that exact field, follow the first camera/input and UI/resource destination, and confirm the transition in a controlled runtime. Preserve exact ROM/build identity and repeatability in local notes; publish only a short supported summary.
+- Status: not executed here. No local SWE1R ROM, emulator/debugger, or runtime evidence was accessed by this public-source check.
