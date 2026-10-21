@@ -161,6 +161,7 @@ jobs:
                 --setting DebugServer/Port=9123 \
                 --setting DebugServer/Enabled=true \
                 --setting DebugServer/UseIPv4=false \
+                --setting Audio/Driver=None \
                 --kiosk "$CTEST_ROM" \
                 > "$ARES_LOG" 2>&1 &
           else
@@ -171,6 +172,7 @@ jobs:
                 --setting DebugServer/Port=9123 \
                 --setting DebugServer/Enabled=true \
                 --setting DebugServer/UseIPv4=false \
+                --setting Audio/Driver=None \
                 "$CTEST_ROM" \
                 > "$ARES_LOG" 2>&1 &
           fi
