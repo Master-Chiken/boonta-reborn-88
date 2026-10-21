@@ -1399,3 +1399,23 @@ A second method reference was checked after reviewing the public static-recompil
 4. Record emulator and game-region/version, breakpoint addresses, observed state values, and repeatability locally. Publish only a concise evidence summary; do not upload a ROM, raw proprietary binary, or extracted game resources.
 
 **What this adds:** a reproducible experimental route to close the blocker. It does not itself close the results-transition question. No emulator or hardware run was executed, no ROM was uploaded, and no gameplay files changed.
+
+## Q. Public symbol-table coverage check — N64 result-renderer lead (2026-10-21)
+
+This pass checked the full public symbol manifest and tracked repository tree at `sp00nznet/racer` commit [`11f6f70469f995304422f2209a47e9c2df5ff6d0`](https://github.com/sp00nznet/racer/commit/11f6f70469f995304422f2209a47e9c2df5ff6d0). This is a source-availability audit, not a claim about proprietary runtime behavior.
+
+### Directly observable from public files
+
+- The upstream project README explicitly describes itself as a static recompilation and states that there is no existing N64 decompilation for this game ([README](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/README.md)).
+- The public [`symbols.toml`](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/symbols.toml) has 880 function entries. Only a small minority have semantic names; examples include `render_submit` (0x800181BC, size 0x19C4), `main_init` (0x8002F4D0), `racer_update_speed` (0x80030154), `collision_check` (0x8003EC40), and `audio_play_sfx` (0x80046670). None of those names by itself establishes the results-screen path.
+- The candidate previously inspected, `func_80080BEC`, remains generic in [`symbols.toml` lines 3229–3232](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/symbols.toml#L3229-L3232): VRAM 0x80080BEC, size 0x5F0. The generated [`section_table.cpp` lines 647–653](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/src/section_table.cpp#L647-L653) maps it to code-section offset 0x807EC, size 0x5F0; it adds no semantic meaning.
+- The tracked [`src/`](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0/src) directory consists of host/runtime integration files and the generated function lookup table; the generated `RecompiledFuncs/` output path was not present in the public repository tree at this commit. This pass therefore did not find a public C body or source-level call graph that ties the all-local-done path to a results UI renderer/resource selector.
+- Public GitHub search for the exact candidate and results/menu/lap/finish terminology did not return a separate source repository or semantic identification. This is only a bounded search result, not proof that no other source exists.
+
+### Evidence boundary and decision
+
+- **Established:** the available public manifest identifies function boundaries and a few broad helpers, but the candidate path is still not semantically identified.
+- **Not established:** that `render_submit` is the results renderer; that `func_80080BEC` owns race completion; that any generic phase bit, `Fini`/`Abrt` tag, or renderer entry corresponds to the results screen.
+- **Decision:** no new function rename or gameplay change. Further searching the same public symbol manifest is unlikely to close RE-001. The next adequate evidence must be either a permitted local runtime/debugger trace (as outlined in section P) or a separately published, citable analysis that explicitly connects the manager state write through readers to the results-screen selector.
+
+**Status remains BLOCKED pending semantic/runtime evidence.** No ROM was uploaded, no proprietary assets were committed, no emulator/hardware execution was done in this pass, and no gameplay source was changed.
