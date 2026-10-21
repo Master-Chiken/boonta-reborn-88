@@ -1358,3 +1358,27 @@ This is a **PC-only comparison lead**, not evidence of N64 parity. Both source f
 **Inference allowed:** the PC reference supplies a concrete comparison checklist for identifying (1) the all-local-racers-done gate, (2) the intervening camera/phase path, and (3) the results UI entry point. The results-active flag has path-dependent timing even in this PC implementation.
 
 **Inference not allowed:** PC state numbers, flags, event tags, struct fields or function names must not be assigned to the N64 build. The local N64 proof still requires a positive local static call/data-flow chain from its all-done predicate through its phase writer to an identified results renderer/resource/scene selector, or controlled runtime observation. No runtime test or gameplay change is claimed.
+## O. Public N64 static-recompilation source boundary — results semantics not exposed (2026-10-21)
+
+This is a bounded public-source check on the still-open N64 results-transition question. It does not use or publish local ROM bytes, extracted game content, exact local disassembly, or private offsets.
+
+### Direct observations
+
+- The pinned [sp00nznet/racer README, lines 22–24](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/README.md#L22-L24) describes the repository as a static recompilation using N64Recomp and explicitly says that no N64 decompilation exists for this game.
+- At the same revision, [src/section_table.cpp, lines 647–653](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/src/section_table.cpp#L647-L653) maps `func_80080BEC` to section offset `0x807EC` and size `0x5F0`, adjacent to more generic function labels.
+- [symbols.toml, lines 3229–3232](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/symbols.toml#L3229-L3232) records only the generic symbol, VRAM address and size. It does not identify a results UI routine or explain the function's behavior.
+- A bounded public code search for `func_80080BEC`, `0x80080BEC`, and common lifecycle tags did not yield a readable semantic body or a positive N64 results-renderer edge in that repository. This describes the scope of the checked public material; it is not proof that no other lawful public lead exists.
+
+### Interpretation boundary
+
+The public source confirms a function boundary, not the semantics of the local N64 phase/lifecycle code. It therefore does not close the chain:
+
+`all local participants reached the configured lap threshold` → `manager phase/state writer` → `identified results UI/resource/scene selector`.
+
+The pinned PC reference in section N remains only a comparison checklist. Do not transfer PC state numbers, flags, callbacks, event tags or struct fields to N64.
+
+### Next bounded check
+
+The useful next check requires the owner's existing local static-analysis environment: follow the write to the manager phase/state field that is reached after the all-done predicate, enumerate the consumers of that exact field, then continue to a data/resource identifier or renderer whose results-screen role is positively identified. A generic tag, phase bit, string search, or unrelated reference to a shared global is insufficient. If the consumer chain stays generic, retain the blocker rather than inventing a semantic label.
+
+**Current status:** N64 lap-counter and `FINAL LAP` HUD path remain traced at local static-code level; the terminal results transition remains unresolved. No emulator/hardware result, gameplay change, asset import, or new platform-parity claim is made.
