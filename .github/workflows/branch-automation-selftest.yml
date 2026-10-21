@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
+      - ".github/workflows/ai-daily-coordinator.yml"
       - ".github/workflows/branch-automation-selftest.yml"
   workflow_dispatch:
 
@@ -33,6 +34,7 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
+            .github/workflows/ai-daily-coordinator.yml \
             .github/workflows/branch-automation-selftest.yml
 
       - name: Compile embedded Python scripts without executing network operations
@@ -47,6 +49,7 @@ jobs:
           paths = (
               Path(".github/workflows/branch-governance.yml"),
               Path(".github/workflows/branch-intake-queue.yml"),
+              Path(".github/workflows/ai-daily-coordinator.yml"),
           )
           checked = 0
           for path in paths:
@@ -74,6 +77,7 @@ jobs:
 
           governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          coordinator = Path(".github/workflows/ai-daily-coordinator.yml").read_text(encoding="utf-8")
           intake_header = intake.split("permissions:", 1)[0]
           checks = {
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
@@ -93,6 +97,12 @@ jobs:
               "branch-budget issue text cannot execute markdown backticks": 'echo "1. Keep only main, dev' in governance and 'echo "1. Keep only `main`' not in governance,
               "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
               "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
+            "AI coordinator retains manual dispatch and runs weekly after branch audit": "workflow_dispatch:" in coordinator and 'cron: "17 10 * * 1"' in coordinator and 'cron: "23 9 * * 1"' in governance,
+            "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
+            "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
+            "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No model request was sent" in coordinator,
+            "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
+            "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, or delete refs" in coordinator,
           }
 
           for label, ok in checks.items():
