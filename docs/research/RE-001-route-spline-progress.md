@@ -1476,7 +1476,7 @@ This check narrows the tooling risk for the remaining N64 results-transition inv
 ### Interpretation and caveats
 
 - **High confidence:** the specific historical Ares bug report has a recorded upstream fix and closure.
-- **Not established:** whether any current Ares release/platform combination works with the target SWE1R build, whether remote write watchpoints are supported/reliable for the desired addresses, or whether the game's results transition can be resolved with this method.
+- **Not established at this stage:** whether any current Ares release/platform combination works with the target SWE1R build, whether a watchpoint on the desired address fires with useful stop timing in an actual session, or whether the game's results transition can be resolved with this method. A later source audit documents the upstream N64 watchpoint implementation in section V below.
 - The tutorial and bug report use different port setups (`:1235` in the tutorial's example, `:9123` in issue #1778). Do not hard-code either value; use the selected Ares build's actual configured GDB port.
 - Ares/GDB debugging should therefore be treated as **testable, not guaranteed**. Before the game-specific trace, smoke-test attaching, hitting a breakpoint and continuing with the small open homebrew test case referenced by Ares issue #1778. Only after that succeeds should a lawful local SWE1R copy be used for the specific trace.
 
@@ -1488,3 +1488,24 @@ This check narrows the tooling risk for the remaining N64 results-transition inv
 4. If the emulator setup, memory reads, or relevant state path cannot be validated, report the exact failure and leave RE-001 blocked. Do not infer results-screen semantics from the GameShark labels or PC analogues.
 
 No runtime test was performed during this documentation pass. No ROM, disc image, proprietary asset, or executable was downloaded, uploaded, or committed. No gameplay source changed.
+
+
+## V. Ares N64 memory-watchpoint support — source verified, end-to-end test pending (2026-10-21)
+
+This follow-up checks the emulator implementation itself, rather than inferring capability from the historical attach-fix issue. All Ares code references below are pinned to commit [`9408cb43d4948fc3ea6e152a307a34348df3fe04`](https://github.com/ares-emulator/ares/commit/9408cb43d4948fc3ea6e152a307a34348df3fe04).
+
+### Direct observations
+
+- The Ares [GDB server README](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/nall/nall/gdb/Readme.md) explicitly documents write, read and access memory-watchpoints. It describes `normalizeAddress` as the hook used to compare GDB watchpoint addresses with the emulator's internal addresses.
+- The N64 system registers [`GDB::server.hooks.normalizeAddress`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/ares/n64/system/system.cpp#L162-L165), sign-extends the requested address and routes it through `cpu.devirtualizeDebug(address)`. This is evidence the N64 target has an address-normalization path; it is not an independently executed proof for SWE1R.
+- The N64 CPU [memory read and write methods](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/ares/n64/cpu/memory.cpp#L166-L193) call `reportMemRead(access.vaddr, Size)` and `reportMemWrite(access.vaddr, Size)` for successful CPU memory accesses.
+- The same source also reports debugger-originated writes in [`CPU::writeDebug`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/ares/n64/cpu/memory.cpp#L196-L205). The [N64 recompiler](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/ares/n64/cpu/recompiler.cpp#L252-L262) includes `GDB::server.hasWatchpoints()` in its state key.
+- The server compares each reported access range against configured watchpoints after address normalization ([`server.cpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/nall/nall/gdb/server.cpp#L56-L84)).
+
+### Conclusion and limits
+
+- **Verified at source level:** the reviewed Ares N64 implementation includes memory-read/write reporting, address normalization, and watchpoint-aware recompilation state.
+- **Not verified in execution:** whether the selected Ares build and host OS attach and continue reliably; whether a watchpoint on a public SWE1R lap-code address fires with useful stop timing; and whether a resulting trace can identify the manager transition to the results UI/resource.
+- The next test can therefore be more specific: after the small public `ctest.z64` smoke test from Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) passes, try a write watchpoint on one documented lap-related address in the lawful local game copy. Use the actual configured GDB port; do not assume the historical `:9123` example. Then inspect the observed writer/reader chain and continue to a positively identified results UI/resource/scene selector.
+- Public cheat-list addresses remain **watchpoint candidates**, not proof of a native field or finish flag. No watchpoint was actually run here, no local game data was accessed, and no gameplay code or assets changed.
+
