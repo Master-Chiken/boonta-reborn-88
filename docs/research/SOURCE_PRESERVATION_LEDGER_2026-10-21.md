@@ -125,3 +125,10 @@ Continue the N64-only trace from the local reference note. The best established 
 - The FINAL LAP text is directly referenced by the same HUD function. Its branch compares the next displayed lap with the configured target, requires the single-local-player HUD layout, and is fade-gated to the lap-completion popup.
 - Keep raw instruction addresses, exact ROM string offsets, disassembly, and derived binary data in the owner's local notes. The public dossier contains only summary findings.
 - Status: high confidence in N64 HUD lap-counter and FINAL LAP selection data flow based on local static code; runtime observation and physical finish-line timing remain unverified. Do not infer PC/DC/GameCube/Wii parity.
+## L. Manager results-screen transition remains an open question
+
+- Local-only static follow-up examined the manager phase dispatcher, timer/event branches and manager-side local-player threshold check. The threshold/HUD path is traced, but no conclusive caller-to-results-renderer or scene-load edge has been demonstrated.
+- Generic `Fini` / `Abrt` lifecycle tags and phase-bit changes are not enough to identify the terminal race/results transition; keep them semantically unnamed until the destination path is proven.
+- An ASCII search for plain uppercase results/finish terms found no obvious literals, but this is weak negative evidence only because text may be encoded/compressed/resource-based.
+- The user environment currently has no N64 emulator/debugger or Dolphin CLI in PATH; no runtime test has been performed.
+- Next: trace the all-local-participants-done condition into the lifecycle-phase writer and from there into a positively identified results UI resource/scene selection. No gameplay code/assets changed.
