@@ -1445,3 +1445,19 @@ The older [`OpenSWE1R/openswe1r`](https://github.com/OpenSWE1R/openswe1r) projec
 - Keep PC decompilation names as cross-reference leads only; validate any proposed analogue against N64-specific evidence.
 - Do not import GPL-2.0-or-later OpenSWE1R code into Boonta Reborn 88's MIT codebase without a separate, explicit license decision.
 - No proprietary executable was downloaded or opened during this check. No new semantic name is assigned and the N64 results-transition blocker remains open.
+
+
+## T. N64 lap GameShark addresses — useful label, not finish-state proof (2026-10-21)
+
+TheForce.Net's public N64 code list labels the write location `0x8011900A` as both “Start on Lap” and “Always on Lap” for Player 1, mapping values `00`–`04` to Lap 1–5. The same list labels `0x80119092` the same way for Player 2 ([source lines 88–99](https://theforce.net/videogames/codes/n64/racer.asp)). This is direct evidence about how the published GameShark codes are described, not a source-level symbol name or an independently reproduced memory trace.
+
+### What is supported
+
+- **High confidence — documented cheat target:** the page associates `0x8011900A` and `0x80119092` with forcing the lap value/selection for Player 1 and Player 2 respectively. It separately lists the same values for “Start on Lap” and “Always on Lap”; values `00`–`04` are labelled Lap 1–5.
+- **Moderate confidence — repeated two-player layout pattern:** the address difference is `0x88`. Other pairs on the same page follow the same difference: “Low Timer” P1 `0x80119004` versus P2 `0x8011908C`, and “Always Place First” P1 `0x80118FED` versus P2 `0x80119075`. This makes a repeated player-specific memory layout plausible; the cheat list alone does not prove a C struct, universal stride, or layout for every racer.
+- **Not established — participant struct member or finish flag:** the listing does not demonstrate the owning object/struct, the exact field type or lifetime, which code reads the values, whether the cheat is always accurate across regions/builds, or how final-lap crossing updates race completion. It does **not** show that either address is a finish-state field or identify a results-screen transition.
+- **Not independent validation:** no console/emulator memory watch or controlled race was run in this pass. The source is a community GameShark reference, not an official disassembly.
+
+### Decision and smallest next check
+
+Use the addresses only as **externally documented lap-related watchpoint candidates**, not as semantically proven participant fields. In an authorized local copy/debugger, observe writes and reads at both addresses during a known lap crossing and final-lap finish; then trace the consuming state into the race-manager phase and positively identified results UI/resource selector. If a local debugger trace is unavailable, keep RE-001 blocked rather than infer the missing edge. No ROM or proprietary assets should be uploaded or committed.
