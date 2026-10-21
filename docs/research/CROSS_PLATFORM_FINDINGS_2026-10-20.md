@@ -2,6 +2,8 @@
 
 These are preliminary source-backed findings, not runtime-verified facts.
 
+**Queue status (2026-10-21): PARKED REFERENCE NOTES.** This file preserves dated source/format leads. Its “next checks” and “next research question” headings below are historical proposals, not current work orders. The single active research blocker is tracked in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 all-participants-finished condition through the manager state/phase transition to a positively identified results UI/resource/scene. Do not start platform/asset-format questions until RE-001 is resolved or explicitly handed off.
+
 | Topic | Finding | Status |
 |---|---|---|
 | Core gameplay | Official retrospective identifies overheating, shortcuts, hazards and local split-screen among defining features. | DOCUMENTED; broad features only. |
@@ -20,7 +22,7 @@ These are preliminary source-backed findings, not runtime-verified facts.
 - Dreamcast review: https://www.gamespot.com/reviews/star-wars-episode-i-racer-review/1900-2557867/
 - Pinned tooling README: https://github.com/OpenSWE1R/swe1r-tools/blob/239911513834e19d1530fc908b6dc40eabea25fc/README.md
 
-## Next checks
+## Historical follow-ups (parked; not active queue)
 
 1. Inspect version-pinned PC source files for track/racer/race-mode tables and record executable assumptions.
 2. Build a version-specific N64 inventory, distinguishing region/revision and Expansion Pak settings.
@@ -49,7 +51,7 @@ The public asset-tool repository has a version-labelled SHA-1 catalog for select
 - These are checksums of extracted asset files, not checksums of original executables or disc images. Do not use them to identify a complete retail release or region by themselves.
 - The asset library advertises bit-perfect reserialization for supported block formats, making a no-change round-trip test a strong future validation candidate. It should be run only against a lawfully available local file; no copyrighted game assets need to be committed to Boonta.
 
-## Updated next research question
+## Historical format follow-up (parked; not active queue)
 
 **Can the format/asset evidence distinguish PC, N64, and Dreamcast without relying on visual guesses?**
 
@@ -158,7 +160,7 @@ The tool checks the first 32-bit word (after its byte-swap conversion) for `Comp
 3. These observations are compatible with a layered design (container plus compressed payload chunks), but **the source examined so far does not prove that exact layering**. Need trace where N64 chunk extraction occurs and compare offset-table parsing before making that claim.
 4. Dreamcast executable strings and USA/Europe filesystem inventories establish the four familiar `OUT_*BLOCK.BIN` filenames, but no trustworthy per-file size/hash or Dreamcast parser has yet been established. Shared names alone are not format compatibility.
 
-### Next research question (keep one active)
+### Historical follow-up question (now parked)
 
 **Where in the N64 data path are `Comp` chunks located relative to the generic asset-offset table?** Trace the N64 model-block extraction/iteration call path in available source and compare with the PC block reader. Do not start implementation until the nesting/order is supported by source or a provenance-identified sample. Step 102 remains parked and is not a dependency.
 
@@ -172,7 +174,7 @@ This file documents the **Windows PC executable's** model-load path, not an N64 
 
 **What this changes:** we now have source-level evidence for a PC model-block entry path where the offset table identifies a payload chunk and the payload itself may carry a `Comp` wrapper. The older N64 tool README says the `Comp` chunks are only found in N64, while this PC decompilation note's code checks for `Comp` too. This is a real discrepancy in the available documentation, not something to smooth over: the PC note may be describing a generic/observed path that can handle compressed chunks, rather than proving the checked PC build actually contains any. We must not state “Comp is exclusive to N64” as a universal format rule until sample/version evidence resolves this.
 
-**Refined active question:** compare the PC note's three-offset model-entry structure against the N64 decoder's input contract and identify exactly which offsets delimit the compressed bytes, uncompressed output, and neighboring entry. Then verify whether PC retail/demo samples ever actually contain the `Comp` magic. Dreamcast remains unverified at the payload level. No implementation change yet.
+**Historical follow-up question (superseded by the active queue):** compare the PC note's three-offset model-entry structure against the N64 decoder's input contract and identify exactly which offsets delimit the compressed bytes, uncompressed output, and neighboring entry. Then verify whether PC retail/demo samples ever actually contain the `Comp` magic. Dreamcast remains unverified at the payload level. No implementation change yet.
 
 
 ### Confirmation from the newer PC decompilation source

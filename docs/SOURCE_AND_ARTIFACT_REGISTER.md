@@ -136,7 +136,9 @@ This follow-up inspects the actual Boonta validators/exporters and their tests a
 
 The present Boonta formats are intentionally narrow *authoring formats*, not comprehensive game-asset schemas. In particular, the mesh schema does not describe normals, materials, multiple texture references, or animation/skeleton data; the texture schema has no alpha channel. These are potential conversion gaps only if the target game content and a permitted source dataset require them. Do not expand the runtime format spec speculatively.
 
-### Next validation inside active RE-001 / reuse audit
+### Parked asset-tool reuse opportunity — not the active RE-001 next step
+
+This bounded asset-tool check is a future reuse option, **not current work**. Do not run it until issue #226's N64 finish-to-results blocker is resolved or explicitly handed off.
 
 1. Keep the existing original synthetic fixtures as regression baselines.
 2. If a lawful, locally available sample with clear provenance is selected, run the external CLI in read-only export/list mode and record exact version, input format, output files and hashes privately; do not publish extracted commercial assets.

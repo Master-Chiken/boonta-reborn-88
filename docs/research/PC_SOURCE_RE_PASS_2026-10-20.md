@@ -1,5 +1,7 @@
 # PC source reverse-engineering pass — 2026-10-20
 
+**Current queue notice (2026-10-21):** this is a dated historical analysis log. Its earlier “next action” and format/AI/controls follow-ups are not current queue instructions. The PC spline/progress comparison is documented in the canonical RE-001 dossier. The only active blocker is in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 all-participants-finished condition through the race-manager state/phase transition to a positively identified results UI/resource/scene destination. Do not repeat the completed PC source pass or start a parked comparison in parallel.
+
 ## Scope and evidence rules
 
 This pass inspects public source/documentation in `tim-tim707/SW_RACER_RE`, a PC Windows reverse-engineering project. It is **not** a decompilation of the N64 or Dreamcast builds. Do not transfer PC-specific values, structure layouts, timings, or algorithms to consoles without independent corroboration.
@@ -71,7 +73,9 @@ The next useful step is to make a small evidence matrix, not start porting PC co
 
 `SW_RACER_RE` declares AGPL-3.0. Keep it a read-only behavioral reference unless the project owners make an explicit licensing decision. Prefer independently implemented Boonta code based on documented behavior and controlled tests; do not copy code into Boonta without resolving license compatibility.
 
-## Next action (one active task)
+## Historical next action (superseded by later RE-001 evidence)
+
+This was the next step when this section was first written, before the later PC spline/progress dossier and N64 state/HUD work were recorded. It is retained for chronology only; follow issue #226 for the current task.
 
 **Inspect the PC spline-following / progress routines only**: `swrRace_UpdateSplineCursor`, `swrRace_PlaceOnTrack`, `swrRace_GetLapProgressIfAvailable`, and `swrObjJdge_GetRacerProgress`. Record inputs, outputs, coordinate/progress conventions, and unknowns. After that, compare only externally observable progress behavior against identified N64 and Dreamcast releases. No implementation changes until that comparison reveals a specific Boonta mismatch.
 
@@ -147,17 +151,17 @@ The current PC source has a useful lap-progress model:
 
 **Critical limit:** `swrRace_AdvanceSplineCursor`, `swrRace_GetTrackMeshAtCursor`, `swrRace_UpdateSplineBinding`, and `swrRace_ComputeTrackOffset` remain `HANG("TODO")` in this reconstructed PC source. Therefore the lap-completion logic is informative, but the full spline-following pipeline is not a finished, runnable oracle. Do not blindly port its logic or assume console versions use the same representation.
 
-### Revised research priority
+### Current research status — 2026-10-21
 
-The asset-container/PC-N64-DC format question remains documented but is no longer the only focus. It should not delay the playable-race milestone unless asset loading is actually blocking it.
+This section supersedes earlier “next action” notes in this dated source pass. The PC race-progress/spline analysis is documented, with its unfinished PC helper bodies and platform limitations retained in the canonical dossier.
 
-**Active research question:** what is the smallest evidence-backed race-progress/finish contract that Boonta needs to pass a manual three-lap race, and which parts are supported by the PC reference versus still unknown for N64/Dreamcast?
+**Current active research question (issue #226):** can the N64 all-participants-finished predicate be traced from its writer through the manager state/phase change and its consumer to a positively identified results UI/resource/scene destination?
 
-1. Map the current GameCube implementation and acceptance checks to PC source concepts: spline progress, start/finish crossing, lap timing, finish order, reset/restart.
-2. Mark each behavior as **PC source-supported**, **console-unverified**, **Boonta currently implemented**, or **manually tested**. Never conflate these statuses.
-3. Inspect N64/Dreamcast-specific source/evidence for differences where available; absent evidence stays unknown, not “same as PC”.
-4. Only after the comparison, spend the remaining 20% on one bounded test/fix with regression coverage and visible Dolphin evidence. Do not make broad gameplay changes from source notes alone.
+1. Require positive lawful local static cross-reference or controlled runtime evidence; document exact revision, state field/call path, observations, counter-evidence and unknowns.
+2. Do not infer the destination from generic tags such as `Fini`/`Abrt`, shared global references, HUD strings, or PC behaviour.
+3. The previous Ares/GDB public ctest smoke test remains **NOT PASSED**; do not rerun it without a new falsifiable isolation hypothesis or replacement minimal public homebrew.
+4. If the required evidence cannot be established, record the handoff as blocked/unproven. Do not start another format, controls, AI, handling or rendering question, and do not change gameplay code to conceal the gap.
 
-### Exit gate for this research thread
+### Separate acceptance gate — issue #126
 
-This thread is useful only if it produces a short acceptance matrix for: start, crossing the finish line once per lap, lap count, timing, finish placement, pause/resume, reset, and second race start. Every row must say PASS / FAIL / NOT TESTED and identify whether the evidence is automated, visible Dolphin, or physical hardware. The immediate milestone remains manual three-lap acceptance (issue #126); a build or headless test alone is not proof of a complete race.
+The interactive three-lap visible-Dolphin acceptance matrix remains a required **human acceptance gate**, not a second reverse-engineering question. Host tests or a native build do not substitute for manually testing startup, controls, three laps, finish/reset/restart and a longer session. Record exact commit and setup with PASS / FAIL / NOT TESTED; physical-console compatibility requires separate hardware evidence.

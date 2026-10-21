@@ -18,7 +18,7 @@ The intended allocation is **80% reverse-engineering research and 20% implementa
 
 Only one research question is active at a time. Each question must end in an evidence dossier that separates observed source facts, inference, target-platform hypothesis and unknowns. Do not code while the relevant source evidence is still ambiguous. An unavailable historical archive is not a blocker by itself; use the current repository, pinned public references, and tests. Tool setup and generic documentation do not count as reverse engineering unless they directly unblock the chosen question.
 
-The first active research item is **RE-001: compare the PC spline/cursor route model with the current GameCube prototype's track sampling and distance-based lap progress**. See [the dossier](research/RE-001-route-spline-progress.md). Step 102 is a legacy research bundle assembled early in the project from collected reference materials. It is not the game, not a canonical source tree, and not required to progress; consult it only if a specific detail cannot be answered from current code or stronger references.
+The PC spline/cursor comparison with the clean-room GameCube prototype is documented in [the RE-001 dossier](research/RE-001-route-spline-progress.md). **Current active RE-001 blocker (issue #226):** trace the N64 all-participants-finished condition through the race-manager state/phase change to a positively identified results UI/resource/scene destination. The older PC comparison is supporting evidence, not an instruction to repeat that analysis. Step 102 remains a legacy research bundle, not a canonical source tree or prerequisite; consult it only for a specific unresolved fact with traceable provenance.
 
 ## Why it matters
 
@@ -70,6 +70,8 @@ For each important feature:
 
 ## Priority study matrix
 
+The rows below are a **reference backlog, not parallel active tasks**. Do not start another subsystem while the blocker in issue #226 remains unresolved or has not been explicitly handed off.
+
 | Priority | Research topic | Upstream starting points | Deliverable for Boonta Reborn | Required validation |
 |---|---|---|---|---|
 | P0 | Racing state and lap progression | `src/Swr/swrRace.c`, race HUD and function/symbol records | A short behavior note and mapping to Step 102's race-flow code/tests | Start, lap crossings, finish/reset, edge cases; compare PC and console evidence separately |
@@ -96,11 +98,11 @@ For each important feature:
 - **SW_RACER_RE** is the priority reference for PC-side reverse engineering and behavior research. It does not remove the need to inspect GameCube-specific code/data or test differences in the console version.
 - **The Dreamcast folder** remains a separate experiment and is not a GameCube/Wii implementation path.
 
-## Next concrete task — RE-001 only
+## Current concrete task — RE-001 N64 finish-to-results blocker only
 
-Finish the route/spline progression dossier at [research/RE-001-route-spline-progress.md](research/RE-001-route-spline-progress.md). The bounded question is: **how does the reviewed PC source represent route position and advance a spline cursor, and how does that differ from the current GameCube prototype's track sampling and lap counter?**
+The PC route/spline dossier is recorded. The remaining active question in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is: **can the N64 all-participants-finished predicate be traced through the manager state/phase writer and reader to a positively identified results UI/resource/scene destination?** The existing Ares/GDB public ctest smoke test is **NOT PASSED**; do not repeat it without a new falsifiable isolation hypothesis or a purpose-built minimal public homebrew.
 
-Required output: exact source links, current-prototype mapping, facts vs unknowns, and one next research question. Step 102 status is included only if the dossier directly uses a specific item from that historical bundle. Do not start handling/traction, AI, assets, rendering or another subsystem in parallel. Do not bulk-import either archive or make a code change merely because a behavior has been documented.
+Required output: exact revision/source links, state-field or call-chain evidence, what is observed versus inferred, counter-evidence and remaining unknowns. If positive evidence is unavailable, produce a bounded handoff that leaves the blocker explicitly unresolved. Do not restart the PC spline analysis, start Step 102/RE-002, open the asset/handling/AI questions in the matrix, or make a gameplay change just to show activity.
 
 ## Sources
 

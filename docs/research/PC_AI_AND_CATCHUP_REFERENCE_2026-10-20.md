@@ -1,5 +1,7 @@
 # PC AI and catch-up reference — 2026-10-20
 
+**Queue status (2026-10-21): PARKED reference note.** This PC-only AI comparison is documented and is not the active next task. The sole active research blocker is tracked in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): N64 all-finished state → manager phase/state transition → positively identified results UI/resource/scene. Resume this AI question only after RE-001 is resolved or explicitly handed off.
+
 ## Research question
 
 What does the inspected PC reverse-engineering source actually say about opponent pacing, and how does that compare with the current Boonta GameCube prototype?
@@ -60,4 +62,4 @@ Do not claim exact numeric parity from video alone unless the needed state can b
 
 ## Decision
 
-**No gameplay code change justified yet.** The static PC source reveals a richer opponent-pacing model than the prototype's synthetic rivals, but console parity and target acceptance are unproven. Next research block should independently inspect PC pod-control/traction only after this AI note is reviewed; keep the active queue limited to that one question.
+**No gameplay code change justified.** The static PC source reveals a richer opponent-pacing model than the prototype's synthetic rivals, but console parity and target acceptance are unproven. PC pod-control/traction is a separate parked question; do not start it while the N64 finish-to-results blocker in issue #226 is active.

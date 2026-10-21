@@ -1,9 +1,11 @@
 # Platform source matrix — Star Wars: Episode I Racer
 Date: 2026-10-20
 
+**Status as of 2026-10-21: PARKED SOURCE INVENTORY, NOT AN ACTIVE QUEUE.** The canonical active question is [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 finish-to-results transition. The platform and format items below are preserved for future use only; do not start them before RE-001 is resolved or explicitly handed off.
+
 ## Decision and scope
 
-Step 102 is not a critical-path dependency for this research. Keep it parked unless it later answers a concrete question. The active priority is to mine original game releases and public reverse-engineering repositories, then compare what is actually shared and what is platform-specific.
+Step 102 is not a critical-path dependency. Keep it parked unless it later answers a concrete, unresolved question. This document inventories public sources; it does not authorize parallel source-mining tasks.
 
 Target order remains: GameCube prototype first; Wii only after the GameCube path is reliable. Use PC as the richest documented behavior reference, with Nintendo 64 and Dreamcast as independent console references. Do not assume the PC version is a drop-in source for console behavior.
 
@@ -26,13 +28,13 @@ Target order remains: GameCube prototype first; Wii only after the GameCube path
 
 ## High-value GitHub sources
 
-### P0 — PC behavior and code
+### Reference group — PC behavior and code (inventory only)
 - [tim-tim707/SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) — PC function/symbol research, types, Ghidra scripts and hooks. Its README explicitly says it documents and reimplements *some* functions; its progress numbers count analyzed functions, not necessarily implemented functions. Repository license is AGPL-3.0. Pin a commit for every research note; do not copy code into Boonta without a deliberate license decision.
 - [OpenSWE1R/swe1r-re](https://github.com/OpenSWE1R/swe1r-re) — documentation/analysis of PC functions; README identifies the Windows patch executable by MD5 `d86d5d03638c24ab6279f24079825794` and notes a planned shift to the Windows demo. This is a valuable independent cross-check, but always record which build a finding refers to.
 - [DeonPoncini/swep1r_decomp](https://github.com/DeonPoncini/swep1r_decomp) — frozen Steam-PC Ghidra output and type clarification; repository says it is a reference and not a full original-source translation. Keep read-only; no root license was established in the prior audit.
 - [OpenSWE1R/openswe1r](https://github.com/OpenSWE1R/openswe1r) — an open-source PC port/emulation approach. Its README says it still depends on the original game binary and assets, and that Mac/Dreamcast/N64 support is a possible future direction, not current supported targets. GPL-2.0; use for architecture and behavior research, not as a ready-made GameCube port.
 
-### P1 — data formats and tools
+### Reference group — data formats and tools (inventory only)
 - [akopetsch/swe1r-assets](https://github.com/akopetsch/swe1r-assets) — MIT .NET reader/writer for PC model/spline/sprite/texture blocks, including intended bit-identical no-op reserialization. Best first candidate for a controlled format test when lawful local PC files are available.
 - [OpenSWE1R/swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) — GPL-2.0-or-later parsers/extractors for spline, sprite, texture, saves and strings. The README explicitly labels its `decompress.c` “Comp” model-block chunks as N64-only. This is useful evidence that platform-specific handling exists, not proof every other parser supports N64.
 - [louriccia/blender-swe1r](https://github.com/louriccia/blender-swe1r) — GPL-3.0 Blender import/export work. Main-branch support and experimental branch changes must be reported separately; do not treat an unmerged branch as released functionality.
@@ -67,9 +69,11 @@ For each question:
 
 Never promote a documented or static finding to runtime-verified. Never treat PC evidence as console evidence.
 
-## First research question
+## Historical first research question — parked, superseded by issue #226
 
-**Platform parity inventory:** establish which tracks, racers, race modes, split-screen options, upgrade systems, shortcuts and hazards are confirmed across PC, N64 and Dreamcast, using official product material first and version-pinned repository/runtime evidence second. Create a parity table with columns for platform/build, feature, evidence/source, confidence and unresolved questions. Do not begin a new implementation until the inventory reveals a concrete gap in Boonta.
+The following platform-parity question was proposed in this dated inventory but is **not the active task**. Do not launch this work while the N64 finish-to-results transition is unresolved.
+
+**Platform parity inventory:** establish which tracks, racers, race modes, split-screen options, upgrade systems, shortcuts and hazards are confirmed across PC, N64 and Dreamcast, using official product material first and version-pinned repository/runtime evidence second. Keep this as future backlog; no new work is authorized by its presence here.
 
 
 ## Follow-up note — PC opponent pacing
