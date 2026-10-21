@@ -9,6 +9,7 @@ Le fichier `.github/workflows/openrouter-free-review.yml` prépare une deuxième
 - Le propriétaire choisit le numéro d'une PR ouverte qui cible `main` et provient du même dépôt.
 - Le workflow transmet au maximum les 30 000 premiers octets du diff public, après un contrôle de motifs courants de clés et de secrets.
 - La requête fixe le modèle-routeur `openrouter/free`. Il choisit parmi les modèles gratuits disponibles ; le modèle précis peut varier.
+- La clé `OPENROUTER_API_KEY` n'est disponible que dans l'étape qui appelle l'API ; l'étape préalable télécharge, tronque et analyse le diff sans exposer la clé.
 - Le résultat est publié en commentaire GitHub. Le workflow ne peut pas modifier le code, pousser une branche, créer une PR ou fusionner.
 - Le contrôle statique du dépôt autorise les références OpenRouter dans ce seul workflow et vérifie ses protections. Les autres workflows ne peuvent pas appeler OpenRouter.
 
