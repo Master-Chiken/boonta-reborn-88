@@ -73,7 +73,7 @@
 
 ## E. Current next research action
 
-Continue the N64-only trace from the local reference note. The best established chain currently links a cursor/geometry-derived scalar from `0x80080BEC` into participant field `+0x74`, followed by ranking updates to `+0x5C`. It **does not yet establish** physical distance units, lap wrap, or the HUD lap-counter writer. Next inspect the indexed accumulation around `+0x78`, the manager bound at `+0x1C8` set from a `Begn` message, and downstream finish/state handlers. Keep ROM-derived binary bytes, extracted route data and asset payloads local; publish only evidence notes and public source links.
+The current RE-001 blocker is the N64 race-finish → results-screen transition, not generic route-source discovery. The lap HUD's current/configured counter and `FINAL LAP` selector have since been traced at summary-level local static-code detail (sections I–K); this is not runtime proof. The public static-recompilation symbol source does not expose the semantic manager-to-results path. The next useful result must connect the all-finished predicate through the manager state/phase writer and reader to a positively identified results UI/resource/scene. The public ctest Ares/GDB smoke attempt failed during continued execution (section X); do not repeat it without a new falsifiable hypothesis or a different minimal public homebrew. Keep ROM-derived binary bytes, route data, raw disassembly and asset payloads local; publish only the minimal evidence notes and public source links.
 
 **Ledger policy:** when another URL appears in the conversation, append it here with a short description and a platform/license caveat. Do not rely on chat memory alone as the permanent source list.
 
@@ -83,7 +83,7 @@ Continue the N64-only trace from the local reference note. The best established 
 - [TheForce.Net — Episode I Racer N64 codes](https://www.theforce.net/videogames/codes/n64/racer.asp): the page lists “Start on Lap” and “Always on Lap” code addresses at `0x8011900A` for Player 1 and `0x80119092` for Player 2, a difference of `0x88`.
 - **Disposition:** retain as an old community RAM-code lead, not as verified disassembly or a confirmed mapping to `Jdge +0x78` or `+0x1C8`. It provides an external target for a later lawful memory-watch/cross-reference test. Check version/region assumptions and do not name the field or infer whether it is zero-based until a runtime or code path confirms it.
 - Private local follow-up note: `RE-001_N64_HUD_LAP_FIELD_CROSSCHECK_2026-10-21.md` (kept in the owner's ChatGPT Library; not committed with ROM-derived data).
-- The main remaining gap is the HUD writer for `LAP` / `FINAL LAP` and its current/configured value pair. Keep the source string data and ROM-derived output local.
+- The HUD `LAP` / `FINAL LAP` data path has since been traced at summary-level local static-code detail in sections I–K. This finding is not a runtime observation and does not prove finish timing or the destination scene. The current gap is the downstream manager/results transition. Keep source strings and ROM-derived output local.
 
 
 
