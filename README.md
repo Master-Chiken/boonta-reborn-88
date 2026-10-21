@@ -33,6 +33,7 @@ You do not need to be an experienced programmer. Helpful contributions include t
 - **Volunteer as a tester:** see [issue #250 — testers wanted](https://github.com/Master-Chiken/boonta-reborn-88/issues/250). Record detailed acceptance results in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) and follow the [current milestone checklist](docs/NEXT_MILESTONE.md).
 - **Follow the reverse-engineering work:** see [issue #226 — route/spline progress research](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
 - **Build and test:** start with the [build guide](docs/BUILD_GUIDE.md) and [prototype README](gamecube-demo/README.md).
+- **Contribute:** read [CONTRIBUTING.md](CONTRIBUTING.md) for beginner-friendly tasks, browser-based editing, build commands, and review rules.
 - **Read the project plan:** see the [roadmap](docs/ROADMAP.md) and [project dashboard](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
 The project is open to contributors who can explain what they tested and what the evidence does—and does not—prove. Please do not upload ROMs, disc images, extracted commercial assets, or private files to the repository, issues, or AI tools.
