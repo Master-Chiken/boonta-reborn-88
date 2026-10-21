@@ -1,6 +1,6 @@
 # OpenRouter Free — relecture manuelle des pull requests
 
-**État de cette proposition :** le workflow est ajouté dans la PR de travail [#251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il n'est pas encore actif sur `main` ; GitHub ne permet le lancement manuel que lorsque le workflow est présent sur la branche par défaut et que la clé secrète du dépôt est configurée.
+**État actuel :** le workflow a été fusionné dans `main` via [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251) le 21 octobre 2026. Il est disponible dans GitHub Actions, mais son fonctionnement réel n'est pas encore confirmé : le secret `OPENROUTER_API_KEY` doit être configuré et un premier lancement manuel doit réussir.
 
 ## Ce que fait le workflow
 
@@ -23,14 +23,14 @@ Le diff est transmis à OpenRouter puis au fournisseur du modèle choisi. La vé
 
 Le résultat IA est une suggestion de revue, pas la preuve d'un bug ou d'une correction. Le modèle n'exécute pas le jeu et ne peut pas prétendre avoir lancé les tests.
 
-## Activation après revue de la PR
+## Terminer l'activation
 
-1. Examiner puis fusionner explicitement la PR #251 seulement si son diff et ses contrôles te conviennent. Cette proposition ne la fusionne pas.
-2. Dans [OpenRouter — clés API](https://openrouter.ai/keys), créer une clé pour l'accès gratuit. Ne pas acheter de crédits et ne pas ajouter de carte ou autre moyen de paiement. Si l'interface impose un paiement, arrêter.
-3. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**, avec le nom exact `OPENROUTER_API_KEY`. La clé doit rester dans la valeur du secret, jamais dans un fichier, une issue, un commentaire ou cette conversation.
-4. Ouvrir [Actions — OpenRouter Free PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), choisir **Run workflow**, saisir le numéro d'une PR ouverte et lancer l'analyse.
+1. Dans [OpenRouter — clés API](https://openrouter.ai/keys), créer une clé pour l'accès gratuit. Ne pas acheter de crédits et ne pas ajouter de carte ou autre moyen de paiement. Si l'interface impose un paiement, arrêter.
+2. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**, avec le nom exact `OPENROUTER_API_KEY`. La clé doit rester dans la valeur du secret, jamais dans un fichier, une issue, un commentaire ou cette conversation.
+3. Ouvrir [Actions — OpenRouter Free PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), choisir **Run workflow**, saisir le numéro d'une PR ouverte qui ne contient aucun contenu privé ou de provenance incertaine, puis lancer l'analyse.
+4. Vérifier que le job réussit et publie un commentaire sur la bonne PR. Si la clé, le quota gratuit ou l'API échoue, arrêter ; aucun modèle payant de secours n'est prévu.
 
-Le lancement est manuel et n'implique aucune activité de fond. La fusion, la création de la clé et l'ajout du secret ne sont pas réalisés par cette proposition.
+Le lancement est manuel et n'implique aucune activité en arrière-plan. **Le workflow a été fusionné, mais l'activation reste à confirmer par un premier lancement réussi.**
 
 ## Références officielles
 
