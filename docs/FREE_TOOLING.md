@@ -17,7 +17,7 @@ La démo clean-room est intégrée sous `gamecube-demo/`. L'exécution [CI #3890
 Cela ne prouve **pas** encore que les commandes sont validées de façon interactive, qu'une course de trois tours a été terminée par un joueur, ni que le comportement a été testé sur matériel réel. Voir [le jalon interactif](NEXT_MILESTONE.md).
 
 - Workflow principal : [GameCube demo build](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/gamecube-demo-build.yml).
-- Le dépôt dispose d'une branche `main` protégée ; continuer à passer par des PR et ne pas forcer de push.
+- La protection de `main` n'a pas pu être confirmée par l'API utilisée (l'accès à l'endpoint de protection a échoué avec 403). Vérifier manuellement **Settings → Rules → Rulesets** avant d'autoriser toute écriture par un agent ; continuer à utiliser des PR et ne pas forcer de push.
 - Le DOL/ELF et les rapports CI sont des preuves de compilation ou de diagnostic, pas une déclaration de jeu terminé.
 
 ## Automatisation IA : rester verrouillé par défaut
