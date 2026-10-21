@@ -15,9 +15,15 @@ concurrency:
 
 jobs:
   smoke-test:
-    name: Ares v148 + ctest.z64
+    name: Ares ${{ matrix.ares_tag }} + ctest.z64
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        ares_tag: [v139, v148]
+    env:
+      ARES_TAG: ${{ matrix.ares_tag }}
 
     steps:
       - name: Install build, graphics, and debugger dependencies
@@ -29,16 +35,16 @@ jobs:
             libgtk-3-dev libcanberra-gtk3-module libgl-dev \
             libgl1-mesa-dri mesa-vulkan-drivers libasound2-dev libopenal-dev libvulkan-dev
 
-      - name: Build official Ares v148 with the N64 core
+      - name: Build official Ares ${{ matrix.ares_tag }} with the N64 core
         shell: bash
         run: |
           set -euo pipefail
           LOG_DIR="$RUNNER_TEMP/ares-gdb-smoke"
-          SRC_DIR="$RUNNER_TEMP/ares-v148"
+          SRC_DIR="$RUNNER_TEMP/ares-$ARES_TAG"
           BUILD_DIR="$SRC_DIR/build"
           mkdir -p "$LOG_DIR"
-          echo "Building upstream ares v148; no game ROM is used in this step."
-          git clone --depth 1 --branch v148 https://github.com/ares-emulator/ares.git "$SRC_DIR"
+          echo "Building upstream Ares $ARES_TAG; no game ROM is used in this step."
+          git clone --depth 1 --branch "$ARES_TAG" https://github.com/ares-emulator/ares.git "$SRC_DIR"
           cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARES_CORES=n64 \
@@ -141,7 +147,7 @@ jobs:
               --setting DebugServer/Port=9123 \
               --setting DebugServer/Enabled=true \
               --setting DebugServer/UseIPv4=false \
-              --kiosk "$CTEST_ROM" \
+              --no-file-prompt "$CTEST_ROM" \
               > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
 
@@ -213,8 +219,8 @@ jobs:
             cat "$ARES_LOG" >&2 || true
             exit 1
           fi
-          if ! grep -Fq 'Vulkan Enabled: using paraLLEl-RDP' "$ARES_LOG"; then
-            echo "FAIL: N64 paraLLEl-RDP did not initialize during ctest rendering." >&2
+          if [[ "$ARES_TAG" == "v148" ]] && ! grep -Fq 'Vulkan Enabled: using paraLLEl-RDP' "$ARES_LOG"; then
+            echo "FAIL: Ares v148 paraLLEl-RDP did not initialize during ctest rendering." >&2
             cat "$ARES_LOG" >&2 || true
             exit 1
           fi
@@ -227,7 +233,7 @@ jobs:
           {
             echo "## RE-001 Ares/GDB smoke test"
             echo ""
-            echo "- Ares baseline: official stable v148"
+            echo "- Ares version: $ARES_TAG (v139 is the upstream-reported working control; v148 is the current stable target)."
             echo "- Target: public libdragon ctest homebrew; debugger is started before Ares."
             echo "- Result: **PASS** — GDB hit main and remained connected for the bounded run without target/assert signals."
             echo "- Scope: debugger tooling only; not a SWE1R run and not proof of the N64 results-screen transition."
