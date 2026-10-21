@@ -27,7 +27,7 @@ Les workflows d'assistance sont facultatifs et ne doivent jamais devenir une con
 - Le workflow Gemini est gouverné par `.github/workflows/gemini-dispatch.yml`. Les tâches d'écriture doivent rester bloquées tant que le propriétaire n'a pas explicitement activé le verrou de dépôt prévu à cet effet. Ne pas activer ce verrou automatiquement.
 - Une clé API est un secret GitHub, jamais un texte à mettre dans une issue, un commit, un fichier suivi ou cette conversation.
 - Si un quota gratuit est épuisé, arrêter l'appel concerné et continuer avec les outils GitHub disponibles ; ne pas activer une facturation de secours.
-- La relecture OpenRouter Free a été proposée via [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14). Vérifier le workflow et sa configuration effective avant usage. Toute relecture externe transmet au moins le diff public de la PR au fournisseur sélectionné ; ne pas lui soumettre de contenu privé ou de secrets.
+- **OpenRouter Free PR review — retired:** historical [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14) was merged, but the workflow was subsequently removed by [PR #31](https://github.com/Master-Chiken/boonta-reborn-88/pull/31). The current `main` branch has no `.github/workflows/openrouter-free-review.yml`, and [the AI safety guard](../tools/check_ai_free_safety.py) rejects OpenRouter workflows under the strict €0 setup. Do not create an API key/secret or reintroduce this workflow unless the owner explicitly revisits that decision.
 - Les limites, modèles gratuits et conditions de traitement des données changent : vérifier la documentation officielle au moment d'une activation.
 
 ## Import Step 102 : blocage explicite
