@@ -97,12 +97,12 @@ jobs:
               "branch-budget issue text cannot execute markdown backticks": 'echo "1. Keep only main, dev' in governance and 'echo "1. Keep only `main`' not in governance,
               "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
               "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
-            "AI coordinator retains manual dispatch and runs weekly after branch audit": "workflow_dispatch:" in coordinator and 'cron: "17 10 * * 1"' in coordinator and 'cron: "23 9 * * 1"' in governance,
-            "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
-            "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
-            "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No model request was sent" in coordinator,
-            "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
-            "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, or delete refs" in coordinator,
+              "AI coordinator remains manual-only": "workflow_dispatch:" in coordinator.split("permissions:", 1)[0] and "schedule:" not in coordinator.split("permissions:", 1)[0] and "cron:" not in coordinator.split("permissions:", 1)[0],
+              "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
+              "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
+              "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No model request was sent" in coordinator,
+              "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
+              "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, " in coordinator and "or delete refs." in coordinator,
           }
 
           for label, ok in checks.items():
