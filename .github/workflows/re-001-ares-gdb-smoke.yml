@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
             build-essential cmake pkg-config curl git ninja-build \
-            gdb-multiarch xvfb xauth unzip \
+            gdb-multiarch xvfb xauth unzip iproute2 \
             libgtk-3-dev libcanberra-gtk3-module libgl-dev \
             libgl1-mesa-dri libasound2-dev libopenal-dev libvulkan-dev
 
@@ -84,18 +84,26 @@ jobs:
           ARES_LOG="$LOG_DIR/ares-runtime.log"
           GDB_LOG="$LOG_DIR/gdb.log"
 
-          # Ares settings are overridden in the runner's temporary directory only.
-          cat > "$SETTINGS" <<'BML'
-          DebugServer:
-            Port: 9123
-            Enabled: true
-            UseIPv4: false
-          BML
+          # Use Ares v148's documented CLI settings overrides instead of
+          # relying on an external settings.bml file. With UseIPv4=false,
+          # upstream binds only to IPv6 loopback (::1).
+          "$ARES_BIN" --dump-all-settings \
+            --setting DebugServer/Port=9123 \
+            --setting DebugServer/Enabled=true \
+            --setting DebugServer/UseIPv4=false \
+            > "$LOG_DIR/settings-effective.log" 2>&1
 
-          # Start Ares in a virtual X11 display; keep the server on local loopback.
+          grep -qx 'DebugServer/Port' "$LOG_DIR/settings-effective.log"
+          grep -qx 'DebugServer/Enabled' "$LOG_DIR/settings-effective.log"
+          grep -qx 'DebugServer/UseIPv4' "$LOG_DIR/settings-effective.log"
+
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 \
-            "$ARES_BIN" --settings-file "$SETTINGS" --no-file-prompt "$CTEST_ROM" \
-            > "$ARES_LOG" 2>&1 &
+            "$ARES_BIN" \
+              --setting DebugServer/Port=9123 \
+              --setting DebugServer/Enabled=true \
+              --setting DebugServer/UseIPv4=false \
+              --no-file-prompt "$CTEST_ROM" \
+              > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
           cleanup() {
             if kill -0 "$ARES_PID" 2>/dev/null; then
@@ -105,23 +113,37 @@ jobs:
           }
           trap cleanup EXIT
 
-          # Give the emulator time to load the small homebrew test program.
+          # Verify the listener is actually present on the IPv6 loopback socket
+          # before invoking GDB. Never probe it with a preliminary client connection.
+          LISTENER_READY=0
           for attempt in $(seq 1 20); do
             if ! kill -0 "$ARES_PID" 2>/dev/null; then
-              echo "Ares exited before GDB could attach." >&2
-              tail -n 100 "$ARES_LOG" >&2 || true
+              echo "Ares exited before the GDB listener was ready." >&2
+              cat "$ARES_LOG" >&2 || true
               exit 1
+            fi
+            if ss -H -ltn 'sport = :9123' | grep -q .; then
+              ss -H -ltn 'sport = :9123' | tee "$LOG_DIR/listener.log"
+              LISTENER_READY=1
+              break
             fi
             sleep 1
           done
+          if [[ "$LISTENER_READY" -ne 1 ]]; then
+            echo "FAIL: no TCP listener appeared on port 9123." >&2
+            cat "$ARES_LOG" >&2 || true
+            exit 1
+          fi
 
-          # The ctest program loops indefinitely. A 15-second timeout is expected
-          # only when GDB reached main, continued a second time, and stayed connected.
+          # Resolve specifically to IPv6 loopback: Ares v148's UseIPv4=false
+          # binds to ::1, whereas "localhost" may be resolved to IPv4 by the host.
+          # The ctest program loops indefinitely; the bounded timeout is expected
+          # only after GDB reaches main and a second continue remains connected.
           set +e
           timeout --foreground --signal=INT --kill-after=3s 15s \
             gdb-multiarch -q --batch \
               -ex "set pagination off" \
-              -ex "target extended-remote localhost:9123" \
+              -ex "target extended-remote ip6-localhost:9123" \
               -ex "break main" \
               -ex "continue" \
               -ex "continue" \
