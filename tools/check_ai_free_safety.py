@@ -196,7 +196,11 @@ if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
     errors.append("Project coordinator must use the existing Gemini API-key secret only")
 if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
     errors.append("Project coordinator must keep the explicitly selected free-tier model")
-if '--arg num "156"' not in daily or 'github_issue_number: "156"' not in daily or 'issue_number: 156,' not in daily:
+if (
+    ('--arg num "156"' not in daily and '"issue_number": "156"' not in daily)
+    or 'github_issue_number: "156"' not in daily
+    or 'issue_number: 156,' not in daily
+):
     errors.append("Project coordinator must publish reports to the canonical issue #156")
 if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.search(r"(?m)^\s*issue_number:\s*23,?\s*$", daily):
     errors.append("Project coordinator must not post current reports to stale/closed issue #23")
