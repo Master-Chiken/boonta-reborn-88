@@ -184,3 +184,12 @@ Decision: do not rename `render_submit` or `func_80080BEC`, do not infer a resul
 - The [OpenSWE1R/openswe1r README](https://github.com/OpenSWE1R/openswe1r) describes a Windows/x86-focused compatibility project and lists other platforms, including N64, as possible future support rather than the baseline. The user-owned [Master-Chiken/openswe1r fork](https://github.com/Master-Chiken/openswe1r) reflects the same project lineage.
 - License caution: OpenSWE1R is GPL-2.0-or-later; no source was imported. Keep function names/behavior as PC-only cross-reference leads unless N64-specific evidence independently confirms them.
 - No proprietary executable was downloaded or inspected, no runtime test was done, and no N64 semantic conclusion changed.
+
+
+## T. N64 lap code addresses — public cheat-list evidence only (2026-10-21)
+
+- Source: [TheForce.Net N64 Episode I Racer code list, lines 88–99](https://theforce.net/videogames/codes/n64/racer.asp). It labels GameShark writes to `0x8011900A` as “Start on Lap” / “Always on Lap” for Player 1 and `0x80119092` for Player 2, with `00`–`04` labelled Lap 1–5.
+- Both target addresses differ by `0x88`. The same difference appears in the page's paired “Low Timer” locations (`0x80119004` / `0x8011908C`) and “Always Place First” locations (`0x80118FED` / `0x80119075`). This is moderate evidence for a repeated two-player address layout, not proof of a C struct or a global racer-record stride.
+- **Supported:** these are documented lap-related cheat target addresses. **Not supported:** direct ownership by a participant struct, exact native type/offset, final-lap/finish semantics, reads by a race manager, or any connection to a results renderer/scene selector.
+- Evidence is community cheat documentation, not disassembly or a controlled local memory trace. No runtime test was run. Keep as watchpoint candidates only.
+- Minimal verification: in a lawful local debugger, observe the P1/P2 addresses across lap changes, identify the writers/readers, and separately trace the final-lap completion condition to the actual results UI/resource selector. If unavailable, preserve the blocker. No ROM/assets uploaded or committed.
