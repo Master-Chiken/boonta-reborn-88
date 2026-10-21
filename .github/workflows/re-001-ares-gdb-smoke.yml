@@ -150,15 +150,22 @@ jobs:
 
           # Start the emulator after the debugger has already begun attempting
           # to connect, matching the public issue's ordering more closely.
+          # v148 supports --kiosk, which reliably auto-loads the supplied ROM in
+          # headless CI. v139 predates that option; pass the ROM directly and
+          # do not add --no-file-prompt (the earlier substitution failed to load ctest).
+          ARES_ARGS=(--system "Nintendo 64"
+            --setting DebugServer/Port=9123
+            --setting DebugServer/Enabled=true
+            --setting DebugServer/UseIPv4=false)
+          if [[ "$ARES_TAG" == "v148" ]]; then
+            ARES_ARGS+=(--kiosk)
+          fi
+          ARES_ARGS+=("$CTEST_ROM")
+
           sleep 1
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null \
             VK_ICD_FILENAMES="$LVP_ICD" PARALLEL_RDP_ALLOW_EXTERNAL_HOST=0 \
-            stdbuf -oL -eL "$ARES_BIN" \
-              --system "Nintendo 64" \
-              --setting DebugServer/Port=9123 \
-              --setting DebugServer/Enabled=true \
-              --setting DebugServer/UseIPv4=false \
-              --no-file-prompt "$CTEST_ROM" \
+            stdbuf -oL -eL "$ARES_BIN" "${ARES_ARGS[@]}" \
               > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
 
