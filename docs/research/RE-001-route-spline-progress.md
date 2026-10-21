@@ -1339,3 +1339,10 @@ A follow-on local static pass reviewed the race-manager phase dispatcher and the
 The consumer also handles other tags (including `Load`, `RStr`, and `Stop`) and performs general object flags, timers, and shared-state/fade updates. The shared event helper has callers beyond this one manager path. No direct call edge from the all-local-participants-done condition to a positively identified results renderer or scene-load handler has been demonstrated.
 
 **Evidence status:** the N64 lap counter and `FINAL LAP` HUD selector remain directly traced at static-code level; the terminal manager/results-screen destination remains open. The next bounded target is a positive chain from the all-local-racers-done predicate through the manager phase writer into the actual results UI/resource selection. Do not infer results-screen semantics from `Fini`, `Abrt`, or phase names alone. No runtime test is claimed.
+## Shared lifecycle-tag handler: no results-screen proof (2026-10-21)
+
+Additional local static review of the generic event/tag paths confirms an important negative result. The manager phase dispatcher sends `Fini` and `Abrt` tags into a shared object lifecycle/state helper; a separate tag consumer also handles `Load`, `RStr`, and `Stop`, modifying general object flags, timers and shared fade/control state. The helper has call sites beyond this race-manager path.
+
+No conclusive direct call edge has been established from the all-local-racers-done predicate to a results renderer or scene-load handler. The tag text alone is insufficient to identify the results transition, and the global updated in one handler is referenced elsewhere in menu/UI-related code, so it remains unnamed.
+
+**Current boundary:** N64 lap-count and `FINAL LAP` HUD data flow are traced at local static-code level; manager phase → results-screen destination remains unresolved. The next proof must connect the all-done condition to a positively identified results UI/resource/scene selection. Runtime observation and console parity are still unverified.
