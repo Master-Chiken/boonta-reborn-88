@@ -111,7 +111,7 @@ This is a bounded comparison of the pinned `swe1r-assets` revision (`922ef535f65
 1. **There is already a substantial clean-room toolchain in Boonta.** Before adding a dependency, compare the exact input/output contract of the existing validator, exporter and tests with the external tool's capabilities.
 2. **The external MIT library is a strong offline research candidate, not a ready-made console engine.** Its command-line interface lists models, splines, sprites and textures, and exports sprites/model textures. Its own spline re-serialization tests compare parsed PC-format items; they do not demonstrate GameCube/Wii compatibility.
 3. **Do not import commercial game files or external test assets into the public repository.** Run format experiments only with legally obtained local files where permitted, or with already-public synthetic fixtures. Record file provenance separately from code license.
-4. **No code has been copied and no dependency has been added by this audit.** The next validation should be a read-only capability/format comparison, then a minimal isolated experiment only if a concrete gap remains.
+4. **No code has been copied and no dependency has been added by this audit.** A read-only capability/format comparison or minimal isolated experiment remains a parked reuse option, not the active RE-001 next step. Do not run it until issue #226's N64 finish-to-results blocker is resolved or explicitly handed off.
 
 References:
 - Boonta track format and validation: `tools/track_format/README.md`, `tests/test_track_format.py`.

@@ -95,7 +95,7 @@ The schema defines four selectors: ModelBlockId, SplineBlockId, SpriteBlockId, a
 
 Interpretation: the library's metadata explicitly routes Dreamcast through the same generic block selections as Windows International/Mac. This is more specific than inferring similarity from a filename, but it remains the tool author's mapping, not independent proof from a Dreamcast disc. The checksum catalogue names a combined win_de__mac__dc sprite variant but does not separately list Dreamcast model, spline, or texture hashes. Thus byte identity of all Dreamcast assets, identical loaders, and identical renderer/physics remain unproven. N64 region-specific selection is explicitly represented and must remain part of asset provenance.
 
-Next question: find independent Dreamcast-specific evidence for model/spline/texture handling (a parser, version-pinned format note, or provenance-labelled inventory). Until then, mark Dreamcast model/spline/texture runtime behavior UNKNOWN and do not start a port based solely on matching metadata IDs.
+Parked Dreamcast follow-up (not active queue): find independent Dreamcast-specific evidence for model/spline/texture handling (a parser, version-pinned format note, or provenance-labelled inventory). Until then, mark Dreamcast model/spline/texture runtime behavior UNKNOWN and do not start a port based solely on matching metadata IDs.
 
 
 ## Dreamcast executable string evidence: four named asset files
@@ -111,7 +111,7 @@ Both string reports contain `OUT_SPRITEBLOCK.BIN`, `OUT_SPLINEBLOCK.BIN`, `OUT_T
 1. **Observed:** USA and Europe executable string reports contain all four expected block filenames.
 2. **Observed:** the asset library's release metadata assigns Dreamcast the same block IDs as Windows International/Mac.
 3. **Still unknown:** whether that mapping is based on verified byte-identical Dreamcast blocks, shared logical formats with different payloads, or an assumption made for tool convenience.
-4. **Next research action:** find source-level Dreamcast loading logic or a provenance-documented Dreamcast block inventory; compare metadata and format structure only after provenance is established. Do not infer file compatibility from names alone.
+4. **Parked future follow-up (not active queue):** find source-level Dreamcast loading logic or a provenance-documented Dreamcast block inventory; compare metadata and format structure only after provenance is established. Do not infer file compatibility from names alone. Resume only after issue #226's active N64 finish-to-results blocker is resolved or explicitly handed off.
 
 
 ## Dreamcast disc inventory cross-check + PC loader gap
