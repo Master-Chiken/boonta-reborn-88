@@ -130,3 +130,13 @@ This section is an addendum; the original eight-ref table above is a historical 
 4. Do not retire `jules/re-001-public-source-crosscheck-5621653419986752281` or `test/ares-gdb-smoke-20261021` based only on this inventory; compare merge bases, open references, workflow history and unique commits first.
 
 No merges, branch deletion, force-pushes, destructive workflow dispatches, or gameplay code edits were performed by this inventory refresh.
+
+### Follow-up validation refresh — 2026-10-21 14:10 UTC
+
+The remote branch inventory remains **14 refs**, and the live open-PR query remains **9 open PRs**. No refs were retired and no PR was merged.
+
+- **#252 / RE-001:** current head at this refresh is `3df2aedeccaef904c48637710eedc88699db7acb`. Matrix [run #39613630406](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39613630406) built Ares v139 and v148, but both runtime cases failed. v139 loaded ctest, initialized paraLLEl-RDP and connected GDB, then hit `SIGTRAP` in `__rsp_check_assert()` before `main`. v148 hit the `main` breakpoint, then stopped at `SIGTRAP` in `joybus_exec()`. The listener and GDB handshake are demonstrated, but a clean bounded continue is **not**. Keep #252 draft and unmerged; do not equate connection success with successful execution.
+- **Steering deadzone overlap:** #247 targets `main`, #243 targets `dev`, and #233 also targets `dev`. The changed-code hunk in #247 and #243 is identical for the steering input helper/tests; #233 bundles unrelated branch-cleanup automation with the same idea. Do not merge more than one. #243 is the focused `dev` candidate, but it still needs independent maintainer review and interactive controller-feel acceptance.
+- **Other live gates:** #246 is the non-draft documentation-only reuse inventory with green listed CI checks; #242 remains draft research-priority/dossier documentation; #251 remains draft and its OpenRouter Free workflow is not active on `main`; #214 remains draft until visible human-operated three-lap Dolphin acceptance is recorded; #245 remains draft and needs owner review before any cleanup decision.
+
+This addendum is a status snapshot only. It does not authorize branch deletion, force-push, workflow dispatch, or merge.
