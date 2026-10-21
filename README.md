@@ -30,7 +30,7 @@ The repository contains an original GameCube prototype in `gamecube-demo/`. It b
 
 You do not need to be an experienced programmer. Helpful contributions include testing, reporting exact reproduction steps, researching file formats and public technical references, checking documentation, and reviewing licensing and provenance. Small, evidence-backed contributions are more useful than large unverified changes.
 
-- **Test the prototype:** see [issue #126 — interactive acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) and the [current milestone checklist](docs/NEXT_MILESTONE.md).
+- **Volunteer as a tester:** see [issue #250 — testers wanted](https://github.com/Master-Chiken/boonta-reborn-88/issues/250). Record detailed acceptance results in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) and follow the [current milestone checklist](docs/NEXT_MILESTONE.md).
 - **Follow the reverse-engineering work:** see [issue #226 — route/spline progress research](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
 - **Build and test:** start with the [build guide](docs/BUILD_GUIDE.md) and [prototype README](gamecube-demo/README.md).
 - **Read the project plan:** see the [roadmap](docs/ROADMAP.md) and [project dashboard](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
