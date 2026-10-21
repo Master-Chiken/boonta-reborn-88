@@ -1433,3 +1433,15 @@ A targeted public-web search found independent game guides describing an N64 deb
 The in-game debug option might make a future local race test easier to reproduce or navigate, if it is available in the user's game revision. It does not replace an emulator debugger: fast-forward/rewind behavior alone cannot prove the all-done state write or connect it to the results UI. Region/version compatibility has not been verified.
 
 **Decision:** preserve this as a test-preparation lead only. RE-001 remains blocked pending direct data-flow evidence or a permitted local runtime trace. No game was run and no ROM or assets were accessed.
+
+## S. Platform boundary of older OpenSWE1R analysis (2026-10-21)
+
+A newly located community article about SWE1R reverse engineering links the historical [`OpenSWE1R/swe1r-re`](https://github.com/OpenSWE1R/swe1r-re) analysis project. Its public repository page explicitly says its function documentation is based on a **Windows patch executable** (and describes a planned shift to a Windows demo build), so it is not N64 function evidence. The same page characterizes the project as reverse-engineering and documenting functions, not a platform-neutral symbol map ([repository page](https://github.com/OpenSWE1R/swe1r-re)).
+
+The older [`OpenSWE1R/openswe1r`](https://github.com/OpenSWE1R/openswe1r) project README describes an x86 Windows-focused compatibility/porting approach; Mac/Dreamcast/N64 support is presented as a possible future direction rather than the supported baseline. The user-owned fork [`Master-Chiken/openswe1r`](https://github.com/Master-Chiken/openswe1r) also documents this Windows/x86 approach. These are useful historical PC context, but they do not establish the N64 manager-to-results path.
+
+### Decision
+
+- Keep PC decompilation names as cross-reference leads only; validate any proposed analogue against N64-specific evidence.
+- Do not import GPL-2.0-or-later OpenSWE1R code into Boonta Reborn 88's MIT codebase without a separate, explicit license decision.
+- No proprietary executable was downloaded or opened during this check. No new semantic name is assigned and the N64 results-transition blocker remains open.
