@@ -177,3 +177,10 @@ Decision: do not rename `render_submit` or `func_80080BEC`, do not infer a resul
 - Evidence type: community gameplay documentation only. It is not source-level evidence and does not identify the race manager state field, its readers, or a results UI path.
 - Potential use: could aid reproducible local testing if supported by the game revision; it cannot replace memory breakpoints/cross-reference tracing. Region/version compatibility is unverified.
 - Status: lead recorded only. No runtime test, ROM access, asset extraction, or gameplay change.
+
+## S. Platform boundary — older OpenSWE1R sources (2026-10-21)
+
+- The [OpenSWE1R/swe1r-re repository page](https://github.com/OpenSWE1R/swe1r-re) states its function documentation is based on a Windows patch executable. Treat it as PC analysis, not N64 proof.
+- The [OpenSWE1R/openswe1r README](https://github.com/OpenSWE1R/openswe1r) describes a Windows/x86-focused compatibility project and lists other platforms, including N64, as possible future support rather than the baseline. The user-owned [Master-Chiken/openswe1r fork](https://github.com/Master-Chiken/openswe1r) reflects the same project lineage.
+- License caution: OpenSWE1R is GPL-2.0-or-later; no source was imported. Keep function names/behavior as PC-only cross-reference leads unless N64-specific evidence independently confirms them.
+- No proprietary executable was downloaded or inspected, no runtime test was done, and no N64 semantic conclusion changed.
