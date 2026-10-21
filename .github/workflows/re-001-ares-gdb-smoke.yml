@@ -1,0 +1,174 @@
+name: RE-001 Ares GDB smoke test (public homebrew only)
+
+on:
+  push:
+    branches:
+      - "re-001-ares-gdb-smoke-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: re-001-ares-gdb-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-test:
+    name: Ares v148 + ctest.z64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Install build, graphics, and debugger dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake pkg-config curl git ninja-build \
+            gdb-multiarch xvfb xauth unzip \
+            libgtk-3-dev libcanberra-gtk3-module libgl-dev \
+            libgl1-mesa-dri libasound2-dev libopenal-dev libvulkan-dev
+
+      - name: Build official Ares v148 with the N64 core
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_DIR="$RUNNER_TEMP/ares-gdb-smoke"
+          SRC_DIR="$RUNNER_TEMP/ares-v148"
+          BUILD_DIR="$SRC_DIR/build"
+          mkdir -p "$LOG_DIR"
+          echo "Building upstream ares v148; no game ROM is used in this step."
+          git clone --depth 1 --branch v148 https://github.com/ares-emulator/ares.git "$SRC_DIR"
+          cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARES_CORES=n64 \
+            -DARES_SKIP_DEPS=ON 2>&1 | tee "$LOG_DIR/cmake-configure.log"
+          cmake --build "$BUILD_DIR" --parallel 2 2>&1 | tee "$LOG_DIR/ares-build.log"
+          ARES_BIN="$(find "$BUILD_DIR" -type f -name ares -executable -print -quit)"
+          if [[ -z "$ARES_BIN" ]]; then
+            echo "Could not locate the Ares executable after the build." >&2
+            find "$BUILD_DIR" -maxdepth 5 -type f -executable -print | head -100 >&2
+            exit 1
+          fi
+          echo "ARES_BIN=$ARES_BIN" >> "$GITHUB_ENV"
+          "$ARES_BIN" --version 2>&1 | tee "$LOG_DIR/ares-version.log"
+
+      - name: Fetch only the public homebrew GDB reproducer
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_DIR="$RUNNER_TEMP/ares-gdb-smoke"
+          TEST_DIR="$RUNNER_TEMP/ctest-homebrew"
+          mkdir -p "$TEST_DIR" "$LOG_DIR"
+          curl --fail --location --retry 3 --retry-delay 1 \
+            https://github.com/user-attachments/files/18465249/ctest.zip \
+            --output "$TEST_DIR/ctest.zip"
+          unzip -q "$TEST_DIR/ctest.zip" -d "$TEST_DIR/unpacked"
+          CTEST_ROM="$(find "$TEST_DIR/unpacked" -type f -name ctest.z64 -print -quit)"
+          CTEST_ELF="$(find "$TEST_DIR/unpacked" -type f -name ctest.elf -print -quit)"
+          if [[ -z "$CTEST_ROM" || -z "$CTEST_ELF" ]]; then
+            echo "The public attachment did not contain the expected ctest.z64 and ctest.elf files." >&2
+            unzip -l "$TEST_DIR/ctest.zip" >&2
+            exit 1
+          fi
+          printf 'Public homebrew ROM: %s\nELF with debug symbols: %s\n' "$CTEST_ROM" "$CTEST_ELF" | tee "$LOG_DIR/ctest-files.log"
+          echo "CTEST_ROM=$CTEST_ROM" >> "$GITHUB_ENV"
+          echo "CTEST_ELF=$CTEST_ELF" >> "$GITHUB_ENV"
+
+      - name: Attach GDB, break at main, and continue for a bounded interval
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_DIR="$RUNNER_TEMP/ares-gdb-smoke"
+          SETTINGS="$LOG_DIR/settings.bml"
+          ARES_LOG="$LOG_DIR/ares-runtime.log"
+          GDB_LOG="$LOG_DIR/gdb.log"
+
+          # Ares settings are overridden in the runner's temporary directory only.
+          cat > "$SETTINGS" <<'BML'
+          DebugServer:
+            Port: 9123
+            Enabled: true
+            UseIPv4: false
+          BML
+
+          # Start Ares in a virtual X11 display; keep the server on local loopback.
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 \
+            "$ARES_BIN" --settings-file "$SETTINGS" --no-file-prompt "$CTEST_ROM" \
+            > "$ARES_LOG" 2>&1 &
+          ARES_PID=$!
+          cleanup() {
+            if kill -0 "$ARES_PID" 2>/dev/null; then
+              kill "$ARES_PID" 2>/dev/null || true
+            fi
+            wait "$ARES_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # Give the emulator time to load the small homebrew test program.
+          for attempt in $(seq 1 20); do
+            if ! kill -0 "$ARES_PID" 2>/dev/null; then
+              echo "Ares exited before GDB could attach." >&2
+              tail -n 100 "$ARES_LOG" >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # The ctest program loops indefinitely. A 15-second timeout is expected
+          # only when GDB reached main, continued a second time, and stayed connected.
+          set +e
+          timeout --foreground --signal=INT --kill-after=3s 15s \
+            gdb-multiarch -q --batch \
+              -ex "set pagination off" \
+              -ex "target extended-remote localhost:9123" \
+              -ex "break main" \
+              -ex "continue" \
+              -ex "continue" \
+              "$CTEST_ELF" > "$GDB_LOG" 2>&1
+          GDB_RC=$?
+          set -e
+
+          cat "$GDB_LOG"
+          if [[ "$GDB_RC" -ne 124 ]]; then
+            echo "FAIL: expected the bounded GDB session to reach the timeout after continuing; exit code was $GDB_RC." >&2
+            tail -n 100 "$ARES_LOG" >&2 || true
+            exit 1
+          fi
+          if ! grep -Eq 'Breakpoint 1, main|Breakpoint 1.*main' "$GDB_LOG"; then
+            echo "FAIL: GDB did not report a breakpoint at main." >&2
+            tail -n 100 "$ARES_LOG" >&2 || true
+            exit 1
+          fi
+          CONTINUES="$(grep -c 'Continuing\.' "$GDB_LOG" || true)"
+          if [[ "$CONTINUES" -lt 2 ]]; then
+            echo "FAIL: GDB did not record two continue operations (found $CONTINUES)." >&2
+            exit 1
+          fi
+          if grep -Eqi 'Remote connection closed|Remote communication error|Target disconnected|SIGSEGV|SIGABRT|Connection refused|Connection timed out|Cannot access memory' "$GDB_LOG"; then
+            echo "FAIL: GDB log contains a disconnect or target error." >&2
+            exit 1
+          fi
+          if ! kill -0 "$ARES_PID" 2>/dev/null; then
+            echo "FAIL: the Ares process exited during the post-breakpoint run." >&2
+            tail -n 100 "$ARES_LOG" >&2 || true
+            exit 1
+          fi
+
+          {
+            echo "## RE-001 Ares/GDB smoke test"
+            echo ""
+            echo "- Ares baseline: official stable v148"
+            echo "- Target: the public libdragon ctest homebrew reproducer only"
+            echo "- Result: **PASS** — GDB hit `main`, recorded two `continue` operations, and remained connected for the bounded 15-second run."
+            echo "- This is only a generic debugger smoke test; it does not test SWE1R or prove the results-screen transition."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: re-001-ares-gdb-smoke-logs
+          path: ${{ runner.temp }}/ares-gdb-smoke/*.log
+          if-no-files-found: ignore
+          retention-days: 14
