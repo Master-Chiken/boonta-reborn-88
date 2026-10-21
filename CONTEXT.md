@@ -44,7 +44,7 @@ The latest owner-confirmed research direction is approximately **80% evidence-le
 
 - Canonical research queue: [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
 - Tester recruitment: [issue #250](https://github.com/Master-Chiken/boonta-reborn-88/issues/250); detailed acceptance record: [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-- Research operating/documentation PR: [PR #242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242), open/draft/unmerged as last checked. Live GitHub metadata on 2026-10-21 reports head `e860f456a84138d67624746e5d68b1d2adb1bcb1`. Always refresh this SHA from live GitHub metadata before relying on an older snapshot.
+- Research operating/documentation PR: [PR #242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242), open/draft/unmerged as last checked. Live GitHub metadata on 2026-10-21 reports head `c2b5765f69f6ee472b38282329c7ff2c4bc755da`. Always refresh this SHA from live GitHub metadata before relying on an older snapshot.
 - Reuse inventory: [`REUSE.md`](REUSE.md) was added through [PR #246](https://github.com/Master-Chiken/boonta-reborn-88/pull/246), merged on 2026-10-21 (merge commit `89c6ddad5d41f9c15807327aa3dd573791508b91`). It records research references and licensing/provenance limits; it does not authorize importing third-party code or commercial assets.
 - Project dashboard: [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
