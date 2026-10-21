@@ -77,8 +77,9 @@ jobs:
           path = Path(sys.argv[1])
           data = path.read_bytes()
           limit = 30000
+          marker = b"\n\n[DIFF TRUNCATED: the remaining changes were not sent.]\n"
           if len(data) > limit:
-              data = data[:limit] + b"\n\n[DIFF TRUNCATED: the remaining changes were not sent.]\n"
+              data = data[:limit - len(marker)] + marker
           path.write_bytes(data)
           PY
 
