@@ -54,6 +54,11 @@ A project's appearance in this table is **not** approval to copy its code, binar
 
 ## Open verification items
 
+- **New Racer research links:** use [Awesome Decomp Games](https://github.com/SubmitGame/awesome-decomp-games) as the primary discovery index; the web-port catalog is redundant and remains parked. Each found project must be checked at its exact source revision and for platform relevance.
+- **QuickBMS:** do not add to the workflow unless a specific required archive format and a matching, properly licensed BMS script are identified. No SWE1R-specific recipe was found in the reviewed fork's visible scripts directory.
+- **Cheat Engine:** keep out of Boonta's code/dependencies while no repository-wide reuse license is provided. Consider only for a narrowly scoped PC process-memory question; it does not replace Ares/GDB for N64.
+- **UE4 fan-game and perfect-retroshaders:** references only. The UE4 fork has no repository-wide reuse license and documents third-party content; GLSL/slang shaders do not run directly on native GX. Do not import code/assets or create a porting task without a concrete need and rights/compatibility review.
+
 - **Ares/GDB runtime trace:** confirm the chosen Ares build, host OS and GDB version; smoke-test attach/breakpoint/continue with the small open homebrew case linked in Ares #1778, then attempt the SWE1R trace locally. The historical GDB crash fix does not prove current SWE1R compatibility. Keep the results-screen question open until writer/readers reach an identified results UI/resource/scene.
 
 - **AudiOGC:** verify the archived audio engine against the selected current libogc toolchain; only consider after a separate audio smoke test and dependency-notice audit.
