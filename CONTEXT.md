@@ -43,6 +43,7 @@ Canonical checklists:
 The latest owner-confirmed research direction is approximately **80% evidence-led reverse engineering and 20% implementation, tests, integration, and project management**. Keep one active research question and one canonical work queue. Do not start parallel research queues or implementation tasks that overlap.
 
 - Canonical research queue: [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
+- Tester recruitment: [issue #250](https://github.com/Master-Chiken/boonta-reborn-88/issues/250); detailed acceptance record: [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
 - Research operating/documentation PR: [PR #242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242), open and unmerged as last checked.
 - Reuse inventory PR: [PR #246](https://github.com/Master-Chiken/boonta-reborn-88/pull/246), open and unmerged as last checked.
 - Project dashboard: [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
