@@ -57,6 +57,10 @@ for path in workflow_files:
 trigger_block = openrouter.split("permissions:", 1)[0].lower()
 if "workflow_dispatch:" not in trigger_block:
     errors.append("OpenRouter reviewer must be manually triggered with workflow_dispatch only")
+if "if: github.actor != github.repository_owner" not in openrouter:
+    errors.append("OpenRouter reviewer must restrict manual execution to the repository owner")
+if "Only the repository owner may run this workflow." not in openrouter:
+    errors.append("OpenRouter reviewer must explicitly reject unauthorized manual runs")
 for forbidden_trigger in ("pull_request:", "pull_request_target:", "push:", "schedule:", "issues:", "issue_comment:", "workflow_run:"):
     if forbidden_trigger in trigger_block:
         errors.append(f"OpenRouter reviewer must not have automatic trigger {forbidden_trigger!r}")
