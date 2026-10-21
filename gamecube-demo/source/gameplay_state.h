@@ -186,9 +186,17 @@ static inline float boonta_steering_input(float stick_x,
                                           int left_held,
                                           int right_held)
 {
+    float steering = 0.0f;
     /* Corrupt controller data must not poison lateral physics with NaN. */
     if (!isfinite(stick_x)) stick_x = 0.0f;
-    float steering = stick_x / 128.0f;
+
+    /* Ignore center stick jitter within neutral deadzone [-16.0f, 16.0f]. */
+    if (stick_x > 16.0f) {
+        steering = boonta_clamp_finite_float((stick_x - 16.0f) / 111.0f, 0.0f, 1.0f);
+    } else if (stick_x < -16.0f) {
+        steering = boonta_clamp_finite_float((stick_x + 16.0f) / 112.0f, -1.0f, 0.0f);
+    }
+
     if (left_held) steering -= 0.7f;
     if (right_held) steering += 0.7f;
     if (steering < -1.0f) return -1.0f;
