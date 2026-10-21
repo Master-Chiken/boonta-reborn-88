@@ -1528,7 +1528,7 @@ Use the tiny public `ctest.z64` / `ctest.elf` case referenced by Ares [issue #17
 
 Only after Gate 1 succeeds and with a lawful local copy of the game loaded, connect with GDB (substitute the actual port if it differs from the default):
 
-\`\`\`text
+```text
 gdb-multiarch
 (gdb) set architecture mips:4000
 (gdb) target extended-remote localhost:9123
@@ -1536,17 +1536,17 @@ gdb-multiarch
 (gdb) watch *(unsigned short *)0x8011900a
 (gdb) info watchpoints
 (gdb) continue
-\`\`\`
+```
 
 The watch expression uses a 16-bit read because the public GameShark listing encodes the address using its `81`/16-bit write form; this is a practical test expression, **not** proof of the underlying field's native type. The public listing only establishes the address as a lap-related cheat target ([TheForce.Net](https://www.theforce.net/videogames/codes/n64/racer.asp)). If the debugger rejects the watchpoint, record the complete error and stop rather than inferring anything.
 
 At a stop, record the observed PC/register state and the value before/after the event where possible, for example:
 
-\`\`\`text
+```text
 (gdb) info registers
 (gdb) x/8i $pc-8
 (gdb) x/2hx 0x8011900a
-\`\`\`
+```
 
 Repeat across a known lap change and compare with the displayed lap. Then follow the actual writer/reader code path locally toward the all-local-participants-done predicate, manager-phase consumers, and a positively identified results UI/resource/scene selector. Keep the raw game binary, extracted assets, local offsets and disassembly in the local workspace; publish only the minimal evidence needed to describe the observed path.
 
