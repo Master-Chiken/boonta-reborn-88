@@ -254,3 +254,10 @@ The workflow experiment proposed by [PR #252](https://github.com/Master-Chiken/b
 - The historical [Ares issue #1778](https://github.com/ares-emulator/ares/issues/1778) was fixed upstream via [PR #1793](https://github.com/ares-emulator/ares/pull/1793) and [commit `dfcd7d4`](https://github.com/jcm93/ares/commit/dfcd7d4fce3d1b9b02df87e5c9f9d16d3ce918fd). The current traps are not enough to claim that same bug has returned; the root cause is unknown.
 - **Disposition:** do not repeat the same test or randomly tweak renderer/audio settings. Retry only with a new, falsifiable hypothesis or a purpose-built minimal public homebrew that isolates the failing subsystem. A generic smoke-test pass would still not prove the N64 race-finish → results transition.
 - **Still required:** a lawful local N64 analysis or runtime trace linking the all-finished condition to the manager state/phase writer and then to a positively identified results UI/resource/scene selector. No ROM, proprietary assets, secrets, or private disassembly should be uploaded or committed.
+
+
+## Y. Local N64 finish handling — safe summary of owner-side private analysis (2026-10-21)
+
+The owner's separate local static-analysis notes now strongly support a configured route-event threshold leading to a per-participant finish/skip state. The lap-count interpretation is a high-confidence inference from the associated configurable count, not a runtime-verified fact. The direct HUD writer and full manager-level transition remain unresolved.
+
+**One active follow-up only:** trace the participant finish/skip state into the manager's all-participants-finished aggregation, phase/state change, and positively identified results UI/resource/scene destination. Do not repeat the failed Ares/GDB public ctest smoke test without a new isolation hypothesis. Keep all ROM-derived addresses, disassembly, string/resource offsets and payloads local; this ledger stores only the evidence classification and public source links.

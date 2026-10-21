@@ -1585,3 +1585,28 @@ The controlled GitHub Actions experiment proposed in [PR #252](https://github.co
 - Neither variant passed the bounded continue phase. This cannot be reported as a passing smoke test, nor does it establish that Ares has a general regression.
 - The historical [Ares issue #1778](https://github.com/ares-emulator/ares/issues/1778) was closed after upstream fix [PR #1793](https://github.com/ares-emulator/ares/pull/1793), including commit [`dfcd7d4`](https://github.com/jcm93/ares/commit/dfcd7d4fce3d1b9b02df87e5c9f9d16d3ce918fd). The present traps are different observations and their root cause is **unknown**; do not claim the old issue has returned.
 - **Disposition:** stop retries of this same ctest setup unless a new falsifiable hypothesis or a deliberately minimal public homebrew isolates the failing subsystem. Do not continue random renderer/audio setting changes. Even a clean generic homebrew pass would only validate the debugger fixture; the required research evidence must still come from a lawful local SWE1R static cross-reference or runtime trace linking the all-finished condition to an identified results UI/resource/scene.
+
+
+## Y. Local N64 participant finish-threshold result — summary only (2026-10-21)
+
+**Evidence source:** owner-side local static MIPS analysis of an identified US N64 build. Raw addresses, disassembly, string/resource offsets and ROM-derived payload remain in the owner's private notes and are intentionally not reproduced here. This section records only the safe conclusion and the remaining question.
+
+### What the local trace supports
+
+- A configurable option that is strongly associated with the menu's lap count is passed into the race manager as a threshold.
+- A participant progress-event counter advances only when the route-progress detector reports an event; reaching that configured threshold enters a distinct state-handling path.
+- The path sets a participant state flag that causes the same progress loop to skip further updates for that participant. A separate per-participant guard prevents the threshold-side action from repeating.
+
+**Classification:** strong local static evidence for *per-participant finish handling at the configured threshold*; the semantic interpretation as a completed-lap count is a very-high-confidence inference, not runtime verification. No GameCube/Wii, Dreamcast or PC parity is implied.
+
+### What remains unresolved
+
+- Whether every progress event counted by this path is precisely one lap/finish-line crossing in every mode.
+- The direct writer/reader for the displayed `LAP` / `FINAL LAP` HUD value.
+- How the race manager aggregates all participants' finish states, selects the next manager phase, and reaches a positively identified results UI/resource/scene destination.
+
+### Next bounded research action
+
+Continue only the last chain: follow the already supported participant finish/skip state into its manager-side readers, establish the all-participants-finished predicate and the state/phase change, then identify the results destination from a distinct consumer/resource association. If the local call chain remains ambiguous, document the exact unresolved edge privately and keep the results transition **BLOCKED / UNPROVEN**. Do not repeat the failed Ares/GDB ctest smoke test without a new falsifiable isolation hypothesis; do not start RE-002 or change gameplay code.
+
+No ROM bytes, raw disassembly, private addresses, extracted course records or commercial assets are published in this summary.
