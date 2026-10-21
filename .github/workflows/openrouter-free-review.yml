@@ -23,6 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Restrict manual runs to repository owner
+        if: github.actor != github.repository_owner
+        shell: bash
+        run: |
+          echo "::error::Only the repository owner may run this workflow."
+          exit 1
+
       - name: Fetch and validate public pull request diff
         id: prepare
         env:
