@@ -91,13 +91,13 @@ jobs:
             --setting DebugServer/Port=9123 \
             --setting DebugServer/Enabled=true \
             --setting DebugServer/UseIPv4=false \
-            --setting Boot/Debugger=true \
+            --setting Boot/AwaitGDBClient=true \
             > "$LOG_DIR/settings-effective.log" 2>&1
 
           grep -qx 'DebugServer/Port' "$LOG_DIR/settings-effective.log"
           grep -qx 'DebugServer/Enabled' "$LOG_DIR/settings-effective.log"
           grep -qx 'DebugServer/UseIPv4' "$LOG_DIR/settings-effective.log"
-          grep -qx 'Boot/Debugger' "$LOG_DIR/settings-effective.log"
+          grep -qx 'Boot/AwaitGDBClient' "$LOG_DIR/settings-effective.log"
 
           # Ares v148's N64 paraLLEl-RDP path requires a Vulkan-capable device.
           # Use Mesa's software Vulkan ICD (lavapipe) for deterministic headless CI.
@@ -114,13 +114,15 @@ jobs:
           # auto-detection or leave a modal system-selection prompt open.
           # OpenAL Soft's built-in null backend is available in CI without
           # a physical audio device. This keeps the smoke test independent of ALSA.
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null VK_ICD_FILENAMES="$LVP_ICD" stdbuf -oL -eL \
+          # Force paraLLEl-RDP's regular device-buffer path; this is slower
+          # but avoids requiring VK_EXT_external_memory_host on software Vulkan.
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null VK_ICD_FILENAMES="$LVP_ICD" PARALLEL_RDP_ALLOW_EXTERNAL_HOST=0 stdbuf -oL -eL \
             "$ARES_BIN" \
               --system "Nintendo 64" \
               --setting DebugServer/Port=9123 \
               --setting DebugServer/Enabled=true \
               --setting DebugServer/UseIPv4=false \
-              --setting Boot/Debugger=true \
+              --setting Boot/AwaitGDBClient=true \
               --kiosk "$CTEST_ROM" \
               > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
@@ -160,9 +162,9 @@ jobs:
             exit 1
           fi
 
-          # Boot/Debugger=true deliberately pauses the N64 core before its first
-          # frame. The RDP backend is initialized lazily on first graphics use,
-          # so verify renderer status after GDB has continued through main below.
+          # AwaitGDBClient keeps the N64 core stopped until GDB attaches, then
+          # resumes it from Ares' client-connect callback. Install the main
+          # breakpoint in GDB before making the remote connection.
 
           # Resolve specifically to IPv6 loopback: Ares v148's UseIPv4=false
           # binds to ::1, whereas "localhost" may be resolved to IPv4 by the host.
@@ -172,8 +174,8 @@ jobs:
           timeout --foreground --signal=INT --kill-after=3s 15s \
             gdb-multiarch -q --batch \
               -ex "set pagination off" \
-              -ex "target extended-remote ip6-localhost:9123" \
               -ex "break main" \
+              -ex "target extended-remote ip6-localhost:9123" \
               -ex "continue" \
               -ex "continue" \
               "$CTEST_ELF" > "$GDB_LOG" 2>&1
