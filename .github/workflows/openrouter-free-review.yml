@@ -108,7 +108,7 @@ jobs:
             }' > "$request_json"
 
           printf 'pr_number=%s\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          printf 'head_sha=%s\\n' "$(jq -r '.head_sha' "$pr_meta")" >> "$GITHUB_OUTPUT"
+          printf 'head_sha=%s\n' "$(jq -r '.head_sha' "$pr_meta")" >> "$GITHUB_OUTPUT"
 
       - name: Call OpenRouter free route
         id: call
