@@ -29,7 +29,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ inputs.pr_number }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +38,6 @@ jobs:
             echo "::error::Enter a numeric pull request number."
             exit 1
           fi
-          if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-            echo "::error::The OPENROUTER_API_KEY repository secret is missing. Do not add credits or payment details."
-            exit 1
-          fi
-
           pr_json="$RUNNER_TEMP/pr.json"
           pr_diff="$RUNNER_TEMP/pr.diff"
           pr_meta="$RUNNER_TEMP/pr-meta.json"
@@ -108,6 +102,23 @@ jobs:
               ]
             }' > "$request_json"
 
+          printf 'pr_number=%s\\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Call OpenRouter free route
+        id: call
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +x
+
+          if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+            echo "::error::The OPENROUTER_API_KEY repository secret is missing. Do not add credits or payment details."
+            exit 1
+          fi
+
           # This fixed route selects free models only. Never try a paid fallback.
           http_code="$(curl --silent --show-error --connect-timeout 10 --max-time 90 --output "$response_json" --write-out "%{http_code}" \
             --request POST "https://openrouter.ai/api/v1/chat/completions" \
@@ -137,7 +148,7 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # pinned GitHub Script v7
         env:
           PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
-          REVIEW_FILE: ${{ steps.prepare.outputs.review_file }}
+          REVIEW_FILE: ${{ steps.call.outputs.review_file }}
         with:
           script: |
             const fs = require('fs');
