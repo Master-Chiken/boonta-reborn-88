@@ -1382,3 +1382,20 @@ The pinned PC reference in section N remains only a comparison checklist. Do not
 The useful next check requires the owner's existing local static-analysis environment: follow the write to the manager phase/state field that is reached after the all-done predicate, enumerate the consumers of that exact field, then continue to a data/resource identifier or renderer whose results-screen role is positively identified. A generic tag, phase bit, string search, or unrelated reference to a shared global is insufficient. If the consumer chain stays generic, retain the blocker rather than inventing a semantic label.
 
 **Current status:** N64 lap-counter and `FINAL LAP` HUD path remain traced at local static-code level; the terminal results transition remains unresolved. No emulator/hardware result, gameplay change, asset import, or new platform-parity claim is made.
+
+## P. Runtime-debugging method reference for the unresolved N64 transition (2026-10-21)
+
+A second method reference was checked after reviewing the public static-recompilation boundary. This is a workflow lead from another N64 title, not evidence about Star Wars: Episode I – Racer.
+
+- Chris Lewis's [Finding Jingle Town: Debugging an N64 Game without Symbols](https://blog.chrislewis.au/finding-jingle-town-debugging-an-n64-game-without-symbols/) describes using the Ares emulator with GDB remote debugging to test a concrete hypothesis about when a loader is called and how a state field changes. The article identifies breakpoint hits and observed values as the proof, rather than naming an unknown function from its address alone.
+- The author's [Using Coding Agents to Decompile Nintendo 64 Games](https://blog.chrislewis.au/using-coding-agents-to-decompile-nintendo-64-games/) distinguishes matching machine code from understanding a function's broader intent, which also requires cross-references and call-site analysis.
+- Applicability limit: these articles analyze Snowboard Kids 2, not SWE1R. They demonstrate a method only. The documented workflow requires a suitable local ROM, an emulator with a debug server, GDB tooling, and a symbol/address mapping or other way to set useful breakpoints. It has not been run for SWE1R in this session.
+
+### Minimal test if a suitable local environment becomes available
+
+1. Set a breakpoint at the already locally identified all-local-participants-done branch and record the exact manager field write reached on the final lap event.
+2. Continue through each write to that same field and break on its readers; note the first branch that correlates with post-race camera/input handling.
+3. Continue until a verified UI resource/scene selector or renderer is reached, confirming the screen visually. If no positive destination is reached, keep the status blocked and record the observed address/data flow without assigning unsupported semantic names.
+4. Record emulator and game-region/version, breakpoint addresses, observed state values, and repeatability locally. Publish only a concise evidence summary; do not upload a ROM, raw proprietary binary, or extracted game resources.
+
+**What this adds:** a reproducible experimental route to close the blocker. It does not itself close the results-transition question. No emulator or hardware run was executed, no ROM was uploaded, and no gameplay files changed.
