@@ -1311,3 +1311,15 @@ At pinned commit [a9863edd4caaa573f89ff634fa7d1cd6d41738ab](https://github.com/t
 Why this helps the N64 trace: the N64 ROM's local text scan showed a cluster in the same apparent ordering — LAP TIME, New Record, FINAL LAP, TIME, two %d/%d templates, LAP, POS. The PC implementation gives us specific comparison targets: one fraction should pair current lap + 1 with configured laps, while the other may be position / number of racers; the final-lap banner is selected at the transition into the last lap in this PC implementation.
 
 Do not promote this to an N64 conclusion yet. The PC text IDs and N64 resource indices may differ, and identical labels/order do not establish shared code. The next local-only N64 step remains mapping the resource/string lookup and draw caller, then validating whether the FINAL LAP selector and lap fraction have the analogous data flow.
+
+## N64 HUD call-path cross-check — direct local static evidence (summary only, 2026-10-21)
+
+This section supersedes the earlier status that the local N64 HUD renderer/resource path was still unlocated. A fresh address-aware pass corrected the earlier direct-pointer search and linked the visible text resources to their caller. Exact instruction addresses, ROM file offsets, and raw disassembly remain in private local notes rather than in this public dossier.
+
+- The local US N64 HUD function obtains the current/configured lap fraction from the same participant progress counter and manager threshold already traced through the configurable 1–5 Laps option and the route-progress event path. The first value is participant count + 1, clamped to the configured target; the second is that target. This is direct local static evidence for the displayed lap fraction, not merely a guess based on the string text.
+- The second numeric fraction is a different template: participant position over the manager's total-racer count, rendered with POS. The two visually similar %d/%d templates therefore have distinct data sources.
+- The same N64 HUD function references and draws FINAL LAP only when the next displayed lap equals the configured threshold, for the single-local-player layout, and during the latter fade portion of the lap-completion popup. It is not a persistent banner throughout the entire final lap.
+
+Combined with the already documented option-to-manager-threshold and route-progress-event-to-participant-counter paths, the N64 chain is now strongly supported end-to-end for the HUD lap count and FINAL LAP selector at the static-code level.
+
+Still open: live emulator/hardware confirmation, exact timing of the reported route-progress event relative to physical finish-line traversal, the manager's eventual results-screen transition, and all cross-platform parity. No Dolphin/N64 hardware run is claimed. The PC source reference remains a separate comparison only.
