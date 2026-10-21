@@ -46,7 +46,8 @@ if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
 # OpenRouter is allowed only through the audited manual free-model PR reviewer.
 openrouter = read(".github/workflows/openrouter-free-review.yml")
 workflow_dir = ROOT / ".github" / "workflows"
-for path in workflow_dir.glob("*.yml"):
+workflow_files = sorted({*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")})
+for path in workflow_files:
     if path.name == "openrouter-free-review.yml":
         continue
     content = path.read_text(encoding="utf-8").lower()
