@@ -64,6 +64,17 @@ if 'model: "openrouter/free"' not in openrouter:
     errors.append("OpenRouter reviewer must use the explicit openrouter/free route only")
 if "secrets.openrouter_api_key" not in openrouter.lower():
     errors.append("OpenRouter reviewer must read its API key from the OPENROUTER_API_KEY secret")
+
+# Keep the secret out of the step that downloads and inspects the untrusted PR diff.
+call_step_marker = "      - name: Call OpenRouter free route"
+if call_step_marker not in openrouter:
+    errors.append("OpenRouter secret must be isolated in a dedicated model-call step")
+else:
+    preparation_step, model_call_step = openrouter.split(call_step_marker, 1)
+    if "secrets.openrouter_api_key" in preparation_step.lower():
+        errors.append("OpenRouter API key must not be available while preparing or scanning the PR diff")
+    if "openrouter_api_key: ${{ secrets.openrouter_api_key }}" not in model_call_step.lower():
+        errors.append("OpenRouter API key must be injected only into the dedicated model-call step")
 if "limit = 30000" not in openrouter:
     errors.append("OpenRouter reviewer must cap the diff at 30,000 bytes")
 if "if grep -eiq" not in openrouter.lower():
