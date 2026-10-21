@@ -84,3 +84,49 @@ The older 27-ref inventory in issue #235 is stale. The earlier 6-ref count is al
 - Refreshed live PR metadata: #214 remains draft on `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5`; #243 remains draft on `6b31321294e8238b836e7d1807c0ef006835f377`; #242 remains draft on `92e82dfc9c246663d9301ea666602b20b1f6bbdf`. No submitted reviews are present for any of the three.
 - #243 exact-head workflow `39477710458` completed successfully. The test boundary addition is now covered by green CI, but manual controller-feel validation and independent review are still open.
 - Branch inventory remains eight refs. No deletions, merges, force pushes, or manual workflow dispatches were performed.
+
+## Addendum — live inventory refresh, 2026-10-21
+
+This section is an addendum; the original eight-ref table above is a historical snapshot from 2026-10-20 and must not be used for current cleanup decisions. A fresh GitHub branch query returned **14 refs**. A fresh open-PR query returned **9 open PRs** (5 targeting `main`, 4 targeting `dev`). No branch was deleted and no PR was merged as part of this refresh.
+
+### Current remote refs
+
+| Branch | Current head | Notes / safe next step |
+|---|---|---|
+| `main` | `fa8cee047ae8e74c30c87cd94977c434bb1c7398` | Protected stable base |
+| `dev` | `c22bf27e0aca621ea735a85e9fedb92fd1933754` | Protected integration base |
+| `archive/branch-heads-20261019` | `a6fd522ed97323d73981dd03aab8dba4753edf49` | Protected recovery snapshot; preserve |
+| `docs/branch-audit-20261020` | `bb31ddeafdc793d4a0b992e1fbc23829209cdaa9` | This audit branch / PR #245; refresh only with a dated addendum |
+| `docs/project-onboarding-20261021` | `dd29d62896e2aa860c56ff440d34e746b81e9b81` | PR #251; reviewer integration remains unmerged |
+| `docs/reuse-inventory-20261020` | `a084a2317f396ab70b1aa2d7fd61654894c61127` | PR #246; reuse inventory only, not vendored code |
+| `docs/reverse-engineering-80-20-20261020` | `e860f456a84138d67624746e5d68b1d2adb1bcb1` | PR #242; RE-001 dossier/priority docs |
+| `fix/steering-stick-deadzone-14890725910744431762` | `5bc59d178a16ab69899589911665c84ba07eee7c` | PR #247 to `main`; competes with #243/#233 |
+| `fix/steering-stick-deadzone-20261019-14221623089412890411` | `0fe5dba576bd823208cd3e9aff9e282b30025c05` | PR #233 to `dev`; includes unrelated cleanup automation; do not merge wholesale |
+| `fix/steering-stick-deadzone-clean-20261020` | `6b31321294e8238b836e7d1807c0ef006835f377` | PR #243 to `dev`; focused two-file version |
+| `fix/width-aware-rail-collision-20261017` | `db1f9747b8193d6cc4e77e0f69a073cd5e210eb5` | PR #214 to `dev`; visible three-lap manual acceptance still outstanding |
+| `jules/re-001-public-source-crosscheck-5621653419986752281` | `de33cca64ce8eeefc3c34260e3d413832b3fd666` | No open PR in the current open-PR query; investigate purpose/dependencies before any retirement |
+| `re-001-ares-gdb-smoke-20261021` | `d87e5f509575253f185ed434c022456579f01dc6` | PR #252 to `main`; bounded public-homebrew GDB control, currently NOT PASSED |
+| `test/ares-gdb-smoke-20261021` | `fa8cee047ae8e74c30c87cd94977c434bb1c7398` | Points at the current `main` head in this query; likely a test ref, but compare refs/events before proposing any deletion |
+
+### Current open PR queue
+
+| PR | Base | State and outstanding gate |
+|---|---|---|
+| [#252](https://github.com/Master-Chiken/boonta-reborn-88/pull/252) | `main` | Draft; v139/v148 launch comparison is running after several setup fixes. No valid end-to-end GDB pass yet; RE-001 game-specific transition remains unproven. |
+| [#242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242) | `main` | Draft; research dossier. Keep RE-002 parked until RE-001 is resolved or explicitly blocked. |
+| [#246](https://github.com/Master-Chiken/boonta-reborn-88/pull/246) | `main` | Open, non-draft; inventory/reference only. Review sources before any reuse/vendor work. |
+| [#251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251) | `main` | Draft; guarded OpenRouter Free reviewer, not activated on `main`. |
+| [#247](https://github.com/Master-Chiken/boonta-reborn-88/pull/247) | `main` | Open, non-draft; steering deadzone; duplicate implementation with #243/#233 needs consolidation decision. |
+| [#233](https://github.com/Master-Chiken/boonta-reborn-88/pull/233) | `dev` | Draft; deadzone plus branch-cleanup workflow (`contents: write`); keep parked and separate the concerns. |
+| [#243](https://github.com/Master-Chiken/boonta-reborn-88/pull/243) | `dev` | Open, non-draft; focused deadzone patch. Do not merge alongside equivalent #247/#233. |
+| [#214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) | `dev` | Draft; automated checks are not the same as visible human-driven three-lap Dolphin acceptance in issue #126. |
+| [#245](https://github.com/Master-Chiken/boonta-reborn-88/pull/245) | `dev` | Draft; this snapshot refresh. Inventory is updated here but still requires owner review before any branch-retirement decision. |
+
+### Decisions that are still intentionally not made
+
+1. Do not merge duplicate steering deadzone PRs; choose one authoritative scoped change only after review.
+2. Do not merge #214 as “visually accepted” without a human-operated race against the exact DOL/head.
+3. Do not mark #252 passed from build success or a TCP listener alone; require the actual GDB breakpoint/continue transcript. Even a homebrew tooling pass does not prove the commercial SWE1R finish-to-results path.
+4. Do not retire `jules/re-001-public-source-crosscheck-5621653419986752281` or `test/ares-gdb-smoke-20261021` based only on this inventory; compare merge bases, open references, workflow history and unique commits first.
+
+No merges, branch deletion, force-pushes, destructive workflow dispatches, or gameplay code edits were performed by this inventory refresh.
