@@ -1522,7 +1522,20 @@ This section turns the source findings above into a bounded experiment. It is do
 
 ### Gate 1 — verify the debugger connection before using the game
 
-Use the tiny public `ctest.z64` / `ctest.elf` case referenced by Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778), following that issue's recorded launch order and exact files. The original failure involved attaching, stopping at `main`, continuing, and then crashing on a further continue. Record whether each step succeeds on the selected Ares/GDB build; record versions and any error verbatim. Do not use SWE1R to diagnose a broken generic connection.
+Use the public `ctest.zip` reproducer attached to Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) (source example: [libdragon's ctest directory](https://github.com/DragonMinded/libdragon/tree/trunk/examples/ctest)). Keep the zip out of the Boonta repository. Reproduce the reported launch order with two terminals, substituting the actual configured GDB port if it is not `9123`:
+
+```sh
+# Terminal 1, in the extracted ctest directory:
+gdb-multiarch -ex "target extended-remote :9123" -ex "break main" -ex "continue" build/ctest.elf
+```
+
+Quickly after GDB starts, launch Ares in terminal 2 from the directory containing the matching test ROM:
+
+```sh
+./ares ctest.z64
+```
+
+Confirm that GDB connects, reaches `main`, and a second `continue` does not crash the test program or emulator. Record the exact Ares build, host OS, GDB version, port, and any error verbatim. This is a generic debugger smoke test only; it is **not** a SWE1R test. Do not use the game to diagnose a broken generic connection.
 
 ### Gate 2 — observe one public lap-code candidate
 
