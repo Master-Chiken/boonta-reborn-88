@@ -39,9 +39,9 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 
 The goal remains a credible native GameCube racing slice with behavior informed by reverse engineering, not an endless procedural mock-up or speculative port.
 
-- Active reverse-engineering queue: [RE-001 — map route/spline progression between the PC reference and the current GameCube prototype](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
+- Active reverse-engineering queue: [RE-001 — route/spline progression and race-state evidence](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). Its current unresolved blocker is the N64 all-finished condition → manager state/phase change → positively identified results UI/resource/scene; the PC route/spline comparison is documented, but console parity and the results transition remain unproven.
 - Existing validation gate: [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). The owner can run this one-time check on PR #214 when convenient; it does not authorize parallel gameplay coding.
-- Parked implementation candidates: [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) and [PR #233](https://github.com/Master-Chiken/boonta-reborn-88/pull/233). Do not merge either just to clear the queue. PR #233 contains unrelated historical maintenance commits and must not be merged as-is.
+- Current implementation/acceptance candidates: [PR #214 — rail-collision alignment](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) remains a draft against `dev` and still requires review plus its relevant manual acceptance in issue #126; [PR #247 — steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247) is the sole open deadzone candidate against `main`, but still requires independent review and interactive controller-feel/three-lap acceptance. PRs #233 and #243 are closed unmerged duplicates; do not treat them as open or merge them blindly.
 - Next research topics only after RE-001 is recorded: map the candidate Step 102 source, if available, then study race state/laps and pod control/traction as separate dossiers. Do not run them concurrently.
 
 ## 5. One responsible writer, no branch sprawl

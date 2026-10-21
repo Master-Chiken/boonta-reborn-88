@@ -22,11 +22,11 @@ Use every useful participant without creating multiple agents that independently
 
 ## Current RE-001: non-overlapping lanes
 
-The task is still one question: trace route progress to the finish/lap state, keeping N64 evidence separate from PC/Dreamcast/GameCube/Wii evidence.
+The single active blocker is narrower: trace the N64 all-participants-finished condition through the race-manager state/phase change to the actual results UI/resource/scene destination. The PC route/spline dossier and the N64 LAP/FINAL LAP HUD data flow are supporting findings already recorded; neither proves the N64 finish-to-results transition. Keep platform findings separate and do not start RE-002.
 
 1. **Local binary lane — owner + local research session.** Continue N64 ROM/disassembly work locally. Keep the ROM and all extracted bytes/assets local. Record addresses, instruction/call relationships, confidence, and unresolved semantics; publish only safe prose and public URLs.
-2. **Public-source lane — Jules, only when the owner assigns it.** Independently check the pinned public N64 project [sp00nznet/racer at 11f6f70469f995304422f2209a47e9c2df5ff6d0](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0), its symbols and tools, and the historical [TheForce.Net N64 code listing](https://www.theforce.net/videogames/codes/n64/racer.asp). Answer only: does the public material directly map RAM addresses 0x8011900A / 0x80119092 to a field or writer, or is the match only suggestive? Return evidence links and unknowns. Do not touch gameplay code, modify the canonical RE-001 dossier, or upload local ROM data.
-3. **Falsification lane — Gemini CLI, read-only.** Review only the public issue/dossier and cited public sources. Try to disprove the proposed mapping between the lap option, participant event counter, finish state, and HUD. Distinguish facts, inferences and unknowns. Do not write files or approve merging.
+2. **Public-source lane — Jules, only if a new concrete lead appears and the owner assigns it.** The pinned public N64 project [sp00nznet/racer at 11f6f70469f995304422f2209a47e9c2df5ff6d0](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0) and the historical [TheForce.Net N64 code listing](https://www.theforce.net/videogames/codes/n64/racer.asp) have already been checked. Do not repeat broad searches or re-test the same public symbol boundary. If a specific new public reference appears, answer only whether it directly identifies the manager-state writer/reader or results UI/resource/scene destination; distinguish evidence from suggestion and list unknowns. Do not touch gameplay code, rewrite the canonical dossier, or upload local ROM data.
+3. **Falsification lane — Gemini CLI, read-only.** Review only the public issue/dossier and cited public sources. Challenge whether the written evidence actually connects the all-finished predicate through a manager state/phase writer and reader to a positively identified results destination. Do not infer scene semantics from generic tags, shared globals, or HUD labels. Distinguish facts, inferences and unknowns. Do not write files or approve merging.
 4. **Integration lane — coordinator.** Compare each output against local-source evidence, resolve contradictions, and fold only supported conclusions into the canonical RE-001 dossier. A new agent report is not automatically a new truth.
 5. **Human gate — owner and requested reviewer.** Before implementation, confirm whether the evidence actually answers the question and decide the next test. Runtime memory watch or visual tests that require the private ROM/emulator must be performed in a suitable local environment.
 
@@ -39,16 +39,16 @@ These lanes can overlap in time because they answer different evidentiary subque
 - An agent task must name the canonical issue, target branch, files it may change, files it must not change, acceptance criteria and expected output.
 - A reviewer should receive the same exact diff/source pins and should be asked to challenge it, not independently rewrite it.
 - No auto-merge, agent self-approval, direct push to main, automatic branch deletion, extra cloud billing, or merging merely to clear the queue.
-- The present open PRs include **three overlapping steering-deadzone proposals**: [#233](https://github.com/Master-Chiken/boonta-reborn-88/pull/233), [#243](https://github.com/Master-Chiken/boonta-reborn-88/pull/243) and [#247](https://github.com/Master-Chiken/boonta-reborn-88/pull/247). PR #247 was created by Jules; its two gameplay files have the same core deadzone change as #243, while #233 also carries unrelated branch-cleanup workflow work. Do not merge all three. Compare full diffs/checks, select at most one canonical implementation, and keep the unrelated changes separate. This overlap is a concrete reason to route tasks before launching additional agents.
+- **Current deadzone triage (2026-10-21):** [PR #247](https://github.com/Master-Chiken/boonta-reborn-88/pull/247) is the sole open steering-deadzone candidate, targets `main`, and is ready for review. No submitted PR review or visible-Dolphin controller-feel/three-lap acceptance has been recorded. PR #233 and PR #243 are **closed unmerged duplicates**, not open candidates; retain their branches only as historical evidence and do not merge them blindly. [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) is a separate draft rail-collision change targeting `dev` and still needs its relevant human Dolphin acceptance. Do not start another overlapping gameplay task.
 - Research-first documentation changes do not validate the gameplay PRs. Every PR still needs exact-head checks, review, provenance checks where applicable, and the right level of manual acceptance.
 
 ## Required task request template
 
 Canonical issue: #226
-Active research question: Does the N64 lap/finish transition map to the public RAM-code addresses?
-Agent role: independent public-source check (read-only)
-Allowed inputs: public links and repository files listed in the issue
-Forbidden: private ROM uploads, extracted course/assets, gameplay changes, merging, settings/billing changes
+Active research question: Can the N64 all-participants-finished condition be traced through its manager-state/phase transition to a positively identified results UI/resource/scene destination?
+Agent role: read-only evidence falsification / synthesis
+Allowed inputs: public links and repository documentation in issue #226; locally obtained ROM-derived evidence stays with the owner
+Forbidden: private ROM uploads, extracted course/assets, broad duplicate web searches, repeat of the failed Ares/GDB smoke test without a new hypothesis, gameplay changes, merging, settings/billing changes
 Required output:
 1. Exact URLs and commit pins inspected.
 2. Confirmed observations with line/address references.
