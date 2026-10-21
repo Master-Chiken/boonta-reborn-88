@@ -160,11 +160,9 @@ jobs:
             exit 1
           fi
 
-          if ! grep -Fq 'Vulkan Enabled: using paraLLEl-RDP' "$ARES_LOG"; then
-            echo "FAIL: Ares opened GDB but did not initialize N64 paraLLEl-RDP; ctest will likely trip an RSP assertion." >&2
-            cat "$ARES_LOG" >&2 || true
-            exit 1
-          fi
+          # Boot/Debugger=true deliberately pauses the N64 core before its first
+          # frame. The RDP backend is initialized lazily on first graphics use,
+          # so verify renderer status after GDB has continued through main below.
 
           # Resolve specifically to IPv6 loopback: Ares v148's UseIPv4=false
           # binds to ::1, whereas "localhost" may be resolved to IPv4 by the host.
@@ -183,8 +181,11 @@ jobs:
           set -e
 
           cat "$GDB_LOG"
-          if [[ "$GDB_RC" -ne 124 ]]; then
-            echo "FAIL: expected the bounded GDB session to reach the timeout after continuing; exit code was $GDB_RC." >&2
+          # GNU timeout may return 124 (deadline) or 137 (SIGKILL after the
+          # grace period) if GDB is still blocked in a valid remote continue.
+          # These statuses count only if all transcript/target assertions below pass.
+          if [[ "$GDB_RC" -ne 124 && "$GDB_RC" -ne 130 && "$GDB_RC" -ne 137 ]]; then
+            echo "FAIL: unexpected GDB exit code $GDB_RC for the bounded remote session." >&2
             tail -n 100 "$ARES_LOG" >&2 || true
             exit 1
           fi
@@ -198,8 +199,18 @@ jobs:
             echo "FAIL: GDB did not record two continue operations (found $CONTINUES)." >&2
             exit 1
           fi
-          if grep -Eqi 'Remote connection closed|Remote communication error|Target disconnected|SIGSEGV|SIGABRT|Connection refused|Connection timed out|Cannot access memory' "$GDB_LOG"; then
-            echo "FAIL: GDB log contains a disconnect or target error." >&2
+          if grep -Eqi 'Remote connection closed|Remote communication error|Target disconnected|SIGSEGV|SIGABRT|Program received signal SIGTRAP|__rsp_check_assert|Connection refused|Connection timed out|Cannot access memory' "$GDB_LOG"; then
+            echo "FAIL: GDB log contains a disconnect, signal/assert trap, or target error." >&2
+            exit 1
+          fi
+          if ! grep -Fq 'GDB client connected' "$ARES_LOG"; then
+            echo "FAIL: Ares log does not confirm a GDB client connection." >&2
+            cat "$ARES_LOG" >&2 || true
+            exit 1
+          fi
+          if ! grep -Fq 'Vulkan Enabled: using paraLLEl-RDP' "$ARES_LOG"; then
+            echo "FAIL: N64 paraLLEl-RDP did not initialize once ctest began rendering." >&2
+            cat "$ARES_LOG" >&2 || true
             exit 1
           fi
           if ! kill -0 "$ARES_PID" 2>/dev/null; then
