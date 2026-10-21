@@ -62,7 +62,7 @@ Do not merge, close, auto-merge, delete, or force-push an existing PR or branch 
 - The N64 lap HUD's data flow for the current/configured lap fraction and the `FINAL LAP` selector has been traced at local static-code level and recorded in issue #226/PR #242. This is not runtime validation.
 - A public N64 symbol table places address `0x80080DB4` inside the recorded range for `func_80080BEC`; it does not identify `0x80080DB4` as a separately named semantic function. Treat it as an address inside the containing function unless cross-references prove a finer boundary.
 - The N64 manager-to-results-screen transition remains unresolved. Generic `Fini`/`Abrt` tags and phase changes alone do not prove selection of a results renderer or scene.
-- Public Dreamcast binary-string research contains names such as `OUT_SPLINEBLOCK.BIN`, `OUT_MODELBLOCK.BIN`, `OUT_SPRITEBLOCK.BIN`, and `OUT_TEXTUREBLOCK.BIN`. Matching filenames do not establish that Dreamcast and PC binary layouts are identical.
+- Public Dreamcast evidence is stronger than matching filenames alone: at pinned `akopetsch/swe1r-assets@922ef535f6598a1330ff93d6b07258956f990b34`, `Release.csv` maps Windows International, Mac and Dreamcast to the same model/spline/texture variant IDs and to a shared sprite variant named `win_de__mac__dc`; `Block.csv` lists the associated release variants. The Dreamcast executable string index also names the four `OUT_*BLOCK.BIN` files. This supports the tool author's shared-block-format model, but does not prove byte-for-byte identity of every retail file or runtime parity. Keep the finding as a qualified inference.
 - Proposed edge-case tests, including the `splineSampleIndex == 0` sentinel ambiguity, are hypotheses/test designs until executed against valid evidence. Do not call them confirmed bugs.
 
 ### Next bounded research step
@@ -88,6 +88,8 @@ These links preserve previously identified avenues. They are **leads to evaluate
 - [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) — partial PC research/reimplementation; retain the pinned commit listed above when making a specific claim.
 - [Steam-PC decompilation reference](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef) — read-only comparison source; never copy its code into Boonta.
 - [Sw_Racer (Olganix)](https://github.com/Olganix/Sw_Racer) and [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) — format/tooling leads with license and per-format limitations described in PR #246.
+- [swe1r-assets](https://github.com/akopetsch/swe1r-assets) at `922ef535f6598a1330ff93d6b07258956f990b34` — MIT C#/.NET parser/serializer for model, spline, sprite and texture blocks. Its release metadata is the current public basis for the qualified Dreamcast shared-variant observation above. The repository also includes an `Original` resource package with embedded game block files; do not copy those resources or assume the MIT source license covers them.
+- [SWE1R Blender importer/exporter](https://github.com/louriccia/blender-swe1r) at `6bb2538b8e5956c99baabec8bd0caba374943491` — GPL-3.0-or-later importer/exporter and spline parser, potentially useful as a format reference; not integrated and not a browser-only workflow. Do not copy its code into the MIT project without a license decision.
 
 ### N64 tooling and navigation
 
