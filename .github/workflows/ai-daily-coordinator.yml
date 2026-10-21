@@ -1,10 +1,7 @@
-name: Weekly read-only AI project coordinator
+name: Manual read-only AI project coordinator
 
 on:
   workflow_dispatch:
-  # Run after the deterministic branch-governance audit on Monday.
-  schedule:
-    - cron: "17 10 * * 1"
 
 permissions:
   contents: read
@@ -13,11 +10,11 @@ permissions:
 
 concurrency:
   group: ai-daily-coordinator
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   daily-report:
-    name: Weekly free-tier read-only project report
+    name: Manual free-tier read-only project report
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -168,7 +165,7 @@ jobs:
           }
 
           additional_context = (
-              "This is a scheduled, read-only weekly audit. Use the LIVE SNAPSHOT below as the "
+              "This is a manually requested, read-only project audit. Use the LIVE SNAPSHOT below as the "
               "authoritative metadata gathered during this run; older issue comments and documentation "
               "may be stale. State facts, inferences, and unknowns separately.\n\n"
               "Tasks: (1) assess whether RE-001 issue #226 remains the best single research focus under "
@@ -186,7 +183,7 @@ jobs:
           )
 
           context = {
-              "title": "Weekly branch and project audit",
+              "title": "Manual branch and project audit",
               "description": "Use current branch/PR metadata, cite evidence, and recommend one best next task.",
               "event_name": os.environ.get("EVENT_NAME", "unknown"),
               "is_pull_request": "false",
