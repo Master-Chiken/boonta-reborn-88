@@ -43,13 +43,40 @@ if "approval-denied:" not in dispatch or "The /approve command is restricted to 
 if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
     errors.append("Setup documentation must require branch protection before enabling writes")
 
-# Workflow files must not reference OpenRouter; the secret may remain unused until audited.
-workflow_text = "\n".join(
-    path.read_text(encoding="utf-8")
-    for path in (ROOT / ".github" / "workflows").glob("*.yml")
-)
-if "openrouter_api_key" in workflow_text.lower() or "openrouter.ai" in workflow_text.lower():
-    errors.append("GitHub Actions workflows must not use OpenRouter in the €0-only setup")
+# OpenRouter is allowed only through the audited manual free-model PR reviewer.
+openrouter = read(".github/workflows/openrouter-free-review.yml")
+workflow_dir = ROOT / ".github" / "workflows"
+for path in workflow_dir.glob("*.yml"):
+    if path.name == "openrouter-free-review.yml":
+        continue
+    content = path.read_text(encoding="utf-8").lower()
+    if "openrouter_api_key" in content or "openrouter.ai" in content:
+        errors.append(f"OpenRouter references are forbidden outside the allowlisted reviewer: {path.name}")
+
+trigger_block = openrouter.split("permissions:", 1)[0].lower()
+if "workflow_dispatch:" not in trigger_block:
+    errors.append("OpenRouter reviewer must be manually triggered with workflow_dispatch only")
+for forbidden_trigger in ("pull_request:", "pull_request_target:", "push:", "schedule:", "issues:", "issue_comment:", "workflow_run:"):
+    if forbidden_trigger in trigger_block:
+        errors.append(f"OpenRouter reviewer must not have automatic trigger {forbidden_trigger!r}")
+if 'model: "openrouter/free"' not in openrouter:
+    errors.append("OpenRouter reviewer must use the explicit openrouter/free route only")
+if "secrets.openrouter_api_key" not in openrouter.lower():
+    errors.append("OpenRouter reviewer must read its API key from the OPENROUTER_API_KEY secret")
+if "limit = 30000" not in openrouter:
+    errors.append("OpenRouter reviewer must cap the diff at 30,000 bytes")
+if "if grep -eiq" not in openrouter.lower():
+    errors.append("OpenRouter reviewer must scan the transmitted diff for common credential patterns")
+if not (0 <= openrouter.find("limit = 30000") < openrouter.lower().find("if grep -eiq") < openrouter.find("https://openrouter.ai/api/v1/chat/completions")):
+    errors.append("OpenRouter reviewer must truncate and scan the diff before any API request")
+if "base.ref" not in openrouter or "head.repo.full_name" not in openrouter:
+    errors.append("OpenRouter reviewer must require an open PR targeting main from the same repository")
+if "contents: read" not in openrouter or "pull-requests: read" not in openrouter or "issues: write" not in openrouter:
+    errors.append("OpenRouter reviewer permissions must be read-only except for publishing issue comments")
+if "contents: write" in openrouter or "pull-requests: write" in openrouter or "actions: write" in openrouter:
+    errors.append("OpenRouter reviewer must not have repository, PR, or Actions write permissions")
+if "No paid fallback will be attempted." not in openrouter:
+    errors.append("OpenRouter reviewer must fail closed and never use a paid fallback")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -159,7 +186,7 @@ if errors:
 print("AI free-tier safety checks passed.")
 print("- Only the repository owner can authorize the Gemini write workflow.")
 print("- Gemini write path remains gated by GEMINI_WRITE_ENABLED=true.")
-print("- OpenRouter and legacy Google Cloud / paid-auth routes are absent from workflows.")
+print("- OpenRouter uses only the manual, capped, free-route PR reviewer; no paid fallback or code-write permissions.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
 print("- Project instructions retain the strict €0 requirement.")
