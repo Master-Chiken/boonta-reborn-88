@@ -40,7 +40,7 @@ The project is open to contributors who can explain what they tested and what th
 
 ---
 
-## What we're building
+## Technical overview
 
 The current GameCube development build lives in `gamecube-demo/`. It is an early racing foundation: a native GX scene, procedural course and rivals, and an original player mesh/texture path. The intended end product is much more ambitious than this prototype; full remaster visuals, broad game-asset compatibility, and a complete manually verified race are not finished yet.
 
