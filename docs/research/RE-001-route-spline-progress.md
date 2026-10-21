@@ -1346,3 +1346,15 @@ Additional local static review of the generic event/tag paths confirms an import
 No conclusive direct call edge has been established from the all-local-racers-done predicate to a results renderer or scene-load handler. The tag text alone is insufficient to identify the results transition, and the global updated in one handler is referenced elsewhere in menu/UI-related code, so it remains unnamed.
 
 **Current boundary:** N64 lap-count and `FINAL LAP` HUD data flow are traced at local static-code level; manager phase → results-screen destination remains unresolved. The next proof must connect the all-done condition to a positively identified results UI/resource/scene selection. Runtime observation and console parity are still unverified.
+
+## PC results-transition analogue — pinned-source refinement (2026-10-21)
+
+This is a **PC-only comparison lead**, not evidence of N64 parity. Both source files below are pinned to `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`.
+
+- [swrObj.c lines 918–970](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L918-L970): in `swrObjJdge_F2`, the state-1 dispatcher provisionally writes state 2, commented as “all local racers finished”, and re-arms state 1 while eligible local racers remain in progress.
+- [swrObj.c lines 800–875](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L800-L875): state 4 is the post-race camera sweep. A skip/input path sets `swrRace_resultsScreenActive` immediately; the normal path advances to state 5 after sweep completion and a linger, while state 5 sets the results-active flag on its handler pass.
+- [swrRace.c line 320 onward](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c#L320-L340): `swrRace_ResultsMenu` is explicitly documented as the post-race results-screen routine; its stated responsibilities include score ordering, record/name-entry handling and tournament progression/save work.
+
+**Inference allowed:** the PC reference supplies a concrete comparison checklist for identifying (1) the all-local-racers-done gate, (2) the intervening camera/phase path, and (3) the results UI entry point. The results-active flag has path-dependent timing even in this PC implementation.
+
+**Inference not allowed:** PC state numbers, flags, event tags, struct fields or function names must not be assigned to the N64 build. The local N64 proof still requires a positive local static call/data-flow chain from its all-done predicate through its phase writer to an identified results renderer/resource/scene selector, or controlled runtime observation. No runtime test or gameplay change is claimed.
