@@ -97,12 +97,15 @@ jobs:
           grep -qx 'DebugServer/Enabled' "$LOG_DIR/settings-effective.log"
           grep -qx 'DebugServer/UseIPv4' "$LOG_DIR/settings-effective.log"
 
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 \
+          # Select the N64 core explicitly. Do not depend on file-type
+          # auto-detection or leave a modal system-selection prompt open.
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 stdbuf -oL -eL \
             "$ARES_BIN" \
+              --system "Nintendo 64" \
               --setting DebugServer/Port=9123 \
               --setting DebugServer/Enabled=true \
               --setting DebugServer/UseIPv4=false \
-              --no-file-prompt "$CTEST_ROM" \
+              --kiosk "$CTEST_ROM" \
               > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
           cleanup() {
@@ -130,7 +133,7 @@ jobs:
             sleep 1
           done
           if [[ "$LISTENER_READY" -ne 1 ]]; then
-            echo "FAIL: no TCP listener appeared on port 9123." >&2
+            echo "FAIL: no TCP listener appeared on port 9123. Check the line-buffered Ares runtime log below for system-load or debug-server initialization errors." >&2
             cat "$ARES_LOG" >&2 || true
             exit 1
           fi
