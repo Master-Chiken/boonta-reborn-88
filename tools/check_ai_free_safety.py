@@ -64,6 +64,18 @@ if "Only the repository owner may run this workflow." not in openrouter:
 for forbidden_trigger in ("pull_request:", "pull_request_target:", "push:", "schedule:", "issues:", "issue_comment:", "workflow_run:"):
     if forbidden_trigger in trigger_block:
         errors.append(f"OpenRouter reviewer must not have automatic trigger {forbidden_trigger!r}")
+
+# Assert the complete event list, not only a hand-picked denylist.
+declared_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", trigger_block)
+if declared_events != ["workflow_dispatch"]:
+    errors.append(f"OpenRouter reviewer must declare workflow_dispatch as its only event; found {declared_events!r}")
+
+# Enforce the complete permission set so extra write capabilities cannot be added unnoticed.
+permission_block = openrouter.split("permissions:", 1)[1].split("concurrency:", 1)[0]
+declared_permissions = dict(re.findall(r"(?m)^  ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", permission_block))
+expected_permissions = {"contents": "read", "pull-requests": "read", "issues": "write"}
+if declared_permissions != expected_permissions:
+    errors.append(f"OpenRouter reviewer permissions must be exactly {expected_permissions!r}; found {declared_permissions!r}")
 if 'model: "openrouter/free"' not in openrouter:
     errors.append("OpenRouter reviewer must use the explicit openrouter/free route only")
 if "secrets.openrouter_api_key" not in openrouter.lower():
