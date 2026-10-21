@@ -170,3 +170,10 @@ Audited `sp00nznet/racer` at [`11f6f70469f995304422f2209a47e9c2df5ff6d0`](https:
 Repository links: [README](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/README.md), [`symbols.toml` candidate](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/symbols.toml#L3229-L3232), [section table mapping](https://github.com/sp00nznet/racer/blob/11f6f70469f995304422f2209a47e9c2df5ff6d0/src/section_table.cpp#L647-L653). Public tree inspection found no tracked generated `RecompiledFuncs/` output or public semantic call graph linking the all-local-done branch to a results resource/scene selector. Search absence is bounded evidence only.
 
 Decision: do not rename `render_submit` or `func_80080BEC`, do not infer a results transition from generic phases/tags, and do not change gameplay code. RE-001 remains blocked pending a permitted local runtime trace or a separately published semantic analysis. No ROM or assets were accessed/uploaded by this pass.
+
+## R. Public N64 debug-menu references — test lead only (2026-10-21)
+
+- [GameFAQs N64 cheats](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/cheats), [N64 FAQ](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/faqs/2522), and [Ethereal Games guide](https://etherealgames.com/n64/s/star-wars-episode-i-racer/cheats-secrets-tips-tricks/) describe an in-game `RRDEBUG`/debug-menu flow and controls including fast-forward/rewind.
+- Evidence type: community gameplay documentation only. It is not source-level evidence and does not identify the race manager state field, its readers, or a results UI path.
+- Potential use: could aid reproducible local testing if supported by the game revision; it cannot replace memory breakpoints/cross-reference tracing. Region/version compatibility is unverified.
+- Status: lead recorded only. No runtime test, ROM access, asset extraction, or gameplay change.
