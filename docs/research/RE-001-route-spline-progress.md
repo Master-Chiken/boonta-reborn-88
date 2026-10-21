@@ -1509,3 +1509,51 @@ This follow-up checks the emulator implementation itself, rather than inferring 
 - The next test can therefore be more specific: after the small public `ctest.z64` smoke test from Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) passes, try a write watchpoint on one documented lap-related address in the lawful local game copy. Use the actual configured GDB port; do not assume the historical `:9123` example. Then inspect the observed writer/reader chain and continue to a positively identified results UI/resource/scene selector.
 - Public cheat-list addresses remain **watchpoint candidates**, not proof of a native field or finish flag. No watchpoint was actually run here, no local game data was accessed, and no gameplay code or assets changed.
 
+
+
+## W. Concrete GDB watchpoint procedure — local checklist, not a claimed test (2026-10-21)
+
+This section turns the source findings above into a bounded experiment. It is documentation only; no local game or emulator was run during this pass.
+
+### Configure the Ares debug server
+
+- In Ares, open **Settings → Developer → Debug Server Options**, enable the server, and note the displayed port. In the reviewed pinned source, the default is `9123` ([`settings.hpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/desktop-ui/settings/settings.hpp)); the UI permits changing it, so the actual configured value wins.
+- Leave **Use IPv4** disabled for a normal local-only connection where possible. The reviewed UI explicitly warns that IPv4 mode binds to any device and can allow anyone on the network to access the server ([`developer.cpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/desktop-ui/settings/developer.cpp)). If a specific host setup requires IPv4, restrict network access and do not expose the debug port to an untrusted network.
+
+### Gate 1 — verify the debugger connection before using the game
+
+Use the tiny public `ctest.z64` / `ctest.elf` case referenced by Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778), following that issue's recorded launch order and exact files. The original failure involved attaching, stopping at `main`, continuing, and then crashing on a further continue. Record whether each step succeeds on the selected Ares/GDB build; record versions and any error verbatim. Do not use SWE1R to diagnose a broken generic connection.
+
+### Gate 2 — observe one public lap-code candidate
+
+Only after Gate 1 succeeds and with a lawful local copy of the game loaded, connect with GDB (substitute the actual port if it differs from the default):
+
+\`\`\`text
+gdb-multiarch
+(gdb) set architecture mips:4000
+(gdb) target extended-remote localhost:9123
+(gdb) x/2hx 0x8011900a
+(gdb) watch *(unsigned short *)0x8011900a
+(gdb) info watchpoints
+(gdb) continue
+\`\`\`
+
+The watch expression uses a 16-bit read because the public GameShark listing encodes the address using its `81`/16-bit write form; this is a practical test expression, **not** proof of the underlying field's native type. The public listing only establishes the address as a lap-related cheat target ([TheForce.Net](https://www.theforce.net/videogames/codes/n64/racer.asp)). If the debugger rejects the watchpoint, record the complete error and stop rather than inferring anything.
+
+At a stop, record the observed PC/register state and the value before/after the event where possible, for example:
+
+\`\`\`text
+(gdb) info registers
+(gdb) x/8i $pc-8
+(gdb) x/2hx 0x8011900a
+\`\`\`
+
+Repeat across a known lap change and compare with the displayed lap. Then follow the actual writer/reader code path locally toward the all-local-participants-done predicate, manager-phase consumers, and a positively identified results UI/resource/scene selector. Keep the raw game binary, extracted assets, local offsets and disassembly in the local workspace; publish only the minimal evidence needed to describe the observed path.
+
+### Interpretation guardrails
+
+- GDB's `watch` stops when the watched expression's value changes, not necessarily on every write. A lack of stops does not by itself prove that the location is never written; consult GDB's [watchpoint documentation](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Set-Watchpoints.html).
+- GDB's remote protocol maps write/read/access watchpoints to `Z2`/`Z3`/`Z4` packets ([official protocol reference](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html)). Source-level support in Ares is documented above, but successful packet negotiation and stop timing still need a live test.
+- Do not set a semantic field name based only on a GameShark label or a watchpoint hit. A successful hit is only the first edge of the evidence chain.
+- Status after this documentation pass: **not executed; results transition still blocked**. No ROM, disc image, private disassembly, or proprietary assets were uploaded or committed. No gameplay code changed.
+
