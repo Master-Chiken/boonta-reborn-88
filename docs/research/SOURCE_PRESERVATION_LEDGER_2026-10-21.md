@@ -220,7 +220,13 @@ Pinned Ares code revision: [`9408cb43d4948fc3ea6e152a307a34348df3fe04`](https://
 
 A local-only test checklist was added to the RE-001 dossier. It uses the reviewed Ares default debug port `9123` as a starting value, but requires the operator to read the actual configured port. The Ares UI warns that **Use IPv4** binds to any device and may expose the debug server to the network; prefer its local-only mode unless the host setup specifically requires IPv4, and restrict access if used.
 
-First reproduce Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) with its small public `ctest.z64`/`ctest.elf` test case; record whether attach → breakpoint at `main` → continue/continue works. Only after that passes, a lawful local game copy may be tested with:
+First reproduce Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) with its public [attached `ctest.zip`](https://github.com/user-attachments/files/18465249/ctest.zip) (built from [libdragon's ctest example](https://github.com/DragonMinded/libdragon/tree/trunk/examples/ctest)). Keep it out of the repo. In the extracted folder, run:
+
+```sh
+gdb-multiarch -ex "target extended-remote :9123" -ex "break main" -ex "continue" build/ctest.elf
+```
+
+Then quickly launch `./ares ctest.z64` from the directory holding that ROM. Use the actual configured port and record whether attach → breakpoint at `main` → second continue succeeds. This is a generic debugger smoke test only, not a SWE1R test. Only after that passes, a lawful local game copy may be tested with:
 
 ```text
 gdb-multiarch
