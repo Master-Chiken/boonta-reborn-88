@@ -131,10 +131,10 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
     if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
         errors.append(f"{label} must use only the GEMINI_API_KEY secret")
     if (
-        "id: 'free_tier_guard'" not in content
+        "id: free_tier_guard" not in content
         or "GEMINI_FREE_TIER_CONFIRMED" not in content
         or "if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
-        or content.find("id: 'free_tier_guard'") > content.find("name: 'Run Gemini CLI'")
+        or content.find("id: free_tier_guard") > content.find("name: 'Run Gemini CLI'")
     ):
         errors.append(f"{label} must gate its Gemini model call on explicit free-tier confirmation")
     if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
