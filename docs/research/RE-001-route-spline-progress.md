@@ -1479,12 +1479,12 @@ This check narrows the tooling risk for the remaining N64 results-transition inv
 - **High confidence:** the specific historical Ares bug report has a recorded upstream fix and closure.
 - **Not established at this stage:** whether any current Ares release/platform combination works with the target SWE1R build, whether a watchpoint on the desired address fires with useful stop timing in an actual session, or whether the game's results transition can be resolved with this method. A later source audit documents the upstream N64 watchpoint implementation in section V below.
 - The tutorial and bug report use different port setups (`:1235` in the tutorial's example, `:9123` in issue #1778). Do not hard-code either value; use the selected Ares build's actual configured GDB port.
-- Ares/GDB debugging should therefore be treated as **testable, not guaranteed**. Before the game-specific trace, smoke-test attaching, hitting a breakpoint and continuing with the small open homebrew test case referenced by Ares issue #1778. Only after that succeeds should a lawful local SWE1R copy be used for the specific trace.
+- Ares/GDB debugging should therefore be treated as **testable, not guaranteed**. The later CI attempt against the public ctest homebrew confirmed the listener/GDB handshake but failed on continue; see section X. Do not proceed directly to a game-specific trace or repeat that same smoke test unless a new falsifiable hypothesis or replacement minimal homebrew addresses the observed traps.
 
 ### Minimal next runtime experiment
 
 1. Start with official stable Ares v148 (or record the exact later stable version if one is available at test time); also record host OS, GDB version and configured port.
-2. Run the public small homebrew test case from issue #1778; confirm attach → breakpoint → second continue works without a crash. If v148 fails, capture the result before separately comparing with a nightly build.
+2. **This step was attempted in CI and did not pass**; see section X. Do not repeat the same ctest/v148 path as if still untested. A future retry needs a distinct, justified variable or a purpose-built minimal public homebrew.
 3. With a lawful local N64 game copy, observe the documented lap-related watchpoint candidates `0x8011900A` (Player 1) and `0x80119092` (Player 2) through lap changes, then trace the actual all-local-done condition and its consumers to an identified results UI/resource/scene selector.
 4. If the emulator setup, memory reads, or relevant state path cannot be validated, report the exact failure and leave RE-001 blocked. Do not infer results-screen semantics from the GameShark labels or PC analogues.
 
@@ -1507,7 +1507,7 @@ This follow-up checks the emulator implementation itself, rather than inferring 
 
 - **Verified at source level:** the reviewed Ares N64 implementation includes memory-read/write reporting, address normalization, and watchpoint-aware recompilation state.
 - **Not verified in execution:** whether the selected Ares build and host OS attach and continue reliably; whether a watchpoint on a public SWE1R lap-code address fires with useful stop timing; and whether a resulting trace can identify the manager transition to the results UI/resource.
-- The next test can therefore be more specific: after the small public `ctest.z64` smoke test from Ares issue [#1778](https://github.com/ares-emulator/ares/issues/1778) passes, try a write watchpoint on one documented lap-related address in the lawful local game copy. Use the actual configured GDB port; do not assume the historical `:9123` example. Then inspect the observed writer/reader chain and continue to a positively identified results UI/resource/scene selector.
+- The proposed next test was to try a write watchpoint after the generic ctest smoke test passed. That precondition did not pass in the later CI experiment (see section X), so **do not run the game-specific watchpoint yet**. First isolate the generic ctest failure with a new hypothesis or different minimal public homebrew. Only a successful, stable debugger session can justify the subsequent local game watchpoint.
 - Public cheat-list addresses remain **watchpoint candidates**, not proof of a native field or finish flag. No watchpoint was actually run here, no local game data was accessed, and no gameplay code or assets changed.
 
 
@@ -1521,11 +1521,11 @@ This section turns the source findings above into a bounded experiment. It is do
 - In Ares, open **Settings → Developer → Debug Server Options**, enable the server, and note the displayed port. In the reviewed pinned source, the default is `9123` ([`settings.hpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/desktop-ui/settings/settings.hpp)); the UI permits changing it, so the actual configured value wins.
 - Leave **Use IPv4** disabled for a normal local-only connection where possible. The reviewed UI explicitly warns that IPv4 mode binds to any device and can allow anyone on the network to access the server ([`developer.cpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/desktop-ui/settings/developer.cpp)). If a specific host setup requires IPv4, restrict network access and do not expose the debug port to an untrusted network.
 
-### Gate 1 — verify the debugger connection before using the game
+### Gate 1 — generic debugger connection and continuation (attempted; not passed)
 
-Use official stable [Ares v148](https://github.com/ares-emulator/ares/releases/tag/v148) as the first baseline: upstream's fix for the historical attach crash is in its commit ancestry. Do not begin with a nightly build; if v148 fails, record the failure first and use a separately recorded nightly run only as a comparison.
+Official stable [Ares v148](https://github.com/ares-emulator/ares/releases/tag/v148) was selected as the first baseline because upstream's fix for the historical attach crash is in its commit ancestry. CI ran v148 and v139; both built and accepted GDB, but neither passed the continue phase (see section X). Do not begin a blind nightly comparison: first identify a concrete cause or replace the fixture with a purpose-built minimal homebrew.
 
-Use the public `ctest.zip` reproducer attached to Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) (source example: [libdragon's ctest directory](https://github.com/DragonMinded/libdragon/tree/trunk/examples/ctest)). Keep the zip out of the Boonta repository. Reproduce the reported launch order with two terminals, substituting the actual configured GDB port if it is not `9123`:
+Use the public `ctest.zip` fixture attached to Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) (source example: [libdragon's ctest directory](https://github.com/DragonMinded/libdragon/tree/trunk/examples/ctest)). Keep the zip out of the Boonta repository. This is a generic homebrew fixture, **not** a live reproduction of the historical upstream bug, which has been fixed. The current CI test connected but trapped during continued execution; the following commands preserve the original local test procedure for future diagnosis, not as an assertion that the test remains unrun:
 
 ```sh
 # Terminal 1, in the extracted ctest directory:
@@ -1571,5 +1571,17 @@ Repeat across a known lap change and compare with the displayed lap. Then follow
 - GDB's `watch` stops when the watched expression's value changes, not necessarily on every write. A lack of stops does not by itself prove that the location is never written; consult GDB's [watchpoint documentation](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Set-Watchpoints.html).
 - GDB's remote protocol maps write/read/access watchpoints to `Z2`/`Z3`/`Z4` packets ([official protocol reference](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html)). Source-level support in Ares is documented above, but successful packet negotiation and stop timing still need a live test.
 - Do not set a semantic field name based only on a GameShark label or a watchpoint hit. A successful hit is only the first edge of the evidence chain.
-- Status after this documentation pass: **not executed; results transition still blocked**. No ROM, disc image, private disassembly, or proprietary assets were uploaded or committed. No gameplay code changed.
+- Status at the time this procedure was written was **not executed locally**. The later CI smoke attempt was **NOT PASSED**, with the exact result in section X. The N64 results transition remains blocked/unproven. No ROM, disc image, private disassembly, or proprietary assets were uploaded or committed. No gameplay code changed.
 
+
+
+## X. Public ctest Ares/GDB smoke-test result — NOT PASSED (2026-10-21)
+
+The controlled GitHub Actions experiment proposed in [PR #252](https://github.com/Master-Chiken/boonta-reborn-88/pull/252) was run against the public `ctest.z64` homebrew fixture referenced by Ares issue #1778. It is now closed **unmerged** because the smoke test never passed. The source branch and logs remain available. This was a debugger-tooling check only; it was not a SWE1R game run.
+
+- [Latest matrix run #39613630406](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39613630406) built both configured Ares variants and established that the GDB listener/client handshake works.
+- **Ares v139:** ctest loaded and the loopback listener opened; GDB connected, but execution trapped in `__rsp_check_assert()` before `main`.
+- **Ares v148:** ctest loaded and accepted GDB; execution reached `main`, but the next `continue` trapped in `joybus_exec()`.
+- Neither variant passed the bounded continue phase. This cannot be reported as a passing smoke test, nor does it establish that Ares has a general regression.
+- The historical [Ares issue #1778](https://github.com/ares-emulator/ares/issues/1778) was closed after upstream fix [PR #1793](https://github.com/ares-emulator/ares/pull/1793), including commit [`dfcd7d4`](https://github.com/jcm93/ares/commit/dfcd7d4fce3d1b9b02df87e5c9f9d16d3ce918fd). The present traps are different observations and their root cause is **unknown**; do not claim the old issue has returned.
+- **Disposition:** stop retries of this same ctest setup unless a new falsifiable hypothesis or a deliberately minimal public homebrew isolates the failing subsystem. Do not continue random renderer/audio setting changes. Even a clean generic homebrew pass would only validate the debugger fixture; the required research evidence must still come from a lawful local SWE1R static cross-reference or runtime trace linking the all-finished condition to an identified results UI/resource/scene.
