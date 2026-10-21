@@ -1419,3 +1419,17 @@ This pass checked the full public symbol manifest and tracked repository tree at
 - **Decision:** no new function rename or gameplay change. Further searching the same public symbol manifest is unlikely to close RE-001. The next adequate evidence must be either a permitted local runtime/debugger trace (as outlined in section P) or a separately published, citable analysis that explicitly connects the manager state write through readers to the results-screen selector.
 
 **Status remains BLOCKED pending semantic/runtime evidence.** No ROM was uploaded, no proprietary assets were committed, no emulator/hardware execution was done in this pass, and no gameplay source was changed.
+
+## R. Publicly documented N64 debug mode — possible runtime aid (2026-10-21)
+
+A targeted public-web search found independent game guides describing an N64 debug mode entered through the in-game naming/cheat flow. This is a possible convenience for a future lawful local test, not evidence of the results-screen code path.
+
+- [GameFAQs N64 cheats page](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/cheats) documents the `RRDEBUG` code and the pause-menu directional sequence used to expose the cheat/debug menu.
+- [GameFAQs N64 FAQ](https://gamefaqs.gamespot.com/n64/198780-star-wars-episode-i-racer/faqs/2522) and [Ethereal Games' guide](https://etherealgames.com/n64/s/star-wars-episode-i-racer/cheats-secrets-tips-tricks/) describe debug controls including fast-forward and rewind during a race.
+- These are community gameplay guides, not source-level reverse-engineering reports. They do not identify the manager state field, its readers, a results renderer, or any scene/resource selector. They should not be used to assign semantics to `func_80080BEC` or generic tags.
+
+### Limited value for RE-001
+
+The in-game debug option might make a future local race test easier to reproduce or navigate, if it is available in the user's game revision. It does not replace an emulator debugger: fast-forward/rewind behavior alone cannot prove the all-done state write or connect it to the results UI. Region/version compatibility has not been verified.
+
+**Decision:** preserve this as a test-preparation lead only. RE-001 remains blocked pending direct data-flow evidence or a permitted local runtime trace. No game was run and no ROM or assets were accessed.
