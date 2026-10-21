@@ -70,7 +70,7 @@ Continue only RE-001. Seek positive evidence connecting the N64 “all local par
 
 ## Reuse, licensing, and provenance
 
-- Read [REUSE.md](REUSE.md) once its open pull request has been reviewed/merged.
+- Review the reuse inventory proposed in [PR #246](https://github.com/Master-Chiken/boonta-reborn-88/pull/246). It is a separate open PR so the mainline file may not exist until it is merged.
 - A source repository can be useful for **research** without being safe to copy into Boonta.
 - Check exact revisions, file-level notices, dependencies, compatibility with the project's MIT license, and redistribution obligations before copying code.
 - Known unresolved areas include OpenGX's overall/file-level licensing and compatibility, conflicting licensing statements in Sw_Racer, and the license/provenance of scripts and assets in SWE1R-Mods.
