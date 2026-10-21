@@ -1,5 +1,7 @@
 # RE-002 — PC / Nintendo 64 / Dreamcast source matrix
 
+> **Queue status: PARKED — reference index only.** The sole active research question is [RE-001 in issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). This file preserves existing public-source leads for later; it does **not** authorize a second active research workstream. Do not execute the future sequence below until RE-001 is resolved or explicitly blocked.
+
 **Status:** research inventory; no game code changed  
 **Date:** 2026-10-20  
 **Purpose:** use the original released game versions as behavioral references, then use public reverse-engineering repositories to explain what can be observed. This is not a claim that original commercial source code is public.
@@ -50,7 +52,7 @@ Allowed evidence types:
 Allowed confidence states:
 - `CONFIRMED`, `SUPPORTED`, `HYPOTHESIS`, `UNKNOWN`, `CONFLICTING`.
 
-## Next research sequence (80% reverse engineering)
+## Parked future sequence — not active
 
 1. **PC subsystem map:** continue from RE-001 route/spline/progress and map the next highest-value areas in SW_RACER_RE: handling/physics, collision, AI/racing line, boost/heat, track loading, camera and race completion. Pin each function to an exact commit and binary revision.
 2. **N64 evidence audit:** inspect only public tool/source repositories and published documentation for N64-specific formats, memory/rendering constraints, controller and rumble behavior. Search for a genuine N64 reverse-engineering project before assuming one exists.
@@ -65,3 +67,6 @@ Allowed confidence states:
 - Public repositories may be read and cited, but their code licences remain binding. A source-code licence does not grant rights to game assets.
 - Use lawful local game copies for runtime comparisons; keep extracted content local-only unless redistribution rights are explicit.
 - Step 102 is intentionally outside this research sequence and is not a blocker for this platform/source audit.
+
+
+**Activation gate:** all items in this section remain backlog candidates. No one should pick them up in parallel while RE-001 is active; the owner must explicitly select a single next question first.
