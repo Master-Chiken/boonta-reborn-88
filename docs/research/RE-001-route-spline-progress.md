@@ -1461,3 +1461,30 @@ TheForce.Net's public N64 code list labels the write location `0x8011900A` as bo
 ### Decision and smallest next check
 
 Use the addresses only as **externally documented lap-related watchpoint candidates**, not as semantically proven participant fields. In an authorized local copy/debugger, observe writes and reads at both addresses during a known lap crossing and final-lap finish; then trace the consuming state into the race-manager phase and positively identified results UI/resource selector. If a local debugger trace is unavailable, keep RE-001 blocked rather than infer the missing edge. No ROM or proprietary assets should be uploaded or committed.
+
+
+## U. Ares/GDB feasibility check — historical attach crash has a recorded fix (2026-10-21)
+
+This check narrows the tooling risk for the remaining N64 results-transition investigation. It does **not** add evidence about SWE1R's internal state machine.
+
+### Direct public observations
+
+- Chris Lewis' [N64 debugging walkthrough (23 Dec 2025)](https://blog.chrislewis.au/finding-jingle-town-debugging-an-n64-game-without-symbols/) demonstrates Ares remote debugging with `gdb-multiarch`, selecting `mips:4000`, connecting to the configured GDB port, setting a function breakpoint, and reading a state byte directly from memory. The walkthrough applies to **Snowboard Kids 2**, not SWE1R; it is a method reference only.
+- Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) recorded an N64 GDB-attach/continue crash in January 2025 and said v139 worked while v140–v141 and a bleeding-edge build did not.
+- The issue timeline records commits [`c8ddc5d`](https://github.com/ares-emulator/ares/commit/c8ddc5d) and [`dfcd7d4`](https://github.com/ares-emulator/ares/commit/dfcd7d4), both named as fixes for the MIPS exception on GDB attach; the linked [issue #1793](https://github.com/ares-emulator/ares/issues/1793) closed the report as completed on 26 January 2025.
+
+### Interpretation and caveats
+
+- **High confidence:** the specific historical Ares bug report has a recorded upstream fix and closure.
+- **Not established:** whether any current Ares release/platform combination works with the target SWE1R build, whether remote write watchpoints are supported/reliable for the desired addresses, or whether the game's results transition can be resolved with this method.
+- The tutorial and bug report use different port setups (`:1235` in the tutorial's example, `:9123` in issue #1778). Do not hard-code either value; use the selected Ares build's actual configured GDB port.
+- Ares/GDB debugging should therefore be treated as **testable, not guaranteed**. Before the game-specific trace, smoke-test attaching, hitting a breakpoint and continuing with the small open homebrew test case referenced by Ares issue #1778. Only after that succeeds should a lawful local SWE1R copy be used for the specific trace.
+
+### Minimal next runtime experiment
+
+1. Record the exact Ares build/version, host OS, GDB version and configured port.
+2. Run the public small homebrew test case from issue #1778; confirm attach → breakpoint → continue works without a crash.
+3. With a lawful local N64 game copy, observe the documented lap-related watchpoint candidates `0x8011900A` (Player 1) and `0x80119092` (Player 2) through lap changes, then trace the actual all-local-done condition and its consumers to an identified results UI/resource/scene selector.
+4. If the emulator setup, memory reads, or relevant state path cannot be validated, report the exact failure and leave RE-001 blocked. Do not infer results-screen semantics from the GameShark labels or PC analogues.
+
+No runtime test was performed during this documentation pass. No ROM, disc image, proprietary asset, or executable was downloaded, uploaded, or committed. No gameplay source changed.
