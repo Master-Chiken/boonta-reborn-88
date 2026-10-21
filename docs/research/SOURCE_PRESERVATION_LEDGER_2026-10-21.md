@@ -132,3 +132,8 @@ Continue the N64-only trace from the local reference note. The best established 
 - An ASCII search for plain uppercase results/finish terms found no obvious literals, but this is weak negative evidence only because text may be encoded/compressed/resource-based.
 - The user environment currently has no N64 emulator/debugger or Dolphin CLI in PATH; no runtime test has been performed.
 - Next: trace the all-local-participants-done condition into the lifecycle-phase writer and from there into a positively identified results UI resource/scene selection. No gameplay code/assets changed.
+## M. Lifecycle-tag semantics do not prove the race-results destination
+
+- A local static pass reviewed the phase-dispatch table and the generic tag consumer. `Fini` / `Abrt` route through general object lifecycle/state handling (object flags, timers and shared fade/control state); the consumer also handles `Load`, `RStr`, `Stop` and other tags, and is called beyond the targeted race-manager path.
+- The current static evidence does not show a conclusive direct edge from the all-local-participants-done condition to a positively identified results renderer or scene-load handler. Do not infer results semantics from tag strings or phase names alone.
+- Lap counter + `FINAL LAP` HUD selector are traced; manager/results-screen destination remains open. The next target is a call/data-flow chain from the all-done predicate through the manager phase writer to an actual results UI/resource selection.
