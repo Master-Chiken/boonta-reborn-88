@@ -1323,3 +1323,12 @@ This section supersedes the earlier status that the local N64 HUD renderer/resou
 Combined with the already documented option-to-manager-threshold and route-progress-event-to-participant-counter paths, the N64 chain is now strongly supported end-to-end for the HUD lap count and FINAL LAP selector at the static-code level.
 
 Still open: live emulator/hardware confirmation, exact timing of the reported route-progress event relative to physical finish-line traversal, the manager's eventual results-screen transition, and all cross-platform parity. No Dolphin/N64 hardware run is claimed. The PC source reference remains a separate comparison only.
+## Manager/results-screen boundary — next unresolved link (2026-10-21)
+
+The N64 HUD path is now traced at the local static-code level, but the downstream transition into the actual results screen is still unresolved. A follow-on review of the phase/lifecycle dispatcher, its timer/event branches, and the manager-side local-player threshold check did not expose a conclusive call to a results renderer or scene-load handler.
+
+Some generic lifecycle branches send `Fini` / `Abrt` tags or adjust phase bits, but those labels alone do not establish that they mean “race finished” or select the results UI. Do not assign those semantic names without a positive caller-to-destination data-flow chain.
+
+A plain ASCII scan of the local US ROM found no obvious uppercase `RESULTS`, `RACE OVER`, `FINISH`, `FINISHED`, `CHAMPION`, `STANDINGS`, `PODIUM`, `RACE COMPLETE`, `CONTINUE`, or `RACE RESULTS` literals. This is weak negative evidence only: UI text may be compressed, encoded, or referenced by resource ID.
+
+**Next bounded target:** connect the all-local-participants-done condition to the writer of the manager's lifecycle phase and then to the actual results resource/scene selection. Runtime behavior remains untested: no N64 emulator/debugger or Dolphin binary is available in this command-line environment. The lap/HUD static finding should not be read as results-transition proof.
