@@ -14,7 +14,7 @@ The original game's commercial tracks, models, textures, music, voices, and othe
 
 ### 1. Test the prototype
 
-Start with [issue #126 — interactive three-lap acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) and the [milestone checklist](docs/NEXT_MILESTONE.md). Each item should be reported as **PASS**, **FAIL**, or **NOT TESTED**.
+Volunteer through [issue #250 — testers wanted](https://github.com/Master-Chiken/boonta-reborn-88/issues/250). Use [issue #126 — interactive three-lap acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) as the canonical detailed checklist and the [milestone checklist](docs/NEXT_MILESTONE.md). Each item should be reported as **PASS**, **FAIL**, or **NOT TESTED**.
 
 Please include:
 - the exact commit SHA of the DOL/ELF build you tested;
