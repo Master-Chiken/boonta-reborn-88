@@ -50,6 +50,18 @@ The latest owner-confirmed research direction is approximately **80% evidence-le
 
 Do not merge, close, auto-merge, delete, or force-push an existing PR or branch unless the owner explicitly requests that action. Do not merge old branch histories wholesale. Use a short-lived task branch and a reviewable PR; documentation normally targets `main`, while gameplay changes follow the repository's current `dev`/review rules.
 
+## AI assistants and automation — current verified status
+
+- **ChatGPT (this session):** actively checking public repository evidence, updating documentation on the working PR branch, and reporting what is and is not verified. This work does not continue in the background after the conversation pauses.
+- **GitHub Actions:** no workflow runs were in progress at the 2026-10-21 status check. CI guard jobs run when their configured triggers fire; successful guard checks are not independent engineering work and do not prove game behavior.
+- **Gemini coordinator:** `.github/workflows/ai-daily-coordinator.yml` is manually dispatched and read-only. It has not been running as an autonomous daily background job in the current configuration. The last listed `Gemini on-demand coding assistant` run on 2026-10-21 was **skipped**, not a new completed source audit. The separate Gemini plan/execute route remains subject to its repository write gate.
+- **Jules:** the public-source task requested on issue #226 has not produced a visible, usable report in that issue. Historical [PR #249](https://github.com/Master-Chiken/boonta-reborn-88/pull/249) was closed unmerged because its diff changed a provenance safety guard instead of supplying the requested RE-001 evidence. Do not count that PR as progress on the research question.
+- **Biddy-Pinky:** a `COMMENTED` review exists on [PR #243](https://github.com/Master-Chiken/boonta-reborn-88/pull/243), but that is a past review submission, not evidence the reviewer is currently running another task.
+- **Human testers:** [issue #250](https://github.com/Master-Chiken/boonta-reborn-88/issues/250) is open and had no comments at the latest check; no volunteer report is visible yet.
+- **OpenRouter:** the old manual review integration from [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14) is **retired**. The workflow was removed by [PR #31](https://github.com/Master-Chiken/boonta-reborn-88/pull/31), and `tools/check_ai_free_safety.py` explicitly rejects OpenRouter workflows under the €0-only policy. There is no active OpenRouter review workflow on `main`; do not create an API key/secret or weaken that guard. See [the archived explanation](docs/OPENROUTER_FREE_REVIEW.md).
+
+**Honest operating conclusion:** only actual, visible CI runs, submitted review comments, issue updates, or concrete repository commits count as agent activity. No agent should be described as “working in the background” unless a current run/task is visible.
+
 ## RE-001 — Route and spline progression
 
 **Scope:** understand how route position and progress are represented and advanced, compare the PC reference against the clean-room prototype, and clearly separate evidence from inference. Do not change gameplay code as part of this research unless a separate task is explicitly approved.
