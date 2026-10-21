@@ -44,7 +44,7 @@ The latest owner-confirmed research direction is approximately **80% evidence-le
 
 - Canonical research queue: [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
 - Tester recruitment: [issue #250](https://github.com/Master-Chiken/boonta-reborn-88/issues/250); detailed acceptance record: [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-- Research operating/documentation PR: [PR #242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242), open and unmerged as last checked.
+- Research operating/documentation PR: [PR #242](https://github.com/Master-Chiken/boonta-reborn-88/pull/242), open/draft/unmerged as last checked. Live GitHub metadata on 2026-10-21 reports head `8e8afa33ebf72722c3342b5bdeb6383ff3e326d5`; older prose in the PR description still refers to `58eda2d389a0201d7f02c3e68d344e017564cf7d` and must not override the live head.
 - Reuse inventory PR: [PR #246](https://github.com/Master-Chiken/boonta-reborn-88/pull/246), open and unmerged as last checked.
 - Project dashboard: [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
@@ -78,6 +78,34 @@ Continue only RE-001. Seek positive evidence connecting the N64 “all local par
 - swe1r-tools reports GPLv2-or-later for its source. SW_RACER_RE reports AGPL-3.0. These licenses do not grant rights over commercial game assets.
 - decomp.anything is an optional future research tool, not a requirement. Its repository declares MIT at the checked revision, but its prerequisites, third-party components, free-only workflow, and practical usefulness for this project still need review before adoption.
 - Never commit or upload ROMs, disc images, BIOS files, extracted commercial models/textures/audio, raw game data, or content of unclear provenance to the public repository, issues, CI artifacts, or AI services. Keep legally held local reference files local; do not ask the owner to upload them.
+
+## Source shelf and historical research leads
+
+These links preserve previously identified avenues. They are **leads to evaluate**, not a claim that their code, data, or licenses are approved for reuse.
+
+### PC reference and file-format tools
+
+- [SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE) — partial PC research/reimplementation; retain the pinned commit listed above when making a specific claim.
+- [Steam-PC decompilation reference](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef) — read-only comparison source; never copy its code into Boonta.
+- [Sw_Racer (Olganix)](https://github.com/Olganix/Sw_Racer) and [swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) — format/tooling leads with license and per-format limitations described in PR #246.
+
+### N64 tooling and navigation
+
+- [N64Recomp](https://github.com/N64Recomp/N64Recomp) — general static-recompilation tooling; not a decompilation of Racer by itself.
+- [sp00nznet/racer at pinned revision](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0) — public N64 static-recompilation/symbol-navigation reference. Generic symbols and detected address labels do not prove semantics.
+
+### Dreamcast reverse-engineering and tooling leads
+
+- [Dreamcast Disassembly, Debugging and Decompilation Diaries](https://github.com/AltoRetrato/Dreamcast-Disassembly-Debugging-and-Decompilation-Diaries)
+- [tbg-decomp](https://github.com/lhsazevedo/tbg-decomp)
+- [recv-dc-decomp](https://github.com/fmil95/recv-dc-decomp)
+- [Flycast](https://github.com/flyinghead/flycast) — emulator/reference implementation; not proof of original Racer data structures.
+- [gditools3](https://github.com/AltoRetrato/gditools3) — GD-ROM tooling lead; use only with lawfully held local media.
+- [mc.pp.se/dc](https://mc.pp.se/dc/) — Dreamcast technical documentation.
+- [Dreamcast extracted-string index](https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20%28USA%29/bins/1ST_READ.BIN.strings.txt) — string names are a research clue, not reusable game assets and not proof of PC/Dreamcast format identity.
+- `borer.lol` — previously mentioned as a possible lead; its role, license, and relevance have not been verified. Do not rely on it until checked.
+
+Before relying on any of these sources, record the repository or page, exact revision/date, platform, relevant file/claim, license/provenance, and limitations. Keep commercial binaries and extracted content out of Boonta, issues, CI artifacts, and AI services.
 
 ## Working rules for AI-assisted contributions
 
