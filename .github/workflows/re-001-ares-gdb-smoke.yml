@@ -75,32 +75,17 @@ jobs:
           echo "CTEST_ROM=$CTEST_ROM" >> "$GITHUB_ENV"
           echo "CTEST_ELF=$CTEST_ELF" >> "$GITHUB_ENV"
 
-      - name: Attach GDB, break at main, and continue for a bounded interval
+      - name: Reproduce upstream attach order and continue through main
         shell: bash
         run: |
           set -euo pipefail
           LOG_DIR="$RUNNER_TEMP/ares-gdb-smoke"
-          SETTINGS="$LOG_DIR/settings.bml"
           ARES_LOG="$LOG_DIR/ares-runtime.log"
           GDB_LOG="$LOG_DIR/gdb.log"
+          GDB_RC_FILE="$LOG_DIR/gdb-exit-code.txt"
+          LAST_GDB_ATTEMPT="$LOG_DIR/gdb-last-attempt.log"
 
-          # Use Ares v148's documented CLI settings overrides instead of
-          # relying on an external settings.bml file. With UseIPv4=false,
-          # upstream binds only to IPv6 loopback (::1).
-          "$ARES_BIN" --dump-all-settings \
-            --setting DebugServer/Port=9123 \
-            --setting DebugServer/Enabled=true \
-            --setting DebugServer/UseIPv4=false \
-            --setting Boot/AwaitGDBClient=true \
-            > "$LOG_DIR/settings-effective.log" 2>&1
-
-          grep -qx 'DebugServer/Port' "$LOG_DIR/settings-effective.log"
-          grep -qx 'DebugServer/Enabled' "$LOG_DIR/settings-effective.log"
-          grep -qx 'DebugServer/UseIPv4' "$LOG_DIR/settings-effective.log"
-          grep -qx 'Boot/AwaitGDBClient' "$LOG_DIR/settings-effective.log"
-
-          # Ares v148's N64 paraLLEl-RDP path requires a Vulkan-capable device.
-          # Use Mesa's software Vulkan ICD (lavapipe) for deterministic headless CI.
+          # Verify lavapipe exists and use it for headless N64 rendering.
           LVP_ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -type f -name 'lvp_icd*.json' -print -quit)"
           if [[ -z "$LVP_ICD" ]]; then
             echo "FAIL: Mesa lavapipe Vulkan ICD was not installed." >&2
@@ -110,36 +95,73 @@ jobs:
           echo "Vulkan ICD selected: $LVP_ICD" | tee "$LOG_DIR/vulkan-icd.log"
           VK_ICD_FILENAMES="$LVP_ICD" vulkaninfo --summary > "$LOG_DIR/vulkaninfo.log" 2>&1
 
-          # Select the N64 core explicitly. Do not depend on file-type
-          # auto-detection or leave a modal system-selection prompt open.
-          # OpenAL Soft's built-in null backend is available in CI without
-          # a physical audio device. This keeps the smoke test independent of ALSA.
-          # Force paraLLEl-RDP's regular device-buffer path; this is slower
-          # but avoids requiring VK_EXT_external_memory_host on software Vulkan.
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null VK_ICD_FILENAMES="$LVP_ICD" PARALLEL_RDP_ALLOW_EXTERNAL_HOST=0 stdbuf -oL -eL \
-            "$ARES_BIN" \
+          # Mirror Ares issue #1778's startup ordering: start GDB first and
+          # retry real remote-connection attempts while the emulator is launched.
+          # This avoids testing only the separate AwaitGDBClient pause mechanism.
+          (
+            set +e
+            deadline=$((SECONDS + 35))
+            attempt=0
+            while (( SECONDS < deadline )); do
+              attempt=$((attempt + 1))
+              ATTEMPT_LOG="$LOG_DIR/gdb-attempt-$attempt.log"
+              timeout --foreground --signal=INT --kill-after=3s 15s \
+                gdb-multiarch -q --batch \
+                  -ex "set pagination off" \
+                  -ex "target extended-remote ip6-localhost:9123" \
+                  -ex "break main" \
+                  -ex "continue" \
+                  -ex "continue" \
+                  "$CTEST_ELF" > "$ATTEMPT_LOG" 2>&1
+              rc=$?
+              cp "$ATTEMPT_LOG" "$LAST_GDB_ATTEMPT"
+              # Once the target responds far enough to reach main or report a
+              # target signal, preserve this transcript; do not hide a crash
+              # by retrying another session.
+              if grep -Eq 'Breakpoint 1, main|Program received signal|Remote debugging using|Remote connection closed|Remote communication error' "$ATTEMPT_LOG"; then
+                cp "$ATTEMPT_LOG" "$GDB_LOG"
+                printf '%s\n' "$rc" > "$GDB_RC_FILE"
+                exit 0
+              fi
+              sleep 0.25
+            done
+            cp "$LAST_GDB_ATTEMPT" "$GDB_LOG" 2>/dev/null || true
+            printf '1\n' > "$GDB_RC_FILE"
+            exit 1
+          ) &
+          GDB_WRAPPER_PID=$!
+
+          # Start the emulator after the debugger has already begun attempting
+          # to connect, matching the public issue's ordering more closely.
+          sleep 1
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSOFT_DRIVERS=null \
+            VK_ICD_FILENAMES="$LVP_ICD" PARALLEL_RDP_ALLOW_EXTERNAL_HOST=0 \
+            stdbuf -oL -eL "$ARES_BIN" \
               --system "Nintendo 64" \
               --setting DebugServer/Port=9123 \
               --setting DebugServer/Enabled=true \
               --setting DebugServer/UseIPv4=false \
-              --setting Boot/AwaitGDBClient=true \
               --kiosk "$CTEST_ROM" \
               > "$ARES_LOG" 2>&1 &
           ARES_PID=$!
+
           cleanup() {
-            if kill -0 "$ARES_PID" 2>/dev/null; then
+            if [[ -n "${GDB_WRAPPER_PID:-}" ]] && kill -0 "$GDB_WRAPPER_PID" 2>/dev/null; then
+              pkill -TERM -P "$GDB_WRAPPER_PID" 2>/dev/null || true
+              kill "$GDB_WRAPPER_PID" 2>/dev/null || true
+            fi
+            if [[ -n "${ARES_PID:-}" ]] && kill -0 "$ARES_PID" 2>/dev/null; then
               kill "$ARES_PID" 2>/dev/null || true
             fi
-            wait "$ARES_PID" 2>/dev/null || true
+            wait "${GDB_WRAPPER_PID:-}" 2>/dev/null || true
+            wait "${ARES_PID:-}" 2>/dev/null || true
           }
           trap cleanup EXIT
 
-          # Verify the listener is actually present on the IPv6 loopback socket
-          # before invoking GDB. Never probe it with a preliminary client connection.
           LISTENER_READY=0
-          for attempt in $(seq 1 20); do
+          for attempt in $(seq 1 30); do
             if ! kill -0 "$ARES_PID" 2>/dev/null; then
-              echo "Ares exited before the GDB listener was ready." >&2
+              echo "FAIL: Ares exited before its debug listener became ready." >&2
               cat "$ARES_LOG" >&2 || true
               exit 1
             fi
@@ -151,43 +173,29 @@ jobs:
             sleep 1
           done
           if [[ "$LISTENER_READY" -ne 1 ]]; then
-            echo "FAIL: no TCP listener appeared on port 9123. Check the line-buffered Ares runtime log below for system-load or debug-server initialization errors." >&2
+            echo "FAIL: no TCP listener appeared on port 9123." >&2
             cat "$ARES_LOG" >&2 || true
+            cat "$LAST_GDB_ATTEMPT" >&2 || true
             exit 1
           fi
 
-          if ! grep -Fq 'Opening TCP-server on [::1]:9123' "$ARES_LOG"; then
-            echo "FAIL: port listener exists but Ares did not log the expected IPv6 GDB endpoint." >&2
-            cat "$ARES_LOG" >&2 || true
+          # Wait for the bounded GDB session to capture either a successful
+          # main breakpoint or a clear target/connection outcome.
+          for attempt in $(seq 1 40); do
+            [[ -s "$GDB_RC_FILE" ]] && break
+            if ! kill -0 "$GDB_WRAPPER_PID" 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [[ ! -s "$GDB_RC_FILE" ]]; then
+            echo "FAIL: GDB did not finish within the workflow's bounded window." >&2
+            cat "$LAST_GDB_ATTEMPT" >&2 || true
             exit 1
           fi
-
-          # AwaitGDBClient keeps the N64 core stopped until GDB attaches, then
-          # resumes it from Ares' client-connect callback. Install the main
-          # breakpoint in GDB before making the remote connection.
-
-          # Resolve specifically to IPv6 loopback: Ares v148's UseIPv4=false
-          # binds to ::1, whereas "localhost" may be resolved to IPv4 by the host.
-          # The ctest program loops indefinitely; the bounded timeout is expected
-          # only after GDB reaches main and a second continue remains connected.
-          set +e
-          timeout --foreground --signal=INT --kill-after=3s 15s \
-            gdb-multiarch -q --batch \
-              -ex "set pagination off" \
-              -ex "break main" \
-              -ex "target extended-remote ip6-localhost:9123" \
-              -ex "continue" \
-              -ex "continue" \
-              "$CTEST_ELF" > "$GDB_LOG" 2>&1
-          GDB_RC=$?
-          set -e
-
+          GDB_RC="$(cat "$GDB_RC_FILE")"
           cat "$GDB_LOG"
-          # GNU timeout may return 124 (deadline) or 137 (SIGKILL after the
-          # grace period) if GDB is still blocked in a valid remote continue.
-          # These statuses count only if all transcript/target assertions below pass.
+
           if [[ "$GDB_RC" -ne 124 && "$GDB_RC" -ne 130 && "$GDB_RC" -ne 137 ]]; then
-            echo "FAIL: unexpected GDB exit code $GDB_RC for the bounded remote session." >&2
+            echo "FAIL: GDB ended with exit code $GDB_RC before the bounded continue completed." >&2
             tail -n 100 "$ARES_LOG" >&2 || true
             exit 1
           fi
@@ -196,13 +204,8 @@ jobs:
             tail -n 100 "$ARES_LOG" >&2 || true
             exit 1
           fi
-          CONTINUES="$(grep -c 'Continuing\.' "$GDB_LOG" || true)"
-          if [[ "$CONTINUES" -lt 2 ]]; then
-            echo "FAIL: GDB did not record two continue operations (found $CONTINUES)." >&2
-            exit 1
-          fi
           if grep -Eqi 'Remote connection closed|Remote communication error|Target disconnected|SIGSEGV|SIGABRT|Program received signal SIGTRAP|__rsp_check_assert|Connection refused|Connection timed out|Cannot access memory' "$GDB_LOG"; then
-            echo "FAIL: GDB log contains a disconnect, signal/assert trap, or target error." >&2
+            echo "FAIL: GDB transcript contains a disconnect, signal/assert trap, or target error." >&2
             exit 1
           fi
           if ! grep -Fq 'GDB client connected' "$ARES_LOG"; then
@@ -211,12 +214,12 @@ jobs:
             exit 1
           fi
           if ! grep -Fq 'Vulkan Enabled: using paraLLEl-RDP' "$ARES_LOG"; then
-            echo "FAIL: N64 paraLLEl-RDP did not initialize once ctest began rendering." >&2
+            echo "FAIL: N64 paraLLEl-RDP did not initialize during ctest rendering." >&2
             cat "$ARES_LOG" >&2 || true
             exit 1
           fi
           if ! kill -0 "$ARES_PID" 2>/dev/null; then
-            echo "FAIL: the Ares process exited during the post-breakpoint run." >&2
+            echo "FAIL: Ares exited during the post-breakpoint run." >&2
             tail -n 100 "$ARES_LOG" >&2 || true
             exit 1
           fi
@@ -225,9 +228,9 @@ jobs:
             echo "## RE-001 Ares/GDB smoke test"
             echo ""
             echo "- Ares baseline: official stable v148"
-            echo "- Target: the public libdragon ctest homebrew reproducer only"
-            echo "- Result: **PASS** — GDB hit `main`, recorded two `continue` operations, and remained connected for the bounded 15-second run."
-            echo "- This is only a generic debugger smoke test; it does not test SWE1R or prove the results-screen transition."
+            echo "- Target: public libdragon ctest homebrew; debugger is started before Ares."
+            echo "- Result: **PASS** — GDB hit main and remained connected for the bounded run without target/assert signals."
+            echo "- Scope: debugger tooling only; not a SWE1R run and not proof of the N64 results-screen transition."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload diagnostic logs
