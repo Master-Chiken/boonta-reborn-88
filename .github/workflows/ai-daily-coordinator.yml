@@ -24,23 +24,32 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: Guard the existing Gemini API-key route
+      - name: Require explicit free-tier attestation and Gemini API key
         id: key
         shell: bash
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}
         run: |
           set -euo pipefail
-          if [[ -n "${GEMINI_API_KEY:-}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "The existing Gemini API-key route is configured. No provider or billing fallback is used." >> "$GITHUB_STEP_SUMMARY"
-          else
+          if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
             {
               echo "## AI coordinator skipped safely"
               echo
-              echo "The repository secret GEMINI_API_KEY is absent. No model request was sent and no alternative or paid provider was attempted."
+              echo "No Gemini API request was sent. The repository Actions variable GEMINI_FREE_TIER_CONFIRMED must equal the exact string true."
+              echo "The owner must first verify in Google AI Studio that this project is on the Free tier and is not linked to a Cloud Billing account. The variable is an owner attestation; this workflow cannot inspect Google billing."
             } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## AI coordinator skipped safely"
+              echo
+              echo "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "The explicit free-tier attestation and API key are present. No provider or billing fallback is used." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Collect live branches, open PRs, and project issue metadata

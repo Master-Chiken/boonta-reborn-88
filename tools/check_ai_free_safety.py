@@ -130,6 +130,13 @@ for label, content in (
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
     if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
         errors.append(f"{label} must use only the GEMINI_API_KEY secret")
+    if (
+        "id: 'free_tier_guard'" not in content
+        or "GEMINI_FREE_TIER_CONFIRMED" not in content
+        or "if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or content.find("id: 'free_tier_guard'") > content.find("name: 'Run Gemini CLI'")
+    ):
+        errors.append(f"{label} must gate its Gemini model call on explicit free-tier confirmation")
     if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
@@ -194,6 +201,11 @@ for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', 
         errors.append(f"Project coordinator must not expose write tool {forbidden}")
 if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
     errors.append("Project coordinator must use the existing Gemini API-key secret only")
+if (
+    'GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}' not in daily
+    or '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' not in daily
+):
+    errors.append("Project coordinator must fail closed unless the exact free-tier attestation is present")
 if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
     errors.append("Project coordinator must keep the explicitly selected free-tier model")
 if (
@@ -206,6 +218,8 @@ if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.searc
     errors.append("Project coordinator must not post current reports to stale/closed issue #23")
 if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
     errors.append("Project coordinator prompt must enforce read-only and €0 constraints")
+if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup:
+    errors.append("Setup documentation must explain the explicit free-tier owner attestation")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
 
