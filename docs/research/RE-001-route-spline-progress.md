@@ -1472,6 +1472,7 @@ This check narrows the tooling risk for the remaining N64 results-transition inv
 - Chris Lewis' [N64 debugging walkthrough (23 Dec 2025)](https://blog.chrislewis.au/finding-jingle-town-debugging-an-n64-game-without-symbols/) demonstrates Ares remote debugging with `gdb-multiarch`, selecting `mips:4000`, connecting to the configured GDB port, setting a function breakpoint, and reading a state byte directly from memory. The walkthrough applies to **Snowboard Kids 2**, not SWE1R; it is a method reference only.
 - Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) recorded an N64 GDB-attach/continue crash in January 2025 and said v139 worked while v140–v141 and a bleeding-edge build did not.
 - The issue timeline records commits [`c8ddc5d`](https://github.com/ares-emulator/ares/commit/c8ddc5d) and [`dfcd7d4`](https://github.com/ares-emulator/ares/commit/dfcd7d4), both named as fixes for the MIPS exception on GDB attach; the linked [issue #1793](https://github.com/ares-emulator/ares/issues/1793) closed the report as completed on 26 January 2025.
+- The official [Ares v148 release](https://github.com/ares-emulator/ares/releases/tag/v148) was published on 30 May 2026 and is the latest non-prerelease release returned by the upstream releases API checked on 21 October 2026. The v148 tag is 812 commits ahead of, and not behind, the merged fix commit `dfcd7d4`, so the fix is included in that release's ancestry.
 
 ### Interpretation and caveats
 
@@ -1482,8 +1483,8 @@ This check narrows the tooling risk for the remaining N64 results-transition inv
 
 ### Minimal next runtime experiment
 
-1. Record the exact Ares build/version, host OS, GDB version and configured port.
-2. Run the public small homebrew test case from issue #1778; confirm attach → breakpoint → continue works without a crash.
+1. Start with official stable Ares v148 (or record the exact later stable version if one is available at test time); also record host OS, GDB version and configured port.
+2. Run the public small homebrew test case from issue #1778; confirm attach → breakpoint → second continue works without a crash. If v148 fails, capture the result before separately comparing with a nightly build.
 3. With a lawful local N64 game copy, observe the documented lap-related watchpoint candidates `0x8011900A` (Player 1) and `0x80119092` (Player 2) through lap changes, then trace the actual all-local-done condition and its consumers to an identified results UI/resource/scene selector.
 4. If the emulator setup, memory reads, or relevant state path cannot be validated, report the exact failure and leave RE-001 blocked. Do not infer results-screen semantics from the GameShark labels or PC analogues.
 
@@ -1521,6 +1522,8 @@ This section turns the source findings above into a bounded experiment. It is do
 - Leave **Use IPv4** disabled for a normal local-only connection where possible. The reviewed UI explicitly warns that IPv4 mode binds to any device and can allow anyone on the network to access the server ([`developer.cpp`](https://github.com/ares-emulator/ares/blob/9408cb43d4948fc3ea6e152a307a34348df3fe04/desktop-ui/settings/developer.cpp)). If a specific host setup requires IPv4, restrict network access and do not expose the debug port to an untrusted network.
 
 ### Gate 1 — verify the debugger connection before using the game
+
+Use official stable [Ares v148](https://github.com/ares-emulator/ares/releases/tag/v148) as the first baseline: upstream's fix for the historical attach crash is in its commit ancestry. Do not begin with a nightly build; if v148 fails, record the failure first and use a separately recorded nightly run only as a comparison.
 
 Use the public `ctest.zip` reproducer attached to Ares [issue #1778](https://github.com/ares-emulator/ares/issues/1778) (source example: [libdragon's ctest directory](https://github.com/DragonMinded/libdragon/tree/trunk/examples/ctest)). Keep the zip out of the Boonta repository. Reproduce the reported launch order with two terminals, substituting the actual configured GDB port if it is not `9123`:
 
