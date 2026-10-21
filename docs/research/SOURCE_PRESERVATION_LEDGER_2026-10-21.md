@@ -117,3 +117,11 @@ Continue the N64-only trace from the local reference note. The best established 
 - src/Swr/swrRace.c, function swrRace_InRaceTimer / PC address 0x00460950: source of the PC in-race HUD's lap fraction, lap-time popup, LAP TIME, FINAL LAP, LAP, POS and text resource identifiers.
 - src/Swr/swrObj.c, function swrObjJdge_F2 / PC address 0x0045EA30: reference for how the PC implementation increments the lap counter after a route-progress crossing and handles the configured lap threshold.
 - Use limit: these PC functions are comparison leads only. They do not prove N64 implementation, resource IDs, structure layouts, or control-flow parity. N64-specific claims must stay based on N64 local static/dynamic evidence and the independently labelled public GameShark documentation.
+
+## K. N64 HUD display data flow cross-check
+
+- Local-only static trace on the user's US N64 build now connects the HUD's current/configured lap fraction to the previously traced participant progression counter and manager threshold. Displayed current value is participant count + 1 clamped to the configured target; the target value comes from the same manager threshold.
+- The second %d/%d template is position / total racer count and pairs with POS.
+- The FINAL LAP text is directly referenced by the same HUD function. Its branch compares the next displayed lap with the configured target, requires the single-local-player HUD layout, and is fade-gated to the lap-completion popup.
+- Keep raw instruction addresses, exact ROM string offsets, disassembly, and derived binary data in the owner's local notes. The public dossier contains only summary findings.
+- Status: high confidence in N64 HUD lap-counter and FINAL LAP selection data flow based on local static code; runtime observation and physical finish-line timing remain unverified. Do not infer PC/DC/GameCube/Wii parity.
