@@ -1,6 +1,6 @@
 # Configuration des outils — Boonta Reborn 88
 
-**Mise à jour : 2026-10-16**
+**Mise à jour : 2026-10-21**
 
 ## Décisions et contraintes de travail
 
@@ -27,7 +27,7 @@ Les workflows d'assistance sont facultatifs et ne doivent jamais devenir une con
 - Le workflow Gemini est gouverné par `.github/workflows/gemini-dispatch.yml`. Les tâches d'écriture doivent rester bloquées tant que le propriétaire n'a pas explicitement activé le verrou de dépôt prévu à cet effet. Ne pas activer ce verrou automatiquement.
 - Une clé API est un secret GitHub, jamais un texte à mettre dans une issue, un commit, un fichier suivi ou cette conversation.
 - Si un quota gratuit est épuisé, arrêter l'appel concerné et continuer avec les outils GitHub disponibles ; ne pas activer une facturation de secours.
-- La relecture OpenRouter Free a été proposée via [PR #14](https://github.com/Master-Chiken/boonta-reborn-88/pull/14). Vérifier le workflow et sa configuration effective avant usage. Toute relecture externe transmet au moins le diff public de la PR au fournisseur sélectionné ; ne pas lui soumettre de contenu privé ou de secrets.
+- **OpenRouter Free PR review:** the manual-only, read-only reviewer is being restored in [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). It uses only `openrouter/free`, caps the transmitted diff at 30,000 bytes, checks common secret patterns, and has no code-write permission or paid fallback. It will not be runnable from the Actions tab until this PR is explicitly merged to `main`; the `OPENROUTER_API_KEY` secret is configured separately by the owner, without credits or a payment method. External model providers receive the selected public diff, so never submit secrets, private data, commercial assets, or unclear-provenance files.
 - Les limites, modèles gratuits et conditions de traitement des données changent : vérifier la documentation officielle au moment d'une activation.
 
 ## Import Step 102 : blocage explicite
