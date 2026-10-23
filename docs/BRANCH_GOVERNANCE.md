@@ -18,6 +18,20 @@
 
 Before describing CI as mandatory or enabling any auto-merge policy, the repository owner must configure the intended stable status checks under GitHub repository **Settings → Rules → Rulesets**, preserve the current approval/latest-push safeguards, and re-read the live ruleset to verify that the selected checks are enforced on the intended branch. Until that verification is complete, keep manual review as the merge gate and do not enable automatic merging. Ruleset configuration is an owner-side repository setting; this workflow does not change it.
 
+### Suggested baseline checks for `main`
+
+The following exact GitHub Actions check-run names were observed passing on recent pull requests and are produced by workflows that trigger for every pull request targeting `main`, without path filters:
+
+- `Verify Gemini free-only guardrails` — static AI free-tier safety check.
+- `Reject known held assets and data` — source-import/provenance policy plus its unit tests.
+- `Check proposed source paths using trusted base policy` — trusted-base path-policy validation.
+
+Select these under **Require status checks to pass before merging** for the `main` ruleset. If GitHub asks for the expected source, choose **GitHub Actions**. Recheck the current ruleset after saving; do not assume documentation or a green run makes a check mandatory.
+
+**Do not globally require path-filtered checks as an initial step:** `Read-only Wii64 tooling unit tests`, `Branch automation self-test`, `GameCube first-render prototype build`, and Dolphin diagnostics only run for selected file paths or opt-in cases. Requiring a path-filtered workflow globally can leave unrelated pull requests stuck waiting for a check that did not run. If the project later wants every relevant gameplay/tooling test to be a formal merge gate, add and test an always-running aggregate check that runs those tests conditionally based on changed paths, then require that aggregate check.
+
+These three baseline checks are the universal policy/provenance gate; they do **not** replace gameplay build tests, visible Dolphin acceptance, independent code review, or the owner's verification of the Google Free-tier billing state.
+
 ## What counts as active?
 
 The GitHub Actions audit treats a branch as active if it is the default branch, has an open pull request, its latest commit is no more than 30 days old, or its commit date cannot be verified. The unknown-date rule is deliberately conservative. This is a practical heuristic, not proof that a branch is safe to retire.
