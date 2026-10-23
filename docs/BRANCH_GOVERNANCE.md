@@ -14,23 +14,27 @@
 
 ## Merge gates and required status checks
 
-**Verified ruleset gap as of 2026-10-23:** the live GitHub rulesets for `main` and `dev` require pull requests and an approving review, but neither ruleset defines required CI status checks. A green check can therefore provide evidence without necessarily blocking a merge when it fails or is missing.
+**Live ruleset state verified on 2026-10-23:** `Protect main 2` is active for `main` and currently requires a pull request, one approving review, approval of the latest push, and the three required status checks listed below. The owner saved this ruleset and the live GitHub API confirms the checks are enforced. The `Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks. Therefore, CI is a merge-blocking gate for `main`, but not yet for `dev`.
 
-Before describing CI as mandatory or enabling any auto-merge policy, the repository owner must configure the intended stable status checks under GitHub repository **Settings → Rules → Rulesets**, preserve the current approval/latest-push safeguards, and re-read the live ruleset to verify that the selected checks are enforced on the intended branch. Until that verification is complete, keep manual review as the merge gate and do not enable automatic merging. Ruleset configuration is an owner-side repository setting; this workflow does not change it.
+Ruleset configuration is an owner-side repository setting; repository workflows do not change it. Preserve existing approval/latest-push safeguards. Do not enable automatic merging merely because these checks are green: independent review, scope review, and the applicable gameplay acceptance gate remain necessary.
 
-### Suggested baseline checks for `main`
+### Required status checks for `main` (live verified 2026-10-23)
 
-The following exact GitHub Actions check-run names were observed passing on recent pull requests and are produced by workflows that trigger for every pull request targeting `main`, without path filters:
+The following exact GitHub Actions check-run names are now configured in the `main` ruleset and were observed passing on recent pull requests. They are triggered for every pull request targeting `main`, without path filters:
 
 - `Verify Gemini free-only guardrails` — static AI free-tier safety check.
 - `Reject known held assets and data` — source-import/provenance policy plus its unit tests.
 - `Check proposed source paths using trusted base policy` — trusted-base path-policy validation.
 
-Select these under **Require status checks to pass before merging** for the `main` ruleset. If GitHub asks for the expected source, choose **GitHub Actions**. Recheck the current ruleset after saving; do not assume documentation or a green run makes a check mandatory.
+The ruleset also requires the pull-request branch to be up to date before merging. Do not describe unrelated path-filtered tests as globally required.
 
-**Do not globally require path-filtered checks as an initial step:** `Read-only Wii64 tooling unit tests`, `Branch automation self-test`, `GameCube first-render prototype build`, and Dolphin diagnostics only run for selected file paths or opt-in cases. Requiring a path-filtered workflow globally can leave unrelated pull requests stuck waiting for a check that did not run. If the project later wants every relevant gameplay/tooling test to be a formal merge gate, add and test an always-running aggregate check that runs those tests conditionally based on changed paths, then require that aggregate check.
+### Remaining gap on `dev`
 
-These three baseline checks are the universal policy/provenance gate; they do **not** replace gameplay build tests, visible Dolphin acceptance, independent code review, or the owner's verification of the Google Free-tier billing state.
+The `Protect dev` ruleset does not currently require CI status checks. Do not copy the `main` check list directly onto `dev` until the workflows are confirmed to trigger on PRs targeting `dev`; otherwise GitHub could wait for required checks that never run. If `dev` is meant to have the same enforcement, first add/verify stable checks or an always-running aggregate gate for `dev`, then configure and re-read the live `dev` ruleset.
+
+**Do not globally require path-filtered checks:** `Read-only Wii64 tooling unit tests`, `Branch automation self-test`, `GameCube first-render prototype build`, and Dolphin diagnostics only run for selected file paths or opt-in cases. Requiring a path-filtered workflow globally can leave unrelated pull requests stuck waiting for a check that did not run. If the project later wants every relevant gameplay/tooling test to be a formal merge gate, add and test an always-running aggregate check that runs those tests conditionally based on changed paths, then require that aggregate check.
+
+The three baseline checks on `main` are a universal policy/provenance gate; they do **not** replace gameplay build tests, visible Dolphin acceptance, independent code review, or the owner's verification of the Google Free-tier billing state.
 
 ## What counts as active?
 
