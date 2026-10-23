@@ -65,7 +65,7 @@ jobs:
             exit 1
           fi
 
-          jq '{number,title,base:.base.ref,head:.head.ref,html_url}' "$pr_json" > "$pr_meta"
+          jq '{number,title,base:.base.ref,head:.head.ref,head_sha:.head.sha,html_url}' "$pr_json" > "$pr_meta"
           gh api -H "Accept: application/vnd.github.v3.diff" "repos/${GH_REPO}/pulls/${PR_NUMBER}" > "$pr_diff"
           test -s "$pr_diff"
 
@@ -108,6 +108,7 @@ jobs:
             }' > "$request_json"
 
           printf 'pr_number=%s\n' "$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          printf 'head_sha=%s\n' "$(jq -r '.head_sha' "$pr_meta")" >> "$GITHUB_OUTPUT"
 
       - name: Call OpenRouter free route
         id: call
@@ -157,6 +158,7 @@ jobs:
         env:
           PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
           REVIEW_FILE: ${{ steps.call.outputs.review_file }}
+          PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
         with:
           script: |
             const fs = require('fs');
@@ -173,7 +175,19 @@ jobs:
             if (review.length > 50000) {
               review = review.slice(0, 49500) + '\n\n[Review truncated to fit GitHub comment limits.]';
             }
+            const current = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: number });
+            const expectedRepo = `${context.repo.owner}/${context.repo.repo}`;
+            if (
+              current.data.state !== 'open' ||
+              current.data.base.ref !== 'main' ||
+              current.data.head.repo?.full_name !== expectedRepo ||
+              current.data.head.sha !== process.env.PR_HEAD_SHA
+            ) {
+              core.setFailed('The pull request state, base, head repository, or head SHA changed during review. Discard this report and run a fresh review.');
+              return;
+            }
             const body = '## OpenRouter Free AI Review (read-only)\n\n' +
+              '**Reviewed head SHA:** `' + process.env.PR_HEAD_SHA + '`\n\n' +
               review +
               '\n\n---\nAutomated second opinion only; this is not proof of correctness. Only the capped diff was provided. No code was changed, no branch was pushed, and no pull request was merged. Verify findings manually.';
             await github.rest.issues.createComment({

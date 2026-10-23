@@ -106,6 +106,24 @@ if "contents: write" in openrouter or "pull-requests: write" in openrouter or "a
 if "No paid fallback will be attempted." not in openrouter:
     errors.append("OpenRouter reviewer must fail closed and never use a paid fallback")
 
+# The result must stay bound to the exact, still-eligible PR reviewed before the external call.
+head_binding_requirements = (
+    "head_sha:.head.sha",
+    "PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}",
+    "current.data.state !== 'open'",
+    "current.data.base.ref !== 'main'",
+    "current.data.head.repo?.full_name !== expectedRepo",
+    "current.data.head.sha !== process.env.PR_HEAD_SHA",
+    "Reviewed head SHA:",
+)
+missing_head_binding = [requirement for requirement in head_binding_requirements if requirement not in openrouter]
+if missing_head_binding:
+    errors.append(f"OpenRouter reviewer is missing exact-head/eligibility safeguards: {missing_head_binding!r}")
+head_recheck_position = openrouter.find("const current = await github.rest.pulls.get")
+comment_publish_position = openrouter.find("await github.rest.issues.createComment")
+if head_recheck_position < 0 or comment_publish_position < 0 or head_recheck_position >= comment_publish_position:
+    errors.append("OpenRouter reviewer must re-check PR eligibility and exact head before publishing its comment")
+
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
     "google_api_key:",
