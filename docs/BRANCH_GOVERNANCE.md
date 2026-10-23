@@ -14,7 +14,7 @@
 
 ## Merge gates and required status checks
 
-**Live ruleset state verified on 2026-10-23:** `Protect main 2` is active for `main` and currently requires a pull request, one approving review, approval of the latest push, and the three required status checks listed below. The owner saved this ruleset and the live GitHub API confirms the checks are enforced. The `Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks. Therefore, CI is a merge-blocking gate for `main`, but not yet for `dev`.
+**Live ruleset state verified on 2026-10-23:** `Protect main 2` is active for `main` and currently requires a pull request, one approving review, approval of the latest push, and the three required status checks listed below. The live GitHub API confirms these checks are enforced for normal merges. However, the ruleset's Bypass list still includes the repository owner as a `User` with `pull_request` bypass mode; GitHub documents that this actor can bypass applicable rules only through a pull request, not by direct push. This is a deliberate exception; remove the actor from the `Bypass list` if no exception is wanted. The `Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks. Therefore, CI is a merge-blocking gate for `main`, but not yet for `dev`.
 
 Ruleset configuration is an owner-side repository setting; repository workflows do not change it. Preserve existing approval/latest-push safeguards. Do not enable automatic merging merely because these checks are green: independent review, scope review, and the applicable gameplay acceptance gate remain necessary.
 
