@@ -82,6 +82,7 @@ jobs:
           governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
           coordinator = Path(".github/workflows/ai-daily-coordinator.yml").read_text(encoding="utf-8")
+          daily_prompt = Path(".github/commands/gemini-daily-coordinator.toml").read_text(encoding="utf-8")
           gemini_invoke = Path(".github/workflows/gemini-invoke.yml").read_text(encoding="utf-8")
           gemini_execute = Path(".github/workflows/gemini-plan-execute.yml").read_text(encoding="utf-8")
           setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
@@ -118,6 +119,7 @@ jobs:
               "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
               "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
               "AI coordinator remains manual-only": "workflow_dispatch:" in coordinator.split("permissions:", 1)[0] and "schedule:" not in coordinator.split("permissions:", 1)[0] and "cron:" not in coordinator.split("permissions:", 1)[0],
+              "AI coordinator preserves the explicit RE-001 pause": "RE-001 issue #226 is intentionally PAUSED" in coordinator and "do not continue its research or start RE-002 unless an explicit owner instruction resumes it" in coordinator and "RE-001 (issue #226) is explicitly PAUSED" in daily_prompt and "must not recommend restarting it as the next task" in daily_prompt,
               "YAML syntax check includes both reusable Gemini workflows": all(path in yaml_validation for path in (".github/workflows/gemini-invoke.yml", ".github/workflows/gemini-plan-execute.yml")),
               "AI coordinator requires exact free-tier attestation": "GEMINI_FREE_TIER_CONFIRMED" in coordinator and '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' in coordinator,
               "AI coordinator checks gate before live-data collection and model": coordinator.index("id: key") < coordinator.index("name: Collect live branches, open PRs, and project issue metadata") < coordinator.index("name: Run Gemini read-only coordinator"),
