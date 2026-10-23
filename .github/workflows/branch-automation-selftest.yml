@@ -85,6 +85,7 @@ jobs:
           gemini_invoke = Path(".github/workflows/gemini-invoke.yml").read_text(encoding="utf-8")
           gemini_execute = Path(".github/workflows/gemini-plan-execute.yml").read_text(encoding="utf-8")
           setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
+          branch_docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           selftest = Path(".github/workflows/branch-automation-selftest.yml").read_text(encoding="utf-8")
           yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
           intake_header = intake.split("permissions:", 1)[0]
@@ -95,6 +96,9 @@ jobs:
               "branch intake can prepare at most two draft PRs": '          - "1"\n          - "2"' in intake_header and "1|2) ;;" in intake and "1|3|5|10" not in intake,
               "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
               "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs match active target": "no more than 10 active working branches" in branch_docs and "no more than 30 active working branches" not in branch_docs and "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs distinguish count warning and red line": "10 or more branch refs" in branch_docs and "more than 20 total branch refs" in branch_docs and "30-active-branch target" not in branch_docs,
+              "branch governance docs preserve no-automatic-deletion rule": "Do not delete branches automatically." in branch_docs and "gh api --method DELETE" not in governance,
               "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
               "audit reconciles inventory after branch cleanup": '  workflow_run:\n    workflows: ["Retire archived branch refs"]' in governance and 'branches: ["main"]' in governance,
               "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
