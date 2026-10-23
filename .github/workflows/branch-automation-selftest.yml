@@ -100,6 +100,8 @@ jobs:
               "branch governance docs distinguish count warning and red line": "10 or more branch refs" in branch_docs and "more than 20 total branch refs" in branch_docs and "30-active-branch target" not in branch_docs,
               "branch governance docs preserve no-automatic-deletion rule": "Do not delete branches automatically." in branch_docs and "gh api --method DELETE" not in governance,
               "branch governance docs flag that CI is not yet merge-blocking": "Verified ruleset gap as of 2026-10-23" in branch_docs and "neither ruleset defines required CI status checks" in branch_docs and "do not enable automatic merging" in branch_docs,
+              "branch docs list the three universal main checks": all(name in branch_docs for name in ("Verify Gemini free-only guardrails", "Reject known held assets and data", "Check proposed source paths using trusted base policy")),
+              "branch docs warn against globally requiring path-filtered checks": "Do not globally require path-filtered checks" in branch_docs and "always-running aggregate check" in branch_docs,
               "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
               "audit reconciles inventory after branch cleanup": '  workflow_run:\n    workflows: ["Retire archived branch refs"]' in governance and 'branches: ["main"]' in governance,
               "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
