@@ -1610,3 +1610,46 @@ The controlled GitHub Actions experiment proposed in [PR #252](https://github.co
 Continue only the last chain: follow the already supported participant finish/skip state into its manager-side readers, establish the all-participants-finished predicate and the state/phase change, then identify the results destination from a distinct consumer/resource association. If the local call chain remains ambiguous, document the exact unresolved edge privately and keep the results transition **BLOCKED / UNPROVEN**. Do not repeat the failed Ares/GDB ctest smoke test without a new falsifiable isolation hypothesis; do not start RE-002 or change gameplay code.
 
 No ROM bytes, raw disassembly, private addresses, extracted course records or commercial assets are published in this summary.
+
+
+
+## Z. Alternative local trace via native N64 static recomp — source verified, not executed (2026-10-23)
+
+**Decision:** Do not retry the failed Ares/GDB `ctest` setup. A separate, potentially more useful local observation path is available in the public N64 static-recompilation project [`sp00nznet/racer`](https://github.com/sp00nznet/racer/tree/293032ef29a620edb00ba877276c36ff0936d245), pinned here to commit `293032ef29a620edb00ba877276c36ff0936d245`. This is a testable alternative, **not** evidence that the results transition has been traced. No build was run during this review, no ROM was accessed, and no trace has been captured.
+
+### Direct observations from the public project
+
+- Its [README at the pinned revision](https://github.com/sp00nznet/racer/blob/293032ef29a620edb00ba877276c36ff0936d245/README.md) documents a Windows native static-recompiled build, recompiled functions, and these runtime switches: `SWE1R_WATCH=<N64 address>@<seconds>`, `SWE1R_PEEK=<addresses>`, and `SWE1R_STACKDUMP=<seconds>`. The README reports that the current project reaches a playable Boonta Training Course race, while the overall playable-build milestone remains in progress. This is the upstream project's report, not an independent run by this dossier's author.
+- At the same revision, [`src/main.cpp`](https://github.com/sp00nznet/racer/blob/293032ef29a620edb00ba877276c36ff0936d245/src/main.cpp#L276-L325) loads the executable's `.map` symbols. Its crash handler prints the native stack and calls `print_peeks()`; the stack walker resolves native frames to labels such as `func_800XXXXX + offset` and prints PDB source lines if available.
+- The [watch implementation](https://github.com/sp00nznet/racer/blob/293032ef29a620edb00ba877276c36ff0936d245/src/main.cpp#L394-L438) arms a Windows hardware data breakpoint (DR0) for a **four-byte write range** across other running threads, repeating thread enumeration to cover new threads. The first matching write enters the top-level exception handler, which prints the writer's stack and configured PEEK values. It is a one-hit diagnostic run; do not assume it continues after the trap.
+- The implementation returns without arming if `g_rdram_base` is not initialized after the chosen delay. Also, the current code does not check/report the return value from `SetThreadContext`; the `[WATCH] armed` message by itself is not proof that a watchpoint actually fired. A run with no trap is inconclusive.
+- This local toolchain requires the owner to provide a legally obtained ROM and build/run it on Windows; its repository ignores ROM images and generated recompiled code. No ROM, game binary, or extracted asset should be uploaded, committed, or sent to hosted services.
+
+### Alignment requirement and a bounded first trace
+
+The public [TheForce.Net N64 code list](https://www.theforce.net/videogames/codes/n64/racer.asp) labels `0x8011900A` as a Player 1 lap-related GameShark target and `0x80119092` as the analogous Player 2 target. These are watchpoint candidates only; the published labels do not establish a native field type or a finish-state flag.
+
+Because this watch implementation always requests a four-byte range, use the aligned containing words rather than the odd-to-four-byte-alignment halfword addresses themselves:
+
+- Player 1 candidate at `0x8011900A` is contained in the aligned range `0x80119008–0x8011900B`; arm at `0x80119008`.
+- Player 2 candidate at `0x80119092` is contained in `0x80119090–0x80119093`; arm at `0x80119090`.
+
+Intel's [Software Developer's Manual section on breakpoint-field recognition](https://cdrdv2-public.intel.com/671427/253669-sdm-vol-3b.pdf) states that four-byte data-breakpoint ranges must start at a doubleword boundary; unaligned addresses do not yield valid results. A four-byte aligned range can also cover an adjacent field, so do not assign semantics from the trap alone. Inspect the mapped PDB line/generated instruction and confirm the actual store's address/width before accepting it as the lap field.
+
+A first, local-only calibration can use the existing runtime environment variables, set **before** starting the already-built executable:
+
+```bat
+set SWE1R_WATCH=0x80119008@60
+set SWE1R_PEEK=0x80119008,0x80119090
+```
+
+Then start the owner's local static-recompiled build and enter a race promptly enough that the delay expires after RDRAM initialization but before the event of interest. Adjust the delay if the trap is from startup initialization or a neighboring field. The delay is measured from process start. Keep the log locally: it may expose native function offsets or source lines which are useful for tracing but should not be copied into the public dossier as raw ROM-derived detail.
+
+### How this could answer the actual RE-001 question
+
+1. Use the public lap candidate only to validate that the watchpoint fires and that the map/PDB stack output is useful.
+2. In a separate local run, arm the aligned four-byte word containing the participant finish/skip flag already identified in the owner's private static notes. Keep its address and raw trace private. Arrange for the watch to arm after initialization and before that participant reaches the configured threshold; the first write may otherwise be an initialization, not the finish event.
+3. On the trap, identify the actual writer instruction and the recompiled `func_XXXXXXXX + offset` frame. Use the locally generated recompiled C / function-disassembly output to establish the exact store, then search for manager-side reads/consumers of that field.
+4. Close the chain only when independent evidence shows the manager's all-participants-finished predicate, the state/phase write and its consumer, and an identified results UI/resource/scene destination. A visible post-race screen is useful observation but does not by itself prove the internal writer/reader chain.
+
+**Current classification:** a concrete, source-verified alternative to the failed Ares debugger fixture exists. It is **not yet tested by this investigation** and supplies no new gameplay finding. The N64 all-participants-finished → results destination remains **BLOCKED / UNPROVEN** until a valid local trace or equivalent positive evidence exists. Do not start RE-002, change gameplay code, publish raw ROM addresses/disassembly, or treat PC source as proof of N64 behavior.
