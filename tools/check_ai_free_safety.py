@@ -212,6 +212,28 @@ if (
     or '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' not in daily
 ):
     errors.append("Project coordinator must fail closed unless the exact free-tier attestation is present")
+
+# Presence of the attestation is insufficient unless every live-data/model step is actually gated.
+coordinator_snapshot_name = "      - name: Collect live branches, open PRs, and project issue metadata"
+coordinator_model_name = "      - name: Run Gemini read-only coordinator"
+coordinator_publish_name = "      - name: Publish the requested report to the canonical project issue"
+if not all(name in daily for name in (coordinator_snapshot_name, coordinator_model_name, coordinator_publish_name)):
+    errors.append("Project coordinator is missing a required gated data/model/publication step")
+else:
+    coordinator_snapshot_step = daily.split(coordinator_snapshot_name, 1)[1].split(coordinator_model_name, 1)[0]
+    coordinator_model_step = daily.split(coordinator_model_name, 1)[1].split(coordinator_publish_name, 1)[0]
+    coordinator_publish_step = daily.split(coordinator_publish_name, 1)[1]
+    free_gate_position = daily.find("id: key")
+    snapshot_position = daily.find(coordinator_snapshot_name)
+    model_position = daily.find(coordinator_model_name)
+    if not (0 <= free_gate_position < snapshot_position < model_position):
+        errors.append("Project coordinator must evaluate its free-tier gate before live-data collection and model use")
+    if "if: steps.key.outputs.available == 'true'" not in coordinator_snapshot_step:
+        errors.append("Project coordinator must skip live-data collection unless the exact free-tier gate passes")
+    if "if: steps.key.outputs.available == 'true'" not in coordinator_model_step:
+        errors.append("Project coordinator model call must be conditional on the exact free-tier gate")
+    if "if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'" not in coordinator_publish_step:
+        errors.append("Project coordinator must publish a report only after the free-tier gate passes")
 if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
     errors.append("Project coordinator must keep the explicitly selected free-tier model")
 if (
