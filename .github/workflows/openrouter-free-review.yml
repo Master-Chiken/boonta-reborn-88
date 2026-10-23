@@ -176,8 +176,14 @@ jobs:
               review = review.slice(0, 49500) + '\n\n[Review truncated to fit GitHub comment limits.]';
             }
             const current = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: number });
-            if (current.data.head.sha !== process.env.PR_HEAD_SHA) {
-              core.setFailed('The pull request head changed during review. Discard this report and run a fresh review.');
+            const expectedRepo = `${context.repo.owner}/${context.repo.repo}`;
+            if (
+              current.data.state !== 'open' ||
+              current.data.base.ref !== 'main' ||
+              current.data.head.repo?.full_name !== expectedRepo ||
+              current.data.head.sha !== process.env.PR_HEAD_SHA
+            ) {
+              core.setFailed('The pull request state, base, head repository, or head SHA changed during review. Discard this report and run a fresh review.');
               return;
             }
             const body = '## OpenRouter Free AI Review (read-only)\n\n' +
