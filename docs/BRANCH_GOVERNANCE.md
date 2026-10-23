@@ -2,9 +2,11 @@
 
 ## Policy
 
-- **Target:** no more than 30 active working branches.
+- **Active-branch target:** no more than 10 active working branches.
+- **Total-count warning:** 10 or more branch refs.
+- **Red line:** more than 20 total branch refs.
 - **Do not delete branches automatically.** This is an explicit project rule.
-- The total branch count may remain above 30 while inactive or historical branches are retained.
+- The total branch count may remain above the active-branch target while inactive or historical branches are retained.
 - Preserve every branch's commits and useful work. Prefer reviewing, testing, and merging completed work into `main`; do not merge merely to reduce the count.
 - Keep `main` protected and require relevant CI checks before merging.
 - Avoid creating a branch when an existing work branch can safely be reused. Prefer one focused branch per task and avoid duplicate `-v2` / `-v3` branches unless the reason is documented.
@@ -12,17 +14,17 @@
 
 ## What counts as active?
 
-The scheduled GitHub Actions audit treats a branch as active if it is the default branch, has an open pull request, or its latest commit is no more than 30 days old. This is a practical heuristic, not proof that a branch is safe to retire.
+The GitHub Actions audit treats a branch as active if it is the default branch, has an open pull request, its latest commit is no more than 30 days old, or its commit date cannot be verified. The unknown-date rule is deliberately conservative. This is a practical heuristic, not proof that a branch is safe to retire.
 
 ## Automated audit
 
-The `Branch governance audit` workflow runs weekly and on demand. It reports:
+The `Branch governance audit` workflow runs weekly, on demand, when a branch is created, after relevant policy changes reach `main`, and after the archived-branch cleanup workflow completes. It reports:
 - total branches and active branches;
-- whether the 30-active-branch target is exceeded;
+- whether the 10-active-branch target is exceeded, whether the 10-ref warning is reached, and whether the total exceeds the 20-ref red line;
 - branches with open pull requests;
 - branches with no recent commits that may be reviewed for consolidation.
 
-If the target is exceeded, it opens a single tracking issue (if one is not already open). It does not merge or delete branches automatically. The issue should be worked through by the project maintainers and AI agents, preserving branch contents and contributions.
+When the total-count warning or red line is reached, it opens or updates one tracking issue rather than spamming comments. It does not merge or delete branches automatically. The issue should be worked through by the project maintainers and AI agents, preserving branch contents and contributions.
 
 ## Manual review sequence
 
@@ -30,7 +32,7 @@ If the target is exceeded, it opens a single tracking issue (if one is not alrea
 2. Group duplicate or related work and select a canonical branch for each task.
 3. Test and merge useful work through PRs.
 4. Keep historical or uncertain branches untouched until their contents have been reviewed and preserved.
-5. Report active count and remaining blockers; aim for 30 or fewer active branches without deleting branch refs.
+5. Report active count and remaining blockers; aim for 10 or fewer active branches, investigate the total-count warning at 10 refs and red line above 20, and do not delete branch refs automatically.
 
 ## Automated intake of branch work
 
