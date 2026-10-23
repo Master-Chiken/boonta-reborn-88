@@ -132,7 +132,12 @@ jobs:
               if date:
                   try:
                       stamp = datetime.datetime.fromisoformat(date.replace("Z", "+00:00"))
-                      recent = (now - stamp).days < 30
+                      age = now - stamp
+                      if age < datetime.timedelta(0):
+                          # A future-dated commit is an anomalous timestamp, not evidence of recent activity.
+                          date = None
+                      else:
+                          recent = age < datetime.timedelta(days=30)
                   except ValueError:
                       date = None
               unknown_date = not date
