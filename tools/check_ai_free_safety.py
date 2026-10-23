@@ -248,6 +248,14 @@ if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
     errors.append("Project coordinator prompt must enforce read-only and €0 constraints")
 if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup:
     errors.append("Setup documentation must explain the explicit free-tier owner attestation")
+
+if (
+    "RE-001 issue #226 is intentionally PAUSED" not in daily
+    or "do not continue its research or start RE-002 unless an explicit owner instruction resumes it" not in daily
+    or "RE-001 (issue #226) is explicitly PAUSED" not in daily_prompt
+    or "must not recommend restarting it as the next task" not in daily_prompt
+):
+    errors.append("AI coordinator must preserve the owner's explicit RE-001 pause and must not restart that research autonomously")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
 
