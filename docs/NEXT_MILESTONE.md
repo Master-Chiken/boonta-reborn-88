@@ -1,10 +1,10 @@
 # Next milestone: Interactive validation of the clean-room racing slice
 
-Last updated: 2026-10-17
+Last updated: 2026-10-18
 
 ## Goal of this milestone
 
-Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a real controller in a visible Dolphin session (and later on real hardware).
+Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a configured emulated GameCube controller (keyboard or gamepad) in a visible Dolphin session, then test physical hardware separately.
 
 This is the gate before expanding the vertical slice.
 
@@ -25,12 +25,12 @@ PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 
 
 Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. Subsequent main commits update documentation only; the code-bearing tree validated by run #39062005581 has not changed. The live-controller checklist below remains the outstanding acceptance gate.
 
-The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured emulated GameCube controller. They also do not establish physical GameCube/Wii compatibility.
 
 ## Interactive acceptance checklist
 
-Load the latest mainline DOL in a **visible** Dolphin session.  
-Record: Dolphin version, video backend, video mode, controller profile, and evidence (short video or screenshots + notes).
+Load the latest mainline DOL in a **visible** Dolphin session. If no physical controller is available, use the [keyboard-only Dolphin setup](DOLPHIN_KEYBOARD_TEST.md); it uses Dolphin's existing emulated GameCube controller rather than requiring a new input layer in Boonta.  
+Record: Dolphin version, video backend, video mode, selected input device/profile, and evidence (short video or screenshots + notes).
 
 Test in this exact order:
 
