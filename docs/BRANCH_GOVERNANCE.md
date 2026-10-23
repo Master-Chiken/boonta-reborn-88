@@ -8,9 +8,15 @@
 - **Do not delete branches automatically.** This is an explicit project rule.
 - The total branch count may remain above the active-branch target while inactive or historical branches are retained.
 - Preserve every branch's commits and useful work. Prefer reviewing, testing, and merging completed work into `main`; do not merge merely to reduce the count.
-- Keep `main` protected and require relevant CI checks before merging.
+- Keep `main` protected. Do not describe CI as merge-blocking unless the applicable GitHub ruleset explicitly requires the selected status checks.
 - Avoid creating a branch when an existing work branch can safely be reused. Prefer one focused branch per task and avoid duplicate `-v2` / `-v3` branches unless the reason is documented.
 - An AI agent may inventory branches, classify candidates, prepare consolidation PRs, and report recommendations. It must not delete branches or force-push without explicit human authorization.
+
+## Merge gates and required status checks
+
+**Verified ruleset gap as of 2026-10-23:** the live GitHub rulesets for `main` and `dev` require pull requests and an approving review, but neither ruleset defines required CI status checks. A green check can therefore provide evidence without necessarily blocking a merge when it fails or is missing.
+
+Before describing CI as mandatory or enabling any auto-merge policy, the repository owner must configure the intended stable status checks under GitHub repository **Settings → Rules → Rulesets**, preserve the current approval/latest-push safeguards, and re-read the live ruleset to verify that the selected checks are enforced on the intended branch. Until that verification is complete, keep manual review as the merge gate and do not enable automatic merging. Ruleset configuration is an owner-side repository setting; this workflow does not change it.
 
 ## What counts as active?
 
