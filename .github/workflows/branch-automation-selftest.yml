@@ -131,6 +131,7 @@ jobs:
               "owner attestation is documented as not an automated billing check": "GEMINI_FREE_TIER_CONFIRMED" in setup and "not an automated billing-status check" in setup,
               "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
               "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
+              "AI snapshot does not count future commit timestamps as recent activity": "if age < datetime.timedelta(0):" in coordinator and "recent = age < datetime.timedelta(days=30)" in coordinator,
               "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing." in coordinator,
               "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
               "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, " in coordinator and "or delete refs." in coordinator,
