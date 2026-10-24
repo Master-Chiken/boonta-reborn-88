@@ -1,12 +1,18 @@
-# Next milestone: Interactive validation of the clean-room racing slice
+# Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-10-18
+Last updated: 2026-10-24
+
+## Owner priority update
+
+Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. Finish the current rail-collision, steering-deadzone, and finish/restart work, then refine handling, rival behavior, camera, and track readability in small, testable changes. Defer the broader visible-Dolphin playtest until the race slice is more consolidated, when testers can provide more useful feedback. Physical GameCube/Wii testing comes later still.
+
+The manual checklist below remains required before claiming the prototype is fully playable. It is not a blanket blocker for independent code, design, or automated-test improvements. Keep test claims evidence-based, keep the €0/tooling and clean-room constraints, and do not merge without appropriate independent review and required checks.
 
 ## Goal of this milestone
 
-Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a configured emulated GameCube controller (keyboard or gamepad) in a visible Dolphin session, then test physical hardware separately.
+Build and refine the current clean-room prototype in `gamecube-demo/` into a convincing, stable racing slice. Use host tests, native builds, and scripted Dolphin diagnostics for development; reserve human-operated visible-Dolphin acceptance for the consolidated candidate, then test physical hardware separately.
 
-This is the gate before expanding the vertical slice.
+The manual acceptance checklist is the gate for declaring full playability, not a reason to pause all vertical-slice development.
 
 ## What is already verified (CI)
 
@@ -70,13 +76,14 @@ Test in this exact order:
 
 Any item not tested remains **pending**. Do not claim hardware compatibility from Dolphin alone.
 
-## After this milestone
+## Next development steps
 
-Once the interactive checklist is fully green:
+Continue this work before the manual acceptance session:
 
-1. Fix any bugs found during the session and add regression tests.
-2. Improve the procedural track, camera and collision as one coherent vertical slice.
-3. Only then expand content (more tracks, pods, AI, presentation, bonuses).
+1. Finish review and integration of the existing rail-collision, steering-deadzone, and restart changes, with green exact-head CI.
+2. Refine handling, pitch/slide trade-offs, boost/heat feedback, rivals, camera and course readability as one coherent vertical slice; add focused host regression tests for behavior changes.
+3. Consolidate the candidate build and then run the visible-Dolphin checklist below, recording PASS / FAIL / NOT TESTED honestly.
+4. Once the manual race is reliable, expand content (more original tracks, craft profiles, rival tactics, presentation and progression). Physical GameCube/Wii testing remains a later, separate check.
 
 ## Parallel track (do not mix)
 
