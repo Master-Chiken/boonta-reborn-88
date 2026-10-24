@@ -204,7 +204,7 @@ jobs:
     continue-on-error: true
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
@@ -224,18 +224,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
+          # Bound network/package operations so this optional, non-blocking job
+          # cannot sit on a runner for its full 30-minute job timeout.
+          run_bounded() {
+            local label="$1"
+            local limit="$2"
+            shift 2
+            echo "::group::${label} (timeout ${limit})"
+            if timeout --signal=TERM --kill-after=20s "$limit" "$@"; then
+              echo "::endgroup::"
+            else
+              local status="$?"
+              echo "::endgroup::"
+              echo "::error::${label} failed or exceeded ${limit} (exit ${status})."
+              exit "$status"
+            fi
+          }
+          run_bounded "apt metadata update" 3m sudo apt-get update
+          run_bounded "install capture dependencies" 4m sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
-          flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
-          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          run_bounded "add official Dolphin remote" 90s flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
+          run_bounded "add Flathub remote" 90s flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           # Dolphin's official release remote does not reliably provide the KDE
           # runtime required by the app. Install the runtime from Flathub first.
-          flatpak install --user --assumeyes flathub org.kde.Platform//6.11
+          run_bounded "install KDE Flatpak runtime" 5m flatpak install --user --assumeyes flathub org.kde.Platform//6.11
           flatpak info --user org.kde.Platform//6.11
-          flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
+          run_bounded "install official Dolphin Flatpak" 5m flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
           # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
           flatpak info --user org.DolphinEmu.dolphin-emu
           {
