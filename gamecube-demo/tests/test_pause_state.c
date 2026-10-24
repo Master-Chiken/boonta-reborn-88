@@ -21,6 +21,21 @@ int main(void)
     assert(boonta_pause_state_next(1, 1, 1) == 0);
     assert(boonta_pause_state_next(0, 1, 1) == 0);
 
+    /* boonta_race_should_reset: Y resets at any time. */
+    assert(boonta_race_should_reset(0, 0, 1) == 1);
+    assert(boonta_race_should_reset(1, 0, 1) == 1);
+
+    /* Start during an unfinished race does not trigger a reset. */
+    assert(boonta_race_should_reset(0, 1, 0) == 0);
+    assert(boonta_race_should_reset(0, 0, 0) == 0);
+
+    /* Start on a finished race restarts the run. */
+    assert(boonta_race_should_reset(1, 1, 0) == 1);
+    assert(boonta_race_should_reset(1, 0, 0) == 0);
+
+    /* If Y and Start are pressed on a finished race, Y still resets. */
+    assert(boonta_race_should_reset(1, 1, 1) == 1);
+
     puts("pause-state tests passed");
     return 0;
 }
