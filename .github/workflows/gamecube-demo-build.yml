@@ -567,7 +567,7 @@ jobs:
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
                   echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
-                echo "Running one finish/reset DTM; the live-frame poll checks finish and the first clean HUD after Y reset."
+                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Y reset."
                 python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
                 mkdir -p "$FINISH_RESET_USER/Config"
                 chmod 700 "$FINISH_RESET_USER"
