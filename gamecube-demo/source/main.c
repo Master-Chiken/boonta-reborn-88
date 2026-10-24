@@ -1180,14 +1180,16 @@ int main(int argc, char **argv)
         buttons_held = PAD_ButtonsHeld(0);
         stick_x = PAD_StickX(0);
         stick_y = PAD_StickY(0);
-        if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
-            g_paused = boonta_pause_state_next(g_paused, 1, 0);
-        }
-        if ((buttons_down & PAD_BUTTON_Y) != 0U) {
+        if (boonta_race_should_reset(g_race_finished,
+                                     (buttons_down & PAD_BUTTON_START) != 0U,
+                                     (buttons_down & PAD_BUTTON_Y) != 0U)) {
             boonta_race_state_reset(&g_race_state);
             /* Render the clean start state before any input advances the race. */
             draw_frame();
             continue;
+        }
+        if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
+            g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
 
         if (g_paused || g_race_finished) {
