@@ -242,7 +242,11 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
 
 
 def reset_state_visible(image: Image.Image) -> bool:
-    """Return true only when the HUD visibly matches the clean start state."""
+    """Return true only when the HUD is reset and no finish banner remains."""
+    # A reset can clear speed/lap bars while leaving the finish overlay on
+    # screen. Treat that as a failed reset rather than a false-positive pass.
+    if finish_banner_visible(image):
+        return False
     metrics = reset_state_metrics(image)
     tolerance = max(3.0, (130.0 if image.width < 500 else 190.0) * 0.02)
     return (

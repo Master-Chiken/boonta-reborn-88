@@ -1,6 +1,6 @@
 # Boonta Reborn 88 – Project Roadmap
 
-Last updated: 2026-10-17
+Last updated: 2026-10-24
 
 **Goal**  
 Create an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), native on GameCube / Wii, with improved visuals and bonus content.  
@@ -10,7 +10,7 @@ Unofficial fan / homebrew project. Clean-room first.
 
 ## Phase 0 – Foundations
 
-**Status: prototype foundations and CI are in place; interactive acceptance is still open.**
+**Status: prototype foundations and CI are in place; the three gameplay candidates are under review and interactive acceptance remains pending.**
 
 - [x] Clean-room procedural GX prototype.
 - [x] Basic driving, boost/heat, rivals, lap system and HUD.
@@ -23,8 +23,9 @@ Unofficial fan / homebrew project. Clean-room first.
 - [x] Original source-authored indexed player-pod mesh and 16×16 RGB8 texture are validated and deterministically exported to the GX mesh / tiled RGB565 headers ([PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), merged).
 - [x] Readable `FINISH` label and varied procedural canyon skyline are integrated ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204), merged).
 - [x] Scripted three-lap finish-banner and orange `FINISH`-label pixel checks passed on PR #204 head in [run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310); this was DTM-driven, not a manual race.
-- [ ] **Manual controller + live finish/reset/restart acceptance** — current focus.
-  → See [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md) and [current test evidence/status](GAMECUBE_FIRST_RENDER_STATUS.md).
+- [ ] **Manual controller + live finish/reset/restart acceptance** — deferred until the racing slice is more consolidated, so player feedback evaluates a coherent build.
+  → This remains required before claiming full playability, but is not a blanket blocker for ongoing implementation. See [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md) and [current test evidence/status](GAMECUBE_FIRST_RENDER_STATUS.md).
+- [ ] **Finish current gameplay candidates** — review and integrate [#214 width-aware rails](https://github.com/Master-Chiken/boonta-reborn-88/pull/214), [#247 steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247), and [#259 finish/restart](https://github.com/Master-Chiken/boonta-reborn-88/pull/259), preserving exact-head CI and independent review.
 
 The current visual/asset sequence is integrated on `main`: PR #202 (finish label, merge commit `2c632fe3fbe5220c158ede9bc53b7b62842abf20`), PR #203 (source-authored player mesh/texture, merge commit `662bd10368a566f18872ee70e1f95f95f48cafdc`), and PR #204 (varied canyon silhouette, merge commit `72acf968e3214b086b00b77240bb20b889314917`). Their exact-head workflows passed.
 

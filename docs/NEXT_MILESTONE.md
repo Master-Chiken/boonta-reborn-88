@@ -1,12 +1,18 @@
-# Next milestone: Interactive validation of the clean-room racing slice
+# Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-10-17
+Last updated: 2026-10-24
+
+## Owner priority update
+
+Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. Finish the current rail-collision, steering-deadzone, and finish/restart work, then refine handling, rival behavior, camera, and track readability in small, testable changes. Defer the broader visible-Dolphin playtest until the race slice is more consolidated, when testers can provide more useful feedback. Physical GameCube/Wii testing comes later still.
+
+The manual checklist below remains required before claiming the prototype is fully playable. It is not a blanket blocker for independent code, design, or automated-test improvements. Keep test claims evidence-based, keep the €0/tooling and clean-room constraints, and do not merge without appropriate independent review and required checks.
 
 ## Goal of this milestone
 
-Prove that the current clean-room prototype in `gamecube-demo/` is **actually playable** with a real controller in a visible Dolphin session (and later on real hardware).
+Build and refine the current clean-room prototype in `gamecube-demo/` into a convincing, stable racing slice. Use host tests, native builds, and scripted Dolphin diagnostics for development; reserve human-operated visible-Dolphin acceptance for the consolidated candidate, then test physical hardware separately.
 
-This is the gate before expanding the vertical slice.
+The manual acceptance checklist is the gate for declaring full playability, not a reason to pause all vertical-slice development.
 
 ## What is already verified (CI)
 
@@ -25,12 +31,12 @@ PR #202 (readable `FINISH` label), PR #203 (authored mesh/texture), and PR #204 
 
 Post-merge mainline run [#39062005581](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39062005581), executed on the game-code merge commit `72acf968e3214b086b00b77240bb20b889314917`, also passed its native DOL/ELF build, host pause/reset tests, Null-backend smoke and non-blocking Software Renderer diagnostic. That push run intentionally used the shorter capture/steering diagnostic rather than the long full-race DTM. Subsequent main commits update documentation only; the code-bearing tree validated by run #39062005581 has not changed. The live-controller checklist below remains the outstanding acceptance gate.
 
-The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured controller. They also do not establish physical GameCube/Wii compatibility.
+The tests remain scripted. Keep every item in the checklist below pending until a person records a visible Dolphin session with a configured emulated GameCube controller. They also do not establish physical GameCube/Wii compatibility.
 
 ## Interactive acceptance checklist
 
-Load the latest mainline DOL in a **visible** Dolphin session.  
-Record: Dolphin version, video backend, video mode, controller profile, and evidence (short video or screenshots + notes).
+Load the latest mainline DOL in a **visible** Dolphin session. If no physical controller is available, use the [keyboard-only Dolphin setup](DOLPHIN_KEYBOARD_TEST.md); it uses Dolphin's existing emulated GameCube controller rather than requiring a new input layer in Boonta.  
+Record: Dolphin version, video backend, video mode, selected input device/profile, and evidence (short video or screenshots + notes).
 
 Test in this exact order:
 
@@ -70,13 +76,14 @@ Test in this exact order:
 
 Any item not tested remains **pending**. Do not claim hardware compatibility from Dolphin alone.
 
-## After this milestone
+## Next development steps
 
-Once the interactive checklist is fully green:
+Continue this work before the manual acceptance session:
 
-1. Fix any bugs found during the session and add regression tests.
-2. Improve the procedural track, camera and collision as one coherent vertical slice.
-3. Only then expand content (more tracks, pods, AI, presentation, bonuses).
+1. Finish review and integration of the existing rail-collision, steering-deadzone, and restart changes, with green exact-head CI.
+2. Refine handling, pitch/slide trade-offs, boost/heat feedback, rivals, camera and course readability as one coherent vertical slice; add focused host regression tests for behavior changes.
+3. Consolidate the candidate build and then run the visible-Dolphin checklist below, recording PASS / FAIL / NOT TESTED honestly.
+4. Once the manual race is reliable, expand content (more original tracks, craft profiles, rival tactics, presentation and progression). Physical GameCube/Wii testing remains a later, separate check.
 
 ## Parallel track (do not mix)
 
