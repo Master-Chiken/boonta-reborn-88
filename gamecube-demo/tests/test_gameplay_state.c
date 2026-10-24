@@ -578,16 +578,35 @@ static void road_width_alignment_tests(void) {
 }
 
 static void offroad_and_rail_tests(void) {
- /* No speed loss on the road, including the exact 3.15 boundary. */
+ /* The normalized road stays at full grip through its visible 3.6-unit edge. */
  assert(nearf(boonta_speed_after_offroad(0.5f, 0.0f), 0.5f));
  assert(nearf(boonta_speed_after_offroad(0.5f, 3.15f), 0.5f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.15f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.6f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.6f), 0.5f));
 
- /* The existing off-road drag starts just outside the road edge and is symmetric. */
- assert(nearf(boonta_speed_after_offroad(0.5f, 3.16f), 0.49188f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.16f), 0.49188f));
+ /* Off-road drag starts strictly beyond the rendered edge and is symmetric. */
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.61f), 0.49188f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.61f), 0.49188f));
  assert(nearf(boonta_speed_after_offroad(0.01f, 3.85f), 0.0f));
  assert(nearf(boonta_speed_after_offroad(1.0f, 100.0f), 0.0f));
+
+ /* All authored road widths normalize their actual edge to the same threshold. */
+ {
+  const float widths[] = {
+   BOONTA_MIN_ROAD_HALF_WIDTH,
+   BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+   BOONTA_MAX_ROAD_HALF_WIDTH
+  };
+  unsigned int i;
+  for (i = 0U; i < sizeof(widths) / sizeof(widths[0]); ++i) {
+   const float normalized_edge = boonta_normalize_road_lateral(widths[i], widths[i]);
+   assert(nearf(normalized_edge, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+   assert(nearf(boonta_speed_after_offroad(0.5f, normalized_edge), 0.5f));
+   assert(nearf(boonta_speed_after_offroad(0.5f, normalized_edge + 0.01f), 0.49188f));
+   assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge), 0.5f));
+   assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge - 0.01f), 0.49188f));
+  }
+ }
 
  /* Collision starts strictly beyond the visible nominal-width rail line. */
  {
