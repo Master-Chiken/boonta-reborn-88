@@ -24,5 +24,26 @@ class PlayerLateralGuardTests(unittest.TestCase):
         self.assertIn("BOONTA_MAX_LATERAL_VELOCITY 0.085f", header)
 
 
+    def test_rendered_rails_and_collision_share_the_same_offset(self):
+        source = MAIN_SOURCE.read_text(encoding="utf-8")
+        header = GAMEPLAY_HEADER.read_text(encoding="utf-8")
+
+        self.assertIn("#define BOONTA_RAIL_OUTER_OFFSET 0.28f", header)
+        self.assertIn("effective_half_width + BOONTA_RAIL_OUTER_OFFSET", header)
+        self.assertIn("-w0 - BOONTA_RAIL_OUTER_OFFSET", source)
+        self.assertIn("-w1 - BOONTA_RAIL_OUTER_OFFSET", source)
+        self.assertIn("w0 + BOONTA_RAIL_OUTER_OFFSET", source)
+        self.assertIn("w1 + BOONTA_RAIL_OUTER_OFFSET", source)
+
+    def test_collision_samples_width_at_the_rendered_player_anchor(self):
+        source = MAIN_SOURCE.read_text(encoding="utf-8")
+        self.assertIn("#define PLAYER_ANCHOR_LOCAL_Z 1.0f", source)
+        self.assertIn("g_vehicle_anchor_local_z = PLAYER_ANCHOR_LOCAL_Z;", source)
+        self.assertIn(
+            "track_half_width_at(\n                g_distance + (4.0f - PLAYER_ANCHOR_LOCAL_Z))",
+            source,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
