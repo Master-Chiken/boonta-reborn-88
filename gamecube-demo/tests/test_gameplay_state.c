@@ -605,6 +605,15 @@ static void offroad_and_rail_tests(void) {
    assert(nearf(boonta_speed_after_offroad(0.5f, normalized_edge + 0.01f), 0.49188f));
    assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge), 0.5f));
    assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge - 0.01f), 0.49188f));
+   /* The runtime uses the scaled helper: the visible edge stays grip-neutral
+    * at the largest frame step, while the outside drag scales by frame time. */
+   assert(nearf(boonta_speed_after_offroad_scaled(0.5f, normalized_edge, 3.0f), 0.5f));
+   assert(nearf(boonta_speed_after_offroad_scaled(
+       0.5f, normalized_edge + 0.01f, 0.5f), 0.49594f));
+   assert(nearf(boonta_speed_after_offroad_scaled(
+       0.5f, normalized_edge + 0.01f, 3.0f), 0.47564f));
+   assert(nearf(boonta_speed_after_offroad_scaled(
+       0.5f, -normalized_edge - 0.01f, 0.5f), 0.49594f));
   }
  }
 
