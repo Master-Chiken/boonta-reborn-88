@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
 import struct
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from make_dolphin_dtm import (
@@ -311,6 +315,30 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertEqual(state[0], 0)  # Stop immediately after the restarted state.
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_cli_accepts_finish_restart_scenario(self) -> None:
+        frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
+        script = Path(__file__).with_name("make_dolphin_dtm.py")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "finish-restart.dtm"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--output", str(output),
+                    "--frames", str(frames),
+                    "--game-id", DEFAULT_GAME_ID,
+                    "--steering", "none",
+                    "--scenario", "finish-restart-check",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            self.assertTrue(output.is_file(), msg=completed.stdout)
+            self.assertEqual(output.stat().st_size, HEADER_SIZE + frames * 8)
 
     def test_finish_restart_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
