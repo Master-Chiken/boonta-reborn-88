@@ -12,6 +12,8 @@ from make_dolphin_dtm import (
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
+    FINISH_RESTART_PRESS_FRAME,
+    FINISH_RESTART_HOLD_FRAMES,
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
@@ -272,6 +274,51 @@ class DolphinDtmTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_dtm(10, steering="right", scenario="full-race")
 
+    def test_finish_restart_profile_presses_start_alone_after_race_window(self) -> None:
+        frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
+        blob = build_dtm(frames, steering="none", scenario="finish-restart-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+        self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
+
+        start = record(blob, 0)
+        self.assertEqual(start[0], A | Y)  # Begin from a clean deterministic state.
+        self.assertTrue(start[1] & IS_CONNECTED)
+        self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        early_boost = record(blob, 20)
+        self.assertEqual(early_boost[0], A | X)
+
+        before_restart = record(blob, FINISH_RESTART_PRESS_FRAME - 1)
+        self.assertEqual(before_restart[0], A)
+        self.assertFalse(before_restart[0] & (B | START | X | Y))
+
+        for frame in range(
+            FINISH_RESTART_PRESS_FRAME,
+            FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES,
+        ):
+            with self.subTest(restart_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)  # Start alone must trigger restart.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES, frames - 1):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)  # Stop immediately after the restarted state.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_finish_restart_profile_rejects_directional_steering(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(16000, steering="right", scenario="finish-restart-check")
+
+    def test_finish_restart_profile_rejects_too_short_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "needs enough frames"):
+            build_dtm(12000, steering="none", scenario="finish-restart-check")
+
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
         "Pillow is not installed in the lightweight host-test environment",
@@ -516,7 +563,7 @@ class DolphinDtmTests(unittest.TestCase):
                     build_dtm(1, invalid)
 
     def test_rejects_invalid_frame_counts(self) -> None:
-        for invalid in (0, -1, 12001, True, 3.5):
+        for invalid in (0, -1, 16001, True, 3.5):
             with self.subTest(invalid=invalid):
                 with self.assertRaises(ValueError):
                     build_dtm(invalid)
