@@ -1,6 +1,18 @@
 # GameCube prototype status
 
-Last updated: 2026-10-17
+Last updated: 2026-10-24
+
+
+## Owner priority update — 2026-10-24
+
+Continue implementation and automated regression work now; do not wait for a physical controller or a final player playtest before advancing the racing slice. Complete and review the current candidates first:
+
+- [PR #214 — width-aware rail collision](https://github.com/Master-Chiken/boonta-reborn-88/pull/214), current head `b25c4614aa9694bdcb65d5f813854e3a08860532`. The new source-contract tests and roadmap updates are under CI: host tests passed; the native GameCube build is running in [workflow #40099360797](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40099360797).
+- [PR #247 — analog steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247), current head `defd893f3c25fa240e24bc9524545ef1d12d4b4f`. All required policy checks and all four GameCube workflow jobs passed in [workflow #40098910954](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40098910954).
+- [PR #259 — Start restart after finish](https://github.com/Master-Chiken/boonta-reborn-88/pull/259), current head `827b63dff09055ed09e79d1ed06fabdda390208c`. All required policy checks and all four GameCube workflow jobs passed in [workflow #40098536014](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40098536014).
+
+The interactive checklist below remains pending until a person actually runs it. Defer the broad visible-Dolphin playtest until the gameplay slice is more consolidated so that players can give feedback on a coherent build. This is not a blanket blocker for independent code or test improvements. Real GameCube/Wii testing is a separate, later milestone. None of the CI evidence above means that manual playability or physical hardware compatibility has been established.
+
 
 ## Current mainline and reproducible CI evidence
 
@@ -43,11 +55,11 @@ A CI-generated DTM, HUD assertion or rendered frame is valuable evidence, but do
 
 ## Next engineering priorities
 
-1. Complete the interactive acceptance checklist and turn any reproducible failure into a regression test.
-2. Keep extending automated tests only where they close a clear gap; do not substitute more scripted frames for live play evidence.
-3. Fix confirmed input, race-finish/reset, camera or collision defects.
-4. Improve track/camera/collision feel as one coherent playable vertical slice before adding more content.
-5. Review unique branch diffs against current `main`; never merge stale branch histories wholesale or delete branches automatically.
+1. Finish the existing rail-collision, steering-deadzone, and finish/restart candidates with exact-head CI and appropriate independent review; avoid duplicate branches/tasks.
+2. Refine handling, pitch/slide trade-offs, boost/heat feedback, rival behavior, camera stability, track readability, and collision as one coherent slice. Add narrow host regression tests for code-testable behavior changes.
+3. Once this slice is consolidated, run the full visible-Dolphin checklist and collect player feedback. A scripted DTM or rendered frame does not satisfy the manual checklist.
+4. After the race is reliable, expand original content (track variants, handling profiles, rivals, presentation, and progression).
+5. Keep the €0 and clean-room constraints; do not merge stale branch histories wholesale or delete branches automatically.
 
 ## Restricted parallel track: Step 102
 
