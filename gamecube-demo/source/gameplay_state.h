@@ -553,8 +553,14 @@ static inline float boonta_speed_after_offroad_scaled(float speed, float player_
     if (!isfinite(player_lateral)) player_lateral = 0.0f;
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     const float distance_from_center = boonta_abs_float(player_lateral);
-    if (distance_from_center > 3.15f) {
-        const float excess = distance_from_center - 3.15f;
+    /*
+     * player_lateral is normalized to BOONTA_REFERENCE_ROAD_HALF_WIDTH before
+     * reaching this helper. Start off-road drag only outside that visible road
+     * edge; a fixed 3.15f threshold starts slowing the pod while it is still on
+     * the road and disagrees with the rendered half-width (3.6f).
+     */
+    if (distance_from_center > BOONTA_REFERENCE_ROAD_HALF_WIDTH) {
+        const float excess = distance_from_center - BOONTA_REFERENCE_ROAD_HALF_WIDTH;
         speed -= (0.008f + excess * 0.012f) * frame_scale;
     }
     if (speed < 0.0f) return 0.0f;
