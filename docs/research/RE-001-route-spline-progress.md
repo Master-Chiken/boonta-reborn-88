@@ -1757,3 +1757,30 @@ The ROM's text data contains a user-facing “Results” entry, but no validated
 This was a **local static disassembly/cross-reference pass only**. It did not execute the game, an emulator, or a freshly built static-recomp executable. No ROM bytes, disassembly, exact local addresses, or extracted assets are included in this public dossier.
 
 **RE-001 status remains BLOCKED / UNPROVEN for the full chain.** The next bounded task is to identify (a) the writer/consumer that aggregates participant completion into a manager phase transition, and (b) a direct consumer of the results UI/resource/scene identifier. Do not modify Boonta gameplay logic or infer cross-platform parity before those links are demonstrated.
+
+## AB. Local-player completion aggregation and manager-phase trace — static only (2026-10-25)
+
+### New result: the local-player completion gate is now traced
+
+A second pass over the private local MIPS disassembly closes the specific gap recorded in section AA: the race manager does have a completion aggregation for its registered local-player slots.
+
+- The active manager update provisionally advances its low-nibble phase from the running value to an intermediate post-race value before iterating the participant records.
+- For each participant still eligible for normal progress updates, the manager compares that participant against the local-player references. If a matching local participant has not yet acquired the participant-level finish state, the manager writes the running phase back. Consequently, the intermediate phase is retained only when no unfinished participant matches a registered local-player slot.
+- The participant-level state being aggregated is the same one reached through the configured progress-event threshold path documented above. The flow is now supported statically from configured target → participant finish/skip state → local-player aggregate → intermediate manager phase.
+
+This is evidence of a real all-local-participants-finished gate, rather than merely a post-update loop that revisits participant records. It is still static control-flow evidence, not a runtime observation.
+
+### What follows the intermediate phase
+
+The manager's phase callback has additional guarded stages after that gate. The intermediate phase waits on a generic event/mask condition; once that condition succeeds, it schedules a delayed `Fini`-tagged action. A later handler performs cleanup and can advance the manager into another phase under an additional global-state condition.
+
+These are confirmed intermediate state transitions, but their labels alone do not establish a results screen. The local code paths inspected so far do not directly bind the local-player aggregate or those generic lifecycle actions to the text-bank entry “Results”, a results renderer, or a positively identified scene/resource load. That text entry sits among career/circuit and winnings strings and is therefore only a search lead.
+
+### Updated classification and next bounded step
+
+- **Supported statically:** configured progress-event threshold → participant finish/skip state → local-player completion aggregate → intermediate manager phase; then guarded generic-event and delayed lifecycle processing.
+- **Still blocked:** the exact state/resource/scene that presents the race results, and the complete route from the manager's post-race phase to that destination.
+- **Not executed:** no emulator session, physical console session, or freshly built full-game static-recomp run was performed. The ROM and the exact address-level trace remain private; no ROM bytes, disassembly, generated C or game assets were added to this repository.
+
+**RE-001 remains BLOCKED / UNPROVEN for the full finish-to-results chain.** The next test must resolve a direct consumer of the results UI/resource/scene identifier from the post-race manager/lifecycle path. Do not infer that destination from `Fini`, from the standalone “Results” string, or from the phase number alone.
+
