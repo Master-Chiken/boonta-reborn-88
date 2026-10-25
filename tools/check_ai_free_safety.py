@@ -148,6 +148,19 @@ for label, content in (
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
     if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
         errors.append(f"{label} must use only the GEMINI_API_KEY secret")
+    if (
+        "id: free_tier_guard" not in content
+        or "GEMINI_FREE_TIER_CONFIRMED" not in content
+        or "if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or content.find("id: free_tier_guard") > content.find("name: 'Mint identity token'")
+        or content.find("name: 'Mint identity token'") > content.find("name: 'Checkout Code'")
+        or content.find("name: 'Checkout Code'") > content.find("name: 'Prepare prompt context'")
+        or content.find("name: 'Prepare prompt context'") > content.find("name: 'Run Gemini CLI'")
+        or "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" not in content
+        or "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+    ):
+        errors.append(f"{label} must fail closed before token mint, checkout, prompt preparation, and Gemini model call")
     if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
@@ -212,14 +225,55 @@ for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', 
         errors.append(f"Project coordinator must not expose write tool {forbidden}")
 if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
     errors.append("Project coordinator must use the existing Gemini API-key secret only")
+if (
+    'GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}' not in daily
+    or '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' not in daily
+):
+    errors.append("Project coordinator must fail closed unless the exact free-tier attestation is present")
+
+# Presence of the attestation is insufficient unless every live-data/model step is actually gated.
+coordinator_snapshot_name = "      - name: Collect live branches, open PRs, and project issue metadata"
+coordinator_model_name = "      - name: Run Gemini read-only coordinator"
+coordinator_publish_name = "      - name: Publish the requested report to the canonical project issue"
+if not all(name in daily for name in (coordinator_snapshot_name, coordinator_model_name, coordinator_publish_name)):
+    errors.append("Project coordinator is missing a required gated data/model/publication step")
+else:
+    coordinator_snapshot_step = daily.split(coordinator_snapshot_name, 1)[1].split(coordinator_model_name, 1)[0]
+    coordinator_model_step = daily.split(coordinator_model_name, 1)[1].split(coordinator_publish_name, 1)[0]
+    coordinator_publish_step = daily.split(coordinator_publish_name, 1)[1]
+    free_gate_position = daily.find("id: key")
+    snapshot_position = daily.find(coordinator_snapshot_name)
+    model_position = daily.find(coordinator_model_name)
+    if not (0 <= free_gate_position < snapshot_position < model_position):
+        errors.append("Project coordinator must evaluate its free-tier gate before live-data collection and model use")
+    if "if: steps.key.outputs.available == 'true'" not in coordinator_snapshot_step:
+        errors.append("Project coordinator must skip live-data collection unless the exact free-tier gate passes")
+    if "if: steps.key.outputs.available == 'true'" not in coordinator_model_step:
+        errors.append("Project coordinator model call must be conditional on the exact free-tier gate")
+    if "if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'" not in coordinator_publish_step:
+        errors.append("Project coordinator must publish a report only after the free-tier gate passes")
 if 'gemini_model: "gemini-3.5-flash-lite"' not in daily:
     errors.append("Project coordinator must keep the explicitly selected free-tier model")
-if '--arg num "156"' not in daily or 'github_issue_number: "156"' not in daily or 'issue_number: 156,' not in daily:
+if (
+    ('--arg num "156"' not in daily and '"issue_number": "156"' not in daily)
+    or 'github_issue_number: "156"' not in daily
+    or 'issue_number: 156,' not in daily
+):
     errors.append("Project coordinator must publish reports to the canonical issue #156")
 if '--arg num "23"' in daily or 'github_issue_number: "23"' in daily or re.search(r"(?m)^\s*issue_number:\s*23,?\s*$", daily):
     errors.append("Project coordinator must not post current reports to stale/closed issue #23")
 if "READ ONLY" not in daily_prompt or "€0" not in daily_prompt:
     errors.append("Project coordinator prompt must enforce read-only and €0 constraints")
+if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup:
+    errors.append("Setup documentation must explain the explicit free-tier owner attestation")
+
+if (
+    "RE-001 issue #226 is intentionally PAUSED" not in daily
+    or "do not continue its research or start RE-002 unless an explicit owner instruction resumes it" not in daily
+    or "RE-001 (issue #226) is explicitly PAUSED" not in daily_prompt
+    or "must not recommend restarting it as the next task" not in daily_prompt
+):
+    errors.append("AI coordinator must preserve the owner's explicit RE-001 pause and must not restart that research autonomously")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
 

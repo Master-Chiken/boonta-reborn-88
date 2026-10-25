@@ -5,6 +5,9 @@ on:
     paths:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
+      - ".github/workflows/ai-daily-coordinator.yml"
+      - ".github/workflows/gemini-invoke.yml"
+      - ".github/workflows/gemini-plan-execute.yml"
       - ".github/workflows/branch-automation-selftest.yml"
   workflow_dispatch:
 
@@ -33,6 +36,9 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
+            .github/workflows/ai-daily-coordinator.yml \
+            .github/workflows/gemini-invoke.yml \
+            .github/workflows/gemini-plan-execute.yml \
             .github/workflows/branch-automation-selftest.yml
 
       - name: Compile embedded Python scripts without executing network operations
@@ -47,6 +53,7 @@ jobs:
           paths = (
               Path(".github/workflows/branch-governance.yml"),
               Path(".github/workflows/branch-intake-queue.yml"),
+              Path(".github/workflows/ai-daily-coordinator.yml"),
           )
           checked = 0
           for path in paths:
@@ -74,6 +81,14 @@ jobs:
 
           governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          coordinator = Path(".github/workflows/ai-daily-coordinator.yml").read_text(encoding="utf-8")
+          daily_prompt = Path(".github/commands/gemini-daily-coordinator.toml").read_text(encoding="utf-8")
+          gemini_invoke = Path(".github/workflows/gemini-invoke.yml").read_text(encoding="utf-8")
+          gemini_execute = Path(".github/workflows/gemini-plan-execute.yml").read_text(encoding="utf-8")
+          setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
+          branch_docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          selftest = Path(".github/workflows/branch-automation-selftest.yml").read_text(encoding="utf-8")
+          yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
           intake_header = intake.split("permissions:", 1)[0]
           checks = {
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
@@ -82,6 +97,16 @@ jobs:
               "branch intake can prepare at most two draft PRs": '          - "1"\n          - "2"' in intake_header and "1|2) ;;" in intake and "1|3|5|10" not in intake,
               "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
               "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs match active target": "no more than 10 active working branches" in branch_docs and "no more than 30 active working branches" not in branch_docs and "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs distinguish count warning and red line": "10 or more branch refs" in branch_docs and "more than 20 total branch refs" in branch_docs and "30-active-branch target" not in branch_docs,
+              "branch governance docs preserve no-automatic-deletion rule": "Do not delete branches automatically." in branch_docs and "gh api --method DELETE" not in governance,
+              "branch governance docs reflect live main ruleset": "Live ruleset state verified on 2026-10-23" in branch_docs and "`Protect main 2` is active for `main`" in branch_docs and "approval of the latest push, and the three required status checks" in branch_docs,
+              "branch governance docs record the owner pull-request bypass exception": "Bypass list still includes the repository owner as a `User` with `pull_request` bypass mode" in branch_docs and "remove the actor from the `Bypass list` if no exception is wanted" in branch_docs,
+              "branch governance docs preserve dev required-check gap": "`Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks" in branch_docs and "not yet for `dev`" in branch_docs,
+              "branch governance docs warn not to copy main checks to dev without confirming triggers": "Do not copy the `main` check list directly onto `dev`" in branch_docs and "trigger on PRs targeting `dev`" in branch_docs,
+              "branch governance docs keep auto-merge disabled pending review": "Do not enable automatic merging" in branch_docs and "independent review" in branch_docs,
+              "branch docs list the three universal main checks": all(name in branch_docs for name in ("Verify Gemini free-only guardrails", "Reject known held assets and data", "Check proposed source paths using trusted base policy")),
+              "branch docs warn against globally requiring path-filtered checks": "Do not globally require path-filtered checks" in branch_docs and "always-running aggregate check" in branch_docs,
               "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
               "audit reconciles inventory after branch cleanup": '  workflow_run:\n    workflows: ["Retire archived branch refs"]' in governance and 'branches: ["main"]' in governance,
               "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
@@ -93,6 +118,23 @@ jobs:
               "branch-budget issue text cannot execute markdown backticks": 'echo "1. Keep only main, dev' in governance and 'echo "1. Keep only `main`' not in governance,
               "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
               "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
+              "AI coordinator remains manual-only": "workflow_dispatch:" in coordinator.split("permissions:", 1)[0] and "schedule:" not in coordinator.split("permissions:", 1)[0] and "cron:" not in coordinator.split("permissions:", 1)[0],
+              "AI coordinator preserves the explicit RE-001 pause": "RE-001 issue #226 is intentionally PAUSED" in coordinator and "do not continue its research or start RE-002 unless an explicit owner instruction resumes it" in coordinator and "RE-001 (issue #226) is explicitly PAUSED" in daily_prompt and "must not recommend restarting it as the next task" in daily_prompt,
+              "YAML syntax check includes both reusable Gemini workflows": all(path in yaml_validation for path in (".github/workflows/gemini-invoke.yml", ".github/workflows/gemini-plan-execute.yml")),
+              "AI coordinator requires exact free-tier attestation": "GEMINI_FREE_TIER_CONFIRMED" in coordinator and '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' in coordinator,
+              "AI coordinator checks gate before live-data collection and model": coordinator.index("id: key") < coordinator.index("name: Collect live branches, open PRs, and project issue metadata") < coordinator.index("name: Run Gemini read-only coordinator"),
+              "AI coordinator skips live-data collection unless gate passes": "name: Collect live branches, open PRs, and project issue metadata\n        if: steps.key.outputs.available == 'true'" in coordinator,
+              "AI coordinator model action is gated": "name: Run Gemini read-only coordinator\n        id: coordinator\n        if: steps.key.outputs.available == 'true'" in coordinator,
+              "AI coordinator report publication is gated": "if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'" in coordinator,
+              "read-only Gemini invocation blocks setup before model calls": "id: free_tier_guard" in gemini_invoke and gemini_invoke.index("id: free_tier_guard") < gemini_invoke.index("name: 'Mint identity token'") < gemini_invoke.index("name: 'Checkout Code'") < gemini_invoke.index("name: 'Prepare prompt context'") < gemini_invoke.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_invoke and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_invoke and "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_invoke and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_invoke,
+              "write-capable Gemini invocation blocks setup before model calls": "id: free_tier_guard" in gemini_execute and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint identity token'") < gemini_execute.index("name: 'Checkout Code'") < gemini_execute.index("name: 'Prepare prompt context'") < gemini_execute.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_execute and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_execute,
+              "owner attestation is documented as not an automated billing check": "GEMINI_FREE_TIER_CONFIRMED" in setup and "not an automated billing-status check" in setup,
+              "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
+              "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
+              "AI snapshot does not count future commit timestamps as recent activity": "if age < datetime.timedelta(0):" in coordinator and "recent = age < datetime.timedelta(days=30)" in coordinator,
+              "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing." in coordinator,
+              "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
+              "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, " in coordinator and "or delete refs." in coordinator,
           }
 
           for label, ok in checks.items():

@@ -24,25 +24,217 @@ jobs:
           ref: main
           persist-credentials: false
 
-      - name: Prepare fixed report context
+      - name: Require explicit free-tier attestation and Gemini API key
+        id: key
         shell: bash
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}
         run: |
-          mkdir -p .gemini
-          jq -n \
-            --arg title "Project coordination report" \
-            --arg desc "Review current project state and recommend the single highest-value next task." \
-            --arg event "${GITHUB_EVENT_NAME}" \
-            --arg num "156" \
-            --arg repo "${GITHUB_REPOSITORY}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: "false", issue_number: $num, repository: $repo, additional_context: "Manually requested read-only report. Never modify code or create branches/PRs."}' > .gemini/context.json
+          set -euo pipefail
+          if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## AI coordinator skipped safely"
+              echo
+              echo "No Gemini API request was sent. The repository Actions variable GEMINI_FREE_TIER_CONFIRMED must equal the exact string true."
+              echo "The owner must first verify in Google AI Studio that this project is on the Free tier and is not linked to a Cloud Billing account. The variable is an owner attestation; this workflow cannot inspect Google billing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## AI coordinator skipped safely"
+              echo
+              echo "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "The explicit free-tier attestation and API key are present. No provider or billing fallback is used." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Collect live branches, open PRs, and project issue metadata
+        if: steps.key.outputs.available == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > "$RUNNER_TEMP/branches.json"
+          gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > "$RUNNER_TEMP/open-prs.json"
+          gh api "repos/$GH_REPO" > "$RUNNER_TEMP/repository.json"
+          gh api "repos/$GH_REPO/issues/156" > "$RUNNER_TEMP/dashboard-issue.json"
+          gh api "repos/$GH_REPO/issues/226" > "$RUNNER_TEMP/re001-issue.json"
+
+          python3 - <<'PY'
+          import datetime
+          import json
+          import os
+          import subprocess
+          from concurrent.futures import ThreadPoolExecutor
+          from pathlib import Path
+
+          repo = os.environ["GH_REPO"]
+          temp = Path(os.environ["RUNNER_TEMP"])
+          branches = json.loads((temp / "branches.json").read_text())
+          prs = json.loads((temp / "open-prs.json").read_text())
+          repo_info = json.loads((temp / "repository.json").read_text())
+          dashboard = json.loads((temp / "dashboard-issue.json").read_text())
+          re001 = json.loads((temp / "re001-issue.json").read_text())
+          now = datetime.datetime.now(datetime.timezone.utc)
+
+          def tip_date(sha):
+              try:
+                  raw = subprocess.check_output(
+                      ["gh", "api", f"repos/{repo}/commits/{sha}",
+                       "--jq", ".commit.committer.date // .commit.author.date // empty"],
+                      text=True, stderr=subprocess.DEVNULL
+                  ).strip()
+                  return sha, raw or None
+              except subprocess.CalledProcessError:
+                  return sha, None
+
+          tip_shas = sorted({
+              branch.get("commit", {}).get("sha")
+              for branch in branches
+              if branch.get("commit", {}).get("sha")
+          })
+          with ThreadPoolExecutor(max_workers=min(10, max(1, len(tip_shas)))) as pool:
+              tip_dates = dict(pool.map(tip_date, tip_shas))
+
+          repo_name = repo_info["full_name"]
+          prs_by_head = {}
+          open_pr_records = []
+          for pr in prs:
+              head = pr.get("head", {})
+              if head.get("repo") and head["repo"].get("full_name") == repo_name:
+                  prs_by_head.setdefault(head.get("ref", ""), []).append(pr["number"])
+              open_pr_records.append({
+                  "number": pr.get("number"),
+                  "title": pr.get("title"),
+                  "draft": bool(pr.get("draft", False)),
+                  "url": pr.get("html_url"),
+                  "updated_at": pr.get("updated_at"),
+                  "head_ref": head.get("ref"),
+                  "head_sha": head.get("sha"),
+                  "head_repo": (head.get("repo") or {}).get("full_name"),
+                  "base_ref": (pr.get("base") or {}).get("ref"),
+                  "base_sha": (pr.get("base") or {}).get("sha"),
+              })
+
+          branch_records = []
+          for branch in sorted(branches, key=lambda item: item["name"]):
+              name = branch["name"]
+              sha = (branch.get("commit") or {}).get("sha")
+              date = tip_dates.get(sha) if sha else None
+              recent = False
+              if date:
+                  try:
+                      stamp = datetime.datetime.fromisoformat(date.replace("Z", "+00:00"))
+                      age = now - stamp
+                      if age < datetime.timedelta(0):
+                          # A future-dated commit is an anomalous timestamp, not evidence of recent activity.
+                          date = None
+                      else:
+                          recent = age < datetime.timedelta(days=30)
+                  except ValueError:
+                      date = None
+              unknown_date = not date
+              has_open_pr = bool(prs_by_head.get(name))
+              branch_records.append({
+                  "name": name,
+                  "tip_sha": sha,
+                  "protected": bool(branch.get("protected", False)),
+                  "last_commit_date": date or "unknown",
+                  "recent_within_30_days": recent,
+                  "open_pr_numbers": prs_by_head.get(name, []),
+                  "active_by_30_day_heuristic": (
+                      name == repo_info["default_branch"] or has_open_pr or recent or unknown_date
+                  ),
+              })
+
+          def issue_record(issue):
+              return {
+                  "number": issue.get("number"),
+                  "title": issue.get("title"),
+                  "state": issue.get("state"),
+                  "updated_at": issue.get("updated_at"),
+                  "url": issue.get("html_url"),
+              }
+
+          snapshot = {
+              "snapshot_time_utc": now.isoformat(),
+              "repository": repo_name,
+              "default_branch": repo_info.get("default_branch"),
+              "delete_branch_on_merge": repo_info.get("delete_branch_on_merge"),
+              "branch_count": len(branch_records),
+              "active_branch_count_by_30_day_heuristic": sum(
+                  1 for branch in branch_records if branch["active_by_30_day_heuristic"]
+              ),
+              "branches": branch_records,
+              "open_pull_request_count": len(open_pr_records),
+              "open_pull_requests": sorted(open_pr_records, key=lambda item: item["number"] or 0),
+              "tracked_issues": [issue_record(dashboard), issue_record(re001)],
+          }
+
+          additional_context = (
+              "This is a manually requested, read-only project audit. Use the LIVE SNAPSHOT below as the "
+              "authoritative metadata gathered during this run; older issue comments and documentation "
+              "may be stale. State facts, inferences, and unknowns separately.\n\n"
+              "Tasks: (1) preserve the current owner-defined pause: RE-001 issue #226 is intentionally PAUSED; do not continue its research or start RE-002 unless an explicit owner instruction resumes it; (2) inspect current open PR metadata and report the real head SHAs, "
+              "draft state, and blockers; (3) identify branches only as review candidates, distinguishing "
+              "protected refs, open-PR heads, recent/unknown tips, and old tips; (4) recommend one highest-value "
+              "next action with a concrete reason; (5) list what is still unverified.\n\n"
+              "Safety and evidence rules: never modify code, create branches/PRs, approve or merge, force-push, "
+              "or delete refs. Age alone is never sufficient evidence that a branch is safe to delete. A protected "
+              "branch, main, dev, archive/branch-heads-20261019, and every active PR head must be preserved. "
+              "Do not claim branch ancestry or patch equivalence from this metadata alone; label it unknown unless "
+              "you can verify it. Keep the project at strict EUR 0 and never suggest a paid fallback. CI passing "
+              "does not prove visible Dolphin/controller acceptance or physical console compatibility.\n\n"
+              "LIVE SNAPSHOT (JSON):\n" + json.dumps(snapshot, indent=2)
+          )
+
+          context = {
+              "title": "Manual branch and project audit",
+              "description": "Use current branch/PR metadata, cite evidence, and recommend one best next task.",
+              "event_name": os.environ.get("EVENT_NAME", "unknown"),
+              "is_pull_request": "false",
+              "issue_number": "156",
+              "repository": repo_name,
+              "additional_context": additional_context,
+          }
+          Path(".gemini/context.json").write_text(json.dumps(context, indent=2) + "\n")
+
+          recent_count = sum(1 for branch in branch_records if branch["recent_within_30_days"])
+          protected_count = sum(1 for branch in branch_records if branch["protected"])
+          summary = [
+              "## Live branch snapshot passed to the AI coordinator",
+              "",
+              f"- Snapshot time (UTC): {snapshot['snapshot_time_utc']}",
+              f"- Repository default branch: `{snapshot['default_branch']}`",
+              f"- Total branches: **{len(branch_records)}**",
+              f"- Tips dated within 30 days: **{recent_count}**",
+              f"- Branches whose protection flag is true: **{protected_count}**",
+              f"- Open PRs with live head SHAs included: **{len(open_pr_records)}**",
+              f"- Dashboard #156: **{dashboard.get('state')}**, updated {dashboard.get('updated_at')}",
+              f"- RE-001 #226: **{re001.get('state')}**, updated {re001.get('updated_at')}",
+              "",
+              "The AI report must distinguish metadata from proven ancestry. No branch mutation is permitted.",
+          ]
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text("\n".join(summary) + "\n")
+          print("\n".join(summary))
+          PY
 
       - name: Run Gemini read-only coordinator
         id: coordinator
+        if: steps.key.outputs.available == 'true'
         uses: google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489 # pinned action
         env:
           GEMINI_CLI_TRUST_WORKSPACE: "true"
           GITHUB_TOKEN: ${{ github.token }}
         with:
+          # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           gemini_model: "gemini-3.5-flash-lite"
           upload_artifacts: "false"
@@ -91,7 +283,7 @@ jobs:
           prompt: "/gemini-daily-coordinator"
 
       - name: Publish the requested report to the canonical project issue
-        if: always() && steps.coordinator.outcome != 'skipped'
+        if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT: ${{ steps.coordinator.outputs.summary }}
