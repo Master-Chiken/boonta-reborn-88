@@ -1690,8 +1690,8 @@ The native watchpoint path has a verification weakness, and LLDB may not be usab
    #ifndef RE001_TRACE_H
    #define RE001_TRACE_H
    #include <stdio.h>
-   #define TRACE_ENTRY() ((void)fprintf(stderr, "[RE001_ENTER] %s\\n", __func__));
-   #define TRACE_RETURN() ((void)fprintf(stderr, "[RE001_RETURN] %s\\n", __func__));
+   #define TRACE_ENTRY() ((void)fprintf(stderr, "[RE001_ENTER] %s\n", __func__));
+   #define TRACE_RETURN() ((void)fprintf(stderr, "[RE001_RETURN] %s\n", __func__));
    #endif
    ```
 3. Build and launch from a terminal with stdout/stderr redirected to a local log. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game.
