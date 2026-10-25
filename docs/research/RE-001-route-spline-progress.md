@@ -1673,6 +1673,24 @@ Then start the owner's local static-recompiled build and enter a race promptly e
 
 **Evidence boundary:** this improves the documented set of possible local observation methods; no LLDB run, watchpoint hit, race trace, or N64 result-screen discovery is claimed. RE-001's all-participants-finished → results destination remains **BLOCKED / UNPROVEN** until a valid target-specific trace is captured. RE-002 remains parked.
 
+### No-hardware fallback: targeted store instrumentation in N64Recomp — source-derived design, not implemented (2026-10-25)
+
+The native watchpoint path has a verification weakness, and LLDB may not be usable on the owner's older macOS host. A third route is technically plausible: add narrowly filtered, local-only write logging to the public N64 recompiler's store-code generator rather than relying on operating-system hardware breakpoints.
+
+**Public source basis, pinned to N64Recomp commit `ffb39cdad1da5de07eaaa48bd1db4a89a7986771`:**
+- [`include/recomp.h`](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/include/recomp.h) defines `MEM_W`, `MEM_H`, and `MEM_B` as direct lvalue accesses into `rdram`. Merely wrapping one macro is not a reliable write-event hook because the generated C uses these expressions on both sides of assignments.
+- [`src/cgenerator.cpp`](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/src/cgenerator.cpp#L585-L660), in `CGenerator::process_store_op`, is a centralized source-generation point for MIPS store operations. It emits ordinary word/halfword/byte stores and routes partial/doubleword stores through helper functions. This makes address-filtered logging at each generated store a more promising interception point than patching the memory lvalue macros.
+- The instruction context currently passed to `process_store_op` does not itself carry the exact MIPS instruction address. A first proof of concept could still record generated C function name (`__func__`), effective N64 virtual address, store operation/width, and old/new aligned word for any store overlapping the selected four-byte region. If an exact MIPS PC is needed, the instrumentation would also have to propagate the instruction virtual address into the generator context.
+
+**Bounded implementation/test plan — proposed only:**
+1. On a private local checkout, add an opt-in debug-only filter for the aligned containing word `0x80119008–0x8011900B` (the public lap-candidate address is `0x8011900A`). Log only writes whose effective address range overlaps that word; account for byte/halfword XOR-swizzling and for unaligned/doubleword instructions. Do not add this patch to the public Boonta gameplay code.
+2. Rebuild the recompiler and game from the owner's own legally obtained local ROM. The instrumented build may run slower; use it for tracing only, never as a release build.
+3. Calibrate against a known lap change. Accept the instrumentation only if the log identifies a real write consistent with the lap change and the generated function/source confirms the access width/address. A silent log, compile-only success, or an initialization write is inconclusive.
+4. Only after that calibration, apply the same filtered logging to the private participant finish/skip field, then follow its readers to the all-participants-finished predicate, manager state/phase write, and positively identified results UI/resource/scene. Keep ROM-derived addresses and trace output local.
+5. If codegen instrumentation proves too invasive, return to a supported-host debugger/watchpoint route; do not interpret a missed trace as evidence that the field is never written.
+
+**Classification and limits:** this is a source-backed implementation hypothesis, not a patch or an executed experiment. It sees recompiled CPU store instructions that pass through the generated code; it may miss host-side runtime writes or transfers, so its coverage must be checked before treating absence as meaningful. No ROM, generated function source, binary, or raw trace is to be committed or uploaded. RE-001 remains **BLOCKED / UNPROVEN** until the manager-to-results destination chain is positively established; RE-002 stays parked.
+
 ### Upstream build/test boundary — checked 2026-10-25
 
 Pinned upstream current `main` is `1197119fb6d4d1e60e9dfcc3d50d610475433af2` ([v0.3.0](https://github.com/sp00nznet/racer/releases/tag/v0.3.0)). Its latest work adds Linux/macOS packaging and Linux arm64/Android build targets; this improves the available ways to build the host application, but does not by itself close RE-001.
