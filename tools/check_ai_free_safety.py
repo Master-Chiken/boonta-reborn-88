@@ -139,6 +139,14 @@ else:
 
 
 
+        "current_state=",
+        "current_base=",
+        "current_repo=",
+        "current_sha=",
+        ".state // empty",
+        ".base.ref // empty",
+        ".head.repo.full_name // empty",
+        ".head.sha // empty",
         '"$current_state" != "open"',
         '"$current_base" != "main"',
         '"$current_repo" != "$GH_REPO"',
