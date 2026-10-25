@@ -1683,8 +1683,8 @@ The native watchpoint path has a verification weakness, and LLDB may not be usab
 - Racer's [CMake file](https://github.com/sp00nznet/racer/blob/1197119fb6d4d1e60e9dfcc3d50d610475433af2/CMakeLists.txt#L72-L80) adds `RecompiledFuncs` to the generated functions' include path. A local `RecompiledFuncs/trace.h` can therefore satisfy the added include.
 
 **Proposed local-only reconnaissance recipe (not run):**
-1. In the private Racer checkout, set `trace_mode = true` inside the existing `[input]` table in `recomp.toml`.
-2. Run the recompile step so the change regenerates `RecompiledFuncs/*.c`; the setup script deletes `RecompiledFuncs`, so create `RecompiledFuncs/trace.h` **after** generation and before compiling the game. The generator emits these macro calls without a trailing semicolon, so each macro definition below includes its own semicolon:
+1. In the private Racer checkout, set `trace_mode = true` inside the existing `[input]` table in `recomp.toml`. Confirm the checked-out `deps/N64Recomp/src/config.cpp` (or the recompiler checkout actually used by the setup) supports this option.
+2. From the Racer repository root, run `bash scripts/recompile.sh`. This script removes and regenerates `RecompiledFuncs`, so create `RecompiledFuncs/trace.h` **after** it completes and before compiling the game. The generator emits these macro calls without a trailing semicolon, so each macro definition below includes its own semicolon:
    
    ```c
    #ifndef RE001_TRACE_H
@@ -1694,7 +1694,8 @@ The native watchpoint path has a verification weakness, and LLDB may not be usab
    #define TRACE_RETURN() ((void)fprintf(stderr, "[RE001_RETURN] %s\n", __func__));
    #endif
    ```
-3. Build and launch from a terminal with stdout/stderr redirected to a local log. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game.
+3. Build the game with `cmake --build build --target SWE1Racer`. Do **not** rerun the recompile script after adding `trace.h`, because it deletes that file along with generated sources. For future regeneration, repeat the copy step.
+4. Launch the existing `Star Wars Episode I Racer (recomp).command` (macOS) or `Star Wars Episode I Racer (recomp).sh` (Linux) from the repository root in a terminal, redirecting stdout/stderr to a local file such as `re001_trace.log`. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game. Do not commit the local `trace_mode` change, `trace.h`, or the log.
 4. Inspect the sequence of `func_800XXXXX` entries/returns around the finish event, then cross-reference those functions in the locally generated source. This is candidate discovery only: function traces do not identify individual stores or prove a results-screen consumer.
 
 **Limited smoke check of the example header (2026-10-25):** I compiled and ran the exact macro definitions above in a minimal standalone C17 translation unit with `-Wall -Wextra -Werror`. It printed the expected entry/return events for two test functions. This validates only the macro syntax and basic output; it does **not** verify the header include path in Racer's CMake build, the full generated project, runtime log volume, or any game behavior.
