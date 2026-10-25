@@ -1675,7 +1675,20 @@ Then start the owner's local static-recompiled build and enter a race promptly e
 
 ### No-hardware fallback: targeted store instrumentation in N64Recomp — source-derived design, not implemented (2026-10-25)
 
-The native watchpoint path has a verification weakness, and LLDB may not be usable on the owner's older macOS host. A third route is technically plausible: add narrowly filtered, local-only write logging to the public N64 recompiler's store-code generator rather than relying on operating-system hardware breakpoints.
+The native watchpoint path has a verification weakness, and LLDB may not be usable on the owner's older macOS host. A lower-cost reconnaissance step should precede the custom store logger: **use N64Recomp's existing function entry/return tracing mode**, which needs no new generator hook.
+
+**Built-in trace-mode path verified in public source (N64Recomp `ffb39cdad1da5de07eaaa48bd1db4a89a7986771`):**
+- The [config parser](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/src/config.cpp#L467-L477) accepts `[input] trace_mode = true` and appends `#include "trace.h"` to generated functions.
+- The [function recompiler](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/src/recompilation.cpp#L768-L774) emits `TRACE_ENTRY()` at each generated function entry, and the [C generator](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/src/cgenerator.cpp#L480-L485) emits `TRACE_RETURN()` before returns. The pinned Racer `recomp.toml` does not enable this mode today.
+- Racer's [CMake file](https://github.com/sp00nznet/racer/blob/1197119fb6d4d1e60e9dfcc3d50d610475433af2/CMakeLists.txt#L72-L80) adds `RecompiledFuncs` to the generated functions' include path. A local `RecompiledFuncs/trace.h` can therefore satisfy the added include.
+
+**Proposed local-only reconnaissance recipe (not run):**
+1. In the private Racer checkout, set `trace_mode = true` inside the existing `[input]` table in `recomp.toml`.
+2. Run the recompile step so the change regenerates `RecompiledFuncs/*.c`; the setup script deletes `RecompiledFuncs`, so create `RecompiledFuncs/trace.h` **after** generation and before compiling the game. A minimal header can define `TRACE_ENTRY()` and `TRACE_RETURN()` as `fprintf(stderr, ... , __func__)` macros with `#include <stdio.h>`.
+3. Build and launch from a terminal with stdout/stderr redirected to a local log. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game.
+4. Inspect the sequence of `func_800XXXXX` entries/returns around the finish event, then cross-reference those functions in the locally generated source. This is candidate discovery only: function traces do not identify individual stores or prove a results-screen consumer.
+
+If this function trace is too noisy or too imprecise, the source-instrumented store logger below is the next step. It remains a separate, more invasive experiment. The instrumentation must stay local and preserve the game's original store semantics.
 
 **Public source basis, pinned to N64Recomp commit `ffb39cdad1da5de07eaaa48bd1db4a89a7986771`:**
 - [`include/recomp.h`](https://github.com/sp00nznet/N64Recomp/blob/ffb39cdad1da5de07eaaa48bd1db4a89a7986771/include/recomp.h) defines `MEM_W`, `MEM_H`, and `MEM_B` as direct lvalue accesses into `rdram`. Merely wrapping one macro is not a reliable write-event hook because the generated C uses these expressions on both sides of assignments.
