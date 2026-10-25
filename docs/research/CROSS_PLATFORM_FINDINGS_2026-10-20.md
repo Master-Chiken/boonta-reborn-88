@@ -204,3 +204,19 @@ The PC source therefore gives us the clearest map of the *expected entry layout*
 - **Supported:** the N64-oriented tool documents and implements a `Comp` decoder; its README says the chunks it targets are only found in N64 model blocks.
 - **Not yet supported:** which exact PC retail/demo build has `Comp` chunks; whether N64 uses an identical offset-table layout; whether Dreamcast's payload format matches either.
 - **No binary samples were downloaded or embedded.** Next work should stay source-first: inspect asset-library metadata/checksum catalogue and Dreamcast extracted inventory metadata, then look for a trustworthy version-specific test report. Do not invent hashes or treat a generic release selector as proof of byte identity.
+
+### PC-only post-race state-machine reference — 2026-10-25
+
+**Purpose:** record a useful comparison lead while keeping the open N64 question explicit. This is source-level evidence for the **Windows PC reference only**; it does not establish N64, Dreamcast, GameCube, or Wii behavior.
+
+Pinned upstream reference: [tim-tim707/SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab), commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`. No code was copied.
+
+- In [src/Swr/swrObj.c, lines 773–793](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L773-L793), the PC reference labels state 2 as racing → finish (Fini); the handler calls `swrObjJdge_Clear(jdge, 'Fini')` when the finish interaction is accepted.
+- In [lines 795–808](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L795-L808), state 3 is a finish hold. Input or selected flags start the post-race sequence.
+- In [lines 810–851](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L810-L851), state 4 is explicitly labelled “post-race camera sweep → results.” The skip path sets `swrRace_resultsScreenActive`; the normal path advances after the camera sweep completes and a short linger.
+- In [lines 853–889](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L853-L889), state 5 is explicitly labelled “results screen” and also sets `swrRace_resultsScreenActive`.
+- Separately, [`swrRace_ResultsMenu` in `src/Swr/swrRace.c`, lines 320–365](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c#L320-L365) is labelled as the post-race results-screen handler; its entry work includes sanitizing/sorting scores and starting record/progression handling. This note does **not** claim a complete direct call-site chain from every state-machine branch to that handler.
+
+**Research value:** the PC reference separates at least four observable phases—finish handling, finish hold, post-race camera sweep, and results screen—so they should not be collapsed into one generic Fini/Abrt lifecycle label when comparing behavior. It suggests concrete questions to keep separate in the N64 trace: (1) per-racer finish, (2) manager-level completion condition, (3) transition/phase writer, and (4) results UI/scene destination.
+
+**Boundary unchanged:** the N64 all-participants-finished → manager state/phase → identified results UI/resource/scene chain remains **BLOCKED / UNPROVEN**. PC names, fields, phases, and ordering are comparison evidence only, not N64 symbols or proof of platform parity. The next decisive step still requires a lawful local N64 trace or equivalent positive N64-specific evidence; RE-002 remains parked.
