@@ -135,10 +135,10 @@ else:
         "GH_TOKEN: ${{ github.token }}",
         "PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}",
         "PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}",
-        'current_state="$(jq -r '.state // empty' "$current_pr")"',
-        'current_base="$(jq -r '.base.ref // empty' "$current_pr")"',
-        'current_repo="$(jq -r '.head.repo.full_name // empty' "$current_pr")"',
-        'current_sha="$(jq -r '.head.sha // empty' "$current_pr")"',
+
+
+
+
         '"$current_state" != "open"',
         '"$current_base" != "main"',
         '"$current_repo" != "$GH_REPO"',
