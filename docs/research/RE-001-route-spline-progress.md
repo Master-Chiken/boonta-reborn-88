@@ -1684,7 +1684,16 @@ The native watchpoint path has a verification weakness, and LLDB may not be usab
 
 **Proposed local-only reconnaissance recipe (not run):**
 1. In the private Racer checkout, set `trace_mode = true` inside the existing `[input]` table in `recomp.toml`.
-2. Run the recompile step so the change regenerates `RecompiledFuncs/*.c`; the setup script deletes `RecompiledFuncs`, so create `RecompiledFuncs/trace.h` **after** generation and before compiling the game. A minimal header can define `TRACE_ENTRY()` and `TRACE_RETURN()` as `fprintf(stderr, ... , __func__)` macros with `#include <stdio.h>`.
+2. Run the recompile step so the change regenerates `RecompiledFuncs/*.c`; the setup script deletes `RecompiledFuncs`, so create `RecompiledFuncs/trace.h` **after** generation and before compiling the game. The generator emits these macro calls without a trailing semicolon, so each macro definition below includes its own semicolon:
+   
+   ```c
+   #ifndef RE001_TRACE_H
+   #define RE001_TRACE_H
+   #include <stdio.h>
+   #define TRACE_ENTRY() ((void)fprintf(stderr, "[RE001_ENTER] %s\\n", __func__));
+   #define TRACE_RETURN() ((void)fprintf(stderr, "[RE001_RETURN] %s\\n", __func__));
+   #endif
+   ```
 3. Build and launch from a terminal with stdout/stderr redirected to a local log. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game.
 4. Inspect the sequence of `func_800XXXXX` entries/returns around the finish event, then cross-reference those functions in the locally generated source. This is candidate discovery only: function traces do not identify individual stores or prove a results-screen consumer.
 
