@@ -1697,6 +1697,8 @@ The native watchpoint path has a verification weakness, and LLDB may not be usab
 3. Build and launch from a terminal with stdout/stderr redirected to a local log. Capture only one controlled race and keep the log private; the trace can be enormous and may slow the game.
 4. Inspect the sequence of `func_800XXXXX` entries/returns around the finish event, then cross-reference those functions in the locally generated source. This is candidate discovery only: function traces do not identify individual stores or prove a results-screen consumer.
 
+**Limited smoke check of the example header (2026-10-25):** I compiled and ran the exact macro definitions above in a minimal standalone C17 translation unit with `-Wall -Wextra -Werror`. It printed the expected entry/return events for two test functions. This validates only the macro syntax and basic output; it does **not** verify the header include path in Racer's CMake build, the full generated project, runtime log volume, or any game behavior.
+
 If this function trace is too noisy or too imprecise, the source-instrumented store logger below is the next step. It remains a separate, more invasive experiment. The instrumentation must stay local and preserve the game's original store semantics.
 
 **Public source basis, pinned to N64Recomp commit `ffb39cdad1da5de07eaaa48bd1db4a89a7986771`:**
