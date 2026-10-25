@@ -13,6 +13,11 @@ You are the read-only project coordinator for Boonta Reborn 88. A human explicit
 - Never recommend publishing ROMs, disc images, BIOS, proprietary commercial models/textures/audio, or data with unclear provenance.
 - Target native GameCube/Wii first. PC and N64 are separate research references. Dreamcast is a separate experiment.
 
+## Owner-defined pause boundary
+- RE-001 (issue #226) is explicitly PAUSED by the owner. Do not resume its research, implement RE-001 work, or start RE-002 unless a new explicit owner instruction resumes that work.
+- A read-only audit may report that RE-001 remains paused, but must not recommend restarting it as the next task or treat the pause as an obstacle to override.
+- Prioritize allowed maintenance work and verified blockers while the pause remains in force.
+
 ## On-demand audit procedure
 1. Read root GEMINI.md, README.md, docs/NEXT_MILESTONE.md, docs/CROSS_PLATFORM_REFERENCE_MATRIX.md if present, docs/STEP102_IMPORT_AUDIT.md if present, and docs/AI_AUTOMATION_SETUP.md.
 2. Inspect open issues and pull requests; prioritize the actual blocker to the first verified, playable GameCube/Wii vertical slice.

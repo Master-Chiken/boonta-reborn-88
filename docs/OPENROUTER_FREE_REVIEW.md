@@ -1,41 +1,39 @@
-# OpenRouter Free — relecture IA de pull requests
+# OpenRouter Free — relecture manuelle des pull requests
 
-## Ce que fait ce workflow
+**État actuel :** le workflow a été fusionné dans `main` via [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251) le 21 octobre 2026. Il est disponible dans GitHub Actions, mais son fonctionnement réel n'est pas encore confirmé : le secret `OPENROUTER_API_KEY` doit être configuré et un premier lancement manuel doit réussir.
 
-Le workflow `.github/workflows/openrouter-free-review.yml` ajoute une deuxième opinion IA pour Boonta Reborn 88. Il est **manuel uniquement** : aucune analyse ne se lance à chaque commit ou PR.
+## Ce que fait le workflow
 
-- Il reçoit le numéro d'une PR ouverte qui cible `main`.
-- Il récupère son diff public, le limite à 30 000 octets et bloque certains motifs courants de clés exposées avant d'envoyer quoi que ce soit.
-- Il utilise uniquement le modèle-routeur `openrouter/free`, qui choisit parmi les modèles gratuits actuellement disponibles.
-- Il publie une revue sous forme de commentaire GitHub.
-- Il ne modifie aucun fichier, ne crée aucun commit, ne peut pas pousser de branche et ne fusionne rien.
+Le fichier `.github/workflows/openrouter-free-review.yml` prépare une deuxième opinion IA, à la demande seulement.
 
-## Limites du gratuit
+- Le propriétaire choisit le numéro d'une PR ouverte qui cible `main` et provient du même dépôt.
+- Le workflow transmet au maximum les 30 000 premiers octets du diff public, après un contrôle de motifs courants de clés et de secrets.
+- La requête fixe le modèle-routeur `openrouter/free`. Il choisit parmi les modèles gratuits disponibles ; le modèle précis peut varier.
+- La clé `OPENROUTER_API_KEY` n'est disponible que dans l'étape qui appelle l'API ; l'étape préalable télécharge, tronque et analyse le diff sans exposer la clé.
+- Le résultat est publié en commentaire GitHub. Le workflow ne peut pas modifier le code, pousser une branche, créer une PR ou fusionner.
+- Le contrôle statique du dépôt autorise les références OpenRouter dans ce seul workflow et vérifie ses protections. Les autres workflows ne peuvent pas appeler OpenRouter.
 
-OpenRouter annonce pour son offre Free plus de 25 modèles gratuits et une limite de 50 requêtes par jour. Le routeur `openrouter/free` affiche un tarif de 0 $ pour les tokens. Les modèles, quotas et la disponibilité peuvent changer. Si la requête gratuite échoue, le workflow échoue : il **n'essaie jamais de modèle payant en secours**.
+## Coût et limites
 
-Le routeur ne fournit pas Claude directement : il sélectionne un modèle gratuit de son catalogue. L'API Anthropic directe n'est pas utilisée parce qu'elle est facturée à l'usage.
+La documentation officielle affiche actuellement le routeur `openrouter/free` à 0 $ par token et l'offre Free avec un quota annoncé de 50 requêtes par jour. Les modèles disponibles, quotas et conditions peuvent changer. **En cas d'erreur ou de quota épuisé, le workflow s'arrête ; il n'essaie aucun modèle payant en secours.** N'achète pas de crédits et n'ajoute aucun moyen de paiement.
 
-## Données et sécurité
+## Données et limites du contrôle
 
-Le diff est transmis à OpenRouter, puis au fournisseur du modèle choisi par le routeur. OpenRouter explique que les pratiques de rétention et d'utilisation des données varient selon les fournisseurs. Le dépôt étant public, l'utilisation se limite à un diff public, mais ne lance pas ce workflow sur une PR qui contiendrait des secrets, des informations personnelles privées ou des éléments que tu ne veux pas transmettre à un fournisseur externe.
+Le diff est transmis à OpenRouter puis au fournisseur du modèle choisi. La vérification de secrets ne reconnaît que certains formats courants et ne peut pas garantir qu'un diff est dépourvu de toute donnée sensible. Avant de lancer le workflow, vérifie la PR toi-même. Ne l'utilise jamais sur du contenu privé, des données personnelles, des secrets, des archives commerciales, des ROMs/images disque/BIOS, des ressources extraites ou des fichiers dont les droits ou la provenance ne sont pas établis.
 
-La clé `OPENROUTER_API_KEY` reste dans les secrets GitHub et ne fait pas partie du prompt. Ne colle jamais la clé dans une issue, un commentaire ou un fichier.
+Le résultat IA est une suggestion de revue, pas la preuve d'un bug ou d'une correction. Le modèle n'exécute pas le jeu et ne peut pas prétendre avoir lancé les tests.
 
-## Activer la connexion
+## Terminer l'activation
 
-**Important :** le workflow est proposé dans une pull request indépendante en brouillon. GitHub exige que le fichier `workflow_dispatch` soit présent sur la branche par défaut avant de pouvoir lancer le workflow manuellement. Tu dois examiner et valider explicitement cette pull request avant de la fusionner ; aucune fusion n'a été effectuée. Référence : [documentation GitHub sur l'exécution manuelle](https://docs.github.com/fr/actions/how-tos/manage-workflow-runs/manually-run-a-workflow).
+1. Dans [OpenRouter — clés API](https://openrouter.ai/keys), créer une clé pour l'accès gratuit. Ne pas acheter de crédits et ne pas ajouter de carte ou autre moyen de paiement. Si l'interface impose un paiement, arrêter.
+2. Dans GitHub, ouvrir **Settings → Secrets and variables → Actions → New repository secret**, avec le nom exact `OPENROUTER_API_KEY`. La clé doit rester dans la valeur du secret, jamais dans un fichier, une issue, un commentaire ou cette conversation.
+3. Ouvrir [Actions — OpenRouter Free PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), choisir **Run workflow**, saisir le numéro d'une PR ouverte qui ne contient aucun contenu privé ou de provenance incertaine, puis lancer l'analyse.
+4. Vérifier que le job réussit et publie un commentaire sur la bonne PR. Si la clé, le quota gratuit ou l'API échoue, arrêter ; aucun modèle payant de secours n'est prévu.
 
-1. Ouvre [OpenRouter — clés API](https://openrouter.ai/keys), crée un compte/une clé pour l'offre Free, et n'ajoute **aucun crédit**, aucune carte bancaire et aucun moyen de paiement. La page des plans Free indique actuellement qu'aucun mode de paiement n'est disponible pour cette offre.
-2. Dans GitHub, ouvre **Settings → Secrets and variables → Actions → New repository secret**.
-3. Nom exact : `OPENROUTER_API_KEY`. Colle la clé uniquement dans la valeur du secret et enregistre.
-4. Ouvre [Actions — OpenRouter Free PR review](https://github.com/Master-Chiken/boonta-reborn-88/actions/workflows/openrouter-free-review.yml), clique **Run workflow**, saisis le numéro de la PR (par exemple `13`) et lance l'exécution.
-5. Lis le commentaire produit et vérifie chaque point. Le retour d'une IA ne prouve pas qu'un problème existe ni qu'une modification est correcte.
+Le lancement est manuel et n'implique aucune activité en arrière-plan. **Le workflow a été fusionné, mais l'activation reste à confirmer par un premier lancement réussi.**
 
-Si OpenRouter demande une carte ou un paiement pour créer la clé ou envoyer une requête, arrête-toi ; n'active rien de payant.
+## Références officielles
 
-## Sources officielles
-
-- [Offre Free et limites](https://openrouter.ai/pricing)
-- [Routeur de modèles gratuits et tarif à 0 $](https://openrouter.ai/openrouter/free/)
-- [Politique de confidentialité d'OpenRouter](https://openrouter.ai/privacy/)
+- [Tarifs et limites OpenRouter](https://openrouter.ai/pricing)
+- [Routeur officiel des modèles gratuits](https://openrouter.ai/openrouter/free/)
+- [Exécution manuelle d'un workflow GitHub Actions](https://docs.github.com/fr/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)

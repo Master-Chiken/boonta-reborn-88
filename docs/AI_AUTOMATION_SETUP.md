@@ -5,10 +5,24 @@ Cette page décrit les automatismes disponibles dans le dépôt. **La règle de 
 ## Budget et données
 
 - Budget strict : **0 €**. Aucun compte de facturation, moyen de paiement, modèle payant de secours ou service cloud payant.
-- Utiliser uniquement le chemin Gemini API explicitement configuré. Si le quota gratuit est épuisé ou que l'outil réclame une facturation, arrêter.
+- Gemini reste le fournisseur d'API utilisé par les workflows d'assistance existants. OpenRouter est autorisé uniquement pour la relecture manuelle de PR via `openrouter/free`, à condition que le workflow approuvé soit sur `main` et que le secret `OPENROUTER_API_KEY` soit configuré. Si le quota gratuit échoue ou qu'une facturation est réclamée, arrêter ; aucun secours payant n'est autorisé.
 - Ne jamais mettre une clé dans un fichier, une issue, un commentaire ou cette conversation. Les clés restent dans les secrets GitHub.
 - Ne jamais envoyer à un service IA hébergé les ROMs, images disque, BIOS, archives commerciales, modèles/textures/audio extraits, secrets ou données dont les droits ne sont pas établis.
 - Le dépôt est public. Une réussite de tests de configuration ne prouve ni que le quota gratuit est disponible, ni que les comportements de jeu sont corrects.
+
+## Gemini zero-cost gate
+
+Before any Gemini workflow can call a model, the repository Actions variable `GEMINI_FREE_TIER_CONFIRMED` must equal the exact string `true`, and the `GEMINI_API_KEY` secret must exist. If either requirement is missing, the model step is skipped; there is no paid fallback.
+
+**Do not set this variable until you personally verify the project in Google AI Studio.** Open the AI Studio Projects/Billing view and confirm the API-key project is on the **Free** tier and is not linked to a Cloud Billing account. Google documents that API keys inherit the billing tier of their project and that projects linked to a Cloud Billing account inherit the account's usage tier ([official billing documentation](https://ai.google.dev/gemini-api/docs/billing/)). The model has both Free and Paid pricing tiers ([official pricing](https://ai.google.dev/gemini-api/docs/pricing)).
+
+This check is an explicit owner attestation, **not an automated billing-status check**: GitHub Actions cannot establish the billing state through this workflow. If the tier or billing linkage is uncertain, leave the variable absent or set it to anything other than `true`. Do not add a payment method, enable billing, buy credits, or switch to a paid tier. If free quota is unavailable, stop and wait for quota to reset rather than upgrading.
+
+## Relecture de PR via OpenRouter Free — à la demande
+
+Le workflow [OpenRouter Free PR review](../.github/workflows/openrouter-free-review.yml) est présent sur `main` depuis la fusion de [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il est manuel, réservé au propriétaire du dépôt, transmet au maximum 30 000 octets du diff après un contrôle de motifs de secrets et utilise uniquement `openrouter/free`. Il peut publier un commentaire mais ne peut écrire du code, pousser, créer une PR ou fusionner. Il apparaît dans Actions, mais il ne doit pas être considéré opérationnel tant que `OPENROUTER_API_KEY` n'est pas configuré et qu'un premier lancement réel n'a pas réussi.
+
+Avant un lancement, examiner la PR cible et exclure tout contenu privé ou incertain. Le diff est transmis à OpenRouter puis au fournisseur du modèle sélectionné ; la détection de secrets est indicative, pas exhaustive. Le routeur est gratuit au tarif affiché, avec des quotas susceptibles de changer. En cas d'indisponibilité, le job échoue sans choisir de modèle payant. La clé doit être stockée uniquement comme secret GitHub `OPENROUTER_API_KEY` et aucun crédit/moyen de paiement ne doit être ajouté.
 
 ## Contrôle statique
 

@@ -26,10 +26,38 @@ jobs:
       pull-requests: 'write'
 
     steps:
+      - name: Require explicit free-tier attestation before model call
+        id: free_tier_guard
+        shell: bash
+        env:
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GEMINI_FREE_TIER_CONFIRMED: '${{ vars.GEMINI_FREE_TIER_CONFIRMED }}'
+        run: |-
+          set -euo pipefail
+          if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Gemini model call skipped safely"
+              echo
+              echo "No Gemini API request was sent because GEMINI_FREE_TIER_CONFIRMED is not exactly true."
+              echo "Verify the project's Free tier and confirm it has no linked Cloud Billing account before setting the repository Actions variable. This workflow cannot inspect Google billing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Gemini model call skipped safely"
+              echo
+              echo "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "Free-tier attestation and API key are present; no provider or paid fallback is configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: 'Mint identity token'
         id: 'mint_identity_token'
         if: |-
-          ${{ vars.APP_ID }}
+          ${{ steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID }}
         uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
         with:
           app-id: '${{ vars.APP_ID }}'
@@ -39,11 +67,13 @@ jobs:
           permission-pull-requests: 'write'
 
       - name: 'Checkout Code'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
         with:
           persist-credentials: 'false'
 
       - name: 'Prepare prompt context'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: 'bash'
         run: |-
           mkdir -p .gemini
@@ -66,6 +96,7 @@ jobs:
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
 
       - name: 'Run Gemini CLI'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
         env:
@@ -131,6 +162,26 @@ jobs:
               }
             }
           prompt: '/gemini-plan-execute'
+
+      - name: Explain why Gemini was not called
+        if: steps.free_tier_guard.outputs.allowed != 'true'
+        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
+            if (!issueNumber) {
+              core.warning('Could not resolve the issue or pull request number; the model call was still skipped.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'Gemini was not called. The workflow requires the repository Actions variable GEMINI_FREE_TIER_CONFIRMED to equal the exact string true, plus a configured GEMINI_API_KEY. Before setting the variable, verify in Google AI Studio that this project is on the Free tier and is not linked to Cloud Billing. The variable is an owner attestation, not an automated billing check. No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
+            });
 
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
