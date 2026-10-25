@@ -224,7 +224,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bound package and Flatpak operations so this optional diagnostic cannot stall.
+          # Bound network/package operations so this optional, non-blocking job
+          # cannot sit on a runner for its full 30-minute job timeout.
           run_bounded() {
             local label="$1"
             local limit="$2"
