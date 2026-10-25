@@ -1733,3 +1733,27 @@ Pinned upstream current `main` is `1197119fb6d4d1e60e9dfcc3d50d610475433af2` ([v
 **Operational decision:** first inspect whether the existing owner machine can build/run this upstream revision without a system/toolchain upgrade. If not, do not force a Catalina/Xcode migration for this research task; use a suitable already-available supported host when practical. A valid trace must stay local because it can expose ROM-derived addresses, disassembly and resource details.
 
 **Boundary unchanged:** no full-game build or host debugger session has been executed by this review. The N64 all-participants-finished → manager state/phase → identified results UI/scene chain remains **BLOCKED / UNPROVEN** until local target-specific evidence exists.
+
+
+## AA. Additional local N64 finish-state cross-check — static only (2026-10-25)
+
+### New bounded result
+
+A further local, static pass over the owner's N64 reference ROM strengthens the **participant-level** part of the finish chain:
+
+- The configurable lap-related value is passed into the race manager's target field.
+- A participant's progress-event counter advances only when the route-progress helper reports an event.
+- When that counter reaches the configured target, a one-time branch changes that participant's state; the normal participant-update loop then skips that participant on subsequent updates.
+- The manager has separate per-frame and message/render paths. The inspected post-update path revisits all configured participant records, but this pass did **not** establish a definitive all-participants-finished aggregation that switches the race manager into a results phase.
+
+This makes participant finish/disable handling **strongly supported by static control flow**. It does not yet prove how every non-player racer is included in the race's global completion condition.
+
+### Results UI and lifecycle disambiguation
+
+The ROM's text data contains a user-facing “Results” entry, but no validated code/data cross-reference links that entry to the participant-threshold branch or a particular scene-load routine. The shared `Fini` and `Abrt` message tags are used by generic lifecycle paths; neither tag, by itself, identifies a results transition. They must not be used as a shortcut for the missing link.
+
+### Evidence boundary and next step
+
+This was a **local static disassembly/cross-reference pass only**. It did not execute the game, an emulator, or a freshly built static-recomp executable. No ROM bytes, disassembly, exact local addresses, or extracted assets are included in this public dossier.
+
+**RE-001 status remains BLOCKED / UNPROVEN for the full chain.** The next bounded task is to identify (a) the writer/consumer that aggregates participant completion into a manager phase transition, and (b) a direct consumer of the results UI/resource/scene identifier. Do not modify Boonta gameplay logic or infer cross-platform parity before those links are demonstrated.
