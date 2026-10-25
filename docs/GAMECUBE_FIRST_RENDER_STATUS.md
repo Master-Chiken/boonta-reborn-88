@@ -1,6 +1,17 @@
 # GameCube prototype status
 
-Last updated: 2026-10-17
+Last updated: 2026-10-24
+
+
+## Owner priority update — 2026-10-24
+
+Continue implementation and automated regression work now; do not wait for physical-controller testing or broad public playtesting before advancing the racing slice. Finish/review the existing candidates first:
+
+- [PR #214 — width-aware rail collision](https://github.com/Master-Chiken/boonta-reborn-88/pull/214). The latest code/test commit is `324962374e1c359e3b8e476e3b37a834547f7d72`; it adds frame-time-scaled off-road-drag regression assertions without changing runtime physics. Exact-head workflow [#40129536252](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40129536252) on that commit passed all four jobs: host C/Python tests, native DOL/ELF build, Dolphin headless process smoke, and the optional non-blocking Software Renderer diagnostic. The later update to this status document is documentation-only; use [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) for its current branch head. Artifacts: [DOL/ELF](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40129536252/artifacts/12573901814), [headless smoke](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40129536252/artifacts/12574717505), and [renderer bundle](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40129536252/artifacts/12574039567), expiring 31 October 2026.
+- [PR #247 — analog steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247), current code head `defd893f3c25fa240e24bc9524545ef1d12d4b4f`. [Workflow #40098910954](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40098910954) passed the policy guards, host tests, native build, headless Dolphin process smoke, and Software Renderer diagnostic. Its branch adds source-contract coverage for the stick/D-pad steering call path and bounded Dolphin installation steps.
+- [PR #259 — Start restart after finish](https://github.com/Master-Chiken/boonta-reborn-88/pull/259), current PR head `52733175993d70d8fce9d8260ad5428af511412f`; the latest commit updates control documentation, while the runtime code from `67968afb0b00754b7d642814e4d59c41c9ce3704` is unchanged. Exact-head workflow [#40111152677](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40111152677) passed all policy gates and all four GameCube jobs. The scripted capture detected the three-lap finish banner at capture poll #83, then the clean reset HUD after pressing Start alone at capture poll #174; capture polls are about three seconds apart, not Dolphin internal frame indices. This confirms the automated restart path, not human-controlled playability. Artifacts: [DOL](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40111152677/artifacts/12566602823), [headless smoke](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40111152677/artifacts/12566124749), and [finish/restart diagnostic bundle](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/40111152677/artifacts/12566629556), expiring 31 October 2026.
+
+All three gameplay PRs remain open with independent review requested; no formal review has been submitted yet, and nothing has been merged. The visible-Dolphin manual acceptance checklist stays pending and is deliberately deferred until the racing slice is more consolidated. It remains required before claiming full playability; physical GameCube/Wii compatibility is a separate later milestone.
 
 ## Current mainline and reproducible CI evidence
 
@@ -43,11 +54,11 @@ A CI-generated DTM, HUD assertion or rendered frame is valuable evidence, but do
 
 ## Next engineering priorities
 
-1. Complete the interactive acceptance checklist and turn any reproducible failure into a regression test.
-2. Keep extending automated tests only where they close a clear gap; do not substitute more scripted frames for live play evidence.
-3. Fix confirmed input, race-finish/reset, camera or collision defects.
-4. Improve track/camera/collision feel as one coherent playable vertical slice before adding more content.
-5. Review unique branch diffs against current `main`; never merge stale branch histories wholesale or delete branches automatically.
+1. Finish the existing rail-collision, steering-deadzone, and finish/restart candidates with exact-head CI and appropriate independent review; avoid duplicate branches/tasks.
+2. Refine handling, pitch/slide trade-offs, boost/heat feedback, rival behavior, camera stability, track readability, and collision as one coherent slice. Add narrow host regression tests for code-testable behavior changes.
+3. Once this slice is consolidated, run the full visible-Dolphin checklist and collect player feedback. A scripted DTM or rendered frame does not satisfy the manual checklist.
+4. After the race is reliable, expand original content (track variants, handling profiles, rivals, presentation, and progression).
+5. Keep the €0 and clean-room constraints; do not merge stale branch histories wholesale or delete branches automatically.
 
 ## Restricted parallel track: Step 102
 

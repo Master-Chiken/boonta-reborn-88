@@ -34,21 +34,22 @@ See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact sta
 
 ## The next big wins
 
-We keep the work focused on a playable vertical slice rather than spreading effort across unfinished systems.
+We are finishing the existing gameplay work before opening a broad playtest, so feedback can focus on a coherent racing slice rather than several preliminary builds.
 
-1. **Prove the race is playable.** In visible Dolphin, verify steering, acceleration/braking, boost and overheating, off-road/rail response, pause/resume, three-lap finish, reset and restart. Record the emulator version, controller setup, results, and any evidence. Start with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-2. **Make the course and racer feel convincing.** Improve the track silhouette, camera, handling, and collision response as one coherent experience.
-3. **Build the remaster asset pipeline.** Extend the existing mesh/texture path toward richer models, textures, track data, and collision. Experience with the original game's modding scene, file formats, asset workflows, or reverse-engineering research is especially welcome. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
+1. **Finish the current gameplay candidates.** Review and consolidate [#214 rail collision](https://github.com/Master-Chiken/boonta-reborn-88/pull/214), [#247 steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247), and [#259 finish/restart](https://github.com/Master-Chiken/boonta-reborn-88/pull/259), with exact-head CI and independent review.
+2. **Make the course and racer feel convincing.** Refine handling, pitch/slide, boost and heat feedback, rival behavior, camera, track readability, and collision response as one coherent experience.
+3. **Run the full player playtest once the slice is consolidated.** Then use [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) to record visible-Dolphin results and collect player feedback. This manual check remains required before calling the prototype fully playable, but it is deliberately deferred during current implementation.
+4. **Expand the remaster asset pipeline.** After the race is reliable, extend the original mesh/texture work toward richer models, track data, and collision. For research into documented formats and source provenance, see [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
 
 Once the first race is reliable, the roadmap opens up to the bigger remaster vision: upgraded visual presentation, more tracks and pods, expanded menus, audio, saves, progression, bonus modes, and DLC-style content packs. These are intended future features, not claims about the current prototype. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
 
 ## Come build this with us
 
-**You don't need to know everything or arrive with a huge feature.** Curiosity, clear communication, and the willingness to test an idea are valuable here. A useful bug report, a small fix, a model, a tool, or one careful test session can move the game forward.
+**You don't need to know everything or arrive with a huge feature.** Curiosity, clear communication, and the willingness to test an idea are valuable here. A useful bug report, a small fix, a model, a tool, or one careful test session can move the game forward. Broad tester recruitment is deferred until the current gameplay slice is consolidated; code, automated tests, tooling, and clean-room research contributions remain welcome now.
 
 | If you enjoy… | You could help with… |
 | --- | --- |
-| Playing and testing | Run the prototype in a visible Dolphin session, test the controls and full race, and report what works or breaks. |
+| Playing and testing | When the consolidated playtest is announced, run the build in visible Dolphin, test the controls and full race, and report what works or breaks. |
 | C and gameplay | Improve steering feel, race-state transitions, collisions, lap timing, or reset/restart behavior—with regression tests. |
 | Graphics and 3D | Improve the GX scene, camera, course readability, or the validated mesh/texture path. |
 | Python and tooling | Strengthen format validators, synthetic fixtures, artifact checks, and reproducible diagnostics. |
@@ -58,7 +59,7 @@ Once the first race is reliable, the roadmap opens up to the bigger remaster vis
 
 ### Good places to start
 
-- **Best first contribution:** follow the manual test plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Mark each check **PASS / FAIL / NOT TESTED**; include the Dolphin version, video backend, controller profile, and screenshots or a short video where useful.
+- **Best current contribution:** help finish or review the existing gameplay PRs, add focused regression tests, improve the native build/diagnostic tooling, or document original clean-room behavior. The manual acceptance plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) is retained for the consolidated playtest; do not mark a step **PASS** without actually trying it by hand.
 - **Interested in rendering or asset formats?** Read [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181) first so new work builds on the existing mesh and test foundations instead of duplicating them.
 - **Not sure where to begin?** Open an issue or join the [Discord community](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474). Explain what you would like to try and what environment you have. Small, focused experiments and well-documented findings are welcome.
 

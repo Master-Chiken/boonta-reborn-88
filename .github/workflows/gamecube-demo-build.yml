@@ -204,7 +204,7 @@ jobs:
     continue-on-error: true
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
@@ -224,18 +224,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
+          # Bound network/package operations so this optional, non-blocking job
+          # cannot sit on a runner for its full 30-minute job timeout.
+          run_bounded() {
+            local label="$1"
+            local limit="$2"
+            shift 2
+            echo "::group::${label} (timeout ${limit})"
+            if timeout --signal=TERM --kill-after=20s "$limit" "$@"; then
+              echo "::endgroup::"
+            else
+              local status="$?"
+              echo "::endgroup::"
+              echo "::error::${label} failed or exceeded ${limit} (exit ${status})."
+              exit "$status"
+            fi
+          }
+          run_bounded "apt metadata update" 3m sudo apt-get update
+          run_bounded "install capture dependencies" 4m sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates flatpak xvfb xauth xdotool x11-utils imagemagick dbus-daemon tesseract-ocr python3-pil
           export HOME=/tmp/dolphin-render-home
           mkdir -p "$HOME"
           chmod 700 "$HOME"
-          flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
-          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          run_bounded "add official Dolphin remote" 90s flatpak remote-add --if-not-exists --user dolphin https://flatpak.dolphin-emu.org/releases.flatpakrepo
+          run_bounded "add Flathub remote" 90s flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           # Dolphin's official release remote does not reliably provide the KDE
           # runtime required by the app. Install the runtime from Flathub first.
-          flatpak install --user --assumeyes flathub org.kde.Platform//6.11
+          run_bounded "install KDE Flatpak runtime" 5m flatpak install --user --assumeyes flathub org.kde.Platform//6.11
           flatpak info --user org.kde.Platform//6.11
-          flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
+          run_bounded "install official Dolphin Flatpak" 5m flatpak install --user --assumeyes dolphin org.DolphinEmu.dolphin-emu
           # Do not start the Qt GUI during setup: the GUI capture job owns Xvfb.
           flatpak info --user org.DolphinEmu.dolphin-emu
           {
@@ -252,9 +268,9 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          # Run the longer finish check automatically only for this spline-integration PR.
+          # Run finish and post-finish reset checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017')) }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
         run: |
@@ -297,6 +313,10 @@ jobs:
           export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
           export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
           export RACE_USER="$GITHUB_WORKSPACE/dolphin-full-race-user"
+          export FINISH_RESET_DTM="$GITHUB_WORKSPACE/dolphin-finish-reset.dtm"
+          export FINISH_RESET_LOG="$GITHUB_WORKSPACE/dolphin-finish-reset.log"
+          export FINISH_RESET_CAPTURE="$GITHUB_WORKSPACE/dolphin-finish-reset.png"
+          export FINISH_RESET_USER="$GITHUB_WORKSPACE/dolphin-finish-reset-user"
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
@@ -325,7 +345,10 @@ jobs:
           EOF
           done
           capture_timeout=160
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
+          # Finish-label branches perform a separate 12,000-frame label capture
+          # before the finish/reset movie, so they need a longer overall window.
+          if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then capture_timeout=1450; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -402,6 +425,97 @@ jobs:
                 wait "$emu_pid" >/dev/null 2>&1 || true
                 sleep 2
               }
+              # Do not use a fixed post-movie sleep for the finish/reset check:
+              # that can let the restarted race run for several minutes before capture.
+              # Poll one live Dolphin session until we first see the finish banner,
+              # then retain the first frame whose HUD matches the clean reset state.
+              capture_finish_then_reset() {
+                local movie="$1"
+                local log="$2"
+                local capture="$3"
+                local user_dir="$4"
+                local emu_pid=""
+                local window=""
+                local title=""
+                local geometry=""
+                local width=""
+                local height=""
+                local saw_finish=0
+                local saw_reset=0
+                flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
+                  --video_backend="Software Renderer" \
+                  --config=Logger.Options.WriteToFile=True \
+                  --config=Logger.Options.WriteToConsole=True \
+                  --config=Logger.Options.Verbosity=2 \
+                  --config=Logger.Logs.BOOT=True \
+                  --config=Logger.Logs.CORE=True \
+                  --config=Logger.Logs.Video=True \
+                  --exec="$DOL" --movie="$movie" --user="$user_dir" > "$log" 2>&1 &
+                emu_pid=$!
+                sleep 6
+                if ! kill -0 "$emu_pid" 2>/dev/null; then
+                  cat "$log"
+                  echo "Dolphin exited before the finish/reset window became available."
+                  return 1
+                fi
+                for attempt in $(seq 1 15); do
+                  for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
+                    title=$(xdotool getwindowname "$id" 2>/dev/null || true)
+                    geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
+                    width=$(printf "%s\\n" "$geometry" | sed -n "s/^WIDTH=//p")
+                    height=$(printf "%s\\n" "$geometry" | sed -n "s/^HEIGHT=//p")
+                    if [[ -n "$width" && -n "$height" && "$width" -ge 300 && "$height" -ge 200 && "$title" == *Dolphin* ]]; then
+                      window="$id"
+                      break
+                    fi
+                  done
+                  [[ -n "$window" ]] && break
+                  sleep 1
+                done
+                if [[ -z "$window" ]]; then
+                  echo "No visible Dolphin main window was found for the finish/reset diagnostic."
+                  xwininfo -root -tree || true
+                  flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                  kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                  wait "$emu_pid" >/dev/null 2>&1 || true
+                  return 1
+                fi
+                xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
+                # 220 polls x 3 seconds gives the slow Software Renderer more
+                # than 10 minutes to reach finish and the subsequent reset.
+                for attempt in $(seq 1 220); do
+                  import -window "$window" "$capture"
+                  test -s "$capture"
+                  if [[ "$saw_finish" -eq 0 ]]; then
+                    if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-detector.log" 2>&1; then
+                      echo "Finish banner detected on capture poll #$attempt."
+                      cat "$GITHUB_WORKSPACE/dolphin-finish-detector.log"
+                      saw_finish=1
+                    fi
+                  else
+                    if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log" 2>&1; then
+                      echo "Clean reset HUD detected after the finish banner on capture poll #$attempt."
+                      cat "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log"
+                      saw_reset=1
+                      break
+                    fi
+                  fi
+                  sleep 3
+                done
+                flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                wait "$emu_pid" >/dev/null 2>&1 || true
+                if [[ "$saw_finish" -ne 1 ]]; then
+                  [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-detector.log"
+                  echo "The finish banner was not detected during the post-finish reset movie."
+                  return 1
+                fi
+                if [[ "$saw_reset" -ne 1 ]]; then
+                  [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log"
+                  echo "The clean reset HUD was not detected after the finish banner."
+                  return 1
+                fi
+              }
               capture_frame "$BASELINE_DTM" "$BASELINE_LOG" "$BASELINE_CAPTURE" "$BASELINE_USER"
               capture_frame "$DTM" "$DOLPHIN_LOG" "$CAPTURE" "$STEERED_USER"
               capture_frame "$LEFT_DTM" "$LEFT_LOG" "$LEFT_CAPTURE" "$LEFT_USER"
@@ -440,18 +554,27 @@ jobs:
               fi
               echo "D-pad/stick steering passed; Y-reset produced a clean HUD; Start paused visibly, and a second Start resumed throttle-driven movement."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
-                echo "Starting optional full-race DTM; this may take around two to four minutes."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
-                mkdir -p "$RACE_USER/Config"
-                chmod 700 "$RACE_USER"
-                printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
-                echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
                 if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
+                  # Finish-label work needs a dedicated finish screenshot so the
+                  # orange text detector runs on the actual finish frame.
+                  echo "Capturing a dedicated finish-label frame for this branch."
+                  python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
+                  mkdir -p "$RACE_USER/Config"
+                  chmod 700 "$RACE_USER"
+                  printf "%s\\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
+                  capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
+                  python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
-                  echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
+                  echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
+                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Y reset."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
+                mkdir -p "$FINISH_RESET_USER/Config"
+                chmod 700 "$FINISH_RESET_USER"
+                printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESET_USER/Config/Dolphin.ini"
+                capture_finish_then_reset "$FINISH_RESET_DTM" "$FINISH_RESET_LOG" "$FINISH_RESET_CAPTURE" "$FINISH_RESET_USER"
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESET_CAPTURE" --expect-reset
+                echo "Post-finish Y reset restored a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
@@ -466,9 +589,10 @@ jobs:
           [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
           [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
           [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
+          [[ ! -f "$FINISH_RESET_LOG" ]] || cat "$FINISH_RESET_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" "$FINISH_RESET_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs" "$FINISH_RESET_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -500,6 +624,11 @@ jobs:
             dolphin-reset-state.dtm
             dolphin-pause-state.dtm
             dolphin-resume-state.dtm
+            dolphin-finish-reset.dtm
+            dolphin-finish-reset.png
+            dolphin-finish-reset.log
+            dolphin-finish-detector.log
+            dolphin-finish-reset-detector.log
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
@@ -521,5 +650,6 @@ jobs:
             dolphin-left-stick-steered-user/Logs/**
             dolphin-reset-user/Logs/**
             dolphin-full-race-user/Logs/**
+            dolphin-finish-reset-user/Logs/**
           if-no-files-found: warn
           retention-days: 7
