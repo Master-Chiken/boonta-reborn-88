@@ -114,11 +114,26 @@ jobs:
         id: call
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
+          PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
           set +x
+
+          # Re-check immediately before the external request so stale diffs are not sent.
+          current_pr="$RUNNER_TEMP/current-pr-before-call.json"
+          gh api "repos/${GH_REPO}/pulls/${PR_NUMBER}" > "$current_pr"
+          current_state="$(jq -r '.state // empty' "$current_pr")"
+          current_base="$(jq -r '.base.ref // empty' "$current_pr")"
+          current_repo="$(jq -r '.head.repo.full_name // empty' "$current_pr")"
+          current_sha="$(jq -r '.head.sha // empty' "$current_pr")"
+          if [[ "$current_state" != "open" || "$current_base" != "main" || "$current_repo" != "$GH_REPO" || "$current_sha" != "$PR_HEAD_SHA" ]]; then
+            echo "::error::The pull request changed after diff preparation. Nothing was sent to OpenRouter; rerun against the current head."
+            exit 1
+          fi
 
           request_json="$RUNNER_TEMP/openrouter-request.json"
           response_json="$RUNNER_TEMP/openrouter-response.json"
