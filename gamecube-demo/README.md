@@ -30,8 +30,8 @@ The procedural course, rival craft, controls, dynamic exhaust and HUD remain sep
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; energy drains and recharges on release. Heat rises during boost; at 98% heat, boost locks out until the engine cools to 60% or below.
-- Start: toggle pause/resume; the pause icon appears in the center of the HUD.
-- Y: reset the run, lap counter, rival, overtake indicators, and pause state.
+- Start: toggle pause/resume during a live race; after the finish state, Start restarts a fresh run. The pause icon appears in the center of the HUD.
+- Y: reset the run, lap counter, rival, overtake indicators, and pause state at any time.
 
 ## Build
 
