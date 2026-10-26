@@ -83,13 +83,27 @@ static inline float boonta_speed_after_input(float speed, int accelerating, int 
  * Racer-style pitch: a forward/up stick push means nose-down. Pitching down
  * rewards risk with more forward travel but reduces steering authority; pitching
  * up trades speed for tighter control. Ignore small stick noise around center.
+ * D-pad Up adds nose-down pitch (+0.7f) and D-pad Down adds nose-up pitch (-0.7f).
  */
-static inline float boonta_pitch_input(float stick_y)
+static inline float boonta_pitch_input(float stick_y,
+                                        int up_held,
+                                        int down_held)
 {
-    if (!isfinite(stick_y)) return 0.0f;
-    if (stick_y >= -16.0f && stick_y <= 16.0f) return 0.0f;
-    if (stick_y > 0.0f) return boonta_clamp_finite_float((stick_y - 16.0f) / 111.0f, 0.0f, 1.0f);
-    return boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
+    float analog_pitch = 0.0f;
+    float pitch;
+    if (isfinite(stick_y)) {
+        if (stick_y > 16.0f) {
+            analog_pitch = boonta_clamp_finite_float((stick_y - 16.0f) / 111.0f, 0.0f, 1.0f);
+        } else if (stick_y < -16.0f) {
+            analog_pitch = boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
+        }
+    }
+    pitch = analog_pitch;
+    if (down_held) pitch -= 0.7f;
+    if (up_held) pitch += 0.7f;
+    if (pitch < -1.0f) return -1.0f;
+    if (pitch > 1.0f) return 1.0f;
+    return pitch;
 }
 
 /* While pitching up (negative), steering grows up to +35%; nose-down loses 40%. */
