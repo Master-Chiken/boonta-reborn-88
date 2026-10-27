@@ -230,6 +230,24 @@ static inline float boonta_lateral_velocity_after_steering(float lateral_velocit
 }
 
 /*
+ * Slide / drift mode can be initiated with digital L/R trigger buttons or
+ * analog trigger pulls exceeding the threshold.
+ */
+static inline int boonta_slide_input(int trigger_l_held,
+                                     int trigger_r_held,
+                                     unsigned char trigger_l_analog,
+                                     unsigned char trigger_r_analog)
+{
+    if (trigger_l_held || trigger_r_held) {
+        return 1;
+    }
+    if (trigger_l_analog >= 40U || trigger_r_analog >= 40U) {
+        return 1;
+    }
+    return 0;
+}
+
+/*
  * Holding slide increases turn impulse while reducing lateral grip. That makes
  * a corner easier to initiate but lets sideways drift persist after release.
  */
