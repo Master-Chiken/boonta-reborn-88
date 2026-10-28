@@ -1783,4 +1783,22 @@ These are confirmed intermediate state transitions, but their labels alone do no
 - **Not executed:** no emulator session, physical console session, or freshly built full-game static-recomp run was performed. The ROM and the exact address-level trace remain private; no ROM bytes, disassembly, generated C or game assets were added to this repository.
 
 **RE-001 remains BLOCKED / UNPROVEN for the full finish-to-results chain.** The next test must resolve a direct consumer of the results UI/resource/scene identifier from the post-race manager/lifecycle path. Do not infer that destination from `Fini`, from the standalone “Results” string, or from the phase number alone.
+## AC. Results-panel consumer cross-reference — static only (2026-10-28)
 
+### New result: the results UI is identified at code-consumer level
+
+A fresh local disassembly pass over the owner's existing US N64 ROM goes beyond the isolated text-bank hit:
+
+- A game routine loads the `~c~sResults` text-bank entry and passes it directly to the game's 2D text/UI helper with layout arguments. This is a direct consumer of the Results label, not merely a string-search match.
+- The same routine iterates participant records, builds/uses an ordering array, and compares participant ordering fields to produce a leaderboard. Nearby formatting paths handle placement prefixes, racer-name fields, and a winnings/prize line. Together, these are strong static evidence for a results/placement-panel builder.
+- The caller is reached through a `Hang`-labelled object/callback registry and a particular object-substate branch. That supplies a concrete UI-side path to investigate, without assuming the registry label alone describes a scene.
+
+### What this closes — and what remains open
+
+- **Supported statically:** configured progress-event threshold → participant finish/skip state → local-player completion aggregate → intermediate manager phase (Section AB); separately, a concrete results/placement-panel builder and its `Results` text consumer under a `Hang` object substate.
+- **Still unproven:** I have not yet demonstrated the edge from the manager's intermediate/delayed lifecycle path to that particular `Hang` instance/substate, nor found a confirmed scene/resource-load identifier for the complete destination. Generic `Fini`/`Abrt` tags do not close this gap. The full finish-to-results chain therefore remains **BLOCKED / UNPROVEN**.
+- **Not executed:** no emulator or game runtime was launched, and no freshly built full-game static-recomp executable was run. This is static ROM disassembly only. No ROM bytes, raw disassembly, exact local addresses/offsets, extracted text/asset dumps, or gameplay changes are included in this repository.
+
+### Next bounded research step
+
+Trace how the relevant `Hang` object's substate is initialized and reached, then locate the manager/lifecycle writer or dispatcher that connects the post-race phase to it. Alternatively, identify a direct scene/resource-transition consumer. Do not change Boonta gameplay logic until that edge is evidenced.
