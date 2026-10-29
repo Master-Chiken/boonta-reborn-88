@@ -2090,3 +2090,24 @@ The README also says the `SWE1R_STACKDUMP` / `SWE1R_WATCH` crash-trace tools are
 
 If a compatible instrumentable build becomes available, record one reproducible visible race completion and capture the four state observations above. Otherwise, continue the static producer/consumer audit without assigning physical button names to the unresolved packed input bits. Keep RE-002 parked.
 
+## AP. Code-section VMA audit limits conclusions that depend on external state tables — static mapping correction (2026-10-29)
+
+### Why this re-audit is required
+
+The prior local scratch ELF flattened a much larger ROM range into one `.text` mapping. That is not a valid global virtual-address map for the whole ROM. The public N64Recomp reference project provides an explicit main-code section in its `symbols.toml`: ROM offset `0x1000` maps to VMA `0x80000400`, with code size `0x98000` (ending at VMA `0x80098400`). Its `recomp.toml` also declares `0x80000400` as the entrypoint. The code-only rebase is consistent with the first boot trampoline, but it does **not** define the virtual mapping of later data, global tables or overlays.
+
+The manager callback's code is inside this mapped main-code range. It reads a jump-table pointer from a global location beyond the mapped code section, however. Treating the ROM as a single linear file-to-VMA mapping makes the table bytes look available at a plausible file offset, but that is not enough to prove they are the correct runtime table bytes. I therefore cannot independently validate the callback's state-index-to-handler mapping from the flattened scratch ELF alone.
+
+### Evidence reclassification
+
+- **Retained:** the instructions in the mapped main-code section directly show a state-index dispatch, a call to the generic input-mask predicate with mask `0x201`, a fallback object-flag test, and a state-change helper on the matching paths. The helper itself includes a low-nibble state update to index 5 in one branch. The helper predicate consults gated shared input words.
+- **Downgraded pending a correct data/overlay map:** any claim that names a specific state-table entry, ties a manager state index to the Results/standings builder, or uses table bytes read from the linearized out-of-section region as corroboration. Sections AF–AG and related finish-to-Results descriptions above should be read as **conditional hypotheses from the previous trace, not independently verified table resolution** until those tables are located through a validated data/overlay map.
+- **Still unproven:** the meaning of input bits `0x001` and `0x200` at the physical-control level; the causal relationship between normal race completion and the first `Fini` transition; the relevant selector and global-guard values at runtime; and a visible Results screen.
+- **No implementation consequence:** this correction does not justify changing Boonta's GameCube/Wii code. No retail payload, raw disassembly, local exact offsets or assets are included in this dossier.
+
+### Next bounded validation
+
+1. Establish a trustworthy map for the global tables and any loaded data/overlay segment that contains the state-dispatch records. Do not infer their contents from a single flat ROM-to-VMA mapping.
+2. Re-resolve the named state-handler edges only from correctly mapped table bytes or an independent symbol/recomp trace.
+3. Update or retract the affected historical hypotheses once that independent mapping is obtained. Until then the safe overall grade is **MAIN-CODE CALL PATH PARTLY VERIFIED / DATA-TABLE DISPATCH UNVALIDATED / FINISH-TO-RESULTS UNPROVEN / RUNTIME UNVERIFIED**.
+
