@@ -1940,3 +1940,28 @@ Sections AF–AH accurately establish the **conditional consumer-side path**: if
 What remains unproven is the **producer-side entry condition** at the end of an actual race: which secondary selector value is present on the relevant object when the manager broadcasts normal finalization, and whether earlier lifecycle-sequence transitions bring it to the sentinel/default path. Therefore, do not describe the full live race finish-to-results path as connected yet.
 
 No emulator, runtime instrumentation, write-watchpoint trace or full static-recomp execution was performed. No ROM bytes, raw disassembly, exact local addresses/offsets, text/resource dumps or extracted assets are added to this public dossier; no clean-room gameplay behavior is modified based on these N64-only observations.
+
+
+## AJ. Re-audit of lifecycle message producers: normal Fini delivery is still unproven — static only (2026-10-29)
+
+### Important correction after reviewing the actual dispatcher call sites
+
+A caller-by-caller audit of the generic all-registered-types dispatcher found three direct `All!` broadcasts in the disassembled code paths checked:
+
+- Two carry the `Paws` pause-state message.
+- The third goes through a helper whose only direct caller in the audited code sets the lifecycle token to `Abrt` (abort) before broadcasting it.
+
+The class-specific dispatcher itself is confirmed to support `All!` by iterating registered types and invoking eligible callbacks. However, **the audited `All!` call sites do not establish that the manager broadcasts normal `Fini` (finish) to the `Hang` receiver**. A direct constructor/sender for the normal `Fini` token was not found in this pass. Consequently, the earlier section AE description of a proven manager-finalization → all-types broadcast → `Hang/Fini` edge was too strong and must be treated as **superseded** unless a separate producer path is found.
+
+### What remains directly supported
+
+- The `Hang` message receiver distinguishes `Fini`, `Abrt`, `Load`, `RStr`, and `Stop` as separate cases.
+- On the receiver's `Fini` case, the default target is the Results/standings primary state, but a secondary selector can override it; a transition guard can also suppress the setter.
+- The Results/standings consumer exists under the corresponding state-table handler.
+- A separate state-0 path on the `Hang` class can write selector value 15 under a guarded global event condition. This proves the selector is not merely an abstract parameter; it does **not** prove that this condition is reached at normal race completion.
+
+### Revised RE-001 conclusion
+
+The present evidence supports the **receiver-side conditional path**—if normal `Fini` reaches this `Hang` instance, the selector and guard determine whether its state transition reaches the Results builder. It does **not** yet connect the race manager's all-local-finished condition to the normal `Fini` producer, nor prove the live selector value or a visible results-screen transition. The full finish-to-results chain is therefore **BLOCKED / UNPROVEN at the producer/delivery edge**.
+
+This revision supersedes any earlier claim in this dossier that the normal `Fini` broadcast to `Hang` was statically established. No emulator, watchpoint capture, visible run, or full static-recomp runtime was executed. The local ROM, raw disassembly, exact addresses/offsets, and extracted resource payloads remain private; no game assets or retail code were added to this repository and no clean-room GameCube/Wii implementation was changed based on the N64 trace.
