@@ -1994,3 +1994,26 @@ The chain is **statically connected as a conditional path**, rather than blocked
 ### Boundaries
 
 This was a private local instruction/control-flow check against the user-provided N64 ROM. No emulator, live game session, write-watchpoint capture or full static-recomp execution was performed. Exact ROM offsets, instruction addresses, raw disassembly, resource bytes and extracted assets remain local and are not included in this public dossier. This N64 finding does not justify a GameCube/Wii gameplay change or platform-parity claim.
+
+
+## AL. State-table handoff confirms the conditional all-types relay — static only (2026-10-29)
+
+### Follow-through from the manager's `Fini` request
+
+A narrower pass traced the manager callback's state-table entries and the delayed-token consumer:
+
+1. The callback's state dispatch has a distinct handler for the phase branch that tests event/mask `0x201`. The test must return nonzero before that branch requests `Fini`; the condition is not an unconditional finish broadcast.
+2. The guarded transition helper stores the pending `Fini` token, changes the manager object to its delayed-processing state, and sets its delay/timer bookkeeping. This confirms that the token is queued for a later update rather than sent immediately.
+3. The delayed-processing state reads that stored token and passes it into the manager's message handler.
+4. The message handler has two materially different routes. Under one global mode flag, an incoming `Fini` takes a special cleanup/state-transition path that bypasses the ordinary all-types broadcast. Otherwise it composes a manager event and broadcasts through the generic `All!` destination. On that broadcast route, a separate global-mode condition can substitute `Abrt` for the pending `Fini` token.
+5. Consequently, the `Hang` receiver-side Results path is only reachable if the event/mask condition succeeds, the manager uses the ordinary relay route rather than the special bypass, the abort override does not apply, and the receiving `Hang` object is in the permitted selector/guard state.
+
+### Current evidence grade
+
+The static chain is now connected through the **conditional broadcast mechanism**:
+
+`local-player completion aggregate` → `intermediate manager phase` → `event/mask 0x201 succeeds` → `queue Fini` → `delayed manager state` → `message handler` → `conditional All! relay / possible Abrt substitution / bypass` → `Hang receiver` → `conditional Results/standings state handler`.
+
+This improves the control-flow trace; it does not collapse those gates into an observed live execution. We still lack a runtime observation of the actual flag/selector values at the end of a real race and the visible Results screen. No emulator, write-watchpoint capture or full static-recomp runtime was executed, and there is no GameCube/Wii parity claim.
+
+The private ROM, exact local instruction addresses/offsets, raw disassembly, text/resource bytes and extracted assets remain local. No game payload or N64-derived gameplay change was added to Boonta.
