@@ -211,20 +211,28 @@ static void pitch_tradeoff_tests(void) {
  assert(nearf(boonta_pitch_input(0.0f), 0.0f));
  assert(nearf(boonta_pitch_input(12.0f), 0.0f));
  assert(nearf(boonta_pitch_input(-16.0f), 0.0f));
+ assert(nearf(boonta_pitch_input(16.0f), 0.0f));
  assert(nearf(boonta_pitch_input(72.0f), 56.0f / 111.0f));
  assert(nearf(boonta_pitch_input(-72.0f), -0.5f));
  assert(nearf(boonta_pitch_input(127.0f), 1.0f));
  assert(nearf(boonta_pitch_input(-128.0f), -1.0f));
+ assert(nearf(boonta_pitch_input(200.0f), 1.0f));
+ assert(nearf(boonta_pitch_input(-200.0f), -1.0f));
  assert(nearf(boonta_pitch_input(NAN), 0.0f));
  assert(nearf(boonta_pitch_input(INFINITY), 0.0f));
+ assert(nearf(boonta_pitch_input(-INFINITY), 0.0f));
 
  /* Nose-down trades steering authority for faster progress; nose-up does the opposite. */
  assert(nearf(boonta_steering_after_pitch(0.5f, 0.0f), 0.5f));
  assert(nearf(boonta_steering_after_pitch(0.5f, 1.0f), 0.3f));
  assert(nearf(boonta_steering_after_pitch(0.5f, -1.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(1.0f, -1.0f), 1.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, 2.0f), 0.3f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, -2.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(NAN, 0.8f), 0.0f));
  assert(nearf(boonta_steering_after_pitch(0.5f, NAN), 0.5f));
+ assert(nearf(boonta_steering_after_pitch(INFINITY, 0.5f), 0.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, INFINITY), 0.5f));
 
  /* Compare actual forward progress at the same throttle/speed and frame scale. */
  {
