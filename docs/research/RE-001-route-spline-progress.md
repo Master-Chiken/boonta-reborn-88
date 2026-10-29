@@ -1825,3 +1825,36 @@ In the message-handler paths checked during this pass, no direct write to the `H
 ### Next bounded test
 
 Follow the manager's guarded transition into the object/resource dispatcher and find either (a) an explicit message send/receiver pair for the target `Hang` instance, or (b) the writer that assigns the primary/nested state used by the already identified results-panel builder. If neither edge can be resolved statically, preserve the result as **BLOCKED / UNPROVEN** and make no gameplay-code change based on this hypothesis.
+
+
+## AE. Delayed finalization broadcast to registered callbacks — static only (2026-10-29)
+
+### New result: the manager-to-Hang link is supported at message-dispatch level
+
+The bounded follow-up connected more of the producer/consumer path than Section AD:
+
+1. The race manager's finishing/finalization path invokes a guarded transition helper on the manager object. That helper records the incoming lifecycle token on the manager and schedules a short delayed transition, while performing separate cleanup/notification work for other registered components.
+2. When the manager's delay expires, its update path passes the stored token into the manager message handler.
+3. On the handler's ordinary broadcast path, the message is sent through the engine's generic **all-registered-types** dispatcher. Depending on global mode flags, the original pending token is propagated or an abort token is substituted. A separate mode-gated path bypasses this broadcast, so the behavior is conditional rather than universal.
+4. The `Hang` object's previously identified message callback has explicit finalization/abort handling. The generic dispatcher walks eligible registered callbacks, so there is now a statically supported manager-lifecycle → global callback dispatch → `Hang` message-handler edge on the ordinary broadcast path.
+
+This is the first producer-to-consumer connection found for the lifecycle **message**. It is stronger than matching token names alone.
+
+### Remaining gap: message reception is not proof of the results substate
+
+The newly connected edge still does **not** show that receiving the finalization message assigns the exact primary/nested state consumed by the Results/placement-panel builder:
+
+- The `Hang` message handler updates lifecycle flags and its message-sequence bookkeeping; it does not directly write the primary-state selector in the paths checked.
+- The results/placement-panel builder remains identified separately under a `Hang` state/substate branch.
+- The state/object relationship that takes the receiving instance from its lifecycle sequence into that exact rendering branch remains unproven. The mode-gated bypass and abort override also mean the broadcast path cannot be assumed for every race/session.
+
+### Evidence classification after this pass
+
+- **Supported statically:** configured progression threshold → participant finish/skip handling → manager post-race/finalization path → delayed manager message handling → conditional all-types callback dispatch → `Hang` callback recognizes finalization/abort messages.
+- **Supported separately:** a `Hang` state/substate branch consumes the Results heading and formats ordered participants, placements/names and prize-related text.
+- **Still blocked:** a direct writer/transition proving that the *same relevant Hang instance* enters that exact results-panel state because of the manager lifecycle message.
+- **Not performed:** no emulator, live-game trace, write-watchpoint result, or full static-recomp runtime was executed. No ROM bytes, raw disassembly, exact addresses/offsets, extracted text/resource dumps, or game assets were added here.
+
+### Next bounded test
+
+Inspect the `Hang` receiver's lifecycle-sequence continuation and its state dispatcher together: identify the writer or branch that changes the selector/substate used by the Results-panel consumer, then connect it to the message-driven path above. If no such direct state assignment/call can be established, leave the full finish-to-results chain **BLOCKED / UNPROVEN** and do not infer the UI transition from successful message delivery alone.
