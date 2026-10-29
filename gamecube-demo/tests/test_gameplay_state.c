@@ -211,20 +211,28 @@ static void pitch_tradeoff_tests(void) {
  assert(nearf(boonta_pitch_input(0.0f), 0.0f));
  assert(nearf(boonta_pitch_input(12.0f), 0.0f));
  assert(nearf(boonta_pitch_input(-16.0f), 0.0f));
+ assert(nearf(boonta_pitch_input(16.0f), 0.0f));
  assert(nearf(boonta_pitch_input(72.0f), 56.0f / 111.0f));
  assert(nearf(boonta_pitch_input(-72.0f), -0.5f));
  assert(nearf(boonta_pitch_input(127.0f), 1.0f));
  assert(nearf(boonta_pitch_input(-128.0f), -1.0f));
+ assert(nearf(boonta_pitch_input(200.0f), 1.0f));
+ assert(nearf(boonta_pitch_input(-200.0f), -1.0f));
  assert(nearf(boonta_pitch_input(NAN), 0.0f));
  assert(nearf(boonta_pitch_input(INFINITY), 0.0f));
+ assert(nearf(boonta_pitch_input(-INFINITY), 0.0f));
 
  /* Nose-down trades steering authority for faster progress; nose-up does the opposite. */
  assert(nearf(boonta_steering_after_pitch(0.5f, 0.0f), 0.5f));
  assert(nearf(boonta_steering_after_pitch(0.5f, 1.0f), 0.3f));
  assert(nearf(boonta_steering_after_pitch(0.5f, -1.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(1.0f, -1.0f), 1.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, 2.0f), 0.3f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, -2.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(NAN, 0.8f), 0.0f));
  assert(nearf(boonta_steering_after_pitch(0.5f, NAN), 0.5f));
+ assert(nearf(boonta_steering_after_pitch(INFINITY, 0.5f), 0.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, INFINITY), 0.5f));
 
  /* Compare actual forward progress at the same throttle/speed and frame scale. */
  {
@@ -294,6 +302,25 @@ static void track_scroll_tests(void) {
  assert(boonta_track_section_index(1.0f, NAN) == 0U);
  assert(nearf(boonta_track_phase(NAN, 2.0f), 0.0f));
  assert(nearf(boonta_track_phase(2.0f, INFINITY), 0.0f));
+}
+
+static void slide_input_tests(void) {
+ /* Digital L or R held triggers slide mode. */
+ assert(boonta_slide_input(1, 0, 0, 0) == 1);
+ assert(boonta_slide_input(0, 1, 0, 0) == 1);
+ assert(boonta_slide_input(1, 1, 0, 0) == 1);
+
+ /* Analog trigger pull >= 40 threshold triggers slide mode. */
+ assert(boonta_slide_input(0, 0, 40U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 40U) == 1);
+ assert(boonta_slide_input(0, 0, 128U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 255U) == 1);
+
+ /* Below threshold without digital press remains inactive. */
+ assert(boonta_slide_input(0, 0, 0, 0) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 0) == 0);
+ assert(boonta_slide_input(0, 0, 0, 39U) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 39U) == 0);
 }
 
 static void slide_drift_tests(void) {
@@ -531,6 +558,13 @@ static void rival_event_tests(void) {
  assert(nearf(boonta_rival_contact_nudge(-0.5f, 0.0f), -0.035f));
  assert(nearf(boonta_rival_contact_nudge(0.5f, 0.0f), 0.035f));
  assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
+}
+
+static void overtake_count_tests(void) {
+ assert(boonta_overtake_count_after_event(0U) == 1U);
+ assert(boonta_overtake_count_after_event(10U) == 11U);
+ assert(boonta_overtake_count_after_event(0xfffffffeU) == 0xffffffffU);
+ assert(boonta_overtake_count_after_event(0xffffffffU) == 0xffffffffU);
 }
 
 
@@ -795,6 +829,7 @@ int main(void) {
  lap_clock_tests();
  steering_input_tests();
  pitch_tradeoff_tests();
+ slide_input_tests();
  slide_drift_tests();
  steering_inertia_tests();
  lap_tests();
@@ -806,6 +841,7 @@ int main(void) {
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
+ overtake_count_tests();
   road_width_alignment_tests();
   offroad_and_rail_tests();
  puts("gameplay-state tests passed");
