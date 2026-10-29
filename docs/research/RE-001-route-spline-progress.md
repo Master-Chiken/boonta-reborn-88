@@ -1802,3 +1802,26 @@ A fresh local disassembly pass over the owner's existing US N64 ROM goes beyond 
 ### Next bounded research step
 
 Trace how the relevant `Hang` object's substate is initialized and reached, then locate the manager/lifecycle writer or dispatcher that connects the post-race phase to it. Alternatively, identify a direct scene/resource-transition consumer. Do not change Boonta gameplay logic until that edge is evidenced.
+
+## AD. Manager-to-lifecycle call-path cross-check — static only (2026-10-29)
+
+### New result from the bounded follow-up
+
+A further static pass confirms that the race-progress manager's per-frame callback invokes a separate manager/lifecycle routine before its own low-phase dispatch. That routine inspects the race/participant context and, on selected branches, invokes a guarded transition helper with a lifecycle token corresponding to either normal finishing or aborting. The helper mutates the **manager object passed to it** (including its state/transition bookkeeping) and touches several named global/resource registries.
+
+Separately, the `Hang`-labelled object has two distinct control paths:
+
+- its main update dispatches through a primary-state table, with one state using a nested substate field;
+- its message callback recognizes lifecycle/control tokens including `Fini`, `Abrt`, `Load`, `RStr`, and `Stop`, and updates lifecycle flags/secondary bookkeeping.
+
+In the message-handler paths checked during this pass, no direct write to the `Hang` object's primary-state selector was observed. The shared token vocabulary therefore does **not** prove that the manager's finishing transition selects the results-panel substate. Nor does a call that changes the manager object's own state identify a particular `Hang` instance.
+
+### Evidence update
+
+- **Added:** manager update → manager/lifecycle routine → guarded normal-finish/abort transition on the manager object; independently, `Hang` main-state and lifecycle-message handling are separate mechanisms.
+- **Still blocked:** no direct producer-to-consumer edge yet connects the manager's post-race phase or transition token to the specific `Hang` instance/substate that consumes the Results heading and formats the ordered participant list.
+- **Not performed:** no emulator/session was launched, no runtime trace/watchpoint result was obtained, and no full static-recomp build was executed. These conclusions remain from private, local static analysis only. No ROM bytes, raw disassembly, exact offsets/addresses, text dumps, or game assets are included here.
+
+### Next bounded test
+
+Follow the manager's guarded transition into the object/resource dispatcher and find either (a) an explicit message send/receiver pair for the target `Hang` instance, or (b) the writer that assigns the primary/nested state used by the already identified results-panel builder. If neither edge can be resolved statically, preserve the result as **BLOCKED / UNPROVEN** and make no gameplay-code change based on this hypothesis.
