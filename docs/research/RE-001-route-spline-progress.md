@@ -1858,3 +1858,28 @@ The newly connected edge still does **not** show that receiving the finalization
 ### Next bounded test
 
 Inspect the `Hang` receiver's lifecycle-sequence continuation and its state dispatcher together: identify the writer or branch that changes the selector/substate used by the Results-panel consumer, then connect it to the message-driven path above. If no such direct state assignment/call can be established, leave the full finish-to-results chain **BLOCKED / UNPROVEN** and do not infer the UI transition from successful message delivery alone.
+
+
+## AF. Same-object state transition reaches the Results-panel builder — static only (2026-10-29)
+
+### New result: the previously missing state edge is now connected on the ordinary/default path
+
+The follow-up resolves the specific state-dispatch gap left in Section AE:
+
+1. The `Hang` lifecycle callback's `Fini` branch does more than update flags. It selects the next primary state from its internal lifecycle sequence and passes the same object plus that selected state to the class's state-transition helper, unless a separate global guard suppresses this step.
+2. The transition helper stores the new primary state on that object, preserves the previous primary/nested state for transition handling, and invokes that object's state updater and presentation routine for nonzero target states.
+3. The updater's own dispatch table maps the default/sentinel-sequence finishing path to a nested display mode used by the same object's presentation routine. The presentation routine contains the previously identified direct consumer of the Results heading and the ordered participant/placement/prize formatting.
+4. The object is passed consistently through the lifecycle receiver → state setter → state updater → presentation routine. This closes the formerly missing same-instance link; it is no longer just a match between global message names and an independently found UI label.
+
+### Revised assessment
+
+**The static finish-to-results route is now connected for the ordinary all-types broadcast and default/sentinel lifecycle path**, subject to the state-transition guard described above. Other internal lifecycle-sequence values select different primary states, and the dispatcher can substitute an abort token or bypass the broadcast under mode-specific conditions. Do not generalize this one traced path into a claim that every session or mode follows it.
+
+This remains static control-flow evidence, not proof of runtime timing or a successful visible results screen. A true end-to-end runtime confirmation would require observing the target game/emulator transition or a correctly instrumented static-recomp execution; neither was performed in this pass.
+
+### Next validation
+
+- Keep this finding as **STATIC PATH CONNECTED / RUNTIME UNVERIFIED**.
+- If the private test environment becomes available, record whether the ordinary finishing path reaches the Results panel, and separately exercise the mode-gated bypass/abort paths.
+- Do not change the clean-room GameCube implementation solely on the basis of this N64 control-flow result, and do not infer parity with PC, Dreamcast, GameCube or Wii.
+- No ROM bytes, raw disassembly, exact addresses/offsets, extracted resource/text dumps or game assets were added to this public dossier.
