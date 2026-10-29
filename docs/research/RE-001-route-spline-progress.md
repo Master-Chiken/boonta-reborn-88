@@ -1904,3 +1904,20 @@ configured progress target → participant finish/skip state → local-player co
 **Runtime remains unverified.** No emulator or live game session was run; no write-watchpoint capture or full static-recomp runtime was executed. This conclusion is limited to the statically traced default path and is not evidence that every game mode reaches the screen, nor that N64 internals match GameCube/Wii.
 
 The exact local ROM offsets, instruction addresses, raw disassembly, resource bytes and assets remain private and are not included in this public dossier. No clean-room gameplay code was changed based on this N64-only trace.
+
+
+## AH. Fini selector matrix: Results is a conditional subpath — static only (2026-10-29)
+
+### Secondary-sequence selector result
+
+The follow-up decoded the control-flow distinction behind the sentinel/default route:
+
+- The `Fini` handler begins with primary target index 5. If the object's secondary sequence selector is the negative sentinel, that target is left unchanged (provided the global transition guard permits the state setter), so the same-object primary-state table reaches the Results/standings builder described in section AG.
+- If the selector is in its valid nonnegative range, a local jump table dispatches to alternate branches that replace the primary target with other state indices. Most of these branches reset the sequence selector to the negative sentinel; a smaller high-value range advances it through additional intermediate transitions before it is reset. An out-of-range nonnegative selector takes an alternate state branch rather than the Results target.
+- Consequently, the static state edge is direct and well-supported **conditional on the sentinel/default branch**, but this does not by itself prove that an ordinary completed race enters `Fini` with that selector already negative, nor that a particular mode completes the intermediate sequence and delivers the subsequent `Fini` invocation.
+
+### Updated scope
+
+The defensible conclusion is: **the `Fini` receiver can reach the Results/standings builder on its sentinel/default subpath; other selector values deliberately take alternate state paths.** RE-001's remaining limitation is now explicit: whether the relevant live race-completion path reaches that subpath, and the visible/runtime transition, remain unverified.
+
+No runtime/emulator execution was performed. Exact local branch addresses, offsets, raw disassembly, ROM bytes and extracted resources remain private; no retail-game payload was added to the repository and no clean-room GameCube/Wii behavior was changed based on this N64-only analysis.
