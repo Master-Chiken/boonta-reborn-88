@@ -1214,7 +1214,11 @@ int main(int argc, char **argv)
         /* Up/forward on the analog stick pitches down; down pitches up. */
         pitch_down = boonta_pitch_input((float)stick_y);
         g_pitch_down = pitch_down;
-        g_slide_active = (buttons_held & PAD_TRIGGER_L) != 0U;
+        g_slide_active = boonta_slide_input(
+            (buttons_held & PAD_TRIGGER_L) != 0U,
+            (buttons_held & PAD_TRIGGER_R) != 0U,
+            (unsigned char)PAD_TriggerL(0),
+            (unsigned char)PAD_TriggerR(0));
         steering = boonta_steering_after_pitch(
             boonta_steering_input(
                 (float)stick_x,

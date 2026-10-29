@@ -296,6 +296,25 @@ static void track_scroll_tests(void) {
  assert(nearf(boonta_track_phase(2.0f, INFINITY), 0.0f));
 }
 
+static void slide_input_tests(void) {
+ /* Digital L or R held triggers slide mode. */
+ assert(boonta_slide_input(1, 0, 0, 0) == 1);
+ assert(boonta_slide_input(0, 1, 0, 0) == 1);
+ assert(boonta_slide_input(1, 1, 0, 0) == 1);
+
+ /* Analog trigger pull >= 40 threshold triggers slide mode. */
+ assert(boonta_slide_input(0, 0, 40U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 40U) == 1);
+ assert(boonta_slide_input(0, 0, 128U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 255U) == 1);
+
+ /* Below threshold without digital press remains inactive. */
+ assert(boonta_slide_input(0, 0, 0, 0) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 0) == 0);
+ assert(boonta_slide_input(0, 0, 0, 39U) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 39U) == 0);
+}
+
 static void slide_drift_tests(void) {
  const float regular_turn = boonta_lateral_velocity_after_steering_scaled(
      0.0f, 1.0f, 1.0f, 1.0f);
@@ -802,6 +821,7 @@ int main(void) {
  lap_clock_tests();
  steering_input_tests();
  pitch_tradeoff_tests();
+ slide_input_tests();
  slide_drift_tests();
  steering_inertia_tests();
  lap_tests();
