@@ -1883,3 +1883,24 @@ This remains static control-flow evidence, not proof of runtime timing or a succ
 - If the private test environment becomes available, record whether the ordinary finishing path reaches the Results panel, and separately exercise the mode-gated bypass/abort paths.
 - Do not change the clean-room GameCube implementation solely on the basis of this N64 control-flow result, and do not infer parity with PC, Dreamcast, GameCube or Wii.
 - No ROM bytes, raw disassembly, exact addresses/offsets, extracted resource/text dumps or game assets were added to this public dossier.
+
+
+## AG. Fini default-state dispatch cross-check — static only (2026-10-29)
+
+### Result: the default Fini state index reaches the previously identified Results/standings builder
+
+The private instruction-level cross-check confirms the final state-table edge described in section AF:
+
+- On the ordinary `Hang` `Fini` path, when the optional next-state selector is absent/out of range (the sentinel/default case) and the global transition guard permits the change, the handler leaves the selected primary state at index 5 and passes that value to the state setter for the same object.
+- The `Hang` primary-state dispatch table maps index 5 to a handler that calls the screen/standings routine already identified in section AC. That routine orders participant records and constructs the corresponding on-screen elements, including placement/racer data and result-related text. This is a direct state-table and same-object call edge, rather than an inference from the shared `Fini` tag alone.
+- The nested-state mapping can override the default index when its selector is in the valid range; a separate global guard can alter or suppress the ordinary state change. Abort substitution, broadcast bypass and alternative lifecycle sequences remain separate cases.
+
+### Updated evidence classification
+
+For the ordinary default/sentinel `Fini` path, the static chain is now **CONNECTED THROUGH THE RESULTS/STANDINGS STATE HANDLER**:
+
+configured progress target → participant finish/skip state → local-player completion gate → manager delayed finalization → registered-callback broadcast → `Hang` `Fini` receiver → same-object primary-state setter → state-table handler → Results/standings presentation builder.
+
+**Runtime remains unverified.** No emulator or live game session was run; no write-watchpoint capture or full static-recomp runtime was executed. This conclusion is limited to the statically traced default path and is not evidence that every game mode reaches the screen, nor that N64 internals match GameCube/Wii.
+
+The exact local ROM offsets, instruction addresses, raw disassembly, resource bytes and assets remain private and are not included in this public dossier. No clean-room gameplay code was changed based on this N64-only trace.
