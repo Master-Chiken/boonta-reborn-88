@@ -1968,3 +1968,29 @@ The evidence supports the **receiver-side conditional path** and a **conditional
 **Status: BLOCKED / UNPROVEN at the race-finish → initial Fini producer edge; receiver-side Results path conditionally identified.**
 
 No emulator, watchpoint capture, visible run, or full static-recomp runtime was executed. The local ROM, raw disassembly, exact local addresses/offsets and extracted resource payloads remain private; no game assets or retail code were added to this repository and no clean-room GameCube/Wii behavior was changed based on the N64 trace.
+
+
+## AK. Manager phase callback schedules the first normal Fini transition — static only (2026-10-29)
+
+### New producer-side result from the local instruction trace
+
+The manager update/state callback contains a direct `Fini` transition request that was not covered by the earlier inventory of direct `All!` broadcast call sites:
+
+- The callback first dispatches from the manager object's low-nibble phase/state. In one phase branch, it calls the event/mask helper with mask `0x201`.
+- If that helper reports the condition satisfied, the branch passes the same manager object and the literal `Fini` token to the guarded transition helper. A separate branch in the same callback passes `Abrt` to that helper, so abort and normal-finish requests are distinct paths.
+- The helper checks a global re-entry guard, updates the manager object's state/timer bookkeeping, stores the requested lifecycle token in the manager's pending-transition field, and runs several cleanup/notification hooks. This is a **scheduled manager transition**, not an immediate `All!` broadcast.
+- On the delayed path already described in Sections AB/AE, the manager later processes that pending token. Its message handler has the conditional all-types relay that can forward the token to registered callbacks, including the `Hang` receiver; global-mode conditions can bypass the broadcast or substitute `Abrt`.
+
+This links the manager's intermediate phase callback to the first normal `Fini` transition request at static call-site level. It corrects the narrower Section AJ conclusion, which inventoried `All!` calls but did not connect this earlier manager-state callback that queues the token.
+
+### Revised chain and remaining conditions
+
+The best-supported static chain is now:
+
+`all-local-participant completion gate` → `intermediate manager phase` → `event/mask condition (0x201)` → `manager schedules Fini` → `delayed manager message handling` → `conditional all-types relay` → `Hang Fini receiver` → `same-object Results/standings state handler on the sentinel/default selector path`.
+
+The chain is **statically connected as a conditional path**, rather than blocked at an unidentified first `Fini` request. It is not yet proof of the actual live path: the global re-entry/mode guards can change the route, the dispatcher may bypass or replace the relay with abort, and the secondary selector value on the relevant `Hang` instance at actual race completion remains unobserved. Runtime display remains unverified.
+
+### Boundaries
+
+This was a private local instruction/control-flow check against the user-provided N64 ROM. No emulator, live game session, write-watchpoint capture or full static-recomp execution was performed. Exact ROM offsets, instruction addresses, raw disassembly, resource bytes and extracted assets remain local and are not included in this public dossier. This N64 finding does not justify a GameCube/Wii gameplay change or platform-parity claim.
