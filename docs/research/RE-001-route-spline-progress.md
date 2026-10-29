@@ -2129,3 +2129,28 @@ The manager's main-code state dispatch and the generic input-mask branch are now
 
 No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. The private ROM, exact local offsets, raw disassembly and extracted assets remain uncommitted. No clean-room GameCube/Wii gameplay change follows from this N64-only finding.
 
+## AR. Hang primary-state dispatch verified; normal finish-to-state-5 entry remains open — static only (2026-10-29)
+
+### Correct table and handler now cross-checked
+
+A new pass identified the `Hang` object's own class/update callback, separately from the manager callback examined in Section AQ. Its primary-state updater dispatches through a 19-entry table indexed by the object's primary-state field. The table was cross-matched against the private ROM bytes, and each target resolves to a handler inside the correctly mapped main-code range. This is the relevant `Hang` primary-state table; it is distinct from the separate lifecycle-message sequence table.
+
+The handler selected by primary-state index **5** directly invokes the already identified Results/placement-panel builder. That builder consumes the Results heading and formats ordered participant placement, racer-name and prize-related information. This closes the table-resolution gap for the **consumer side**: there is now a static, same-class route from Hang primary state 5 to the Results UI builder, rather than relying only on the separate manager's dispatch table.
+
+### Crucial causal edge still missing
+
+The `Fini` lifecycle receiver was rechecked in the same pass. In the inspected branch it updates generic lifecycle flags and message-sequence bookkeeping, stores a value in a shared global selector, and invokes a helper with the same object. It does **not** directly write the `Hang` object's primary-state field to 5 in that branch.
+
+That distinction matters: a shared selector value of 5 is not equivalent to proving the object's own primary state became 5. The remaining task is to find the writer or intermediary helper/callback that moves the same `Hang` instance into primary state 5 as a consequence of normal race completion, or to obtain a controlled runtime trace that observes this transition.
+
+### Updated evidence grade
+
+- **Statically supported:** Hang class/update callback → its own primary-state table → state-5 handler → Results/placement-panel builder.
+- **Not established:** normal race finish → first `Fini` delivery → same Hang object's primary-state field becomes 5.
+- **Runtime still unverified:** no emulator, visible game session, watchpoint trace or full static-recomp execution was run.
+- **No platform-parity claim:** the finding is from private N64 analysis and does not prove GameCube/Wii behavior. No ROM bytes, raw disassembly, exact local offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
+
+### Next bounded trace
+
+Trace all writers of the Hang object's primary-state field and identify whether the message receiver's helper or a later registered callback makes the transition to index 5. Keep the full finish-to-visible-Results path **UNPROVEN / RUNTIME UNVERIFIED** until that causal edge is shown or observed at runtime.
+
