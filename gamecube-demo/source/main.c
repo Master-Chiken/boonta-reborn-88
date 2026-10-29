@@ -1211,8 +1211,11 @@ int main(int argc, char **argv)
         g_boost_overheated = boonta_boost_overheated_after_frame(
             g_boost_overheated, g_engine_heat);
 
-        /* Up/forward on the analog stick pitches down; down pitches up. */
-        pitch_down = boonta_pitch_input((float)stick_y);
+        /* Up/forward on the analog stick or D-pad Up pitches down; down pitches up. */
+        pitch_down = boonta_pitch_input(
+            (float)stick_y,
+            (buttons_held & PAD_BUTTON_UP) != 0U,
+            (buttons_held & PAD_BUTTON_DOWN) != 0U);
         g_pitch_down = pitch_down;
         g_slide_active = boonta_slide_input(
             (buttons_held & PAD_TRIGGER_L) != 0U,
