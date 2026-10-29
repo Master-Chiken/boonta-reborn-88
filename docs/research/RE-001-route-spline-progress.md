@@ -1944,24 +1944,27 @@ No emulator, runtime instrumentation, write-watchpoint trace or full static-reco
 
 ## AJ. Re-audit of lifecycle message producers: normal Fini delivery is still unproven — static only (2026-10-29)
 
-### Important correction after reviewing the actual dispatcher call sites
+### Dispatcher call-site audit and relay distinction
 
-A caller-by-caller audit of the generic all-registered-types dispatcher found three direct `All!` broadcasts in the disassembled code paths checked:
+The generic message dispatcher does support broadcasts to all registered types. Four direct call sites targeting `All!` were identified in the disassembled code paths audited:
 
-- Two carry the `Paws` pause-state message.
-- The third goes through a helper whose only direct caller in the audited code sets the lifecycle token to `Abrt` (abort) before broadcasting it.
+- Two send the `Paws` pause-state message.
+- One broadcasts `Abrt` (abort) through a helper whose direct caller explicitly sets that token.
+- A fourth is in a manager/message handler that first handles its **incoming** token. When it receives `Fini` and the associated global guard permits, it performs a `RSet`-related operation and then can relay the original token through the all-types dispatcher; under another global-state condition it substitutes `Abrt` instead.
 
-The class-specific dispatcher itself is confirmed to support `All!` by iterating registered types and invoking eligible callbacks. However, **the audited `All!` call sites do not establish that the manager broadcasts normal `Fini` (finish) to the `Hang` receiver**. A direct constructor/sender for the normal `Fini` token was not found in this pass. Consequently, the earlier section AE description of a proven manager-finalization → all-types broadcast → `Hang/Fini` edge was too strong and must be treated as **superseded** unless a separate producer path is found.
+The fourth site therefore confirms a **conditional relay of an already-received Fini token** to registered callbacks. It does **not** identify the producer of the first normal `Fini` message from the race-finish manager. The other audited all-types broadcasts do not supply that missing producer edge. No direct first-sender path from the all-local-finished aggregate to this relay's incoming `Fini` has been established in this pass.
 
 ### What remains directly supported
 
-- The `Hang` message receiver distinguishes `Fini`, `Abrt`, `Load`, `RStr`, and `Stop` as separate cases.
-- On the receiver's `Fini` case, the default target is the Results/standings primary state, but a secondary selector can override it; a transition guard can also suppress the setter.
-- The Results/standings consumer exists under the corresponding state-table handler.
-- A separate state-0 path on the `Hang` class can write selector value 15 under a guarded global event condition. This proves the selector is not merely an abstract parameter; it does **not** prove that this condition is reached at normal race completion.
+- The `Hang` message receiver has distinct cases for `Fini`, `Abrt`, `Load`, `RStr`, and `Stop`.
+- On the receiver's `Fini` case, the default primary target is the Results/standings state, but a secondary selector can override that target, and a global guard can suppress the transition.
+- The Results/standings consumer exists under the relevant state-table handler.
+- A separate state-0 path on the `Hang` class can write selector value 15 under a guarded global-event condition. This confirms a real selector writer on the `Hang` type; it does **not** prove that the condition is reached by a normal race finish.
 
 ### Revised RE-001 conclusion
 
-The present evidence supports the **receiver-side conditional path**—if normal `Fini` reaches this `Hang` instance, the selector and guard determine whether its state transition reaches the Results builder. It does **not** yet connect the race manager's all-local-finished condition to the normal `Fini` producer, nor prove the live selector value or a visible results-screen transition. The full finish-to-results chain is therefore **BLOCKED / UNPROVEN at the producer/delivery edge**.
+The evidence supports the **receiver-side conditional path** and a **conditional Fini relay**, but the initial producer/delivery edge remains open. It is not yet proven that the race manager's all-local-finished condition emits the first normal `Fini`, that the relevant `Hang` object receives it in the required selector state, or that the Results panel appears in a real session.
 
-This revision supersedes any earlier claim in this dossier that the normal `Fini` broadcast to `Hang` was statically established. No emulator, watchpoint capture, visible run, or full static-recomp runtime was executed. The local ROM, raw disassembly, exact addresses/offsets, and extracted resource payloads remain private; no game assets or retail code were added to this repository and no clean-room GameCube/Wii implementation was changed based on the N64 trace.
+**Status: BLOCKED / UNPROVEN at the race-finish → initial Fini producer edge; receiver-side Results path conditionally identified.**
+
+No emulator, watchpoint capture, visible run, or full static-recomp runtime was executed. The local ROM, raw disassembly, exact local addresses/offsets and extracted resource payloads remain private; no game assets or retail code were added to this repository and no clean-room GameCube/Wii behavior was changed based on the N64 trace.
