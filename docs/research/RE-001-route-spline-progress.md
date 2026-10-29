@@ -2046,3 +2046,29 @@ The participant threshold path still supports a per-participant finish/disable t
 3. Keep the full live finish-to-visible-Results chain **UNPROVEN** until the producer/consumer relationship is established or runtime evidence is obtained.
 
 No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. No ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted resource bytes or assets are added to this public dossier. No clean-room GameCube/Wii behavior was changed from this N64-only trace.
+
+## AN. Input-word translation narrows the 0x201 source, but not its high-level meaning — static only (2026-10-29)
+
+### New input-side evidence
+
+A further local static pass followed the packed input word through the routine that builds the internal input-state mask:
+
+- The internal mask is **not** a direct copy of the raw input word. It is assembled through separate source/configuration gates and remapping branches.
+- One branch contributes internal bit `0x001` when source-word bit `0x400` is set and that branch's gate permits the mapping.
+- A separate branch contributes internal bits `0x100` and `0x200` together when source-word bits `0x080` and `0x200` are both set and its own gate permits the mapping.
+- These are input-state-mask observations, upstream of the press-edge words that the manager's generic query reads. They do not establish a one-to-one identity between an internal bit and a physical button, because the precise packed source-field semantics, gate values and active input-source mode have not been resolved.
+
+### Downstream manager reaction
+
+The manager branch that queries mask `0x201` converges on a state-change path that replaces the object's low-nibble state index with `5`, resets its timer-like field, and invokes a generic state-transition helper. A separate object-flag condition can reach the same state-change path even when the mask query does not match.
+
+This supports a more precise but still limited statement: **the branch reacts to a generic input-edge mask or an alternate object-flag condition by moving to state index 5.** It does not identify state 5 as Results, prove that the queried mask is a dedicated finish signal, or show that a normal completed race necessarily takes this route.
+
+### Remaining bounded trace
+
+1. Resolve the packed input word and the gates that enable the two remapping branches before assigning named controller controls to `0x001` or `0x200`.
+2. Identify the state-index-5 handler/consumer and its callers, then establish whether its entry is causally downstream of normal race completion or an input/skip/cleanup interaction.
+3. Keep the full finish-to-visible-Results path **UNPROVEN / RUNTIME UNVERIFIED** until those links or a real runtime observation exist.
+
+No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. Exact local addresses/offsets, raw disassembly, ROM bytes and extracted assets remain private. No game payload or N64-derived gameplay change was added to Boonta.
+
