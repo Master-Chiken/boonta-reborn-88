@@ -469,6 +469,11 @@ static inline int boonta_rival_event(float rival_z,
     return BOONTA_RIVAL_EVENT_NONE;
 }
 
+static inline unsigned int boonta_overtake_count_after_event(unsigned int current_count)
+{
+    return current_count < 0xffffffffU ? current_count + 1U : 0xffffffffU;
+}
+
 static inline float boonta_speed_after_rival_contact(float speed)
 {
     speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);

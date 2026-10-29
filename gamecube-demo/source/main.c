@@ -1294,7 +1294,7 @@ int main(int argc, char **argv)
                         g_lateral_velocity, g_player_lateral, g_rival_lateral[rival_index]);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
-                    ++g_overtake_count;
+                    g_overtake_count = boonta_overtake_count_after_event(g_overtake_count);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 0);
                 }
             }

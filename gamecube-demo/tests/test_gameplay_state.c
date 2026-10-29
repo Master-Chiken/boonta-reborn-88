@@ -533,6 +533,13 @@ static void rival_event_tests(void) {
  assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
 }
 
+static void overtake_count_tests(void) {
+ assert(boonta_overtake_count_after_event(0U) == 1U);
+ assert(boonta_overtake_count_after_event(10U) == 11U);
+ assert(boonta_overtake_count_after_event(0xfffffffeU) == 0xffffffffU);
+ assert(boonta_overtake_count_after_event(0xffffffffU) == 0xffffffffU);
+}
+
 
 static void road_width_alignment_tests(void) {
  /* The renderer's effective width stays within its documented runtime bounds. */
@@ -806,6 +813,7 @@ int main(void) {
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
+ overtake_count_tests();
   road_width_alignment_tests();
   offroad_and_rail_tests();
  puts("gameplay-state tests passed");
