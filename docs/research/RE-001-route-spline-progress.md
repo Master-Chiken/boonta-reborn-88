@@ -2111,3 +2111,21 @@ The manager callback's code is inside this mapped main-code range. It reads a ju
 2. Re-resolve the named state-handler edges only from correctly mapped table bytes or an independent symbol/recomp trace.
 3. Update or retract the affected historical hypotheses once that independent mapping is obtained. Until then the safe overall grade is **MAIN-CODE CALL PATH PARTLY VERIFIED / DATA-TABLE DISPATCH UNVALIDATED / FINISH-TO-RESULTS UNPROVEN / RUNTIME UNVERIFIED**.
 
+## AQ. Manager state-table bytes cross-match the ROM, but state 5 is not race-finish proof — static only (2026-10-29)
+
+### Targeted follow-up to Section AP
+
+The manager callback's dispatch table was rechecked independently against the private ROM bytes rather than reading the table from the flattened scratch ELF. The candidate ROM word sequence aligns with the VMA implied by the code's absolute table reference and contains a complete set of seven 32-bit targets. Every target resolves to an instruction boundary within the mapped main-code range or to a state-handler block inside that range. This is a positive table-byte/code-target cross-check for **this specific manager callback**; it does not establish a universal ROM-to-VMA map for all data or overlays.
+
+The mapping audit therefore narrows, but does not remove, Section AP's warning:
+
+- **Resolved for this callback:** the low-nibble state dispatch's candidate target sequence is supported by the raw ROM words and main-code targets. The handlers for the states that call the generic `0x201` input predicate are inside the manager callback's code.
+- **Important semantic result:** the matching input-driven paths perform a state transition and related cleanup/timer work. Their presence shows that this manager has an input-gated state progression; it does **not** prove that the input edge denotes “all racers finished” or that this state is the Results screen.
+- **Still not resolved:** the separate `Hang` state/selector table and any overlay/global table needed to prove the Results-panel dispatch have not been independently mapped in this pass. Do not use the manager-table confirmation as proof of that different dispatch table.
+
+### Revised evidence grade
+
+The manager's main-code state dispatch and the generic input-mask branch are now **statically cross-checked for this specific table**. The broader end-to-end claim remains **FINISH-TO-RESULTS UNPROVEN / RUNTIME UNVERIFIED**, because the causal meaning of the manager state change and the receiver-side `Hang` table/selector path are not yet shown to converge on a normal post-race Results display.
+
+No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. The private ROM, exact local offsets, raw disassembly and extracted assets remain uncommitted. No clean-room GameCube/Wii gameplay change follows from this N64-only finding.
+
