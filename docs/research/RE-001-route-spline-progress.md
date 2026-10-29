@@ -2072,3 +2072,21 @@ This supports a more precise but still limited statement: **the branch reacts to
 
 No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. Exact local addresses/offsets, raw disassembly, ROM bytes and extracted assets remain private. No game payload or N64-derived gameplay change was added to Boonta.
 
+## AO. External N64 recompilation is a runtime-test lead, not finish-to-Results evidence — public-tooling audit (2026-10-29)
+
+### What the public project claims
+
+The public [`sp00nznet/racer` repository](https://github.com/sp00nznet/racer) describes an N64 static-recompilation workflow built around N64Recomp. Its README reports a stable game loop, visible frames through menus and races, SDL controller input and a race that can be driven; its [release page](https://github.com/sp00nznet/racer/releases) lists v0.3.0 dated 2026-10-25 and native installers for Windows, Linux and macOS. Those are project-maintainer status claims, not an execution performed in this RE-001 session.
+
+The README also says the `SWE1R_STACKDUMP` / `SWE1R_WATCH` crash-trace tools are Windows-only. Consequently, the project is a credible *candidate* for a visible runtime check, but its documented tooling does not provide a ready-made cross-platform watchpoint path. A normal race run alone would show the external recomp's behavior; it would not by itself prove the specific producer/consumer edge needed in this dossier.
+
+### What this changes — and what it does not
+
+- **Changes:** there is now a concrete third-party runtime avenue to evaluate for the N64 reference, rather than treating “no emulator installed in the current command-line environment” as the only option. A useful instrumented session would need to observe the manager phase / pending lifecycle token, the queried input-edge condition, the receiving object's selector, and entry into the Results/standings builder on the same run.
+- **Does not change:** no `sp00nznet/racer` binary was built or launched in this session, no runtime values or watchpoint trace were obtained, and the README status is not independent verification. The full ordinary race-finish → visible-Results path remains **UNPROVEN / RUNTIME UNVERIFIED**.
+- **Source boundary:** this audit imports no recompilation code, decompilation code, retail-game data or assets into Boonta. The external project remains a separate analysis/runtime reference; no N64-derived GameCube/Wii gameplay implementation is justified by this result.
+
+### Next bounded action
+
+If a compatible instrumentable build becomes available, record one reproducible visible race completion and capture the four state observations above. Otherwise, continue the static producer/consumer audit without assigning physical button names to the unresolved packed input bits. Keep RE-002 parked.
+
