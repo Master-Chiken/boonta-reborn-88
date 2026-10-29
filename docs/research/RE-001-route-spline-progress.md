@@ -1921,3 +1921,22 @@ The follow-up decoded the control-flow distinction behind the sentinel/default r
 The defensible conclusion is: **the `Fini` receiver can reach the Results/standings builder on its sentinel/default subpath; other selector values deliberately take alternate state paths.** RE-001's remaining limitation is now explicit: whether the relevant live race-completion path reaches that subpath, and the visible/runtime transition, remain unverified.
 
 No runtime/emulator execution was performed. Exact local branch addresses, offsets, raw disassembly, ROM bytes and extracted resources remain private; no retail-game payload was added to the repository and no clean-room GameCube/Wii behavior was changed based on this N64-only analysis.
+
+
+## AI. Token-specific correction: the selector reset belongs to abort handling — static only (2026-10-29)
+
+### Correction after separating each Hang message branch
+
+A fresh instruction-level pass separated the `Hang` message switch cases instead of grouping them by shared lifecycle vocabulary:
+
+- The `Abrt` branch contains the call that initializes the object's option/sequence data and resets the secondary state selector to its negative sentinel. That reset must **not** be used as evidence that the normal `Fini` receiver enters with the sentinel already set.
+- The `Fini` branch sets the default primary target to the Results/standings state, reads the object's secondary selector, and can replace that target with an alternate state from its selector jump table. Some nonnegative values are advanced and others are reset as part of the selector's own sequence. The negative-sentinel path continues with the default target only when the global transition guard permits the state setter.
+- A separate timed/UI routine writes a nonnegative sequence value (15) through its incoming object pointer under a mode/timer condition. The inspected code does not establish that this pointer is the same `Hang` instance involved in the race's finalization path, so this is a possible setter lead—not a proven producer edge.
+
+### Refined finding
+
+Sections AF–AH accurately establish the **conditional consumer-side path**: if the relevant `Hang` receiver reaches `Fini` with the sentinel/default selector and passes the transition guard, the same-object state dispatch reaches the Results/standings builder.
+
+What remains unproven is the **producer-side entry condition** at the end of an actual race: which secondary selector value is present on the relevant object when the manager broadcasts normal finalization, and whether earlier lifecycle-sequence transitions bring it to the sentinel/default path. Therefore, do not describe the full live race finish-to-results path as connected yet.
+
+No emulator, runtime instrumentation, write-watchpoint trace or full static-recomp execution was performed. No ROM bytes, raw disassembly, exact local addresses/offsets, text/resource dumps or extracted assets are added to this public dossier; no clean-room gameplay behavior is modified based on these N64-only observations.
