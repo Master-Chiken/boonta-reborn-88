@@ -2017,3 +2017,32 @@ The static chain is now connected through the **conditional broadcast mechanism*
 This improves the control-flow trace; it does not collapse those gates into an observed live execution. We still lack a runtime observation of the actual flag/selector values at the end of a real race and the visible Results screen. No emulator, write-watchpoint capture or full static-recomp runtime was executed, and there is no GameCube/Wii parity claim.
 
 The private ROM, exact local instruction addresses/offsets, raw disassembly, text/resource bytes and extracted assets remain local. No game payload or N64-derived gameplay change was added to Boonta.
+
+
+## AM. Event-mask provenance cross-check: 0x201 is a generic input-edge mask, not a named finish event — static only (2026-10-29)
+
+### New result: the mask's data source is the input-edge subsystem
+
+A local static cross-check of the mask-query helper and its producer narrows the meaning of the 0x201 condition used by the manager state callback:
+
+- The query helper checks a shared array of per-input-source event words, with mode/selection guards. In some modes it checks one selected word; in another it examines the first two words and updates the selected-source index based on which word matches.
+- A separate input-update routine constructs the event words by reading the current controller/input packet, building a button-state mask, comparing it with the prior mask, and writing the resulting press/release edge masks into the shared arrays. The array queried by this helper is the press-edge side of that input state.
+- The manager callback passes 0x201 to this generic query. The helper applies a bitwise mask; it does not identify the bits as a race-finish notification. The two bit meanings and their high-level control labels are not yet independently established here.
+
+### Correction to the interpretation of Sections AK–AL
+
+Sections AK–AL correctly record a conditional static call path from the manager phase callback through a guarded/delayed Fini request and the conditional relay. However, the 0x201 predicate must **not** be described as proof that all local racers have finished or as a dedicated “race finished” event: its data source is a generic input-edge mask. This makes a controller/input-triggered continuation (for example, a confirmation/skip action) a plausible explanation, but the exact high-level meaning is not yet proven.
+
+The evidence grade is therefore refined to:
+
+**CONDITIONAL STATIC CALL PATH CONNECTED / EVENT SEMANTICS AND RACE-FINISH CAUSALITY UNPROVEN / RUNTIME UNVERIFIED.**
+
+The participant threshold path still supports a per-participant finish/disable transition. The Hang receiver still has a conditional state path into the Results/standings builder. What is not yet proven is that the manager's Fini request is causally produced by the aggregate completion of all local racers, rather than a generic input edge in a later phase. The global-mode bypass, possible Abrt substitution, transition guard and secondary selector conditions remain.
+
+### Next bounded trace
+
+1. Identify the exact meaning of the input-mask bits 0x001 and 0x200 from their source fields and downstream consumers; do not assign button names from bit positions alone.
+2. Trace the manager object's phase/state writer into the callback branch that tests this mask, to determine whether that branch is a results-screen acknowledgement/skip, a manager cleanup action, or something else.
+3. Keep the full live finish-to-visible-Results chain **UNPROVEN** until the producer/consumer relationship is established or runtime evidence is obtained.
+
+No emulator, visible race session, watchpoint capture or full static-recomp runtime was performed. No ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted resource bytes or assets are added to this public dossier. No clean-room GameCube/Wii behavior was changed from this N64-only trace.
