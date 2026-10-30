@@ -208,19 +208,30 @@ static void steering_input_tests(void) {
 
 static void pitch_tradeoff_tests(void) {
  /* Centered/noisy input is neutral; stick-up maps to nose-down. */
- assert(nearf(boonta_pitch_input(0.0f), 0.0f));
- assert(nearf(boonta_pitch_input(12.0f), 0.0f));
- assert(nearf(boonta_pitch_input(-16.0f), 0.0f));
- assert(nearf(boonta_pitch_input(16.0f), 0.0f));
- assert(nearf(boonta_pitch_input(72.0f), 56.0f / 111.0f));
- assert(nearf(boonta_pitch_input(-72.0f), -0.5f));
- assert(nearf(boonta_pitch_input(127.0f), 1.0f));
- assert(nearf(boonta_pitch_input(-128.0f), -1.0f));
- assert(nearf(boonta_pitch_input(200.0f), 1.0f));
- assert(nearf(boonta_pitch_input(-200.0f), -1.0f));
- assert(nearf(boonta_pitch_input(NAN), 0.0f));
- assert(nearf(boonta_pitch_input(INFINITY), 0.0f));
- assert(nearf(boonta_pitch_input(-INFINITY), 0.0f));
+ assert(nearf(boonta_pitch_input(0.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(12.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(-16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(72.0f, 0, 0), 56.0f / 111.0f));
+ assert(nearf(boonta_pitch_input(-72.0f, 0, 0), -0.5f));
+ assert(nearf(boonta_pitch_input(127.0f, 0, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-128.0f, 0, 0), -1.0f));
+ assert(nearf(boonta_pitch_input(200.0f, 0, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-200.0f, 0, 0), -1.0f));
+ assert(nearf(boonta_pitch_input(NAN, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(INFINITY, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(-INFINITY, 0, 0), 0.0f));
+
+ /* D-pad Up (+0.7f) and Down (-0.7f) pitch controls. */
+ assert(nearf(boonta_pitch_input(0.0f, 1, 0), 0.7f));
+ assert(nearf(boonta_pitch_input(0.0f, 0, 1), -0.7f));
+ assert(nearf(boonta_pitch_input(0.0f, 1, 1), 0.0f));
+ assert(nearf(boonta_pitch_input(72.0f, 0, 1), 56.0f / 111.0f - 0.7f));
+ assert(nearf(boonta_pitch_input(-72.0f, 1, 0), 0.2f));
+ assert(nearf(boonta_pitch_input(127.0f, 1, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-128.0f, 0, 1), -1.0f));
+ assert(nearf(boonta_pitch_input(NAN, 1, 0), 0.7f));
+ assert(nearf(boonta_pitch_input(INFINITY, 0, 1), -0.7f));
 
  /* Nose-down trades steering authority for faster progress; nose-up does the opposite. */
  assert(nearf(boonta_steering_after_pitch(0.5f, 0.0f), 0.5f));
