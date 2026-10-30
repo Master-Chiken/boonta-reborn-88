@@ -2323,3 +2323,30 @@ The query's physical input meaning is now statically established, but why the st
 Next: trace the object-state writer and the actions reached from the A/Start-held branches to identify whether this is a Results confirmation/advance gate, a generic transition gate, or another mode-specific interaction. Independently retain normal all-local-finish → manager finalization as unproven. RE-002 remains parked.
 
 No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
+
+
+## AX. Hang updater state 6 waits for held A/Start, then passes a Fini selector to a transition helper — static only (2026-10-30)
+
+### Same updater, separate state branch
+
+The primary-state dispatcher examined for the Hang object has a separate state-index-6 branch. Its input check uses the same generic query helper and the same `0x201` mask discussed in Section AW. The query therefore tests the currently held A-or-Start state.
+
+When that test is false, the state-6 branch returns without taking the following action. When it is true, the branch calls a transition/setup helper with the same object pointer and the literal `Fini` selector as its second argument.
+
+### What the helper does — and does not prove
+
+The helper has a global re-entry guard. On its permitted path it performs object/sequence bookkeeping, changes the object's low-nibble state to 6, resets its timer-like field, stores the supplied selector on the object, and registers several related named entries through a generic helper.
+
+The helper body does **not** directly call the previously identified `Fini` lifecycle-message receiver, and this pass does not prove that storing the selector dispatches that lifecycle callback. It would be an overstatement to say this branch itself sends the lifecycle `Fini` message or enters Results state 5.
+
+### Updated interpretation
+
+This narrows the reason for the input check: in this same object's state-6 branch, a held A or Start gates a transition/setup action whose selector is `Fini`. This is consistent with a user acknowledgement/continue step in a later state, but the exact meaning of the selector and the downstream transition still require a field consumer/callback cross-reference.
+
+The state-5 → Results-panel builder and the conditional lifecycle-receiver → same-object state-5 path from Sections AR–AS remain independent evidence. No causal link has yet been shown from normal completion of every local racer into this state-6 branch, nor from this branch's selector storage into that state-5 transition.
+
+**Evidence grade:** **SAME HANG UPDATER STATE-6 BRANCH → HELD A/START GATE → Fini-SELECTOR TRANSITION HELPER STATically SUPPORTED / SELECTOR CONSUMER AND STATE-5/RESULTS CAUSAL LINK UNRESOLVED / NORMAL-FINISH TRIGGER AND RUNTIME UNVERIFIED.**
+
+Next: follow the object field populated by the `Fini` selector to its readers/dispatcher and identify whether it ultimately invokes the lifecycle receiver or another state/sequence. Separately retain normal all-local-finish → manager finalization as an independent proof obligation. Keep RE-002 parked.
+
+No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
