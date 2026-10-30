@@ -2246,3 +2246,42 @@ This positively connects **logical configuration records → current mask → pr
 The next bounded static step is to identify where the two logical mapping fields are initialized or loaded, then cross-match their values to documented user-facing bindings or a verified configuration/menu label. Separately retain the manager's normal-finish aggregate → finalization request as a distinct proof obligation. Keep RE-002 parked.
 
 No emulator, controller session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM addresses/offsets, raw disassembly, ROM bytes, extracted resources/assets or N64-derived gameplay implementation were added to Boonta.
+
+
+## AV. Raw OSContPad button path resolves the manager's 0x201 mask to A-or-Start — static only (2026-10-30)
+
+### New end-to-end input-side dataflow
+
+A fresh local static cross-check now links the platform read buffer, per-port button states, logical input masks, press edges and the generic mask-query helper:
+
+- The controller-read path uses the paired N64 `osContStartReadData` / `osContGetReadData` calls and a four-entry `OSContPad` buffer. The documented structure contains a 16-bit `button` field, signed stick X/Y bytes and an error byte.
+- The game's input-state conversion walks the 16 raw bits in each port's `OSContPad.button` word and stores each bit's on/off state in the corresponding per-port button-state record. The same conversion carries the stick coordinates into that record.
+- The logical-mask builder assembles its internal mask from those per-port button states. Internal bit `0x001` is sourced from raw `OSContPad.button` bit `0x8000`; internal bit `0x200` is sourced from raw bit `0x1000`.
+- The standard N64 definitions identify raw `0x8000` as `A_BUTTON` and raw `0x1000` as `START_BUTTON`. Thus, for this code path, internal `0x001` represents A and internal `0x200` represents Start.
+- The edge builder computes a newly pressed word as `(previous XOR current) AND current`. The `0x201` query intersects the requested mask with the selected source's press-edge word(s), subject to the already documented source/mode-selection guards.
+
+**Result:** the query is an A-or-Start *new press* predicate, not a held-state test and not a dedicated race-finished signal. The bitwise-any mask means either A or Start can satisfy it.
+
+### Correction to Sections AN–AU
+
+This dataflow supersedes the earlier tentative interpretation that the two intermediate button-state bytes were independently identified user-configurable action mappings. They are per-port button-state bytes populated from the raw N64 controller packet; the logical-mask builder translates those states into the game's internal bit positions. The earlier candidate mapping routine described in Section AN is not evidence for this controller-to-mask path.
+
+The corrected mapping is:
+
+- internal `0x001` = N64 A (raw `OSContPad.button` bit `0x8000`);
+- internal `0x200` = N64 Start (raw `OSContPad.button` bit `0x1000`);
+- query `0x201` = newly pressed A **or** Start.
+
+This identifies what input satisfies the predicate, but not why the manager is checking it in that phase. It does **not** prove that A/Start is an aggregate-racer-finished notification, that normal completion necessarily issues the `Fini` message, or that the Results panel appears during a normal completed race.
+
+### Evidence and limits
+
+- The N64 OS Functions Reference documents the `OSContPad` data layout and paired controller-read calls: https://ultra64.ca/files/documentation/online-manuals/man/n64man/os/osContGetReadData.html
+- The public N64 header reference lists `A_BUTTON = 0x8000` and `START_BUTTON = 0x1000`: https://github.com/n64decomp/sm64/blob/master/include/PR/os_cont.h
+- The game-specific raw-packet → per-port-state → logical-mask → press-edge → `0x201` query connection is a private local static-analysis result, not a public-source proof and not a runtime observation.
+
+**Updated evidence grade:** **RAW OS CONTROLLER BUTTON FIELD → PER-PORT BUTTON STATE → INTERNAL MASK → PRESS-EDGE WORD → MANAGER/CALLBACK 0x201 QUERY STATICALLY CONNECTED; QUERY MEANS A-OR-START PRESS / NORMAL-FINISH → FINALIZATION CAUSATION UNPROVEN / RUNTIME UNVERIFIED.**
+
+Next: trace the manager object's phase/state writer and explain why its A/Start press-edge query is active on that branch. Separately retain the ordinary all-local-finish → finalization causal link as unproven until a producer/consumer trace or controlled runtime observation establishes it. Keep RE-002 parked.
+
+No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
