@@ -2350,3 +2350,30 @@ The state-5 → Results-panel builder and the conditional lifecycle-receiver →
 Next: follow the object field populated by the `Fini` selector to its readers/dispatcher and identify whether it ultimately invokes the lifecycle receiver or another state/sequence. Separately retain normal all-local-finish → manager finalization as an independent proof obligation. Keep RE-002 parked.
 
 No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
+
+
+## AY. Updated upstream N64 runtime milestone improves the test candidate, not the evidence grade — public-source audit (2026-10-30)
+
+### Pinned runtime status
+
+At pinned public revision [`sp00nznet/racer@1197119fb6d4d1e60e9dfcc3d50d610475433af2`](https://github.com/sp00nznet/racer/commit/1197119fb6d4d1e60e9dfcc3d50d610475433af2), the README labels the project **Phase 8 — In Game** and says it can run from the intro through the title menu and tournament setup into a drivable race. The same README includes screenshots identified as captured on 2026-10-22: title, shop, player selection, tournament setup, and the Boonta Training Course in-race view. It still labels the overall playable build **IN PROGRESS**.
+
+This is stronger evidence that a useful N64 runtime test candidate exists than a boot-only or headless-loop milestone. It is still maintainer-authored project evidence: this RE-001 session did not build or launch the recompilation, complete a race, observe the Results screen, or capture any game-state trace.
+
+### RE-001 implications
+
+- **Improved test feasibility:** the external project reports reaching an interactive race, so a normal race-completion experiment is now a concrete next runtime test if a compatible local build and lawful local game copy are already available.
+- **No change to the static proof:** the reported milestone does not show that all participants finishing causes the manager's finalization route, that the state-6 `Fini` selector is consumed, or that the same `Hang` object reaches primary state 5 and the Results builder.
+- **Input-control caveat:** the README documents scripted button injection (`AUTOPRESS`). Any test using injected A/Start must be kept separate from a no-injected-input race-completion run; otherwise it could merely satisfy the known state-6 A-or-Start gate and would not prove that normal race completion initiated finalization.
+- **Instrumentation caveat:** the README describes `SWE1R_WATCH` and `SWE1R_STACKDUMP` as Windows-only. Their presence in source does not mean a watchpoint was armed successfully or that the relevant private field address is known.
+
+### Smallest discriminating runtime experiment
+
+If the external build is already available locally, use two clearly separated runs and retain the exact build/revision and logs:
+
+1. Complete a race without scripted A/Start input after the finish. Record whether and when the Results/placement screen appears.
+2. Only if the first run waits at a post-race state, repeat with a deliberate A-or-Start press after the finish and record the state change separately.
+
+A visible Results screen in the first run would establish normal finish-to-Results behavior for that tested configuration, but not the exact internal selector-consumer chain. To establish that chain, a valid trace must additionally observe the manager finalization request, the `Hang` selector consumer/receiver, the same object's primary-state write to 5, and entry into the Results builder. A result from the second run alone would establish only an input-assisted path.
+
+No external source, ROM, game asset, or binary was copied into Boonta. No build, emulator run, race completion, watchpoint, or runtime test is claimed here. Overall RE-001 remains **CONDITIONAL STATIC PATHS / NORMAL FINISH-TO-RESULTS CAUSALITY UNPROVEN / RUNTIME UNVERIFIED**.
