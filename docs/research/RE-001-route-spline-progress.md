@@ -2154,3 +2154,40 @@ That distinction matters: a shared selector value of 5 is not equivalent to prov
 
 Trace all writers of the Hang object's primary-state field and identify whether the message receiver's helper or a later registered callback makes the transition to index 5. Keep the full finish-to-visible-Results path **UNPROVEN / RUNTIME UNVERIFIED** until that causal edge is shown or observed at runtime.
 
+## AS. Fini invokes the same-object primary-state setter on the default selector path — static only (2026-10-30)
+
+### Correction and completion of the Section AR writer check
+
+Section AR correctly noted that the `Fini` receiver contains no literal store to the object's primary-state field. That was incomplete as an account of the receiver's full call path: the receiver delegates the state change to a helper, and the helper was not followed through to its write in that pass.
+
+The new pass follows the arguments and the helper body:
+
+1. The registered `Hang` object record pairs the previously identified primary-state updater with the `Fini`-capable message receiver. The same object pointer is retained in the receiver.
+2. In the `Fini` branch, the receiver sets the object's lifecycle flag bit and initializes the requested primary-state value to index **5**.
+3. When the object's secondary-sequence selector is the negative sentinel, the selector branch leaves that requested value unchanged and restores the sentinel. It does not replace the requested state with one of the alternate sequence values.
+4. If the separate global transition guard is clear, the receiver calls the shared state-transition helper with the **same object pointer** and the requested value loaded from the selector. On this default/sentinel path that value is still **5**.
+5. The helper checks the lifecycle flag bit set by the receiver. When the bit is present, it writes the supplied value into that object's primary-state field, preserves the previous primary state for transition bookkeeping, and continues the state-change processing.
+6. The registered `Hang` updater dispatches from that same primary-state field. Its independently cross-checked index-5 handler reaches the Results/placement-panel builder described in Section AR.
+
+This resolves the writer/intermediary gap for the **conditional default/sentinel Fini path**. It is not merely a shared token or a coincidentally matching global selector: the receiver passes the object pointer to the state helper, and the helper's guarded write targets the primary-state field on that same object.
+
+### Conditions and remaining limits
+
+The result is conditional, not universal:
+
+- The manager's ordinary all-registered-types broadcast can deliver the finalization token to the `Hang` receiver; the mode-gated bypass and possible abort substitution documented in Section AL remain alternate routes.
+- The `Hang` secondary selector must be on the negative-sentinel/default path for the requested target to remain index 5. Valid alternative selector values can choose other states.
+- The separate global transition guard must permit the helper call.
+- Section AM still applies: the manager's `0x201` test is a generic input-edge predicate. Its bits and remapping gates do not yet identify a dedicated “all racers finished” event or a named physical confirmation control.
+
+### Revised evidence grade
+
+**CONDITIONAL FINALIZATION MESSAGE → SAME HANG INSTANCE PRIMARY STATE 5 → RESULTS/PLACEMENT BUILDER STATICALLY SUPPORTED / ALL-LOCAL-FINISH → FINALIZATION TRIGGER SEMANTICS UNPROVEN / RUNTIME UNVERIFIED.**
+
+The static evidence now connects the ordinary/default lifecycle receiver to the same object's Results state when the selector and guard conditions are met. What remains unproven is whether the generic input-edge gate after the manager's local-player completion aggregate is necessarily satisfied as a consequence of a normal completed race, and whether a real runtime session visibly presents the panel.
+
+No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No N64-to-GameCube/Wii parity is implied. No ROM bytes, raw disassembly, exact private offsets, extracted resources/assets or N64-derived gameplay implementation were added to Boonta.
+
+### Next bounded trace
+
+Resolve the input-word fields and gates feeding the manager's generic `0x201` press-edge query, then determine whether the resulting event is a post-race confirmation/continuation or another mode-dependent action. Keep the runtime-visible Results check pending until a controlled game/recomp session can observe it. Keep RE-002 parked.
