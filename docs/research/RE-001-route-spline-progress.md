@@ -2191,3 +2191,29 @@ No emulator, visible race session, write-watchpoint capture or full static-recom
 ### Next bounded trace
 
 Resolve the input-word fields and gates feeding the manager's generic `0x201` press-edge query, then determine whether the resulting event is a post-race confirmation/continuation or another mode-dependent action. Keep the runtime-visible Results check pending until a controlled game/recomp session can observe it. Keep RE-002 parked.
+
+## AT. Controller-poll follow-up does not yet identify the manager's 0x201 event source — static only (2026-10-30)
+
+### What the additional source trace establishes
+
+A bounded follow-up inspected one controller-poll path around the platform controller read API:
+
+- The path invokes the platform controller read routine and then enters a separate application-side update routine.
+- That update routine iterates four per-source records and changes their state/timer/threshold fields through helper calls. A later call re-arms the platform controller read operation.
+- This establishes a controller-poll → application-side multi-source update path in this part of the main code.
+
+### What it does not establish
+
+The inspected pass did **not** positively map those four records or helper outputs to the shared press-edge words read by the manager's generic `0x201` query in Sections AM–AN. In particular:
+
+- No verified data-flow edge yet connects a raw platform controller packet field, through the four-record updater, to the exact per-source press-edge word consumed by the manager query.
+- A separate candidate routine with raw-bit tests also contains coordinate/UI-related work; without a verified cross-reference to the manager's query storage it is not promoted as the input-mask producer.
+- The source-word bit mappings and their configuration gates therefore remain unresolved. Do not assign button names (A/B/Start/D-pad or otherwise) to internal bits `0x001` and `0x200`.
+
+### Evidence grade and next step
+
+**PLATFORM CONTROLLER POLL PATH IDENTIFIED / APPLICATION RECORD UPDATER PARTIALLY MAPPED / MANAGER 0x201 SOURCE-WORD DATA FLOW UNPROVEN.**
+
+This is a bounded negative result: the controller path is now a concrete place to continue looking, but it does not yet explain the manager's input-edge condition. The next static step is to identify the exact storage read by the manager query, find every writer to that storage, and follow those writes back to a field in the controller packet or to a clearly identified higher-level event producer. If the required data/overlay mapping or xrefs cannot be validated, retain the unresolved status rather than naming controls from bit positions.
+
+No emulator, controller session, watchpoint capture or full static-recomp runtime was performed. The private ROM, raw disassembly, exact local addresses/offsets, extracted resource bytes and assets remain local. No N64-derived gameplay changes or commercial game data were added to Boonta. Keep RE-002 parked.
