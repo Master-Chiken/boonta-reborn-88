@@ -1,0 +1,222 @@
+# Cross-platform findings — 2026-10-20
+
+These are preliminary source-backed findings, not runtime-verified facts.
+
+**Queue status (2026-10-21): PARKED REFERENCE NOTES.** This file preserves dated source/format leads. Its “next checks” and “next research question” headings below are historical proposals, not current work orders. The single active research blocker is tracked in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 all-participants-finished condition through the manager state/phase transition to a positively identified results UI/resource/scene. Do not start platform/asset-format questions until RE-001 is resolved or explicitly handed off.
+
+| Topic | Finding | Status |
+|---|---|---|
+| Core gameplay | Official retrospective identifies overheating, shortcuts, hazards and local split-screen among defining features. | DOCUMENTED; broad features only. |
+| Cinematics | Secondary history reports PC/Mac cinematics absent on N64 due to cartridge constraints; a contemporary Dreamcast preview advertised prerendered cinematics. | DOCUMENTED; verify exact regional releases. |
+| Audio | Reviews report a reduced N64 soundtrack compared with PC/Dreamcast. | DOCUMENTED by reviews; no track-by-track comparison yet. |
+| Graphics | N64 Expansion Pak supports a high-resolution mode; Dreamcast was advertised as higher resolution. | DOCUMENTED; does not prove shared assets or renderer. |
+| Dreamcast online time comparison | Mentioned in a contemporary preview; actual implementation/service status not verified. | ANNOUNCED, not runtime-confirmed. |
+| Exact track/racer/mode parity | Not inventoried by identified build/region. | UNKNOWN. |
+| N64-specific data | Pinned OpenSWE1R/swe1r-tools README says its Comp model-block decompressor applies only to N64. | STATIC-DOCUMENTED; evidence of at least one platform-specific data path. |
+
+## Sources
+
+- Official overview: https://www.starwars.com/news/star-wars-episode-i-racer-legacy
+- Contemporary Dreamcast preview: https://www.gamespot.com/articles/star-wars-episode-i-racer-preview/1100-2540691/
+- N64 review: https://www.nintendolife.com/reviews/n64/star_wars_episode_i_racer
+- Dreamcast review: https://www.gamespot.com/reviews/star-wars-episode-i-racer-review/1900-2557867/
+- Pinned tooling README: https://github.com/OpenSWE1R/swe1r-tools/blob/239911513834e19d1530fc908b6dc40eabea25fc/README.md
+
+## Historical follow-ups (parked; not active queue)
+
+1. Inspect version-pinned PC source files for track/racer/race-mode tables and record executable assumptions.
+2. Build a version-specific N64 inventory, distinguishing region/revision and Expansion Pak settings.
+3. Investigate Dreamcast file-layout/tooling evidence before assuming it follows PC or N64.
+4. Record exact counts only when a named version-specific source supports them.
+5. Do not change gameplay code until the inventory identifies a concrete discrepancy against Boonta.
+
+
+## Additional evidence: asset-library release matrix and checksums
+
+Source: https://github.com/akopetsch/swe1r-assets/blob/main/src/SWE1R.Assets.Blocks.Original/Resources/checksums.sha1
+Supporting source: https://github.com/akopetsch/swe1r-assets/blob/main/src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv
+
+The public asset-tool repository has a version-labelled SHA-1 catalog for selected *extracted block files*. Its names include:
+- `out_modelblock.bin/n64_us.bin` and `n64_eu-jp.bin`;
+- `out_modelblock.bin/win-demo.bin` and `_default.bin`;
+- `out_splineblock.bin/n64.bin` and `_default.bin`;
+- `out_textureblock.bin/n64.bin` and `win-demo.bin`;
+- sprite block variants labelled `n64_us`, `n64_jp`, `win-demo`, and `win_de__mac__dc`.
+
+### What this establishes — and what it does not
+
+- The community tooling tracks N64 and Windows-demo block data as distinct named variants; this is evidence that a single generic PC asset dump should not automatically be treated as the console's data.
+- At least one sprite-block variant is grouped under a shared Windows / German / Macintosh / Dreamcast label in that repository. This is a tool author's grouping label, not proof that all Dreamcast assets match PC or that the entire formats are interchangeable.
+- The listed checksum set does **not** show a separately named Dreamcast model-block or spline-block variant. That is a gap in this catalog, not proof that Dreamcast uses the same files or lacks such data.
+- These are checksums of extracted asset files, not checksums of original executables or disc images. Do not use them to identify a complete retail release or region by themselves.
+- The asset library advertises bit-perfect reserialization for supported block formats, making a no-change round-trip test a strong future validation candidate. It should be run only against a lawfully available local file; no copyrighted game assets need to be committed to Boonta.
+
+## Historical format follow-up (parked; not active queue)
+
+**Can the format/asset evidence distinguish PC, N64, and Dreamcast without relying on visual guesses?**
+
+1. Pin the exact commit of the asset library and record its release metadata plus the precise scope of each checksum.
+2. Inspect the N64-specific model-block decompressor and compare its stated input assumptions with the generic block reader; document only the format boundary, not extracted game data.
+3. Find a Dreamcast-specific primary source or reproducible tool/parser before claiming shared formats. Until then, Dreamcast model/spline format stays **unknown**.
+4. Do not compare hash values across labels unless the source proves they were produced from equivalent extraction pipelines and matching release inputs.
+
+
+## N64 compression: concrete format boundary from public tooling
+
+Source: https://github.com/OpenSWE1R/swe1r-tools/blob/master/decompress.c
+
+The tool's source documents a Comp chunk with:
+- a four-byte Comp magic checked after byte-order conversion;
+- an output-size field read from the header;
+- a compressed stream beginning after a 12-byte header;
+- a 0x1000-byte history window;
+- LZ77-style literals and back-references, with a zero source offset terminating the stream;
+- an assertion that the produced output size matches the header's declared output size.
+
+The tool README explicitly scopes this decompressor to model-block chunks found only in the N64 version. This is meaningful platform-specific evidence for the model-block chunk path, but not a claim that every N64 asset is compressed or that the whole N64 file system differs. The implementation also has a notable input contract: it allocates a 0x1000-byte window before the input pointer, so a future independent parser must reproduce that memory model safely rather than copy the pointer arithmetic blindly.
+
+The asset library's release-labelled checksum list includes separate N64 US and EU/JP model-block variants, while the model-block documentation describes an archive of 323 model entries for its documented sample. Those details should not be combined into a claim that every region has the same count or layout: the sample/release identity must be pinned first.
+
+### Practical consequence
+
+Boonta's asset pipeline should keep container format, compression wrapper, and model payload as three separate layers. A parser should identify the platform/build from grounded metadata, validate lengths and bounds before decompression, and round-trip only formats for which the tool's support is demonstrated. Do not assume a PC block reader can accept an N64 Comp chunk, and do not label Dreamcast support as present until there is a Dreamcast-specific sample or primary parser evidence.
+
+
+## Release metadata audit: Dreamcast mapping evidence boundary
+
+Pinned source snapshot: `akopetsch/swe1r-assets` commit `922ef535f6598a1330ff93d6b07258956f990b34`.
+
+Sources:
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Metadata/ReleaseMetadata.cs
+- https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/Resources/checksums.sha1
+
+The schema defines four selectors: ModelBlockId, SplineBlockId, SpriteBlockId, and TextureBlockId. Release.csv maps Windows International, Mac, and Dreamcast to the same IDs (0,0,3,0); N64 USA to (2,1,2,1); N64 Europe to (1,1,0,1); N64 Japan to (1,1,1,1); and Windows Demo to (3,0,4,2).
+
+Interpretation: the library's metadata explicitly routes Dreamcast through the same generic block selections as Windows International/Mac. This is more specific than inferring similarity from a filename, but it remains the tool author's mapping, not independent proof from a Dreamcast disc. The checksum catalogue names a combined win_de__mac__dc sprite variant but does not separately list Dreamcast model, spline, or texture hashes. Thus byte identity of all Dreamcast assets, identical loaders, and identical renderer/physics remain unproven. N64 region-specific selection is explicitly represented and must remain part of asset provenance.
+
+Parked Dreamcast follow-up (not active queue): find independent Dreamcast-specific evidence for model/spline/texture handling (a parser, version-pinned format note, or provenance-labelled inventory). Until then, mark Dreamcast model/spline/texture runtime behavior UNKNOWN and do not start a port based solely on matching metadata IDs.
+
+
+## Dreamcast executable string evidence: four named asset files
+
+GitHub code search found string-extraction reports for both USA and Europe Dreamcast builds in `lhsazevedo/dc-redump-extracted-data`, pinned at commit `832abe37573642c56298d3efd006f72416391755`:
+- USA: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(USA)/bins/1ST_READ.BIN.strings.txt
+- Europe: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(Europe)/bins/1ST_READ.BIN.strings.txt
+
+Both string reports contain `OUT_SPRITEBLOCK.BIN`, `OUT_SPLINEBLOCK.BIN`, `OUT_TEXTUREBLOCK.BIN`, and `OUT_MODELBLOCK.BIN`, followed by an error string for a missing named file. This is independent Dreamcast-specific evidence that the executable expects the familiar four block filenames in those builds. It does **not** establish that their binary layouts, compression, byte order, item IDs, or contents match PC/Mac: filenames are not a format specification. Treat this as a useful loader-level clue, not a validated Dreamcast parser.
+
+### Revised Dreamcast evidence ladder
+
+1. **Observed:** USA and Europe executable string reports contain all four expected block filenames.
+2. **Observed:** the asset library's release metadata assigns Dreamcast the same block IDs as Windows International/Mac.
+3. **Still unknown:** whether that mapping is based on verified byte-identical Dreamcast blocks, shared logical formats with different payloads, or an assumption made for tool convenience.
+4. **Parked future follow-up (not active queue):** find source-level Dreamcast loading logic or a provenance-documented Dreamcast block inventory; compare metadata and format structure only after provenance is established. Do not infer file compatibility from names alone. Resume only after issue #226's active N64 finish-to-results blocker is resolved or explicitly handed off.
+
+
+## Dreamcast disc inventory cross-check + PC loader gap
+
+Pinned Dreamcast inventory source: `lhsazevedo/dc-redump-extracted-data` commit `832abe37573642c56298d3efd006f72416391755`.
+- USA inventory: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(USA)/files.txt
+- Europe inventory: https://github.com/lhsazevedo/dc-redump-extracted-data/blob/832abe37573642c56298d3efd006f72416391755/output/Star%20Wars%20-%20Episode%20I%20-%20Racer%20(Europe)/files.txt
+
+Both inventories list all four OUT_*BLOCK.BIN files at the disc root, corroborating the executable strings with filesystem-level evidence. The two region inventories also differ in other files (for example Europe lists DP2.INI, DPETC/DPFONT/DPSS/DPTEX-related files, SAVEDATA.BIN, and SW1RACER.H00; USA has a different ancillary file set). Do not attribute those differences to the race engine without further analysis: the inventory alone does not identify which files are consumed by the game executable, and it provides no hashes or byte sizes for the four block files.
+
+PC source cross-check: pinned `tim-tim707/SW_RACER_RE` file `src/Swr/swrLoader.c` declares `swrLoader_DecompressLZSS` but its body is still `HANG("TODO")`; `swrLoader_OpenBlock` opens the four PC `data/lev01/out_*block.bin` paths. This source therefore confirms the PC block-loading entry points and file names, but it does not yet give us a usable PC LZSS implementation to compare with the N64 `Comp` decoder. It also contains TODO/crash notes in nearby file I/O routines, so treat this file as analysis progress, not a tested loader implementation.
+
+### Updated decision
+
+We now have two independent kinds of Dreamcast evidence for the four block files: (1) executable string listings and (2) extracted disc filesystem inventories, for both USA and Europe. Still missing: trustworthy per-block hashes/sizes, format parser tested against a provenance-identified Dreamcast block, and source-level confirmation of compression/endian/record-layout details. The next high-value task is a format comparison using metadata/provenance and parser source—not guessing from shared filenames or metadata IDs.
+
+
+## 2026-10-20 — Format parser comparison (source-level, not runtime-validated)
+
+### PC-style generic block container
+
+Pinned source: `OpenSWE1R/blender-swe1r/block.py`, commit `b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce`:
+https://github.com/OpenSWE1R/blender-swe1r/blob/b0dfb8bc0437f783d86fe7824fd8703fa8ab55ce/block.py
+
+The importer reads a big-endian 32-bit asset count at byte 0. It then walks a table of big-endian 32-bit offsets, using `sub_chunks` entries per asset. Payloads are sliced from each nonzero start offset to a following offset; when the immediately following offset is zero, it tries the next offset as the end. The writer builds an offset table and concatenates payloads. This is concrete evidence for the parser's assumed *generic block layout* on the files it supports; it is not proof that the same layout applies unchanged to N64 or Dreamcast.
+
+Important implementation caveats in this reference:
+- The reader has no explicit bounds/monotonic-offset validation before slicing.
+- It infers an end offset from neighbouring table entries and a final sentinel; malformed/truncated input needs stricter checks in a new parser.
+- The writer emits a compact table based on `asset_count * sub_chunks`; it should not be treated as a universal canonical serializer for every release without no-op round-trip tests.
+- The project is GPL-3.0. Treat it as a format reference, not code to copy into Boonta without a licensing decision.
+
+### N64 model-block compression wrapper
+
+Pinned source: `OpenSWE1R/swe1r-tools/decompress.c`, commit `239911513834e19d1530fc908b6dc40eabea25fc`:
+https://github.com/OpenSWE1R/swe1r-tools/blob/239911513834e19d1530fc908b6dc40eabea25fc/decompress.c
+
+The tool checks the first 32-bit word (after its byte-swap conversion) for `Comp`. If present, it reads the output size from header offset 8 and starts the LZ77-style stream after a 12-byte header. If absent, it copies the input unchanged. The decoder uses a 0x1000-byte circular history window; a back-reference with source offset zero terminates the stream, and the tool asserts decoded length equals the header output size. The repository README scopes this to `Comp` model-block chunks only found in the N64 version.
+
+**Safe conclusion:** evidence supports an N64-specific compression wrapper around some model-block chunks. It does not establish that every N64 model is compressed, that the whole block uses this wrapper, or that decompressed payloads are byte-for-byte the same as PC/DC records. The reference decoder expects a 0x1000-byte window before the input pointer; a new implementation must model that explicitly and validate input/output bounds rather than reproducing unchecked pointer arithmetic.
+
+### What the comparison currently establishes
+
+1. The Blender importer documents a big-endian offset-table container for the PC files it targets.
+2. The N64 utility recognizes an optional `Comp` wrapper on its input and documents it as N64 model-block chunk decompression.
+3. These observations are compatible with a layered design (container plus compressed payload chunks), but **the source examined so far does not prove that exact layering**. Need trace where N64 chunk extraction occurs and compare offset-table parsing before making that claim.
+4. Dreamcast executable strings and USA/Europe filesystem inventories establish the four familiar `OUT_*BLOCK.BIN` filenames, but no trustworthy per-file size/hash or Dreamcast parser has yet been established. Shared names alone are not format compatibility.
+
+### Historical follow-up question (now parked)
+
+**Where in the N64 data path are `Comp` chunks located relative to the generic asset-offset table?** Trace the N64 model-block extraction/iteration call path in available source and compare with the PC block reader. Do not start implementation until the nesting/order is supported by source or a provenance-identified sample. Step 102 remains parked and is not a dependency.
+
+
+### Follow-up: the N64 wrapper sits inside an indexed model entry (PC reverse-engineering notes)
+
+Pinned reference: `OpenSWE1R/swe1r-re/swep1rcr.exe/Models.md`, commit `57638c19ed092d52c152d8119e0cfe55e9c9f129`:
+https://github.com/OpenSWE1R/swe1r-re/blob/57638c19ed092d52c152d8119e0cfe55e9c9f129/swep1rcr.exe/Models.md
+
+This file documents the **Windows PC executable's** model-load path, not an N64 executable. It reads a model count, then three consecutive 32-bit values for the selected model at offset `8 * modelIndex + 4`; the notes interpret these as adjacent boundaries (`v23`, `v24`, `v25`). It derives a preceding region length as `v24 - v23` and the model payload length as `v25 - v24`. At `v24`, it reads a 12-byte header and checks for `Comp`; if present it takes the output size from header word 2 and invokes the decompressor on data starting at `v24 + 12`. Otherwise it loads the chunk directly.
+
+**What this changes:** we now have source-level evidence for a PC model-block entry path where the offset table identifies a payload chunk and the payload itself may carry a `Comp` wrapper. The older N64 tool README says the `Comp` chunks are only found in N64, while this PC decompilation note's code checks for `Comp` too. This is a real discrepancy in the available documentation, not something to smooth over: the PC note may be describing a generic/observed path that can handle compressed chunks, rather than proving the checked PC build actually contains any. We must not state “Comp is exclusive to N64” as a universal format rule until sample/version evidence resolves this.
+
+**Historical follow-up question (superseded by the active queue):** compare the PC note's three-offset model-entry structure against the N64 decoder's input contract and identify exactly which offsets delimit the compressed bytes, uncompressed output, and neighboring entry. Then verify whether PC retail/demo samples ever actually contain the `Comp` magic. Dreamcast remains unverified at the payload level. No implementation change yet.
+
+
+### Confirmation from the newer PC decompilation source
+
+Pinned source: `tim-tim707/SW_RACER_RE/src/Swr/swrModel.c`, commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`:
+https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrModel.c
+
+The `swrModel_LoadFromId` implementation explicitly reads three big-endian offsets (`mask_offset`, `model_offset`, `next_model_offset`) from the model table. It computes mask length as `model_offset - mask_offset` and model chunk length as `next_model_offset - model_offset`. It reads 12 bytes at `model_offset`, checks `Comp`, takes the decompressed size from word 2, reads the remaining compressed payload from `model_offset + 12`, and calls `swrLoader_DecompressLZSS`. If the marker is absent, it loads the entire model chunk directly. The source explicitly marks this load path as “TODO broken...” and the decompressor itself remains `HANG("TODO")`, so this is reconstructed source/intent, not a validated implementation.
+
+This independently corroborates the older PC reverse-engineering notes' entry boundaries and makes the layering much clearer: the generic model-block table contains a per-model mask region and a per-model payload region; the payload may have a `Comp` wrapper. It still does **not** prove whether a particular PC retail/demo asset contains compressed models, and does not establish N64 or Dreamcast offset-table compatibility. The earlier tool README's “only found in N64” claim should be treated as an observation about known samples, not as proof the PC loader cannot recognize the marker.
+
+Next verification target: find version-tagged evidence for whether PC retail/demo model entries actually use `Comp`; meanwhile do not infer DC/N64 layout from the PC source.
+
+
+### Cross-check with the PC source's format-analysis notes
+
+Pinned file: `tim-tim707/SW_RACER_RE/archive/block_format_RE/modelblock_code.pat`, commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`:
+https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/archive/block_format_RE/modelblock_code.pat
+
+The notes model each entry as three offsets (`begin`, `headerBegin`, `end`), with region 1 before the header and region 2 beginning at the header. They explicitly label the `Comp` branch `TODO`; the non-`Comp` branch is also not fully specified there. This agrees with the structure in `swrModel_LoadFromId`, but it does not provide a finished compression specification or prove actual `Comp` use in a named PC release.
+
+The PC source therefore gives us the clearest map of the *expected entry layout*, but not an executable reference implementation of the decompressor. The N64 tool contains a decoder, yet its sample/version provenance is not sufficient to claim every N64 release uses the same chunk encoding.
+
+### Evidence boundary / current result
+
+- **Supported:** PC source and its analysis notes agree on three offsets and a possible `Comp` header at the selected model payload.
+- **Supported:** the N64-oriented tool documents and implements a `Comp` decoder; its README says the chunks it targets are only found in N64 model blocks.
+- **Not yet supported:** which exact PC retail/demo build has `Comp` chunks; whether N64 uses an identical offset-table layout; whether Dreamcast's payload format matches either.
+- **No binary samples were downloaded or embedded.** Next work should stay source-first: inspect asset-library metadata/checksum catalogue and Dreamcast extracted inventory metadata, then look for a trustworthy version-specific test report. Do not invent hashes or treat a generic release selector as proof of byte identity.
+
+### PC-only post-race state-machine reference — 2026-10-25
+
+**Purpose:** record a useful comparison lead while keeping the open N64 question explicit. This is source-level evidence for the **Windows PC reference only**; it does not establish N64, Dreamcast, GameCube, or Wii behavior.
+
+Pinned upstream reference: [tim-tim707/SW_RACER_RE](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab), commit `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`. No code was copied.
+
+- In [src/Swr/swrObj.c, lines 773–793](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L773-L793), the PC reference labels state 2 as racing → finish (Fini); the handler calls `swrObjJdge_Clear(jdge, 'Fini')` when the finish interaction is accepted.
+- In [lines 795–808](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L795-L808), state 3 is a finish hold. Input or selected flags start the post-race sequence.
+- In [lines 810–851](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L810-L851), state 4 is explicitly labelled “post-race camera sweep → results.” The skip path sets `swrRace_resultsScreenActive`; the normal path advances after the camera sweep completes and a short linger.
+- In [lines 853–889](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c#L853-L889), state 5 is explicitly labelled “results screen” and also sets `swrRace_resultsScreenActive`.
+- Separately, [`swrRace_ResultsMenu` in `src/Swr/swrRace.c`, lines 320–365](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c#L320-L365) is labelled as the post-race results-screen handler; its entry work includes sanitizing/sorting scores and starting record/progression handling. This note does **not** claim a complete direct call-site chain from every state-machine branch to that handler.
+
+**Research value:** the PC reference separates at least four observable phases—finish handling, finish hold, post-race camera sweep, and results screen—so they should not be collapsed into one generic Fini/Abrt lifecycle label when comparing behavior. It suggests concrete questions to keep separate in the N64 trace: (1) per-racer finish, (2) manager-level completion condition, (3) transition/phase writer, and (4) results UI/scene destination.
+
+**Boundary unchanged:** the N64 all-participants-finished → manager state/phase → identified results UI/resource/scene chain remains **BLOCKED / UNPROVEN**. PC names, fields, phases, and ordering are comparison evidence only, not N64 symbols or proof of platform parity. The next decisive step still requires a lawful local N64 trace or equivalent positive N64-specific evidence; RE-002 remains parked.

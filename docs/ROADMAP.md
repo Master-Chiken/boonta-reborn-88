@@ -1,12 +1,31 @@
 # Boonta Reborn 88 – Project Roadmap
 
-Last updated: 2026-10-17
+Last updated: 2026-10-21
 
 **Goal**  
 Create an enhanced, playable racing experience inspired by *Star Wars: Episode I – Racer* (1999), native on GameCube / Wii, with improved visuals and bonus content.  
 Unofficial fan / homebrew project. Clean-room first.
 
 ---
+
+## Product strategy — reconstruct first, enhance second
+
+The intended order is now explicit: **use reverse engineering to reconstruct a faithful, playable baseline of the original game before adding the HD++ improvements.** The current procedural GameCube demo is a technical harness, not the intended substitute for the original courses, route system, handling or race flow.
+
+### Stage A — original-faithful playable baseline
+
+- Reverse-engineer the original's route/course representation, pod handling, lap/race state, rivals, collision/recovery, camera, HUD and race flow from version-tagged PC, N64 and Dreamcast evidence where available.
+- Implement those behaviors independently for native GameCube/Wii, keeping platform-specific assumptions explicit.
+- Establish how original course and model data can be read; use only content the owner can lawfully supply locally, and do not publish or redistribute proprietary assets.
+- Validate one representative course from start to finish, then reset and start another race. Do not call the baseline complete while the route/course remains only a procedural placeholder.
+
+### Stage B — improve after the baseline works
+
+- Improve visuals, presentation, handling quality-of-life and performance without silently changing the reference behavior.
+- Add extra original or provenance-cleared courses, pods, modes and bonus content as separate, testable work.
+- Keep every enhancement distinguishable from the reconstructed baseline so regressions can be identified.
+
+The research target is not “copy PC code into GameCube.” PC source is a source of behavioral evidence; N64/Dreamcast evidence must be evaluated independently, and gaps remain unknown until supported. Upstream code licenses and the project's clean-room policy still apply. Reverse engineering can establish behavior and formats, but it does not itself grant rights to redistribute the original game executable or proprietary assets.
 
 ## Phase 0 – Foundations
 
@@ -23,7 +42,7 @@ Unofficial fan / homebrew project. Clean-room first.
 - [x] Original source-authored indexed player-pod mesh and 16×16 RGB8 texture are validated and deterministically exported to the GX mesh / tiled RGB565 headers ([PR #203](https://github.com/Master-Chiken/boonta-reborn-88/pull/203), merged).
 - [x] Readable `FINISH` label and varied procedural canyon skyline are integrated ([PR #202](https://github.com/Master-Chiken/boonta-reborn-88/pull/202), [PR #204](https://github.com/Master-Chiken/boonta-reborn-88/pull/204), merged).
 - [x] Scripted three-lap finish-banner and orange `FINISH`-label pixel checks passed on PR #204 head in [run #39057247310](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/39057247310); this was DTM-driven, not a manual race.
-- [ ] **Manual controller + live finish/reset/restart acceptance** — current focus.
+- [ ] **Manual controller + live finish/reset/restart acceptance** — required acceptance gate before claiming playability or accepting relevant gameplay changes; it is not a second active research queue.
   → See [`NEXT_MILESTONE.md`](NEXT_MILESTONE.md) and [current test evidence/status](GAMECUBE_FIRST_RENDER_STATUS.md).
 
 The current visual/asset sequence is integrated on `main`: PR #202 (finish label, merge commit `2c632fe3fbe5220c158ede9bc53b7b62842abf20`), PR #203 (source-authored player mesh/texture, merge commit `662bd10368a566f18872ee70e1f95f95f48cafdc`), and PR #204 (varied canyon silhouette, merge commit `72acf968e3214b086b00b77240bb20b889314917`). Their exact-head workflows passed.

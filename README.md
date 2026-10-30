@@ -58,13 +58,15 @@ See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact sta
 
 ## The next big wins
 
-We keep the work focused on a playable vertical slice rather than spreading effort across unfinished systems.
+**Research-first working model: 80% reverse engineering, 20% implementation, tests and project management combined.** For every ten comparable work blocks, aim for eight spent understanding source, binaries/runtime behavior, formats and platform differences, and no more than two on all other engineering work. Keep one research question active at a time. Record evidence, confidence, unknowns and a reproducible next test before changing gameplay. The operating rules are in [docs/PROJECT_OPERATING_RULES.md](docs/PROJECT_OPERATING_RULES.md).
 
-1. **Prove the race is playable.** In visible Dolphin, verify steering, acceleration/braking, boost and overheating, off-road/rail response, pause/resume, three-lap finish, reset and restart. Record the emulator version, controller setup, results, and any evidence. Start with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
-2. **Make the course and racer feel convincing.** Improve the track silhouette, camera, handling, and collision response as one coherent experience.
-3. **Build the remaster asset pipeline.** Extend the existing mesh/texture path toward richer models, textures, track data, and collision. Experience with the original game's modding scene, file formats, asset workflows, or reverse-engineering research is especially welcome. Follow [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181).
+1. **Reverse-engineer route/progress before redesigning it.** Map the PC reference's spline cursor against the current GameCube test course and its distance-based lap counter. Keep PC facts, candidate Step 102 findings and GameCube/Wii hypotheses separate. Start with the [SW_RACER_RE study plan](docs/SW_RACER_RE_STUDY_PLAN.md) and [behavior matrix](docs/SW_RACER_RE_BEHAVIOR_MATRIX.md).
 
-Once the first race is reliable, the roadmap opens up to the bigger remaster vision: upgraded visual presentation, more tracks and pods, expanded menus, audio, saves, progression, bonus modes, and DLC-style content packs. These are intended future features, not claims about the current prototype. See the [product priorities](https://github.com/Master-Chiken/boonta-reborn-88/issues/156) and [roadmap](docs/ROADMAP.md).
+2. **Reverse-engineer pod handling and state transitions next.** Establish how input, turn rate, traction, boost/heat, collision and lap state work in the sources before choosing a change. Use evidence-linked notes, not copied upstream code. Keep unclear Step 102 files/data on provenance hold.
+
+3. **Use the remaining 20% to verify and implement one bounded result.** Test the current rail/controls candidate in visible Dolphin, record the exact build and PASS / FAIL / NOT TESTED results, then implement only the smallest change justified by the research. Start the interactive acceptance with [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126).
+
+4. **Expand rendering/content later.** Richer models, textures, camera effects, extra tracks, rivals, sound and bonus modes follow after the relevant behavior and source formats are understood and the core race is reliable.
 
 ## Come build this with us
 
