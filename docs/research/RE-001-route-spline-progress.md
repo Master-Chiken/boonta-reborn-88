@@ -2285,3 +2285,41 @@ This identifies what input satisfies the predicate, but not why the manager is c
 Next: trace the manager object's phase/state writer and explain why its A/Start press-edge query is active on that branch. Separately retain the ordinary all-local-finish → finalization causal link as unproven until a producer/consumer trace or controlled runtime observation establishes it. Keep RE-002 parked.
 
 No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
+
+
+## AW. Critical correction: the manager's 0x201 query reads the current held mask, not a press edge (2026-10-30)
+
+Section AV correctly resolves the physical buttons behind the two logical bits, but its description of the query as a *new press* is superseded here.
+
+### Confirmed raw-button mapping
+
+A second pass followed the actual controller buffer through the complete per-port conversion:
+
+- The controller poll fills a four-entry `OSContPad` buffer. The documented `OSContPad` begins with a 16-bit `button` field and then stick X/Y and error data.
+- The game copies the raw button word into a per-port record and expands its 16 bits into per-button boolean state bytes.
+- The logical-mask builder reads those per-port booleans in a reordered sequence: internal mask bit `0x001` is set by the boolean populated from raw `OSContPad.button` bit `0x8000`; internal bit `0x200` is set by the boolean populated from raw bit `0x1000`.
+- The standard N64 definitions name raw `0x8000` `A_BUTTON` and raw `0x1000` `START_BUTTON`.
+
+So the physical mapping remains sound: internal `0x001` = A; internal `0x200` = Start; mask `0x201` = A-or-Start (bitwise-any).
+
+### Correct held-state semantics
+
+The generic input-query helper used by the manager/callback does **not** read the separately built pressed-edge or released-edge arrays. It reads the current logical-mask word for the selected input source and intersects that current mask with the requested argument. For a `0x201` query, it returns true while either A or Start is currently held, subject to the helper's global/controller-selection guards.
+
+The distinction is important:
+
+- **Current/held mask:** the word read by the manager's query helper.
+- **Pressed-edge mask:** independently computed from previous/current words as `(previous XOR current) AND current`.
+- **Released-edge mask:** independently computed as `(previous XOR current) AND previous`.
+
+The manager's `0x201` path consumes the first of these, not the second. The correct interpretation is therefore **A-or-Start held-state test**, not a new A/Start press event.
+
+### Impact on the manager/Results hypothesis
+
+The query's physical input meaning is now statically established, but why the state machine waits for A/Start remains unresolved. The call sites occur in particular object-state branches and route to further state/action handling; they must not be re-labelled as a normal-finish signal merely because the conditional `Fini` → Hang state 5 → Results-builder consumer path exists elsewhere in the dossier.
+
+**Updated evidence grade:** **RAW OSContPad BUTTON → PER-PORT BOOLEAN STATES → INTERNAL CURRENT MASK → 0x201 A-OR-START HELD-STATE QUERY STATICALLY CONNECTED / SEMANTIC ROLE OF THAT WAIT STATE AND NORMAL-FINISH → FINALIZATION CAUSATION UNPROVEN / RUNTIME UNVERIFIED.**
+
+Next: trace the object-state writer and the actions reached from the A/Start-held branches to identify whether this is a Results confirmation/advance gate, a generic transition gate, or another mode-specific interaction. Independently retain normal all-local-finish → manager finalization as unproven. RE-002 remains parked.
+
+No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
