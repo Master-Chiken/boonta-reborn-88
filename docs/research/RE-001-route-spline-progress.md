@@ -2377,3 +2377,24 @@ If the external build is already available locally, use two clearly separated ru
 A visible Results screen in the first run would establish normal finish-to-Results behavior for that tested configuration, but not the exact internal selector-consumer chain. To establish that chain, a valid trace must additionally observe the manager finalization request, the `Hang` selector consumer/receiver, the same object's primary-state write to 5, and entry into the Results builder. A result from the second run alone would establish only an input-assisted path.
 
 No external source, ROM, game asset, or binary was copied into Boonta. No build, emulator run, race completion, watchpoint, or runtime test is claimed here. Overall RE-001 remains **CONDITIONAL STATIC PATHS / NORMAL FINISH-TO-RESULTS CAUSALITY UNPROVEN / RUNTIME UNVERIFIED**.
+
+
+## AZ. Upstream v0.3.0 adds Linux/macOS desktop and Android build targets — runtime access improved, tracing still bounded (2026-10-30)
+
+### Pinned upstream change
+
+The latest public commit inspected in `sp00nznet/racer` is `1197119fb6d4d1e60e9dfcc3d50d610475433af2` (2026-10-25), release `v0.3.0`. Its commit adds build/installer paths for Linux arm64 and Android, driven by Docker-based setup scripts. The same pinned README describes Linux and macOS desktop support in the preceding `v0.2.0` work and continues to label the overall playable build **IN PROGRESS**, despite reporting a drivable Boonta Training Course race.
+
+The pinned `scripts/targets.tsv` is specific about the new targets:
+- `linux-arm64`: Linux/arm64 container build, aimed at Raspberry Pi 5 and other arm64 Linux systems with Vulkan.
+- `android`: Linux/amd64 Docker build producing an APK for arm64 phones/handhelds with Vulkan; the README says a controller is needed.
+
+### RE-001 implications and limits
+
+- There are now more potential ways to obtain a local interactive test build than the earlier Windows/MSVC-only setup. This improves **test accessibility**, not the underlying RE-001 evidence.
+- The new Android target is not a ready-made proof path: it requires a compatible arm64/Vulkan device and controller, and the build itself runs through Docker. No APK was built, installed, or tested here.
+- The README still describes `SWE1R_WATCH` and `SWE1R_STACKDUMP` as Windows-only. Linux/macOS/Android availability therefore does not establish that the documented writer-watchpoint tooling is available on those targets.
+- A no-injected-input normal race-completion observation remains useful if a compatible build is already available. It can show whether Results appears after a normal race in that tested configuration, but it cannot by itself prove the private N64 manager/selector/receiver chain.
+- Keep any A/Start-injected run separate: the known Hang state-6 branch tests held A-or-Start, so an injected press could satisfy an acknowledgement gate rather than demonstrate that normal race completion initiated finalization.
+
+**Decision:** no local build, APK, emulator, race, Results observation, or runtime trace was performed. Do not ask for a large install or ROM upload. Keep RE-001's evidence grade unchanged: **CONDITIONAL STATIC PATHS / NORMAL FINISH-TO-RESULTS CAUSALITY UNPROVEN / RUNTIME UNVERIFIED**. The next decisive internal step remains target-specific evidence for the stored `Fini` selector's consumer and the independent all-local-finish → manager-finalization predicate.
