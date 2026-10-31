@@ -2325,31 +2325,48 @@ Next: trace the object-state writer and the actions reached from the A/Start-hel
 No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
 
 
-## AX. Hang updater state 6 waits for held A/Start, then passes a Fini selector to a transition helper — static only (2026-10-30)
+## AX. Correction: the manager's state-2 A/Start gate queues Fini; state 6 consumes it — static only (2026-10-31)
 
-### Same updater, separate state branch
+### Object identity and state-index correction
 
-The primary-state dispatcher examined for the Hang object has a separate state-index-6 branch. Its input check uses the same generic query helper and the same `0x201` mask discussed in Section AW. The query therefore tests the currently held A-or-Start state.
+The earlier version of this section misidentified the seven-state callback as the `Hang` updater and assigned the A/Start gate to state 6. The seven-entry dispatch is the **race manager's** state machine examined in Sections AQ and AL. It is separate from the `Hang` object's 19-entry primary-state table documented in Section AR.
 
-When that test is false, the state-6 branch returns without taking the following action. When it is true, the branch calls a transition/setup helper with the same object pointer and the literal `Fini` selector as its second argument.
+The ROM-resident seven-entry target table resolves the relevant branches as follows:
 
-### What the helper does — and does not prove
+- **Manager state 2:** tests the current logical input mask `0x201`. Sections AW and AV establish that, on the traced N64 input path, this is A-or-Start held. When false, the branch does not queue the selector. When true, it calls the guarded transition helper with the literal `Fini` selector.
+- The helper preserves the manager object pointer, changes that manager's low-nibble state to **6**, resets its timer-like field, and stores the selector on that manager object at `+0x128`.
+- **Manager state 6:** reads the stored `+0x128` selector and passes it, with the same manager object, to the manager message/transition handler. This is the selector consumer; it is not the `Hang` message receiver.
 
-The helper has a global re-entry guard. On its permitted path it performs object/sequence bookkeeping, changes the object's low-nibble state to 6, resets its timer-like field, stores the supplied selector on the object, and registers several related named entries through a generic helper.
+### Consumer and conditional global relay
 
-The helper body does **not** directly call the previously identified `Fini` lifecycle-message receiver, and this pass does not prove that storing the selector dispatches that lifecycle callback. It would be an overstatement to say this branch itself sends the lifecycle `Fini` message or enters Results state 5.
+The selector consumer has two materially different routes:
 
-### Updated interpretation
+1. If its special global-mode bit is set and the stored selector is `Fini`, it takes a bypass path: it calls the local-participant setup routine, sets a separate global state, and changes the manager object's low-nibble state to **3**. This route does not perform the ordinary `All!` broadcast in this handler. The semantic identity of that special setup path is not promoted beyond the observed participant-table work.
+2. Otherwise, it dispatches an `RSet` message to `CMan`, then uses the generic dispatcher with destination `All!`. The payload is the stored selector (`Fini`) unless a separate global condition substitutes `Abrt`.
 
-This narrows the reason for the input check: in this same object's state-6 branch, a held A or Start gates a transition/setup action whose selector is `Fini`. This is consistent with a user acknowledgement/continue step in a later state, but the exact meaning of the selector and the downstream transition still require a field consumer/callback cross-reference.
+The generic dispatcher explicitly treats `All!` as matching every registered callback type, then invokes eligible callbacks while respecting each object's registration/skip flag. This independently confirms the relay mechanism described in Section AE. On the ordinary relay path, the registered `Hang` message callback can therefore receive `Fini`; the abort-substitution and mode-bypass conditions remain real exclusions.
 
-The state-5 → Results-panel builder and the conditional lifecycle-receiver → same-object state-5 path from Sections AR–AS remain independent evidence. No causal link has yet been shown from normal completion of every local racer into this state-6 branch, nor from this branch's selector storage into that state-5 transition.
+### Reconnected Results route — still conditional
 
-**Evidence grade:** **SAME HANG UPDATER STATE-6 BRANCH → HELD A/START GATE → Fini-SELECTOR TRANSITION HELPER STATically SUPPORTED / SELECTOR CONSUMER AND STATE-5/RESULTS CAUSAL LINK UNRESOLVED / NORMAL-FINISH TRIGGER AND RUNTIME UNVERIFIED.**
+Combining this manager-side trace with Sections AE, AF and AS gives a static, conditional route:
 
-Next: follow the object field populated by the `Fini` selector to its readers/dispatcher and identify whether it ultimately invokes the lifecycle receiver or another state/sequence. Separately retain normal all-local-finish → manager finalization as an independent proof obligation. Keep RE-002 parked.
+`local-player completion aggregate` (Section AB)
+→ intermediate manager phase
+→ manager state-2 A/Start-held gate
+→ queued `Fini` / manager state 6
+→ manager selector consumer
+→ ordinary `All!` broadcast carrying `Fini`
+→ eligible `Hang` lifecycle callback
+→ same `Hang` object primary state 5 on the default/sentinel selector path
+→ Results/placement-panel builder.
 
-No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. No private ROM bytes, raw disassembly, exact local instruction addresses/offsets, extracted assets or N64-derived gameplay implementation were added to Boonta.
+This is not a universal route: the special global-mode bypass can skip the broadcast, another global condition can substitute `Abrt`, and the `Hang` receiver's own selector and transition guards still apply. The `0x201` condition is a held A-or-Start input, not an all-racers-finished event; the participant aggregate and this later input gate must remain separate steps.
+
+### Revised evidence grade
+
+**CONDITIONAL STATIC FINISH-AGGREGATE → MANAGER INPUT-GATED FINI → ALL-TYPES RELAY → HANG STATE-5 RESULTS BUILDER PATH CONNECTED FOR THE ORDINARY/DEFAULT ROUTE / MODE-BYPASS, ABORT-SUBSTITUTION AND SELECTOR GUARDS REMAIN / RUNTIME-VISIBLE RESULTS UNVERIFIED.**
+
+No emulator, visible race session, write-watchpoint capture or full static-recomp runtime was performed. This corrects the earlier state/object attribution; it does not add a runtime claim, platform-parity claim, ROM data, raw disassembly, exact local instruction offsets, extracted resources/assets, or an N64-derived gameplay change. Keep RE-002 parked.
 
 
 ## AY. Updated upstream N64 runtime milestone improves the test candidate, not the evidence grade — public-source audit (2026-10-30)
