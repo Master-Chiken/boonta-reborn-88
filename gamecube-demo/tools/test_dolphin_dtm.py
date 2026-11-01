@@ -381,6 +381,32 @@ class DolphinDtmTests(unittest.TestCase):
             self.assertTrue(output.is_file(), msg=completed.stdout)
             self.assertEqual(output.stat().st_size, HEADER_SIZE + frames * 8)
 
+    def test_cli_accepts_pitch_check_scenario(self) -> None:
+        script = Path(__file__).with_name("make_dolphin_dtm.py")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "pitch-up.dtm"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--output", str(output),
+                    "--frames", "1200",
+                    "--game-id", DEFAULT_GAME_ID,
+                    "--steering", "none",
+                    "--scenario", "pitch-check",
+                    "--pitch", "up",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            self.assertTrue(output.is_file(), msg=completed.stdout)
+            blob = output.read_bytes()
+            self.assertEqual(len(blob), HEADER_SIZE + 1200 * 8)
+            self.assertTrue(record(blob, 1)[0] & DPAD_UP)
+
     def test_finish_restart_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(16000, steering="right", scenario="finish-restart-check")
