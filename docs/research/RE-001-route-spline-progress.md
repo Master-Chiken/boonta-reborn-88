@@ -2706,7 +2706,7 @@ A final bounded instruction scan searched the main N64 code section for word loa
 
 The highest-value static search is now a trace from the participant's finish/progression state into the relevant HUD object/resource update, not another broad search for the number `0x78`. If that producer-to-display link cannot be established, leave the HUD consumer explicitly unproven and use a controlled local memory watch at lap boundaries as the runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
 
-## BJ. HUD string-bank context confirmed; counter-to-renderer link remains absent (2026-11-01)
+## BJ. HUD resource group and earlier formatter trace: keep the evidence scopes separate (2026-11-01)
 
 ### Resource-side observation
 
@@ -2719,20 +2719,36 @@ A local scan of the owner-supplied ROM's visible text entries finds a tightly gr
 - `POS`
 - `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING`, `Warning` and `Repair`
 
-Together these entries strongly identify a lap/timer/position/engine-condition HUD text group. This is resource/string evidence, not a code call-site match.
+Together these entries strongly identify a lap/timer/position/engine-condition HUD text group. The strings alone are resource evidence, not a code call-site match.
 
-### Cross-check against the participant counter
+### Earlier N64 HUD formatter trace — retained as a separate static finding
 
-The candidate participant counter at `+0x78` is now structurally tied to the same roster array used by the manager, and its low halfword at `+0x7A` is independently targeted by public per-player lap-modifier codes. The bounded main-code scan nevertheless found no direct halfword access at `+0x7A` and no direct renderer/HUD reader of the participant counter.
+The dossier's 2026-10-21 **N64 HUD call-path cross-check** records a separate address-aware local static pass on the same US N64 ROM. That pass reported that a HUD formatter:
+- obtains a displayed lap fraction from a participant progress value plus one, clamped to the configured lap target, over that target;
+- obtains the separate POS fraction from participant position over the manager's total-racer count; and
+- draws FINAL LAP only when the next displayed lap equals the configured target, for the single-local-player layout and during the latter fade portion of the lap-completion popup.
 
-The resource group therefore confirms that the N64 game has the expected lap/timer HUD presentation, but it does **not** prove that the display helper reads the manager's participant counter in place. A presentation object may copy, normalize or derive the value elsewhere; no such copy has yet been positively identified.
+This earlier static finding is not a runtime observation. Exact local instruction addresses and file offsets remain private; the public dossier retains only its behavior-level summary.
 
-### Revised evidence grade / stop condition
+### Cross-check against the newer participant counter
 
-- **Strongly supported:** participant-record event counter at `+0x78` is the per-driver lap/event counter; the public GameShark lap targets address its lower halfword at `+0x7A`.
-- **Confirmed separately:** the ROM text pool contains the LAP/TIME/FINAL LAP/POS presentation entries in a coherent HUD-oriented group.
-- **Still unproven:** the specific dataflow from the participant counter (or a copy of it) into the text/HUD formatting call that supplies the `%d/%d` values.
+The 2026-11-01 pass independently identifies the participant-record event counter at `+0x78), with the public P1/P2 lap-code targets aligned to its lower halfword at `+0x7A). The bounded instruction scan searched the **main N64 code section** for direct loads/stores at those participant-record offsets and did not identify a direct HUD-formatting consumer there.
 
-The most useful remaining static work is now narrow: inspect the HUD/presentation updater's participant-source pointer and find whether it references the roster record, or a copied lap value. Do not continue broad offset scans. If that pointer relationship cannot be established, preserve the HUD consumer as unresolved and use a controlled runtime memory observation during a normal race as the discriminator.
+That bounded negative result does **not** establish that no HUD formatter was found, and it does not invalidate the earlier formatter trace. The two findings can coexist if the formatter reads a copied/converted presentation value, follows a different object pointer, or resides outside the scanned main-code section. The present public evidence does not yet show whether the earlier HUD formatter's lap source is exactly this newly identified `+0x78) manager counter or a related value derived elsewhere.
 
-No raw resource bytes, ROM data, instruction dumps, private offsets, extracted assets or game payloads are published. No emulator or live race was run, no gameplay code changed, and RE-002 remains parked.
+### Revised evidence grade
+
+- **Earlier static HUD finding retained:** the local formatter trace reported the lap/target fraction, POS fraction and conditional FINAL LAP behavior described above.
+- **Strong static counter identification:** the manager updates and thresholds the per-participant event counter at `+0x78); public GameShark targets align to its lower halfword at `+0x7A).
+- **Still unresolved:** the exact pointer/field/dataflow join between that specific manager counter and the earlier HUD formatter. Do not summarize this as “the HUD reader does not exist”; only a direct read of this exact field was not found in the bounded main-code pass.
+- **Still untested:** live HUD values, lap-boundary timing, visible Results behavior and cross-platform parity.
+
+The next useful static step is a targeted reconciliation of the earlier formatter's participant-source path against the manager's setup-message roster pointer. Do not repeat broad offset scans. If the local trace notes cannot establish that join, keep the two findings separate and reserve final confirmation for a controlled runtime observation during a normal race.
+
+No raw resource bytes, ROM data, instruction dumps, private instruction offsets, extracted assets or game payloads are published. No emulator or live race was run, no gameplay code changed, and RE-002 remains parked.
+
+## BK. RE-001 HUD/counter status after evidence reconciliation (2026-11-01)
+
+The earlier 2026-10-21 HUD formatter summary and the newer 2026-11-01 participant-counter scan answer different questions. The first records what the local HUD formatter displayed; the second identifies a manager-owned per-driver event counter and reports no direct use of that exact field in the bounded main-code scan. Neither result alone supplies the missing exact field-to-formatter link.
+
+**Canonical wording from this point forward:** the N64 HUD formatter's behavior has a prior local static trace; the manager's `+0x78) value is strongly identified as the per-driver lap/event counter; the direct dataflow between those two findings remains to be reconciled. Runtime remains unverified. This supersedes any broader reading of Section BI/BJ that implied the HUD formatter itself had not been located.
