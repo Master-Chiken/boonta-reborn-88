@@ -2796,3 +2796,33 @@ The participant rank updater still dispatches numeric events when rank snapshots
 - **Next search boundary:** identify the general text/resource lookup and formatting API from independently proven call sites, then trace its callers to the in-race HUD context. Do not broaden the scan to unrelated numeric event IDs or string bytes alone.
 
 No ROM bytes, raw disassembly, exact local instruction offsets, extracted text/resource payloads or assets are published. No runtime emulator test or gameplay change was made; RE-002 remains parked.
+
+
+## BN. POST_RACE_INFO state-name mapping and a separate ID-5 UI request path (2026-11-01)
+
+### State-name mapping
+
+A local static pass traced the generic UI-object state setter and its state-name formatter. The object's state field is used as an index into a 14-entry name mapping; the entry for state value **5** resolves to `POST_RACE_INFO`. Other entries in the same table identify front-end screens and menus (for example the main menu, vehicle/planet/track selection, and the Watto screen).
+
+This establishes that `POST_RACE_INFO` is a symbolic name for UI state value 5 in this state-name table. The formatter builds a readable state-name string; it is not itself a screen renderer or resource loader.
+
+### A real state-5 request exists, but its producer is not the race-finish path
+
+A separate UI/transition update path writes state value 5 into the global requested-state slot under two conditions:
+- a transition timer counts down to zero; or
+- an accepted controller-input condition is detected.
+
+The front-end state manager later reads the requested value and calls the generic object state setter, which updates the object's current/previous state and derives the corresponding state-name label. Thus the local static chain **UI timer/input → requested state 5 → generic state setter → state label `POST_RACE_INFO`** is supported.
+
+### Critical separation from RE-001 race completion
+
+The current pass did **not** find a direct call or message/dataflow from the `Jdge` participant-threshold / finish-skip path, the local-player completion gate, or the previously traced conditional `Hang` Results/placement builder into this specific requested-state-5 producer. The timer/input branch may be a separate front-end or post-race navigation path. The fact that its target state is named `POST_RACE_INFO` does not prove that a normal race finish activates it.
+
+### Revised evidence grade
+
+- **Confirmed statically:** state ID 5 in the UI state-name mapping is labelled `POST_RACE_INFO`.
+- **Confirmed statically:** a separate timer/input-gated UI path requests state 5, and the front-end state manager consumes the requested value through the generic state setter.
+- **Not established:** the race manager's finish/results path invokes this timer/input-gated state request; whether this mapped state is the same object or screen as the previously traced Hang Results/placement-panel builder; and whether the state is visibly displayed in a normal race.
+- **Still unlocated:** the in-race LAP / FINAL LAP text renderer and the source field passed to its formatter.
+
+Do not merge the two transition paths in the dossier until a positive caller/message/field join is demonstrated. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted resource payloads or assets are published; no gameplay code changed. Keep RE-002 parked.
