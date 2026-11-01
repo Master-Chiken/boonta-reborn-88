@@ -2872,3 +2872,34 @@ Section BI's statement that no direct HUD reader had been found was true only of
 - No GameCube/Wii parity is implied. No gameplay code was changed.
 
 No ROM bytes, raw disassembly, exact private instruction addresses, extracted resource payloads or assets are published. Keep RE-002 parked.
+
+
+## BP. Local MIPS-III decoder cross-check using a synthetic ELF container (2026-11-01)
+
+### Method
+
+The US N64 reference ROM already held in the owner's Library was materialized only into the private working area for a local check. Its identity matched the previously retained private reference metadata. No bytes or derived binary data were uploaded to GitHub or sent to a hosted analysis service.
+
+The public `sp00nznet/racer` symbol map documents the main code segment's ROM/VMA mapping. Using that public mapping, a **synthetic ELF64 big-endian MIPS III container** was constructed around the exact code-section bytes. It contains a single executable `.text` section, the mapped virtual address and a minimal program header. `readelf` recognizes the ELF header/segment, and LLVM 17 `llvm-objdump` successfully decodes it with a MIPS III target.
+
+This is a second disassembler/toolchain cross-check against the same ROM code, not independent game evidence and not the original `n64_main.elf`.
+
+### Static control-flow cross-check
+
+A targeted local re-decode of the participant-update routine confirms the relationships already described in Sections BE and BB:
+
+- the update path calls the route-progress event helper and only advances the participant event counter when that helper reports an event;
+- the incremented counter is compared with the manager's configured threshold;
+- the equality branch reaches the same participant record and sets the finish/skip state condition;
+- the ordinary roster/progress path tests that same condition and bypasses normal progress bookkeeping once it is set.
+
+**Result:** the existing participant-counter → configured-threshold → same-record finish/skip writer/reader chain is reproduced by LLVM's MIPS III decoder. This raises confidence in the *disassembly/tool interpretation* but does not change the evidence grade beyond the existing static finding.
+
+### Important limits
+
+- The synthetic ELF has only the mapped code section. It does not reconstruct the original ELF's data/BSS/resource segments, symbol tables, relocations, toolchain metadata or original ABI flags.
+- The ELF64 class and MIPS III architecture flags describe the wrapper we constructed; they must not be cited as proof of the original analysis ELF's exact ABI or as an automatic Kuna target selection.
+- It is **not** the missing original `n64_main.elf`; it is a minimal container created to let a second local disassembler consume the ROM code section.
+- No Kuna decompilation, emulator run, write-watchpoint capture, live race or Results-screen observation was performed.
+
+No ROM bytes, raw disassembly, generated C, private instruction offsets, assets or game-derived payloads are included here. No gameplay code changed; RE-002 remains parked.
