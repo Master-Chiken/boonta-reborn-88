@@ -48,3 +48,27 @@ The separate optional Docker builds are heavier still: the published launcher ma
 - This repository remains an N64 static-recompilation project. Its status, installer, and screenshots do not prove the GameCube/Wii prototype's behavior or close RE-001's conditional finish-to-Results runtime question.
 
 **Evidence boundary:** read-only review of the public README, launcher manifest and latest installer commit. No ROM, build, installer, emulator, executable, or gameplay test was run; no game-derived data was downloaded or uploaded.
+
+
+## Correction and practical runtime option — macOS release installer (2026-11-01)
+
+A direct check of the latest published [Racer v0.4.0 release](https://github.com/sp00nznet/racer/releases/tag/v0.4.0) and its pinned `launcher/launcher.json` refines the feasibility decision above:
+
+- The release **does publish a macOS Apple Silicon installer**: `Racer-Installer-macos-arm64.zip`, approximately **9.6 MB**. This is only the installer application, not a precompiled game.
+- The installer can fetch the project/toolkit and invoke the documented setup script. The setup script clones `N64Recomp`, `N64ModernRuntime` and `rt64` (with submodules), builds the N64 recompiler, recompiles the user's own ROM locally, and builds the native executable.
+- The manifest explicitly requires an **Apple Silicon Mac**, Xcode including the Metal shader compiler, and estimates the first local game build at **20–40 minutes and about 6 GB**. It installs CMake, Ninja and SDL2 with Homebrew if missing. These are the PC/macOS target costs; they are distinct from the optional Docker targets (about 1 GB for Linux arm64 and 6 GB for Android).
+- The setup script's README says the N64 watchpoint/stack-dump tools are Windows-only. Therefore a macOS build can potentially support a **manual visible-race/Results observation**, but it does not provide the documented native `SWE1R_WATCH` instrumentation on Mac.
+
+### Revised decision
+
+This is now a **conditional runtime-test route**, not a rejected one:
+
+1. If the available Mac is Apple Silicon and at least 6 GB of temporary working space can be made available, the 9.6 MB installer is a simpler entry point than a manual source checkout. Keep the project’s 6 GB / 20–40 minute estimate as the advertised first-build requirement, not a measured guarantee.
+2. Choose only **“This computer / pc”** in the installer. Do not select Linux arm64 or Android; those are extra Docker outputs and are irrelevant to the N64 Results observation.
+3. Use the user's own legally held USA `.z64`. Do not upload or commit it or any generated game-derived output.
+4. The useful test is a normal race through completion and a record of whether the Results/placement screen visibly appears. This would close a runtime-observation gap only for that tested Mac build/session; it would not give an instruction-level writer trace or prove GameCube/Wii parity.
+5. If the Mac is Intel, does not have Xcode's Metal compiler, or cannot spare the required disk space, stop before starting the build. Do not install the optional Docker toolchains as a workaround.
+
+**Installer asset:** [Racer-Installer-macos-arm64.zip (v0.4.0)](https://github.com/sp00nznet/racer/releases/download/v0.4.0/Racer-Installer-macos-arm64.zip). Its published asset size is about 9.6 MB; the locally generated game build is much larger and is estimated at about 6 GB.
+
+**Evidence boundary:** verified public release metadata, the project's launcher manifest and `setup.sh`. No installer was run, no ROM was accessed, and no build/runtime test was performed in this session.
