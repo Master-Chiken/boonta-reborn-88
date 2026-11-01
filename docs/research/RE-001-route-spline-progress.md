@@ -2812,7 +2812,7 @@ A separate UI/transition update path writes state value 5 into the global reques
 - a transition timer counts down to zero; or
 - an accepted controller-input condition is detected.
 
-The front-end state manager later reads the requested value and calls the generic object state setter, which updates the object's current/previous state and derives the corresponding state-name label. Thus the local static chain **UI timer/input → requested state 5 → generic state setter → state label `POST_RACE_INFO`** is supported.
+The front-end state manager later reads the requested value and calls the generic object state setter, which updates the object's current/previous state and derives the corresponding state-name label. This 14-entry UI screen-state mapping is a separate state namespace from the previously examined `Hang` object's 19-state update dispatcher; the shared numeric value 5 does not make those two state fields or objects identical. Thus the local static chain **UI timer/input → requested state 5 → generic state setter → state label `POST_RACE_INFO`** is supported.
 
 ### Critical separation from RE-001 race completion
 
