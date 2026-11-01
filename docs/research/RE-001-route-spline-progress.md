@@ -2664,7 +2664,7 @@ A final bounded decode connects the race setup message to the exact pointer cons
 4. The bookkeeping initializer stores that incoming roster pointer in the manager's live participant-array global.
 5. The race update callback loads that same global and uses the pointer as the base for its participant-record scan.
 
-This closes the last table-identity ambiguity: the local-reference registration path and the manager's live per-frame roster scan are fed from the same participant-table pointer carried in the setup message. This is stronger than matching only the `0x88) record stride or comparing independently derived static bases.
+This closes the last table-identity ambiguity: the local-reference registration path and the manager's live per-frame roster scan are fed from the same participant-table pointer carried in the setup message. This is stronger than matching only the `0x88` record stride or comparing independently derived static bases.
 
 ### Resulting combined evidence
 
@@ -2705,3 +2705,34 @@ A final bounded instruction scan searched the main N64 code section for word loa
 **NOT FOUND IN THIS BOUNDED PASS:** a direct renderer/HUD consumer of that counter or its lower halfword. The absence of a direct `+0x7A` halfword access does not prove the HUD does not display the value; the presentation path may use a copied, transformed or separately maintained value.
 
 The highest-value static search is now a trace from the participant's finish/progression state into the relevant HUD object/resource update, not another broad search for the number `0x78`. If that producer-to-display link cannot be established, leave the HUD consumer explicitly unproven and use a controlled local memory watch at lap boundaries as the runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
+
+## BJ. HUD string-bank context confirmed; counter-to-renderer link remains absent (2026-11-01)
+
+### Resource-side observation
+
+A local scan of the owner-supplied ROM's visible text entries finds a tightly grouped set of presentation strings:
+- `LAP TIME`
+- `New Record`
+- `FINAL LAP`
+- `TIME`
+- two `LAP` labels with matching `%d/%d` integer formats
+- `POS`
+- `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING), `Warning` and `Repair`
+
+Together these entries strongly identify a lap/timer/position/engine-condition HUD text group. This is resource/string evidence, not a code call-site match.
+
+### Cross-check against the participant counter
+
+The candidate participant counter at `+0x78` is now structurally tied to the same roster array used by the manager, and its low halfword at `+0x7A` is independently targeted by public per-player lap-modifier codes. The bounded main-code scan nevertheless found no direct halfword access at `+0x7A` and no direct renderer/HUD reader of the participant counter.
+
+The resource group therefore confirms that the N64 game has the expected lap/timer HUD presentation, but it does **not** prove that the display helper reads the manager's participant counter in place. A presentation object may copy, normalize or derive the value elsewhere; no such copy has yet been positively identified.
+
+### Revised evidence grade / stop condition
+
+- **Strongly supported:** participant-record event counter at `+0x78) is the per-driver lap/event counter; the public GameShark lap targets address its lower halfword at `+0x7A).
+- **Confirmed separately:** the ROM text pool contains the LAP/TIME/FINAL LAP/POS presentation entries in a coherent HUD-oriented group.
+- **Still unproven:** the specific dataflow from the participant counter (or a copy of it) into the text/HUD formatting call that supplies the `%d/%d` values.
+
+The most useful remaining static work is now narrow: inspect the HUD/presentation updater's participant-source pointer and find whether it references the roster record, or a copied lap value. Do not continue broad offset scans. If that pointer relationship cannot be established, preserve the HUD consumer as unresolved and use a controlled runtime memory observation during a normal race as the discriminator.
+
+No raw resource bytes, ROM data, instruction dumps, private offsets, extracted assets or game payloads are published. No emulator or live race was run, no gameplay code changed, and RE-002 remains parked.
