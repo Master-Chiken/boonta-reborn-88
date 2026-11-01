@@ -2603,3 +2603,50 @@ The community code list is corroboration, not disassembly documentation. Do not 
 ### Next bounded RE-001 action
 
 Follow the participant record's `+0x7A` candidate through any copied/aliased structures and its consumers; distinguish a one-time start-lap override from the live current-lap value. If no static reader/writer appears, the best discriminator is a lawful local memory watch during a normal race at successive lap boundaries, kept separate from any GameShark-injected run. No ROM, raw code, private addresses, assets or extracted resources are to be uploaded. Keep RE-002 parked.
+
+
+## BG. Lap GameShark targets map onto the static local-participant records and the event counter — strong static triangulation (2026-11-01)
+
+### Static participant-table construction
+
+A fresh decode of the race-setup builder `0x8004F790` closes an important part of the base-address question:
+
+- The builder returns the fixed participant-table base at `0x80118F90`.
+- On the table-building path it initializes records from that same base and advances the record pointer by exactly `0x88` bytes per entry.
+- It writes the literal `Locl` tag into local participant entries and a different `AIII` tag into the non-local/AI entries.
+- The setup message carries the returned participant-table pointer. The receiver passes that pointer to the routine that registers the local-reference slots.
+- The manager's per-participant progress callback also walks records with the same `0x88` stride, and its local-completion phase compares those record pointers with the registered local-reference pointers.
+
+This is stronger than merely observing that two unrelated structures happen to share a stride: the setup, local registration and manager phase all use participant-record pointers and the same record layout. The runtime pointer values themselves were not captured in an emulator session.
+
+### Exact mapping of the public lap codes
+
+The public [TheForce.Net N64 code list](https://www.theforce.net/videogames/codes/n64/racer.asp) and independent [Ethereal Games listing](https://etherealgames.com/n64/s/star-wars-episode-i-racer/gameshark-codes-us/) identify:
+- P1's “Start on Lap” and “Always on Lap” target at `0x8011900A`.
+- P2's corresponding target at `0x80119092`.
+- Values `00`–`04` as Lap 1–Lap 5.
+
+The local static layout gives:
+- P1 record base `0x80118F90`; cheat target = base + `0x7A`.
+- P2 record base = P1 base + `0x88`; cheat target = that record + `0x7A`.
+
+Thus both community targets land at the **same within-record offset** in the first two local participant records.
+
+### Cross-reference to the game's counter
+
+The race-progress callback uses the participant's 32-bit word at `+0x78` as an event counter:
+- It increments the word only after the route-progress event helper returns a nonzero status.
+- It compares the incremented value to the manager's configured threshold.
+- When the threshold is reached, the same participant's finish/skip state is set, as documented in Sections BB and BE.
+
+The GameShark target is a 16-bit write at `+0x7A), the lower halfword of the aligned 32-bit word at `+0x78) on the N64's big-endian memory layout. This explains why the game uses full-word load/store instructions at `+0x78` while the community cheat uses a halfword write at `+0x7A`.
+
+### Revised evidence grade
+
+**STRONG STATIC IDENTIFICATION:** public per-player lap modifiers target the lower halfword of the participant-record event counter that the N64 race manager increments and compares with its configured finish threshold. The table base, `0x88` record stride, local tags and per-record counter layout independently align.
+
+**STILL NOT PROVEN:** that this exact field is read directly by the visible HUD drawing routine rather than being copied/converted into a separate presentation value; the actual runtime values at each lap boundary; and cross-platform parity. The GameShark pages are third-party code listings, not official disassembly documentation.
+
+### Best next step
+
+The highest-value static follow-up is now to trace the participant record's `+0x78) counter consumers/copies into the lap display or format routine, rather than searching the already-identified public cheat address again. In parallel, the decisive runtime discriminator remains a clean race with a memory watch at the candidate counter, with no GameShark writes enabled. No ROM bytes, raw disassembly, extracted resources or assets are published; no gameplay code changed. Keep RE-002 parked.
