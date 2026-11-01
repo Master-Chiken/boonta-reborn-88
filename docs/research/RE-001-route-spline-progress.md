@@ -1340,7 +1340,7 @@ Some generic lifecycle branches send `Fini` / `Abrt` tags or adjust phase bits, 
 
 A plain ASCII scan of the local US ROM found no obvious uppercase `RESULTS`, `RACE OVER`, `FINISH`, `FINISHED`, `CHAMPION`, `STANDINGS`, `PODIUM`, `RACE COMPLETE`, `CONTINUE`, or `RACE RESULTS` literals. This is weak negative evidence only: UI text may be compressed, encoded, or referenced by resource ID.
 
-**Next bounded target:** connect the all-local-participants-done condition to the writer of the manager's lifecycle phase and then to the actual results resource/scene selection. Runtime behavior remains untested: no N64 emulator/debugger or Dolphin binary is available in this command-line environment. The lap/HUD static finding should not be read as results-transition proof.
+**Next bounded target:** connect the all-local-participants-done condition to the writer of the manager's lifecycle phase and then to the actual results resource/scene selection. Runtime behavior remains untested: no N64 emulator/debugger or Dolphin binary is available in this command-line environment. The HUD strings are resource evidence only; neither a HUD drawing path nor a results transition is established by their presence.
 ## Lifecycle-tag disambiguation — do not treat Fini/Abrt as results events (2026-10-21)
 
 A follow-on local static pass reviewed the race-manager phase dispatcher and the shared four-character-tag consumer. The branch that reaches the participant threshold still routes through generic lifecycle/event handling; the `Fini` / `Abrt` strings are not, on their own, evidence of a results-screen transition.
