@@ -1312,20 +1312,29 @@ Why this helps the N64 trace: the N64 ROM's local text scan showed a cluster in 
 
 Do not promote this to an N64 conclusion yet. The PC text IDs and N64 resource indices may differ, and identical labels/order do not establish shared code. The next local-only N64 step remains mapping the resource/string lookup and draw caller, then validating whether the FINAL LAP selector and lap fraction have the analogous data flow.
 
-## N64 HUD call-path cross-check — direct local static evidence (summary only, 2026-10-21)
+## Correction — the previously claimed N64 HUD call-path trace is withdrawn (2026-11-01)
 
-This section supersedes the earlier status that the local N64 HUD renderer/resource path was still unlocated. A fresh address-aware pass corrected the earlier direct-pointer search and linked the visible text resources to their caller. Exact instruction addresses, ROM file offsets, and raw disassembly remain in private local notes rather than in this public dossier.
+The earlier public wording in this section claimed that a fresh local static pass had identified the N64 HUD formatter and connected it to the participant progress counter, configured threshold, POS fraction and FINAL LAP selector. That positive claim is **withdrawn**.
 
-- The local US N64 HUD function obtains the current/configured lap fraction from the same participant progress counter and manager threshold already traced through the configurable 1–5 Laps option and the route-progress event path. The first value is participant count + 1, clamped to the configured target; the second is that target. This is direct local static evidence for the displayed lap fraction, not merely a guess based on the string text.
-- The second numeric fraction is a different template: participant position over the manager's total-racer count, rendered with POS. The two visually similar %d/%d templates therefore have distinct data sources.
-- The same N64 HUD function references and draws FINAL LAP only when the next displayed lap equals the configured threshold, for the single-local-player layout, and during the latter fade portion of the lap-completion popup. It is not a persistent banner throughout the entire final lap.
+A cross-check against the contemporaneous private note `RE-001_N64_HUD_LAP_FIELD_CROSSCHECK_2026-10-21.md` found that the saved note says the opposite about the then-current evidence boundary: the strings were found in a resource bank, a direct-pointer search did not locate a convincing code cross-reference, and the actual HUD variable/draw routine was still listed as work to do. The note explicitly says that the cheat-code target had not yet been mapped to the manager participant record or a HUD field. The previous public claim is therefore not supported by the underlying dated research record and must not be cited as a result.
 
-Combined with the already documented option-to-manager-threshold and route-progress-event-to-participant-counter paths, the N64 chain is now strongly supported end-to-end for the HUD lap count and FINAL LAP selector at the static-code level.
+### What remains supported
 
-Still open: live emulator/hardware confirmation, exact timing of the reported route-progress event relative to physical finish-line traversal, the manager's eventual results-screen transition, and all cross-platform parity. No Dolphin/N64 hardware run is claimed. The PC source reference remains a separate comparison only.
+- The ROM contains the relevant lap/time/position HUD strings as resource data. Their presence does not identify the code that draws them.
+- The manager's participant counter at `+0x78` increments only after a route-progress event status and is compared with the setup-configured threshold. This is a route-event counter with a strong lap/finish interpretation, not a proven HUD variable.
+- The threshold branch sets a participant state bit that the same active-progress loop later tests to skip further ordinary progress processing. This strongly supports participant finish/disable handling.
+- Public P1/P2 lap-modifier targets align with the lower halfword of the per-participant counter after the later record-stride/table-pointer cross-check. This strengthens the counter identification, but still does not locate the HUD draw consumer.
+- The ranking/position event path and its generic numeric event dispatch are separate evidence. No numeric event has been tied to the LAP or FINAL LAP resources.
+
+### Correct evidence status
+
+**Not located / not demonstrated:** the code path that reads or copies the manager's per-driver event counter into the visible LAP formatter; the writer/selector for the FINAL LAP display; and any direct linkage from those drawing calls to the lap resource strings.
+
+The prior positive summary in this section is historical documentation error, not evidence. Keep the N64 HUD consumer open. No runtime HUD observation, emulator trace, or cross-platform parity is claimed.
+
 ## Manager/results-screen boundary — next unresolved link (2026-10-21)
 
-The N64 HUD path is now traced at the local static-code level, but the downstream transition into the actual results screen is still unresolved. A follow-on review of the phase/lifecycle dispatcher, its timer/event branches, and the manager-side local-player threshold check did not expose a conclusive call to a results renderer or scene-load handler.
+The N64 lap/time/position strings are found in the resource bank, but the HUD drawing/data path is not traced. The downstream transition into the actual results screen is also a separate unresolved question. A follow-on review of the phase/lifecycle dispatcher, its timer/event branches, and the manager-side local-player threshold check did not expose a conclusive call to a results renderer or scene-load handler.
 
 Some generic lifecycle branches send `Fini` / `Abrt` tags or adjust phase bits, but those labels alone do not establish that they mean “race finished” or select the results UI. Do not assign those semantic names without a positive caller-to-destination data-flow chain.
 
@@ -1338,14 +1347,14 @@ A follow-on local static pass reviewed the race-manager phase dispatcher and the
 
 The consumer also handles other tags (including `Load`, `RStr`, and `Stop`) and performs general object flags, timers, and shared-state/fade updates. The shared event helper has callers beyond this one manager path. No direct call edge from the all-local-participants-done condition to a positively identified results renderer or scene-load handler has been demonstrated.
 
-**Evidence status:** the N64 lap counter and `FINAL LAP` HUD selector remain directly traced at static-code level; the terminal manager/results-screen destination remains open. The next bounded target is a positive chain from the all-local-racers-done predicate through the manager phase writer into the actual results UI/resource selection. Do not infer results-screen semantics from `Fini`, `Abrt`, or phase names alone. No runtime test is claimed.
+**Evidence status (corrected):** the N64 route-event counter and participant finish/skip state are statically supported; the visible LAP / FINAL LAP draw path is not identified; the terminal manager/results-screen destination was also open at this historical point. The next bounded target is a positive chain from the all-local-racers-done predicate through the manager phase writer into the actual results UI/resource selection. Do not infer results-screen semantics from `Fini`, `Abrt`, or phase names alone. No runtime test is claimed.
 ## Shared lifecycle-tag handler: no results-screen proof (2026-10-21)
 
 Additional local static review of the generic event/tag paths confirms an important negative result. The manager phase dispatcher sends `Fini` and `Abrt` tags into a shared object lifecycle/state helper; a separate tag consumer also handles `Load`, `RStr`, and `Stop`, modifying general object flags, timers and shared fade/control state. The helper has call sites beyond this race-manager path.
 
 No conclusive direct call edge has been established from the all-local-racers-done predicate to a results renderer or scene-load handler. The tag text alone is insufficient to identify the results transition, and the global updated in one handler is referenced elsewhere in menu/UI-related code, so it remains unnamed.
 
-**Current boundary:** N64 lap-count and `FINAL LAP` HUD data flow are traced at local static-code level; manager phase → results-screen destination remains unresolved. The next proof must connect the all-done condition to a positively identified results UI/resource/scene selection. Runtime observation and console parity are still unverified.
+**Current boundary (corrected):** the N64 lap/route-event counter and threshold finish path are statically supported; HUD drawing/data flow is unlocated; manager phase → results-screen destination remained unresolved at this historical point. The next proof must connect the all-done condition to a positively identified results UI/resource/scene selection. Runtime observation and console parity are still unverified.
 
 ## PC results-transition analogue — pinned-source refinement (2026-10-21)
 
@@ -1381,7 +1390,7 @@ The pinned PC reference in section N remains only a comparison checklist. Do not
 
 The useful next check requires the owner's existing local static-analysis environment: follow the write to the manager phase/state field that is reached after the all-done predicate, enumerate the consumers of that exact field, then continue to a data/resource identifier or renderer whose results-screen role is positively identified. A generic tag, phase bit, string search, or unrelated reference to a shared global is insufficient. If the consumer chain stays generic, retain the blocker rather than inventing a semantic label.
 
-**Current status:** N64 lap-counter and `FINAL LAP` HUD path remain traced at local static-code level; the terminal results transition remains unresolved. No emulator/hardware result, gameplay change, asset import, or new platform-parity claim is made.
+**Current status (corrected):** N64 route-event counter/threshold and participant finish state are statically supported; the `LAP` / `FINAL LAP` drawing path is not established; the terminal results transition remained unresolved at this historical point. No emulator/hardware result, gameplay change, asset import, or new platform-parity claim is made.
 
 ## P. Runtime-debugging method reference for the unresolved N64 transition (2026-10-21)
 
@@ -2706,49 +2715,57 @@ A final bounded instruction scan searched the main N64 code section for word loa
 
 The highest-value static search is now a trace from the participant's finish/progression state into the relevant HUD object/resource update, not another broad search for the number `0x78`. If that producer-to-display link cannot be established, leave the HUD consumer explicitly unproven and use a controlled local memory watch at lap boundaries as the runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
 
-## BJ. HUD resource group and earlier formatter trace: keep the evidence scopes separate (2026-11-01)
+## BJ. HUD resource strings confirmed; drawing/data path remains unlocated (2026-11-01)
 
 ### Resource-side observation
 
-A local scan of the owner-supplied ROM's visible text entries finds a tightly grouped set of presentation strings:
+A local scan of the owner-supplied ROM's visible text entries finds a grouped set of presentation strings:
 - `LAP TIME`
 - `New Record`
 - `FINAL LAP`
 - `TIME`
-- two `LAP` labels with matching `%d/%d` integer formats
+- two `LAP` labels with `%d/%d` integer formats
 - `POS`
-- `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING`, `Warning` and `Repair`
+- engine-condition labels such as `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING`, `Warning` and `Repair`
 
-Together these entries strongly identify a lap/timer/position/engine-condition HUD text group. The strings alone are resource evidence, not a code call-site match.
+These identify relevant HUD/resource content, not the drawing routine or the source values passed to the formatter.
 
-### Earlier N64 HUD formatter trace — retained as a separate static finding
+### Provenance correction to the earlier public HUD claim
 
-The dossier's 2026-10-21 **N64 HUD call-path cross-check** records a separate address-aware local static pass on the same US N64 ROM. That pass reported that a HUD formatter:
-- obtains a displayed lap fraction from a participant progress value plus one, clamped to the configured lap target, over that target;
-- obtains the separate POS fraction from participant position over the manager's total-racer count; and
-- draws FINAL LAP only when the next displayed lap equals the configured target, for the single-local-player layout and during the latter fade portion of the lap-completion popup.
+The earlier public dossier text that reported a completed N64 HUD formatter trace was inconsistent with the saved contemporaneous private note for the 21 October 2026 pass. That note explicitly records that a direct-pointer search found no convincing caller for the HUD strings, and lists the writer/reader for the current/configured lap values and FINAL LAP resource as a future target. It does not contain the positive formatter trace later described in the public dossier.
 
-This earlier static finding is not a runtime observation. Exact local instruction addresses and file offsets remain private; the public dossier retains only its behavior-level summary.
+Accordingly, the former positive claim (lap fraction, POS fraction and FINAL LAP selection supposedly read from a located N64 HUD function) is withdrawn. This is a correction of the research record, not a new negative proof that such a function does not exist.
 
-### Cross-check against the newer participant counter
+### Evidence status
 
-The 2026-11-01 pass independently identifies the participant-record event counter at `+0x78`, with the public P1/P2 lap-code targets aligned to its lower halfword at `+0x7A`. The bounded instruction scan searched the **main N64 code section** for direct loads/stores at those participant-record offsets and did not identify a direct HUD-formatting consumer there.
+- **Strong static counter finding:** the manager increments and thresholds a per-participant route-event counter at `+0x78); the public P1/P2 lap-modifier targets align to its lower halfword at `+0x7A`.
+- **Strong static finish-path finding:** the configured-threshold branch sets the same participant's finish/skip state bit, and the manager's ordinary progress scan later filters that state.
+- **Resource evidence only:** LAP / FINAL LAP / TIME / POS strings and integer format templates exist in a coherent group.
+- **Not established:** the actual HUD renderer, the source of the displayed current-lap number, the FINAL LAP selector/dataflow, or a writer/copy from the manager counter into the HUD formatter.
 
-That bounded negative result does **not** establish that no HUD formatter was found, and it does not invalidate the earlier formatter trace. The two findings can coexist if the formatter reads a copied/converted presentation value, follows a different object pointer, or resides outside the scanned main-code section. The present public evidence does not yet show whether the earlier HUD formatter's lap source is exactly this newly identified `+0x78` manager counter or a related value derived elsewhere.
+No emulator, live race or memory watch was run. No ROM bytes, raw disassembly, private instruction offsets, extracted assets or game payloads are published. No gameplay code changed; RE-002 remains parked.
 
-### Revised evidence grade
+## BK. Rank/position event dispatch does not close the HUD lap path (2026-11-01)
 
-- **Earlier static HUD finding retained:** the local formatter trace reported the lap/target fraction, POS fraction and conditional FINAL LAP behavior described above.
-- **Strong static counter identification:** the manager updates and thresholds the per-participant event counter at `+0x78`; public GameShark targets align to its lower halfword at `+0x7A`.
-- **Still unresolved:** the exact pointer/field/dataflow join between that specific manager counter and the earlier HUD formatter. Do not summarize this as “the HUD reader does not exist”; only a direct read of this exact field was not found in the bounded main-code pass.
-- **Still untested:** live HUD values, lap-boundary timing, visible Results behavior and cross-platform parity.
+A bounded local review of the manager's rank/position update routine shows that it:
 
-The next useful static step is a targeted reconciliation of the earlier formatter's participant-source path against the manager's setup-message roster pointer. Do not repeat broad offset scans. If the local trace notes cannot establish that join, keep the two findings separate and reserve final confirmation for a controlled runtime observation during a normal race.
+- iterates the participant roster using the same fixed record stride;
+- checks associated entity state and the participant's rank field;
+- compares current ranks against a saved rank snapshot and chooses among several numeric event selectors when rank-related conditions change;
+- submits those event parameters through a shared generic event-dispatch helper; and
+- refreshes the saved rank snapshot after processing the participant.
 
-No raw resource bytes, ROM data, instruction dumps, private instruction offsets, extracted assets or game payloads are published. No emulator or live race was run, no gameplay code changed, and RE-002 remains parked.
+This is consistent with a rank-change / position-announcement event path. The numeric selectors have not been mapped to the LAP or FINAL LAP text resources, and this routine does not establish a read of the participant route-event counter for the lap display. The separate rank-query path that recognizes ordinal-place queries is also not a lap HUD proof.
 
-## BK. RE-001 HUD/counter status after evidence reconciliation (2026-11-01)
+**Result:** this is useful evidence that rank/position announcements have their own event path, but it does not supply the missing lap-counter-to-HUD dataflow. Do not repurpose these numeric event IDs as lap/HUD labels without a positive resource/call-site join.
 
-The earlier 2026-10-21 HUD formatter summary and the newer 2026-11-01 participant-counter scan answer different questions. The first records what the local HUD formatter displayed; the second identifies a manager-owned per-driver event counter and reports no direct use of that exact field in the bounded main-code scan. Neither result alone supplies the missing exact field-to-formatter link.
+## BL. RE-001 current HUD/counter boundary after provenance audit (2026-11-01)
 
-**Canonical wording from this point forward:** the N64 HUD formatter's behavior has a prior local static trace; the manager's `+0x78` value is strongly identified as the per-driver lap/event counter; the direct dataflow between those two findings remains to be reconciled. Runtime remains unverified. This supersedes any broader reading of Section BI/BJ that implied the HUD formatter itself had not been located.
+The corrected chain is:
+
+`route cursor/progress history` → `event-status gate` → `participant route-event counter` → `configured threshold` → `participant finish/skip state` → `manager local-participant completion gate`.
+
+The HUD string bank is confirmed independently. The code path that reads or copies the counter into a LAP formatter, chooses FINAL LAP, or draws those strings is still **unlocated**. The ordinary/default manager-to-Results static path is documented separately in the later manager/lifecycle sections, with its mode, abort, selector and receiver guards retained. Runtime-visible HUD and Results behavior remain untested; cross-platform parity is not implied.
+
+The next useful static action is a targeted search for a writer or copy of the displayed lap value and a call site that passes that value to the LAP format resource. Do not infer this from the string bank, rank-event helper or GameShark target alone. If the dataflow remains unclosed, keep the HUD consumer explicitly unresolved and use a controlled runtime memory watch as the acceptance test.
+
