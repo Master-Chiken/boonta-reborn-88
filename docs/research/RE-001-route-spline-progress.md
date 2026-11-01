@@ -2658,8 +2658,8 @@ The highest-value static follow-up is now to trace the participant record's `+0x
 
 A final bounded decode connects the race setup message to the exact pointer consumed by the manager update:
 
-1. The race setup builder calls the participant-table constructor and saves its returned pointer into the `Begn` message's word at offset `+0x04).
-2. The `Begn` manager receiver uses that same message pointer as its base and passes the word at `+0x04) to the local-slot setup helper.
+1. The race setup builder calls the participant-table constructor and saves its returned pointer into the `Begn` message's word at offset `+0x04`.
+2. The `Begn` manager receiver uses that same message pointer as its base and passes the word at `+0x04` to the local-slot setup helper.
 3. The local-slot helper preserves that second argument as the roster base. When it calls the participant bookkeeping initializer, it passes the same preserved pointer as that helper's roster argument.
 4. The bookkeeping initializer stores that incoming roster pointer in the manager's live participant-array global.
 5. The race update callback loads that same global and uses the pointer as the base for its participant-record scan.
@@ -2671,7 +2671,7 @@ This closes the last table-identity ambiguity: the local-reference registration 
 The following now share a single statically traced participant-array pointer:
 
 - setup's fixed local-participant table and record initialization;
-- `Locl)-tagged record registration into the local-reference slots;
+- `Locl`-tagged record registration into the local-reference slots;
 - the manager's active/unfinished record filter;
 - the per-record event counter and its configured threshold;
 - the same-record finish/skip bit writer;
@@ -2681,6 +2681,6 @@ The following now share a single statically traced participant-array pointer:
 
 ### Remaining limit
 
-This does not identify a direct consumer in the HUD renderer. The `+0x7A) GameShark target remains strong corroboration for the lower halfword of the live event counter at `+0x78), but normal HUD display may use a copied/converted field. Runtime values, visual Results presentation and cross-platform parity remain unverified.
+This does not identify a direct consumer in the HUD renderer. The `+0x7A` GameShark target remains strong corroboration for the lower halfword of the live event counter at `+0x78`, but normal HUD display may use a copied/converted field. Runtime values, visual Results presentation and cross-platform parity remain unverified.
 
 No ROM bytes, instruction dumps, private instruction offsets, extracted assets or derived resource payloads were published. No gameplay code changed; RE-002 remains parked.
