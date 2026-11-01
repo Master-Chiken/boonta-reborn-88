@@ -3024,4 +3024,9 @@ On a compatible local Mac, using the owner's own lawful US `.z64` copy:
 
 This one run can answer the user-visible question “does a normal race reach the Results/placement panel, and does it require the later A/Start confirmation?” It cannot prove the internal writer/reader chain by itself; the static evidence in Section BS supplies that separate explanation.
 
-**Current status:** Ares v148 is a platform-compatible test candidate based on official published requirements, but it has not been installed or run against this ROM in this session. Game compatibility and Results display remain unverified. This is the next runtime acceptance step, not a passed test. RE-002 remains parked; no gameplay code changed.
+**Current status:** Ares v148 is a platform-compatible test candidate based on official published requirements, but it has not been installed or run against this ROM in this session. Game compatibility and Results display remain unverified. This is the next runtime acceptance step, not a passed test.
+
+### Historical Ares compatibility lead — not current certification
+
+The closed [Ares N64 compatibility-list issue #143](https://github.com/ares-emulator/ares/issues/143) states that its list was updated through Ares v127 dev (commit `3aa1b3b`). In that list, **Star Wars Episode I: Racer** appears under “No issues found”. The maintainers later marked the issue as superseded by the official Ares compatibility section on 2022-07-22. This is a useful historical indication that the title had been exercised successfully in an earlier Ares development build, but it is **not** a current v148 compatibility result and does not prove a complete normal race, a stable current JIT run, or the Results transition. The bounded v148 GUI test above is still required.
+ RE-002 remains parked; no gameplay code changed.
