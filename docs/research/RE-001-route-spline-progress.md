@@ -3062,11 +3062,11 @@ A second local observation route is available if the owner prefers to use the Wi
 
 ### Not64 baseline procedure and manual-based Results oracle
 
-**Bounded Not64 test:** use the owner's own US `.z64` image; record Not64 version, Wii/vWii model, video mode, controller profile, graphics/framebuffer settings and CPU core. First attempt one ordinary race using the default settings. Capture whether the title boots, enters a race, holds normal speed, and whether HUD/menus/textures are visible. If it boots but close-up pod textures disappear, record that baseline first; then optionally repeat in first-person or farthest zoom as the old compatibility entry suggests. Do not use savestates to skip the finish. Capture the first post-finish screen before pressing A/Start, then the screen after one deliberate confirmation press if required. Exit using the supported Not64 exit combination for the selected controller so the emulator can return to its menu and save normally. Keep the ROM and captures local; publish only metadata and observed outcome.
+**Bounded Not64 test:** use the owner's own US `.z64` image; record Not64 version, Wii/vWii model, video mode, controller profile, graphics/framebuffer settings and CPU core. First attempt one ordinary race using default emulator settings and the default Classic Controller profile. Capture whether the title boots, enters a race, responds to controls, holds normal speed, and whether HUD/menus/textures are visible. Keep N64 A (Classic A by default) held as the accelerator through the finish line, as in ordinary racing. Record a continuous clip through the line without pressing a new button after the finish. If the Results panel appears, release A once it is visible, capture it, then press A once to test the manual's next-track action. Do not press Start as a Results shortcut; the booklet defines Start as pause. If Results does not appear, preserve that baseline before running a separate A-hold gate diagnostic. Do not use savestates to skip the finish. If close-up pod textures disappear, record that baseline first; then optionally repeat in first-person or farthest zoom as the old compatibility entry suggests. Keep the ROM and captures local; publish only metadata and observed outcome.
 
 Start with default emulator settings; do not alter framebuffer or CPU core to chase a better result before recording the baseline. If the default core fails to boot or locks up, a separate interpreter-mode diagnostic can distinguish a dynarec-specific failure, but record it as a second configuration, not a successful default run. The old camera recommendation is only a graphics workaround; it is not a substitute for recording the default baseline.
 
-**Not64 exit/save behavior:** when using a GameCube controller or Classic Controller, exit with **X + Y together**; on a Wii Remote with Nunchuk, use **1 + 2 together**. The guide warns that the emulator should be exited this way for the game to save; do not simply power off during the test.
+**Not64 exit/save behavior:** the Not64 20260410 Classic Controller source sets the default exit/menu combo to **Home**. Use Home with the unmodified default Classic profile; check the Input settings first if the profile has been changed. The older general guide also lists X+Y, +&- and controller-specific alternatives, so record the active exit combo rather than assuming one. Return to the Not64 menu before shutting down; do not power off mid-race.
 
 **Minimal result record (fill each line PASS / FAIL / NOT TESTED):**
 
@@ -3078,8 +3078,9 @@ Start with default emulator settings; do not alter framebuffer or CPU core to ch
 | Race starts and responds to the selected controller | |
 | Frame pacing and audio remain usable during a full race | |
 | Three-lap race reaches the finish without a savestate jump | |
-| First post-finish state captured before A/Start | |
-| Results/placement panel appears after natural transition or one deliberate confirmation | |
+| A is held as accelerator through the finish; uninterrupted post-line clip recorded | |
+| Results/placement panel appears without a new post-finish button press | |
+| A released after Results is visible; one fresh A selects a new track | |
 | Any graphics, HUD, audio, freeze or crash issue recorded | |
 
 Record the exact ROM revision/size privately, Not64 version, Wii model (RVL-001/RVL-101 or Wii U vWii), video mode, controller, CPU core and framebuffer setting. Retain any video/screenshots locally. A boot-only PASS must not be promoted to a full-race or Results PASS; a race PASS without Results is not evidence for the finish-to-Results question.
