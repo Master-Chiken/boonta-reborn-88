@@ -2949,7 +2949,7 @@ A bounded second look used the owner's existing US N64 reference from the privat
 
 ### What this does and does not close
 
-This cross-check narrows the identity gap recorded in Section BQ, but it is still static evidence. A type descriptor can serve multiple object instances; the registry record alone does not show which live instance receives the message in a particular race. The conditional path still depends on the ordinary `All!` relay (not the mode bypass), no abort substitution, the receiver's default/sentinel selector and its transition guard. No runtime trace confirms those values or that the Results panel becomes visible after a normal race.
+This cross-check first established the type-level join. Section BS below now follows the runtime registry dispatchers and shows that the message callback and update callback are invoked with the same per-instance object pointer; the static record still does not reveal the runtime values of the selectors and guards in a particular race. The conditional path still depends on the ordinary `All!` relay (not the mode bypass), no abort substitution, the receiver's default/sentinel selector and its transition guard. No runtime trace confirms those values or that the Results panel becomes visible after a normal race.
 
 The separate 14-entry front-end state namespace labelled `POST_RACE_INFO` in Section BN remains distinct. This section does not merge that screen with the Hang Results/placement builder, and it does not establish GameCube/Wii parity.
 
@@ -2957,6 +2957,44 @@ The separate 14-entry front-end state namespace labelled `POST_RACE_INFO` in Sec
 
 - **Newly corroborated:** Fini-capable message callback and 19-state Results updater belong to the same registered `Hang` type.
 - **Supported by the combined static trace:** ordinary manager relay → registered Hang message callback → conditional same-object state-5 transition → Results/placement builder.
-- **Still unverified:** which concrete Hang instance is live in a completed race, whether all guards select this route in normal play, and whether the visible Results panel appears at runtime.
+- **Still unverified:** whether an ordinary completed race actually takes the eligible `Fini` relay/default-selector route in a live session, and whether the Results panel appears visibly at runtime.
 
 **Next bounded action:** stop broad static searching here and seek one controlled local runtime observation of a normal completed race on a compatible environment, recording the manager/receiver conditions and visible Results transition without publishing ROM-derived bytes. Until that is run, retain **STATIC CONDITIONAL PATH SUPPORTED / RUNTIME UNVERIFIED**. RE-002 remains parked; no gameplay code changed.
+
+
+## BS. Shared per-instance registry dispatch closes the Hang/Fini update-pointer join — local static cross-reference (2026-11-01)
+
+### Question
+
+Section BQ's second-decoder pass corroborated a conditional state write on the object pointer received by the `Fini` handler, while Section BR tied that handler and the 19-state updater to the same `Hang` type descriptor. The remaining static caveat was whether those two callbacks operate on the same individual object or merely share a type.
+
+### Registry-dispatch evidence
+
+A targeted local MIPS III disassembly pass followed the engine's callback dispatchers and compared their registry traversal logic:
+
+- The `Hang` type record stores the 19-state primary update callback and the `Fini`-capable message callback in the corresponding callback slots. The former callback reads the incoming object's primary-state selector and dispatches through the 19-entry state table; the latter preserves its incoming object pointer through the guarded transition helper.
+- The ordinary update-slot dispatcher walks the global registered-type list. For each type entry it reads that callback slot, then iterates the entry's instance count, object-array base and per-instance stride. It passes the current object pointer as the callback's first argument and applies the per-instance registration/skip flags.
+- The generic `All!` message dispatcher walks that **same registry list** and, for each matching type (or the `All!` selector), reads the message-callback slot. It iterates the same count, object-array base and stride fields, passes the current object pointer as the receiver's first argument, and applies the message-dispatch eligibility flag.
+- The two callback slots are therefore not merely associated with the same class name: both dispatchers retrieve their callback from the same registered-type entry and iterate the same instance array using the same stride. For an eligible `Hang` instance, the message receiver and the subsequent update callback receive that same instance pointer.
+
+### Resulting static chain
+
+For an eligible `Hang` instance reached through the ordinary manager relay, the combined trace now supports:
+
+`manager schedules Fini` → `All!` finds the `Hang` type entry → `Fini` callback receives a particular instance pointer → guarded default/sentinel transition writes primary state 5 on that same instance → the update-slot dispatcher later passes that instance to the 19-state updater → state 5 reaches the Results/placement-panel builder.
+
+This closes the **static per-instance callback identity** gap left by BQ/BR. It is stronger than a type-name match and does not rely on matching numeric state IDs across unrelated objects. The object-level path remains conditional on the previously documented manager relay and receiver guards.
+
+### Conditions and boundaries retained
+
+- The manager must take the ordinary `All!` route; the special-mode bypass and possible `Abrt` substitution remain alternatives.
+- The manager's intermediate phase has a separate A-or-Start held-input gate before it queues `Fini`; that input condition must not be conflated with the participant-finish aggregate.
+- The receiving `Hang` instance must take the default/sentinel selector path and pass the transition guard.
+- This is local static analysis only. It does not show the live flag/selector values for an ordinary race, the exact instance chosen at runtime, or a visible Results frame.
+- The separate front-end state-name mapping `POST_RACE_INFO` remains a different state namespace. No N64-to-PC/Dreamcast/GameCube/Wii parity is implied.
+
+**Revised evidence grade:** **SAME REGISTERED HANG INSTANCE ARRAY → FINI MESSAGE CALLBACK AND 19-STATE UPDATE CALLBACK RECEIVE THE SAME OBJECT POINTER → CONDITIONAL STATE-5 RESULTS BUILDER PATH STATICALLY CONNECTED / NORMAL-RACE GUARD VALUES AND VISIBLE RESULTS STILL RUNTIME-UNVERIFIED.**
+
+### Next action
+
+Stop broad static searching of this same callback-identity question. The next meaningful evidence is one controlled local runtime observation of a normal completed race on a compatible environment, capturing whether the manager queues `Fini`, whether the ordinary relay and default selector are taken, and whether Results appears. Keep ROM-derived bytes, raw disassembly and exact private instruction locations local. Do not repeat the failed Ares/GDB ctest experiment without a new isolation hypothesis. RE-002 remains parked; no gameplay code changed.
