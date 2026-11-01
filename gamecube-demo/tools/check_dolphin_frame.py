@@ -156,6 +156,59 @@ def steering_indicator_center(image: Image.Image) -> float:
     return sum(x * hits for x, hits in best_group) / max(1, weight)
 
 
+def pitch_indicator_center(image: Image.Image) -> float:
+    """Locate the colored marker in the upper-right PITCH gauge.
+
+    The neutral marker is cyan, while the strongest nose-down position uses
+    the warm boost color. Restrict sampling to the gauge's thin horizontal
+    track so road/sky pixels and the PITCH/SLIDE labels cannot satisfy it.
+    """
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    y_start = round(viewport_top + viewport_height * 35.0 / 480.0)
+    y_end = round(viewport_top + viewport_height * 45.0 / 480.0)
+    x_start = int(width * 0.78)
+    x_end = int(width * 0.98)
+    column_hits: list[tuple[int, int]] = []
+    for x in range(x_start, x_end):
+        hits = 0
+        for y in range(y_start, min(y_end + 1, height)):
+            r, g, b = image.getpixel((x, y))
+            cyan_marker = r < 140 and g > 185 and b > 195 and g - r > 70 and b - r > 80
+            warm_marker = r > 190 and 90 < g < 210 and b < 145 and r - b > 75
+            if cyan_marker or warm_marker:
+                hits += 1
+        if hits:
+            column_hits.append((x, hits))
+
+    if not column_hits:
+        raise ValueError(
+            f"No colored pitch marker found in projected HUD rows "
+            f"y=[{y_start},{y_end}] and x=[{x_start},{x_end})."
+        )
+
+    active = [(x, hits) for x, hits in column_hits if hits >= 2]
+    groups = []
+    current = []
+    for item in active:
+        if current and item[0] != current[-1][0] + 1:
+            groups.append(current)
+            current = []
+        current.append(item)
+    if current:
+        groups.append(current)
+    if not groups:
+        raise ValueError("No contiguous colored pitch-marker columns found.")
+
+    best_group = max(groups, key=lambda group: sum(hits for _, hits in group))
+    if len(best_group) > 12:
+        raise ValueError(f"Pitch-marker candidate is too wide ({len(best_group)} columns).")
+    weight = sum(hits for _, hits in best_group)
+    return sum(x * hits for x, hits in best_group) / max(1, weight)
+
+
 def validate_scene(image: Image.Image, label: str) -> None:
     signatures = scene_signatures(image)
     print(label + " scene color-pixel counts: " +
@@ -405,6 +458,12 @@ def main() -> int:
                         help="check that a Start input visibly leaves the game in paused state")
     parser.add_argument("--expect-resume", action="store_true",
                         help="check that the pause overlay is gone and throttle visibly moves the game after Start resumes")
+    parser.add_argument("--expect-pitch-up", action="store_true",
+                        help="check that D-pad Up moved the pitch gauge marker right of the neutral baseline")
+    parser.add_argument("--expect-pitch-down", action="store_true",
+                        help="check that D-pad Down moved the pitch gauge marker left of the neutral baseline")
+    parser.add_argument("--min-pitch-shift", type=float, default=12.0,
+                        help="minimum pitch-gauge marker displacement from neutral")
     parser.add_argument("--direction", choices=("left", "right"), default="right",
                         help="steering direction encoded by the input movie")
     parser.add_argument("--min-shift", type=float, default=2.0,
@@ -416,8 +475,9 @@ def main() -> int:
     args = parser.parse_args()
     image = Image.open(args.frame).convert("RGB")
     if sum((args.expect_finish, args.expect_finish_label, args.expect_reset,
-            args.expect_pause, args.expect_resume)) > 1:
-        parser.error("--expect-finish, --expect-finish-label, --expect-reset, --expect-pause, and --expect-resume are mutually exclusive")
+            args.expect_pause, args.expect_resume, args.expect_pitch_up,
+            args.expect_pitch_down)) > 1:
+        parser.error("visual expectation flags are mutually exclusive")
     if args.expect_finish_label:
         if args.baseline is not None:
             parser.error("--expect-finish-label cannot be combined with --baseline")
@@ -459,6 +519,28 @@ def main() -> int:
         if not resumed_state_visible(image):
             raise SystemExit("The visible frame does not prove the game resumed (pause overlay absent and speed bar advanced).")
         print("Pause overlay cleared and speed bar advanced after the scripted Start-resume input.")
+        return 0
+    if args.expect_pitch_up or args.expect_pitch_down:
+        if args.baseline is None:
+            parser.error("--baseline is required with --expect-pitch-up or --expect-pitch-down")
+        baseline = Image.open(args.baseline).convert("RGB")
+        if image.size != baseline.size:
+            raise SystemExit(f"Frame dimensions differ: pitch={image.size}, baseline={baseline.size}")
+        validate_scene(baseline, "Neutral pitch baseline")
+        validate_scene(image, "Pitched")
+        baseline_x = pitch_indicator_center(baseline)
+        pitched_x = pitch_indicator_center(image)
+        delta = pitched_x - baseline_x
+        direction_label = "right/nose-down" if args.expect_pitch_up else "left/nose-up"
+        print(f"Neutral pitch-marker center x={baseline_x:.1f}")
+        print(f"Pitched marker center x={pitched_x:.1f}")
+        print(f"Pitch marker {direction_label} displacement={delta:.1f}px "
+              f"(minimum magnitude {args.min_pitch_shift:.1f}px)")
+        if args.expect_pitch_up and delta < args.min_pitch_shift:
+            raise SystemExit("D-pad Up did not move the PITCH gauge marker right as expected.")
+        if args.expect_pitch_down and delta > -args.min_pitch_shift:
+            raise SystemExit("D-pad Down did not move the PITCH gauge marker left as expected.")
+        print("Scripted D-pad pitch input moved the visible PITCH gauge in the expected direction.")
         return 0
     if args.baseline is None:
         parser.error("--baseline is required unless --expect-finish is set")
