@@ -3060,6 +3060,8 @@ A second local observation route is available if the owner prefers to use the Wi
 4. In Not64 choose **Load ROM → SD/USB → the ROM → Play Game**. For FTP transfer, place the ROM in `/wii64/roms/`; do not put it inside the Homebrew Channel application's `apps` folder.
 5. In the Not64 settings, configure the actual controller using **Configure Input / Configure Buttons** rather than assuming an N64 button mapping. Both Classic Controller and GameCube controller are listed as supported.
 
+### Not64 baseline procedure and manual-based Results oracle
+
 **Bounded Not64 test:** use the owner's own US `.z64` image; record Not64 version, Wii/vWii model, video mode, controller profile, graphics/framebuffer settings and CPU core. First attempt one ordinary race using the default settings. Capture whether the title boots, enters a race, holds normal speed, and whether HUD/menus/textures are visible. If it boots but close-up pod textures disappear, record that baseline first; then optionally repeat in first-person or farthest zoom as the old compatibility entry suggests. Do not use savestates to skip the finish. Capture the first post-finish screen before pressing A/Start, then the screen after one deliberate confirmation press if required. Exit using the supported Not64 exit combination for the selected controller so the emulator can return to its menu and save normally. Keep the ROM and captures local; publish only metadata and observed outcome.
 
 Start with default emulator settings; do not alter framebuffer or CPU core to chase a better result before recording the baseline. If the default core fails to boot or locks up, a separate interpreter-mode diagnostic can distinguish a dynarec-specific failure, but record it as a second configuration, not a successful default run. The old camera recommendation is only a graphics workaround; it is not a substitute for recording the default baseline.
@@ -3082,6 +3084,43 @@ Start with default emulator settings; do not alter framebuffer or CPU core to ch
 
 Record the exact ROM revision/size privately, Not64 version, Wii model (RVL-001/RVL-101 or Wii U vWii), video mode, controller, CPU core and framebuffer setting. Retain any video/screenshots locally. A boot-only PASS must not be promoted to a full-race or Results PASS; a race PASS without Results is not evidence for the finish-to-Results question.
 
-**Priority:** Ares v148 remains the primary desktop test candidate because its platform requirements and prior fixes are documented. Not64 20260410 is a useful alternative or independent second observation on the owner's Wii. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
+### Classic Controller defaults in Not64 20260410
+
+The source at [Not64 release commit `d35a7a1`](https://github.com/extremscorner/not64/blob/d35a7a1c454eca973995939dbca3f06725cf4a6e/gc_input/controller-Classic.c) defines the current default Classic Controller profile. The mapping is not guessed from controller appearance:
+
+| N64 input | Racer function in the N64 booklet | Not64 Classic Controller default |
+|---|---|---|
+| Analog stick | Steering / pitch | Left analog stick |
+| A | Accelerate | A |
+| B | Air brake | B |
+| Z | Slide / drift | L shoulder |
+| L | Cycle map / progress views | ZR |
+| R | Hold to repair; quick double-tap action | R shoulder |
+| Start | Pause | + |
+| C-Up / Down / Left / Right | Camera / rear view / roll | Right stick directions |
+| D-Pad | Menu navigation | D-Pad |
+
+**Exit-combo clarification:** the same release's Classic Controller source sets its default emulator-exit/menu combo to **Home** (`config_default.exit = menu_combos[2]`, where menu-combo 2 is Home). Older Wii64/Not64 quick-start text also mentions X+Y as an exit combination. For this exact 20260410 Classic Controller default profile, use **Home** unless the controller settings show a different configured combo; do not use reset as the first choice during testing. Save controller settings before the race if you change the profile.
+
+### Retail N64 booklet gives the visible finish expectation
+
+The scanned original [French Nintendo 64 instruction booklet](https://emulation64.fr/pdf/N64%20-%20Star%20Wars%20Episode%20I%20-%20Racer%20%28Francais%29.pdf) describes the following user-facing behavior:
+
+- It identifies **A as acceleration**, **B as air brakes**, **Start as pause**, **Z as slide**, and **R as engine repair** (held).
+- In the section **“TERMINER LA COURSE”**, it says that once the podracer has crossed the finish line, the player has access to the **Results screen**. Competitors' names and times are displayed by finishing position; the analog stick scrolls the full list; **A selects a new track**.
+
+This is the retail manual's observable acceptance oracle, not a statement about every emulator. It refines the runtime test: make a continuous capture through the finish line; do **not** press A or Start to try to summon Results before the first post-finish frame is recorded. Once Results is visible and recorded, release the throttle and use one fresh A press to test the manual's “select a new track” action. Start should not be used as a Results-confirmation shortcut because the manual assigns it to pause.
+
+### Reconciling the manual with the static A/Start gate — still a runtime question
+
+The static manager path documented in AW/AX/BS has a separate current/held `0x201` predicate, mapped to **A or Start held**, before the manager queues `Fini`. Section AW explicitly rejects the earlier press-edge interpretation. The booklet, meanwhile, says A is accelerator during the race and that Results is available once the finish line is crossed, with a later A action selecting a new track.
+
+A plausible reconciliation is that the manager's A-or-Start held gate is satisfied by the player naturally keeping **A (accelerate) held as the finish line is crossed**, so it need not represent an extra post-race confirmation. That interpretation is consistent with both sources but remains an inference: the runtime state order and whether releasing A immediately before the line delays the Results path have not been observed. The manual's assignment of Start to pause also means Start should not be the first deliberate post-finish test input.
+
+**Required observation:** record one ordinary finish while A is held through the line, capture whether Results appears without a new post-finish input, then release A and press A once to see whether the track-selection screen advances. Only if Results fails to appear should a separate diagnostic run release A before the finish and then hold A after the finish; label that as a gate-isolation experiment, not the normal acceptance run. No savestate jump, memory injection or button mash is permitted.
+
+**Evidence status:** booklet behavior is **DOCUMENTED**; Not64 mapping/exit defaults are **CONFIRMED IN RELEASE SOURCE**; the “A held through finish satisfies manager gate” reconciliation is **INFERRED**; actual Not64/Ares result behavior remains **NOT TESTED**.
+
+**Priority:** Not64 20260410 is now the most practical first local test on the owner's Wii/Homebrew setup, with Ares v148 retained as the desktop alternative. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
 
 RE-002 remains parked; no gameplay code changed.
