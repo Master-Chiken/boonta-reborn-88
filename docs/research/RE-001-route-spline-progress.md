@@ -2732,14 +2732,14 @@ This earlier static finding is not a runtime observation. Exact local instructio
 
 ### Cross-check against the newer participant counter
 
-The 2026-11-01 pass independently identifies the participant-record event counter at `+0x78), with the public P1/P2 lap-code targets aligned to its lower halfword at `+0x7A). The bounded instruction scan searched the **main N64 code section** for direct loads/stores at those participant-record offsets and did not identify a direct HUD-formatting consumer there.
+The 2026-11-01 pass independently identifies the participant-record event counter at `+0x78`, with the public P1/P2 lap-code targets aligned to its lower halfword at `+0x7A`. The bounded instruction scan searched the **main N64 code section** for direct loads/stores at those participant-record offsets and did not identify a direct HUD-formatting consumer there.
 
-That bounded negative result does **not** establish that no HUD formatter was found, and it does not invalidate the earlier formatter trace. The two findings can coexist if the formatter reads a copied/converted presentation value, follows a different object pointer, or resides outside the scanned main-code section. The present public evidence does not yet show whether the earlier HUD formatter's lap source is exactly this newly identified `+0x78) manager counter or a related value derived elsewhere.
+That bounded negative result does **not** establish that no HUD formatter was found, and it does not invalidate the earlier formatter trace. The two findings can coexist if the formatter reads a copied/converted presentation value, follows a different object pointer, or resides outside the scanned main-code section. The present public evidence does not yet show whether the earlier HUD formatter's lap source is exactly this newly identified `+0x78` manager counter or a related value derived elsewhere.
 
 ### Revised evidence grade
 
 - **Earlier static HUD finding retained:** the local formatter trace reported the lap/target fraction, POS fraction and conditional FINAL LAP behavior described above.
-- **Strong static counter identification:** the manager updates and thresholds the per-participant event counter at `+0x78); public GameShark targets align to its lower halfword at `+0x7A).
+- **Strong static counter identification:** the manager updates and thresholds the per-participant event counter at `+0x78`; public GameShark targets align to its lower halfword at `+0x7A`.
 - **Still unresolved:** the exact pointer/field/dataflow join between that specific manager counter and the earlier HUD formatter. Do not summarize this as “the HUD reader does not exist”; only a direct read of this exact field was not found in the bounded main-code pass.
 - **Still untested:** live HUD values, lap-boundary timing, visible Results behavior and cross-platform parity.
 
@@ -2751,4 +2751,4 @@ No raw resource bytes, ROM data, instruction dumps, private instruction offsets,
 
 The earlier 2026-10-21 HUD formatter summary and the newer 2026-11-01 participant-counter scan answer different questions. The first records what the local HUD formatter displayed; the second identifies a manager-owned per-driver event counter and reports no direct use of that exact field in the bounded main-code scan. Neither result alone supplies the missing exact field-to-formatter link.
 
-**Canonical wording from this point forward:** the N64 HUD formatter's behavior has a prior local static trace; the manager's `+0x78) value is strongly identified as the per-driver lap/event counter; the direct dataflow between those two findings remains to be reconciled. Runtime remains unverified. This supersedes any broader reading of Section BI/BJ that implied the HUD formatter itself had not been located.
+**Canonical wording from this point forward:** the N64 HUD formatter's behavior has a prior local static trace; the manager's `+0x78` value is strongly identified as the per-driver lap/event counter; the direct dataflow between those two findings remains to be reconciled. Runtime remains unverified. This supersedes any broader reading of Section BI/BJ that implied the HUD formatter itself had not been located.
