@@ -3040,4 +3040,20 @@ Two older Ares issues explicitly mentioned *Star Wars Episode I: Racer* and macO
 These fixes reduce concern about those specific historical regressions; they are not a per-game v148 verification and do not establish that a normal race reaches Results. The target user's Intel/Catalina environment is also distinct from the arm64/M1 conditions in those reports. Retain the same bounded GUI test and record any actual hang, graphics/audio issue or performance anomaly rather than assuming it is fixed.
 
 
+### Current Ares N64 catalog and per-title lookup limitation — 2026-11-02
+
+The current [official Ares Nintendo 64 compatibility index](https://ares-emu.net/compatibility/nintendo-nintendo-64) reports 903 entries: 822 in the “Completable” category, 76 “In-Game”, 5 “Starts”, 0 “Nothing”, and 0 “Untested”. The page explicitly says that “Unverified” entries are expected to be completable but have not yet been verified by completing them, and that some issues may have been missed. The extracted page view exposed only the first alphabetical page, not the exact *Star Wars Episode I: Racer* row; therefore **no current per-title Ares v148 rating is assigned here**. Aggregate counts are not title-specific proof.
+
+### Secondary visible-run route — Not64 on Wii (original N64 ROM, not a native Wii port)
+
+A second local observation route is available if the owner prefers to use the Wii already being prepared for homebrew:
+
+- The official [Not64 release page](https://github.com/extremscorner/not64/releases) lists **20260410** as its latest release. The [Open Shop Channel package record](https://oscwii.org/library/app/not64) identifies the same version/date, lists Wii, Wii U vWii and Wii Mini support, and confirms Classic Controller support.
+- The community [Not64 compatibility list](https://wiki.gbatemp.net/wiki/Not64_Compatibility_List) lists the USA *Star Wars: Episode 1 Racer* image with Not64 20200514 as playable, noting small graphical glitches and missing close-up textures. It recommends first-person view or the farthest zoom to reduce the visible texture problem. This entry is old and community-maintained; it does **not** certify the 20260410 release or guarantee a complete race.
+- Not64 emulates the N64 game on Wii. A successful run is therefore evidence about the N64 game under Not64 on the tested Wii, **not** an N64-hardware result and not a native GameCube/Wii port result.
+
+**Bounded Not64 test:** install the current Not64 homebrew package from the Open Shop Channel or its official release page; use the owner's own US `.z64` image; record Not64 version, Wii/vWii model, video mode, controller, graphics/framebuffer settings and CPU core. First attempt one ordinary race using default settings; if the known close-up texture issue obscures the view, note the camera change and repeat the visual check without using savestates to skip the finish. Capture the first post-finish screen before pressing A/Start, then the screen after one deliberate confirmation press if required. Keep the ROM and captures local; publish only metadata and observed outcome.
+
+**Priority:** Ares v148 remains the primary desktop test candidate because its platform requirements and prior fixes are documented. Not64 20260410 is a useful alternative or independent second observation on the owner's Wii. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
+
 RE-002 remains parked; no gameplay code changed.
