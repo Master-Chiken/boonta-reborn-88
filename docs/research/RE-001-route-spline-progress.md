@@ -2769,3 +2769,30 @@ The HUD string bank is confirmed independently. The code path that reads or copi
 
 The next useful static action is a targeted search for a writer or copy of the displayed lap value and a call site that passes that value to the LAP format resource. Do not infer this from the string bank, rank-event helper or GameShark target alone. If the dataflow remains unclosed, keep the HUD consumer explicitly unresolved and use a controlled runtime memory watch as the acceptance test.
 
+
+
+## BM. Bounded audit of nearby menu/render candidates: audio and geometry paths are not the lap text consumer (2026-11-01)
+
+### Menu candidate
+
+A local call-path review of the option-menu handler shows that the numeric selectors previously mistaken for possible UI events are passed to the helper that the pinned public N64 symbol manifest labels `audio_play_sfx`. The surrounding code updates option/menu state and submits sound-event parameters; the inspected call does not pass a text-resource identifier, format string, or participant lap value to a text routine.
+
+**Classification:** menu-navigation sound feedback. This rules out that particular call path as evidence for drawing `LAP` or `FINAL LAP`; it does not rule out a separate menu or HUD text renderer elsewhere.
+
+### Geometry/render candidate
+
+A second candidate reached from the local display/effect path builds parameters from coordinates, dimensions, floating-point values and colour/alpha bytes, then forwards those values into a graphics helper. The bounded caller/callee slice did not show a string pointer, text-resource index, format arguments, or participant route-event counter being passed through this path.
+
+**Classification:** a graphics/effect primitive path, not a demonstrated text-formatting consumer. Its broader use may include visual overlays, but this pass does not assign it a game-level HUD purpose.
+
+### Rank-event path remains separate
+
+The participant rank updater still dispatches numeric events when rank snapshots change. The current evidence maps those calls to rank/position changes only; the numeric selectors have not been joined to the LAP / FINAL LAP resource entries. They must not be treated as lap announcements or text IDs.
+
+### Result of this bounded pass
+
+- **Ruled out as direct HUD proof:** option-menu sound-feedback calls; the inspected coordinate/colour graphics primitive path; and the rank-change numeric-event dispatch.
+- **Still not located:** the N64 text renderer/resource lookup that consumes the LAP and FINAL LAP entries; the source of the displayed current/configured lap numbers; and any direct/copy dataflow from the participant route-event counter into those draw arguments.
+- **Next search boundary:** identify the general text/resource lookup and formatting API from independently proven call sites, then trace its callers to the in-race HUD context. Do not broaden the scan to unrelated numeric event IDs or string bytes alone.
+
+No ROM bytes, raw disassembly, exact local instruction offsets, extracted text/resource payloads or assets are published. No runtime emulator test or gameplay change was made; RE-002 remains parked.
