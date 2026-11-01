@@ -30,3 +30,21 @@ The repository's LICENSE identifies its tools/runtime/build files/documentation 
 ## Result
 
 **Useful as process context; not evidence of GameCube/Wii parity and not a substitute for the remaining RE-001 trace.** No implementation change is justified by this reference audit alone.
+
+
+## Recheck — installer and local runtime feasibility (2026-11-01)
+
+The current upstream `main` tip reviewed for this recheck is [`694c5663b3a7c30e2862fc240344f34683f99a9c`](https://github.com/sp00nznet/racer/commit/694c5663b3a7c30e2862fc240344f34683f99a9c). Its only changed file is `.github/workflows/installer.yml`: both installer jobs now pin `sp00nznet/recomp-launcher` to v0.6.0. This is an installer/toolchain update, not a new gameplay or results-screen implementation.
+
+The current README still labels **Playable Build — IN PROGRESS**. Its recommended release installer locates the user's own USA `.z64` and builds the native game locally; it is not a ready-made game executable that bypasses the local build. The documented macOS route requires Xcode (including the Metal shader compiler), CMake, Ninja and SDL2 installed through Homebrew.
+
+The separate optional Docker builds are heavier still: the published launcher manifest lists a roughly **1 GB** toolchain for Linux arm64 and **6 GB** for Android. On Apple silicon, the Linux arm64 build runs natively, but the Android x86 toolchain is emulated and can take hours. These are build-toolchain estimates from the project's manifest, not measured storage or runtime measurements from this audit.
+
+### Updated decision
+
+- Keep `sp00nznet/racer` as a source/process reference, not a local, zero-setup route to the Results-screen test.
+- Do not recommend its optional Android/Linux Docker toolchains for the current low-storage machine.
+- A native macOS run may still be possible on a suitable machine with the user's own legal ROM and the documented dependencies, but it requires a local build and has not been tested here.
+- This repository remains an N64 static-recompilation project. Its status, installer, and screenshots do not prove the GameCube/Wii prototype's behavior or close RE-001's conditional finish-to-Results runtime question.
+
+**Evidence boundary:** read-only review of the public README, launcher manifest and latest installer commit. No ROM, build, installer, emulator, executable, or gameplay test was run; no game-derived data was downloaded or uploaded.
