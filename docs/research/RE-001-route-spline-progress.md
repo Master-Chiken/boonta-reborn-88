@@ -2611,7 +2611,7 @@ Follow the participant record's `+0x7A` candidate through any copied/aliased str
 
 A fresh decode of the race-setup builder `0x8004F790` closes an important part of the base-address question:
 
-- The builder returns the fixed participant-table base at `0x80118F90`.
+- The builder returns a fixed participant-table base in N64 RAM; the absolute base is retained only in the owner's local notes and is intentionally omitted from this public dossier.
 - On the table-building path it initializes records from that same base and advances the record pointer by exactly `0x88` bytes per entry.
 - It writes the literal `Locl` tag into local participant entries and a different `AIII` tag into the non-local/AI entries.
 - The setup message carries the returned participant-table pointer. The receiver passes that pointer to the routine that registers the local-reference slots.
@@ -2627,7 +2627,7 @@ The public [TheForce.Net N64 code list](https://www.theforce.net/videogames/code
 - Values `00`–`04` as Lap 1–Lap 5.
 
 The local static layout gives:
-- P1 record base `0x80118F90`; cheat target = base + `0x7A`.
+- P1 record base is the fixed table base (absolute value retained locally); cheat target = base + `0x7A`.
 - P2 record base = P1 base + `0x88`; cheat target = that record + `0x7A`.
 
 Thus both community targets land at the **same within-record offset** in the first two local participant records.
