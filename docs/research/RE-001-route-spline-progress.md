@@ -4,6 +4,12 @@
 **Status:** PC-source evidence recorded; current prototype mapped. The historical Step 102 bundle is optional background material, not a required source baseline.  
 **Scope limit:** This dossier investigates route representation and progress only. It does not determine the correct console implementation, prove the complete original-PC progress path is functional in this reconstruction, or approve any code/data import.
 
+## Active runtime input target — Wii Classic Controller (locked)
+
+The owner confirms that the **Wii Classic Controller is the controller currently available/in use**. Treat it as the single reference input device for the next normal-race runtime check on Wii/Homebrew with Not64. Use Not64's **Classic Controller** profile and its release-default mapping documented below. Do not switch the acceptance run to a GameCube controller, a generic Wii Remote mapping, or an assumed N64-to-Wii layout. A test performed with a different controller may be useful as a separate diagnostic, but it does not satisfy the current Classic Controller test target.
+
+Practical in-race controls for this profile: left stick steers; **A** accelerates; **B** air-brakes; **L shoulder** performs the game's N64 Z/slide action; **ZR** performs N64 L/map-view cycling; **R shoulder** performs N64 R/repair; **+** pauses; right stick handles C-button camera actions; D-Pad navigates menus. With the default Not64 20260410 Classic profile, **Home** is the emulator exit/menu combo; verify this only if the profile was changed. The detailed source mapping and finish-screen procedure below remain authoritative.
+
 ## The question
 
 How does the reviewed SW_RACER_RE PC source represent a route position and advance along a spline, and how does that compare with the track-sampling and lap-progress model currently used by Boonta's clean-room GameCube prototype?
