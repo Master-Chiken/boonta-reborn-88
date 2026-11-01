@@ -289,6 +289,14 @@ jobs:
           export RESET_USER="$GITHUB_WORKSPACE/dolphin-reset-user"
           export PAUSE_USER="$GITHUB_WORKSPACE/dolphin-pause-user"
           export RESUME_USER="$GITHUB_WORKSPACE/dolphin-resume-user"
+          export PITCH_UP_USER="$GITHUB_WORKSPACE/dolphin-pitch-up-user"
+          export PITCH_DOWN_USER="$GITHUB_WORKSPACE/dolphin-pitch-down-user"
+          export PITCH_UP_DTM="$GITHUB_WORKSPACE/dolphin-pitch-up.dtm"
+          export PITCH_DOWN_DTM="$GITHUB_WORKSPACE/dolphin-pitch-down.dtm"
+          export PITCH_UP_LOG="$GITHUB_WORKSPACE/dolphin-pitch-up.log"
+          export PITCH_DOWN_LOG="$GITHUB_WORKSPACE/dolphin-pitch-down.log"
+          export PITCH_UP_CAPTURE="$GITHUB_WORKSPACE/dolphin-pitch-up.png"
+          export PITCH_DOWN_CAPTURE="$GITHUB_WORKSPACE/dolphin-pitch-down.png"
           export DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-input.dtm"
           export LEFT_DTM="$GITHUB_WORKSPACE/dolphin-scripted-controller-left.dtm"
           export STICK_DTM="$GITHUB_WORKSPACE/dolphin-scripted-stick-right.dtm"
@@ -326,6 +334,8 @@ jobs:
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESET_DTM" --frames 3600 --game-id ID-boo --steering right --steering-source stick --scenario reset-check
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$PAUSE_DTM" --frames 3600 --game-id ID-boo --steering right --scenario pause-check
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RESUME_DTM" --frames 3600 --game-id ID-boo --steering none --scenario resume-check
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$PITCH_UP_DTM" --frames 3600 --game-id ID-boo --steering none --scenario pitch-check --pitch up
+          python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$PITCH_DOWN_DTM" --frames 3600 --game-id ID-boo --steering none --scenario pitch-check --pitch down
           test -s "$BASELINE_DTM"
           test -s "$DTM"
           test -s "$LEFT_DTM"
@@ -334,18 +344,20 @@ jobs:
           test -s "$RESET_DTM"
           test -s "$PAUSE_DTM"
           test -s "$RESUME_DTM"
+          test -s "$PITCH_UP_DTM"
+          test -s "$PITCH_DOWN_DTM"
           export HOME=/tmp/dolphin-render-home
-          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config" "$STICK_USER/Config" "$LEFT_STICK_USER/Config" "$RESET_USER/Config" "$PAUSE_USER/Config" "$RESUME_USER/Config" "$FINISH_RESTART_USER/Config"
-          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$FINISH_RESTART_USER"
+          mkdir -p "$HOME" "$BASELINE_USER/Config" "$STEERED_USER/Config" "$LEFT_USER/Config" "$STICK_USER/Config" "$LEFT_STICK_USER/Config" "$RESET_USER/Config" "$PAUSE_USER/Config" "$RESUME_USER/Config" "$PITCH_UP_USER/Config" "$PITCH_DOWN_USER/Config" "$FINISH_RESTART_USER/Config"
+          chmod 700 "$HOME" "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$PITCH_UP_USER" "$PITCH_DOWN_USER" "$FINISH_RESTART_USER"
           # Use isolated Dolphin profiles so the second capture cannot reuse
           # the first session's movie state, window or display configuration.
-          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$FINISH_RESTART_USER"; do
+          for user_dir in "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$PITCH_UP_USER" "$PITCH_DOWN_USER" "$FINISH_RESTART_USER"; do
             cat > "$user_dir/Config/Dolphin.ini" <<EOF
           [Display]
           RenderToMain = True
           EOF
           done
-          capture_timeout=160
+          capture_timeout=190
           if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
           if [[ "${RUN_FINISH_RESTART_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
           set +e
@@ -518,7 +530,9 @@ jobs:
               capture_frame "$RESET_DTM" "$RESET_LOG" "$RESET_CAPTURE" "$RESET_USER" 24
               capture_frame "$PAUSE_DTM" "$PAUSE_LOG" "$PAUSE_CAPTURE" "$PAUSE_USER" 10
               capture_frame "$RESUME_DTM" "$RESUME_LOG" "$RESUME_CAPTURE" "$RESUME_USER" 12
-              echo "Running D-pad and analog-stick camera-follow diagnostics: road silhouette should shift opposite to each steering direction."
+              capture_frame "$PITCH_UP_DTM" "$PITCH_UP_LOG" "$PITCH_UP_CAPTURE" "$PITCH_UP_USER"
+              capture_frame "$PITCH_DOWN_DTM" "$PITCH_DOWN_LOG" "$PITCH_DOWN_CAPTURE" "$PITCH_DOWN_USER"
+              echo "Running D-pad steering and pitch diagnostics: steering should move the camera-follow road silhouette, while D-pad Up/Down should move the PITCH gauge right/left."
               python3 gamecube-demo/tools/check_dolphin_frame.py "$CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$LEFT_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction left --min-shift 2.0
               python3 gamecube-demo/tools/check_dolphin_frame.py "$STICK_CAPTURE" --baseline "$BASELINE_CAPTURE" --direction right --min-shift 2.0
@@ -526,6 +540,8 @@ jobs:
               python3 gamecube-demo/tools/check_dolphin_frame.py "$RESET_CAPTURE" --expect-reset
               python3 gamecube-demo/tools/check_dolphin_frame.py "$PAUSE_CAPTURE" --expect-pause
               python3 gamecube-demo/tools/check_dolphin_frame.py "$RESUME_CAPTURE" --expect-resume
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$PITCH_UP_CAPTURE" --baseline "$BASELINE_CAPTURE" --expect-pitch-up
+              python3 gamecube-demo/tools/check_dolphin_frame.py "$PITCH_DOWN_CAPTURE" --baseline "$BASELINE_CAPTURE" --expect-pitch-down
               near_white_fraction=$(convert "$CAPTURE" -crop 800x180+0+280 +repage \
                 -colorspace gray -threshold 90% -format "%[fx:mean]" info:)
               echo "Near-white pixel fraction in the lower Dolphin game viewport: $near_white_fraction"
@@ -584,9 +600,11 @@ jobs:
           [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
           [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
           [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
+          [[ ! -f "$PITCH_UP_LOG" ]] || cat "$PITCH_UP_LOG"
+          [[ ! -f "$PITCH_DOWN_LOG" ]] || cat "$PITCH_DOWN_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$PITCH_UP_USER" "$PITCH_DOWN_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$PITCH_UP_USER/Logs" "$PITCH_DOWN_USER/Logs" "$RACE_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -612,6 +630,14 @@ jobs:
             dolphin-reset-state.png
             dolphin-pause-state.png
             dolphin-resume-state.png
+            dolphin-pitch-up.png
+            dolphin-pitch-down.png
+            dolphin-pitch-up.dtm
+            dolphin-pitch-down.dtm
+            dolphin-pitch-up.log
+            dolphin-pitch-down.log
+            dolphin-pitch-up-user/Logs/**
+            dolphin-pitch-down-user/Logs/**
             dolphin-reset-state.log
             dolphin-pause-state.log
             dolphin-resume-state.log
