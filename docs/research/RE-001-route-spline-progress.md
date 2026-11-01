@@ -2713,7 +2713,7 @@ A final bounded instruction scan searched the main N64 code section for word loa
 
 **NOT FOUND IN THIS BOUNDED PASS:** a direct renderer/HUD consumer of that counter or its lower halfword. The absence of a direct `+0x7A` halfword access does not prove the HUD does not display the value; the presentation path may use a copied, transformed or separately maintained value.
 
-The highest-value static search is now a trace from the participant's finish/progression state into the relevant HUD object/resource update, not another broad search for the number `0x78`. If that producer-to-display link cannot be established, leave the HUD consumer explicitly unproven and use a controlled local memory watch at lap boundaries as the runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
+At the time of this bounded pass, no direct HUD consumer had been identified. That was a limited-scan result, not a proof that no such reader existed. The later caller-to-renderer trace in Section BO supersedes this interim negative conclusion and identifies the local HUD consumer of the same participant counter. A controlled local memory watch at lap boundaries remains an outstanding runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
 
 ## BJ. HUD resource strings confirmed; drawing/data path remains unlocated (2026-11-01)
 
@@ -2826,3 +2826,49 @@ The current pass did **not** find a direct call or message/dataflow from the `Jd
 - **Still unlocated:** the in-race LAP / FINAL LAP text renderer and the source field passed to its formatter.
 
 Do not merge the two transition paths in the dossier until a positive caller/message/field join is demonstrated. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted resource payloads or assets are published; no gameplay code changed. Keep RE-002 parked.
+
+
+## BO. Local HUD consumes the same participant lap counter — static caller-to-renderer trace (2026-11-01)
+
+### Caller and participant identity
+
+A new local call-chain pass closes the HUD consumer gap left by Sections BI and BJ:
+
+1. The race-manager HUD update path reads the two registered local-participant reference slots. When a slot is non-null and the applicable manager-state/mode gates permit the update, it calls the per-participant HUD update routine with the manager object and that participant pointer.
+2. The per-participant routine preserves both arguments and invokes the HUD composition callback with the **same participant pointer** and the corresponding race-manager pointer. The argument order is explicit in the call setup; the renderer is not being inferred from a matching record stride or an unrelated global.
+3. The two local-participant slots are the references established by the `Locl` registration path described in Section BH. Section BH already connects those references to the same setup-message participant table used by the manager's live roster scan.
+
+This establishes that the HUD callback is operating on a registered local participant record from the race's active participant table.
+
+### Direct lap-number rendering
+
+The HUD composition callback contains direct calls to the game's 2D text/UI drawing helper and to its text-formatting helper. In that callback:
+
+- It reads the participant record's 32-bit event counter at `+0x78`.
+- It derives the displayed lap numerator as that counter plus one.
+- It reads the configured race target from the manager at `+0x1C8`.
+- It clamps the displayed numerator to the configured total when the counter-derived value exceeds that total.
+- It formats the numerator and total with the `%d/%d` lap resource and submits the resulting text, alongside the `LAP` label, to the 2D text renderer.
+
+This is the missing direct dataflow: the counter already shown in Sections BG, BH and BI as the race manager's route-event counter is also read by the local HUD path and used to compose the visible lap fraction. It is not merely a nearby participant field or a string-bank match.
+
+### FINAL LAP selection
+
+The same HUD composition callback has a separate draw branch for the `FINAL LAP` resource. Its lap-condition compares the same participant counter plus one against the manager's configured target. The draw also remains subject to additional mode, timing and presentation guards; therefore the static condition identifies the lap-selection rule, not a guarantee that the banner is visible in every frame or every mode.
+
+The callback also submits other time/position-related resources from the HUD text group to the text helper. This places the lap fraction and final-lap banner in the actual HUD composition path rather than merely in an unused resource bank.
+
+### Correction to the earlier evidence boundary
+
+Section BI's statement that no direct HUD reader had been found was true only of that earlier bounded counter-offset scan. It is now superseded by this caller-to-renderer trace. Section BJ's resource-only classification is likewise superseded for the `LAP`, formatted lap fraction and `FINAL LAP` entries: their use is now connected to the local HUD composition callback.
+
+**Revised evidence grade:** **SAME REGISTERED LOCAL PARTICIPANT RECORD → COUNTER +0x78 → CURRENT/TOTAL LAP TEXT; SAME COUNTER + MANAGER TARGET +0x1C8 → CONDITIONAL FINAL LAP DRAW BRANCH — DIRECT STATIC DATAFLOW ESTABLISHED.**
+
+### Remaining limits
+
+- This is static N64 code evidence. No emulator, live race, frame capture, memory watch or runtime display test was performed.
+- The extra mode/timing/presentation guards have not been exhaustively exercised; the static branch does not establish which exact race modes display the banner during a real session.
+- This does not identify the separate 14-entry front-end state labelled `POST_RACE_INFO` as the same screen as the `Hang` Results/placement builder. The HUD path and post-race Results transition remain distinct findings.
+- No GameCube/Wii parity is implied. No gameplay code was changed.
+
+No ROM bytes, raw disassembly, exact private instruction addresses, extracted resource payloads or assets are published. Keep RE-002 parked.
