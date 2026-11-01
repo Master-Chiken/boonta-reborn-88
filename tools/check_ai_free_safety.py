@@ -250,7 +250,9 @@ if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup
     errors.append("Setup documentation must explain the explicit free-tier owner attestation")
 
 if (
-    "RE-001 issue #226 is ACTIVE because the owner explicitly resumed it on 2026-11-01" not in daily
+    '"body": issue.get("body")' not in daily
+    or "Current-state resolution: read the body of tracked issue #226 in the LIVE SNAPSHOT" not in daily
+    or "RE-001 issue #226 is ACTIVE because the owner explicitly resumed it on 2026-11-01" not in daily
     or "continue only the single bounded question recorded in the latest live issue #226 and canonical dossier PR #242" not in daily
     or "RE-001 (issue #226) is ACTIVE" not in daily_prompt
     or "Keep RE-002 parked" not in daily_prompt
