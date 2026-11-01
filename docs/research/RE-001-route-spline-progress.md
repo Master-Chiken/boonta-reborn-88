@@ -3064,6 +3064,24 @@ A second local observation route is available if the owner prefers to use the Wi
 
 Start with default emulator settings; do not alter framebuffer or CPU core to chase a better result before recording the baseline. If the default core fails to boot or locks up, a separate interpreter-mode diagnostic can distinguish a dynarec-specific failure, but record it as a second configuration, not a successful default run. The old camera recommendation is only a graphics workaround; it is not a substitute for recording the default baseline.
 
+**Not64 exit/save behavior:** when using a GameCube controller or Classic Controller, exit with **X + Y together**; on a Wii Remote with Nunchuk, use **1 + 2 together**. The guide warns that the emulator should be exited this way for the game to save; do not simply power off during the test.
+
+**Minimal result record (fill each line PASS / FAIL / NOT TESTED):**
+
+| Check | Result / observation |
+|---|---|
+| Not64 20260410 appears and launches from Homebrew Channel | |
+| US `.z64` is visible under `/wii64/roms/` and loads | |
+| Title screen and menus render legibly | |
+| Race starts and responds to the selected controller | |
+| Frame pacing and audio remain usable during a full race | |
+| Three-lap race reaches the finish without a savestate jump | |
+| First post-finish state captured before A/Start | |
+| Results/placement panel appears after natural transition or one deliberate confirmation | |
+| Any graphics, HUD, audio, freeze or crash issue recorded | |
+
+Record the exact ROM revision/size privately, Not64 version, Wii model (RVL-001/RVL-101 or Wii U vWii), video mode, controller, CPU core and framebuffer setting. Retain any video/screenshots locally. A boot-only PASS must not be promoted to a full-race or Results PASS; a race PASS without Results is not evidence for the finish-to-Results question.
+
 **Priority:** Ares v148 remains the primary desktop test candidate because its platform requirements and prior fixes are documented. Not64 20260410 is a useful alternative or independent second observation on the owner's Wii. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
 
 RE-002 remains parked; no gameplay code changed.
