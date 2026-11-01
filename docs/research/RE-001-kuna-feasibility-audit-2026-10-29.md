@@ -55,3 +55,53 @@ RE-001 remains the only active reverse-engineering question: establish the unpro
 - [Boonta RE-001 research priority](https://github.com/Master-Chiken/boonta-reborn-88/pull/242)
 
 **Status:** feasibility review only. No Kuna installation, decompilation, game binary analysis, emulator run, or build test was performed during this review.
+
+
+## Recheck — N64 MIPS ELF language selection and compact output (2026-11-01)
+
+A read-only source audit of Kuna commit [`f8746b9730b525a065c89c26e358ffd7c2328bc7`](https://github.com/Noelo-Lab/kuna/commit/f8746b9730b525a065c89c26e358ffd7c2328bc7) improves the feasibility assessment, but does **not** yet pass the game-specific proof of concept.
+
+### What is now source-verified
+
+- Kuna vendors MIPS big-endian SLEIGH language definitions for both MIPS32 and MIPS64. The MIPS64 definitions include a 32-bit-address variant, `MIPS:BE:64:64-32addr`, with compiler-spec variants including `o32`, `n32`, and `o64`.
+- The current generic ELF language composer maps `object::Architecture::Mips` to `MIPS:{endian}:32:default:default`. Therefore a big-endian MIPS ELF will not automatically select the MIPS64/32-bit-address decoder candidate simply because the file is related to Nintendo 64. The exact architecture and ABI must be established from the actual ELF header, `e_flags`, and toolchain metadata.
+- Kuna's documented `--target <SLEIGH-language-id>` option can explicitly select a decoder while retaining section mappings and image base from a recognized object container. The docs state that decoder width/architecture may differ from the container header; an endian disagreement is reported, but the requested decoder is still used.
+- Kuna's MIPS marker pass is gated to ELF/MIPS and handles MIPS and MIPS64 object architecture variants. That confirms a MIPS-specific analysis path exists; it is not proof that a particular N64 executable is decoded correctly.
+- The latest commit adds `--omit line_mappings,variables,types` to `decompile --json` and `decompile-all --json`. Omitted collections are absent (not represented as empty), are listed in a top-level `omitted` array, and variable/stack-object and provenance work is skipped where applicable. This is useful for keeping a one-function report compact.
+
+### Bounded proof of concept — revised
+
+The first input must be the locally held `n64_main.elf` from the earlier analysis workflow, **not** the raw `.z64` ROM. Before decompiling, record:
+
+1. `readelf -h -A` output: ELF class, endianness, machine, ABI flags and architecture flags;
+2. the existing function map / code address convention used by the local disassembly;
+3. the exact Kuna release or pinned commit and host platform.
+
+Then select the SLEIGH language explicitly from the ELF evidence. `MIPS:BE:64:64-32addr` is a candidate to test only if the file metadata supports a 64-bit MIPS ISA with 32-bit addresses; choose its compiler model (`o32`, `n32`, or another declared model) from the actual ABI evidence, not from the game title alone.
+
+Illustrative one-function invocation after those values are established:
+
+```bash
+kuna decompile ./n64_main.elf <known-function-address> --addr \
+  --target <verified-MIPS-SLEIGH-language-id> --json \
+  --omit line_mappings,variables,types
+```
+
+Compare the resulting control flow and register/data accesses against the already existing local MIPS disassembly and known writer/reader relationships. A plausible-looking C body is not accepted unless those instruction-level checks agree.
+
+### Current result and blocker
+
+**Source compatibility has improved from “MIPS unknown” to “MIPS ELF + MIPS big-endian SLEIGH languages are present, with an explicit decoder override available.” The exact N64 ELF/ABI selection remains unverified.**
+
+The prior local notes mention `/tmp/n64_main.elf`, but that file and the source ROM are not mounted in the current working session. Therefore no installation, decompilation, binary upload, emulator run, or game-specific Kuna test was performed here. Do not claim Kuna has successfully decompiled this N64 binary, and do not upload the ROM, ELF, decompiler output, or extracted game data to GitHub/cloud services.
+
+This remains a **single bounded RE-001 tool check**, not a new workstream. It does not resolve the conditional normal-finish → visible Results runtime question. RE-002 stays parked.
+
+### Pinned upstream references
+
+- [Kuna MIPS language definitions at the reviewed commit](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/specs/Ghidra/Processors/MIPS/data/languages/mips.ldefs)
+- [Kuna ELF language selection](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/decompiler/crates/kuna-analysis/src/loadimage_object.rs)
+- [Kuna MIPS ELF markers](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/decompiler/crates/kuna-analysis/src/loader/mips_markers.rs)
+- [Kuna MIPS ELF language/ABI definitions](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/specs/Ghidra/Processors/MIPS/data/languages/MIPS.opinion)
+- [Kuna compact JSON options](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/docs/cli.md)
+- [Kuna documented `--target` behavior](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525c89c26e358ffd7c2328bc7/docs/cli.md)
