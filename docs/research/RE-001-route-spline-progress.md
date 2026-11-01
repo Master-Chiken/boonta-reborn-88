@@ -2485,3 +2485,34 @@ Therefore this closes the **participant-state/roster-filter** question, but it d
 Local static MIPS cross-reference only, against the previously identified owner-supplied US N64 reference. No ROM bytes, raw disassembly, instruction addresses, extracted resources, assets or binary data are published here. No emulator, visible race, write-watchpoint capture or full static-recomp runtime was executed. No GameCube/Wii gameplay code was changed.
 
 **Next bounded RE-001 action:** preserve this writer/reader result, then test the remaining normal-finish → manager finalization gate as a separate question. Keep RE-002 parked.
+
+
+## BC. Local-player reference slots are populated from Locl-tagged roster entries — static only (2026-11-01)
+
+### Initialization cross-reference
+
+A separate pass over the race-participant setup routine clarifies what the manager's local-reference slots represent:
+
+- Setup first clears the four reference slots.
+- It walks the participant roster using the same fixed record stride used by the manager update.
+- It checks the participant type tag; records tagged `Locl` are assigned, in order, to the available local-reference slots.
+- The manager's update later compares each current roster-record pointer against those slots when deciding whether an unfinished participant must restore the running phase.
+
+This connects the local-reference table to a concrete roster class rather than treating the four pointers as arbitrary participant references.
+
+### Combined interpretation with Sections BA and BB
+
+The three pieces now line up statically:
+
+1. Setup identifies `Locl`-tagged participant records and registers their record pointers as local references.
+2. The manager's roster update treats a record as ordinarily active only when its inclusion condition is set and its finish/skip condition is clear.
+3. A participant reaching the configured threshold receives that finish/skip condition on the same record.
+4. Only an unfinished record that matches a registered local reference restores the manager's running phase. Once all registered local records are marked, none restores that phase.
+
+**Revised classification:** the roster/finish-bit/local-reference portion of the local-player completion gate is now directly connected by static cross-references. The meaning of the `Locl` tag is supported by its registration role and literal tag, but no stronger claim about controller ownership or the maximum number of simultaneous human players is made here.
+
+### Remaining boundary
+
+The later manager state still has a separate A-or-Start held-state gate before queuing the ordinary finalization token. That input condition is not the finish marker. Mode-specific bypass, abort substitution and receiver guards remain. No runtime observation proves that an un-injected race displays Results, and no N64-to-GameCube/Wii parity is implied.
+
+No ROM bytes, raw disassembly, private instruction addresses, extracted resources, assets or binary data are published. This remains local static analysis; no gameplay code changed. Keep RE-002 parked.
