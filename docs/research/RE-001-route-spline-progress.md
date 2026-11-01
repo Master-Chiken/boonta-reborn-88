@@ -2998,3 +2998,30 @@ This closes the **static per-instance callback identity** gap left by BQ/BR. It 
 ### Next action
 
 Stop broad static searching of this same callback-identity question. The next meaningful evidence is one controlled local runtime observation of a normal completed race on a compatible environment, capturing whether the manager queues `Fini`, whether the ordinary relay and default selector are taken, and whether Results appears. Keep ROM-derived bytes, raw disassembly and exact private instruction locations local. Do not repeat the failed Ares/GDB ctest experiment without a new isolation hypothesis. RE-002 remains parked; no gameplay code changed.
+
+
+## BT. Ares v148 supplies a separate visible-runtime route on Intel Catalina — feasibility checked, game not run (2026-11-01)
+
+### Platform check
+
+The official Ares download page lists v148 (released 2026-05-30) as a **Universal macOS binary requiring macOS 10.15 (Catalina)** and states that it runs natively on both Intel and Apple Silicon Macs: https://ares-emu.net/download. The official release notes list Nintendo 64 support and N64 CPU/RSP JIT improvements: https://github.com/ares-emulator/ares/releases/tag/v148.
+
+This gives RE-001 a lower-friction **visible emulator test candidate** on a Catalina/Intel Mac. It avoids the separate `sp00nznet/racer` v0.4.0 installer route, which is Apple-Silicon-only and builds the static recompilation locally. Ares is an emulator, not a static recompilation, so its result is evidence about the N64 ROM running under Ares only; it does not validate the PC recompilation or GameCube/Wii prototype.
+
+### Important separation from the failed GDB smoke test
+
+The previous public Ares/GDB ctest experiment remains **NOT PASSED**: v148 reached the fixture's `main` but trapped during the subsequent continue. That blocks claiming a working GDB/watchpoint route. It does **not** mean the Ares GUI cannot launch the game normally, because the proposed visible Results observation does not require attaching GDB or setting a watchpoint. Do not rerun the same ctest fixture blindly.
+
+### Bounded visible test
+
+On a compatible local Mac, using the owner's own lawful US `.z64` copy:
+
+1. Install/run official Ares v148 for macOS and load the local N64 image.
+2. Record Ares version, macOS version, ROM region/revision, race mode, course and controller mapping.
+3. Complete a normal race without injecting memory values or using a save-state jump across the finish.
+4. Capture the first post-finish screen **before pressing A/Start**, then capture what happens after one deliberate A or Start press if the game waits for confirmation.
+5. Preserve the video/screenshots locally. Publish only the observed outcome and metadata; do not upload the ROM or raw memory/disassembly data.
+
+This one run can answer the user-visible question “does a normal race reach the Results/placement panel, and does it require the later A/Start confirmation?” It cannot prove the internal writer/reader chain by itself; the static evidence in Section BS supplies that separate explanation.
+
+**Current status:** Ares v148 is a platform-compatible test candidate based on official published requirements, but it has not been installed or run against this ROM in this session. Game compatibility and Results display remain unverified. This is the next runtime acceptance step, not a passed test. RE-002 remains parked; no gameplay code changed.
