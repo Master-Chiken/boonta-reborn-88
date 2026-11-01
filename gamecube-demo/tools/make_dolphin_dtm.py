@@ -16,6 +16,7 @@ CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
 MAX_FRAMES = 16000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
+PITCH_HOLD_FRAMES = 600  # Hold pitch long enough for a visible, deterministic HUD-gauge capture.
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
@@ -34,6 +35,8 @@ A = 1 << 1
 B = 1 << 2
 X = 1 << 3
 Y = 1 << 4
+DPAD_UP = 1 << 6
+DPAD_DOWN = 1 << 7
 
 # Second byte: D-pad left/right, L/R, disc, reset, connected, origin.
 DPAD_LEFT = 1 << 0
@@ -44,9 +47,19 @@ NEUTRAL_AXIS = 128
 
 def _controller_state(frame: int, steering: str = "right",
                       scenario: str = "control-smoke",
-                      steering_source: str = "dpad") -> bytes:
-    """Return one packed controller poll with one explicit steering source."""
-    if scenario == "reset-check":
+                      steering_source: str = "dpad",
+                      pitch: str = "none") -> bytes:
+    """Return one packed controller poll with explicit steering and pitch sources."""
+    if scenario == "pitch-check":
+        # Reset at frame zero, accelerate, then hold exactly one D-pad pitch
+        # direction. The HUD pitch gauge is the visible diagnostic signal.
+        buttons = A | (Y if frame == 0 else 0)
+        if frame < PITCH_HOLD_FRAMES:
+            if pitch == "up":
+                buttons |= DPAD_UP
+            elif pitch == "down":
+                buttons |= DPAD_DOWN
+    elif scenario == "reset-check":
         # First create a state that differs visibly from reset: accelerate, boost,
         # and steer. Y is pressed alone at frame 120; every later poll is neutral.
         if frame < RESET_PRESS_FRAME:
@@ -126,7 +139,7 @@ def _controller_state(frame: int, steering: str = "right",
 
 def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
               steering: str = "right", scenario: str = "control-smoke",
-              steering_source: str = "dpad") -> bytes:
+              steering_source: str = "dpad", pitch: str = "none") -> bytes:
     """Build a boot-from-DOL movie whose ID matches the selected homebrew DOL."""
     if not isinstance(frame_count, int) or isinstance(frame_count, bool):
         raise ValueError("frame_count must be an integer")
@@ -136,10 +149,19 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-restart-check"):
-        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-restart-check")
+    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-restart-check", "pitch-check"):
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-restart-check, pitch-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
+    if pitch not in ("none", "up", "down"):
+        raise ValueError("pitch must be one of: none, up, down")
+    if scenario == "pitch-check":
+        if pitch not in ("up", "down"):
+            raise ValueError("pitch-check requires --pitch up or --pitch down")
+        if steering != "none":
+            raise ValueError("pitch-check requires --steering none")
+    elif pitch != "none":
+        raise ValueError("--pitch is only valid with --scenario pitch-check")
     if scenario in ("full-race", "finish-restart-check") and steering != "none":
         raise ValueError(f"{scenario} scenario requires --steering none")
     if (scenario == "finish-restart-check" and
@@ -168,7 +190,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
 
     data = bytearray(header)
     for frame in range(frame_count):
-        data.extend(_controller_state(frame, steering, scenario, steering_source))
+        data.extend(_controller_state(frame, steering, scenario, steering_source, pitch))
     return bytes(data)
 
 
@@ -186,14 +208,16 @@ def main() -> int:
                         help="short controls, full race, Y-reset, Start-pause/resume, or post-finish Start-restart check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
+    parser.add_argument("--pitch", choices=("none", "up", "down"), default="none",
+                        help="hold D-pad pitch up/down in the pitch-check scenario")
     args = parser.parse_args()
     payload = build_dtm(args.frames, args.game_id, args.steering, args.scenario,
-                        args.steering_source)
+                        args.steering_source, args.pitch)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_bytes(payload)
     print(f"Wrote {args.output}: {args.frames} controller polls, game ID {args.game_id!r}, "
-          f"steering={args.steering}, source={args.steering_source}, scenario={args.scenario}, "
-          f"{len(payload)} bytes")
+          f"steering={args.steering}, source={args.steering_source}, pitch={args.pitch}, "
+          f"scenario={args.scenario}, {len(payload)} bytes")
     return 0
 
 
