@@ -203,9 +203,9 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-restart-check"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-restart-check", "pitch-check"),
                         default="control-smoke",
-                        help="short controls, full race, Y-reset, Start-pause/resume, or post-finish Start-restart check")
+                        help="short controls, full race, Y-reset, Start-pause/resume, post-finish restart, or D-pad pitch check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
     parser.add_argument("--pitch", choices=("none", "up", "down"), default="none",
