@@ -3029,4 +3029,15 @@ This one run can answer the user-visible question “does a normal race reach th
 ### Historical Ares compatibility lead — not current certification
 
 The closed [Ares N64 compatibility-list issue #143](https://github.com/ares-emulator/ares/issues/143) states that its list was updated through Ares v127 dev (commit `3aa1b3b`). In that list, **Star Wars Episode I: Racer** appears under “No issues found”. The maintainers later marked the issue as superseded by the official Ares compatibility section on 2022-07-22. This is a useful historical indication that the title had been exercised successfully in an earlier Ares development build, but it is **not** a current v148 compatibility result and does not prove a complete normal race, a stable current JIT run, or the Results transition. The bounded v148 GUI test above is still required.
- RE-002 remains parked; no gameplay code changed.
+
+### Ares v148 host-risk triage — historical macOS issues confirmed fixed before the target release
+
+Two older Ares issues explicitly mentioned *Star Wars Episode I: Racer* and macOS, but neither should be treated as a known blocker for the planned v148 Intel/Catalina GUI test:
+
+- [Issue #1305](https://github.com/ares-emulator/ares/issues/1305) described an N64 CPU-recompiler cache-flush crash on **Apple Silicon / arm64**. The maintainer marked it fixed by [PR #1306](https://github.com/ares-emulator/ares/pull/1306), which merged on 2023-11-30. The merge commit `9a8e7f8b6ecc73f2161ec882854512ccdf200a38` is an ancestor of the v148 tag (GitHub compare: 1,243 commits from the merge commit to v148; 0 behind).
+- [Issue #1154](https://github.com/ares-emulator/ares/issues/1154) reported gradual performance/memory growth on an M1 Max with v133. The maintainer said it should be fixed in [commit `3de3f99`](https://github.com/ares-emulator/ares/commit/3de3f99ad136e5f12ba7a94f658003fa570801e5), which updates MoltenVK to 1.2.4. That commit is also an ancestor of v148 (GitHub compare: 1,469 commits from the fix to v148; 0 behind).
+
+These fixes reduce concern about those specific historical regressions; they are not a per-game v148 verification and do not establish that a normal race reaches Results. The target user's Intel/Catalina environment is also distinct from the arm64/M1 conditions in those reports. Retain the same bounded GUI test and record any actual hang, graphics/audio issue or performance anomaly rather than assuming it is fixed.
+
+
+RE-002 remains parked; no gameplay code changed.
