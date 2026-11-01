@@ -2588,13 +2588,13 @@ Source: https://www.theforce.net/videogames/codes/n64/racer.asp
 
 ### Static cross-check
 
-The locally decoded fixed local-participant table begins at a record-aligned base and advances by `0x88) bytes per record. The two public cheat addresses also differ by `0x88). Relative to the first record base, both candidate addresses land at the same within-record offset, `+0x7A`.
+The locally decoded fixed local-participant table begins at a record-aligned base and advances by `0x88` bytes per record. The two public cheat addresses also differ by `0x88`. Relative to the first record base, both candidate addresses land at the same within-record offset, `+0x7A`.
 
-This is a useful independent alignment: the community source labels the two addresses as P1/P2 lap controls, while the N64 code independently shows a `Locl)-tagged local-participant record array with the same stride.
+This is a useful independent alignment: the community source labels the two addresses as P1/P2 lap controls, while the N64 code independently shows a `Locl`-tagged local-participant record array with the same stride.
 
 ### What this does and does not prove
 
-- **Strong candidate:** the 16-bit value at local-record offset `+0x7A) is a lap-related field.
+- **Strong candidate:** the 16-bit value at local-record offset `+0x7A` is a lap-related field.
 - **Not yet proven:** that this is the normal runtime HUD lap value rather than a start override, cheat/control field, cached lap state or another related value.
 - **Still missing:** a positive local MIPS reader/writer cross-reference for that precise halfword, or a controlled runtime observation showing it changing at lap boundaries.
 
@@ -2602,4 +2602,4 @@ The community code list is corroboration, not disassembly documentation. Do not 
 
 ### Next bounded RE-001 action
 
-Follow the participant record's `+0x7A) candidate through any copied/aliased structures and its consumers; distinguish a one-time start-lap override from the live current-lap value. If no static reader/writer appears, the best discriminator is a lawful local memory watch during a normal race at successive lap boundaries, kept separate from any GameShark-injected run. No ROM, raw code, private addresses, assets or extracted resources are to be uploaded. Keep RE-002 parked.
+Follow the participant record's `+0x7A` candidate through any copied/aliased structures and its consumers; distinguish a one-time start-lap override from the live current-lap value. If no static reader/writer appears, the best discriminator is a lawful local memory watch during a normal race at successive lap boundaries, kept separate from any GameShark-injected run. No ROM, raw code, private addresses, assets or extracted resources are to be uploaded. Keep RE-002 parked.
