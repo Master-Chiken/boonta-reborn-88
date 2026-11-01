@@ -2684,3 +2684,24 @@ The following now share a single statically traced participant-array pointer:
 This does not identify a direct consumer in the HUD renderer. The `+0x7A` GameShark target remains strong corroboration for the lower halfword of the live event counter at `+0x78`, but normal HUD display may use a copied/converted field. Runtime values, visual Results presentation and cross-platform parity remain unverified.
 
 No ROM bytes, instruction dumps, private instruction offsets, extracted assets or derived resource payloads were published. No gameplay code changed; RE-002 remains parked.
+
+## BI. Bounded participant-counter consumer scan: update logic found; no direct HUD reader yet (2026-11-01)
+
+### Scan scope
+
+A final bounded instruction scan searched the main N64 code section for word loads/stores at participant-record offset `+0x78` and halfword loads/stores at candidate offset `+0x7A`. Each candidate was then checked against its surrounding register/pointer flow rather than classified by offset alone.
+
+### Results
+
+- The direct per-participant event-counter reads and write are in the race manager's progress-update loop. The same loop calls the route-progress event helper, increments the word at `+0x78`, compares it against the configured manager threshold, and applies the finish/skip state when the threshold is reached.
+- The local-progress helper separately reads `+0x78` through the first two registered local-player pointers and compares `(counter + 1)` with the configured target. Its condition is true if either local slot meets the threshold; it is an OR/any-player helper, not the all-local completion aggregate.
+- Other `+0x78` load/store occurrences in the code section were checked in context. The visible candidates include stack-frame slots, float/object fields, route/render helper structures, or secondary objects reached through a different pointer. Their surrounding code does not establish that their base pointer is the participant record array passed through the `Begn`/manager path.
+- The scan found no direct halfword load/store at participant-record `+0x7A` in the main code section. This is consistent with the manager treating the value as a 32-bit word at `+0x78`, while the third-party GameShark codes patch only its lower halfword.
+
+### Evidence grade and stop condition
+
+**CONFIRMED:** the manager updates and thresholds the participant event counter at `+0x78`; community lap-modifier addresses align to the same record's lower halfword at `+0x7A`.
+
+**NOT FOUND IN THIS BOUNDED PASS:** a direct renderer/HUD consumer of that counter or its lower halfword. The absence of a direct `+0x7A` halfword access does not prove the HUD does not display the value; the presentation path may use a copied, transformed or separately maintained value.
+
+The highest-value static search is now a trace from the participant's finish/progression state into the relevant HUD object/resource update, not another broad search for the number `0x78`. If that producer-to-display link cannot be established, leave the HUD consumer explicitly unproven and use a controlled local memory watch at lap boundaries as the runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
