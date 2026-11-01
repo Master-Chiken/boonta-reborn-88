@@ -2415,3 +2415,37 @@ The pinned `scripts/targets.tsv` is specific about the new targets:
 - Keep any A/Start-injected run separate: the known Hang state-6 branch tests held A-or-Start, so an injected press could satisfy an acknowledgement gate rather than demonstrate that normal race completion initiated finalization.
 
 **Decision:** no local build, APK, emulator, race, Results observation, or runtime trace was performed. Do not ask for a large install or ROM upload. Keep RE-001's evidence grade unchanged: **CONDITIONAL STATIC PATHS / NORMAL FINISH-TO-RESULTS CAUSALITY UNPROVEN / RUNTIME UNVERIFIED**. The next decisive internal step remains target-specific evidence for the stored `Fini` selector's consumer and the independent all-local-finish → manager-finalization predicate.
+
+
+## BA. Cross-audit of the participant roster: candidate local-player gate separated from progress/ranking helpers — static only (2026-11-01)
+
+### Manager roster pass
+
+A fresh read of the manager's participant-update routine confirms a two-pass shape that is consistent with the candidate aggregate described in Section AB:
+
+- The routine provisionally moves its low-nibble phase from the running value to an intermediate value before walking the registered participant list.
+- The list is walked by its fixed participant-record stride. Only records passing a two-bit eligibility test enter the relevant update path; the routine follows the participant record's nested object pointer and calls the per-object updater.
+- For a qualifying record, the manager compares that participant record against each of the four local-player reference slots. A match restores the manager's low-nibble phase to the running value.
+- The intermediate phase is therefore retained only when the loop encounters no qualifying participant record that matches a local-player reference.
+
+This is a concrete static control-flow shape for an **“no qualifying local participant remains”** gate. It is compatible with the all-local-player completion interpretation in Section AB, but the independent pass has not yet traced the eligibility bits to the participant's exact finish/skip writer. It would be premature to state that the two-bit test itself is conclusively the finish flag.
+
+### Nearby routines explicitly excluded as proof of the aggregate
+
+Two adjacent paths are not the all-local aggregate and must not be used as corroboration:
+
+- A separate local-progress threshold helper checks two local-player progress values against a manager threshold. Its temporary condition becomes true if **either** local slot meets the threshold; it is an OR/any-player test, not an all-local AND.
+- The participant normalization/ranking pass walks the roster and derives progress/ordering values for participant records. Its observed work is standings/ranking preparation, not an all-local completion predicate.
+
+These distinctions matter because all three routines touch the same participant roster or local-player references, but their boolean conditions answer different questions.
+
+### Revised confidence and next bounded trace
+
+- **Confirmed statically:** a manager phase is advanced provisionally; a roster scan applies eligibility filters; qualifying entries that match any local-player reference restore the running phase.
+- **Supported but not independently closed in this pass:** interpreting that filter as “local participant not yet finished.” Section AB records the earlier private trace of the participant finish/skip state and aggregate relationship, but this cross-audit has not independently tied the eligibility bit to that exact writer.
+- **Not established by this pass:** runtime values at race completion, the visible Results screen, or N64/GameCube/Wii parity.
+
+**Evidence grade:** **MANAGER ROSTER SCAN → NO-QUALIFYING-LOCAL-ENTRY PHASE GATE STATically SUPPORTED / ELIGIBILITY-BIT → PARTICIPANT FINISH FLAG CORRESPONDENCE STILL REQUIRES A WRITER CROSS-REFERENCE / RUNTIME UNVERIFIED.**
+
+The next static step is narrowly scoped: follow the writer that sets/clears the participant-record eligibility bit, compare it with the participant-level finish/skip marker from Section AB, then check whether that exact marker is what the manager's filtered roster loop excludes. Keep RE-002 parked. No ROM bytes, raw disassembly, exact local instruction offsets, extracted assets or N64-derived gameplay code were added to Boonta.
+
