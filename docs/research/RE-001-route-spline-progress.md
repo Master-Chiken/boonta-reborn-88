@@ -2932,3 +2932,31 @@ Accordingly, this second-decoder pass must **not** be counted as an independent 
 - **Still unverified at runtime:** normal completed-race trigger conditions, visible Results presentation, mode-bypass/abort cases, and N64-to-GameCube/Wii parity.
 
 The prior Section AS result remains recorded as the original local static trace, but the new LLVM pass is **not independent corroboration of its Hang-class identity**. Keep the overall finish-to-visible-Results conclusion conditional / runtime-unverified until the object registration and renderer consumer are positively joined or a controlled runtime session observes the screen. RE-002 remains parked. No gameplay code changed.
+
+
+## BR. Hang type-registry cross-check pairs the state updater and Fini receiver — local static corroboration (2026-11-01)
+
+### Scope and method
+
+A bounded second look used the owner's existing US N64 reference from the private Library workspace and the already-created code-only synthetic MIPS III ELF wrapper. The ROM and wrapper remained local; neither was uploaded, committed, or sent to a hosted analysis service. The pass inspected the ROM's object/type registration record and followed only the callback targets needed to test the identity caveat in Section BQ.
+
+### New corroboration
+
+- The registry contains one `Hang` type descriptor with both the primary-state update callback and the lifecycle/message callback in its callback set.
+- Following the state-update callback confirms the 19-entry primary-state dispatch used by the Results/placement path in Sections AR–AS.
+- Following the message callback confirms that it handles the `Fini` message and preserves its incoming object pointer through the state-transition helper call described in Section BQ.
+- This is a positive **type-registration** join: the Fini-capable receiver is not merely a separately discovered function with a coincidentally matching state index; it is registered alongside the 19-state updater under the same `Hang` type descriptor. In combination with the ordinary all-types callback-dispatch path recorded in Sections AE and AX, this supports the class-level link from the manager relay to the Hang lifecycle receiver.
+
+### What this does and does not close
+
+This cross-check narrows the identity gap recorded in Section BQ, but it is still static evidence. A type descriptor can serve multiple object instances; the registry record alone does not show which live instance receives the message in a particular race. The conditional path still depends on the ordinary `All!` relay (not the mode bypass), no abort substitution, the receiver's default/sentinel selector and its transition guard. No runtime trace confirms those values or that the Results panel becomes visible after a normal race.
+
+The separate 14-entry front-end state namespace labelled `POST_RACE_INFO` in Section BN remains distinct. This section does not merge that screen with the Hang Results/placement builder, and it does not establish GameCube/Wii parity.
+
+### Revised evidence grade and next action
+
+- **Newly corroborated:** Fini-capable message callback and 19-state Results updater belong to the same registered `Hang` type.
+- **Supported by the combined static trace:** ordinary manager relay → registered Hang message callback → conditional same-object state-5 transition → Results/placement builder.
+- **Still unverified:** which concrete Hang instance is live in a completed race, whether all guards select this route in normal play, and whether the visible Results panel appears at runtime.
+
+**Next bounded action:** stop broad static searching here and seek one controlled local runtime observation of a normal completed race on a compatible environment, recording the manager/receiver conditions and visible Results transition without publishing ROM-derived bytes. Until that is run, retain **STATIC CONDITIONAL PATH SUPPORTED / RUNTIME UNVERIFIED**. RE-002 remains parked; no gameplay code changed.
