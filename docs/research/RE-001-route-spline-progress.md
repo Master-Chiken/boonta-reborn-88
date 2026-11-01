@@ -3052,7 +3052,16 @@ A second local observation route is available if the owner prefers to use the Wi
 - The community [Not64 compatibility list](https://wiki.gbatemp.net/wiki/Not64_Compatibility_List) lists the USA *Star Wars: Episode 1 Racer* image with Not64 20200514 as playable, noting small graphical glitches and missing close-up textures. It recommends first-person view or the farthest zoom to reduce the visible texture problem. This entry is old and community-maintained; it does **not** certify the 20260410 release or guarantee a complete race.
 - Not64 emulates the N64 game on Wii. A successful run is therefore evidence about the N64 game under Not64 on the tested Wii, **not** an N64-hardware result and not a native GameCube/Wii port result.
 
+**Install and load procedure (Not64 20260410):**
+
+1. Download the current Not64 ZIP from the [official releases](https://github.com/extremscorner/not64/releases) or [Open Shop Channel](https://oscwii.org/library/app/not64). The Open Shop Channel lists Wii/vWii/Wii Mini, Classic Controller, GameCube controller and SDHC support.
+2. Extract the ZIP contents to the **root of the SD card**, preserving the folders inside the archive. Launch Not64 from the Homebrew Channel.
+3. Place the owner's own US ROM at `/wii64/roms/SW Racer 1999- (US).z64` (or another filename ending in `.z64`). Not64's documentation also accepts `.v64` and `.n64`; SD/USB save files are placed automatically in `/wii64/saves`.
+4. In Not64 choose **Load ROM → SD/USB → the ROM → Play Game**. For a transfer over FTP, upload the extracted app folder to the SD root and the ROM into `/wii64/roms/`; do not put the ROM inside the application's `apps` directory.
+
 **Bounded Not64 test:** install the current Not64 homebrew package from the Open Shop Channel or its official release page; use the owner's own US `.z64` image; record Not64 version, Wii/vWii model, video mode, controller, graphics/framebuffer settings and CPU core. First attempt one ordinary race using default settings; if the known close-up texture issue obscures the view, note the camera change and repeat the visual check without using savestates to skip the finish. Capture the first post-finish screen before pressing A/Start, then the screen after one deliberate confirmation press if required. Keep the ROM and captures local; publish only metadata and observed outcome.
+
+Start with default emulator settings; do not change framebuffer, CPU core or camera to chase a better result before recording the baseline. If Racer boots but close-up pod textures disappear, note the issue and make a separate run using first-person or the farthest zoom as suggested by the old compatibility entry. That optional camera change is a graphics workaround, not a substitute for recording the default baseline.
 
 **Priority:** Ares v148 remains the primary desktop test candidate because its platform requirements and prior fixes are documented. Not64 20260410 is a useful alternative or independent second observation on the owner's Wii. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
 
