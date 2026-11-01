@@ -2449,3 +2449,39 @@ These distinctions matter because all three routines touch the same participant 
 
 The next static step is narrowly scoped: follow the writer that sets/clears the participant-record eligibility bit, compare it with the participant-level finish/skip marker from Section AB, then check whether that exact marker is what the manager's filtered roster loop excludes. Keep RE-002 parked. No ROM bytes, raw disassembly, exact local instruction offsets, extracted assets or N64-derived gameplay code were added to Boonta.
 
+
+
+## BB. Same participant finish bit is the roster exclusion bit — direct local static cross-reference (2026-11-01)
+
+### What the cross-reference closes
+
+A targeted pass compared the manager's participant roster loop with the individual threshold transition while tracking the same participant-record pointer through both paths.
+
+- The roster loop reads the participant's state word and uses two independent tests to select the ordinary progress-bookkeeping path: the record must be included/active, and its finish/skip bit must not yet be set.
+- When that participant's configured progress-event counter reaches the race threshold, the threshold branch updates the state word on that same participant record and sets the finish/skip bit.
+- The state is checked again before the remaining per-participant work. Once the finish/skip bit is set, the record no longer enters the ordinary progress-bookkeeping path; on later roster passes it takes a narrower alternate path rather than incrementing the normal progress-event counter.
+- The manager's local-player phase test is on the ordinary unfinished-participant path. A qualifying unfinished local participant can restore the running phase; a participant already carrying the finish/skip bit does not take that path.
+
+This is the direct writer-to-reader correspondence that Section BA previously lacked. It is not just a similarity between two state tests: both operate on the same participant record and the threshold path writes the exact state condition that the roster loop later tests.
+
+### Revised evidence grade
+
+**CLOSED STATICALLY:** participant threshold transition sets the finish/skip state; the manager roster filter reads that same state and excludes the participant from ordinary progress bookkeeping and the unfinished-local-participant phase-reset path.
+
+**STILL NOT CLAIMED:** the other inclusion/active bit's full lifecycle semantics; universal behavior across all game modes; a live runtime observation; or N64-to-PC/Dreamcast/GameCube/Wii parity.
+
+### Consequence for the finish-to-Results investigation
+
+The chain is now better supported through the local-player completion gate:
+
+configured progress-event threshold → participant finish/skip state → roster exclusion from normal progress bookkeeping → no unfinished local participant restores the running phase → intermediate manager phase.
+
+The later transition remains separately gated. The manager's subsequent A-or-Start held-state check is an input/acknowledgement condition, not a finish flag. Its ordinary finalization relay can reach the Hang Results/placement-panel state on the documented default path, subject to mode bypass, abort substitution and receiver guards.
+
+Therefore this closes the **participant-state/roster-filter** question, but it does not prove that every ordinary race automatically displays Results without the relevant later input or mode conditions.
+
+### Method and handling
+
+Local static MIPS cross-reference only, against the previously identified owner-supplied US N64 reference. No ROM bytes, raw disassembly, instruction addresses, extracted resources, assets or binary data are published here. No emulator, visible race, write-watchpoint capture or full static-recomp runtime was executed. No GameCube/Wii gameplay code was changed.
+
+**Next bounded RE-001 action:** preserve this writer/reader result, then test the remaining normal-finish → manager finalization gate as a separate question. Keep RE-002 parked.
