@@ -105,3 +105,19 @@ This remains a **single bounded RE-001 tool check**, not a new workstream. It do
 - [Kuna MIPS ELF language/ABI definitions](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/specs/Ghidra/Processors/MIPS/data/languages/MIPS.opinion)
 - [Kuna compact JSON options](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525a065c89c26e358ffd7c2328bc7/docs/cli.md)
 - [Kuna documented `--target` behavior](https://github.com/Noelo-Lab/kuna/blob/f8746b9730b525c89c26e358ffd7c2328bc7/docs/cli.md)
+
+
+## Recheck — owner-held ROM, synthetic ELF and LLVM decoder validation (2026-11-01)
+
+The earlier note that the original `n64_main.elf` was not present in the current working session remains true, but the owner-held US N64 ROM is available in the Library. It was materialized only into the private working directory for a local static-tool check; it was not uploaded to GitHub or an external analysis service.
+
+Using the main code-section mapping documented in the pinned upstream `symbols.toml`, a **minimal synthetic ELF64 big-endian MIPS III wrapper** was constructed around the exact code-section bytes. `readelf` recognizes the ELF header and executable segment, and LLVM 17 `llvm-objdump` successfully decodes the code with a MIPS III target. A targeted local re-decode reproduces the already documented participant event-counter → configured threshold → same-record finish/skip writer/reader relationship.
+
+### What this does and does not change
+
+- **Improved:** the MIPS III code bytes can now be consumed by a second local disassembler without needing the earlier missing `n64_main.elf` file. The same-record finish-state logic has a fresh decoder cross-check.
+- **Not resolved:** the synthetic wrapper has no data/BSS/resources, symbol table, relocations or authentic ABI metadata. Its ELF64 class and MIPS III flags are properties of the wrapper, not proof of the original analysis ELF's ABI. The compiler model for Kuna's `MIPS:BE:64:64-32addr` candidate therefore remains to be verified.
+- **Still not run:** Kuna itself is not installed in the current environment; neither a Kuna one-function decompilation nor comparison of its pseudocode has occurred. The original complete ELF and its ABI/toolchain metadata are still unavailable here.
+- **Runtime remains separate:** no emulator, visible race, write-watchpoint hit or Results-screen observation has been produced. This tool check does not close the conditional finish-to-Results runtime question.
+
+Treat this as a useful local decoder/format experiment, **not** a passed Kuna proof of concept. No ROM bytes, disassembly text, generated C, assets or game-derived output were uploaded or committed. RE-002 remains parked.
