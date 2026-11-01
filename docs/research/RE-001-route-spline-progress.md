@@ -2546,3 +2546,60 @@ Locl-tagged local participant registration → finish/skip marker set at the con
 Mode bypass, abort substitution, selector and receiver guards still apply. The text/prompt associated with the input gate remains unidentified, and a live visible Results screen has not been observed.
 
 No emulator, interactive race, write-watchpoint capture or full static-recomp runtime was executed. This section records a bounded local static result only; no ROM bytes, raw disassembly, private instruction addresses, assets or extracted game data are published.
+
+
+## BE. Local N64 binary re-decode independently confirms Locl roster setup and finish-bit aggregation (2026-11-01)
+
+### Method
+
+The owner-supplied US N64 file was rechecked locally: 32 MiB, big-endian N64 header, title `STAR WARS EP1 RACER`, game code `NEPE`, CRC1 `0x72F70398`, CRC2 `0x6556A98B`. The code-section mapping was checked against the public `sp00nznet/racer` section table before translating code addresses to ROM offsets. Only the local file was decoded; no ROM data, raw assembly, exact instruction offsets or derived assets were uploaded or committed.
+
+### Directly observed in the local MIPS code
+
+- A setup helper constructs the literal four-character tag `Locl`, clears the four local-reference slots, and walks the supplied participant-record array.
+- The loop advances by a fixed `0x88`-byte record stride and checks the record tag at `+0x04`. A matching `Locl` record pointer is placed into the first available local-reference slot; the helper can populate up to four slots.
+- The manager's race-update callback obtains the participant-record array and walks it using the same `0x88` stride.
+- For each record, the manager reads its state word at `+0x08`. The ordinary progress path requires the inclusion bit to be set and the finish/skip bit to be clear.
+- When the configured per-participant progress-event threshold is reached, the manager sets that finish/skip bit in the same record's state word.
+- The later local-reference comparisons are bypassed for a record with that bit set. An unfinished record matching any registered local reference restores the manager's running phase; a marked record does not.
+
+This local decode independently supports Sections BB–BC. It confirms the tag, record stride, slot registration and same-record finish/skip writer-reader relationship. It also confirms that the alternate path may still perform a narrower per-object update; “excluded from ordinary progress bookkeeping” is more accurate than “never updated again”.
+
+### Address-arithmetic correction
+
+The effective addresses for the global local-reference slots were recalculated using MIPS sign extension for `ADDIU` immediates. Do not copy older hand-calculated absolute addresses into notes or code without recomputing the full `LUI + signed ADDIU` expression. Exact private addresses are intentionally omitted from this public dossier.
+
+### Evidence grade
+
+**CONFIRMED BY LOCAL STATIC MIPS CROSS-REFERENCE:** Locl record registration → manager roster scan → ordinary-active/unfinished filter → same-record threshold finish/skip write → no unfinished registered local record restores the running phase.
+
+**NOT ESTABLISHED:** live values during a race, visible Results presentation, all modes, or parity with PC/Dreamcast/GameCube/Wii. No runtime trace or emulator session was executed. RE-002 remains parked.
+
+## BF. Community lap-code addresses align with the Locl record stride — candidate field only (2026-11-01)
+
+### External lead
+
+TheForce.Net's N64 GameShark list describes:
+- Player 1 “Start on Lap” and “Always on Lap” writes at `0x8011900A`.
+- Player 2 equivalents at `0x80119092`.
+- Values `00` through `04` as Lap 1 through Lap 5.
+
+Source: https://www.theforce.net/videogames/codes/n64/racer.asp
+
+### Static cross-check
+
+The locally decoded fixed local-participant table begins at a record-aligned base and advances by `0x88) bytes per record. The two public cheat addresses also differ by `0x88). Relative to the first record base, both candidate addresses land at the same within-record offset, `+0x7A`.
+
+This is a useful independent alignment: the community source labels the two addresses as P1/P2 lap controls, while the N64 code independently shows a `Locl)-tagged local-participant record array with the same stride.
+
+### What this does and does not prove
+
+- **Strong candidate:** the 16-bit value at local-record offset `+0x7A) is a lap-related field.
+- **Not yet proven:** that this is the normal runtime HUD lap value rather than a start override, cheat/control field, cached lap state or another related value.
+- **Still missing:** a positive local MIPS reader/writer cross-reference for that precise halfword, or a controlled runtime observation showing it changing at lap boundaries.
+
+The community code list is corroboration, not disassembly documentation. Do not rename the field as the confirmed HUD counter or change Boonta gameplay code yet.
+
+### Next bounded RE-001 action
+
+Follow the participant record's `+0x7A) candidate through any copied/aliased structures and its consumers; distinguish a one-time start-lap override from the live current-lap value. If no static reader/writer appears, the best discriminator is a lawful local memory watch during a normal race at successive lap boundaries, kept separate from any GameShark-injected run. No ROM, raw code, private addresses, assets or extracted resources are to be uploaded. Keep RE-002 parked.
