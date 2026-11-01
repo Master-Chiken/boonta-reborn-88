@@ -2903,3 +2903,32 @@ A targeted local re-decode of the participant-update routine confirms the relati
 - No Kuna decompilation, emulator run, write-watchpoint capture, live race or Results-screen observation was performed.
 
 No ROM bytes, raw disassembly, generated C, private instruction offsets, assets or game-derived payloads are included here. No gameplay code changed; RE-002 remains parked.
+
+
+## BQ. LLVM second-decoder check of the Fini receiver — state write corroborated, Hang/Results object identity still open (2026-11-01)
+
+### Scope and method
+
+The locally held US N64 reference was decoded a second time using LLVM 17 from the private synthetic ELF wrapper described in Section BP. The wrapper contains the mapped main-code section only; it is not the original analysis ELF and does not supply original data tables, symbols, relocations or authentic ABI metadata. No ROM-derived bytes, disassembly, generated C or trace logs were uploaded or published.
+
+The pass was limited to the manager's conditional finalization relay, the Fini-capable message receiver and the state-transition helper it calls. It did not run the game or inspect a live object at runtime.
+
+### What the second decoder independently reproduces
+
+- The manager's ordinary relay path sends its stored finalization token through the all-registered-callback dispatcher; the special mode bypass and abort substitution remain distinct alternatives, as described in Section AX.
+- The Fini receiver retains its incoming object pointer, starts from requested state index 5 on its default/sentinel sequence branch, and passes that same object pointer plus the selected state value to a transition helper when the receiver's local lifecycle condition and a separate global guard permit it.
+- The called helper contains a guarded write of its incoming state value into the state field of the object pointer it received. Thus the local LLVM decode corroborates a **conditional Fini receiver → same receiver-object state-5 write**. Alternate sequence values and guard conditions still prevent treating this as universal.
+
+### Important object-identity limit
+
+The helper also contains several dispatch tables with different entry counts and state roles. This bounded decode did **not** positively identify the Fini receiver's object type/registration as the exact `Hang` instance whose 19-entry updater and state-5 Results/placement consumer are described in Sections AR–AS. Nor did it positively join this helper's state table to the separate 14-entry `POST_RACE_INFO` name mapping from Section BN. Equal numeric state IDs and shared lifecycle tokens are not sufficient to merge those namespaces.
+
+Accordingly, this second-decoder pass must **not** be counted as an independent confirmation of the full same-`Hang` → Results renderer join in Section AS. It confirms the receiver's conditional state-5 write on its own object; the exact class/instance identity and final Results-consumer join remain a separate cross-reference to verify against the primary local analysis.
+
+### Revised evidence grade
+
+- **Second decoder corroborates:** ordinary manager relay is conditional; the Fini receiver can request state 5 on its default/sentinel sequence; the state helper can write that value to the same object passed by the receiver.
+- **Not newly corroborated:** that this receiver object is necessarily the `Hang` instance whose 19-entry updater selects the Results/placement builder; and that `POST_RACE_INFO` is either the same object or the same screen.
+- **Still unverified at runtime:** normal completed-race trigger conditions, visible Results presentation, mode-bypass/abort cases, and N64-to-GameCube/Wii parity.
+
+The prior Section AS result remains recorded as the original local static trace, but the new LLVM pass is **not independent corroboration of its Hang-class identity**. Keep the overall finish-to-visible-Results conclusion conditional / runtime-unverified until the object registration and renderer consumer are positively joined or a controlled runtime session observes the screen. RE-002 remains parked. No gameplay code changed.
