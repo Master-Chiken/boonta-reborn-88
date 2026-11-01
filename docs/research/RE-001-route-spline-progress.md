@@ -2516,3 +2516,33 @@ The three pieces now line up statically:
 The later manager state still has a separate A-or-Start held-state gate before queuing the ordinary finalization token. That input condition is not the finish marker. Mode-specific bypass, abort substitution and receiver guards remain. No runtime observation proves that an un-injected race displays Results, and no N64-to-GameCube/Wii parity is implied.
 
 No ROM bytes, raw disassembly, private instruction addresses, extracted resources, assets or binary data are published. This remains local static analysis; no gameplay code changed. Keep RE-002 parked.
+
+
+## BD. The A/Start held-state gate is separate; no visible prompt binding found — static only (2026-11-01)
+
+### What the manager check establishes
+
+The later manager state checks the current held logical input mask for A or Start before queuing its finalization selector. It reads the held-state mask, not the separately computed pressed-edge mask. This gate occurs after the local-participant completion phase described in Sections AB and BB–BC.
+
+Thus the evidence supports two separate conditions:
+
+1. **Participant completion:** no unfinished, registered local participant remains to restore the manager's running phase.
+2. **Input acknowledgement:** A or Start is held when the manager reaches its later gate, allowing the finalization selector to be queued and consumed.
+
+The input condition is not a participant finish flag and must not be folded into the roster aggregate.
+
+### Prompt/label cross-check
+
+A bounded local text-resource scan did not establish a direct link from this held-state branch to a specific visible prompt, label or Results instruction. A generic “Continue” menu string is not sufficient evidence that the manager gate displays a “Continue” prompt; it occurs in a separate menu context in the examined resource area.
+
+Accordingly, describe this as an **A-or-Start held-state finalization gate**. Do not assign it a player-facing label until the prompt's draw/consumer path is traced or observed at runtime.
+
+### Revised finish-to-Results status
+
+The ordinary/default static route is now connected conditionally:
+
+Locl-tagged local participant registration → finish/skip marker set at the configured threshold → roster/local-player completion phase → A-or-Start held-state gate → queued and consumed finalization selector → ordinary callback relay → eligible Hang receiver → Results/placement-panel state.
+
+Mode bypass, abort substitution, selector and receiver guards still apply. The text/prompt associated with the input gate remains unidentified, and a live visible Results screen has not been observed.
+
+No emulator, interactive race, write-watchpoint capture or full static-recomp runtime was executed. This section records a bounded local static result only; no ROM bytes, raw disassembly, private instruction addresses, assets or extracted game data are published.
