@@ -3052,6 +3052,11 @@ The current [official Ares Nintendo 64 compatibility index](https://ares-emu.net
 
 ### Secondary visible-run route — Not64 on Wii (original N64 ROM, not a native Wii port)
 
+### Upstream Not64 release/peripheral recheck (2026-11-02)
+
+The [official Not64 releases page](https://github.com/extremscorner/not64/releases) currently labels **20260410** as the latest release; its release entry is dated 10 April 2026 and identifies source commit `d35a7a1`. No later release appears in the published release list checked for this update. The [Open Shop Channel Not64 manifest](https://github.com/OpenShopChannel/Apps/blob/master/contents/not64.oscmeta) lists **Wii, vWii and Wii Mini** as supported platforms and explicitly lists **Classic Controller** as a supported peripheral (alongside GameCube controller, Wii Remote/Nunchuk and SDHC). This independently confirms that the chosen build family and the owner's Classic Controller target are supported by the Not64 package metadata. It does **not** certify this specific N64 game, the user's exact hardware/revision, or a visible Results transition; those remain runtime-test questions.
+
+
 A second local observation route is available if the owner prefers to use the Wii already being prepared for homebrew:
 
 - The official [Not64 release page](https://github.com/extremscorner/not64/releases) lists **20260410** as its latest release. The [Open Shop Channel package record](https://oscwii.org/library/app/not64) identifies the same version/date, lists Wii, Wii U vWii and Wii Mini support, and confirms Classic Controller support.
