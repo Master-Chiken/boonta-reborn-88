@@ -2717,7 +2717,7 @@ A local scan of the owner-supplied ROM's visible text entries finds a tightly gr
 - `TIME`
 - two `LAP` labels with matching `%d/%d` integer formats
 - `POS`
-- `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING), `Warning` and `Repair`
+- `ENGINE FIRE`, `OVERHEAT`, `TEMP WARNING`, `Warning` and `Repair`
 
 Together these entries strongly identify a lap/timer/position/engine-condition HUD text group. This is resource/string evidence, not a code call-site match.
 
@@ -2729,7 +2729,7 @@ The resource group therefore confirms that the N64 game has the expected lap/tim
 
 ### Revised evidence grade / stop condition
 
-- **Strongly supported:** participant-record event counter at `+0x78) is the per-driver lap/event counter; the public GameShark lap targets address its lower halfword at `+0x7A).
+- **Strongly supported:** participant-record event counter at `+0x78` is the per-driver lap/event counter; the public GameShark lap targets address its lower halfword at `+0x7A`.
 - **Confirmed separately:** the ROM text pool contains the LAP/TIME/FINAL LAP/POS presentation entries in a coherent HUD-oriented group.
 - **Still unproven:** the specific dataflow from the participant counter (or a copy of it) into the text/HUD formatting call that supplies the `%d/%d` values.
 
