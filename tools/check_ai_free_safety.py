@@ -106,6 +106,59 @@ if "contents: write" in openrouter or "pull-requests: write" in openrouter or "a
 if "No paid fallback will be attempted." not in openrouter:
     errors.append("OpenRouter reviewer must fail closed and never use a paid fallback")
 
+# The result must stay bound to the exact, still-eligible PR reviewed before the external call.
+head_binding_requirements = (
+    "head_sha:.head.sha",
+    "PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}",
+    "current.data.state !== 'open'",
+    "current.data.base.ref !== 'main'",
+    "current.data.head.repo?.full_name !== expectedRepo",
+    "current.data.head.sha !== process.env.PR_HEAD_SHA",
+    "Reviewed head SHA:",
+)
+missing_head_binding = [requirement for requirement in head_binding_requirements if requirement not in openrouter]
+if missing_head_binding:
+    errors.append(f"OpenRouter reviewer is missing exact-head/eligibility safeguards: {missing_head_binding!r}")
+head_recheck_position = openrouter.find("const current = await github.rest.pulls.get")
+comment_publish_position = openrouter.find("await github.rest.issues.createComment")
+if head_recheck_position < 0 or comment_publish_position < 0 or head_recheck_position >= comment_publish_position:
+    errors.append("OpenRouter reviewer must re-check PR eligibility and exact head before publishing its comment")
+
+# Revalidate the captured PR state and SHA immediately before any external model request.
+if call_step_marker not in openrouter:
+    errors.append("OpenRouter reviewer is missing its dedicated model-call step")
+else:
+    model_call = openrouter.split(call_step_marker, 1)[1]
+    preflight_position = model_call.find("current-pr-before-call.json")
+    request_position = model_call.find("https://openrouter.ai/api/v1/chat/completions")
+    preflight_requirements = (
+        "GH_TOKEN: ${{ github.token }}",
+        "PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}",
+        "PR_HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}",
+
+
+
+
+        "current_state=",
+        "current_base=",
+        "current_repo=",
+        "current_sha=",
+        ".state // empty",
+        ".base.ref // empty",
+        ".head.repo.full_name // empty",
+        ".head.sha // empty",
+        '"$current_state" != "open"',
+        '"$current_base" != "main"',
+        '"$current_repo" != "$GH_REPO"',
+        '"$current_sha" != "$PR_HEAD_SHA"',
+        "Nothing was sent to OpenRouter",
+    )
+    missing_preflight = [requirement for requirement in preflight_requirements if requirement not in model_call]
+    if missing_preflight:
+        errors.append(f"OpenRouter model call is missing its pre-request PR state/head guard: {missing_preflight!r}")
+    if preflight_position < 0 or request_position < 0 or preflight_position >= request_position:
+        errors.append("OpenRouter reviewer must re-check PR eligibility and exact head before sending the diff externally")
+
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
     "google_api_key:",
