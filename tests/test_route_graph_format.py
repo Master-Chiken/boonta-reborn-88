@@ -383,15 +383,13 @@ class RouteGraphFormatTests(unittest.TestCase):
         graph = fixture("open-bezier.json")
         original_validate = route_graph_module.validate_route_graph
         original_index = route_graph_module._index_validated_graph
-        with (
-            mock.patch.object(
-                route_graph_module, "validate_route_graph", wraps=original_validate
-            ) as validator,
-            mock.patch.object(
+        with mock.patch.object(
+            route_graph_module, "validate_route_graph", wraps=original_validate
+        ) as validator:
+            with mock.patch.object(
                 route_graph_module, "_index_validated_graph", wraps=original_index
-            ) as indexer,
-        ):
-            length = sample_edge_length(graph, "start-middle", samples=100)
+            ) as indexer:
+                length = sample_edge_length(graph, "start-middle", samples=100)
         self.assertGreater(length, 0.0)
         self.assertEqual(validator.call_count, 1)
         self.assertEqual(indexer.call_count, 1)
