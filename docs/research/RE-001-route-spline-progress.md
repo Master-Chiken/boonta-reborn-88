@@ -3318,3 +3318,34 @@ The state-6 handler reads that timer field and compares it with zero. While the 
 - **No implementation consequence:** N64 static evidence only; no GameCube/Wii gameplay change follows.
 
 No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
+
+
+## BY. The manager enters phase 2 only when no qualifying unfinished local record restores phase 1 — static only (2026-11-02)
+
+### Manager update ordering
+
+A targeted re-read of the manager's race-update pass connects the participant completion aggregate to the state-2 callback used by Sections BW–BX:
+
+1. The update pass runs from the manager's normal running phase and provisionally writes **phase 2** before scanning its active participant roster.
+2. It walks the manager's live participant table. The ordinary bookkeeping path filters records by their active/inclusion condition and their finish/skip condition.
+3. For an eligible unfinished record, the manager compares that same participant-record pointer against the registered local-participant references. A qualifying unfinished local record restores the manager's low-nibble phase to **1**.
+4. After the roster scan and its follow-up helpers, the routine re-reads the manager phase. If it is still **2**, it initializes the manager's timer-like field to **0.0** before leaving the phase-2 update path.
+
+Sections BB–BE establish that the local references are populated from `Locl` participant records, and that the same participant-record finish/skip bit is written at the configured threshold and later used by the roster filter. Section BH establishes that the setup-message participant-table pointer is the same table consumed by this manager update.
+
+### Connected state-2 / Fini sequence
+
+Combining this roster pass with Sections BW and BX gives a continuous conditional static chain:
+
+**live `Locl` roster scan** → no qualifying unfinished local record restores phase 1 → manager remains in **phase 2** and its timer is reset to 0.0 → the state-2 callback advances that timer by the shared runtime timing increment → it tests the current/held A-or-Start mask → when held, it requests `Fini` → the transition helper stores the pending selector, sets state 6 and resets the timer to 0.5 → state 6 counts down using the shared timing increment → once negative, the selector consumer receives the pending `Fini`.
+
+The input query is checked on successive state-2 updates; a false result returns without queuing `Fini` on that branch. Thus the state machine statically waits for A or Start to be held after the local-participant completion phase, rather than treating the completion aggregate itself as the Fini event. Holding accelerator A across the finish can satisfy that gate if it remains held when state 2 is processed, but this specific timing has not been observed in a live race.
+
+### Evidence boundary
+
+- **Newly closed statically:** manager roster completion phase → explicit state-2 timer initialization → repeated held-input gate → pending `Fini` → state-6 half-unit countdown → selector consumer.
+- **Still conditional:** the ordinary/default relay must be selected; mode bypass, abort substitution, Hang selector and global transition guards remain as documented in Sections AX and AS.
+- **Still unverified at runtime:** whether an ordinary three-lap race on the target emulator naturally reaches this route with A held, whether the `Hang` object enters Results state 5, and whether the Results panel becomes visible.
+- **Platform boundary:** N64 local static evidence only. It does not establish equivalent GameCube/Wii prototype behavior.
+
+No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
