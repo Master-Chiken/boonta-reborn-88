@@ -11,7 +11,14 @@
 void boonta_input_init(void)
 {
 #ifdef BOONTA_WII
-    (void)WPAD_Init();
+    if (WPAD_Init() == WPAD_ERR_NONE) {
+        /*
+         * Request the report format that carries expansion data. Without an
+         * explicit format, WPADData may contain buttons but no Classic stick
+         * or shoulder sample, causing the runtime guard to return neutral.
+         */
+        (void)WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
+    }
 #else
     (void)PAD_Init();
 #endif
