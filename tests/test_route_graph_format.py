@@ -41,6 +41,13 @@ class RouteGraphFormatTests(unittest.TestCase):
                 self.assertEqual(graph["format"], "boonta-route-graph-v1")
                 self.assertEqual(graph["source"]["platform"], "synthetic")
 
+    def test_validation_is_idempotent_and_json_compatible(self):
+        graph = fixture("open-bezier.json")
+        normalized = validate_route_graph(graph)
+        reparsed = validate_route_graph(normalized)
+        self.assertEqual(reparsed, normalized)
+        json.dumps(reparsed, allow_nan=False)
+
     def test_schema_is_draft_2020_12_and_versioned(self):
         schema = json.loads((FORMAT_DIR / "schema.json").read_text(encoding="utf-8"))
         self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
