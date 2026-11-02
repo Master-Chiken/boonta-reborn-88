@@ -53,6 +53,14 @@ Each edge contributes a fixed number of samples; the shared endpoint is emitted 
 
 **Not yet exported:** open routes and branching/rejoining graphs. These remain valid in route-graph-v1 and are rejected by this first bake path; selecting a branch and flattening it requires an explicit route choice, not an arbitrary edge ordering. This is a deterministic offline conversion, not a runtime graph loader, a live branch selector, or proof of GameCube/Wii source-format parity. The baked samples are then interpolated by the existing track-v1 Catmull-Rom runtime, so sampling density affects the approximation.
 
+## Current runtime oval source
+
+The native prototype's active test oval has now been converted into the canonical clean-room source at `gamecube-demo/data/original-test-oval-route-graph.json`, with explicit width classes in `gamecube-demo/data/original-test-oval-surface-widths.json`. The eight edge curves are cubic Bezier segments formed by converting the previous Catmull-Rom test points to their mathematically equivalent Bezier handles. Progress intervals are proportional to sampled 3D edge lengths.
+
+The checked-in `gamecube-demo/source/generated_track.h` is deterministically baked from this route graph using 16 samples per edge, then exported through the existing track-v1 header generator. Host test `test_runtime_oval_route_graph_is_the_canonical_header_source` checks this entire conversion against the committed C header. The 8-node source is deliberately the same original prototype oval; no commercial course coordinates or retail assets are involved.
+
+This moves the **current simple loop's authoring source** to route-graph-v1 while preserving the existing runtime data contract. It does not yet move curve evaluation or branch selection into GX/gameplay code: the executable still consumes the sampled track header, and its Catmull-Rom sampler interpolates the baked points. Branching/rejoining graphs remain host-side only until an explicit runtime route-choice design is implemented.
+
 ## Evidence and deliberate limits
 
 The PC source pinned to [SW_RACER_RE commit a9863edd4caaa573f89ff634fa7d1cd6d41738ab](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab) directly shows:
