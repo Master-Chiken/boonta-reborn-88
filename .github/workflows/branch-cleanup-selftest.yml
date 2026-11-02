@@ -1,26 +1,26 @@
-name: Archived branch cleanup safety tests
+name: Branch retirement safety tests
 
 on:
   pull_request:
     paths:
-      - ".github/workflows/retire-archived-branch-refs.yml"
+      - ".github/workflows/retire-verified-branch.yml"
       - ".github/workflows/branch-cleanup-selftest.yml"
 
 permissions:
   contents: read
 
 jobs:
-  validate-cleanup:
-    name: Validate cleanup YAML, shell syntax, and safety gates
+  validate-retirement:
+    name: Validate retirement YAML, shell syntax and exact allowlist
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check out exact tested commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
-      - name: Parse YAML and syntax-check all embedded bash scripts
+      - name: Parse workflow YAML and syntax-check embedded shell
         shell: bash
         run: |
           set -euo pipefail
@@ -28,81 +28,72 @@ jobs:
             ARGV.each do |path|
               doc = YAML.load_file(path)
               puts "YAML OK: #{path}"
-              next unless path.end_with?("retire-archived-branch-refs.yml")
+              next unless path.end_with?("retire-verified-branch.yml")
               doc.fetch("jobs").fetch("retire").fetch("steps").each_with_index do |step, index|
                 next unless step["run"]
-                File.write("/tmp/retire-workflow-#{index}.sh", step["run"])
+                File.write("/tmp/verified-retire-#{index}.sh", step["run"])
               end
             end
-          ' .github/workflows/retire-archived-branch-refs.yml .github/workflows/branch-cleanup-selftest.yml
+          ' .github/workflows/retire-verified-branch.yml .github/workflows/branch-cleanup-selftest.yml
 
-          for script in /tmp/retire-workflow-*.sh; do
+          for script in /tmp/verified-retire-*.sh; do
             bash -n "$script"
             echo "Bash syntax OK: $script"
           done
 
-      - name: Assert owner-only manual dispatch and exact safe allowlist
+      - name: Assert owner-only issue command, exact refs and safety gates
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
-          workflow = Path(".github/workflows/retire-archived-branch-refs.yml").read_text(encoding="utf-8")
-          job_env = workflow.split("\n    env:\n", 1)[1].split("\n    steps:\n", 1)[0]
-          runner_temp_expression = "$" + "{{ runner.temp }}"
+          workflow = Path(".github/workflows/retire-verified-branch.yml").read_text(encoding="utf-8")
           header = workflow.split("permissions:", 1)[0]
-          marker = 'cat > "$CANDIDATES_FILE" <<\'EOF\''
-          assert marker in workflow, "fixed candidate list is missing"
-          candidate_block = workflow.split(marker, 1)[1].split("\n          EOF", 1)[0]
-          records = [line.split() for line in candidate_block.splitlines() if line.strip()]
-          names = [row[0] for row in records]
-
+          cases = dict(re.findall(
+              r'^\s*"([^"]+)"\)\s+PINNED_SHA="([0-9a-f]{40})"\s+;;$',
+              workflow,
+              flags=re.MULTILINE,
+          ))
           expected = {
-              "audit/step102-import-gate",
-              "chore/two-branch-workflow",
-              "feat/game-finish-banner-label-20261017",
-              "feat/rocky-canyon-silhouette-20261017",
-              "feat/source-driven-racer-mesh-texture-20261017",
-              "feature/cleanroom-mesh-source",
-              "feature/gamecube-boost-meter",
-              "feature/gamecube-boost-overheat",
-              "feature/gamecube-lap-timing-hud",
-              "feature/gamecube-multi-rival-race-v2",
-              "fix/frame-rate-independent-gameplay-v3",
-              "fix/steering-stick-deadzone-20261017",
-              "governance/no-branch-cap-task-completion-20261017",
-              "import/step102-source-only",
-              "recovery/branch-heads-20261019-verified",
-              "test/dolphin-pause-state-acceptance",
-              "test/dolphin-pause-state-acceptance-7679597746618456134",
-              "chore/archived-branch-ref-cleanup",
-              "fix/cleanup-runner-context-20261019",
-              "fix/cleanup-final-allowlist-20261019",
-              "chore/branch-budget-policy-20261020",
+              "docs/branch-audit-20261020": "d78f4113a2ba6a9b0eabbc83ddc81cd0c9a9fdf3",
+              "feat/dpad-pitch-control-7615408465390853764-3543088446284898244": "888bb824f1ee6201efa965756712f0c84c6c7c43",
+              "feat/dpad-pitch-control-7615408465390853764": "c8c69c562dfeb84cfdc8218bd5364b88706a1e4f",
+              "feat/dpad-pitch-input-support-17230867255224679905": "df29ed77b12dabf4bfc84fa066389b5f3c6baeb8",
+              "feat/native-wii-classic-input-267": "18db18c60ce033c1f589ceaaf0a06790024bd5a5",
+              "feat/start-button-finished-race-reset-4403260542384541549": "2e00824f9b24cb86c47fc50220eb532c9023a2df",
+              "fix/steering-stick-deadzone-27065704226814874": "4c3014b054e427fa0edbb53a6765bd6147659955",
+              "fix/steering-stick-deadzone-20261019-14221623089412890411": "0fe5dba576bd823208cd3e9aff9e282b30025c05",
+              "fix/steering-stick-deadzone-clean-20261020-1968330082647905868": "a6d0ee1cc0b383849c942de4d38f10bbc185a8cd",
+              "fix/steering-stick-deadzone-clean-20261020": "6b31321294e8238b836e7d1807c0ef006835f377",
+              "jules/re-001-public-source-crosscheck-5621653419986752281": "de33cca64ce8eeefc3c34260e3d413832b3fd666",
+              "re-001-ares-gdb-smoke-20261021": "3df2aedeccaef904c48637710eedc88699db7acb",
+              "safety/openrouter-exact-head-sha": "c52c9b2594b711a76a8f7ccf5e25acce7982c381",
+              "test/ares-gdb-smoke-20261021": "fa8cee047ae8e74c30c87cd94977c434bb1c7398",
           }
 
           checks = {
-              "manual dispatch only": "workflow_dispatch:" in header and all(x not in header for x in ("push:", "pull_request:", "schedule:")),
-              "owner and main-branch gate": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in workflow,
-              "runner context only used in step-level env": "runner.temp" not in job_env and workflow.count("CANDIDATES_FILE: " + runner_temp_expression + "/archived-branch-cleanup.tsv") == 2,
-              "dry-run is the default": "default: dry-run" in workflow and 'CONFIRMATION" == "DRY RUN"' in workflow,
-              "deletion needs explicit phrase": "RETIRE 21 ARCHIVED BRANCH REFS" in workflow,
-              "pinned checkpoint and ancestry check": "cf4978a17916c00eed8e25550bd9231354096993" in workflow and "git merge-base --is-ancestor" in workflow,
-              "exact SHA verification for archived refs": '[[ "$actual_sha" == "$expected" ]]' in workflow,
-              "reject protected refs": ".protected // false" in workflow,
-              "reject open PR head or base": '.head.ref == $branch or .base.ref == $branch' in workflow,
-              "exact allowlist contains 21 unique reviewed refs": len(names) == 21 and len(set(names)) == 21 and set(names) == expected,
-              "never retire permanent refs": '[[ "$branch" != "main" && "$branch" != "dev" && "$branch" != "archive/branch-heads-20261019" ]]' in workflow,
-              "only one Git ref delete operation": workflow.count('gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$branch"') == 1,
-              "no force updates or merges": all(x not in workflow for x in ("git push --force", "gh pr merge", "git update-ref", "force=true")),
-              "each ref is verified again immediately before deletion": "Retire refs one by one after immediate recheck" in workflow and workflow.count('actual_sha="$(jq -r') >= 2,
-              "final inventory verifies each deletion": 'any(.[]; .name == $branch)' in workflow,
+              "manual triggers only": "workflow_dispatch:" in header and "issue_comment:" in header and all(token not in header for token in ("push:", "pull_request:", "schedule:")),
+              "actor, main ref and dedicated issue gate": "github.actor == 'Master-Chiken'" in workflow and "github.ref == 'refs/heads/main'" in workflow and "github.event.issue.number == 248" in workflow and "github.event.issue.pull_request == null" in workflow,
+              "comment requires exact one-line command and explicit confirmation": r"^/retire-branch" in workflow and "CONFIRM$" in workflow and "Use exactly: /retire-branch BRANCH_NAME EXPECTED_SHA CONFIRM" in workflow,
+              "14 unique exact branch/SHA pins": cases == expected and len(cases) == 14,
+              "current open PR heads are not allowlisted": "recovery/all-branch-heads-20261102" not in cases and "feat/native-wii-classic-input-main-20261102" not in cases,
+              "permanent refs cannot be retired": all(name not in cases for name in ("main", "dev", "archive/branch-heads-20261019")),
+              "checks exact live head": '.object.sha' in workflow and '== "$EXPECTED_SHA"' in workflow,
+              "rejects protected branches": '.protected' in workflow and '== "false"' in workflow,
+              "rejects open PR heads and bases": '.head.ref == $branch or .base.ref == $branch' in workflow,
+              "requires archived commit ancestry": workflow.count("git merge-base --is-ancestor") == 2,
+              "rechecks immediately before deletion": workflow.count('ref_json="$(gh api') == 2 and "Recheck exact ref and atomically retire one branch" in workflow,
+              "deletion uses exact-SHA lease": 'git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"' in workflow,
+              "one ref per workflow run and no broad delete": "branch_name" in workflow and "push --delete" not in workflow and workflow.count('git push --force-with-lease=') == 1,
+              "concurrent retirements are serialized": "cancel-in-progress: false" in workflow and "concurrency:" in workflow,
+              "never deletes via an unguarded REST DELETE": "gh api --method DELETE" not in workflow,
           }
 
           for label, ok in checks.items():
               print(f"{'PASS' if ok else 'FAIL'}: {label}")
           failed = [label for label, ok in checks.items() if not ok]
           if failed:
-              raise SystemExit("Cleanup workflow validation failed: " + "; ".join(failed))
+              raise SystemExit("Retirement workflow validation failed: " + "; ".join(failed))
           PY

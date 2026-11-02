@@ -4,28 +4,34 @@ on:
   workflow_dispatch:
     inputs:
       branch_name:
-        description: "One pre-reviewed branch ref"
+        description: "One exact branch ref from the reviewed retirement allowlist"
         required: true
         type: choice
         options:
-          - recovery/all-branch-heads-20261102
-          - test/ares-gdb-smoke-20261021
-          - feat/dpad-pitch-control-7615408465390853764
+          - docs/branch-audit-20261020
           - feat/dpad-pitch-control-7615408465390853764-3543088446284898244
+          - feat/dpad-pitch-control-7615408465390853764
           - feat/dpad-pitch-input-support-17230867255224679905
+          - feat/native-wii-classic-input-267
+          - feat/start-button-finished-race-reset-4403260542384541549
           - fix/steering-stick-deadzone-27065704226814874
           - fix/steering-stick-deadzone-20261019-14221623089412890411
           - fix/steering-stick-deadzone-clean-20261020-1968330082647905868
-          - feat/start-button-finished-race-reset-4403260542384541549
-          - feat/native-wii-classic-input-267
+          - fix/steering-stick-deadzone-clean-20261020
+          - jules/re-001-public-source-crosscheck-5621653419986752281
+          - re-001-ares-gdb-smoke-20261021
+          - safety/openrouter-exact-head-sha
+          - test/ares-gdb-smoke-20261021
       expected_sha:
-        description: "Exact SHA from reviewed inventory"
+        description: "Exact SHA from the reviewed inventory"
         required: true
         type: string
       confirm_branch:
         description: "Type the complete branch name again"
         required: true
         type: string
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -37,75 +43,150 @@ concurrency:
 
 jobs:
   retire:
-    if: github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'
+    if: github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main' && (github.event_name != 'issue_comment' || (github.event.issue.number == 248 && github.event.issue.pull_request == null))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      BRANCH_NAME: ${{ inputs.branch_name }}
-      EXPECTED_SHA: ${{ inputs.expected_sha }}
-      CONFIRM_BRANCH: ${{ inputs.confirm_branch }}
+      EVENT_NAME: ${{ github.event_name }}
+      ISSUE_NUMBER: ${{ github.event.issue.number || '' }}
+      COMMENT_BODY: ${{ github.event.comment.body || '' }}
+      INPUT_BRANCH_NAME: ${{ inputs.branch_name || '' }}
+      INPUT_EXPECTED_SHA: ${{ inputs.expected_sha || '' }}
+      INPUT_CONFIRM_BRANCH: ${{ inputs.confirm_branch || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          ref: main
           fetch-depth: 0
           persist-credentials: true
-      - name: Verify exact allowlist, head, protection, PRs and archive reachability
+
+      - name: Resolve one explicit owner retirement command
+        id: selection
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$CONFIRM_BRANCH" == "$BRANCH_NAME" ]] || { echo "::error::Confirmation mismatch"; exit 1; }
+          if [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            [[ "$ISSUE_NUMBER" == "248" ]] || { echo "::error::Only branch-budget issue #248 is accepted."; exit 1; }
+            if [[ ! "$COMMENT_BODY" =~ ^/retire-branch[[:space:]]+([A-Za-z0-9_./-]+)[[:space:]]+([0-9a-f]{40})[[:space:]]+CONFIRM$ ]]; then
+              echo "::error::Use exactly: /retire-branch BRANCH_NAME EXPECTED_SHA CONFIRM"
+              exit 1
+            fi
+            BRANCH_NAME="${BASH_REMATCH[1]}"
+            EXPECTED_SHA="${BASH_REMATCH[2]}"
+            CONFIRM_BRANCH="$BRANCH_NAME"
+          else
+            BRANCH_NAME="$INPUT_BRANCH_NAME"
+            EXPECTED_SHA="$INPUT_EXPECTED_SHA"
+            CONFIRM_BRANCH="$INPUT_CONFIRM_BRANCH"
+          fi
+
+          [[ -n "$BRANCH_NAME" && "$CONFIRM_BRANCH" == "$BRANCH_NAME" ]] || {
+            echo "::error::Branch confirmation mismatch."
+            exit 1
+          }
+
           case "$BRANCH_NAME" in
-            "recovery/all-branch-heads-20261102") PINNED_SHA="69a88aadcc7fb3bb17255136f079568f3f98c501" ;;
-            "test/ares-gdb-smoke-20261021") PINNED_SHA="fa8cee047ae8e74c30c87cd94977c434bb1c7398" ;;
-            "feat/dpad-pitch-control-7615408465390853764") PINNED_SHA="c8c69c562dfeb84cfdc8218bd5364b88706a1e4f" ;;
+            "docs/branch-audit-20261020") PINNED_SHA="d78f4113a2ba6a9b0eabbc83ddc81cd0c9a9fdf3" ;;
             "feat/dpad-pitch-control-7615408465390853764-3543088446284898244") PINNED_SHA="888bb824f1ee6201efa965756712f0c84c6c7c43" ;;
+            "feat/dpad-pitch-control-7615408465390853764") PINNED_SHA="c8c69c562dfeb84cfdc8218bd5364b88706a1e4f" ;;
             "feat/dpad-pitch-input-support-17230867255224679905") PINNED_SHA="df29ed77b12dabf4bfc84fa066389b5f3c6baeb8" ;;
+            "feat/native-wii-classic-input-267") PINNED_SHA="18db18c60ce033c1f589ceaaf0a06790024bd5a5" ;;
+            "feat/start-button-finished-race-reset-4403260542384541549") PINNED_SHA="2e00824f9b24cb86c47fc50220eb532c9023a2df" ;;
             "fix/steering-stick-deadzone-27065704226814874") PINNED_SHA="4c3014b054e427fa0edbb53a6765bd6147659955" ;;
             "fix/steering-stick-deadzone-20261019-14221623089412890411") PINNED_SHA="0fe5dba576bd823208cd3e9aff9e282b30025c05" ;;
             "fix/steering-stick-deadzone-clean-20261020-1968330082647905868") PINNED_SHA="a6d0ee1cc0b383849c942de4d38f10bbc185a8cd" ;;
-            "feat/start-button-finished-race-reset-4403260542384541549") PINNED_SHA="2e00824f9b24cb86c47fc50220eb532c9023a2df" ;;
-            "feat/native-wii-classic-input-267") PINNED_SHA="18db18c60ce033c1f589ceaaf0a06790024bd5a5" ;;
-            *) echo "::error::Not allowlisted"; exit 1 ;;
+            "fix/steering-stick-deadzone-clean-20261020") PINNED_SHA="6b31321294e8238b836e7d1807c0ef006835f377" ;;
+            "jules/re-001-public-source-crosscheck-5621653419986752281") PINNED_SHA="de33cca64ce8eeefc3c34260e3d413832b3fd666" ;;
+            "re-001-ares-gdb-smoke-20261021") PINNED_SHA="3df2aedeccaef904c48637710eedc88699db7acb" ;;
+            "safety/openrouter-exact-head-sha") PINNED_SHA="c52c9b2594b711a76a8f7ccf5e25acce7982c381" ;;
+            "test/ares-gdb-smoke-20261021") PINNED_SHA="fa8cee047ae8e74c30c87cd94977c434bb1c7398" ;;
+            *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
-          [[ "$EXPECTED_SHA" == "$PINNED_SHA" ]] || { echo "::error::SHA mismatch"; exit 1; }
-          # Git refs support slash-delimited branch names directly. The branches
-          # endpoint is read as a paginated inventory to verify protection without
-          # relying on a slash-containing path parameter.
+
+          [[ "$EXPECTED_SHA" == "$PINNED_SHA" ]] || {
+            echo "::error::Expected SHA does not match the reviewed allowlist."
+            exit 1
+          }
+          {
+            echo "branch_name=$BRANCH_NAME"
+            echo "expected_sha=$EXPECTED_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify exact head, protection, open PRs and archive reachability
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
+          EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" ]] || {
+            echo "::error::Permanent refs cannot be retired."
+            exit 1
+          }
+
           ref_json="$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME")"
-          [[ "$(jq -r '.object.sha' <<< "$ref_json")" == "$EXPECTED_SHA" ]] || { echo "::error::Head changed"; exit 1; }
+          [[ "$(jq -r '.object.sha' <<< "$ref_json")" == "$EXPECTED_SHA" ]] || {
+            echo "::error::Live branch head changed."
+            exit 1
+          }
+
           branch_pages="$(gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100")"
           branch_json="$(jq -c --arg branch "$BRANCH_NAME" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
-          [[ -n "$branch_json" ]] || { echo "::error::Branch missing from branch inventory"; exit 1; }
-          [[ "$(jq -r '.protected' <<< "$branch_json")" == "false" ]] || { echo "::error::Protected branch"; exit 1; }
+          [[ -n "$branch_json" ]] || { echo "::error::Branch missing from inventory."; exit 1; }
+          [[ "$(jq -r '.protected' <<< "$branch_json")" == "false" ]] || {
+            echo "::error::Protected branch."
+            exit 1
+          }
+
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
           if jq -e --arg branch "$BRANCH_NAME" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' /tmp/open-prs.json >/dev/null; then
-            echo "::error::Open PR uses this branch"; exit 1
+            echo "::error::An open PR uses this branch as head or base."
+            exit 1
           fi
+
           git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
           git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
-      - name: Recheck and atomically delete one ref
+
+      - name: Recheck exact ref and atomically retire one branch
         shell: bash
+        env:
+          BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
+          EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
           ref_json="$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME")"
-          [[ "$(jq -r '.object.sha' <<< "$ref_json")" == "$EXPECTED_SHA" ]] || { echo "::error::Branch head changed"; exit 1; }
+          [[ "$(jq -r '.object.sha' <<< "$ref_json")" == "$EXPECTED_SHA" ]] || {
+            echo "::error::Branch moved after the first check."
+            exit 1
+          }
+
           branch_pages="$(gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100")"
           branch_json="$(jq -c --arg branch "$BRANCH_NAME" 'add | map(select(.name == $branch)) | if length == 1 then .[0] else empty end' <<< "$branch_pages")"
-          [[ -n "$branch_json" && "$(jq -r '.protected' <<< "$branch_json")" == "false" ]] || { echo "::error::Branch missing or protected"; exit 1; }
+          [[ -n "$branch_json" && "$(jq -r '.protected' <<< "$branch_json")" == "false" ]] || {
+            echo "::error::Branch missing or protected at final check."
+            exit 1
+          }
+
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs-before-delete.json
           if jq -e --arg branch "$BRANCH_NAME" 'any(.[]; .head.ref == $branch or .base.ref == $branch)' /tmp/open-prs-before-delete.json >/dev/null; then
-            echo "::error::Open PR uses this branch"; exit 1
-          fi
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
-          git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
-          # Use an atomic compare-and-swap lease for deletion. The refs DELETE
-          # REST endpoint has no expected-SHA precondition, so a concurrent push
-          # between the last read and DELETE could otherwise remove a moved ref.
-          # --force-with-lease requires the remote ref to still equal EXPECTED_SHA.
-          git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"
-          if gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME" >/dev/null 2>&1; then
-            echo "::error::Ref still exists after conditional deletion"
+            echo "::error::An open PR started using this branch."
             exit 1
           fi
+
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
+          git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
+
+          # Compare-and-swap lease prevents deleting a branch that moved after
+          # verification. Only the exact pre-reviewed ref may be deleted.
+          git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"
+
+          if gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME" >/dev/null 2>&1; then
+            echo "::error::Ref still exists after conditional deletion."
+            exit 1
+          fi
+
+          remaining="$(gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq '[add[]] | length')"
+          echo "Successfully retired $BRANCH_NAME at $EXPECTED_SHA. Remaining branch refs: $remaining"
+          echo "Expected final inventory after the 14 reviewed retirements: 5 refs."
