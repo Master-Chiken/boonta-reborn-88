@@ -3447,7 +3447,7 @@ This is a specification target only. Preserve `boonta-track-v1` as the working s
 - **Not runtime-confirmed:** these are static reconstructions, not a recorded retail gameplay run or matching-compiled source.
 - **Not cross-platform-confirmed:** no part of this trace establishes identical N64, Dreamcast, GameCube or Wii code/data semantics. The existing N64 84-byte-record trace is a useful independent comparison only.
 - **Not yet a converter:** no original coordinates, track assets, code, ROM data or proprietary outputs were copied to this repository; no parser, route graph runtime or gameplay code changed.
-- **Remaining research:** compare the branch/progress lookup with N64's eight trailing short fields and the existing source-format metadata; next inspect the AI/racer consumers of route cursor and progress so the graph is specified for player and rival behavior, not only geometry.
+- **Research outcome:** the PC branch/progress lookup, player cursor/binding path, and AI branch-choice/look-ahead consumer are now documented. The next bounded task is a versioned neutral graph schema with synthetic branch/split/rejoin fixtures; keep N64 field parity and retail GameCube/Wii behavior explicitly unverified.
 
 **Result:** the PC route/spline research is no longer missing the progress-table writer or the principal pod-to-spline cursor/binding flow. The next research question can move from "how does the route graph compute progress?" to "how do AI racers consume the same graph/cursor and choose among branch routes?" Only after that behavior is documented should the runtime schema be designed or ported.
 
@@ -3485,3 +3485,48 @@ This is a route-following AI, not the demo's current sinusoidal rival-lane motio
 A future graph/AI contract must expose the selected outgoing edge to the cursor and persist branch history across the four-node look-ahead. AI steering should request a look-ahead point from that same cursor rather than maintain an unrelated track-polyline follower. The branch selector policy itself should be a swappable behavior layer (random default plus optional scripted per-track choices), separate from graph topology and curve evaluation.
 
 No game code, ROM, route coordinates, extracted assets, or third-party implementation source was copied. This is a PC source-analysis note only.
+
+
+## E. AI and branch-choice consumer — PC graph navigation is now mapped
+
+The pinned PC `swrRace_AutopilotSteer` and `swrSpline_CursorStep` functions close the player-versus-AI route-consumer question at source level:
+
+- The AI racer uses its embedded `swrSplineCursor` (same cursor layout as the player's route state). It evaluates the current point and a forward look-ahead point from that cursor, adjusts its look-ahead parameter toward a desired world-space distance, projects the target along the gravity axis, then steers toward it using a signed heading error.
+- Before route evaluation, the autopilot refreshes `branchSelector` to an integer 0/1 choice. When the cursor reaches a node boundary, `swrSpline_CursorStep` looks at the outgoing-edge count and selects the corresponding indexed edge; if the selector is outside the range, the code uses modulo by that count. It then shifts/stores the branch-history bits in `branchFlags` so the look-ahead window stays on the selected route.
+- Six track scripts override the random branch choice over specific `lapComp` windows. Scripts 1–4 force edge choice 0; scripts 5–6 force choice 1. `InitAISettingsForTrack` assigns these scripts by signature track: planet 1 tracks 0–2 use script 1; planet 3 track 1 uses script 6 and track 2 script 5; planet 4 tracks 0–2 use scripts 2, 3 and 4 respectively.
+- The same track setup assigns `track_spline_variant` values on planet 1 (1/2/3 for tracks 0/1/2). This is a distinct global used by nearby-spline/minimap sampling; do not fold it into the live branch selector or graph topology.
+
+**Port implication:** the route graph is not just static geometry. It must provide one cursor/evaluation service shared by player progress and AI look-ahead steering, and it must retain enough chosen-edge history for deterministic look-ahead across multi-node branches. The AI policy (random branch choice, scripted per-track windows, future difficulty behavior) should remain a separate layer from graph data.
+
+Source pins: [`swrRace_AutopilotSteer`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c), [`swrSpline_CursorStep`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c), [`InitAISettingsForTrack`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrObj.c), and the declarations in [`swrRace.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.h). This is static Windows-PC source evidence only; no runtime AI race or console parity is claimed.
+
+## F. Candidate neutral route-graph contract — proposal, not yet an implementation
+
+The evidence now supports a platform-neutral contract that is richer than `boonta-track-v1`. Keep this as a **design proposal** until the raw source/platform adapters and synthetic edge cases are independently reviewed.
+
+### Separate the data domains
+
+1. **Graph topology:** stable node IDs; directed outgoing/incoming edges; explicit split, join and endpoint relationships. Do not store an implicit single successor for a route that branches.
+2. **Curve evaluation:** spline-wide interpolation kind plus the required per-node data. Bezier curves use the source point's outgoing handle and destination point's incoming handle; B-spline uses a four-node window. Rotation/up data is retained only where the chosen interpolation mode consumes it. Preserve unknown words rather than assigning guessed meanings.
+3. **Progress mapping:** a distinct mapping from a route occurrence/edge parameter to normalized race progress. PC evidence shows that arc length is sampled in world space, then alternate paths are mapped into the common progress interval between their branch and merge. Keep source progress keys and eight branch-band slots separate from the derived normalized values.
+4. **Runtime cursor:** current node/edge, segment parameter, signed direction, look-ahead window, start/end state, selected outgoing edge, and branch history. The cursor API should support evaluate, advance, retreat, seek-by-progress and world-position synchronization as distinct operations.
+5. **Surface and collision binding:** an optional sampled association from route positions to track/model/collision surfaces. The PC version bakes ten samples per control point, but sample density and binding mechanism are platform/runtime details, not graph topology and not a route half-width.
+6. **Pod-relative state:** cross-track offset/distance, ground/surface result, and lap-crossing/high-water state remain separate runtime state. Do not store them as route-node geometry.
+7. **AI route policy:** random/default edge choice, per-track scripted choices and look-ahead control are consumers of the graph, not serialized graph facts. Keep policy swappable and testable.
+
+### Authoring and runtime split
+
+- Preserve `boonta-track-v1` unchanged as the existing small synthetic course and acceptance harness.
+- A future authored route asset may be JSON (or another readable source) with a deterministic export into compact C arrays for the GameCube runtime, reusing the current exporter/build pipeline where possible.
+- The runtime representation should use compact indexed arrays/offsets and bounded node/edge counts; it should not require a heap-heavy general-purpose graph library or a runtime JSON filesystem.
+- Keep raw platform data and normalized graph data separate. Each adapter must record source platform, exact game/revision, source hash, coordinate frame/scale and field-confidence. PC parser observations do not authorise N64/retail-console format assumptions.
+- The first graph fixtures must be synthetic and cover: one straight Bezier route; a four-node B-spline window; a two-way split and rejoin with unequal physical branch lengths but equal normalized progress interval; multiple successive branch decisions with persistent history; open endpoints; closed-loop wrap; reverse travel; missing/duplicate links; and a mesh/collision binding boundary independent of centerline width.
+
+### Current gaps before implementation
+
+- PC findings are static and from a pinned Windows reference; runtime behavior and all console parity remain unverified.
+- N64 has an independently inspected 84-byte node layout and corresponding fields at the same offsets, but its control-flow semantics must remain separately labelled until each relevant N64 consumer is traced.
+- No original retail GameCube/Wii Racer binary has been identified; the target implementation will be a native port using the console toolchain, not a decompilation of the original GameCube/Wii executable.
+- Track mesh association, actual road/collision width, coordinate conversion, full AI branch-policy fidelity and the correct target memory budgets require separate evidence or original-authored target assets.
+
+**Decision:** no gameplay code change yet. The route, progress, cursor and PC AI consumer model is now sufficiently specified to draft a neutral graph contract. The next bounded step is to turn this proposal into a versioned schema and synthetic fixtures, without migrating the current v1 course or importing original game-derived route coordinates.
