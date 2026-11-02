@@ -1,6 +1,6 @@
 # PC AI and catch-up reference — 2026-10-20
 
-**Queue status (2026-10-21): PARKED reference note.** This PC-only AI comparison is documented and is not the active next task. The sole active research blocker is tracked in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): N64 all-finished state → manager phase/state transition → positively identified results UI/resource/scene. Resume this AI question only after RE-001 is resolved or explicitly handed off.
+**Status (2026-11-02): PC reference evidence integrated into the active route-graph dossier.** This file remains the detailed speed/catch-up note; the route cursor and branch-selection consumer is now cross-linked below. The owner’s current port goal prioritizes completing the PC route-graph/AI specification before designing the neutral target schema.
 
 ## Research question
 
@@ -62,4 +62,16 @@ Do not claim exact numeric parity from video alone unless the needed state can b
 
 ## Decision
 
-**No gameplay code change justified.** The static PC source reveals a richer opponent-pacing model than the prototype's synthetic rivals, but console parity and target acceptance are unproven. PC pod-control/traction is a separate parked question; do not start it while the N64 finish-to-results blocker in issue #226 is active.
+**No gameplay code change justified yet.** PC source evidence now covers both AI pacing and route-graph consumption, but it remains PC-only and static. Preserve the current synthetic rivals until a route-graph/cursor contract is specified and target-specific limits are written. No AI or physics implementation is started by this research result.
+
+
+## Route-graph consumption — spline autopilot and scripted branches (2026-11-02)
+
+This supplements the earlier speed/catch-up-only comparison. The PC rival AI also consumes the same route cursor and graph as the player.
+
+- `swrRace_AutopilotSteer` reads the pod's `swrSplineCursor), evaluates the current and forward look-ahead spline positions, and adjusts `aiLookAhead` until the world-space look-ahead distance approaches `aiLookAheadDistSq) (initially 90²). The aim point is adjusted along the gravity axis, then used for a proportional heading controller with a ±0.02 deadzone, gain `-10/7), and throttle reduction on large heading error.
+- The autopilot sets `branchSelector` to 0 or 1 during its update. `swrSpline_CursorStep` uses that selector when crossing an outgoing edge; it stores the choice in `branchFlags), which the cursor's look-ahead resolver uses to stay on the chosen branch history.
+- Six track scripts override the normal branch choice in lap-progress windows. Scripts 1–4 force main choice 0; scripts 5–6 force alternate choice 1. `InitAISettingsForTrack` selects them on signature tracks: planet 1 tracks 0–2 use script 1, planet 3 track 1 uses script 6 and track 2 script 5, planet 4 tracks 0–2 use scripts 2–4. The same setup assigns separate track-spline variant values on planet 1; do not confuse those with the live branch selector.
+- This means route topology, normalized lap progress, AI branch policy and look-ahead steering are coupled by a shared cursor API. A future Boonta graph model must retain branch identity/history and expose the same evaluation service to player movement and AI.
+
+The evidence is static PC source at the pinned SW_RACER_RE revision `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`. It is not a runtime measurement and does not establish N64, Dreamcast, GameCube or Wii parity. See the detailed route/AI crosswalk in [RE-001](RE-001-route-spline-progress.md#pc-ai-consumers-of-the-route-graph--branch-selection-and-spline-following-autopilot).
