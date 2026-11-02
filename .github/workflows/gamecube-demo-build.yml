@@ -16,6 +16,7 @@ on:
   pull_request:
     paths:
       - "gamecube-demo/Makefile"
+      - "gamecube-demo/Makefile.wii"
       - "gamecube-demo/source/**"
       - "gamecube-demo/tests/**"
       - "gamecube-demo/include/**"
