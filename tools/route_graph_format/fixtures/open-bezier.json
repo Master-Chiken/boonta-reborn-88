@@ -1,0 +1,106 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "open-bezier-demo",
+  "name": "Open Bezier route",
+  "source": {
+    "platform": "synthetic",
+    "release": "route-graph-fixtures-v1",
+    "revision": "2026-11-02"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": false,
+  "start_node_id": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "middle",
+      "position": [
+        3,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "finish",
+      "position": [
+        6,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "start-middle",
+      "from": "start",
+      "to": "middle",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          1,
+          0,
+          0
+        ],
+        "control2": [
+          2,
+          0,
+          0
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.5
+      }
+    },
+    {
+      "id": "middle-finish",
+      "from": "middle",
+      "to": "finish",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          4,
+          0,
+          0
+        ],
+        "control2": [
+          5,
+          0,
+          0
+        ]
+      },
+      "progress": {
+        "start": 0.5,
+        "end": 1
+      }
+    }
+  ]
+}
