@@ -3070,6 +3070,7 @@ A second local observation route is available if the owner prefers to use the Wi
 3. Create `/wii64/roms/` on the SD card and put the owner's US ROM there as `SW Racer 1999- (US).z64`. Not64 accepts `.z64` (big-endian), `.v64` and `.n64`; SD/USB saves use `/wii64/saves/`.
 4. In Not64 choose **Load ROM → SD/USB → the ROM → Play Game**. For FTP transfer, place the ROM in `/wii64/roms/`; do not put it inside the Homebrew Channel application's `apps` folder.
 5. In the Not64 settings, configure the actual controller using **Configure Input / Configure Buttons** rather than assuming an N64 button mapping. Both Classic Controller and GameCube controller are listed as supported.
+6. Before racing, confirm that the connected physical pad is actually detected as a **Classic Controller** on the selected port. The pinned Classic input source calls `WPAD_Probe` and rejects the Classic profile when the reported expansion type is not `WPAD_EXP_CLASSIC`; package-level support therefore does not guarantee recognition of every third-party pad.
 
 ### Not64 baseline procedure and manual-based Results oracle
 
@@ -3086,6 +3087,7 @@ Start with default emulator settings; do not alter framebuffer or CPU core to ch
 | Not64 20260410 appears and launches from Homebrew Channel | |
 | US `.z64` is visible under `/wii64/roms/` and loads | |
 | Title screen and menus render legibly | |
+| Wii detects the connected pad as a Classic Controller on the selected port | |
 | Race starts and responds to the selected controller | |
 | Frame pacing and audio remain usable during a full race | |
 | Three-lap race reaches the finish without a savestate jump | |
