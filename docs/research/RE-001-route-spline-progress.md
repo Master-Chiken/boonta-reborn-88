@@ -3254,3 +3254,17 @@ No gameplay code changed. The ROM, raw disassembly, private instruction addresse
 ### Next bounded action
 
 The remaining decisive evidence is runtime: one ordinary N64 race with a continuous capture showing the final lap, finish crossing, Results table and its time values. Keep the ROM and capture private; publish only emulator/version, tested mode and observed behavior.
+
+
+### BV follow-up — formatter rounding and rollover branch (2026-11-02)
+
+A further local pass followed the time formatter beyond the minute/second/hundredth decomposition:
+
+- The minute component is obtained by dividing the input float by 60 and truncating the whole-minute result.
+- The fractional-minute remainder is multiplied by 60 and truncated to the seconds component.
+- The fractional-second remainder receives a small stored floating-point correction before multiplication by 100 and truncation. This is a conversion detail, not evidence that the source measurement itself is rounded to a fixed decimal precision.
+- If the computed hundredths component reaches 100, the helper increments the seconds component. It also has a branch that increments the minute component when that adjusted seconds value reaches 60.
+
+**Important formatting limit:** in the traced carry branch, the incremented seconds value is still passed onward to the generic string formatter; this pass does not establish that the displayed text normalizes that value back to 00. Therefore the arithmetic contains a carry/rollover adjustment, but the exact visible boundary string at a near-minute rollover should not be described as conventional minute:second.hundredth normalization without a runtime capture or a further format-consumer check.
+
+This narrows the formatter's internal arithmetic while preserving the evidence boundary: the Results timing entries are formatted as minute/second/hundredth components, but the exact punctuation, zero-padding and edge-case display remain unverified. No gameplay code changed; no ROM bytes, raw disassembly, exact local offsets, private pointers or extracted assets were published.
