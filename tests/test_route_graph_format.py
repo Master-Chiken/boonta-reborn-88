@@ -76,23 +76,29 @@ class RouteGraphFormatTests(unittest.TestCase):
         middle = evaluate_edge(graph, "bspline-span", 0.5)
         end = evaluate_edge(graph, "bspline-span", 1.0)
         self.assertAlmostEqual(start["position"][0], 1.0, places=8)
+        self.assertAlmostEqual(start["position"][2], 2.0 / 3.0, places=8)
         self.assertAlmostEqual(middle["position"][0], 1.5, places=8)
         self.assertAlmostEqual(end["position"][0], 2.0, places=8)
+        self.assertAlmostEqual(end["position"][2], 0.5, places=8)
         self.assertAlmostEqual(start["tangent"][0], 1.0, places=8)
         self.assertAlmostEqual(end["tangent"][0], 1.0, places=8)
 
     def test_bspline_window_is_independent_from_edge_topology_links(self):
         graph = fixture("uniform-cubic-bspline.json")
-        graph["nodes"].extend([
-            {"id": "route-start", "position": [-5, 0, 0]},
-            {"id": "route-finish", "position": [5, 0, 0]},
-        ])
-        graph["start_node_id"] = "route-start"
-        graph["edges"][0]["from"] = "route-start"
-        graph["edges"][0]["to"] = "route-finish"
+        curve = graph["edges"][0]["curve"]
+        self.assertNotEqual(graph["edges"][0]["from"], curve["control_node_ids"][1])
+        self.assertNotEqual(graph["edges"][0]["to"], curve["control_node_ids"][2])
         normalized = validate_route_graph(graph)
         sample = evaluate_edge(normalized, "bspline-span", 0.5)
         self.assertAlmostEqual(sample["position"][0], 1.5, places=8)
+
+    def test_bspline_curve_must_meet_its_topology_endpoints(self):
+        graph = fixture("uniform-cubic-bspline.json")
+        invalid = copy.deepcopy(graph)
+        start = next(node for node in invalid["nodes"] if node["id"] == "route-start")
+        start["position"][0] += 0.25
+        with self.assertRaisesRegex(RouteGraphError, "B-spline start does not meet topology node"):
+            validate_route_graph(invalid)
 
     def test_split_rejoin_maps_unequal_physical_branches_to_same_progress_band(self):
         graph = fixture("split-rejoin-unequal-lengths.json")
