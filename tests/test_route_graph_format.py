@@ -81,6 +81,19 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(start["tangent"][0], 1.0, places=8)
         self.assertAlmostEqual(end["tangent"][0], 1.0, places=8)
 
+    def test_bspline_window_is_independent_from_edge_topology_links(self):
+        graph = fixture("uniform-cubic-bspline.json")
+        graph["nodes"].extend([
+            {"id": "route-start", "position": [-5, 0, 0]},
+            {"id": "route-finish", "position": [5, 0, 0]},
+        ])
+        graph["start_node_id"] = "route-start"
+        graph["edges"][0]["from"] = "route-start"
+        graph["edges"][0]["to"] = "route-finish"
+        normalized = validate_route_graph(graph)
+        sample = evaluate_edge(normalized, "bspline-span", 0.5)
+        self.assertAlmostEqual(sample["position"][0], 1.5, places=8)
+
     def test_split_rejoin_maps_unequal_physical_branches_to_same_progress_band(self):
         graph = fixture("split-rejoin-unequal-lengths.json")
         left_lengths = [
@@ -211,8 +224,8 @@ class RouteGraphFormatTests(unittest.TestCase):
     def test_rejects_invalid_bspline_window_and_non_finite_coordinates(self):
         graph = fixture("uniform-cubic-bspline.json")
         invalid_window = copy.deepcopy(graph)
-        invalid_window["edges"][0]["curve"]["control_node_ids"] = ["p0", "p0", "p2", "p3"]
-        with self.assertRaisesRegex(RouteGraphError, "must be unique"):
+        invalid_window["edges"][0]["curve"]["control_node_ids"] = ["p0", "p1", "missing", "p3"]
+        with self.assertRaisesRegex(RouteGraphError, "references missing node"):
             validate_route_graph(invalid_window)
 
         invalid_coordinate = copy.deepcopy(graph)
