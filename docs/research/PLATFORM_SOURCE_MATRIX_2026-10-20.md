@@ -1,7 +1,7 @@
 # Platform source matrix — Star Wars: Episode I Racer
 Date: 2026-10-20
 
-**Status as of 2026-10-21: PARKED SOURCE INVENTORY, NOT AN ACTIVE QUEUE.** The canonical active question is [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 finish-to-results transition. The platform and format items below are preserved for future use only; do not start them before RE-001 is resolved or explicitly handed off.
+**Status as of 2026-11-02: PARKED SOURCE INVENTORY, NOT AN ACTIVE QUEUE.** The active RE-001 deliverable in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is a neutral route-graph contract plus synthetic fixtures, based on completed PC spline/progress/cursor/AI mapping. The N64 finish-to-Results question is historical and runtime-unverified. The platform and format items below remain future references; do not execute them as parallel work.
 
 ## Decision and scope
 
