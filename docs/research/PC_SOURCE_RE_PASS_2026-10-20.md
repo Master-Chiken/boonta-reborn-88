@@ -1,6 +1,6 @@
 # PC source reverse-engineering pass — 2026-10-20
 
-**Current queue notice (2026-10-21):** this is a dated historical analysis log. Its earlier “next action” and format/AI/controls follow-ups are not current queue instructions. The PC spline/progress comparison is documented in the canonical RE-001 dossier. The only active blocker is in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 all-participants-finished condition through the race-manager state/phase transition to a positively identified results UI/resource/scene destination. Do not repeat the completed PC source pass or start a parked comparison in parallel.
+**Current queue notice (updated 2026-11-02):** this is a dated historical PC source log. The PC route graph, branch-normalized progress bake, player cursor/binding and AI branch/look-ahead consumers are now documented in the canonical [RE-001 dossier](RE-001-route-spline-progress.md). The only active deliverable in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is a versioned neutral route-graph contract with synthetic host fixtures. The N64 finish-to-Results question remains historical/runtime-unverified; do not repeat this completed PC source pass or treat old follow-ups as active.
 
 ## Scope and evidence rules
 
@@ -155,7 +155,7 @@ The current PC source has a useful lap-progress model:
 
 This section supersedes earlier “next action” notes in this dated source pass. The PC race-progress/spline analysis is documented, with its unfinished PC helper bodies and platform limitations retained in the canonical dossier.
 
-**Current active research question (issue #226):** can the N64 all-participants-finished predicate be traced from its writer through the manager state/phase change and its consumer to a positively identified results UI/resource/scene destination?
+**Historical research question (superseded 2026-11-02):** can the N64 all-participants-finished predicate be traced from its writer through the manager state/phase change and its consumer to a positively identified results UI/resource/scene destination? This remains runtime-unverified and is not the active queue.
 
 1. Require positive lawful local static cross-reference or controlled runtime evidence; document exact revision, state field/call path, observations, counter-evidence and unknowns.
 2. Do not infer the destination from generic tags such as `Fini`/`Abrt`, shared global references, HUD strings, or PC behaviour.
