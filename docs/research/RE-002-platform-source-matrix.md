@@ -1,6 +1,6 @@
 # RE-002 — PC / Nintendo 64 / Dreamcast source matrix
 
-> **Queue status: PARKED — reference index only.** The sole active research question is [RE-001 in issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). This file preserves existing public-source leads for later; it does **not** authorize a second active research workstream. Do not execute the future sequence below until RE-001 is resolved or explicitly blocked.
+> **Queue status: PARKED — reference index only.** The active RE-001 deliverable in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is the versioned neutral route-graph contract and synthetic fixtures. This file preserves PC/N64/Dreamcast source leads for later; it does **not** authorize a second active research workstream. Keep RE-002 parked until the route-graph contract is reviewed and a separate next question is explicitly selected.
 
 **Status:** research inventory; no game code changed  
 **Date:** 2026-10-20  
