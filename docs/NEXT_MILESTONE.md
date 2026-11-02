@@ -40,7 +40,7 @@ Test in this exact order:
 2. **Throttle / Brake (A / B)**  
    Acceleration and braking visibly change speed. Speed falls naturally when released.
 
-3. **Steering**  
+3. **Steering**
    Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
 
 4. **Off-road & rails**  
