@@ -27,7 +27,7 @@ Nodes contain stable IDs, positions and optional up hints. Directed topology is 
 Edges carry one curve:
 
 - cubic_bezier: control1 and control2 are **absolute world-space positions**, not offsets. Endpoint positions come from the from and to nodes.
-- uniform_cubic_bspline: exactly four control-node IDs for the evaluation window. The edge's directed from/to topology links are stored independently; the schema does not infer a fixed control-window index for those links.
+- uniform_cubic_bspline: exactly four control-node IDs for the evaluation window. The edge's directed from/to topology links are stored independently; the schema does not infer a fixed control-window index for those links. The B-spline's evaluated positions at t=0 and t=1 must meet the edge's topology endpoint positions, so neighboring route edges cannot jump in world space.
 
 Each edge carries an explicit normalized progress interval. At a split all outgoing edges share a start value; at a rejoin all incoming edges share an end value. Interior nodes must be progress-continuous. An open route starts at 0 and terminates at 1. A closed route returns to the start node at 1 and begins there at 0.
 
