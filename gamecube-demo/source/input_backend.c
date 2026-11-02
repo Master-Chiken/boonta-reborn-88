@@ -3,7 +3,7 @@
 #include <string.h>
 
 #ifdef BOONTA_WII
-#include <ogc/wpad.h>
+#include <wiiuse/wpad.h>
 #else
 #include <ogc/pad.h>
 #endif
