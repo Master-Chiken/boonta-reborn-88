@@ -523,7 +523,7 @@ class RouteGraphFormatTests(unittest.TestCase):
 
     def test_closed_loop_export_enforces_runtime_point_and_width_limits(self):
         graph = fixture("closed-loop.json")
-        with self.assertRaisesRegex(RouteGraphExportError, "half-width"):
+        with self.assertRaisesRegex(RouteGraphExportError, "default_half_width"):
             export_closed_loop_track(graph, default_half_width=0.1, samples_per_edge=4)
         with self.assertRaisesRegex(RouteGraphExportError, "4096"):
             export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=2048)
