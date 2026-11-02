@@ -6,6 +6,7 @@ This folder defines an original, platform-neutral logical route graph for clean-
 
 - schema.json — JSON Schema Draft 2020-12 structural contract.
 - validate_route_graph.py — standard-library semantic validator, cubic curve evaluator, per-edge and whole-graph sampled-length helpers, normalized progress allocator and host cursor with branch history.
+- export_closed_loop_track.py — explicit offline bake from a simple closed route graph into the existing track-v1 format.
 - fixtures/ — small synthetic graphs only.
 
 Run the validator on the open Bezier example with:
@@ -16,7 +17,7 @@ Run the synthetic host suite with:
 
     python3 -m unittest discover -s tests -p 'test_route_graph_format.py' -v
 
-The existing boonta-track-v1 parser, exporter, source fixture, generated header and runtime are untouched. The new module has no runtime/renderer dependency and is not wired into the GameCube/Wii executable.
+The existing boonta-track-v1 parser, exporter, source fixture and generated header remain backward-compatible. The route graph is still not loaded on-console: the bridge is an offline bake step that produces track-v1 JSON, which the existing track exporter can turn into the C header consumed by the current GameCube/Wii runtime.
 
 ## Contract
 
@@ -32,6 +33,25 @@ Edges carry one curve:
 Each edge carries an explicit normalized progress interval. At a split all outgoing edges share a start value; at a rejoin all incoming edges share an end value. Interior nodes must be progress-continuous. An open route starts at 0 and terminates at 1. A closed route returns to the start node at 1 and begins there at 0.
 
 surface_binding is an optional sequence of (t, surface_id) samples from t=0 to t=1. It deliberately contains no road width, mesh data or collision dimensions. Those belong to separate surface/geometry assets. metadata is an opaque extension object; the validator does not assign semantics to it.
+
+## Offline bridge into the current GameCube/Wii track pipeline
+
+The first runtime bridge is deliberately narrow: it accepts a **single unbranched closed loop** (one incoming and one outgoing edge per route node), samples its cubic Bezier or uniform cubic B-spline edges, and writes a normal `boonta-track-v1` JSON track. The existing `tools/track_format/export_track_header.py` then generates the C header consumed by the native demo.
+
+Example using only the synthetic closed-loop fixture:
+
+    python3 tools/route_graph_format/export_closed_loop_track.py \
+        tools/route_graph_format/fixtures/closed-loop.json \
+        /tmp/route-track.json --half-width 3.6 --samples-per-edge 24
+    python3 tools/track_format/validate_track.py /tmp/route-track.json
+    python3 tools/track_format/export_track_header.py \
+        /tmp/route-track.json /tmp/generated_route_track.h --symbol "route graph demo"
+
+Geometry stays separate from topology. `--half-width` is required; an edge with `surface_binding` additionally needs a JSON object mapping every referenced surface ID to an explicit half-width, supplied with `--surface-widths widths.json`. Missing mappings and widths outside track-v1's 0.5–100 metre range are errors, not guessed defaults.
+
+Each edge contributes a fixed number of samples; the shared endpoint is emitted once by the next edge. The first point alone is marked as the current track-v1 start/finish checkpoint. The current runtime still counts laps by closed-loop distance and does not consume intermediate checkpoint gates.
+
+**Not yet exported:** open routes and branching/rejoining graphs. These remain valid in route-graph-v1 and are rejected by this first bake path; selecting a branch and flattening it requires an explicit route choice, not an arbitrary edge ordering. This is a deterministic offline conversion, not a runtime graph loader, a live branch selector, or proof of GameCube/Wii source-format parity. The baked samples are then interpolated by the existing track-v1 Catmull-Rom runtime, so sampling density affects the approximation.
 
 ## Evidence and deliberate limits
 
