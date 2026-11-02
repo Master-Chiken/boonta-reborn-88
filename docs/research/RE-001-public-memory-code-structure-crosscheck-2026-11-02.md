@@ -28,15 +28,20 @@ The manager table initializer independently clears the placement field, progress
 
 **Still not established:**
 - the exact semantic meaning of the floating-point accumulator beyond its observed route-progress/event-delta use;
-- whether the public “Lap Modifier” codes expose the same value as the visible HUD lap number at every stage (zero-based vs one-based presentation remains a runtime/HUD question);
-- the actual HUD reader/formatter/draw path and the FINAL LAP selector;
+- whether the public “Lap Modifier” codes expose the same value as the visible HUD lap number at every stage (the static HUD adds one for display, but runtime boundary values still need observation);
+- runtime appearance/timing of the lap HUD and FINAL LAP banner under the presentation guards;
 - runtime behavior of the Results transition and the physical Wii/Not64 controller path.
 
 ## Next bounded action
 
-Use these mapped fields as the new anchor to trace the HUD current-lap display and the FINAL LAP resource selection. Follow only readers/consumers of the mapped participant counter first; avoid broad string-table guessing. Keep the ROM, absolute table base, private field offsets and all extracted data local.
+The separate static HUD trace is now documented in Section BU of the route/spline dossier: it follows the participant counter into the one-based current/total lap formatter, the guarded FINAL LAP resource, the text queue and the frame-cycle glyph renderer. The remaining discriminator is a normal runtime race that records the lap fraction and final-lap banner, followed separately by the Results-screen test. Keep the ROM, absolute table base, private field offsets and all extracted data local.
 
 ## Public sources
 
 - [TheForce.net — Episode I Racer N64 codes](https://theforce.net/videogames/codes/n64/racer.asp)
 - [Ethereal Games — Episode I Racer GameShark Codes (US)](https://etherealgames.com/n64/s/star-wars-episode-i-racer/gameshark-codes-us/)
+
+
+## Follow-up reference — current HUD trace
+
+The current/total lap fraction and guarded FINAL LAP branch are no longer open static questions. See [RE-001 route/spline dossier Section BU](https://github.com/Master-Chiken/boonta-reborn-88/blob/docs/reverse-engineering-80-20-20261020/docs/research/RE-001-route-spline-progress.md) for the independently re-traced participant → formatter → text queue → frame-cycle drain → glyph-renderer chain. Runtime appearance and timing remain **NOT TESTED**.
