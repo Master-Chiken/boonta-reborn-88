@@ -594,9 +594,10 @@ class RouteCursor:
         return self.path_history[self.path_index]
 
     def move(
-        self, delta_t: float, branch_choices: dict[str, str] | None = None
+        self, delta_parameter: float, branch_choices: dict[str, str] | None = None
     ) -> dict[str, Any]:
-        delta_t = _number(delta_t, "delta_t")
+        """Advance by local edge parameter t, not by distance or elapsed time."""
+        delta_parameter = _number(delta_parameter, "delta_parameter")
         if branch_choices is None:
             branch_choices = {}
         if not isinstance(branch_choices, dict):
@@ -604,8 +605,8 @@ class RouteCursor:
 
         old_state = (self.path_history[:], self.path_index, self.t, self.finished, self.started)
         try:
-            self.t += delta_t
-            if delta_t < 0.0:
+            self.t += delta_parameter
+            if delta_parameter < 0.0:
                 self.finished = False
             transitions = 0
             while self.t > 1.0 + EPSILON:
