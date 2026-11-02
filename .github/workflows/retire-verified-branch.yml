@@ -85,7 +85,7 @@ jobs:
           fi
           git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
           git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
-      - name: Recheck and delete one ref
+      - name: Recheck and atomically delete one ref
         shell: bash
         run: |
           set -euo pipefail
@@ -100,5 +100,12 @@ jobs:
           fi
           git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
           git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
-          gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH_NAME"
-          if gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME" >/dev/null 2>&1; then echo "::error::Ref still exists"; exit 1; fi
+          # Use an atomic compare-and-swap lease for deletion. The refs DELETE
+          # REST endpoint has no expected-SHA precondition, so a concurrent push
+          # between the last read and DELETE could otherwise remove a moved ref.
+          # --force-with-lease requires the remote ref to still equal EXPECTED_SHA.
+          git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"
+          if gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME" >/dev/null 2>&1; then
+            echo "::error::Ref still exists after conditional deletion"
+            exit 1
+          fi
