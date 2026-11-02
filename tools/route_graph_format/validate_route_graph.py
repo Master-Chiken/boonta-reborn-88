@@ -61,9 +61,33 @@ def _vec3(value: Any, label: str) -> tuple[float, float, float]:
                  for index, component in enumerate(value))
 
 
+def _validate_json_value(value: Any, label: str) -> None:
+    """Reject Python-only values and non-finite numbers inside opaque JSON metadata."""
+    if value is None or isinstance(value, (str, bool)):
+        return
+    if isinstance(value, int):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise RouteGraphError(f"{label} contains a non-finite JSON number")
+        return
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            _validate_json_value(item, f"{label}[{index}]")
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise RouteGraphError(f"{label} contains a non-string object key")
+            _validate_json_value(item, f"{label}.{key}")
+        return
+    raise RouteGraphError(f"{label} contains a value that is not JSON-compatible")
+
+
 def _metadata(value: Any, label: str) -> None:
     if not isinstance(value, dict):
         raise RouteGraphError(f"{label} must be an object when present")
+    _validate_json_value(value, label)
 
 
 def _same(a: float, b: float) -> bool:
@@ -99,7 +123,8 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
         raise RouteGraphError(f"unknown root fields: {sorted(unknown_root)}")
     if data.get("format") != FORMAT:
         raise RouteGraphError(f"format must equal {FORMAT!r}")
-    if data.get("schema_version") != SCHEMA_VERSION:
+    version = data.get("schema_version")
+    if isinstance(version, bool) or version != SCHEMA_VERSION:
         raise RouteGraphError(f"schema_version must equal {SCHEMA_VERSION}")
     _identifier(data.get("route_id"), "route_id")
     name = data.get("name")
