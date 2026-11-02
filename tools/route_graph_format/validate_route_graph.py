@@ -92,7 +92,8 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
         raise RouteGraphError("source must be an object")
     if set(source) - {"platform", "release", "revision"}:
         raise RouteGraphError("source contains unsupported fields")
-    if source.get("platform") not in PLATFORMS:
+    platform = source.get("platform")
+    if not isinstance(platform, str) or platform not in PLATFORMS:
         raise RouteGraphError(f"source.platform must be one of {sorted(PLATFORMS)}")
     for field in ("release", "revision"):
         if field in source and (
