@@ -2719,7 +2719,7 @@ A final bounded instruction scan searched the main N64 code section for word loa
 
 **NOT FOUND IN THIS BOUNDED PASS:** a direct renderer/HUD consumer of that counter or its lower halfword. The absence of a direct `+0x7A` halfword access does not prove the HUD does not display the value; the presentation path may use a copied, transformed or separately maintained value.
 
-At the time of this bounded pass, no direct HUD consumer had been identified. That was a limited-scan result, not a proof that no such reader existed. The later caller-to-renderer trace in Section BO supersedes this interim negative conclusion and identifies the local HUD consumer of the same participant counter. A controlled local memory watch at lap boundaries remains an outstanding runtime discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
+At the time of this bounded pass, no direct HUD consumer had been identified. That was a limited-scan result, not a proof that no such reader existed. The later positive claim in Section BO was subsequently withdrawn on 2026-11-02 because the contemporaneous retained research note did not support its asserted caller-to-renderer cross-reference. Accordingly, this section's counter scan does not establish the HUD path, and the current/configured lap reader and FINAL LAP selector remain unlocated. A controlled local memory watch at lap boundaries remains an outstanding discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
 
 ## BJ. HUD resource strings confirmed; drawing/data path remains unlocated (2026-11-01)
 
@@ -2834,7 +2834,15 @@ The current pass did **not** find a direct call or message/dataflow from the `Jd
 Do not merge the two transition paths in the dossier until a positive caller/message/field join is demonstrated. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted resource payloads or assets are published; no gameplay code changed. Keep RE-002 parked.
 
 
-## BO. Local HUD consumes the same participant lap counter — static caller-to-renderer trace (2026-11-01)
+## BO. WITHDRAWN — unsupported local HUD caller-to-renderer claim (2026-11-02 correction)
+
+### Correction and authoritative evidence boundary
+
+The positive caller-to-renderer trace preserved below is **withdrawn in full**. A review of the contemporaneous retained private note for the 2026-10-21 N64 HUD pass found that it records resource strings, but no convincing code cross-reference to the HUD renderer and no located reader for the current/configured lap values or `FINAL LAP` selector. The retained note therefore does not support the positive call-chain assertions that were added here on 2026-11-01. No independent reproducible trace artifact or runtime observation is available in the project evidence to resolve that provenance conflict.
+
+Do **not** cite the following historical text as an established finding. It is retained only to make the correction auditable. The authoritative current boundary is Section BL: the participant route-event counter and configured threshold/finish handling are statically supported, the HUD string bank is independently observed, but the counter-to-HUD formatter/draw path and `FINAL LAP` selection remain **UNLOCATED / UNPROVEN**. The ordinary/default Finish-to-Results path is a separate conditional static finding in Sections BQ–BS; visible Results remains runtime-unverified. No N64 emulator, live race, frame capture or memory watch was performed.
+
+### Preserved historical claim — withdrawn; not evidence
 
 ### Caller and participant identity
 
