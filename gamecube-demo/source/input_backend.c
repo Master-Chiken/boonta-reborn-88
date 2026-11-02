@@ -46,8 +46,16 @@ void boonta_input_poll(BoontaInputFrame *frame)
         sample.classic_connected = 1;
         sample.buttons_down = WPAD_ButtonsDown(WPAD_CHAN_0);
         sample.buttons_held = WPAD_ButtonsHeld(WPAD_CHAN_0);
-        sample.stick_x = (int8_t)data->exp.classic.ljs.pos.x;
-        sample.stick_y = (int8_t)data->exp.classic.ljs.pos.y;
+        sample.stick_x = boonta_classic_axis_to_signed(
+            data->exp.classic.ljs.pos.x,
+            data->exp.classic.ljs.min.x,
+            data->exp.classic.ljs.center.x,
+            data->exp.classic.ljs.max.x);
+        sample.stick_y = boonta_classic_axis_to_signed(
+            data->exp.classic.ljs.pos.y,
+            data->exp.classic.ljs.min.y,
+            data->exp.classic.ljs.center.y,
+            data->exp.classic.ljs.max.y);
         sample.left_shoulder = data->exp.classic.l_shoulder;
         sample.right_shoulder = data->exp.classic.r_shoulder;
         *frame = boonta_classic_input_translate(&sample);
