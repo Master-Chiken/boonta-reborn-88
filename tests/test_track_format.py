@@ -9,12 +9,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "track_format"))
+sys.path.insert(0, str(ROOT / "tools" / "route_graph_format"))
 
 from validate_track import TrackValidationError, load_track, validate_track  # noqa: E402
 from export_track_header import render_header  # noqa: E402
+from export_closed_loop_track import export_closed_loop_track  # noqa: E402
 
 
 EXAMPLE_PATH = ROOT / "tools" / "track_format" / "example_track.json"
+RUNTIME_ROUTE_GRAPH_PATH = ROOT / "gamecube-demo" / "data" / "original-test-oval-route-graph.json"
+RUNTIME_SURFACE_WIDTHS_PATH = ROOT / "gamecube-demo" / "data" / "original-test-oval-surface-widths.json"
 
 
 class TrackFormatTests(unittest.TestCase):
@@ -93,8 +97,22 @@ class TrackFormatTests(unittest.TestCase):
         self.assertIn("boonta_track_points_original_test_oval", header)
         self.assertEqual(header.count("    { "), 8)
 
-    def test_checked_in_gamecube_header_matches_exporter(self):
-        track = load_track(EXAMPLE_PATH)
+    def test_runtime_oval_route_graph_is_the_canonical_header_source(self):
+        graph = json.loads(RUNTIME_ROUTE_GRAPH_PATH.read_text(encoding="utf-8"))
+        widths = json.loads(RUNTIME_SURFACE_WIDTHS_PATH.read_text(encoding="utf-8"))
+        track = export_closed_loop_track(
+            graph,
+            default_half_width=3.5,
+            samples_per_edge=16,
+            surface_widths=widths,
+        )
+        self.assertTrue(track["closed_loop"])
+        self.assertEqual(len(graph["nodes"]), 8)
+        self.assertEqual(len(graph["edges"]), 8)
+        self.assertEqual(len(track["points"]), 128)
+        self.assertTrue(track["points"][0]["checkpoint"])
+        self.assertEqual(sum(point["checkpoint"] for point in track["points"]), 1)
+
         expected = render_header(track, "original test oval")
         checked_in = (ROOT / "gamecube-demo" / "source" / "generated_track.h").read_text(
             encoding="utf-8"
