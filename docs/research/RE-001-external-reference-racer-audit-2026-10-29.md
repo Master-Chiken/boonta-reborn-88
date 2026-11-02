@@ -72,3 +72,22 @@ This is now a **conditional runtime-test route**, not a rejected one:
 **Installer asset:** [Racer-Installer-macos-arm64.zip (v0.4.0)](https://github.com/sp00nznet/racer/releases/download/v0.4.0/Racer-Installer-macos-arm64.zip). Its published asset size is about 9.6 MB; the locally generated game build is much larger and is estimated at about 6 GB.
 
 **Evidence boundary:** verified public release metadata, the project's launcher manifest and `setup.sh`. No installer was run, no ROM was accessed, and no build/runtime test was performed in this session.
+
+
+## Addendum — Ares v148 as a low-overhead local N64 diagnostic (2026-11-02)
+
+A separate emulator route was checked after the earlier Apple-Silicon-only finding for the *sp00nznet/racer v0.4.0 installer*. That restriction belongs to the recompilation installer, **not** to the Ares emulator itself.
+
+- The official [Ares download page](https://ares-emu.net/download) currently lists **v148**, released 2026-05-30. It says the macOS universal binary requires **macOS 10.15 (Catalina)** and runs natively on **Intel and Apple Silicon**. The official home page lists Nintendo 64 among supported systems and includes debugger functionality.
+- Ares has supported a GDB server for its N64 core since v134. The documented workflow is to enable **Settings → Debug → Enabled**; Ares then reports a pending local server at **[::1]:9123**. A MIPS-capable GDB client connects with architecture **mips:4300** and the remote target **[::1]:9123**. See the [GDB connection guide](https://docs.starhaven.dev/papermario-dx/developing/gdb/) for the explicit commands and UI path.
+- This means a Mac Intel system on Catalina is not excluded from a **local Ares visual run** merely because the separate Racer recompilation installer only publishes an Apple-Silicon build. No 6 GB N64 recompilation toolchain is needed just to load the owner's existing local .z64 in Ares.
+- The prior Ares/GDB homebrew CTest fixture did not pass its continue phase on v139 and v148. That result remains a blocker for claiming a verified GDB session; this addendum does **not** repeat or reinterpret that failed test. A visible Ares race can still be attempted without GDB, and the GDB server/client path can be treated as a separate optional diagnostic after a minimal connection test.
+
+### Correct scope and next test
+
+1. Use the official Ares v148 macOS Universal binary to load the owner's existing US N64 ROM locally, if the machine can run macOS 10.15 or later. Keep the ROM, save states, captures and any game-derived debug output local.
+2. Run an ordinary three-lap race and record continuously from the final lap through the first post-finish screen. This is a low-cost observation of the **N64 build under Ares**; it is not proof of Not64 behavior or Wii Classic Controller compatibility.
+3. For optional instruction-level inspection, enable Ares GDB and attempt a minimal local connection to [::1]:9123 before relying on any breakpoint/continue workflow. Keep the existing failed CTest result visible; do not call the debugger proven until the actual connection, stop, inspect and continue sequence succeeds.
+4. The required target-platform acceptance remains a separate ordinary three-lap run on **Wii + Not64 20260410 + the Wii Classic Controller profile**. Ares cannot substitute for that hardware test.
+
+**Evidence boundary:** official Ares v148 platform/release metadata and N64 support were rechecked on 2026-11-02; the GDB UI/port/client sequence is supported by the linked developer guide. No Ares binary was downloaded or run here, no GDB session was established, and no race/Results screen was observed. No ROM bytes, disassembly, assets or other game-derived data were published.
