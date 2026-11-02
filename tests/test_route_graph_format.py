@@ -124,7 +124,7 @@ class RouteGraphFormatTests(unittest.TestCase):
     def test_three_branch_decisions_survive_reverse_and_forward_replay(self):
         graph = fixture("three-branch-decisions.json")
         cursor = RouteCursor(graph)
-        state = cursor.move(4.05, {
+        state = cursor.move(3.05, {
             "decision-1": "d1-right",
             "decision-2": "d2-left",
             "decision-3": "d3-right",
