@@ -301,6 +301,18 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(state["t"], 0.25)
         self.assertAlmostEqual(state["progress"], 0.125)
 
+    def test_cursor_move_reuses_its_validated_graph(self):
+        graph = fixture("open-bezier.json")
+        original_validate = route_graph_module.validate_route_graph
+        with mock.patch.object(
+            route_graph_module, "validate_route_graph", wraps=original_validate
+        ) as validator:
+            cursor = RouteCursor(graph)
+            self.assertEqual(validator.call_count, 1)
+            state = cursor.move(delta_parameter=0.25)
+            self.assertEqual(validator.call_count, 1)
+        self.assertAlmostEqual(state["progress"], 0.125)
+
     def test_cursor_requires_explicit_branch_choice_and_rolls_back_on_error(self):
         graph = fixture("three-branch-decisions.json")
         cursor = RouteCursor(graph)
