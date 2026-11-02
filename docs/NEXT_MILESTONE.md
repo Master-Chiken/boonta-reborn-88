@@ -1,6 +1,6 @@
 # Next milestone: Interactive validation of the clean-room racing slice
 
-Last updated: 2026-10-17
+Last updated: 2026-11-02
 
 ## Goal of this milestone
 
@@ -85,22 +85,27 @@ See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.
 Do not merge unclear-provenance code or any commercial assets.
 
 
-## Wii Classic Controller acceptance (separate from GameCube)
+## Native Wii Classic Controller acceptance (separate from GameCube)
 
-The native Wii backend is being developed on [PR #268](https://github.com/Master-Chiken/boonta-reborn-88/pull/268), based on the D-pad pitch dependency in PR #264. Keep the PR draft until its dependency is integrated and the physical controller check is performed.
+The native Wii backend is carried by [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269), rebuilt on current `main` after the D-pad pitch prerequisite in [PR #264](https://github.com/Master-Chiken/boonta-reborn-88/pull/264) was integrated. The active branch is `feat/native-wii-classic-input-main-20261102`. PR #268 is the superseded stacked predecessor and is closed unmerged.
 
-Automated checks on branch `feat/native-wii-classic-input-267`:
+**Automated exact-head evidence for PR #269 (head `03a66d0c02e6cb39c51460ad75ad9a3a40aecc9c`):**
 
-- Host translation tests cover button mapping, calibrated stick conversion, analog shoulders, digital ZL/ZR and neutral disconnect/wrong-expansion states.
-- Native CI compiles both GameCube and Wii DOL/ELF targets.
-- The Wii backend requests `WPAD_FMT_BTNS_ACC_IR` only after `WPAD_Probe` confirms a connected Classic expansion. libogc does not apply a channel data-format request before the controller is assigned; the backend resets its setup flag on disconnect/non-Classic state and configures again after reconnection. It accepts input only when `WPAD_DATA_EXPANSION` and the Classic payload are present.
+- Host input/gameplay tests — PASS.
+- Native GameCube DOL/ELF build and artifact validation — PASS.
+- Native Wii DOL/ELF build and artifact validation — PASS.
+- Dolphin null-backend process smoke — PASS.
+- Optional Software Renderer diagnostic — PASS; this is a scripted GameCube-pad diagnostic, not a Wii Classic Controller test.
+- AI safety and source-import provenance checks — PASS.
 
-Manual acceptance remains pending:
+**Manual hardware acceptance remains NOT TESTED and mandatory before merging PR #269:**
 
-1. Load the Wii DOL on a real Wii with the Under Control controller attached to Wii Remote channel 0.
-2. Confirm the runtime sees `WPAD_EXP_CLASSIC`; a Wii Remote-only or other expansion must remain neutral.
-3. Check stick steering and pitch, D-pad steering/pitch, A/B throttle/brake, X+A boost, ZL/ZR and analog shoulders for slide, Plus pause/restart, and Y reset.
-4. Disconnect/reconnect and confirm the input returns to neutral then resumes only when Classic is detected.
-5. Record console model, controller identification, test result and a short video or notes.
+1. Load the Wii DOL on a real Wii with the Under Control controller connected through Wii Remote channel 0.
+2. Confirm the runtime detects `WPAD_EXP_CLASSIC`; Wii Remote-only and non-Classic expansions must remain neutral.
+3. Test left-stick steering/pitch, D-pad steering/pitch, A/B throttle/brake, X+A boost, ZL/ZR and analog L/R shoulders for slide, Plus pause/restart, and Y reset.
+4. Disconnect and reconnect the controller; verify neutral input while disconnected and recovery only after Classic detection and report setup.
+5. Record the Wii model, controller identification, exact tested build SHA, results, and video or notes.
 
-Do not mark physical compatibility as passed from cross-compilation or Dolphin.
+The button masks and Classic expansion identifiers are cross-checked against the current upstream libogc `wpad.h`; its implementation also exposes the Classic shoulder values as normalized raw values divided by `0x1F`. This source check is not a substitute for a physical test.
+
+Do not mark physical compatibility as passed from cross-compilation or Dolphin. The original N64 game running in Not64 is a separate input path and is not covered by this Boonta backend.
