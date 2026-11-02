@@ -1,6 +1,6 @@
 # PC AI and catch-up reference — 2026-10-20
 
-**Status (2026-11-02): PC reference evidence integrated into the active route-graph dossier.** This file remains the detailed speed/catch-up note; the route cursor and branch-selection consumer is now cross-linked below. The owner’s current port goal prioritizes completing the PC route-graph/AI specification before designing the neutral target schema.
+**Status (2026-11-02): PC static reference complete for this pass.** This file preserves the detailed speed/catch-up note and cross-links the route cursor/branch-selection consumer. The active task is now to finalize the neutral route-graph contract and synthetic fixtures; no further PC AI/source work or runtime migration is authorized until that contract is reviewed.
 
 ## Research question
 
