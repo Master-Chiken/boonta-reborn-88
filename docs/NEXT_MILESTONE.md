@@ -93,7 +93,7 @@ Automated checks on branch `feat/native-wii-classic-input-267`:
 
 - Host translation tests cover button mapping, calibrated stick conversion, analog shoulders, digital ZL/ZR and neutral disconnect/wrong-expansion states.
 - Native CI compiles both GameCube and Wii DOL/ELF targets.
-- The Wii backend explicitly requests `WPAD_FMT_BTNS_ACC_IR` so expansion reports are available; it accepts input only after `WPAD_Probe` confirms `WPAD_EXP_CLASSIC` and expansion data is present.
+- The Wii backend requests `WPAD_FMT_BTNS_ACC_IR` only after `WPAD_Probe` confirms a connected Classic expansion. libogc does not apply a channel data-format request before the controller is assigned; the backend resets its setup flag on disconnect/non-Classic state and configures again after reconnection. It accepts input only when `WPAD_DATA_EXPANSION` and the Classic payload are present.
 
 Manual acceptance remains pending:
 
