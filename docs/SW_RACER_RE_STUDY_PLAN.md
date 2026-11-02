@@ -98,11 +98,18 @@ The rows below are a **reference backlog, not parallel active tasks**. Do not st
 - **SW_RACER_RE** is the priority reference for PC-side reverse engineering and behavior research. It does not remove the need to inspect GameCube-specific code/data or test differences in the console version.
 - **The Dreamcast folder** remains a separate experiment and is not a GameCube/Wii implementation path.
 
-## Current concrete task — RE-001 N64 finish-to-results blocker only
+## Current concrete task — RE-001 neutral route-graph contract
 
-The PC route/spline dossier is recorded. The remaining active question in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is: **can the N64 all-participants-finished predicate be traced through the manager state/phase writer and reader to a positively identified results UI/resource/scene destination?** The existing Ares/GDB public ctest smoke test is **NOT PASSED**; do not repeat it without a new falsifiable isolation hypothesis or a purpose-built minimal public homebrew.
+The PC route/spline/AI evidence is now recorded in [the RE-001 dossier](research/RE-001-route-spline-progress.md). The next single task in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is to turn the confirmed PC behavior into a **platform-neutral graph contract** and synthetic host fixtures, while keeping unknown/platform-specific fields opaque.
 
-Required output: exact revision/source links, state-field or call-chain evidence, what is observed versus inferred, counter-evidence and remaining unknowns. If positive evidence is unavailable, produce a bounded handoff that leaves the blocker explicitly unresolved. Do not restart the PC spline analysis, start Step 102/RE-002, open the asset/handling/AI questions in the matrix, or make a gameplay change just to show activity.
+Required output:
+1. Versioned node/edge/curve/cursor/progress/surface-binding concepts, with AI branch policy separated from graph topology.
+2. A clear adapter boundary between source platform records and the neutral graph; PC and N64 evidence are not silently merged.
+3. Synthetic tests for Bezier/B-spline evaluation, split/rejoin normalization across unequal branch lengths, branch-history persistence, open/closed ends, reverse cursor travel, malformed links and surface binding separate from route width.
+4. An explicit v1 compatibility boundary: keep the existing `boonta-track-v1` circuit and exporter working unchanged; no game-derived route coordinates or assets in public fixtures.
+5. No runtime migration until the contract and tests are reviewed; no physical GameCube/Wii parity claims from static PC research.
+
+The N64 finish-to-Results chain remains a separate, historical static dossier with runtime causality unverified. Do not reopen it, start RE-002 or begin unrelated physics/asset/AI tasks while this bounded schema task is active.
 
 ## Sources
 
