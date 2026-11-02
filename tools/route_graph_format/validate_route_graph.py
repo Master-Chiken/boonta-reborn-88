@@ -430,15 +430,34 @@ def _add_scaled(a: tuple[float, float, float],
     return tuple(a[index] + b[index] * scale for index in range(3))
 
 
+def _index_validated_graph(
+    graph: dict[str, Any],
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    """Build node/edge lookup tables once for a validated-graph operation."""
+    nodes_by_id = {node["id"]: node for node in graph["nodes"]}
+    edges_by_id = {edge["id"]: edge for edge in graph["edges"]}
+    return nodes_by_id, edges_by_id
+
+
 def _evaluate_edge_validated(
-    graph: dict[str, Any], edge_id: str, t: float
+    graph: dict[str, Any],
+    edge_id: str,
+    t: float,
+    nodes_by_id: dict[str, dict[str, Any]] | None = None,
+    edges_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, tuple[float, float, float]]:
-    """Evaluate one segment from an already validated graph."""
-    if edge_id not in {edge["id"] for edge in graph["edges"]}:
+    """Evaluate one segment from an already validated graph.
+
+    Callers sampling one edge repeatedly can pass shared lookup tables to avoid
+    rebuilding O(nodes + edges) dictionaries for every curve sample.
+    """
+    if nodes_by_id is None or edges_by_id is None:
+        nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    edge = edges_by_id.get(edge_id)
+    if edge is None:
         raise RouteGraphError(f"unknown edge id {edge_id!r}")
     t = _number(t, "t", 0.0, 1.0)
-    nodes = {node["id"]: node for node in graph["nodes"]}
-    edge = next(item for item in graph["edges"] if item["id"] == edge_id)
+    nodes = nodes_by_id
     curve = edge["curve"]
 
     if curve["type"] == "cubic_bezier":
@@ -529,10 +548,15 @@ def sample_edge_length(graph_data: Any, edge_id: str, samples: int = 100) -> flo
     if isinstance(samples, bool) or not isinstance(samples, int) or samples < 2 or samples > 10000:
         raise RouteGraphError("samples must be an integer from 2 to 10000")
     graph = validate_route_graph(graph_data)
-    previous = _evaluate_edge_validated(graph, edge_id, 0.0)["position"]
+    nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    previous = _evaluate_edge_validated(
+        graph, edge_id, 0.0, nodes_by_id, edges_by_id
+    )["position"]
     length = 0.0
     for index in range(1, samples + 1):
-        current = _evaluate_edge_validated(graph, edge_id, index / samples)["position"]
+        current = _evaluate_edge_validated(
+            graph, edge_id, index / samples, nodes_by_id, edges_by_id
+        )["position"]
         length += math.sqrt(sum((current[axis] - previous[axis]) ** 2 for axis in range(3)))
         previous = current
     if not math.isfinite(length) or length <= EPSILON:
