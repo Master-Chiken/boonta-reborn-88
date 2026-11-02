@@ -54,6 +54,35 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["format"]["const"], "boonta-route-graph-v1")
         self.assertEqual(schema["properties"]["schema_version"]["const"], 1)
 
+    def test_rejects_unicode_identifiers_and_null_metadata(self):
+        graph = fixture("open-bezier.json")
+        invalid_id = copy.deepcopy(graph)
+        invalid_id["route_id"] = "circuit-é"
+        with self.assertRaisesRegex(RouteGraphError, "unsupported character"):
+            validate_route_graph(invalid_id)
+
+        invalid_root_metadata = copy.deepcopy(graph)
+        invalid_root_metadata["metadata"] = None
+        with self.assertRaisesRegex(RouteGraphError, "metadata must be an object"):
+            validate_route_graph(invalid_root_metadata)
+
+        invalid_node_metadata = copy.deepcopy(graph)
+        invalid_node_metadata["nodes"][0]["metadata"] = None
+        with self.assertRaisesRegex(RouteGraphError, "nodes\\[0\\].metadata must be an object"):
+            validate_route_graph(invalid_node_metadata)
+
+        invalid_edge_metadata = copy.deepcopy(graph)
+        invalid_edge_metadata["edges"][0]["metadata"] = None
+        with self.assertRaisesRegex(RouteGraphError, "metadata must be an object"):
+            validate_route_graph(invalid_edge_metadata)
+
+    def test_rejects_coordinates_outside_schema_bounds(self):
+        graph = fixture("open-bezier.json")
+        invalid = copy.deepcopy(graph)
+        invalid["nodes"][0]["position"][0] = 1_000_001.0
+        with self.assertRaisesRegex(RouteGraphError, "finite and between"):
+            validate_route_graph(invalid)
+
     def test_bezier_known_midpoint_and_unit_frame(self):
         graph = fixture("open-bezier.json")
         sample = evaluate_edge(graph, "start-middle", 0.5)
