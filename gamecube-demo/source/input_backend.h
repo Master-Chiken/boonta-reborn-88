@@ -59,6 +59,35 @@ typedef struct {
     float right_shoulder;
 } BoontaClassicInputSample;
 
+/*
+ * libogc exposes Classic joystick pos/min/center/max as unsigned raw bytes.
+ * Convert each calibrated half-range to the signed [-128, 127] range expected
+ * by the existing GameCube gameplay helpers; never cast the raw byte directly.
+ */
+static inline int8_t boonta_classic_axis_to_signed(uint8_t raw,
+                                                    uint8_t minimum,
+                                                    uint8_t center,
+                                                    uint8_t maximum)
+{
+    int delta = (int)raw - (int)center;
+    int range = delta >= 0
+        ? (int)maximum - (int)center
+        : (int)center - (int)minimum;
+    int scaled;
+
+    if (range <= 0) return 0;
+    if (delta > 0) {
+        scaled = delta * 127 / range;
+        if (scaled > 127) scaled = 127;
+    } else if (delta < 0) {
+        scaled = delta * 128 / range;
+        if (scaled < -128) scaled = -128;
+    } else {
+        scaled = 0;
+    }
+    return (int8_t)scaled;
+}
+
 static inline uint8_t boonta_classic_trigger_to_byte(float value)
 {
     if (!isfinite(value) || value <= 0.0f) return 0U;
