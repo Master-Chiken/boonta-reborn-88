@@ -26,6 +26,19 @@ static void test_classic_stick_uses_unsigned_calibrated_raw_values(void)
     assert(boonta_classic_axis_to_signed(32U, 0U, 32U, 32U) == 0);
 }
 
+static void test_classic_stick_respects_asymmetric_calibration_ranges(void)
+{
+    /* The centre need not be the midpoint of the raw ADC range. */
+    assert(boonta_classic_axis_to_signed(20U, 20U, 100U, 220U) == -128);
+    assert(boonta_classic_axis_to_signed(220U, 20U, 100U, 220U) == 127);
+    assert(boonta_classic_axis_to_signed(60U, 20U, 100U, 220U) == -64);
+    assert(boonta_classic_axis_to_signed(160U, 20U, 100U, 220U) == 63);
+
+    /* A degenerate half-range must stay neutral instead of dividing by zero. */
+    assert(boonta_classic_axis_to_signed(80U, 80U, 80U, 220U) == 0);
+    assert(boonta_classic_axis_to_signed(120U, 20U, 120U, 120U) == 0);
+}
+
 static void test_all_gameplay_buttons_map(void)
 {
     const uint32_t raw =
@@ -93,6 +106,7 @@ int main(void)
 {
     test_classic_report_format_is_configured_only_after_classic_probe();
     test_classic_stick_uses_unsigned_calibrated_raw_values();
+    test_classic_stick_respects_asymmetric_calibration_ranges();
     test_all_gameplay_buttons_map();
     test_disconnected_and_wrong_expansion_are_neutral();
     test_shoulders_keep_analog_range_and_digital_clicks();
