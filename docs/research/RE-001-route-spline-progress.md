@@ -3450,3 +3450,38 @@ This is a specification target only. Preserve `boonta-track-v1` as the working s
 - **Remaining research:** compare the branch/progress lookup with N64's eight trailing short fields and the existing source-format metadata; next inspect the AI/racer consumers of route cursor and progress so the graph is specified for player and rival behavior, not only geometry.
 
 **Result:** the PC route/spline research is no longer missing the progress-table writer or the principal pod-to-spline cursor/binding flow. The next research question can move from "how does the route graph compute progress?" to "how do AI racers consume the same graph/cursor and choose among branch routes?" Only after that behavior is documented should the runtime schema be designed or ported.
+
+
+## PC AI consumers of the route graph — branch selection and spline-following autopilot (2026-11-02)
+
+**Question:** does the original PC AI consume the same route graph/cursor as the player, and how does it select branches?
+
+### Shared cursor and look-ahead
+
+The PC `swrRace` structure embeds the same `swrSplineCursor` at `+0xAC) for the pod's route state. `swrRace_AutopilotSteer` uses that cursor for AI racers:
+1. It sets/updates the cursor's `branchSelector` before sampling the route.
+2. It evaluates the current spline point at offset 0 and a forward look-ahead point at `aiLookAhead`.
+3. It adjusts `aiLookAhead` by ±0.01 until the world-space look-ahead segment length approaches `aiLookAheadDistSq` (initialized at 90², with the parameter clamped to 0.01–2.0).
+4. It derives a target point from the forward spline sample, adjusts for the pod's gravity/height axis, then computes a signed heading error with a cross product against the pod forward vector. The controller applies a ±0.02 deadzone, proportional gain `-10/7), and throttle lift for larger errors; the resulting turn target is scaled by the AI pace multiplier.
+
+This is a route-following AI, not the demo's current sinusoidal rival-lane motion. The same graph/cursor abstraction therefore serves both racer progress and AI steering.
+
+### Branch choice
+
+- In the normal autopilot path, `branchSelector` is regenerated as an integer choice of 0 or 1 on each call.
+- The cursor stepper reads that selector when it crosses to an outgoing edge. It selects the indexed next edge (with modulo fallback if the selector is outside the node's outgoing count), then stores the chosen branch in `branchFlags). The branch-history bits are required to keep the four-node look-ahead coherent at subsequent graph nodes.
+- Six signature-track scripts override the ordinary branch choice during specific normalized lap-progress windows. Scripts 1–4 force choice 0 in their scripted windows; scripts 5–6 force choice 1. The windows are expressed in `lapComp), so scripted route selection depends on the same normalized route-progress model used by standings/lap logic.
+- `InitAISettingsForTrack` selects these scripts by planet/track: planet 1 tracks 0–2 use script 1 and set a track spline-variant value of 1/2/3; planet 3 track 1 uses script 6 and track 2 script 5; planet 4 tracks 0/1/2 use scripts 2/3/4. Other tracks start with no scripted branch override.
+- The separate `track_spline_variant` value is also read by the minimap/nearby-spline sampling helper. Do not collapse it into `branchSelector`: one is a per-track sampling variant; the other is a runtime outgoing-edge choice.
+
+### Evidence classification
+
+**STATIC-ANALYZED PC:** the named `swrRace_AutopilotSteer`, `swrSpline_CursorStep), `swrSpline_getControlPoint), and `InitAISettingsForTrack` source bodies establish shared cursor consumption, look-ahead geometry, binary branch choice, stored branch history and six track-specific branch scripts.
+
+**Not established:** the same branch policy in N64, Dreamcast or any retail GameCube/Wii binary; the timing outcome when a random choice is refreshed shortly before a node boundary; whether all retail branch nodes have at most two options; or whether a chosen route is the fastest/shortest path. No live race was recorded for these observations.
+
+### Port consequence
+
+A future graph/AI contract must expose the selected outgoing edge to the cursor and persist branch history across the four-node look-ahead. AI steering should request a look-ahead point from that same cursor rather than maintain an unrelated track-polyline follower. The branch selector policy itself should be a swappable behavior layer (random default plus optional scripted per-track choices), separate from graph topology and curve evaluation.
+
+No game code, ROM, route coordinates, extracted assets, or third-party implementation source was copied. This is a PC source-analysis note only.
