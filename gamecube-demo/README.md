@@ -92,7 +92,7 @@ Host tests cover button translation, analog-stick pass-through, analog shoulder 
 
 ### Wii Classic Controller runtime details
 
-The Wii backend explicitly requests `WPAD_FMT_BTNS_ACC_IR` after `WPAD_Init`, so libogc supplies expansion reports as well as button data. The input loop still verifies both `WPAD_Probe(...)=WPAD_EXP_CLASSIC` and `WPAD_DATA_EXPANSION` before reading the Classic payload. The left stick is converted from its calibrated raw minimum/centre/maximum values into the signed gameplay range; the analog shoulder values are scaled to 0–255 and the digital ZL/ZR clicks are retained.
+The Wii backend calls `WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR)` only after `WPAD_Probe` confirms that channel 0 is connected with a Classic expansion. libogc ignores a channel data-format request when no controller is assigned, so setup is deferred until that probe succeeds and is repeated after disconnect or a non-Classic expansion. The input loop then verifies `WPAD_DATA_EXPANSION` before reading the Classic payload. The left stick is converted from its calibrated raw minimum/centre/maximum values into the signed gameplay range; the analog shoulder values are scaled to 0–255 and the digital ZL/ZR clicks are retained.
 
 | Classic control | Racer action |
 |---|---|
