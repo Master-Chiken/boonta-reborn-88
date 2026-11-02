@@ -25,7 +25,7 @@ The procedural course, rival craft, controls, dynamic exhaust and HUD remain sep
 ## Controls
 
 - Control Stick left/right (or D-pad): steer.
-- Control Stick up/forward: pitch down for more forward progress but weaker steering; down/back: pitch up for slower progress and tighter control.
+- Control Stick up/forward **or D-pad Up**: pitch down for more forward progress but weaker steering; down/back **or D-pad Down**: pitch up for slower progress and tighter control. Analog and digital pitch can be combined; opposite inputs cancel and the final value is clamped.
 - L trigger: slide/drift through corners; turn response grows while sideways drift lasts longer.
 - A: accelerate.
 - B: brake.
