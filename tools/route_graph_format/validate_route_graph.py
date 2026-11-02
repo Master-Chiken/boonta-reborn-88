@@ -541,6 +541,8 @@ class RouteCursor:
         old_state = (self.path_history[:], self.path_index, self.t, self.finished, self.started)
         try:
             self.t += delta_t
+            if delta_t < 0.0:
+                self.finished = False
             transitions = 0
             while self.t > 1.0 + EPSILON:
                 transitions += 1
@@ -562,6 +564,7 @@ class RouteCursor:
                     self.path_history[self.path_index + 1]
                     if self.path_index + 1 < len(self.path_history) else None
                 )
+                append_history = False
                 if requested is not None:
                     if requested not in candidates:
                         raise RouteGraphError(
@@ -570,16 +573,19 @@ class RouteCursor:
                     chosen = requested
                     if cached != requested:
                         self.path_history = self.path_history[: self.path_index + 1]
+                        append_history = True
                 elif cached is not None:
                     if cached not in candidates:
                         raise RouteGraphError("stored branch history no longer matches graph topology")
                     chosen = cached
                 elif len(candidates) == 1:
                     chosen = candidates[0]
+                    append_history = True
                 else:
                     raise RouteGraphError(f"branch choice required at node {node_id!r}")
 
-                self.path_history.append(chosen)
+                if append_history:
+                    self.path_history.append(chosen)
                 self.path_index += 1
                 self.t -= 1.0
                 self.finished = False
