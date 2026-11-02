@@ -40,8 +40,8 @@ Test in this exact order:
 2. **Throttle / Brake (A / B)**  
    Acceleration and braking visibly change speed. Speed falls naturally when released.
 
-3. **Steering and pitch**  
-   Control Stick left/right + D-pad left/right steer. Control Stick up/down or D-pad Up/Down pitches nose-down/nose-up; verify the PITCH HUD marker moves in the expected direction, that combined analog/digital inputs stay bounded, and that releasing the controls returns pitch to neutral. Correct steering direction, inertia, drift damping and bounded steering should remain intact.
+3. **Steering**
+   Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
 
 4. **Off-road & rails**  
    Drive off the road → speed loss visible. Rail recovery works without freezing or breaking rendering.

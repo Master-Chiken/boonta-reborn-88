@@ -10,15 +10,12 @@ import unittest
 from make_dolphin_dtm import (
     A,
     B,
-    DPAD_DOWN,
-    DPAD_UP,
     MAX_FRAMES,
     NEUTRAL_AXIS,
     RESET_PRESS_FRAME,
     RESET_HOLD_FRAMES,
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
-    PITCH_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     FINISH_RESTART_PRESS_FRAME,
     FINISH_RESTART_HOLD_FRAMES,
@@ -49,7 +46,6 @@ try:
         pause_icon_visible,
         resumed_state_visible,
         road_center_from_asphalt,
-        pitch_indicator_center,
     )
 except ImportError:
     Image = None
@@ -61,7 +57,6 @@ except ImportError:
     pause_icon_visible = None
     resumed_state_visible = None
     road_center_from_asphalt = None
-    pitch_indicator_center = None
 
 
 def record(blob: bytes, frame: int) -> bytes:
@@ -161,42 +156,6 @@ class DolphinDtmTests(unittest.TestCase):
     def test_rejects_unknown_steering_source(self) -> None:
         with self.assertRaises(ValueError):
             build_dtm(10, steering_source="both")  # type: ignore[arg-type]
-
-    def test_pitch_check_profile_encodes_dpad_up_down_and_releases(self) -> None:
-        up_blob = build_dtm(3600, steering="none", scenario="pitch-check", pitch="up")
-        down_blob = build_dtm(3600, steering="none", scenario="pitch-check", pitch="down")
-
-        for blob, expected, opposite in (
-            (up_blob, DPAD_UP, DPAD_DOWN),
-            (down_blob, DPAD_DOWN, DPAD_UP),
-        ):
-            first = record(blob, 0)
-            self.assertEqual(first[0], A | Y | expected)
-            self.assertTrue(first[1] & IS_CONNECTED)
-            self.assertFalse(first[1] & (DPAD_LEFT | DPAD_RIGHT))
-            self.assertEqual(first[2:4], bytes((0, 0)))
-            self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
-
-            held = record(blob, PITCH_HOLD_FRAMES - 1)
-            self.assertTrue(held[0] & A)
-            self.assertTrue(held[0] & expected)
-            self.assertFalse(held[0] & opposite)
-            self.assertFalse(held[1] & (DPAD_LEFT | DPAD_RIGHT))
-            self.assertEqual(held[4:], bytes((NEUTRAL_AXIS,) * 4))
-
-            released = record(blob, PITCH_HOLD_FRAMES)
-            self.assertEqual(released[0], A)
-            self.assertFalse(released[0] & (DPAD_UP | DPAD_DOWN))
-
-    def test_pitch_check_requires_an_explicit_single_direction(self) -> None:
-        with self.assertRaises(ValueError):
-            build_dtm(100, steering="none", scenario="pitch-check")
-        with self.assertRaises(ValueError):
-            build_dtm(100, steering="none", scenario="pitch-check", pitch="both")  # type: ignore[arg-type]
-        with self.assertRaises(ValueError):
-            build_dtm(100, steering="right", scenario="pitch-check", pitch="up")
-        with self.assertRaises(ValueError):
-            build_dtm(100, steering="none", pitch="up")
 
     def test_reset_check_profile_builds_state_then_holds_y(self) -> None:
         blob = build_dtm(3600, steering="right", steering_source="stick",
@@ -380,32 +339,6 @@ class DolphinDtmTests(unittest.TestCase):
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             self.assertTrue(output.is_file(), msg=completed.stdout)
             self.assertEqual(output.stat().st_size, HEADER_SIZE + frames * 8)
-
-    def test_cli_accepts_pitch_check_scenario(self) -> None:
-        script = Path(__file__).with_name("make_dolphin_dtm.py")
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "pitch-up.dtm"
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(script),
-                    "--output", str(output),
-                    "--frames", "1200",
-                    "--game-id", DEFAULT_GAME_ID,
-                    "--steering", "none",
-                    "--scenario", "pitch-check",
-                    "--pitch", "up",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=False,
-            )
-            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
-            self.assertTrue(output.is_file(), msg=completed.stdout)
-            blob = output.read_bytes()
-            self.assertEqual(len(blob), HEADER_SIZE + 1200 * 8)
-            self.assertTrue(record(blob, 1)[0] & DPAD_UP)
 
     def test_finish_restart_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):
@@ -649,30 +582,6 @@ class DolphinDtmTests(unittest.TestCase):
         # Centered reset steering tick; it is measured independently of the bars.
         draw.rectangle((398, 444, 401, 455), fill=(238, 246, 255))
         self.assertTrue(reset_state_visible(image))
-
-    @unittest.skipIf(
-        Image is None or ImageDraw is None or pitch_indicator_center is None,
-        "Pillow is not installed in the lightweight host-test environment",
-    )
-    def test_pitch_detector_measures_neutral_up_and_down_gauge_positions(self) -> None:
-        viewport_top = 84
-        viewport_height = 480 - viewport_top
-        marker_y = round(viewport_top + viewport_height * 39.0 / 480.0)
-
-        def frame_with_marker(marker_x: int, color: tuple[int, int, int]) -> Image.Image:
-            image = Image.new("RGB", (800, 480), (239, 239, 239))
-            draw = ImageDraw.Draw(image)
-            draw.rectangle((0, viewport_top, 799, 479), fill=(106, 169, 225))
-            draw.rectangle((645, marker_y - 3, 757, marker_y + 3), fill=(22, 30, 42))
-            draw.rectangle((marker_x - 2, marker_y - 4, marker_x + 2, marker_y + 4), fill=color)
-            return image
-
-        neutral = frame_with_marker(700, (64, 219, 242))
-        nose_down = frame_with_marker(724, (255, 157, 61))
-        nose_up = frame_with_marker(676, (64, 219, 242))
-        neutral_x = pitch_indicator_center(neutral)
-        self.assertGreater(pitch_indicator_center(nose_down) - neutral_x, 20.0)
-        self.assertLess(pitch_indicator_center(nose_up) - neutral_x, -20.0)
 
     def test_custom_game_id_must_be_exactly_six_ascii_bytes(self) -> None:
         blob = build_dtm(1, "ID-boo")
