@@ -37,12 +37,28 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 
 ## 4. Product direction and active tasks
 
-The goal remains a credible native GameCube racing slice with behavior informed by reverse engineering, not an endless procedural mock-up or speculative port.
+The owner's clarified goal is a **faithful native GameCube/Wii port of the original Star Wars Episode I: Racer, followed by improvements**. Do not optimize the project around an original GameCube/Wii binary: the documented original releases are Windows, Nintendo 64, Mac, Dreamcast and Game Boy Color, with later modern ports; no retail GameCube or Wii edition has been identified. The GameCube/Wii executable is therefore our port target, not a source binary that can be decompiled to recover the original game.
 
-- Active reverse-engineering queue: [RE-001 — route/spline progression and race-state evidence](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). Its current unresolved blocker is the N64 all-finished condition → manager state/phase change → positively identified results UI/resource/scene; the PC route/spline comparison is documented, but console parity and the results transition remain unproven.
-- Existing validation gate: [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). The owner can run this one-time check on PR #214 when convenient; it does not authorize parallel gameplay coding.
-- Current implementation/acceptance candidates: [PR #214 — rail-collision alignment](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) remains a draft against `dev` and still requires review plus its relevant manual acceptance in issue #126; [PR #247 — steering deadzone](https://github.com/Master-Chiken/boonta-reborn-88/pull/247) is the sole open deadzone candidate against `main`, but still requires independent review and interactive controller-feel/three-lap acceptance. PRs #233 and #243 are closed unmerged duplicates; do not treat them as open or merge them blindly.
-- Next research topics only after RE-001 is recorded: map the candidate Step 102 source, if available, then study race state/laps and pod control/traction as separate dossiers. Do not run them concurrently.
+Keep the existing `gamecube-demo/` as a reusable technical foundation: preserve the proven GX submission path, input abstraction, build files, generated original test mesh/texture, host tests and CI diagnostics. Do not mistake its procedural oval, toy rivals or synthetic v1 formats for the finished game, and do not discard or rewrite working infrastructure without evidence.
+
+Use this source hierarchy:
+1. **Windows PC** — primary public code/format/behavior reference (`SW_RACER_RE`, the frozen Steam-PC Ghidra reference, and audited PC format tools). Pin executable/repository versions; PC findings are evidence about PC, not automatically about consoles.
+2. **Nintendo 64** — independent console behavior/code cross-check. Preserve the completed RE-001 static work and use it where it answers a specific port question; Not64/Ares observations remain emulator-specific.
+3. **Dreamcast** — secondary console comparison when a traceable local artifact or reliable public evidence is available.
+4. **GameCube/Wii** — native delivery targets. There is no identified retail Racer DOL/REL/ISO for these platforms; use the platform toolchain to build and profile our port, not to pretend a matching original GameCube/Wii decompilation exists.
+
+- **Active reverse-engineering queue:** [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). The next single question is the original course/route model: map the PC linked spline graph, branch/rejoin topology, cursor progress, lap gates and respawn semantics against the existing `boonta-track-v1` representation. That schema currently stores an ordered closed-loop point list and cannot represent the source's full branch graph losslessly. Document the missing semantics before changing the schema or writing a converter. Cross-check with N64/Dreamcast only where evidence is available; do not imply GameCube/Wii parity.
+- The previous N64 finish-to-Results trace remains preserved in the RE-001 dossier as static evidence with an unverified runtime edge. It is useful background, but an N64 Results-screen capture is not the first blocker for a native GameCube/Wii port and does not establish target parity.
+- After the route model is specified, take one next research question at a time: pod physics/handling; race/lap/finish state; rival AI and progression; platform asset/container formats; then menus/audio. Do not run these tracks concurrently.
+- **Existing validation gate:** [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Keep its manual checks distinct from static research and exact-head CI.
+- **Existing implementation candidates:** retain and review PRs #264/#268 as separate input work; do not allow controller enhancements to displace the 80/20 research queue. Do not merge, close, or retarget them automatically.
+- **Step 102:** its historical 359-file inventory has no top-level license and flags PC-mod-derived centerlines plus assets/data of unclear provenance. The archive itself is not currently available in the active Library for file-by-file inspection. Keep its candidate code/data on HOLD; do not bulk-import or spend time recovering it unless a specific file is needed for the active research question and its provenance can be reviewed.
+
+Tool selection must follow the artifact:
+- Use PC disassembly/decompilation and PC format parsers for the original Windows build.
+- Use N64Recomp/sp00nznet's symbol/disassembly workflow and local N64 observation for N64-only questions.
+- Use `decomp-toolkit`, `objdiff` and CodeWarrior for GameCube/Wii DOL/REL build work, symbol/split work on our own target executable, and matching only when a real matching original binary/compiler pair exists. They do not reveal a nonexistent retail GameCube/Wii Racer build.
+- `decompdecomp` lists GameCube/Wii as Beta and requires the original compiler; treat it as an experiment only after checking exact platform support, local requirements and the €0 budget. Do not install or configure tools before an identified artifact and question need them.
 
 ## 5. One responsible writer, no branch sprawl
 
