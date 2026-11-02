@@ -3376,3 +3376,77 @@ This establishes the countdown as **time-step based**, not a fixed number of fra
 - **Not established:** exact seconds-per-unit conversion, configured-step value at runtime, emulator scheduling behavior, whether normal race completion satisfies the held-input gate, and visible Results.
 
 No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
+
+
+## PC spline progress builder and pod-to-track cursor — frozen Steam Ghidra cross-check (2026-11-02)
+
+**Question:** can the missing PC route-progress writer and the main pod cursor/binding functions be recovered from the frozen Steam-PC Ghidra output, then mapped to the existing Boonta track/runtime boundaries?
+
+### Exact source pins and scope
+
+- Public PC research/reimplementation: [SW_RACER_RE at `a9863edd4caaa573f89ff634fa7d1cd6d41738ab`](https://github.com/tim-tim707/SW_RACER_RE/tree/a9863edd4caaa573f89ff634fa7d1cd6d41738ab), particularly [swrSpline.h](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.h), [swrSpline.c](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrSpline.c), [swrRace.h](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.h), and [swrRace.c](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c).
+- Independent frozen Steam-PC Ghidra output: [`swep1r_decomp` at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef), especially [FUN_0047f060.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047f060.c), [FUN_0047f470.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047f470.c), [FUN_0047f6f0.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047f6f0.c), [the raw assembly for FUN_0047f060](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_0047f060.s), and the [combined decompilation file containing FUN_0047f8e0 through FUN_0047ffb0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c).
+- These are two PC research artifacts, not proof of N64, Dreamcast, GameCube or Wii parity. The Steam decompilation is a distinct executable snapshot; matching function addresses are a useful cross-reference, not proof that the binaries are identical.
+
+### A. The previously missing progress-table writer is now mapped at algorithm level
+
+The SW_RACER_RE header assigns `0x0047F060` to `swrSpline_TraceProgress`, `0x0047F470` to `swrSpline_BuildProgressTable`, and `0x0047F6F0` to `swrSpline_Build`. The public C file has the declarations/address map but no complete bodies for these routines. The frozen Steam Ghidra output supplies their corresponding function bodies.
+
+**`FUN_0047f470` — enumerate graph paths and seed one trace per route path:**
+
+1. It initializes the per-control-point progress-base storage to the `-1.0` sentinel and initializes a parallel short array to `0xFFFF`.
+2. It walks the control-point progress keys in sequence. For each key, it searches the node records for one or more control points whose 16-bit `progress` field equals that key.
+3. For each matching node, it enumerates outgoing choices across up to three successive branch decisions. The low three bits of the cursor's branch flags are set from those choices, yielding up to eight binary branch combinations for the three-level lookahead. The flat-Bezier path takes the direct one-edge route; other spline types use the deeper lookahead.
+4. Each enumerated route is passed through `FUN_0047f450`, a small relay to `FUN_0047f060`. The per-route counter is advanced, and the parallel short array records the route/order ID for nodes visited on that path.
+
+**`FUN_0047f060` — integrate each path and assign normalized progress:**
+
+1. It samples the spline from `t=0` to `t=1` in 100 equal parameter increments per segment (builder argument 100.0; step is 1/100).
+2. At each step it evaluates a world-space spline position and adds the 3D distance from the previous sample. The raw assembly confirms the repeated cursor evaluation and distance accumulation calls; this is arc-length approximation, not a simple equal-per-node assignment.
+3. On the primary/default branch path (`branchFlags == 0`), it records the total track-length accumulator. An alternate route starts from the already assigned progress at its branch node and stops when it meets a node whose progress was already assigned, or when the path closes.
+4. For each node along that path, it writes two floats in the per-node table: `.x` is the normalized progress base at that node and `.y` is the progress span to the next node. The accumulated distance fraction is remapped between the route's start-progress and its existing join/end progress. A closed path uses an end value of 1.0; a branch that rejoins an already traced path inherits the join node's existing progress value.
+5. The function also records the per-node route/order ID in the parallel short table. This is subsequently available to the track-mesh baking path.
+
+The consumer is independently visible in [`swrRace_LapProgress`](https://github.com/tim-tim707/SW_RACER_RE/blob/a9863edd4caaa573f89ff634fa7d1cd6d41738ab/src/Swr/swrRace.c): it evaluates `progressBase + segmentT * progressSpan`, then applies the closed-loop or open-finish cap. This closes the missing **PC source-level writer → per-node base/span → lap-progress consumer** relationship for the frozen Steam-PC snapshot.
+
+**Interpretation:** the graph's branches are not independent parallel lap counters. Their arc lengths are normalized into the shared progress interval between the branch point and the merge point. This preserves a common race-progress coordinate across alternate routes of different physical lengths.
+
+### B. The remaining pod-to-track functions are also present in the frozen PC decompilation
+
+The SW_RACER_RE address map identifies the following functions, while its current readable C intentionally leaves several bodies as `HANG("TODO")`:
+
+| PC address | SW_RACER_RE name | Frozen Steam Ghidra evidence | What the body establishes |
+|---|---|---|---|
+| `0x0047F8E0` | `swrRace_AdvanceSplineCursor` | [`FUN_0047f8e0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c) | Uses current and previous pod positions plus the cursor's sampled tangent plane; advances or retreats `segmentT` in 0.01 increments until the cursor sample brackets the pod position. It returns forward/backward movement flags and interpolates an within-frame start/finish crossing time when the cursor crosses node 0. This is position-driven cursor synchronization, not merely `speed * dt` progress. |
+| `0x0047F890` | `swrRace_GetTrackMeshAtCursor` | [`FUN_0047f890`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047f890.c) | Selects one of ten baked mesh samples for the current control point using `segmentT * 10`, then reads the corresponding sample-to-track-mesh pointer. |
+| `0x0047FBB0` | `swrRace_UpdateSplineBinding` | [`FUN_0047fbb0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c) | When the standing track-mesh node changes, checks the mesh's behavior flags and its stored spline sample index. A valid nonzero index can reseed the route cursor and synchronize it against the pod's current world position; ambiguous meshes can reject the rebind. |
+| `0x0047FCA0` | `swrRace_ComputeTrackOffset` | [`FUN_0047fca0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c) | Projects the pod position relative to the current spline sample/tangent plane, stores the cross-track distance and (when nontrivial) its normalized direction. This supplies the lateral/off-line relation used by the race object. |
+| `0x0047FDD0` | `swrRace_LapCompletion` | [`FUN_0047fdd0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c) | Maintains current/previous/high-water normalized progress, unwraps values around the start/finish boundary for closed loops, and tests forward crossing; an open route with an explicit finish-node state instead accepts progress reaching 1.0. |
+
+The top-level `swrRace_UpdateRaceProgress` call order in SW_RACER_RE is therefore grounded by these bodies: synchronize cursor from pod position → select current baked track mesh → (retail projector helper is a zero-return stub) → attempt mesh-based spline rebind → compute cross-track offset → test lap completion → update reverse/forward checkpoint bookkeeping.
+
+**Important exclusions:** the retail projector function `0x0047EB50` is a zero-return stub in the public PC reconstruction, and `swrSpline_GetSampleSpacing` returns 0.0 in that snapshot. Do not silently replace those no-op/stub behaviors with intended-but-unconfirmed projection or spacing algorithms. The frozen Ghidra decompilation is PC-only and does not establish the GameCube/Wii target algorithm.
+
+### C. What this changes in the Boonta port specification
+
+The current `boonta-track-v1` / prototype combines an ordered Catmull–Rom point list, a closed-loop distance counter and hand-authored `half_width`. The pinned PC reference now supports a more precise *candidate* neutral model:
+
+- **Graph topology:** node IDs, directed next/previous links, split/rejoin structure.
+- **Curve definition:** per-node position, two Bezier handles or four-node B-spline window, curve-type selector, and rotation/up data where the selected curve type consumes it.
+- **Branch progress lookup:** the 16-bit node progress key plus the eight branch-combination progress-band slots kept as distinct source fields until their cross-platform mapping is confirmed.
+- **Cursor state:** four-node lookahead, current segment parameter, signed direction/velocity state, start/end flags, branch selector and three-level branch history.
+- **Baked route progress:** per-node normalized progress base and span, with alternate branches interpolated into the same progress interval as their merge.
+- **Track binding:** per-node samples (ten in the PC bake), each optionally associated with a track-mesh/collision node; retain this as a separate surface/mesh binding layer, not a width field on the route point.
+- **Pod-to-route state:** a cursor synchronized from the pod's world position, plus a cross-track offset vector/distance and an independent lap-crossing/high-water state.
+
+This is a specification target only. Preserve `boonta-track-v1` as the working synthetic acceptance circuit; do not overwrite its data or runtime. A future graph schema should be a separately versioned format with raw-source adapters and synthetic fixtures.
+
+### D. Evidence grade and remaining gaps
+
+- **STATIC-ANALYZED PC:** high confidence for the algorithmic flow above in the frozen Steam-PC Ghidra snapshot, cross-referenced to the matching SW_RACER_RE function-address map.
+- **Not runtime-confirmed:** these are static reconstructions, not a recorded retail gameplay run or matching-compiled source.
+- **Not cross-platform-confirmed:** no part of this trace establishes identical N64, Dreamcast, GameCube or Wii code/data semantics. The existing N64 84-byte-record trace is a useful independent comparison only.
+- **Not yet a converter:** no original coordinates, track assets, code, ROM data or proprietary outputs were copied to this repository; no parser, route graph runtime or gameplay code changed.
+- **Remaining research:** compare the branch/progress lookup with N64's eight trailing short fields and the existing source-format metadata; next inspect the AI/racer consumers of route cursor and progress so the graph is specified for player and rival behavior, not only geometry.
+
+**Result:** the PC route/spline research is no longer missing the progress-table writer or the principal pod-to-spline cursor/binding flow. The next research question can move from "how does the route graph compute progress?" to "how do AI racers consume the same graph/cursor and choose among branch routes?" Only after that behavior is documented should the runtime schema be designed or ported.
