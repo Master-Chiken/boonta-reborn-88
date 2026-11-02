@@ -52,8 +52,15 @@ class SteeringDeadzoneSourceContractTests(unittest.TestCase):
     def test_wii_backend_requires_classic_expansion(self):
         source = self.input_backend
         self.assertIn("WPAD_Probe(WPAD_CHAN_0, &expansion_type)", source)
-        self.assertIn("expansion_type != WPAD_EXP_CLASSIC", source)
+        self.assertIn("expansion_type == WPAD_EXP_CLASSIC", source)
         self.assertIn("data->exp.type != WPAD_EXP_CLASSIC", source)
+        self.assertIn("boonta_classic_format_should_configure(", source)
+        self.assertIn("WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR)", source)
+        self.assertLess(source.index("WPAD_Probe("), source.index("WPAD_SetDataFormat("))
+        self.assertLess(source.index("WPAD_SetDataFormat("), source.index("WPAD_Data("))
+        init = source[source.index("void boonta_input_init"):source.index("void boonta_input_poll")]
+        self.assertNotIn("WPAD_SetDataFormat(", init)
+        self.assertIn("g_wpad_classic_format_ready = 0;", source)
         self.assertIn("return;", source)
 
     def test_deadzone_mapping_stays_in_gameplay_state_helper(self):
