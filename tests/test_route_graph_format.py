@@ -81,7 +81,8 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(end["position"][0], 2.0, places=8)
         self.assertAlmostEqual(end["position"][2], 0.5, places=8)
         self.assertAlmostEqual(start["tangent"][0], 1.0, places=8)
-        self.assertAlmostEqual(end["tangent"][0], 1.0, places=8)
+        self.assertAlmostEqual(end["tangent"][0], 1.0 / math.sqrt(1.25), places=8)
+        self.assertAlmostEqual(end["tangent"][2], 0.5 / math.sqrt(1.25), places=8)
 
     def test_bspline_window_is_independent_from_edge_topology_links(self):
         graph = fixture("uniform-cubic-bspline.json")
