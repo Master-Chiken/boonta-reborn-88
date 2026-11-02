@@ -11,6 +11,9 @@ FORMAT_DIR = ROOT / "tools" / "route_graph_format"
 FIXTURE_DIR = FORMAT_DIR / "fixtures"
 sys.path.insert(0, str(FORMAT_DIR))
 
+import validate_route_graph as route_graph_module  # noqa: E402
+from unittest import mock
+
 from validate_route_graph import (  # noqa: E402
     RouteCursor,
     RouteGraphError,
@@ -367,6 +370,16 @@ class RouteGraphFormatTests(unittest.TestCase):
         edge["surface_binding"][1]["t"] = 0.0
         with self.assertRaisesRegex(RouteGraphError, "strictly increasing"):
             validate_route_graph(invalid)
+
+    def test_sample_edge_length_validates_graph_only_once(self):
+        graph = fixture("open-bezier.json")
+        original = route_graph_module.validate_route_graph
+        with mock.patch.object(
+            route_graph_module, "validate_route_graph", wraps=original
+        ) as validator:
+            length = sample_edge_length(graph, "start-middle", samples=100)
+        self.assertGreater(length, 0.0)
+        self.assertEqual(validator.call_count, 1)
 
     def test_progress_allocator_rejects_zero_or_invalid_lengths(self):
         with self.assertRaises(RouteGraphError):
