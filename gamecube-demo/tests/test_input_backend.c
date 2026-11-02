@@ -35,8 +35,14 @@ static void test_classic_stick_respects_asymmetric_calibration_ranges(void)
     assert(boonta_classic_axis_to_signed(160U, 20U, 100U, 220U) == 63);
 
     /* A degenerate half-range must stay neutral instead of dividing by zero. */
+    assert(boonta_classic_axis_to_signed(79U, 80U, 80U, 220U) == 0);
     assert(boonta_classic_axis_to_signed(80U, 80U, 80U, 220U) == 0);
+    assert(boonta_classic_axis_to_signed(121U, 20U, 120U, 120U) == 0);
     assert(boonta_classic_axis_to_signed(120U, 20U, 120U, 120U) == 0);
+
+    /* Raw values outside the calibrated range saturate safely on both sides. */
+    assert(boonta_classic_axis_to_signed(0U, 20U, 100U, 220U) == -128);
+    assert(boonta_classic_axis_to_signed(255U, 20U, 100U, 220U) == 127);
 }
 
 static void test_all_gameplay_buttons_map(void)
