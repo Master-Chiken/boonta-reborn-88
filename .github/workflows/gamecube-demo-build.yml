@@ -11,6 +11,8 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/route_graph_format/**"
+      - "tests/**"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -71,6 +73,9 @@ jobs:
 
       - name: Validate clean-room track format and checked-in runtime header
         run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
+
+      - name: Test neutral route graph format and synthetic cursor invariants
+        run: python3 -m unittest discover -s tests -p 'test_route_graph_format.py' -v
 
   build-gamecube-demo:
     runs-on: ubuntu-latest
