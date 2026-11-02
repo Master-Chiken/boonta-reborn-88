@@ -3268,3 +3268,23 @@ A further local pass followed the time formatter beyond the minute/second/hundre
 **Important formatting limit:** in the traced carry branch, the incremented seconds value is still passed onward to the generic string formatter; this pass does not establish that the displayed text normalizes that value back to 00. Therefore the arithmetic contains a carry/rollover adjustment, but the exact visible boundary string at a near-minute rollover should not be described as conventional minute:second.hundredth normalization without a runtime capture or a further format-consumer check.
 
 This narrows the formatter's internal arithmetic while preserving the evidence boundary: the Results timing entries are formatted as minute/second/hundredth components, but the exact punctuation, zero-padding and edge-case display remain unverified. No gameplay code changed; no ROM bytes, raw disassembly, exact local offsets, private pointers or extracted assets were published.
+
+
+## BW. Manager state-2 gate advances its timer before testing held A/Start — static only (2026-11-02)
+
+### Ordering inside the state callback
+
+A follow-up over the manager's seven-state callback refines the state-2 input gate already documented in Section AX:
+
+1. The callback dispatches from the manager object's low-nibble state.
+2. On the state-2 branch, it first advances the same manager object's timer-like floating-point field using a shared floating-point increment.
+3. It then queries the current logical input mask with the A-or-Start mask (`0x201`). This is the current/held mask established in Section AW, not the separately computed press-edge word.
+4. If the query is false, this branch returns without issuing the `Fini` selector. If true, it calls the manager transition/message helper with `Fini`.
+
+### What this adds to the finish hypothesis
+
+The gate is therefore **level-sensitive and checked after the timer-like field update**. It does not require a fresh A/Start press at that code site: a button that remains held when the manager is processed in state 2 can satisfy the query. This makes the ordinary accelerator-A-through-finish test a direct discriminator for the outstanding runtime question, rather than a test of a newly pressed confirmation button.
+
+This remains a conditional static conclusion. The analysis does not establish the timer's exact unit, a fixed wait duration, the runtime frame on which state 2 is entered, or whether A remains held at that instant on a real setup. A false query does not send `Fini` on this branch; the visible Results screen and normal-race causal path remain runtime-unverified. The separate mode bypass, abort substitution, Hang selector and global transition guards documented in Sections AX and AS still apply.
+
+No emulator, Not64, Wii, controller session or live race was run. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
