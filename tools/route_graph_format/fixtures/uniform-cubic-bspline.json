@@ -15,7 +15,7 @@
     "forward_axis": "z"
   },
   "closed_loop": false,
-  "start_node_id": "p1",
+  "start_node_id": "route-start",
   "nodes": [
     {
       "id": "p0",
@@ -35,7 +35,7 @@
       "position": [
         1,
         0,
-        0
+        1
       ],
       "up": [
         0,
@@ -61,7 +61,33 @@
       "position": [
         3,
         0,
+        2
+      ],
+      "up": [
+        0,
+        1,
         0
+      ]
+    },
+    {
+      "id": "route-start",
+      "position": [
+        1,
+        0,
+        0.6666666666666666
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "route-finish",
+      "position": [
+        2,
+        0,
+        0.5
       ],
       "up": [
         0,
@@ -73,8 +99,8 @@
   "edges": [
     {
       "id": "bspline-span",
-      "from": "p1",
-      "to": "p2",
+      "from": "route-start",
+      "to": "route-finish",
       "curve": {
         "type": "uniform_cubic_bspline",
         "control_node_ids": [
