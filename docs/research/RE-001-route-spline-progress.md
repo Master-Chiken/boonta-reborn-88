@@ -3288,3 +3288,33 @@ The gate is therefore **level-sensitive and checked after the timer-like field u
 This remains a conditional static conclusion. The analysis does not establish the timer's exact unit, a fixed wait duration, the runtime frame on which state 2 is entered, or whether A remains held at that instant on a real setup. A false query does not send `Fini` on this branch; the visible Results screen and normal-race causal path remain runtime-unverified. The separate mode bypass, abort substitution, Hang selector and global transition guards documented in Sections AX and AS still apply.
 
 No emulator, Not64, Wii, controller session or live race was run. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
+
+
+## BX. Fini dispatch has a separate state-6 half-unit countdown — static only (2026-11-02)
+
+### State-2 input gate and pending selector
+
+Section BW records that the manager's state-2 callback first advances its timer-like field by the shared runtime timing increment and then tests the current/held A-or-Start mask. When the mask is false, that branch does not queue the finalization selector and leaves the manager on its current path for another update. When the mask is true, it calls the manager transition helper with the `Fini` selector.
+
+### Transition helper starts a distinct delay
+
+The transition helper does more than change the manager's state:
+
+- it writes the requested selector into the manager's pending-selector field;
+- it changes the manager's low-nibble state to **6**;
+- it resets the same timer-like field to the floating-point value **0.5**.
+
+This reset means the state-2 elapsed value is not simply carried forward as the state-6 delay. State 6 receives a fresh 0.5 value.
+
+### State-6 countdown and selector consumption
+
+The state-6 handler reads that timer field and compares it with zero. While the value is not yet negative, it subtracts the same shared runtime timing increment and stores the result, then returns. Once the value is negative, it calls the manager selector consumer with the pending selector stored by the transition helper. Thus the statically traced ordinary path is not an immediate `Fini` relay on the same branch: it passes through a separate countdown phase before the selector consumer runs.
+
+### Evidence and limits
+
+- **Direct static ordering:** state 2 updates its timer field → checks held A/Start → on a match requests `Fini` → transition helper stores the selector, sets state 6 and initializes the timer to 0.5 → state 6 counts down using the shared timing increment → negative timer permits the pending selector to reach its consumer.
+- **Timing interpretation:** the value 0.5 is directly present in the transition helper, and the countdown uses the same shared time increment used by the manager's timed updates. This establishes a half-unit delay in that timer's own scale. The public note does not rename that scale as seconds or assign an exact number of frames without independently resolving the increment's runtime unit/value.
+- **Causal boundary:** this refines the conditional manager-side Fini route; it does not prove that a real completed race necessarily enters state 2 with A still held, that all mode/abort guards select the ordinary relay, or that a live Results panel appears.
+- **No implementation consequence:** N64 static evidence only; no GameCube/Wii gameplay change follows.
+
+No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
