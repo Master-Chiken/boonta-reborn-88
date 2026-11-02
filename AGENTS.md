@@ -85,3 +85,7 @@ Every task/PR should state:
 Update the relevant status/roadmap documentation when a change materially alters the project state. A task is not done merely because code was written or committed.
 
 **When in doubt, inspect first, reduce scope, protect the clean-room boundary, and prove the result before expanding.**
+
+## Multi-agent coordination and task routing
+
+Read [the multi-agent research and handoff playbook](docs/MULTI_AGENT_RESEARCH_PLAYBOOK.md) before assigning work to Jules, Gemini, Copilot, OpenRouter, Biddy-Pinky, or another assistant. The active work queue remains [Issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). Allow parallel evidence lanes only when they address different subquestions under that one active topic; never launch two writers against the same behavior or files. The owner must specify scope, allowed sources, prohibited changes, acceptance evidence, and expected output. Hosted agents cannot read ROMs/archives that exist only in the owner's computer or ChatGPT Library; never upload them to make an agent work. Gemini stays read-only unless the owner explicitly approves a scoped plan and all repository safety gates have been verified. Do not launch another coding task until overlapping PRs have been compared and routed to one canonical candidate.
