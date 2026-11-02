@@ -293,6 +293,14 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(replayed["path_history"], expected_path)
         self.assertEqual(replayed["edge_id"], "d3-right")
 
+    def test_cursor_move_uses_local_edge_parameter(self):
+        graph = fixture("open-bezier.json")
+        cursor = RouteCursor(graph)
+        state = cursor.move(delta_parameter=0.25)
+        self.assertEqual(state["edge_id"], "start-middle")
+        self.assertAlmostEqual(state["t"], 0.25)
+        self.assertAlmostEqual(state["progress"], 0.125)
+
     def test_cursor_requires_explicit_branch_choice_and_rolls_back_on_error(self):
         graph = fixture("three-branch-decisions.json")
         cursor = RouteCursor(graph)
