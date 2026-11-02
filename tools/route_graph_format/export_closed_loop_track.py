@@ -40,7 +40,10 @@ class RouteGraphExportError(ValueError):
 def _checked_half_width(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise RouteGraphExportError(f"{label} must be a number")
-    width = float(value)
+    try:
+        width = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise RouteGraphExportError(f"{label} must be finite") from exc
     if not math.isfinite(width) or not MIN_HALF_WIDTH <= width <= MAX_HALF_WIDTH:
         raise RouteGraphExportError(
             f"{label} must be finite and between {MIN_HALF_WIDTH} and {MAX_HALF_WIDTH}"
