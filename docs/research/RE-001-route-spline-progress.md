@@ -3146,3 +3146,55 @@ A plausible reconciliation is that the manager's A-or-Start held gate is satisfi
 **Priority:** Not64 20260410 is now the most practical first local test on the owner's Wii/Homebrew setup, with Ares v148 retained as the desktop alternative. A result from either emulator remains runtime evidence for that emulator configuration only. No run is claimed by this dossier update.
 
 RE-002 remains parked; no gameplay code changed.
+
+
+## BU. Participant counter reaches the in-race LAP and FINAL LAP text renderer — direct static trace (2026-11-02)
+
+### Question and scope
+
+Sections BI, BJ and BL recorded that the participant event counter was understood but its consumer in the visible lap HUD had not yet been found. Section BO's later positive HUD trace was withdrawn because its original evidence note did not support the claimed cross-reference. This section records a **new, separately re-traced local call/data-flow path**; it does not revive or rely on the withdrawn historical text in BO.
+
+The analysis used the locally held US N64 reference and a local MIPS III decode. ROM bytes, absolute addresses, private instruction offsets, pointer values and extracted resource bytes remain local and are intentionally omitted here.
+
+### Manager-to-local-participant HUD callback
+
+The manager's HUD update path obtains the registered local-participant references. For an eligible reference, it calls a per-participant update routine with both the race-manager context and that participant pointer. The per-participant routine preserves those arguments and invokes the HUD composition callback with the same participant record and manager context.
+
+The registration path is the same Locl setup path previously connected to the participant table used by the manager's active roster. This joins the HUD data source to the active local participant, rather than merely finding a nearby counter or matching a repeated record stride.
+
+### Current / total lap text
+
+The HUD composition callback performs the following data flow:
+
+1. Reads the participant's 32-bit route-event counter.
+2. Derives the displayed lap numerator by adding one to that counter.
+3. Reads the configured race target from the manager.
+4. Caps the displayed numerator at the configured total if the derived value exceeds it.
+5. Passes the numerator and configured total to the formatter using the resource format `%d/%d`.
+6. Submits the formatted result and the LAP label to the queued 2D text-drawing path.
+
+The format-resource pointer was checked against the local ROM data mapping and resolves to the existing `%d/%d` text resource. The resulting text is not simply prepared and abandoned: the text-queue flush path iterates queued entries, applies their color and screen-position parameters, and submits the string pointer to the text-rendering primitive.
+
+**Static result:** the manager's participant event counter is read by the in-race HUD composition path and used to generate the one-based current/total lap display.
+
+### FINAL LAP branch
+
+The same HUD composition callback has a separate conditional branch that compares the counter-derived lap number with the configured total. When they match, and the additional mode/timing/visibility conditions permit the draw, it submits the `FINAL LAP` resource through the same text queue.
+
+The resource pointer was independently checked against the local ROM data mapping and resolves to the existing `FINAL LAP` string. The queued command then reaches the same text-rendering flush path described above.
+
+**Static result:** the current/total lap text and the conditional FINAL LAP banner are connected to the same local participant counter and configured race target. The extra presentation guards remain relevant; this finding does not claim the banner is visible in every mode or every frame.
+
+### Revised evidence status
+
+- **Direct static data flow established:** active local participant record → route-event counter → counter + 1 → configured target → `%d/%d` lap formatter → queued text renderer.
+- **Direct static branch established:** the same counter-derived lap number is compared with the configured target and can submit the `FINAL LAP` resource through the text renderer, subject to mode/timing/visibility guards.
+- **Runtime still unverified:** no emulator race, memory watch, live HUD capture or visible frame from the N64 game was performed in this pass. The exact on-screen appearance and timing still need runtime confirmation.
+- **Separate Results boundary:** this HUD finding is not the post-race Results/placement panel. The ordinary/default Fini → Hang state-5 Results builder remains a separate conditional static path; its normal-race guard values and visible Results screen remain runtime-unverified.
+- **Platform boundary:** this is N64 static evidence only. It does not establish parity with the clean-room GameCube/Wii prototype or Not64 runtime behavior.
+
+No gameplay code changed. No ROM bytes, private absolute pointers, raw disassembly, private instruction offsets, extracted resources or assets were published. RE-002 remains parked.
+
+### Next bounded action
+
+Use a normal three-lap run on the owner's preferred Wii + Not64 Classic Controller setup, or the already identified Ares v148 desktop alternative, to capture the lap display on each crossing and the FINAL LAP banner. Preserve the ROM and capture locally; record only emulator/version, configuration and observed behavior in the public issue. Keep the Results-screen observation separate from this HUD test.
