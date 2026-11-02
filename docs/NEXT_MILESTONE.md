@@ -83,3 +83,24 @@ Once the interactive checklist is fully green:
 Step 102 source archive remains on **import hold**.  
 See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
 Do not merge unclear-provenance code or any commercial assets.
+
+
+## Wii Classic Controller acceptance (separate from GameCube)
+
+The native Wii backend is being developed on [PR #268](https://github.com/Master-Chiken/boonta-reborn-88/pull/268), based on the D-pad pitch dependency in PR #264. Keep the PR draft until its dependency is integrated and the physical controller check is performed.
+
+Automated checks on branch `feat/native-wii-classic-input-267`:
+
+- Host translation tests cover button mapping, calibrated stick conversion, analog shoulders, digital ZL/ZR and neutral disconnect/wrong-expansion states.
+- Native CI compiles both GameCube and Wii DOL/ELF targets.
+- The Wii backend requests `WPAD_FMT_BTNS_ACC_IR` only after `WPAD_Probe` confirms a connected Classic expansion. libogc does not apply a channel data-format request before the controller is assigned; the backend resets its setup flag on disconnect/non-Classic state and configures again after reconnection. It accepts input only when `WPAD_DATA_EXPANSION` and the Classic payload are present.
+
+Manual acceptance remains pending:
+
+1. Load the Wii DOL on a real Wii with the Under Control controller attached to Wii Remote channel 0.
+2. Confirm the runtime sees `WPAD_EXP_CLASSIC`; a Wii Remote-only or other expansion must remain neutral.
+3. Check stick steering and pitch, D-pad steering/pitch, A/B throttle/brake, X+A boost, ZL/ZR and analog shoulders for slide, Plus pause/restart, and Y reset.
+4. Disconnect/reconnect and confirm the input returns to neutral then resumes only when Classic is detected.
+5. Record console model, controller identification, test result and a short video or notes.
+
+Do not mark physical compatibility as passed from cross-compilation or Dolphin.
