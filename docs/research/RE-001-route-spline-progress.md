@@ -3349,3 +3349,30 @@ The input query is checked on successive state-2 updates; a false result returns
 - **Platform boundary:** N64 local static evidence only. It does not establish equivalent GameCube/Wii prototype behavior.
 
 No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
+
+
+## BZ. Manager timer increments come from the shared timing subsystem — static only (2026-11-02)
+
+### Shared timer increment producer
+
+Sections BW–BY use a common floating-point/double-precision timing increment in the manager's state and race-update paths. A targeted cross-reference followed the writer of that shared value back into the timing subsystem:
+
+- The normal timing path samples the processor's CP0 Count register through the low-level counter reader. The counter reader maintains a high-word rollover count so the sampled counter can be treated as a wider monotonically increasing value.
+- The timing conversion routine scales that counter value and converts it into floating-point time before storing the current sample.
+- The update routine subtracts the previous sample from the current one to produce an elapsed-time delta. It stores the delta as the shared increment consumed by manager timers and other timed callbacks.
+- The normal measured-delta path converts the delta for additional logic and bounds it between two stored floating-point limits before the next timing update.
+- A separate configured-step path exists: when its timing-mode value is positive, the update routine advances its accumulated time by that configured value and publishes that value as the shared increment instead of using the measured difference for that update.
+
+### Consequence for the finish-to-Fini timer
+
+The manager's state-2 timer increment and state-6 countdown consume this same published timing value. Section BY's reset to 0.0 therefore begins an elapsed-time accumulation; the held A-or-Start condition is sampled after that increment. When the transition helper requests Fini, it resets the same timer field to 0.5, and state 6 counts down that half-unit using the same shared increment.
+
+This establishes the countdown as **time-step based**, not a fixed number of frames. In the normal measured-time path it follows a CP0 Count-derived clock delta; in the configured-step path it follows the chosen fixed increment. The code cross-reference does not, by itself, prove the exact user-facing unit or duration on a particular emulator configuration, so the dossier does not label 0.5 as seconds or convert it to a frame count.
+
+### Evidence boundary
+
+- **Direct static link:** CP0 Count sample / rollover handling → converted current time → previous-sample difference (or configured-step update) → shared timing increment → manager state-2 and state-6 timers.
+- **Conditional timing modes:** measured-delta and configured-step branches are distinct; runtime selection for a normal Wii/Not64 race was not observed.
+- **Not established:** exact seconds-per-unit conversion, configured-step value at runtime, emulator scheduling behavior, whether normal race completion satisfies the held-input gate, and visible Results.
+
+No emulator, Not64, Wii, controller session, race or visible Results capture was performed. No gameplay code changed; no ROM bytes, raw disassembly, private instruction addresses/offsets, absolute pointers or extracted assets were published. RE-002 remains parked.
