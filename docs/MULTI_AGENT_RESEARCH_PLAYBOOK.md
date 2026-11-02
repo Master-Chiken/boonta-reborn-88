@@ -1,7 +1,7 @@
 # Multi-agent research and handoff playbook
 
 **Status:** process proposal on the documentation PR; no automatic merge or writer access is granted by this document.
-**Current active question:** [Issue #226 — route/spline and lap progression evidence](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
+**Current active question:** [Issue #226 — versioned neutral route-graph contract and synthetic fixtures](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
 
 ## Goal
 
@@ -20,17 +20,24 @@ Use every useful participant without creating multiple agents that independently
 | **Copilot cloud agent** | Optional only if already available and the owner explicitly chooses it for a scoped task | GitHub documents this agent as available on paid Copilot plans. It is excluded from the default €0 workflow; do not buy/enable a subscription for this project. |
 | **CI and deterministic tests** | Verify the exact commit against predefined mechanical checks | CI can validate what tests assert. It cannot prove a complete playable race, an untested behavior, source-license clearance, or parity with another platform. |
 
-## Current RE-001: non-overlapping lanes
+## Current RE-001: one neutral route-graph contract task
 
-The single active blocker is narrower: trace the N64 all-participants-finished condition through the race-manager state/phase change to the actual results UI/resource/scene destination. The PC route/spline dossier and the N64 LAP/FINAL LAP HUD data flow are supporting findings already recorded; neither proves the N64 finish-to-results transition. Keep platform findings separate and do not start RE-002.
+The PC route/spline and AI consumer evidence is now mapped in the [canonical RE-001 dossier](research/RE-001-route-spline-progress.md): branch topology/history, sampled arc-length progress bake, split/rejoin normalization, player cursor/binding, cross-track offset, lap/high-water logic, and AI look-ahead/branch policy. The active task is now to finalize a versioned platform-neutral graph contract and synthetic host fixtures.
 
-1. **Local binary lane — owner + local research session.** Continue N64 ROM/disassembly work locally. Keep the ROM and all extracted bytes/assets local. Record addresses, instruction/call relationships, confidence, and unresolved semantics; publish only safe prose and public URLs.
-2. **Public-source lane — Jules, only if a new concrete lead appears and the owner assigns it.** The pinned public N64 project [sp00nznet/racer at 11f6f70469f995304422f2209a47e9c2df5ff6d0](https://github.com/sp00nznet/racer/tree/11f6f70469f995304422f2209a47e9c2df5ff6d0) and the historical [TheForce.Net N64 code listing](https://www.theforce.net/videogames/codes/n64/racer.asp) have already been checked. Do not repeat broad searches or re-test the same public symbol boundary. If a specific new public reference appears, answer only whether it directly identifies the manager-state writer/reader or results UI/resource/scene destination; distinguish evidence from suggestion and list unknowns. Do not touch gameplay code, rewrite the canonical dossier, or upload local ROM data.
-3. **Falsification lane — Gemini CLI, read-only.** Review only the public issue/dossier and cited public sources. Challenge whether the written evidence actually connects the all-finished predicate through a manager state/phase writer and reader to a positively identified results destination. Do not infer scene semantics from generic tags, shared globals, or HUD labels. Distinguish facts, inferences and unknowns. Do not write files or approve merging.
-4. **Integration lane — coordinator.** Compare each output against local-source evidence, resolve contradictions, and fold only supported conclusions into the canonical RE-001 dossier. A new agent report is not automatically a new truth.
-5. **Human gate — owner and requested reviewer.** Before implementation, confirm whether the evidence actually answers the question and decide the next test. Runtime memory watch or visual tests that require the private ROM/emulator must be performed in a suitable local environment.
+Do not launch parallel research or implementation lanes. Use one writer and one read-only reviewer at most, with the same pinned sources and a bounded file list.
 
-These lanes can overlap in time because they answer different evidentiary subquestions. They must not create different active product questions or make competing changes to the same canonical dossier.
+Required fixture scope:
+- Bezier and B-spline evaluation;
+- a two-way split/rejoin whose branches have unequal physical lengths but share normalized progress between split and join;
+- three-level branch-history persistence;
+- open endpoints, closed-loop wrap and reverse cursor movement;
+- malformed/missing/duplicate edge rejection;
+- surface/collision binding kept separate from centerline width;
+- legacy `boonta-track-v1` parsing/export/build/tests remain unchanged.
+
+Platform boundary: Windows-PC static source is the current algorithm reference. N64's 84-byte records are separate evidence; Dreamcast and retail GameCube/Wii parity remain unproven. Do not merge PC and N64 structures into one assumed-identical binary schema.
+
+The N64 finish-to-Results chain remains a historical runtime-unverified question. It is not the current blocker and must not override the live issue #226 owner-directed task. Step 102/RE-002 and asset/handling work remain parked.
 
 ## Single-writer and no-duplicate-PR rules
 
@@ -39,23 +46,23 @@ These lanes can overlap in time because they answer different evidentiary subque
 - An agent task must name the canonical issue, target branch, files it may change, files it must not change, acceptance criteria and expected output.
 - A reviewer should receive the same exact diff/source pins and should be asked to challenge it, not independently rewrite it.
 - No auto-merge, agent self-approval, direct push to main, automatic branch deletion, extra cloud billing, or merging merely to clear the queue.
-- **Current deadzone triage (2026-10-21):** [PR #247](https://github.com/Master-Chiken/boonta-reborn-88/pull/247) is the sole open steering-deadzone candidate, targets `main`, and is ready for review. No submitted PR review or visible-Dolphin controller-feel/three-lap acceptance has been recorded. PR #233 and PR #243 are **closed unmerged duplicates**, not open candidates; retain their branches only as historical evidence and do not merge them blindly. [PR #214](https://github.com/Master-Chiken/boonta-reborn-88/pull/214) is a separate draft rail-collision change targeting `dev` and still needs its relevant human Dolphin acceptance. Do not start another overlapping gameplay task.
+- **Historical PR triage (2026-10-21):** the steering-deadzone and earlier rail-collision candidates described in the old note have since been integrated, closed or superseded. Do not use this dated paragraph as a live queue. Always query the live open-PR list and compare exact heads/files before assigning work.
 - Research-first documentation changes do not validate the gameplay PRs. Every PR still needs exact-head checks, review, provenance checks where applicable, and the right level of manual acceptance.
 
 ## Required task request template
 
 Canonical issue: #226
-Active research question: Can the N64 all-participants-finished condition be traced through its manager-state/phase transition to a positively identified results UI/resource/scene destination?
-Agent role: read-only evidence falsification / synthesis
-Allowed inputs: public links and repository documentation in issue #226; locally obtained ROM-derived evidence stays with the owner
-Forbidden: private ROM uploads, extracted course/assets, broad duplicate web searches, repeat of the failed Ares/GDB smoke test without a new hypothesis, gameplay changes, merging, settings/billing changes
+Active research question: finalize the versioned platform-neutral route-graph contract and synthetic host fixtures from the pinned PC evidence without changing boonta-track-v1.
+Agent role: one writer OR one read-only falsification reviewer; never parallel writers.
+Allowed inputs: pinned public SW_RACER_RE and frozen Steam-PC Ghidra references, current Boonta schemas/build/tests, synthetic fixture data.
+Forbidden: private ROM uploads, extracted/proprietary track coordinates or assets, third-party source copying, PC-to-console parity assumptions, route-v1 migration, gameplay runtime changes before contract review, parallel tasks, settings/billing changes.
 Required output:
-1. Exact URLs and commit pins inspected.
-2. Confirmed observations with line/address references.
-3. Inferences clearly marked with confidence.
-4. Evidence against the hypothesis and unknowns.
-5. One minimal reproducible next check.
-Stop condition: If a conclusion requires access to the owner's local ROM, report that blocker instead of guessing.
+1. Exact URLs/commit pins and changed-file list.
+2. Versioned node/edge/curve/cursor/progress/surface-binding contract.
+3. Synthetic fixtures and deterministic host tests for every required branch/endpoint/error case.
+4. v1 unchanged proof: existing parser/exporter and test outputs remain stable.
+5. Remaining unknowns and a narrow next test.
+Stop condition: if a field or behavior is not supported by evidence, retain it as opaque/unknown rather than guessing.
 
 ## Source and privacy boundaries
 
