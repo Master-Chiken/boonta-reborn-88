@@ -1,58 +1,42 @@
-# RE-001 — Public N64 code-list vs participant-table cross-check
+# RE-001 — Public N64 memory-code fields mapped to active participant records
 
 **Date:** 2026-11-02  
-**Scope:** compare public community code-list annotations with a locally traced participant-table lifecycle. This public note contains no ROM bytes, raw disassembly, private absolute addresses, or extracted game data.
+**Scope:** cross-check public community GameShark annotations against local static control/data-flow analysis. This public note omits the ROM-derived absolute table base, private field offsets, raw disassembly, ROM bytes and extracted game data.
 
-## Public code-list observation
+## Result — direct field mapping restored
 
-TheForce.net's N64 code list publishes three Player 1/Player 2 address pairs for *Episode I Racer*:
+The earlier note incorrectly concluded that the public code-list region did not match the manager's live participant table. A re-check of the setup initializer's table base and its row initialization showed that conclusion was wrong.
 
-- an **Always Place First** byte;
-- a **Low Timer** halfword;
-- a **Lap Modifier** halfword, with values 00–04 documented as laps 1–5.
+The public Player 1 code targets fall inside the first record of the very same participant table built during race setup and passed through the Begn message to the race manager. The Player 2 targets fall inside the next record at the same field positions, exactly one 0x88-byte participant stride later.
 
-For all three pairs, the Player 2 address is exactly **0x88 bytes** after the Player 1 address. The same page separately lists a conditional “Start on Lap” modifier using the lap field. Ethereal Games reproduces the lap and placement/timer entries and the same player spacing.
+The exact cross-check now links the three independently listed public code targets to three distinct fields used by the local static control flow:
 
-## Participant-table lifecycle now traced locally
+1. **Always Place First** — the public byte write falls within the participant placement/rank halfword. The manager's ranking/placement helper reads and compares this record field while deriving placement order. The public code's value of one is consistent with first place.
+2. **Low Timer** — the public halfword write falls on the floating-point progress accumulator used by the manager's participant update. The local update path adds route-progress deltas to this scalar. The community label “Low Timer” is retained as the published code name; the internal variable's exact intended semantic is not renamed from that label alone.
+3. **Lap Modifier / Always on Lap** — the public halfword write falls on the lower half of the participant's route-event counter. The local update path increments that counter only when the route-progress event helper reports an event, then compares the new count against the manager's configured threshold. The public list documents values 00–04 as laps 1–5, consistent with a zero-based counter interpretation.
 
-The local static trace now connects the active manager table back to race setup:
+The manager table initializer independently clears the placement field, progress accumulator and event counter for each row, and advances by the same 0x88-byte stride. This is the decisive bridge: the public address pairs are not merely two values with a coincidental stride; they land in the same active record layout and match the corresponding fields consumed by manager code.
 
-1. The race-setup path invokes a participant-table builder.
-2. That builder prepares the participant records with a fixed **0x88-byte stride** and returns the table pointer.
-3. The setup path places that pointer in the Begn message payload sent to the race manager.
-4. The manager's Begn receiver forwards the payload pointer through its initialization path.
-5. The manager initializer stores that same pointer as its active participant-table pointer and iterates the records with the same **0x88-byte stride**.
+## What is supported vs still open
 
-This proves the provenance of the manager's active roster pointer and links the setup-built records to the live manager iteration. The exact private pointer value is deliberately omitted from this public note.
+**High-confidence static mapping:**
+- Player 1 public codes target the first live manager participant record.
+- Player 2 equivalents target the next manager participant record at the same field offsets, separated by 0x88 bytes.
+- Placement/rank helper reads the field targeted by “Always Place First”.
+- Participant progress update reads/writes the float targeted by “Low Timer”.
+- Route-event update increments the counter targeted by “Lap Modifier” and compares it with the configured manager threshold.
 
-## Critical correction: stride is not identity
-
-The public code-list Player 1/Player 2 addresses are **not directly the same base region** as the manager table whose pointer was traced above. Therefore, the shared 0x88 spacing is corroboration of a repeated record size, but it does **not** prove that those GameShark codes address fields in the manager's active participant table.
-
-Accordingly, the earlier candidate assignments of the public “Lap Modifier” and “Low Timer” fields to the manager record's event counter and progress-like accumulator are **withdrawn as a direct mapping**. They remain possible leads for a different player/runtime object, but no direct pointer or field cross-reference has been found.
-
-The public “Always Place First” target also remains **UNMAPPED**. A separate rank-query path must not be conflated with the manager's event-history region.
-
-## What is supported vs unresolved
-
-**Supported:**
-- the public Player 1/Player 2 code pairs use a consistent 0x88-byte separation;
-- the manager's active participant table is built during race setup, passed through the Begn payload, and consumed with a 0x88-byte stride;
-- the manager table lifecycle is now connected end-to-end at the static control/data-flow level.
-
-**Not established:**
-- whether the public code-list addresses target the same runtime object family or a separate player structure;
-- the internal semantic field targeted by “Low Timer”;
-- the internal target for “Always Place First”;
-- whether the public lap-modifier value is the value read by the visible HUD;
-- the code path that formats/draws “FINAL LAP”;
-- the runtime-visible Results transition.
+**Still not established:**
+- the exact semantic meaning of the floating-point accumulator beyond its observed route-progress/event-delta use;
+- whether the public “Lap Modifier” codes expose the same value as the visible HUD lap number at every stage (zero-based vs one-based presentation remains a runtime/HUD question);
+- the actual HUD reader/formatter/draw path and the FINAL LAP selector;
+- runtime behavior of the Results transition and the physical Wii/Not64 controller path.
 
 ## Next bounded action
 
-Trace the entity/object pointers held by each manager participant record to determine whether they reference the separate player-state region represented by the public code-list addresses. If the static pointer chain cannot establish that relation, use a lawful local emulator memory watch on a private copy and record the exact emulator/version and race scenario. Keep all ROM-derived addresses/data local.
+Use these mapped fields as the new anchor to trace the HUD current-lap display and the FINAL LAP resource selection. Follow only readers/consumers of the mapped participant counter first; avoid broad string-table guessing. Keep the ROM, absolute table base, private field offsets and all extracted data local.
 
 ## Public sources
 
-- [TheForce.net — Episode I Racer N64 codes](https://www.theforce.net/videogames/codes/n64/racer.asp)
+- [TheForce.net — Episode I Racer N64 codes](https://theforce.net/videogames/codes/n64/racer.asp)
 - [Ethereal Games — Episode I Racer GameShark Codes (US)](https://etherealgames.com/n64/s/star-wars-episode-i-racer/gameshark-codes-us/)
