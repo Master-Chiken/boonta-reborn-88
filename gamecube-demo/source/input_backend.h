@@ -88,6 +88,18 @@ static inline int8_t boonta_classic_axis_to_signed(uint8_t raw,
     return (int8_t)scaled;
 }
 
+/*
+ * WPAD_SetDataFormat is channel-specific and only takes effect once a
+ * controller has been assigned to that channel. Configure after a successful
+ * Classic probe, not immediately after WPAD_Init.
+ */
+static inline int boonta_classic_format_should_configure(int probe_succeeded,
+                                                          int is_classic,
+                                                          int already_configured)
+{
+    return probe_succeeded && is_classic && !already_configured;
+}
+
 static inline uint8_t boonta_classic_trigger_to_byte(float value)
 {
     if (!isfinite(value) || value <= 0.0f) return 0U;
