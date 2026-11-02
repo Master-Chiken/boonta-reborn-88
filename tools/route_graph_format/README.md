@@ -27,7 +27,7 @@ Nodes contain stable IDs, positions and optional up hints. Directed topology is 
 Edges carry one curve:
 
 - cubic_bezier: control1 and control2 are **absolute world-space positions**, not offsets. Endpoint positions come from the from and to nodes.
-- uniform_cubic_bspline: exactly four control-node IDs. The edge topology runs from the second control node to the third; the outer two supply the four-node curve window.
+- uniform_cubic_bspline: exactly four control-node IDs for the evaluation window. The edge's directed from/to topology links are stored independently; the schema does not infer a fixed control-window index for those links.
 
 Each edge carries an explicit normalized progress interval. At a split all outgoing edges share a start value; at a rejoin all incoming edges share an end value. Interior nodes must be progress-continuous. An open route starts at 0 and terminates at 1. A closed route returns to the start node at 1 and begins there at 0.
 
@@ -43,7 +43,7 @@ The PC source pinned to [SW_RACER_RE commit a9863edd4caaa573f89ff634fa7d1cd6d417
 
 This neutral schema expresses those logical responsibilities without copying the PC record layout. The Ghidra Steam-PC cross-check is pinned separately at [d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef). PC evidence does not prove console parity; no GameCube/Wii route sample has been identified.
 
-The B-spline evaluator uses the standard uniform cubic basis. Optional up hints are linearly blended between the edge's topology endpoints and orthogonalized against the tangent; this is an explicit clean-room policy, **not a claim to reproduce the PC rotation interpolation**. Degenerate tangents fail safely.
+The PC cursor uses the fourth lookahead node for a B-spline forward-link decision and shifts the full four-node window at a boundary. The logical schema therefore keeps directed edge topology separate from the four-point curve window instead of assuming a universal middle-pair mapping. The evaluator uses the standard uniform cubic basis. Optional up hints are linearly blended between the edge's topology endpoints and orthogonalized against the tangent; this is an explicit clean-room policy, **not a claim to reproduce the PC rotation interpolation**. Degenerate tangents fail safely.
 
 The sampled progress allocator apportions a caller-supplied normalized interval in proportion to already-sampled physical edge lengths. It mirrors the documented progress-mapping responsibility but is not a reverse-engineered importer. The caller remains responsible for sampling each curve at a known density.
 
