@@ -12,7 +12,7 @@ on:
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
       - "tools/route_graph_format/**"
-      - "tests/**"
+      - "tests/test_route_graph_format.py"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -23,6 +23,8 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/route_graph_format/**"
+      - "tests/test_route_graph_format.py"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
     inputs:
