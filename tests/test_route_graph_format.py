@@ -227,14 +227,11 @@ class RouteGraphFormatTests(unittest.TestCase):
 
     def test_split_rejoin_maps_unequal_physical_branches_to_same_progress_band(self):
         graph = fixture("split-rejoin-unequal-lengths.json")
-        left_lengths = [
-            sample_edge_length(graph, "left-1", samples=100),
-            sample_edge_length(graph, "left-2", samples=100),
-        ]
+        sampled_lengths = sample_route_edge_lengths(graph, samples=100)
+        left_lengths = [sampled_lengths[edge_id] for edge_id in ("left-1", "left-2")]
         right_lengths = [
-            sample_edge_length(graph, "right-1", samples=100),
-            sample_edge_length(graph, "right-2", samples=100),
-            sample_edge_length(graph, "right-3", samples=100),
+            sampled_lengths[edge_id]
+            for edge_id in ("right-1", "right-2", "right-3")
         ]
         left_total = math.fsum(left_lengths)
         right_total = math.fsum(right_lengths)
