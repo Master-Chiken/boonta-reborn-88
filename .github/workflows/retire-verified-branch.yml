@@ -47,14 +47,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      GH_TOKEN: ${ github.token }}
-      GH_REPO: ${ github.repository }}
-      EVENT_NAME: ${ github.event_name }}
-      ISSUE_NUMBER: ${ github.event.issue.number || '' }}
-      COMMENT_BODY: ${ github.event.comment.body || '' }}
-      INPUT_BRANCH_NAME: ${ inputs.branch_name || '' }}
-      INPUT_EXPECTED_SHA: ${ inputs.expected_sha || '' }}
-      INPUT_CONFIRM_BRANCH: ${ inputs.confirm_branch || '' }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EVENT_NAME: ${{ github.event_name }}
+      ISSUE_NUMBER: ${{ github.event.issue.number || '' }}
+      COMMENT_BODY: ${{ github.event.comment.body || '' }}
+      INPUT_BRANCH_NAME: ${{ inputs.branch_name || '' }}
+      INPUT_EXPECTED_SHA: ${{ inputs.expected_sha || '' }}
+      INPUT_CONFIRM_BRANCH: ${{ inputs.confirm_branch || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -117,8 +117,8 @@ jobs:
       - name: Verify exact head, protection, open PRs and archive reachability
         shell: bash
         env:
-          BRANCH_NAME: ${ steps.selection.outputs.branch_name }}
-          EXPECTED_SHA: ${ steps.selection.outputs.expected_sha }}
+          BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
+          EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
           [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" ]] || {
@@ -152,8 +152,8 @@ jobs:
       - name: Recheck exact ref and atomically retire one branch
         shell: bash
         env:
-          BRANCH_NAME: ${ steps.selection.outputs.branch_name }}
-          EXPECTED_SHA: ${ steps.selection.outputs.expected_sha }}
+          BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
+          EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
           ref_json="$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME")"
