@@ -26,8 +26,8 @@ class SteeringDeadzoneSourceContractTests(unittest.TestCase):
         self.assertIn("stick_x = (s8)input.stick_x;", source)
         self.assertIn("stick_y = (s8)input.stick_y;", source)
         pattern = re.compile(
-            r"steering\\s*=\\s*boonta_steering_after_pitch\\s*\\(\\s*"
-            r"boonta_steering_input\\s*\\((.*?)\\)\\s*,\\s*pitch_down\\s*\\)",
+            r"steering\s*=\s*boonta_steering_after_pitch\s*\(\s*"
+            r"boonta_steering_input\s*\((.*?)\)\s*,\s*pitch_down\s*\)",
             re.DOTALL,
         )
         match = pattern.search(source)
