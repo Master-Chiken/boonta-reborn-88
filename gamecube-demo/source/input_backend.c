@@ -4,6 +4,27 @@
 
 #ifdef BOONTA_WII
 #include <wiiuse/wpad.h>
+
+/*
+ * The host-testable logical masks mirror libogc's Classic masks. Fail the
+ * native Wii build if the SDK definitions ever diverge from those copies.
+ */
+#if BOONTA_CLASSIC_BUTTON_UP != WPAD_CLASSIC_BUTTON_UP || \
+    BOONTA_CLASSIC_BUTTON_LEFT != WPAD_CLASSIC_BUTTON_LEFT || \
+    BOONTA_CLASSIC_BUTTON_ZR != WPAD_CLASSIC_BUTTON_ZR || \
+    BOONTA_CLASSIC_BUTTON_X != WPAD_CLASSIC_BUTTON_X || \
+    BOONTA_CLASSIC_BUTTON_A != WPAD_CLASSIC_BUTTON_A || \
+    BOONTA_CLASSIC_BUTTON_Y != WPAD_CLASSIC_BUTTON_Y || \
+    BOONTA_CLASSIC_BUTTON_B != WPAD_CLASSIC_BUTTON_B || \
+    BOONTA_CLASSIC_BUTTON_ZL != WPAD_CLASSIC_BUTTON_ZL || \
+    BOONTA_CLASSIC_BUTTON_FULL_R != WPAD_CLASSIC_BUTTON_FULL_R || \
+    BOONTA_CLASSIC_BUTTON_PLUS != WPAD_CLASSIC_BUTTON_PLUS || \
+    BOONTA_CLASSIC_BUTTON_FULL_L != WPAD_CLASSIC_BUTTON_FULL_L || \
+    BOONTA_CLASSIC_BUTTON_DOWN != WPAD_CLASSIC_BUTTON_DOWN || \
+    BOONTA_CLASSIC_BUTTON_RIGHT != WPAD_CLASSIC_BUTTON_RIGHT
+#error "Boonta Classic button masks must match the selected libogc SDK"
+#endif
+
 static int g_wpad_classic_format_ready;
 #else
 #include <ogc/pad.h>
