@@ -6,7 +6,7 @@
  * scrolling closed-loop track. No commercial game code/assets are included.
  */
 #include <gccore.h>
-#include <ogc/pad.h>
+#include "input_backend.h"
 #include <ogc/gu.h>
 #include <ogc/gx.h>
 #include <ogc/system.h>
@@ -1009,7 +1009,7 @@ static void initialise_video_and_gx(void)
     u32 scaled_height;
 
     VIDEO_Init();
-    PAD_Init();
+    boonta_input_init();
     g_video_mode = VIDEO_GetPreferredMode(NULL);
     g_framebuffers[0] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(g_video_mode));
     g_framebuffers[1] = MEM_K0_TO_K1(SYS_AllocateFramebuffer(g_video_mode));
@@ -1161,6 +1161,7 @@ int main(int argc, char **argv)
     previous_tick = gettime();
 
     for (;;) {
+        BoontaInputFrame input;
         u32 buttons_down;
         u32 buttons_held;
         s8 stick_x;
@@ -1171,24 +1172,24 @@ int main(int argc, char **argv)
         float frame_delta_seconds;
         float frame_scale;
 
-        PAD_ScanPads();
+        boonta_input_poll(&input);
         frame_tick = gettime();
         frame_delta_seconds = (float)diff_usec(previous_tick, frame_tick) * 0.000001f;
         frame_scale = boonta_frame_scale_from_delta(frame_delta_seconds);
         previous_tick = frame_tick;
-        buttons_down = PAD_ButtonsDown(0);
-        buttons_held = PAD_ButtonsHeld(0);
-        stick_x = PAD_StickX(0);
-        stick_y = PAD_StickY(0);
+        buttons_down = (u32)input.buttons_down;
+        buttons_held = (u32)input.buttons_held;
+        stick_x = (s8)input.stick_x;
+        stick_y = (s8)input.stick_y;
         if (boonta_race_should_reset(g_race_finished,
-                                     (buttons_down & PAD_BUTTON_START) != 0U,
-                                     (buttons_down & PAD_BUTTON_Y) != 0U)) {
+                                     (buttons_down & BOONTA_BUTTON_START) != 0U,
+                                     (buttons_down & BOONTA_BUTTON_Y) != 0U)) {
             boonta_race_state_reset(&g_race_state);
             /* Render the clean start state before any input advances the race. */
             draw_frame();
             continue;
         }
-        if (!g_race_finished && (buttons_down & PAD_BUTTON_START) != 0U) {
+        if (!g_race_finished && (buttons_down & BOONTA_BUTTON_START) != 0U) {
             g_paused = boonta_pause_state_next(g_paused, 1, 0);
         }
 
@@ -1203,8 +1204,8 @@ int main(int argc, char **argv)
         g_lap_seconds = boonta_elapsed_after_frame(g_lap_seconds, frame_delta_seconds, 1);
 
         g_boost_active = boonta_boost_should_activate_with_heat(
-            (buttons_held & PAD_BUTTON_X) != 0U,
-            (buttons_held & PAD_BUTTON_A) != 0U,
+            (buttons_held & BOONTA_BUTTON_X) != 0U,
+            (buttons_held & BOONTA_BUTTON_A) != 0U,
             g_boost, g_engine_heat, g_boost_overheated);
         g_boost = boonta_boost_after_frame_scaled(g_boost, g_boost_active, frame_scale);
         g_engine_heat = boonta_engine_heat_after_frame_scaled(g_engine_heat, g_boost_active, frame_scale);
@@ -1214,25 +1215,25 @@ int main(int argc, char **argv)
         /* Up/forward on the analog stick or D-pad Up pitches down; down pitches up. */
         pitch_down = boonta_pitch_input(
             (float)stick_y,
-            (buttons_held & PAD_BUTTON_UP) != 0U,
-            (buttons_held & PAD_BUTTON_DOWN) != 0U);
+            (buttons_held & BOONTA_BUTTON_UP) != 0U,
+            (buttons_held & BOONTA_BUTTON_DOWN) != 0U);
         g_pitch_down = pitch_down;
         g_slide_active = boonta_slide_input(
-            (buttons_held & PAD_TRIGGER_L) != 0U,
-            (buttons_held & PAD_TRIGGER_R) != 0U,
-            (unsigned char)PAD_TriggerL(0),
-            (unsigned char)PAD_TriggerR(0));
+            (buttons_held & BOONTA_TRIGGER_L) != 0U,
+            (buttons_held & BOONTA_TRIGGER_R) != 0U,
+            (unsigned char)input.trigger_l,
+            (unsigned char)input.trigger_r);
         steering = boonta_steering_after_pitch(
             boonta_steering_input(
                 (float)stick_x,
-                (buttons_held & PAD_BUTTON_LEFT) != 0U,
-                (buttons_held & PAD_BUTTON_RIGHT) != 0U),
+                (buttons_held & BOONTA_BUTTON_LEFT) != 0U,
+                (buttons_held & BOONTA_BUTTON_RIGHT) != 0U),
             pitch_down);
 
         g_speed = boonta_speed_after_input_scaled(
             g_speed,
-            (buttons_held & PAD_BUTTON_A) != 0U,
-            (buttons_held & PAD_BUTTON_B) != 0U,
+            (buttons_held & BOONTA_BUTTON_A) != 0U,
+            (buttons_held & BOONTA_BUTTON_B) != 0U,
             frame_scale);
 
         /* Steering has inertia: quick direction changes need a moment to settle. */
