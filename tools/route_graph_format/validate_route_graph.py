@@ -44,9 +44,12 @@ def _number(value: Any, label: str, low: float = -MAX_ABS_COORDINATE,
 def _identifier(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value or len(value) > 64:
         raise RouteGraphError(f"{label} must be a non-empty string of at most 64 characters")
-    if not (value[0].isalnum() or value[0] == "_"):
-        raise RouteGraphError(f"{label} must start with a letter, digit or underscore")
-    if any(not (ch.isalnum() or ch in "_.:-") for ch in value):
+    def ascii_alnum(character: str) -> bool:
+        return ("A" <= character <= "Z") or ("a" <= character <= "z") or ("0" <= character <= "9")
+
+    if not (ascii_alnum(value[0]) or value[0] == "_"):
+        raise RouteGraphError(f"{label} must start with an ASCII letter, digit or underscore")
+    if any(not (ascii_alnum(character) or character in "_.:-") for character in value):
         raise RouteGraphError(f"{label} contains an unsupported character")
     return value
 
@@ -59,7 +62,7 @@ def _vec3(value: Any, label: str) -> tuple[float, float, float]:
 
 
 def _metadata(value: Any, label: str) -> None:
-    if value is not None and not isinstance(value, dict):
+    if not isinstance(value, dict):
         raise RouteGraphError(f"{label} must be an object when present")
 
 
@@ -132,7 +135,8 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
     if not isinstance(closed_loop, bool):
         raise RouteGraphError("closed_loop must be a boolean")
     start_node_id = _identifier(data.get("start_node_id"), "start_node_id")
-    _metadata(data.get("metadata"), "metadata")
+    if "metadata" in data:
+        _metadata(data["metadata"], "metadata")
 
     raw_nodes = data.get("nodes")
     raw_edges = data.get("edges")
