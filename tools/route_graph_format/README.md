@@ -47,7 +47,7 @@ The PC cursor uses the fourth lookahead node for a B-spline forward-link decisio
 
 The sampled progress allocator apportions a caller-supplied normalized interval in proportion to already-sampled physical edge lengths. It mirrors the documented progress-mapping responsibility but is not a reverse-engineered importer. The caller remains responsible for sampling each curve at a known density.
 
-The host cursor records the actual chosen edge path. Reverse movement walks that stored history, so a rejoin does not guess which incoming branch was used. Forward movement replays history unless an explicit new branch choice replaces the future path. The cursor is a testable logical component only; it is not connected to gameplay runtime, projection/rebinding, collision, lap events, or GX.
+The host cursor records the actual chosen edge path. Reverse movement walks that stored history, so a rejoin does not guess which incoming branch was used. Forward movement replays history unless an explicit new branch choice replaces the future path. Its `move(delta_parameter)` argument is a change in the current edge's local normalized curve parameter `t`; it is **not** metres, arc length, elapsed time, speed, or a vehicle integrator. Use sampled edge lengths plus `allocate_progress_spans` for the separate normalized-progress mapping. The cursor is a testable logical component only; it is not connected to gameplay runtime, projection/rebinding, collision, lap events, or GX.
 
 ## Validation boundary
 
