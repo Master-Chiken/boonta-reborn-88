@@ -193,8 +193,8 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
                 )
             normalized_curve = {
                 "type": curve_type,
-                "control1": _vec3(curve.get("control1"), f"edge {edge_id}.control1"),
-                "control2": _vec3(curve.get("control2"), f"edge {edge_id}.control2"),
+                "control1": list(_vec3(curve.get("control1"), f"edge {edge_id}.control1")),
+                "control2": list(_vec3(curve.get("control2"), f"edge {edge_id}.control2")),
             }
         elif curve_type == "uniform_cubic_bspline":
             if set(curve) != {"type", "control_node_ids"}:
