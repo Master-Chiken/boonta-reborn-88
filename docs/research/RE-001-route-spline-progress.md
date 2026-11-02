@@ -2719,7 +2719,7 @@ A final bounded instruction scan searched the main N64 code section for word loa
 
 **NOT FOUND IN THIS BOUNDED PASS:** a direct renderer/HUD consumer of that counter or its lower halfword. The absence of a direct `+0x7A` halfword access does not prove the HUD does not display the value; the presentation path may use a copied, transformed or separately maintained value.
 
-At the time of this bounded pass, no direct HUD consumer had been identified. That was a limited-scan result, not a proof that no such reader existed. The later positive claim in Section BO was subsequently withdrawn on 2026-11-02 because the contemporaneous retained research note did not support its asserted caller-to-renderer cross-reference. Accordingly, this section's counter scan does not establish the HUD path, and the current/configured lap reader and FINAL LAP selector remain unlocated. A controlled local memory watch at lap boundaries remains an outstanding discriminator. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
+At the time of this bounded pass, no direct HUD consumer had been identified. That was a limited-scan result, not a proof that no such reader existed. The later positive claim in Section BO was subsequently withdrawn on 2026-11-02 because the contemporaneous retained research note did not support its asserted caller-to-renderer cross-reference. Accordingly, this section's counter scan did not establish the HUD path. A separate and subsequently completed static trace is now recorded in Section BU; it supersedes this section's HUD-unlocated status for the current/total lap display and FINAL LAP branch. It does not revive the withdrawn Section BO claim. Runtime appearance and timing remain untested. No emulator or live race was run. No ROM bytes, raw disassembly, private instruction offsets, extracted text/resources or assets were published; no gameplay code changed. Keep RE-002 parked.
 
 ## BJ. HUD resource strings confirmed; drawing/data path remains unlocated (2026-11-01)
 
@@ -2747,7 +2747,7 @@ Accordingly, the former positive claim (lap fraction, POS fraction and FINAL LAP
 - **Strong static counter finding:** the manager increments and thresholds a per-participant route-event counter at `+0x78); the public P1/P2 lap-modifier targets align to its lower halfword at `+0x7A`.
 - **Strong static finish-path finding:** the configured-threshold branch sets the same participant's finish/skip state bit, and the manager's ordinary progress scan later filters that state.
 - **Resource evidence only:** LAP / FINAL LAP / TIME / POS strings and integer format templates exist in a coherent group.
-- **Not established:** the actual HUD renderer, the source of the displayed current-lap number, the FINAL LAP selector/dataflow, or a writer/copy from the manager counter into the HUD formatter.
+- **At the time of this pass, not established:** the actual HUD renderer, the source of the displayed current-lap number, the FINAL LAP selector/dataflow, or a writer/copy from the manager counter into the HUD formatter. Section BU subsequently closes this static data-flow gap through a separate local trace; runtime appearance and timing remain untested.
 
 No emulator, live race or memory watch was run. No ROM bytes, raw disassembly, private instruction offsets, extracted assets or game payloads are published. No gameplay code changed; RE-002 remains parked.
 
@@ -2771,9 +2771,9 @@ The corrected chain is:
 
 `route cursor/progress history` → `event-status gate` → `participant route-event counter` → `configured threshold` → `participant finish/skip state` → `manager local-participant completion gate`.
 
-The HUD string bank is confirmed independently. The code path that reads or copies the counter into a LAP formatter, chooses FINAL LAP, or draws those strings is still **unlocated**. The ordinary/default manager-to-Results static path is documented separately in the later manager/lifecycle sections, with its mode, abort, selector and receiver guards retained. Runtime-visible HUD and Results behavior remain untested; cross-platform parity is not implied.
+The HUD string bank is confirmed independently. At the time of this section the code path was **unlocated**. That boundary is superseded by the separate direct static trace in Section BU, which connects the participant counter to the current/total lap formatter and guarded FINAL LAP text queue/renderer. Runtime-visible HUD behavior remains untested. The ordinary/default manager-to-Results static path is documented separately in the later manager/lifecycle sections, with its mode, abort, selector and receiver guards retained. Runtime-visible HUD and Results behavior remain untested; cross-platform parity is not implied.
 
-The next useful static action is a targeted search for a writer or copy of the displayed lap value and a call site that passes that value to the LAP format resource. Do not infer this from the string bank, rank-event helper or GameShark target alone. If the dataflow remains unclosed, keep the HUD consumer explicitly unresolved and use a controlled runtime memory watch as the acceptance test.
+The next discriminator after Section BU is runtime: observe the current/total lap indicator on successive normal lap crossings and the FINAL LAP banner on the final lap. Keep that HUD observation separate from the later Results/placement-screen transition.
 
 
 
@@ -2840,7 +2840,7 @@ Do not merge the two transition paths in the dossier until a positive caller/mes
 
 The positive caller-to-renderer trace preserved below is **withdrawn in full**. A review of the contemporaneous retained private note for the 2026-10-21 N64 HUD pass found that it records resource strings, but no convincing code cross-reference to the HUD renderer and no located reader for the current/configured lap values or `FINAL LAP` selector. The retained note therefore does not support the positive call-chain assertions that were added here on 2026-11-01. No independent reproducible trace artifact or runtime observation is available in the project evidence to resolve that provenance conflict.
 
-Do **not** cite the following historical text as an established finding. It is retained only to make the correction auditable. The authoritative current boundary is Section BL: the participant route-event counter and configured threshold/finish handling are statically supported, the HUD string bank is independently observed, but the counter-to-HUD formatter/draw path and `FINAL LAP` selection remain **UNLOCATED / UNPROVEN**. The ordinary/default Finish-to-Results path is a separate conditional static finding in Sections BQ–BS; visible Results remains runtime-unverified. No N64 emulator, live race, frame capture or memory watch was performed.
+Do **not** cite the following historical text as an established finding. It is retained only to make the correction auditable. At the time of the correction, Section BL was the authoritative boundary: the counter-to-HUD formatter/draw path and FINAL LAP selection remained unlocated. Section BU now records a separate subsequent trace that closes those static data-flow links. This later trace does not retroactively validate the withdrawn historical text below. The ordinary/default Finish-to-Results path is a separate conditional static finding in Sections BQ–BS; visible Results remains runtime-unverified. No N64 emulator, live race, frame capture or memory watch was performed.
 
 ### Preserved historical claim — withdrawn; not evidence
 
@@ -3198,3 +3198,16 @@ No gameplay code changed. No ROM bytes, private absolute pointers, raw disassemb
 ### Next bounded action
 
 Use a normal three-lap run on the owner's preferred Wii + Not64 Classic Controller setup, or the already identified Ares v148 desktop alternative, to capture the lap display on each crossing and the FINAL LAP banner. Preserve the ROM and capture locally; record only emulator/version, configuration and observed behavior in the public issue. Keep the Results-screen observation separate from this HUD test.
+
+### BU follow-up — queue drain and glyph-renderer path rechecked (2026-11-02)
+
+The queued-text conclusion was then followed through the frame-render path:
+
+- The HUD callback supplies the formatted lap string or FINAL LAP resource, integer screen coordinates and colour values to the generic text-queue writer.
+- The queue writer records each string pointer together with its position and RGBA values in a text-command array; this is an enqueue operation, not an immediate glyph draw.
+- The display-cycle path invokes the queue-drain routines for the two text queues. Each drain walks its queued entries, restores their colour and position, then passes the stored string pointer to the shared string renderer.
+- The string renderer parses the resource's inline markup directives before processing the remaining text as glyphs and emitting graphics commands.
+
+This completes the static path beyond the enqueue call: **participant counter / configured target → formatted or selected resource string → text queue → frame-cycle drain → markup/glyph renderer**. The format and FINAL LAP resource pointers were checked against the locally held ROM's data mapping; this public note does not reproduce ROM offsets, pointer constants, raw resource bytes or instruction addresses.
+
+The evidence grade is therefore stronger than “formatter call located”: the text reaches the actual shared glyph-rendering entry point through the frame's text-queue drain. This still does **not** prove a live N64 frame, per-frame banner timing, which modes pass every presentation guard, or any connection to the separate Results/placement screen.
