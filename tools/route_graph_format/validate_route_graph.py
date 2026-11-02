@@ -544,11 +544,19 @@ def progress_at(graph_data: Any, edge_id: str, t: float) -> float:
     raise RouteGraphError(f"unknown edge id {edge_id!r}")
 
 
-def sample_edge_length(graph_data: Any, edge_id: str, samples: int = 100) -> float:
+def _validate_sample_count(samples: Any) -> int:
     if isinstance(samples, bool) or not isinstance(samples, int) or samples < 2 or samples > 10000:
         raise RouteGraphError("samples must be an integer from 2 to 10000")
-    graph = validate_route_graph(graph_data)
-    nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    return samples
+
+
+def _sample_edge_length_validated(
+    graph: dict[str, Any],
+    edge_id: str,
+    samples: int,
+    nodes_by_id: dict[str, dict[str, Any]],
+    edges_by_id: dict[str, dict[str, Any]],
+) -> float:
     previous = _evaluate_edge_validated(
         graph, edge_id, 0.0, nodes_by_id, edges_by_id
     )["position"]
@@ -562,6 +570,28 @@ def sample_edge_length(graph_data: Any, edge_id: str, samples: int = 100) -> flo
     if not math.isfinite(length) or length <= EPSILON:
         raise RouteGraphError(f"edge {edge_id!r} has zero or invalid sampled length")
     return length
+
+
+def sample_edge_length(graph_data: Any, edge_id: str, samples: int = 100) -> float:
+    samples = _validate_sample_count(samples)
+    graph = validate_route_graph(graph_data)
+    nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    return _sample_edge_length_validated(
+        graph, edge_id, samples, nodes_by_id, edges_by_id
+    )
+
+
+def sample_route_edge_lengths(graph_data: Any, samples: int = 100) -> dict[str, float]:
+    """Bake sampled 3D lengths for every edge with one validation/index pass."""
+    samples = _validate_sample_count(samples)
+    graph = validate_route_graph(graph_data)
+    nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    return {
+        edge_id: _sample_edge_length_validated(
+            graph, edge_id, samples, nodes_by_id, edges_by_id
+        )
+        for edge_id in edges_by_id
+    }
 
 
 def allocate_progress_spans(
