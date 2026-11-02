@@ -721,10 +721,14 @@ class RouteCursor:
             ) = old_state
             raise
 
+        current_edge = self.edges[self.edge_id]
+        progress_start = current_edge["progress"]["start"]
+        progress_end = current_edge["progress"]["end"]
+        progress = progress_start + (progress_end - progress_start) * self.t
         return {
             "edge_id": self.edge_id,
             "t": self.t,
-            "progress": progress_at(self.graph, self.edge_id, self.t),
+            "progress": progress,
             "finished": self.finished,
             "at_start": self.path_index == 0 and _same(self.t, 0.0),
             "path_history": tuple(self.path_history),
