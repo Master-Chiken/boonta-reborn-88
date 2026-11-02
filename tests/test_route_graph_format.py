@@ -312,6 +312,25 @@ class RouteGraphFormatTests(unittest.TestCase):
 
     def test_open_endpoint_clamps_and_reverse_motion_does_not_wrap(self):
         graph = fixture("open-bezier.json")
+
+        # Exact arrival at the last endpoint must be terminal, without
+        # requiring a subsequent frame to move beyond t=1.
+        exact_cursor = RouteCursor(graph)
+        first_endpoint = exact_cursor.move(1.0)
+        self.assertFalse(first_endpoint["finished"])
+        self.assertEqual(first_endpoint["edge_id"], "start-middle")
+        self.assertAlmostEqual(first_endpoint["t"], 1.0)
+        exact_finish = exact_cursor.move(1.0)
+        self.assertTrue(exact_finish["finished"])
+        self.assertEqual(exact_finish["edge_id"], "middle-finish")
+        self.assertAlmostEqual(exact_finish["t"], 1.0)
+        self.assertAlmostEqual(exact_finish["progress"], 1.0)
+
+        # A reverse step, even one within the endpoint tolerance, clears finish.
+        tiny_reverse = exact_cursor.move(-0.0000000005)
+        self.assertFalse(tiny_reverse["finished"])
+        self.assertLess(tiny_reverse["t"], 1.0)
+
         cursor = RouteCursor(graph)
         state = cursor.move(10.0)
         self.assertTrue(state["finished"])
