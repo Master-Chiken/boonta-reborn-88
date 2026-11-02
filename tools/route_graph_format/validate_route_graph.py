@@ -67,6 +67,22 @@ def _same(a: float, b: float) -> bool:
     return math.isclose(a, b, rel_tol=0.0, abs_tol=EPSILON)
 
 
+def _uniform_cubic_bspline_position(
+    points: list[tuple[float, float, float]], t: float
+) -> tuple[float, float, float]:
+    """Evaluate one uniform cubic B-spline position for four control points."""
+    weights = (
+        (1.0 - t) ** 3 / 6.0,
+        (3.0 * t ** 3 - 6.0 * t ** 2 + 4.0) / 6.0,
+        (-3.0 * t ** 3 + 3.0 * t ** 2 + 3.0 * t + 1.0) / 6.0,
+        t ** 3 / 6.0,
+    )
+    return tuple(
+        sum(points[index][axis] * weights[index] for index in range(4))
+        for axis in range(3)
+    )
+
+
 def validate_route_graph(data: Any) -> dict[str, Any]:
     """Validate structure, graph links, normalized progress and surface bindings."""
     if not isinstance(data, dict):
@@ -221,6 +237,22 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
                 "type": curve_type,
                 "control_node_ids": normalized_ids,
             }
+            control_positions = [nodes[item]["position"] for item in normalized_ids]
+            curve_start = _uniform_cubic_bspline_position(control_positions, 0.0)
+            curve_end = _uniform_cubic_bspline_position(control_positions, 1.0)
+            for endpoint_id, curve_position, endpoint_label in (
+                (from_id, curve_start, "start"),
+                (to_id, curve_end, "end"),
+            ):
+                endpoint_position = nodes[endpoint_id]["position"]
+                if not all(
+                    _same(endpoint_position[axis], curve_position[axis])
+                    for axis in range(3)
+                ):
+                    raise RouteGraphError(
+                        f"edge {edge_id!r} B-spline {endpoint_label} does not meet "
+                        f"topology node {endpoint_id!r}"
+                    )
         else:
             raise RouteGraphError(
                 f"edge {edge_id!r} curve.type must be cubic_bezier or uniform_cubic_bspline"
