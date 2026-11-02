@@ -2,7 +2,7 @@
 
 These are preliminary source-backed findings, not runtime-verified facts.
 
-**Queue status (2026-10-21): PARKED REFERENCE NOTES.** This file preserves dated source/format leads. Its “next checks” and “next research question” headings below are historical proposals, not current work orders. The single active research blocker is tracked in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226): trace the N64 all-participants-finished condition through the manager state/phase transition to a positively identified results UI/resource/scene. Do not start platform/asset-format questions until RE-001 is resolved or explicitly handed off.
+**Queue status (updated 2026-11-02): PARKED REFERENCE NOTES.** This file preserves dated cross-platform leads. The current RE-001 task in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is the neutral route-graph contract and synthetic fixtures, following completion of the PC route/progress/cursor/AI source mapping. The N64 finish-to-Results question remains historical and runtime-unverified. Do not treat any dated follow-up below as the active work order or infer PC/console parity.
 
 | Topic | Finding | Status |
 |---|---|---|
