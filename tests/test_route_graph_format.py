@@ -3,6 +3,7 @@ import json
 import math
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -24,6 +25,11 @@ from validate_route_graph import (  # noqa: E402
     sample_edge_length,
     sample_route_edge_lengths,
     validate_route_graph,
+)
+
+from export_closed_loop_track import (  # noqa: E402
+    RouteGraphExportError,
+    export_closed_loop_track,
 )
 
 
@@ -444,6 +450,103 @@ class RouteGraphFormatTests(unittest.TestCase):
             allocate_progress_spans([10.0, 0.0], 0.2, 0.8)
         with self.assertRaises(RouteGraphError):
             allocate_progress_spans([10.0, math.nan], 0.2, 0.8)
+
+    def test_closed_loop_export_bakes_a_single_ordered_track_v1_path(self):
+        graph = fixture("closed-loop.json")
+        track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=4
+        )
+
+        self.assertEqual(track["format"], "boonta-track-v1")
+        self.assertTrue(track["closed_loop"])
+        self.assertEqual(len(track["points"]), 12)
+        self.assertEqual(track["points"][0], {
+            "x": 0.0, "y": 0.0, "z": 0.0,
+            "half_width": 3.6, "checkpoint": True,
+        })
+        self.assertEqual(track["points"][4]["x"], 10.0)
+        self.assertEqual(track["points"][4]["z"], 0.0)
+        self.assertEqual(track["points"][8]["x"], 10.0)
+        self.assertEqual(track["points"][8]["z"], 10.0)
+        self.assertEqual(sum(point["checkpoint"] for point in track["points"]), 1)
+        # The closing node is represented by the first point, not duplicated.
+        self.assertNotEqual(track["points"][-1]["x"], track["points"][0]["x"])
+
+    def test_closed_loop_export_maps_surface_ids_to_explicit_road_widths(self):
+        graph = fixture("closed-loop.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "a-b")
+        edge["surface_binding"] = [
+            {"t": 0.0, "surface_id": "asphalt"},
+            {"t": 0.5, "surface_id": "shoulder"},
+            {"t": 1.0, "surface_id": "shoulder"},
+        ]
+        track = export_closed_loop_track(
+            graph,
+            default_half_width=3.6,
+            samples_per_edge=4,
+            surface_widths={"asphalt": 3.6, "shoulder": 3.1},
+        )
+        self.assertEqual(
+            [point["half_width"] for point in track["points"][:4]],
+            [3.6, 3.6, 3.1, 3.1],
+        )
+
+    def test_closed_loop_export_requires_width_mapping_for_bound_surfaces(self):
+        graph = fixture("closed-loop.json")
+        edge = graph["edges"][0]
+        edge["surface_binding"] = [
+            {"t": 0.0, "surface_id": "asphalt"},
+            {"t": 1.0, "surface_id": "asphalt"},
+        ]
+        with self.assertRaisesRegex(RouteGraphExportError, "provide its width"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=4)
+
+    def test_closed_loop_export_rejects_branching_even_when_graph_is_valid(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        graph["closed_loop"] = True
+        exit_edge = next(edge for edge in graph["edges"] if edge["id"] == "exit")
+        exit_edge["progress"]["end"] = 0.9
+        graph["edges"].append({
+            "id": "finish-return",
+            "from": "finish",
+            "to": "start",
+            "curve": {
+                "type": "cubic_bezier",
+                "control1": [0.0, 0.0, 20.0],
+                "control2": [0.0, 0.0, 10.0],
+            },
+            "progress": {"start": 0.9, "end": 1.0},
+        })
+        validate_route_graph(graph)
+        with self.assertRaisesRegex(RouteGraphExportError, "branching/rejoining"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=4)
+
+    def test_closed_loop_export_enforces_runtime_point_and_width_limits(self):
+        graph = fixture("closed-loop.json")
+        with self.assertRaisesRegex(RouteGraphExportError, "half-width"):
+            export_closed_loop_track(graph, default_half_width=0.1, samples_per_edge=4)
+        with self.assertRaisesRegex(RouteGraphExportError, "4096"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=2048)
+
+    def test_closed_loop_export_cli_writes_track_v1_json(self):
+        source = FIXTURE_DIR / "closed-loop.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "baked-track.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(FORMAT_DIR / "export_closed_loop_track.py"),
+                    str(source),
+                    str(output),
+                    "--half-width", "3.6",
+                    "--samples-per-edge", "4",
+                ],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            baked = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(baked["format"], "boonta-track-v1")
+            self.assertEqual(len(baked["points"]), 12)
 
     def test_cli_accepts_synthetic_example(self):
         path = FIXTURE_DIR / "open-bezier.json"
