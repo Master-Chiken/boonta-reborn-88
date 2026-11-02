@@ -22,6 +22,7 @@ from validate_route_graph import (  # noqa: E402
     load_route_graph,
     progress_at,
     sample_edge_length,
+    sample_route_edge_lengths,
     validate_route_graph,
 )
 
@@ -422,6 +423,22 @@ class RouteGraphFormatTests(unittest.TestCase):
             ) as indexer:
                 length = sample_edge_length(graph, "start-middle", samples=100)
         self.assertGreater(length, 0.0)
+        self.assertEqual(validator.call_count, 1)
+        self.assertEqual(indexer.call_count, 1)
+
+    def test_sample_route_edge_lengths_validates_and_indexes_once_for_all_edges(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        original_validate = route_graph_module.validate_route_graph
+        original_index = route_graph_module._index_validated_graph
+        with mock.patch.object(
+            route_graph_module, "validate_route_graph", wraps=original_validate
+        ) as validator:
+            with mock.patch.object(
+                route_graph_module, "_index_validated_graph", wraps=original_index
+            ) as indexer:
+                lengths = sample_route_edge_lengths(graph, samples=100)
+        self.assertEqual(set(lengths), {edge["id"] for edge in graph["edges"]})
+        self.assertTrue(all(length > 0.0 for length in lengths.values()))
         self.assertEqual(validator.call_count, 1)
         self.assertEqual(indexer.call_count, 1)
 
