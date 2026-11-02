@@ -3211,3 +3211,44 @@ The queued-text conclusion was then followed through the frame-render path:
 This completes the static path beyond the enqueue call: **participant counter / configured target → formatted or selected resource string → text queue → frame-cycle drain → markup/glyph renderer**. The format and FINAL LAP resource pointers were checked against the locally held ROM's data mapping; this public note does not reproduce ROM offsets, pointer constants, raw resource bytes or instruction addresses.
 
 The evidence grade is therefore stronger than “formatter call located”: the text reaches the actual shared glyph-rendering entry point through the frame's text-queue drain. This still does **not** prove a live N64 frame, per-frame banner timing, which modes pass every presentation guard, or any connection to the separate Results/placement screen.
+
+## BV. Results builder formats participant split-times and aggregate timing — static only (2026-11-02)
+
+### Scope
+
+Section AC already identified the Results/standings consumer: it loads the Results heading, orders participant records, and prepares placement prefixes, racer names and prize-related text. This follow-up rechecked the same builder's numeric fields and the formatting helper it calls. It is a separate local static pass; no emulator or Results screen was run.
+
+### Participant timing entries
+
+The Results builder reads the participant's timing-entry area beginning at the record's per-event array and walks it once for each event/lap slot up to the manager-configured count. For every entry it:
+
+1. loads the participant's floating-point timing value;
+2. selects the corresponding row position/layout;
+3. passes the float to the game's shared time-formatting routine;
+4. queues the resulting string for the Results panel through the normal text queue.
+
+The count controlling the loop is the same manager target connected to the configured lap/event count in the earlier participant-progress trace. The corresponding per-participant values are written during the route-event progression path. This supports describing them as **per-lap / per-event timing splits** in the Results table. Because the route-event detector retains mode-dependent boundary behavior, the most conservative internal description remains “timing entries indexed by the configured lap/event count”; the exact semantics of every possible non-standard mode are not renamed here.
+
+### Aggregate timing field
+
+After the per-event loop, the builder separately loads the participant's accumulated timing-like float and sends it through the same formatter before queuing it in the Results panel. The value is distinct from the indexed per-event entries and is not just the participant rank or the current HUD lap numerator.
+
+The code path shows that it is presented as a time value. The exact engine-level name and whether it should be labelled “total race time” or another aggregate timing measure should remain provisional until its full writer/lifetime is independently resolved.
+
+### Time-format helper semantics
+
+The shared formatter divides its floating-point input by 60 to obtain whole minutes, converts the fractional minute back to seconds, and converts the remaining fractional second to hundredths. It then formats those integer components into a string and submits that string to the text queue. This is positive evidence that the Results builder's participant fields are displayed as **minutes / seconds / hundredths**, rather than arbitrary progress scalars.
+
+### Revised Results evidence
+
+- **Static consumer established:** Results heading, ordered participant placements, racer-name data and prize-related line were already identified in Section AC.
+- **New timing evidence:** the builder formats one participant timing entry per configured lap/event slot and queues each result row value through the shared time formatter.
+- **Separate aggregate:** a participant-level aggregate timing float is also formatted through the same helper and queued.
+- **Still unverified:** exact on-screen column labels, formatting appearance, handling of every mode/guard, sorting under a live race, and whether the normal race finish actually causes the Results builder to be displayed in an emulator session.
+- **Keep separate:** the N64 static Fini/Hang state path remains conditional. A complete static consumer trace does not replace a visible normal-finish runtime observation and does not establish GameCube/Wii parity.
+
+No gameplay code changed. The ROM, raw disassembly, private instruction addresses/offsets, absolute pointers, extracted text and assets remain local and are not published. RE-002 remains parked.
+
+### Next bounded action
+
+The remaining decisive evidence is runtime: one ordinary N64 race with a continuous capture showing the final lap, finish crossing, Results table and its time values. Keep the ROM and capture private; publish only emulator/version, tested mode and observed behavior.
