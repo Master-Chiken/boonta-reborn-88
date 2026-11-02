@@ -22,6 +22,29 @@ The player's hull is an original source-authored indexed mesh. The project valid
 
 The procedural course, rival craft, controls, dynamic exhaust and HUD remain separate from this asset. Successful rendering in Dolphin is evidence for this one original mesh/texture path, not proof of full game-asset compatibility or manual-controller acceptance.
 
+## Runtime track source
+
+The current demo oval is now authored as the clean-room `boonta-route-graph-v1` source in `gamecube-demo/data/original-test-oval-route-graph.json`. Its separate `original-test-oval-surface-widths.json` map supplies the road-width classes referenced by the graph's surface bindings.
+
+The graph contains eight topology nodes and eight cubic Bezier edges. Each Bezier edge is the exact Catmull-Rom-to-Bezier conversion of the prior eight-point test oval, and the graph's progress spans are proportional to sampled physical edge lengths. The offline bake samples each edge 16 times, writes `boonta-track-v1`, and the existing track exporter produces `source/generated_track.h`. The native renderer still consumes this compiled C header; it does **not** parse route-graph JSON at runtime. The denser baked points approximate the authored Bezier path through the existing Catmull-Rom track sampler.
+
+Regenerate the committed header from the route source with:
+
+```sh
+python3 tools/route_graph_format/export_closed_loop_track.py \
+  gamecube-demo/data/original-test-oval-route-graph.json \
+  /tmp/original-test-oval-track.json \
+  --half-width 3.5 --samples-per-edge 16 \
+  --surface-widths gamecube-demo/data/original-test-oval-surface-widths.json
+
+python3 tools/track_format/validate_track.py /tmp/original-test-oval-track.json
+python3 tools/track_format/export_track_header.py \
+  /tmp/original-test-oval-track.json \
+  gamecube-demo/source/generated_track.h --symbol "original test oval"
+```
+
+Branched graphs remain preserved in route-graph format; they are not yet executable by this single-loop runtime.
+
 ## Controls
 
 - Control Stick left/right (or D-pad): steer.
