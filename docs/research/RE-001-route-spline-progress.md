@@ -3227,7 +3227,9 @@ The Results builder reads the participant's timing-entry area beginning at the r
 3. passes the float to the game's shared time-formatting routine;
 4. queues the resulting string for the Results panel through the normal text queue.
 
-The count controlling the loop is the same manager target connected to the configured lap/event count in the earlier participant-progress trace. The corresponding per-participant values are written during the route-event progression path. This supports describing them as **per-lap / per-event timing splits** in the Results table. Because the route-event detector retains mode-dependent boundary behavior, the most conservative internal description remains “timing entries indexed by the configured lap/event count”; the exact semantics of every possible non-standard mode are not renamed here.
+The write side is now connected to that read side. The active participant update calls the route-progress measurement helper and receives a floating-point interval value. When the route-event detector reports a qualifying event, the manager adds that same value both to the participant's aggregate timing accumulator and to the current indexed entry in the participant timing array. It then increments the participant's event counter, so the next qualifying event is accumulated into the next array slot. The manager compares the incremented counter against the configured target on that same path.
+
+This supports describing the indexed values as **per-event timing splits**. In the ordinary lap-race interpretation, the counter and HUD evidence make these strongly consistent with per-lap splits. The route-event detector has mode-dependent boundary handling, however, so the public dossier retains “per-lap/per-event timing splits” rather than claiming every non-standard mode uses the same split semantics.
 
 ### Aggregate timing field
 
