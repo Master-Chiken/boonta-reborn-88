@@ -88,3 +88,24 @@ The Wii target is built separately with `make -f Makefile.wii`; it uses libogc's
 The Classic mapping is: left stick for steering and pitch; A/B for throttle/brake; X+A for boost; Y for reset; Plus for pause/restart; D-pad left/right for steering and up/down for pitch; ZL/ZR and the analog L/R shoulders for slide. The existing GameCube build retains its `PAD` backend.
 
 Host tests cover button translation, analog-stick pass-through, analog shoulder scaling, digital trigger clicks, and neutral behavior for a missing or non-Classic expansion. The Wii artifact still needs a physical test on the owner's Wii with the Under Control Classic Controller; a successful cross-build does not prove that this individual unit is recognized.
+
+
+### Wii Classic Controller runtime details
+
+The Wii backend explicitly requests `WPAD_FMT_BTNS_ACC_IR` after `WPAD_Init`, so libogc supplies expansion reports as well as button data. The input loop still verifies both `WPAD_Probe(...)=WPAD_EXP_CLASSIC` and `WPAD_DATA_EXPANSION` before reading the Classic payload. The left stick is converted from its calibrated raw minimum/centre/maximum values into the signed gameplay range; the analog shoulder values are scaled to 0–255 and the digital ZL/ZR clicks are retained.
+
+| Classic control | Racer action |
+|---|---|
+| Left stick left/right | Steering |
+| Left stick up/down | Pitch |
+| D-pad left/right | Steering |
+| D-pad up/down | Pitch |
+| A / B | Accelerate / brake |
+| Hold X + A | Boost |
+| L / R analog shoulders or ZL / ZR clicks | Slide |
+| Plus | Pause / resume; restart after finish |
+| Y | Reset at any time |
+
+There is no separate repair action in the current gameplay slice. Home, Minus and the right stick are currently unused. The mapping is for this native Boonta Wii build only; it does not configure Not64 or the original N64 game.
+
+The current CI run verifies the GameCube and Wii native builds, host translation tests and bounded Dolphin diagnostics. It does not test the Under Control unit or prove a manually completed three-lap race.
