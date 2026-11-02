@@ -91,3 +91,20 @@ A separate emulator route was checked after the earlier Apple-Silicon-only findi
 4. The required target-platform acceptance remains a separate ordinary three-lap run on **Wii + Not64 20260410 + the Wii Classic Controller profile**. Ares cannot substitute for that hardware test.
 
 **Evidence boundary:** official Ares v148 platform/release metadata and N64 support were rechecked on 2026-11-02; the GDB UI/port/client sequence is supported by the linked developer guide. No Ares binary was downloaded or run here, no GDB session was established, and no race/Results screen was observed. No ROM bytes, disassembly, assets or other game-derived data were published.
+
+
+### Ares v148 quick-start for the owner's Mac
+
+This is the smallest useful next test; do not set up GDB first.
+
+1. Download the official **macOS Universal** archive from [Ares v148](https://github.com/ares-emulator/ares/releases/download/v148/ares-macos-universal.zip), extract it, and move `ares.app` to Applications. Ares lists Catalina/macOS 10.15 as the minimum and supports both Intel and Apple Silicon.
+2. Open Ares and load the owner's already-local US `.z64` in the Nintendo 64 core. The documented menu path for loading an N64 title is **Load → Nintendo → Nintendo 64**.
+3. Open **Settings → Input**, select the Nintendo 64 core, and map the throttle, steering and required menu controls to the Mac keyboard. Ares uses configurable per-core input mappings; this is only for the desktop Ares diagnostic, not the Wii Classic profile.
+4. Start an ordinary single-player race with the normal three-lap setting. Do not use cheats, save states, fast-forward or pause around the finish. Keep a continuous local capture from the final lap through the first Results frame. Hold accelerator A across the finish as the current static hypothesis requires; release only once Results is visibly on screen, then press A once to continue after the capture.
+5. Record Ares version, ROM region, whether the race booted, whether the final-lap indicator appeared, whether Results appeared, and any freeze/black-screen point. Keep the ROM, save states, video and all game-derived debug data on the owner's machine.
+
+### Historical compatibility lead — explicitly not a v148 pass
+
+The Ares project's [N64 compatibility-list issue #143](https://github.com/ares-emulator/ares/issues/143) contains a contributor's 2022 report (updated through **ares 127 dev**) that lists *Star Wars Episode I: Racer* under “No issues found,” while explicitly saying speed/framerate were not evaluated. This is a useful reason to try Ares, but it is not an official current compatibility guarantee, it is not a full three-lap/Results report, and it does not validate v148. The v148 release notes later describe N64 CPU/RSP JIT rewrites, so the old result should not be silently carried forward as current proof.
+
+**Evidence boundary:** this quick-start and compatibility lead are documentation only. No Ares app was installed or launched; no N64 race, save state, GDB session, video capture or Results screen was observed. The Ares run remains the next local action. The separate Wii + Not64 + Wii Classic Controller validation remains required and unchanged.
