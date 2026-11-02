@@ -53,6 +53,8 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
         self.assertEqual(schema["properties"]["format"]["const"], "boonta-route-graph-v1")
         self.assertEqual(schema["properties"]["schema_version"]["const"], 1)
+        self.assertIn(r"\\\\S", schema["properties"]["name"]["pattern"])
+        self.assertIn(r"\\\\S", schema["$defs"]["source"]["properties"]["release"]["pattern"])
 
     def test_rejects_unicode_identifiers_and_null_metadata(self):
         graph = fixture("open-bezier.json")
@@ -82,6 +84,83 @@ class RouteGraphFormatTests(unittest.TestCase):
         invalid["nodes"][0]["position"][0] = 1_000_001.0
         with self.assertRaisesRegex(RouteGraphError, "finite and between"):
             validate_route_graph(invalid)
+
+    def test_rejects_whitespace_only_name_and_source_revision(self):
+        graph = fixture("open-bezier.json")
+        invalid_name = copy.deepcopy(graph)
+        invalid_name["name"] = "   "
+        with self.assertRaisesRegex(RouteGraphError, "name must be a non-empty string"):
+            validate_route_graph(invalid_name)
+
+        invalid_source = copy.deepcopy(graph)
+        invalid_source["source"]["release"] = "  "
+        with self.assertRaisesRegex(RouteGraphError, "source.release must be a non-empty string"):
+            validate_route_graph(invalid_source)
+
+    def test_adjacent_bspline_windows_share_the_shifted_boundary(self):
+        graph = fixture("uniform-cubic-bspline.json")
+        controls = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 1.0],
+            [2.0, 0.0, 0.0],
+            [3.0, 0.0, 2.0],
+            [4.0, 0.0, 1.0],
+        ]
+
+        def bspline_point(points, t):
+            weights = (
+                (1.0 - t) ** 3 / 6.0,
+                (3.0 * t ** 3 - 6.0 * t ** 2 + 4.0) / 6.0,
+                (-3.0 * t ** 3 + 3.0 * t ** 2 + 3.0 * t + 1.0) / 6.0,
+                t ** 3 / 6.0,
+            )
+            return [
+                sum(points[index][axis] * weights[index] for index in range(4))
+                for axis in range(3)
+            ]
+
+        first_window = controls[:4]
+        second_window = controls[1:]
+        first_start = bspline_point(first_window, 0.0)
+        shared = bspline_point(first_window, 1.0)
+        second_end = bspline_point(second_window, 1.0)
+        graph["nodes"] = [
+            {"id": f"p{index}", "position": point}
+            for index, point in enumerate(controls)
+        ] + [
+            {"id": "route-start", "position": first_start},
+            {"id": "route-join", "position": shared},
+            {"id": "route-finish", "position": second_end},
+        ]
+        graph["start_node_id"] = "route-start"
+        graph["edges"] = [
+            {
+                "id": "window-0",
+                "from": "route-start",
+                "to": "route-join",
+                "curve": {
+                    "type": "uniform_cubic_bspline",
+                    "control_node_ids": ["p0", "p1", "p2", "p3"],
+                },
+                "progress": {"start": 0.0, "end": 0.5},
+            },
+            {
+                "id": "window-1",
+                "from": "route-join",
+                "to": "route-finish",
+                "curve": {
+                    "type": "uniform_cubic_bspline",
+                    "control_node_ids": ["p1", "p2", "p3", "p4"],
+                },
+                "progress": {"start": 0.5, "end": 1.0},
+            },
+        ]
+        normalized = validate_route_graph(graph)
+        first_end = evaluate_edge(normalized, "window-0", 1.0)["position"]
+        second_start = evaluate_edge(normalized, "window-1", 0.0)["position"]
+        for axis in range(3):
+            self.assertAlmostEqual(first_end[axis], second_start[axis], places=8)
+            self.assertAlmostEqual(first_end[axis], shared[axis], places=8)
 
     def test_bezier_known_midpoint_and_unit_frame(self):
         graph = fixture("open-bezier.json")
