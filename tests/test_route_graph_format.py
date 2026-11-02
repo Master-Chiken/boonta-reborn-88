@@ -56,6 +56,18 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertIn(r"\S", schema["properties"]["name"]["pattern"])
         self.assertIn(r"\S", schema["$defs"]["source"]["properties"]["release"]["pattern"])
 
+    def test_rejects_boolean_schema_version_and_non_json_metadata(self):
+        graph = fixture("open-bezier.json")
+        invalid_version = copy.deepcopy(graph)
+        invalid_version["schema_version"] = True
+        with self.assertRaisesRegex(RouteGraphError, "schema_version must equal 1"):
+            validate_route_graph(invalid_version)
+
+        invalid_metadata = copy.deepcopy(graph)
+        invalid_metadata["metadata"] = {"nested": [math.nan]}
+        with self.assertRaisesRegex(RouteGraphError, "non-finite JSON number"):
+            validate_route_graph(invalid_metadata)
+
     def test_rejects_unicode_identifiers_and_null_metadata(self):
         graph = fixture("open-bezier.json")
         invalid_id = copy.deepcopy(graph)
