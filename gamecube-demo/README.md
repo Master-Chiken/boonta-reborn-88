@@ -79,3 +79,12 @@ Keep validation claims separate:
 
 Do not report the scripted capture as proof that the game is fully playable. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
 
+
+
+## Native Wii Classic Controller backend
+
+The Wii target is built separately with `make -f Makefile.wii`; it uses libogc's `WPAD` interface and does not add Wii-only symbols to the GameCube build. At runtime, channel 0 is accepted only when `WPAD_Probe` reports `WPAD_EXP_CLASSIC` and the current sample contains Classic expansion data. A disconnected controller or a different expansion is treated as neutral input.
+
+The Classic mapping is: left stick for steering and pitch; A/B for throttle/brake; X+A for boost; Y for reset; Plus for pause/restart; D-pad left/right for steering and up/down for pitch; ZL/ZR and the analog L/R shoulders for slide. The existing GameCube build retains its `PAD` backend.
+
+Host tests cover button translation, analog-stick pass-through, analog shoulder scaling, digital trigger clicks, and neutral behavior for a missing or non-Classic expansion. The Wii artifact still needs a physical test on the owner's Wii with the Under Control Classic Controller; a successful cross-build does not prove that this individual unit is recognized.
