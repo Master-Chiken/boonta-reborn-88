@@ -4,6 +4,17 @@
 #include <math.h>
 #include <stdio.h>
 
+static void test_classic_report_format_is_configured_only_after_classic_probe(void)
+{
+    assert(!boonta_classic_format_should_configure(0, 0, 0));
+    assert(!boonta_classic_format_should_configure(1, 0, 0));
+    assert(boonta_classic_format_should_configure(1, 1, 0));
+    assert(!boonta_classic_format_should_configure(1, 1, 1));
+    /* A disconnect/non-Classic probe clears the runtime flag; a later
+       Classic connection therefore requests its report format again. */
+    assert(boonta_classic_format_should_configure(1, 1, 0));
+}
+
 static void test_classic_stick_uses_unsigned_calibrated_raw_values(void)
 {
     assert(boonta_classic_axis_to_signed(32U, 0U, 32U, 63U) == 0);
@@ -80,6 +91,7 @@ static void test_shoulders_keep_analog_range_and_digital_clicks(void)
 
 int main(void)
 {
+    test_classic_report_format_is_configured_only_after_classic_probe();
     test_classic_stick_uses_unsigned_calibrated_raw_values();
     test_all_gameplay_buttons_map();
     test_disconnected_and_wrong_expansion_are_neutral();
