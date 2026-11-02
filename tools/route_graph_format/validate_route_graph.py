@@ -430,11 +430,10 @@ def _add_scaled(a: tuple[float, float, float],
     return tuple(a[index] + b[index] * scale for index in range(3))
 
 
-def evaluate_edge(
-    graph_data: Any, edge_id: str, t: float
+def _evaluate_edge_validated(
+    graph: dict[str, Any], edge_id: str, t: float
 ) -> dict[str, tuple[float, float, float]]:
-    """Evaluate one cubic segment; returns world position and unit tangent/up vectors."""
-    graph = validate_route_graph(graph_data)
+    """Evaluate one segment from an already validated graph."""
     if edge_id not in {edge["id"] for edge in graph["edges"]}:
         raise RouteGraphError(f"unknown edge id {edge_id!r}")
     t = _number(t, "t", 0.0, 1.0)
@@ -508,6 +507,13 @@ def evaluate_edge(
     return {"position": position, "tangent": tangent, "up": up}
 
 
+def evaluate_edge(
+    graph_data: Any, edge_id: str, t: float
+) -> dict[str, tuple[float, float, float]]:
+    """Validate and evaluate one cubic segment."""
+    graph = validate_route_graph(graph_data)
+    return _evaluate_edge_validated(graph, edge_id, t)
+
 def progress_at(graph_data: Any, edge_id: str, t: float) -> float:
     graph = validate_route_graph(graph_data)
     t = _number(t, "t", 0.0, 1.0)
@@ -522,10 +528,11 @@ def progress_at(graph_data: Any, edge_id: str, t: float) -> float:
 def sample_edge_length(graph_data: Any, edge_id: str, samples: int = 100) -> float:
     if isinstance(samples, bool) or not isinstance(samples, int) or samples < 2 or samples > 10000:
         raise RouteGraphError("samples must be an integer from 2 to 10000")
-    previous = evaluate_edge(graph_data, edge_id, 0.0)["position"]
+    graph = validate_route_graph(graph_data)
+    previous = _evaluate_edge_validated(graph, edge_id, 0.0)["position"]
     length = 0.0
     for index in range(1, samples + 1):
-        current = evaluate_edge(graph_data, edge_id, index / samples)["position"]
+        current = _evaluate_edge_validated(graph, edge_id, index / samples)["position"]
         length += math.sqrt(sum((current[axis] - previous[axis]) ** 2 for axis in range(3)))
         previous = current
     if not math.isfinite(length) or length <= EPSILON:
