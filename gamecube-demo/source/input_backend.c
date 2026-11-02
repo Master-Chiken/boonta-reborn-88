@@ -4,6 +4,7 @@
 
 #ifdef BOONTA_WII
 #include <wiiuse/wpad.h>
+static int g_wpad_classic_format_ready;
 #else
 #include <ogc/pad.h>
 #endif
@@ -11,14 +12,8 @@
 void boonta_input_init(void)
 {
 #ifdef BOONTA_WII
-    if (WPAD_Init() == WPAD_ERR_NONE) {
-        /*
-         * Request the report format that carries expansion data. Without an
-         * explicit format, WPADData may contain buttons but no Classic stick
-         * or shoulder sample, causing the runtime guard to return neutral.
-         */
-        (void)WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR);
-    }
+    g_wpad_classic_format_ready = 0;
+    (void)WPAD_Init();
 #else
     (void)PAD_Init();
 #endif
@@ -38,9 +33,32 @@ void boonta_input_poll(BoontaInputFrame *frame)
         (void)WPAD_ScanPads();
 
         /* Never interpret a Wii Remote/Nunchuk/other expansion as Classic. */
-        if (WPAD_Probe(WPAD_CHAN_0, &expansion_type) != WPAD_ERR_NONE ||
-            expansion_type != WPAD_EXP_CLASSIC) {
-            return;
+        {
+            const int probe_succeeded =
+                WPAD_Probe(WPAD_CHAN_0, &expansion_type) == WPAD_ERR_NONE;
+            const int is_classic = probe_succeeded &&
+                expansion_type == WPAD_EXP_CLASSIC;
+
+            if (!probe_succeeded || !is_classic) {
+                /* A later connection or newly attached Classic pad needs setup. */
+                g_wpad_classic_format_ready = 0;
+                return;
+            }
+
+            if (boonta_classic_format_should_configure(
+                    probe_succeeded, is_classic, g_wpad_classic_format_ready)) {
+                /*
+                 * WPAD_SetDataFormat silently has no effect for an unassigned
+                 * channel. Probe first, then configure once per Classic
+                 * connection. Let the next scan deliver the requested report.
+                 */
+                if (WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR) !=
+                    WPAD_ERR_NONE) {
+                    return;
+                }
+                g_wpad_classic_format_ready = 1;
+                return;
+            }
         }
 
         data = WPAD_Data(WPAD_CHAN_0);
