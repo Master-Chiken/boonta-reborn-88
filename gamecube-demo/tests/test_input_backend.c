@@ -4,6 +4,17 @@
 #include <math.h>
 #include <stdio.h>
 
+static void test_classic_stick_uses_unsigned_calibrated_raw_values(void)
+{
+    assert(boonta_classic_axis_to_signed(32U, 0U, 32U, 63U) == 0);
+    assert(boonta_classic_axis_to_signed(63U, 0U, 32U, 63U) == 127);
+    assert(boonta_classic_axis_to_signed(0U, 0U, 32U, 63U) == -128);
+    assert(boonta_classic_axis_to_signed(48U, 0U, 32U, 63U) >= 63);
+    assert(boonta_classic_axis_to_signed(16U, 0U, 32U, 63U) <= -64);
+    assert(boonta_classic_axis_to_signed(255U, 0U, 32U, 63U) == 127);
+    assert(boonta_classic_axis_to_signed(32U, 0U, 32U, 32U) == 0);
+}
+
 static void test_all_gameplay_buttons_map(void)
 {
     const uint32_t raw =
@@ -69,6 +80,7 @@ static void test_shoulders_keep_analog_range_and_digital_clicks(void)
 
 int main(void)
 {
+    test_classic_stick_uses_unsigned_calibrated_raw_values();
     test_all_gameplay_buttons_map();
     test_disconnected_and_wrong_expansion_are_neutral();
     test_shoulders_keep_analog_range_and_digital_clicks();
