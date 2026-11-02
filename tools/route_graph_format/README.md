@@ -5,7 +5,7 @@ This folder defines an original, platform-neutral logical route graph for clean-
 ## Files and commands
 
 - schema.json — JSON Schema Draft 2020-12 structural contract.
-- validate_route_graph.py — standard-library semantic validator, cubic curve evaluator, sampled-length helper, normalized progress allocator and host cursor with branch history.
+- validate_route_graph.py — standard-library semantic validator, cubic curve evaluator, per-edge and whole-graph sampled-length helpers, normalized progress allocator and host cursor with branch history.
 - fixtures/ — small synthetic graphs only.
 
 Run the validator on the open Bezier example with:
