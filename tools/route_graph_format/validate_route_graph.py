@@ -700,6 +700,18 @@ class RouteCursor:
                 self.t = 0.0
             if 1.0 < self.t <= 1.0 + EPSILON:
                 self.t = 1.0
+            # Reaching an open route's terminal node exactly must count as
+            # finished; waiting for a later frame to overshoot t=1 can leave
+            # a cursor parked at progress 1.0 with finished=False.
+            if delta_parameter >= 0.0 and _same(self.t, 1.0):
+                terminal_node = self.edges[self.edge_id]["to"]
+                has_outgoing = bool(self.outgoing.get(terminal_node, []))
+                if not has_outgoing and not (
+                    self.graph["closed_loop"]
+                    and terminal_node == self.graph["start_node_id"]
+                ):
+                    self.t = 1.0
+                    self.finished = True
             if self.t < 0.0 or self.t > 1.0:
                 raise RouteGraphError("cursor parameter escaped [0, 1]")
         except Exception:
