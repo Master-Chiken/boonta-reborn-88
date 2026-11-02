@@ -208,18 +208,14 @@ def validate_route_graph(data: Any) -> dict[str, Any]:
                 _identifier(value, f"edge {edge_id}.control_node_ids[{slot}]")
                 for slot, value in enumerate(ids)
             ]
-            if len(set(normalized_ids)) != 4:
-                raise RouteGraphError(f"edge {edge_id!r} B-spline control_node_ids must be unique")
             missing_ids = [value for value in normalized_ids if value not in nodes]
             if missing_ids:
                 raise RouteGraphError(
                     f"edge {edge_id!r} B-spline references missing node {missing_ids[0]!r}"
                 )
-            if normalized_ids[1] != from_id or normalized_ids[2] != to_id:
-                raise RouteGraphError(
-                    f"edge {edge_id!r} B-spline topology must run from control_node_ids[1] "
-                    "to control_node_ids[2]"
-                )
+            # Graph from/to links and the four-point curve window are separate
+            # logical fields. The PC cursor shifts its full lookahead window at
+            # boundaries; no generic edge-to-control-index mapping is assumed.
             referenced_control_nodes.update(normalized_ids)
             normalized_curve = {
                 "type": curve_type,
