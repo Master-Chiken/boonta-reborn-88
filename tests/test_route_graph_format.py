@@ -53,8 +53,8 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
         self.assertEqual(schema["properties"]["format"]["const"], "boonta-route-graph-v1")
         self.assertEqual(schema["properties"]["schema_version"]["const"], 1)
-        self.assertIn(r"\\\\S", schema["properties"]["name"]["pattern"])
-        self.assertIn(r"\\\\S", schema["$defs"]["source"]["properties"]["release"]["pattern"])
+        self.assertIn(r"\S", schema["properties"]["name"]["pattern"])
+        self.assertIn(r"\S", schema["$defs"]["source"]["properties"]["release"]["pattern"])
 
     def test_rejects_unicode_identifiers_and_null_metadata(self):
         graph = fixture("open-bezier.json")
