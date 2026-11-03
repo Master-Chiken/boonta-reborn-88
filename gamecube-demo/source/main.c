@@ -69,6 +69,16 @@ static float g_vehicle_anchor_progress;
 static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
+static BoontaRouteGraphSampler g_route_sampler;
+static BoontaRouteCursor g_route_cursor;
+static int g_route_cursor_ready;
+static const BoontaRouteCursorGraph g_runtime_route_cursor_graph = {
+    boonta_runtime_route_topology_edges,
+    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+};
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
 #define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
@@ -154,12 +164,44 @@ static const u8 g_font5x7[128][7] = {
  * lookup is cached on first use. This first runtime path is one closed,
  * unbranched loop. Road widths remain independent surface samples.
  */
+static int reset_runtime_route_cursor(void)
+{
+    if (!boonta_route_graph_sampler_prepare(&g_route_sampler)) {
+        g_route_cursor_ready = 0;
+        return 0;
+    }
+    g_route_cursor_ready =
+        boonta_route_cursor_init(
+            &g_route_cursor, &g_runtime_route_cursor_graph,
+            g_route_sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK;
+    return g_route_cursor_ready;
+}
+
+static void advance_runtime_route_cursor(float distance_delta)
+{
+    if (!g_route_cursor_ready) return;
+    if (boonta_route_cursor_move(
+            &g_route_cursor, distance_delta, NULL, 0U) != BOONTA_ROUTE_CURSOR_OK) {
+        /* The loop sampler remains available as a safe rendering fallback. */
+        g_route_cursor_ready = 0;
+    }
+}
+
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
-    static BoontaRouteGraphSampler sampler;
-    boonta_route_graph_sampler_sample_at(&sampler, travelled, ROAD_HALF_WIDTH,
-                                         x_out, y_out, z_out, width_out);
+    if (g_route_cursor_ready &&
+        boonta_route_graph_sampler_sample_relative_to_cursor(
+            &g_route_sampler, &g_route_cursor, g_distance, travelled,
+            ROAD_HALF_WIDTH, x_out, y_out, z_out, width_out) ==
+            BOONTA_ROUTE_CURSOR_OK) {
+        return;
+    }
+
+    /* Preserve the validated closed-loop path if cursor sampling is unavailable. */
+    boonta_route_graph_sampler_sample_at(
+        &g_route_sampler, travelled, ROAD_HALF_WIDTH,
+        x_out, y_out, z_out, width_out);
 }
 
 static float track_center_x_at(float travelled)
@@ -1087,6 +1129,7 @@ int main(int argc, char **argv)
     (void)argv;
     initialise_video_and_gx();
     boonta_race_state_reset(&g_race_state);
+    (void)reset_runtime_route_cursor();
     previous_tick = gettime();
 
     for (;;) {
@@ -1113,6 +1156,7 @@ int main(int argc, char **argv)
                                      (buttons_down & PAD_BUTTON_START) != 0U,
                                      (buttons_down & PAD_BUTTON_Y) != 0U)) {
             boonta_race_state_reset(&g_race_state);
+            (void)reset_runtime_route_cursor();
             /* Render the clean start state before any input advances the race. */
             draw_frame();
             continue;
@@ -1197,6 +1241,7 @@ int main(int argc, char **argv)
             const float previous_distance = g_distance;
             const unsigned int previous_laps = g_lap_count;
             g_distance = boonta_distance_after_pitch_scaled(g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
+            advance_runtime_route_cursor(g_distance - previous_distance);
             g_lap_count = boonta_lap_count_after_frame(
                 g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
             if (g_lap_count > previous_laps) {
