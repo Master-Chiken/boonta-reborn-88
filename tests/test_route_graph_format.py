@@ -305,6 +305,57 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(state["t"], 0.25)
         self.assertAlmostEqual(state["progress"], 0.125)
 
+
+    def test_cursor_move_distance_crosses_unequal_edge_lengths_and_reverses(self):
+        graph = fixture("open-bezier.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        state = cursor.move_distance(4.5)
+        self.assertEqual(state["edge_id"], "middle-finish")
+        self.assertAlmostEqual(state["t"], 0.5, places=3)
+        self.assertAlmostEqual(state["distance_on_edge"], 1.5, places=3)
+        self.assertAlmostEqual(state["edge_length"], 3.0, places=3)
+        self.assertAlmostEqual(state["progress"], 0.75, places=3)
+
+        reversed_state = cursor.move_distance(-2.0)
+        self.assertEqual(reversed_state["edge_id"], "start-middle")
+        self.assertEqual(reversed_state["path_index"], 0)
+        self.assertAlmostEqual(reversed_state["t"], 5.0 / 6.0, places=3)
+        self.assertEqual(reversed_state["path_history"], ("start-middle", "middle-finish"))
+
+    def test_cursor_move_distance_uses_branch_choice_and_preserves_reverse_path(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        state = cursor.move_distance(15.0, {"split": "right-1"})
+        self.assertEqual(state["edge_id"], "right-1")
+        self.assertEqual(state["path_history"], ("approach", "right-1"))
+        self.assertAlmostEqual(state["t"], 0.5, places=3)
+        self.assertAlmostEqual(state["distance_on_edge"], 5.0, places=3)
+
+        backwards = cursor.move_distance(-6.0)
+        self.assertEqual(backwards["edge_id"], "approach")
+        self.assertEqual(backwards["path_index"], 0)
+        self.assertAlmostEqual(backwards["t"], 0.9, places=3)
+        self.assertEqual(backwards["path_history"], ("approach", "right-1"))
+
+    def test_cursor_move_distance_requires_branch_choice_and_rolls_back(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=64)
+        with self.assertRaisesRegex(RouteGraphError, "branch choice required"):
+            cursor.move_distance(10.5)
+        self.assertEqual(cursor.path_history, ["approach"])
+        self.assertEqual(cursor.path_index, 0)
+        self.assertAlmostEqual(cursor.t, 0.0)
+
+    def test_cursor_distance_tables_are_lazy_and_reused(self):
+        graph = fixture("open-bezier.json")
+        cursor = RouteCursor(graph, distance_samples=32)
+        self.assertIsNone(cursor._distance_tables)
+        first = cursor.move_distance(1.0)
+        tables = cursor._distance_tables
+        second = cursor.move_distance(1.0)
+        self.assertIs(cursor._distance_tables, tables)
+        self.assertGreater(second["distance_on_edge"], first["distance_on_edge"])
+
     def test_cursor_move_reuses_its_validated_graph(self):
         graph = fixture("open-bezier.json")
         original_validate = route_graph_module.validate_route_graph

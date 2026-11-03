@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from bisect import bisect_left
 import copy
 import json
 import math
@@ -624,8 +625,16 @@ def allocate_progress_spans(
 class RouteCursor:
     """Host-test cursor with explicit path history and deterministic branch choices."""
 
-    def __init__(self, graph_data: Any, start_edge_id: str | None = None):
+    def __init__(
+        self,
+        graph_data: Any,
+        start_edge_id: str | None = None,
+        distance_samples: int = 128,
+    ):
         self.graph = validate_route_graph(graph_data)
+        self.distance_samples = _validate_sample_count(distance_samples)
+        self._nodes_by_id, self._edges_by_id = _index_validated_graph(self.graph)
+        self._distance_tables: dict[str, tuple[float, ...]] | None = None
         self.edges = {edge["id"]: edge for edge in self.graph["edges"]}
         self.outgoing: dict[str, list[str]] = defaultdict(list)
         for edge in self.graph["edges"]:
@@ -647,6 +656,128 @@ class RouteCursor:
     def edge_id(self) -> str:
         return self.path_history[self.path_index]
 
+
+    def _ensure_distance_tables(self) -> None:
+        """Build bounded per-edge 3D arc-length lookups once, on first metre-based move."""
+        if self._distance_tables is not None:
+            return
+        tables: dict[str, tuple[float, ...]] = {}
+        for edge_id in self.edges:
+            previous = _evaluate_edge_validated(
+                self.graph, edge_id, 0.0, self._nodes_by_id, self._edges_by_id
+            )["position"]
+            cumulative = [0.0]
+            total = 0.0
+            for sample_index in range(1, self.distance_samples + 1):
+                position = _evaluate_edge_validated(
+                    self.graph,
+                    edge_id,
+                    sample_index / self.distance_samples,
+                    self._nodes_by_id,
+                    self._edges_by_id,
+                )["position"]
+                step = math.dist(previous, position)
+                if not math.isfinite(step):
+                    raise RouteGraphError(
+                        f"edge {edge_id!r} produced a non-finite distance lookup step"
+                    )
+                total += step
+                cumulative.append(total)
+                previous = position
+            if not math.isfinite(total) or total <= EPSILON:
+                raise RouteGraphError(
+                    f"edge {edge_id!r} has no measurable 3D length"
+                )
+            tables[edge_id] = tuple(cumulative)
+        self._distance_tables = tables
+
+    def _edge_distance_at_t(self, edge_id: str, t: float) -> float:
+        assert self._distance_tables is not None
+        table = self._distance_tables[edge_id]
+        scaled = min(1.0, max(0.0, t)) * self.distance_samples
+        lower = int(scaled)
+        if lower >= self.distance_samples:
+            return table[-1]
+        fraction = scaled - lower
+        return table[lower] + (table[lower + 1] - table[lower]) * fraction
+
+    def _edge_t_at_distance(self, edge_id: str, distance: float) -> float:
+        assert self._distance_tables is not None
+        table = self._distance_tables[edge_id]
+        target = min(table[-1], max(0.0, distance))
+        upper = bisect_left(table, target)
+        if upper <= 0:
+            return 0.0
+        if upper >= len(table):
+            return 1.0
+        lower_length = table[upper - 1]
+        span = table[upper] - lower_length
+        if span <= EPSILON:
+            return upper / self.distance_samples
+        fraction = (target - lower_length) / span
+        return ((upper - 1) + fraction) / self.distance_samples
+
+    def _cross_forward(self, branch_choices: dict[str, str]) -> bool:
+        """Cross the current edge's end, preserving the explicit branch history."""
+        current = self.edges[self.edge_id]
+        node_id = current["to"]
+        candidates = self.outgoing.get(node_id, [])
+        if not candidates:
+            if self.graph["closed_loop"] and node_id == self.graph["start_node_id"]:
+                candidates = self.outgoing.get(self.graph["start_node_id"], [])
+            if not candidates:
+                self.t = 1.0
+                self.finished = True
+                return False
+
+        requested = branch_choices.get(node_id)
+        cached = (
+            self.path_history[self.path_index + 1]
+            if self.path_index + 1 < len(self.path_history) else None
+        )
+        append_history = False
+        if requested is not None:
+            if requested not in candidates:
+                raise RouteGraphError(
+                    f"branch choice {requested!r} is not an outgoing edge of node {node_id!r}"
+                )
+            chosen = requested
+            if cached != requested:
+                self.path_history = self.path_history[: self.path_index + 1]
+                append_history = True
+        elif cached is not None:
+            if cached not in candidates:
+                raise RouteGraphError("stored branch history no longer matches graph topology")
+            chosen = cached
+        elif len(candidates) == 1:
+            chosen = candidates[0]
+            append_history = True
+        else:
+            raise RouteGraphError(f"branch choice required at node {node_id!r}")
+
+        if append_history:
+            self.path_history.append(chosen)
+        self.path_index += 1
+        self.t -= 1.0
+        self.finished = False
+        return True
+
+    def _cross_backward(self) -> bool:
+        """Cross the current edge's start using the recorded reverse path."""
+        if self.path_index == 0:
+            self.t = 0.0
+            self.started = True
+            return False
+        current = self.edges[self.edge_id]
+        previous_id = self.path_history[self.path_index - 1]
+        previous = self.edges[previous_id]
+        if previous["to"] != current["from"]:
+            raise RouteGraphError("stored reverse path history is not connected")
+        self.path_index -= 1
+        self.t += 1.0
+        self.finished = False
+        return True
+
     def move(
         self, delta_parameter: float, branch_choices: dict[str, str] | None = None
     ) -> dict[str, Any]:
@@ -667,64 +798,15 @@ class RouteCursor:
                 transitions += 1
                 if transitions > 10000:
                     raise RouteGraphError("cursor transition limit exceeded")
-                current = self.edges[self.edge_id]
-                node_id = current["to"]
-                candidates = self.outgoing.get(node_id, [])
-                if not candidates:
-                    if self.graph["closed_loop"] and node_id == self.graph["start_node_id"]:
-                        candidates = self.outgoing.get(self.graph["start_node_id"], [])
-                    if not candidates:
-                        self.t = 1.0
-                        self.finished = True
-                        break
-
-                requested = branch_choices.get(node_id)
-                cached = (
-                    self.path_history[self.path_index + 1]
-                    if self.path_index + 1 < len(self.path_history) else None
-                )
-                append_history = False
-                if requested is not None:
-                    if requested not in candidates:
-                        raise RouteGraphError(
-                            f"branch choice {requested!r} is not an outgoing edge of node {node_id!r}"
-                        )
-                    chosen = requested
-                    if cached != requested:
-                        self.path_history = self.path_history[: self.path_index + 1]
-                        append_history = True
-                elif cached is not None:
-                    if cached not in candidates:
-                        raise RouteGraphError("stored branch history no longer matches graph topology")
-                    chosen = cached
-                elif len(candidates) == 1:
-                    chosen = candidates[0]
-                    append_history = True
-                else:
-                    raise RouteGraphError(f"branch choice required at node {node_id!r}")
-
-                if append_history:
-                    self.path_history.append(chosen)
-                self.path_index += 1
-                self.t -= 1.0
-                self.finished = False
+                if not self._cross_forward(branch_choices):
+                    break
 
             while self.t < -EPSILON:
                 transitions += 1
                 if transitions > 10000:
                     raise RouteGraphError("cursor transition limit exceeded")
-                if self.path_index == 0:
-                    self.t = 0.0
-                    self.started = True
+                if not self._cross_backward():
                     break
-                current = self.edges[self.edge_id]
-                previous_id = self.path_history[self.path_index - 1]
-                previous = self.edges[previous_id]
-                if previous["to"] != current["from"]:
-                    raise RouteGraphError("stored reverse path history is not connected")
-                self.path_index -= 1
-                self.t += 1.0
-                self.finished = False
 
             if -EPSILON <= self.t < 0.0:
                 self.t = 0.0
@@ -763,6 +845,104 @@ class RouteCursor:
             "at_start": self.path_index == 0 and _same(self.t, 0.0),
             "path_history": tuple(self.path_history),
             "path_index": self.path_index,
+        }
+
+
+    def move_distance(
+        self, delta_distance: float, branch_choices: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+        """Move by signed 3D distance in the graph's distance units (metres).
+
+        Arc-length lookup tables are built lazily and cached. Branch choices and
+        reverse traversal use the same deterministic path history as move().
+        """
+        delta_distance = _number(delta_distance, "delta_distance")
+        if branch_choices is None:
+            branch_choices = {}
+        if not isinstance(branch_choices, dict):
+            raise RouteGraphError("branch_choices must be an object keyed by node id")
+        self._ensure_distance_tables()
+
+        old_state = (
+            self.path_history[:], self.path_index, self.t, self.finished, self.started
+        )
+        try:
+            remaining = abs(delta_distance)
+            transitions = 0
+            while remaining > EPSILON:
+                edge_id = self.edge_id
+                edge_distance = self._edge_distance_at_t(edge_id, self.t)
+                edge_length = self._distance_tables[edge_id][-1]  # type: ignore[index]
+
+                if delta_distance > 0.0:
+                    available = max(0.0, edge_length - edge_distance)
+                    if remaining <= available + EPSILON:
+                        self.t = self._edge_t_at_distance(
+                            edge_id, edge_distance + remaining
+                        )
+                        remaining = 0.0
+                        break
+
+                    remaining = max(0.0, remaining - available)
+                    self.t = 1.0
+                    transitions += 1
+                    if transitions > 10000:
+                        raise RouteGraphError("cursor transition limit exceeded")
+                    if not self._cross_forward(branch_choices):
+                        remaining = 0.0
+                        break
+                else:
+                    available = max(0.0, edge_distance)
+                    if remaining <= available + EPSILON:
+                        self.t = self._edge_t_at_distance(
+                            edge_id, edge_distance - remaining
+                        )
+                        remaining = 0.0
+                        break
+
+                    remaining = max(0.0, remaining - available)
+                    self.t = 0.0
+                    transitions += 1
+                    if transitions > 10000:
+                        raise RouteGraphError("cursor transition limit exceeded")
+                    if not self._cross_backward():
+                        remaining = 0.0
+                        break
+
+            if delta_distance < 0.0:
+                self.finished = False
+            if delta_distance > 0.0 and _same(self.t, 1.0):
+                terminal_node = self.edges[self.edge_id]["to"]
+                has_outgoing = bool(self.outgoing.get(terminal_node, []))
+                if not has_outgoing and not (
+                    self.graph["closed_loop"]
+                    and terminal_node == self.graph["start_node_id"]
+                ):
+                    self.finished = True
+            if self.t < 0.0 or self.t > 1.0:
+                raise RouteGraphError("cursor parameter escaped [0, 1]")
+        except Exception:
+            (
+                self.path_history, self.path_index, self.t,
+                self.finished, self.started,
+            ) = old_state
+            raise
+
+        edge_id = self.edge_id
+        current_edge = self.edges[edge_id]
+        progress_start = current_edge["progress"]["start"]
+        progress_end = current_edge["progress"]["end"]
+        progress = progress_start + (progress_end - progress_start) * self.t
+        return {
+            "edge_id": edge_id,
+            "t": self.t,
+            "progress": progress,
+            "finished": self.finished,
+            "at_start": self.path_index == 0 and _same(self.t, 0.0),
+            "path_history": tuple(self.path_history),
+            "path_index": self.path_index,
+            "distance_on_edge": self._edge_distance_at_t(edge_id, self.t),
+            "edge_length": self._distance_tables[edge_id][-1],  # type: ignore[index]
         }
 
 
