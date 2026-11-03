@@ -273,6 +273,61 @@ static void test_closed_branch_laps_follow_selected_path_and_reverse(void)
     assert(state.completed_laps == 2U);
 }
 
+static void test_distance_to_next_lap_uses_selected_variable_length_path(void)
+{
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+    const BoontaRouteBranchChoice choose_right = { 1U, 3U };
+    const BoontaRouteBranchChoice choose_left = { 1U, 1U };
+    float distance_to_lap = -1.0f;
+
+    assert(boonta_route_cursor_init(
+        &cursor, &g_closed_branch_graph, g_closed_branch_lengths, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+
+    /* Do not invent a finish position when the next branch has no history. */
+    assert(boonta_route_cursor_distance_to_next_lap(
+        &cursor, &distance_to_lap) == BOONTA_ROUTE_CURSOR_BRANCH_REQUIRED);
+    assert_close(distance_to_lap, 0.0f, 0.000001f);
+
+    /* Complete the longer right lap and record the next shorter left lap. */
+    assert(boonta_route_cursor_move(&cursor, 1.1f, &choose_right, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 4.0f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    state = state_of(&cursor);
+    assert(state.completed_laps == 1U);
+    assert(state.edge == 0U);
+    assert(boonta_route_cursor_move(&cursor, 1.1f, &choose_left, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 2.7f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    state = state_of(&cursor);
+    assert(state.edge == 2U);
+    assert(state.completed_laps == 1U);
+    assert_close(cursor.distance_on_edge, 1.9f, 0.00001f);
+
+    assert(boonta_route_cursor_distance_to_next_lap(
+        &cursor, &distance_to_lap) == BOONTA_ROUTE_CURSOR_OK);
+    assert_close(distance_to_lap, 0.1f, 0.00001f);
+
+    /* Reverse and forward distances update the measured seam distance too. */
+    assert(boonta_route_cursor_move(&cursor, -0.2f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_distance_to_next_lap(
+        &cursor, &distance_to_lap) == BOONTA_ROUTE_CURSOR_OK);
+    assert_close(distance_to_lap, 0.3f, 0.00001f);
+
+    assert(boonta_route_cursor_move(&cursor, 0.4f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    state = state_of(&cursor);
+    assert(state.completed_laps == 2U);
+    assert(state.edge == 0U);
+    assert(boonta_route_cursor_distance_to_next_lap(
+        &cursor, &distance_to_lap) == BOONTA_ROUTE_CURSOR_BRANCH_REQUIRED);
+    return;
+}
+
 static void test_open_route_never_wraps_to_start_node(void)
 {
     static const BoontaRouteCursorEdge edges[] = {
@@ -334,6 +389,7 @@ int main(void)
     test_open_route_finishes_at_exact_terminal_distance();
     test_closed_loop_replays_start_edge_without_finishing();
     test_closed_branch_laps_follow_selected_path_and_reverse();
+    test_distance_to_next_lap_uses_selected_variable_length_path();
     test_open_route_never_wraps_to_start_node();
     test_history_capacity_failure_is_atomic();
     puts("Native route cursor tests passed.");
