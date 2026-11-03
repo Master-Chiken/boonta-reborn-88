@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -184,19 +185,43 @@ int main(void)
 
         # The approach ends with a collapsed last handle; d1-left begins with
         # a collapsed first handle. Both curves remain valid cubic Beziers.
-        decision = nodes["decision-1"]["position"]
-        edges["approach"]["curve"]["control2"] = list(decision)
-        edges["d1-left"]["curve"]["control1"] = list(decision)
-        decision3 = nodes["decision-3"]["position"]
-        finish = nodes["finish"]["position"]
-        # Force the third-order/chord fallback at both ends of separate edges.
-        edges["d3-left"]["curve"]["control1"] = list(finish)
-        edges["d3-left"]["curve"]["control2"] = list(finish)
-        edges["d3-right"]["curve"]["control1"] = list(decision3)
-        edges["d3-right"]["curve"]["control2"] = list(decision3)
+        # The route validator rejects zero endpoint derivatives. Generate a
+        # valid header first, then mutate only its C geometry table to exercise
+        # the runtime's defensive fallback for malformed/legacy generated data.
         header = generate_runtime_route_header(
             graph, {}, default_half_width=3.6
         )
+        lines = header.splitlines()
+        geometry_start = next(
+            index for index, line in enumerate(lines)
+            if "boonta_runtime_route_edges[" in line
+        )
+
+        def replace_control(edge_id, control_index, point):
+            marker = f"/* {edge_id} */"
+            marker_index = next(
+                index for index in range(geometry_start + 1, len(lines))
+                if lines[index].strip() == marker
+            )
+            vectors = re.findall(r"\\{([^{}]+)\\}", lines[marker_index + 1])
+            self.assertEqual(len(vectors), 4)
+            vectors[control_index] = ", ".join(
+                f"{component:.9f}f" for component in point
+            )
+            lines[marker_index + 1] = "    { " + ", ".join(
+                "{ " + vector.strip() + " }" for vector in vectors
+            ) + " },"
+
+        decision = nodes["decision-1"]["position"]
+        decision3 = nodes["decision-3"]["position"]
+        finish = nodes["finish"]["position"]
+        replace_control("approach", 2, decision)
+        replace_control("d1-left", 1, decision)
+        replace_control("d3-left", 1, finish)
+        replace_control("d3-left", 2, finish)
+        replace_control("d3-right", 1, decision3)
+        replace_control("d3-right", 2, decision3)
+        header = "\\n".join(lines) + "\\n"
         c_source = r"""
 #include <assert.h>
 #include <math.h>
