@@ -173,11 +173,18 @@ static void boost_overheat_tests(void) {
 }
 
 static void steering_input_tests(void) {
- /* The analog stick maps its signed byte range to a normalized steering value. */
+ /* Ignore analog noise in [-16, 16] and rescale each side to the full range. */
  assert(nearf(boonta_steering_input(0.0f, 0, 0), 0.0f));
- assert(nearf(boonta_steering_input(64.0f, 0, 0), 0.5f));
- assert(nearf(boonta_steering_input(-64.0f, 0, 0), -0.5f));
- assert(nearf(boonta_steering_input(127.0f, 0, 0), 127.0f / 128.0f));
+ assert(nearf(boonta_steering_input(12.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(-15.0f, 0, 0), 0.0f));
+ /* The deadzone is inclusive; the first value outside it scales continuously. */
+ assert(nearf(boonta_steering_input(16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(-16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_steering_input(17.0f, 0, 0), 1.0f / 111.0f));
+ assert(nearf(boonta_steering_input(-17.0f, 0, 0), -1.0f / 112.0f));
+ assert(nearf(boonta_steering_input(71.5f, 0, 0), 0.5f));
+ assert(nearf(boonta_steering_input(-72.0f, 0, 0), -0.5f));
+ assert(nearf(boonta_steering_input(127.0f, 0, 0), 1.0f));
  assert(nearf(boonta_steering_input(-128.0f, 0, 0), -1.0f));
  /* Non-finite analog input is treated as a neutral stick, not NaN steering. */
  assert(nearf(boonta_steering_input(NAN, 0, 0), 0.0f));
@@ -188,36 +195,55 @@ static void steering_input_tests(void) {
  /* D-pad steering adds to analog input, with bounded saturation. */
  assert(nearf(boonta_steering_input(0.0f, 1, 0), -0.7f));
  assert(nearf(boonta_steering_input(0.0f, 0, 1), 0.7f));
- assert(nearf(boonta_steering_input(64.0f, 1, 0), -0.2f));
- assert(nearf(boonta_steering_input(-64.0f, 0, 1), 0.2f));
+ assert(nearf(boonta_steering_input(71.5f, 1, 0), -0.2f));
+ assert(nearf(boonta_steering_input(-72.0f, 0, 1), 0.2f));
  assert(nearf(boonta_steering_input(127.0f, 0, 1), 1.0f));
  assert(nearf(boonta_steering_input(-128.0f, 1, 0), -1.0f));
 
  /* Simultaneous opposite D-pad directions cancel; valid stick input remains. */
  assert(nearf(boonta_steering_input(0.0f, 1, 1), 0.0f));
- assert(nearf(boonta_steering_input(32.0f, 1, 1), 0.25f));
+ assert(nearf(boonta_steering_input(71.5f, 1, 1), 0.5f));
 }
 
 
 static void pitch_tradeoff_tests(void) {
  /* Centered/noisy input is neutral; stick-up maps to nose-down. */
- assert(nearf(boonta_pitch_input(0.0f), 0.0f));
- assert(nearf(boonta_pitch_input(12.0f), 0.0f));
- assert(nearf(boonta_pitch_input(-16.0f), 0.0f));
- assert(nearf(boonta_pitch_input(72.0f), 56.0f / 111.0f));
- assert(nearf(boonta_pitch_input(-72.0f), -0.5f));
- assert(nearf(boonta_pitch_input(127.0f), 1.0f));
- assert(nearf(boonta_pitch_input(-128.0f), -1.0f));
- assert(nearf(boonta_pitch_input(NAN), 0.0f));
- assert(nearf(boonta_pitch_input(INFINITY), 0.0f));
+ assert(nearf(boonta_pitch_input(0.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(12.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(-16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(16.0f, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(72.0f, 0, 0), 56.0f / 111.0f));
+ assert(nearf(boonta_pitch_input(-72.0f, 0, 0), -0.5f));
+ assert(nearf(boonta_pitch_input(127.0f, 0, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-128.0f, 0, 0), -1.0f));
+ assert(nearf(boonta_pitch_input(200.0f, 0, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-200.0f, 0, 0), -1.0f));
+ assert(nearf(boonta_pitch_input(NAN, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(INFINITY, 0, 0), 0.0f));
+ assert(nearf(boonta_pitch_input(-INFINITY, 0, 0), 0.0f));
+
+ /* D-pad Up (+0.7f) and Down (-0.7f) pitch controls. */
+ assert(nearf(boonta_pitch_input(0.0f, 1, 0), 0.7f));
+ assert(nearf(boonta_pitch_input(0.0f, 0, 1), -0.7f));
+ assert(nearf(boonta_pitch_input(0.0f, 1, 1), 0.0f));
+ assert(nearf(boonta_pitch_input(72.0f, 0, 1), 56.0f / 111.0f - 0.7f));
+ assert(nearf(boonta_pitch_input(-72.0f, 1, 0), 0.2f));
+ assert(nearf(boonta_pitch_input(127.0f, 1, 0), 1.0f));
+ assert(nearf(boonta_pitch_input(-128.0f, 0, 1), -1.0f));
+ assert(nearf(boonta_pitch_input(NAN, 1, 0), 0.7f));
+ assert(nearf(boonta_pitch_input(INFINITY, 0, 1), -0.7f));
 
  /* Nose-down trades steering authority for faster progress; nose-up does the opposite. */
  assert(nearf(boonta_steering_after_pitch(0.5f, 0.0f), 0.5f));
  assert(nearf(boonta_steering_after_pitch(0.5f, 1.0f), 0.3f));
  assert(nearf(boonta_steering_after_pitch(0.5f, -1.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(1.0f, -1.0f), 1.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, 2.0f), 0.3f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, -2.0f), 0.675f));
  assert(nearf(boonta_steering_after_pitch(NAN, 0.8f), 0.0f));
  assert(nearf(boonta_steering_after_pitch(0.5f, NAN), 0.5f));
+ assert(nearf(boonta_steering_after_pitch(INFINITY, 0.5f), 0.0f));
+ assert(nearf(boonta_steering_after_pitch(0.5f, INFINITY), 0.5f));
 
  /* Compare actual forward progress at the same throttle/speed and frame scale. */
  {
@@ -287,6 +313,25 @@ static void track_scroll_tests(void) {
  assert(boonta_track_section_index(1.0f, NAN) == 0U);
  assert(nearf(boonta_track_phase(NAN, 2.0f), 0.0f));
  assert(nearf(boonta_track_phase(2.0f, INFINITY), 0.0f));
+}
+
+static void slide_input_tests(void) {
+ /* Digital L or R held triggers slide mode. */
+ assert(boonta_slide_input(1, 0, 0, 0) == 1);
+ assert(boonta_slide_input(0, 1, 0, 0) == 1);
+ assert(boonta_slide_input(1, 1, 0, 0) == 1);
+
+ /* Analog trigger pull >= 40 threshold triggers slide mode. */
+ assert(boonta_slide_input(0, 0, 40U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 40U) == 1);
+ assert(boonta_slide_input(0, 0, 128U, 0) == 1);
+ assert(boonta_slide_input(0, 0, 0, 255U) == 1);
+
+ /* Below threshold without digital press remains inactive. */
+ assert(boonta_slide_input(0, 0, 0, 0) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 0) == 0);
+ assert(boonta_slide_input(0, 0, 0, 39U) == 0);
+ assert(boonta_slide_input(0, 0, 39U, 39U) == 0);
 }
 
 static void slide_drift_tests(void) {
@@ -526,6 +571,13 @@ static void rival_event_tests(void) {
  assert(nearf(boonta_rival_contact_nudge(0.0f, 0.0f), -0.035f));
 }
 
+static void overtake_count_tests(void) {
+ assert(boonta_overtake_count_after_event(0U) == 1U);
+ assert(boonta_overtake_count_after_event(10U) == 11U);
+ assert(boonta_overtake_count_after_event(0xfffffffeU) == 0xffffffffU);
+ assert(boonta_overtake_count_after_event(0xffffffffU) == 0xffffffffU);
+}
+
 
 static void road_width_alignment_tests(void) {
  /* The renderer's effective width stays within its documented runtime bounds. */
@@ -544,33 +596,14 @@ static void road_width_alignment_tests(void) {
  assert(nearf(boonta_restore_road_lateral(3.6f, 0.5f), 2.2f));
  assert(nearf(boonta_restore_road_lateral(-3.6f, 100.0f), -4.8f));
 
- /* The normalized contact limit maps exactly back to the rendered rail line. */
+ /* Rail recovery restores the effective visible edge, not the raw file width. */
  {
-  const float narrow_width = BOONTA_MIN_ROAD_HALF_WIDTH;
-  const float reference_width = BOONTA_REFERENCE_ROAD_HALF_WIDTH;
-  const float broad_width = BOONTA_MAX_ROAD_HALF_WIDTH;
-  const float narrow_limit = boonta_normalized_rail_limit(narrow_width);
-  const float reference_limit = boonta_normalized_rail_limit(reference_width);
-  const float broad_limit = boonta_normalized_rail_limit(broad_width);
-
-  assert(nearf(boonta_restore_road_lateral(narrow_limit, narrow_width),
-               narrow_width + BOONTA_RAIL_OUTER_OFFSET));
-  assert(nearf(boonta_restore_road_lateral(reference_limit, reference_width),
-               reference_width + BOONTA_RAIL_OUTER_OFFSET));
-  assert(nearf(boonta_restore_road_lateral(broad_limit, broad_width),
-               broad_width + BOONTA_RAIL_OUTER_OFFSET));
-
-  /* Recovery clamps to each width's visible rail line in normalized space. */
-  assert(nearf(boonta_lateral_after_rail_contact(narrow_limit + 1.0f, narrow_width),
-               narrow_limit));
-  assert(nearf(boonta_lateral_after_rail_contact(-reference_limit - 1.0f, reference_width),
-               -reference_limit));
-  assert(nearf(boonta_lateral_after_rail_contact(broad_limit + 1.0f, broad_width),
-               broad_limit));
-
-  /* Malformed authored widths safely use the same fallback as the renderer. */
-  assert(nearf(boonta_normalized_rail_limit(NAN),
-               BOONTA_REFERENCE_ROAD_HALF_WIDTH + BOONTA_RAIL_OUTER_OFFSET));
+  const float narrow_rail = boonta_restore_road_lateral(3.85f, 0.5f);
+  const float broad_rail = boonta_restore_road_lateral(3.85f, 100.0f);
+  assert(nearf(narrow_rail, 3.85f * 2.2f / 3.6f));
+  assert(nearf(broad_rail, 3.85f * 4.8f / 3.6f));
+  assert(nearf(boonta_restore_road_lateral(
+      boonta_lateral_after_rail_contact(4.0f), 0.5f), narrow_rail));
  }
 
  assert(nearf(boonta_normalize_road_lateral(NAN, 3.6f), 0.0f));
@@ -578,113 +611,29 @@ static void road_width_alignment_tests(void) {
 }
 
 static void offroad_and_rail_tests(void) {
- /* The normalized road stays at full grip through its visible 3.6-unit edge. */
+ /* No speed loss on the road, including the exact 3.15 boundary. */
  assert(nearf(boonta_speed_after_offroad(0.5f, 0.0f), 0.5f));
  assert(nearf(boonta_speed_after_offroad(0.5f, 3.15f), 0.5f));
- assert(nearf(boonta_speed_after_offroad(0.5f, 3.6f), 0.5f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.6f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.15f), 0.5f));
 
- /* Off-road drag starts strictly beyond the rendered edge and is symmetric. */
- assert(nearf(boonta_speed_after_offroad(0.5f, 3.61f), 0.49188f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.61f), 0.49188f));
+ /* The existing off-road drag starts just outside the road edge and is symmetric. */
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.16f), 0.49188f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.16f), 0.49188f));
  assert(nearf(boonta_speed_after_offroad(0.01f, 3.85f), 0.0f));
  assert(nearf(boonta_speed_after_offroad(1.0f, 100.0f), 0.0f));
 
- /* All authored road widths normalize their actual edge to the same threshold. */
- {
-  const float widths[] = {
-   BOONTA_MIN_ROAD_HALF_WIDTH,
-   BOONTA_REFERENCE_ROAD_HALF_WIDTH,
-   BOONTA_MAX_ROAD_HALF_WIDTH
-  };
-  unsigned int i;
-  for (i = 0U; i < sizeof(widths) / sizeof(widths[0]); ++i) {
-   const float normalized_edge = boonta_normalize_road_lateral(widths[i], widths[i]);
-   assert(nearf(normalized_edge, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
-   assert(nearf(boonta_speed_after_offroad(0.5f, normalized_edge), 0.5f));
-   assert(nearf(boonta_speed_after_offroad(0.5f, normalized_edge + 0.01f), 0.49188f));
-   assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge), 0.5f));
-   assert(nearf(boonta_speed_after_offroad(0.5f, -normalized_edge - 0.01f), 0.49188f));
-   /* The runtime uses the scaled helper: the visible edge stays grip-neutral
-    * at the largest frame step, while the outside drag scales by frame time. */
-   assert(nearf(boonta_speed_after_offroad_scaled(0.5f, normalized_edge, 3.0f), 0.5f));
-   assert(nearf(boonta_speed_after_offroad_scaled(
-       0.5f, normalized_edge + 0.01f, 0.5f), 0.49594f));
-   assert(nearf(boonta_speed_after_offroad_scaled(
-       0.5f, normalized_edge + 0.01f, 3.0f), 0.47564f));
-   assert(nearf(boonta_speed_after_offroad_scaled(
-       0.5f, -normalized_edge - 0.01f, 0.5f), 0.49594f));
-  }
- }
-
- /* Collision starts strictly beyond the visible nominal-width rail line. */
- {
-  const float width = BOONTA_REFERENCE_ROAD_HALF_WIDTH;
-  const float limit = width + BOONTA_RAIL_OUTER_OFFSET;
-  assert(!boonta_is_past_rail(limit, width));
-  assert(!boonta_is_past_rail(-limit, width));
-  assert(boonta_is_past_rail(limit + 0.001f, width));
-  assert(boonta_is_past_rail(-limit - 0.001f, width));
-  assert(nearf(boonta_lateral_after_rail_contact(4.5f, width), limit));
-  assert(nearf(boonta_lateral_after_rail_contact(-4.5f, width), -limit));
-  assert(nearf(boonta_lateral_after_rail_contact(3.0f, width), 3.0f));
-
-  /* A narrow/wide segment resolves at its own normalized, visible rail edge. */
-  {
-   const float narrow_width = BOONTA_MIN_ROAD_HALF_WIDTH;
-   const float broad_width = BOONTA_MAX_ROAD_HALF_WIDTH;
-   const float narrow_limit = boonta_normalized_rail_limit(narrow_width);
-   const float broad_limit = boonta_normalized_rail_limit(broad_width);
-   assert(!boonta_is_past_rail(narrow_limit, narrow_width));
-   assert(boonta_is_past_rail(narrow_limit + 0.001f, narrow_width));
-   assert(!boonta_is_past_rail(broad_limit, broad_width));
-   assert(boonta_is_past_rail(broad_limit + 0.001f, broad_width));
-   assert(nearf(boonta_restore_road_lateral(
-       boonta_lateral_after_rail_contact(narrow_limit + 1.0f, narrow_width),
-       narrow_width), narrow_width + BOONTA_RAIL_OUTER_OFFSET));
-   assert(nearf(boonta_restore_road_lateral(
-       boonta_lateral_after_rail_contact(broad_limit + 1.0f, broad_width),
-       broad_width), broad_width + BOONTA_RAIL_OUTER_OFFSET));
-  }
- }
+ /* A rail contact triggers strictly beyond +/-3.85 and clamps the lateral position. */
+ assert(!boonta_is_past_rail(3.85f));
+ assert(!boonta_is_past_rail(-3.85f));
+ assert(boonta_is_past_rail(3.851f));
+ assert(boonta_is_past_rail(-3.851f));
+ assert(nearf(boonta_lateral_after_rail_contact(4.5f), 3.85f));
+ assert(nearf(boonta_lateral_after_rail_contact(-4.5f), -3.85f));
+ assert(nearf(boonta_lateral_after_rail_contact(3.0f), 3.0f));
 
  /* The contact reverses and attenuates lateral velocity (bounce-back). */
  assert(nearf(boonta_lateral_velocity_after_rail_contact(0.08f), -0.028f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(-0.08f), 0.028f));
-}
-
-static void wide_track_rail_reachability_tests(void) {
- const float road_width = BOONTA_MAX_ROAD_HALF_WIDTH;
- float lateral = 0.0f;
- int rail_reached = 0;
- unsigned int frame;
-
- /*
-  * Simulate a sustained maximum outward motion starting from road center.
-  * The old runtime's +/-4 position clamp would hold at 4.0 and this test
-  * would never observe a rail contact on the widest supported road.
-  */
- assert(nearf(BOONTA_PLAYER_LATERAL_GUARD, 5.335f));
- for (frame = 0U; frame < 32U; ++frame) {
-  float normalized_lateral;
-  lateral = boonta_clamp_player_lateral(
-      boonta_lateral_position_after_frame(
-          lateral, BOONTA_MAX_LATERAL_VELOCITY, BOONTA_MAX_FRAME_SCALE));
-  normalized_lateral = boonta_normalize_road_lateral(lateral, road_width);
-  if (boonta_is_past_rail(normalized_lateral, road_width)) {
-   lateral = boonta_restore_road_lateral(
-       boonta_lateral_after_rail_contact(normalized_lateral, road_width), road_width);
-   rail_reached = 1;
-   break;
-  }
- }
-
- assert(rail_reached);
- assert(nearf(lateral, road_width + BOONTA_RAIL_OUTER_OFFSET));
-
- /* Corrupt and extreme positions remain finite and bounded. */
- assert(nearf(boonta_clamp_player_lateral(NAN), 0.0f));
- assert(nearf(boonta_clamp_player_lateral(100.0f), BOONTA_PLAYER_LATERAL_GUARD));
 }
 
 static void distance_progression_tests(void) {
@@ -778,9 +727,9 @@ static void non_finite_physics_state_tests(void) {
  assert(nearf(boonta_speed_after_offroad_scaled(NAN, 0.0f, 1.0f), 0.0f));
  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, NAN, 1.0f), 0.5f));
  assert(nearf(boonta_abs_float(NAN), 0.0f));
- assert(!boonta_is_past_rail(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
- assert(nearf(boonta_lateral_after_rail_contact(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
- assert(nearf(boonta_lateral_after_rail_contact(INFINITY, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
+ assert(!boonta_is_past_rail(NAN));
+ assert(nearf(boonta_lateral_after_rail_contact(NAN), 0.0f));
+ assert(nearf(boonta_lateral_after_rail_contact(INFINITY), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(NAN), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(INFINITY), 0.0f));
 
@@ -891,6 +840,7 @@ int main(void) {
  lap_clock_tests();
  steering_input_tests();
  pitch_tradeoff_tests();
+ slide_input_tests();
  slide_drift_tests();
  steering_inertia_tests();
  lap_tests();
@@ -902,9 +852,9 @@ int main(void) {
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
+ overtake_count_tests();
   road_width_alignment_tests();
   offroad_and_rail_tests();
-  wide_track_rail_reachability_tests();
  puts("gameplay-state tests passed");
  return 0;
 }
