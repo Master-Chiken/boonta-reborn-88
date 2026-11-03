@@ -596,14 +596,20 @@ static void road_width_alignment_tests(void) {
  assert(nearf(boonta_restore_road_lateral(3.6f, 0.5f), 2.2f));
  assert(nearf(boonta_restore_road_lateral(-3.6f, 100.0f), -4.8f));
 
- /* Rail recovery restores the effective visible edge, not the raw file width. */
+ /* Rail recovery restores the width-aware visible rail line. */
  {
-  const float narrow_rail = boonta_restore_road_lateral(3.85f, 0.5f);
-  const float broad_rail = boonta_restore_road_lateral(3.85f, 100.0f);
-  assert(nearf(narrow_rail, 3.85f * 2.2f / 3.6f));
-  assert(nearf(broad_rail, 3.85f * 4.8f / 3.6f));
+  const float narrow_limit = boonta_normalized_rail_limit(0.5f);
+  const float broad_limit = boonta_normalized_rail_limit(100.0f);
+  const float narrow_rail = boonta_restore_road_lateral(narrow_limit, 0.5f);
+  const float broad_rail = boonta_restore_road_lateral(broad_limit, 100.0f);
+  assert(nearf(narrow_rail, 2.2f + BOONTA_RAIL_OUTER_OFFSET));
+  assert(nearf(broad_rail, 4.8f + BOONTA_RAIL_OUTER_OFFSET));
   assert(nearf(boonta_restore_road_lateral(
-      boonta_lateral_after_rail_contact(4.0f), 0.5f), narrow_rail));
+      boonta_lateral_after_rail_contact(narrow_limit + 1.0f, 0.5f), 0.5f),
+      narrow_rail));
+  assert(nearf(boonta_restore_road_lateral(
+      boonta_lateral_after_rail_contact(broad_limit + 1.0f, 100.0f), 100.0f),
+      broad_rail));
  }
 
  assert(nearf(boonta_normalize_road_lateral(NAN, 3.6f), 0.0f));
@@ -622,14 +628,23 @@ static void offroad_and_rail_tests(void) {
  assert(nearf(boonta_speed_after_offroad(0.01f, 3.85f), 0.0f));
  assert(nearf(boonta_speed_after_offroad(1.0f, 100.0f), 0.0f));
 
- /* A rail contact triggers strictly beyond +/-3.85 and clamps the lateral position. */
- assert(!boonta_is_past_rail(3.85f));
- assert(!boonta_is_past_rail(-3.85f));
- assert(boonta_is_past_rail(3.851f));
- assert(boonta_is_past_rail(-3.851f));
- assert(nearf(boonta_lateral_after_rail_contact(4.5f), 3.85f));
- assert(nearf(boonta_lateral_after_rail_contact(-4.5f), -3.85f));
- assert(nearf(boonta_lateral_after_rail_contact(3.0f), 3.0f));
+ /* A rail contact triggers strictly beyond the width-aware outer line. */
+ {
+  const float rail_limit = boonta_normalized_rail_limit(
+      BOONTA_REFERENCE_ROAD_HALF_WIDTH);
+  assert(!boonta_is_past_rail(rail_limit, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+  assert(!boonta_is_past_rail(-rail_limit, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+  assert(boonta_is_past_rail(rail_limit + 0.001f,
+                             BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+  assert(boonta_is_past_rail(-rail_limit - 0.001f,
+                             BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+  assert(nearf(boonta_lateral_after_rail_contact(
+      rail_limit + 1.0f, BOONTA_REFERENCE_ROAD_HALF_WIDTH), rail_limit));
+  assert(nearf(boonta_lateral_after_rail_contact(
+      -rail_limit - 1.0f, BOONTA_REFERENCE_ROAD_HALF_WIDTH), -rail_limit));
+  assert(nearf(boonta_lateral_after_rail_contact(
+      3.0f, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 3.0f));
+ }
 
  /* The contact reverses and attenuates lateral velocity (bounce-back). */
  assert(nearf(boonta_lateral_velocity_after_rail_contact(0.08f), -0.028f));
@@ -727,9 +742,9 @@ static void non_finite_physics_state_tests(void) {
  assert(nearf(boonta_speed_after_offroad_scaled(NAN, 0.0f, 1.0f), 0.0f));
  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, NAN, 1.0f), 0.5f));
  assert(nearf(boonta_abs_float(NAN), 0.0f));
- assert(!boonta_is_past_rail(NAN));
- assert(nearf(boonta_lateral_after_rail_contact(NAN), 0.0f));
- assert(nearf(boonta_lateral_after_rail_contact(INFINITY), 0.0f));
+ assert(!boonta_is_past_rail(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH));
+ assert(nearf(boonta_lateral_after_rail_contact(NAN, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
+ assert(nearf(boonta_lateral_after_rail_contact(INFINITY, BOONTA_REFERENCE_ROAD_HALF_WIDTH), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(NAN), 0.0f));
  assert(nearf(boonta_lateral_velocity_after_rail_contact(INFINITY), 0.0f));
 
