@@ -151,11 +151,6 @@ static const u8 g_font5x7[128][7] = {
 };
 
 
-static float clampf_local(float value, float low, float high)
-{
-    return boonta_clamp_finite_float(value, low, high);
-}
-
 /*
  * Sample the authored closed-loop spline by travelled arc length. Runtime track
  * points remain in world coordinates; existing scene meshes are built in a local
