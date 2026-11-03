@@ -339,4 +339,47 @@ static inline void boonta_route_graph_sampler_sample_cursor_at(
         x_out, y_out, z_out, width_out);
 }
 
+/*
+ * Sample an arbitrary nearby route coordinate relative to the cursor's current
+ * distance. A copy is advanced, so rendering look-ahead/look-behind never
+ * mutates simulation history. At the initial closed-loop start, a small
+ * negative look-behind is interpreted across the loop seam.
+ */
+static inline int boonta_route_graph_sampler_sample_relative_to_cursor(
+    BoontaRouteGraphSampler *sampler, const BoontaRouteCursor *cursor,
+    float current_route_distance, float target_route_distance,
+    float fallback_half_width,
+    float *x_out, float *y_out, float *z_out, float *width_out)
+{
+    BoontaRouteCursor sample_cursor;
+    float delta_distance;
+    int result;
+
+    if (x_out != NULL) *x_out = 0.0f;
+    if (y_out != NULL) *y_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
+    if (width_out != NULL) *width_out = fallback_half_width;
+    if (sampler == NULL || cursor == NULL ||
+        !isfinite(current_route_distance) || !isfinite(target_route_distance)) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    sample_cursor = *cursor;
+    delta_distance = target_route_distance - current_route_distance;
+    if (sample_cursor.graph != NULL && sample_cursor.graph->closed_loop &&
+        sample_cursor.path_index == 0U &&
+        sample_cursor.distance_on_edge <= BOONTA_ROUTE_CURSOR_EPSILON &&
+        delta_distance < 0.0f) {
+        delta_distance += sampler->total_length;
+    }
+
+    result = boonta_route_cursor_move(&sample_cursor, delta_distance, NULL, 0U);
+    if (result != BOONTA_ROUTE_CURSOR_OK) return result;
+
+    boonta_route_graph_sampler_sample_cursor_at(
+        sampler, &sample_cursor, fallback_half_width,
+        x_out, y_out, z_out, width_out);
+    return BOONTA_ROUTE_CURSOR_OK;
+}
+
 #endif /* BOONTA_REBORN_ROUTE_GRAPH_SAMPLING_H */
