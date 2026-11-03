@@ -458,6 +458,66 @@ static void test_generated_topology_cursor_uses_edge_sampler(void)
     assert_close(cursor.distance_on_edge, offset, 0.00002f);
 }
 
+static void test_cursor_relative_sampling_matches_loop_across_seam(void)
+{
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+    const float offsets[] = { -2.0f, -0.25f, 0.0f, 0.25f, 2.0f, 12.0f };
+    unsigned int index;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    assert(boonta_route_cursor_init(
+        &cursor, &g_generated_route_cursor_graph,
+        g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
+        BOONTA_ROUTE_CURSOR_OK);
+
+    /* Put the cursor just before the final edge-to-start seam. */
+    assert(boonta_route_cursor_move(
+        &cursor, g_sampler.total_length - 0.5f, NULL, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+
+    for (index = 0U; index < sizeof(offsets) / sizeof(offsets[0]); ++index) {
+        const float target_distance = g_sampler.total_length - 0.5f + offsets[index];
+        float cursor_x, cursor_y, cursor_z, cursor_width;
+        float loop_x, loop_y, loop_z, loop_width;
+
+        assert(boonta_route_graph_sampler_sample_relative_to_cursor(
+            &g_sampler, &cursor, g_sampler.total_length - 0.5f,
+            target_distance, BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+            &cursor_x, &cursor_y, &cursor_z, &cursor_width) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        sample(target_distance, &loop_x, &loop_y, &loop_z, &loop_width);
+        assert_close(cursor_x, loop_x, 0.0002f);
+        assert_close(cursor_y, loop_y, 0.0002f);
+        assert_close(cursor_z, loop_z, 0.0002f);
+        assert_close(cursor_width, loop_width, 0.0002f);
+    }
+
+    /* Initial look-behind wraps to the last edge but leaves the real cursor untouched. */
+    {
+        BoontaRouteCursor start_cursor;
+        float x, y, z, width;
+        assert(boonta_route_cursor_init(
+            &start_cursor, &g_generated_route_cursor_graph,
+            g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_graph_sampler_sample_relative_to_cursor(
+            &g_sampler, &start_cursor, 0.0f, -0.25f,
+            BOONTA_REFERENCE_ROAD_HALF_WIDTH, &x, &y, &z, &width) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        sample(-0.25f, &loop_x, &loop_y, &loop_z, &loop_width);
+        assert_close(x, loop_x, 0.0002f);
+        assert_close(y, loop_y, 0.0002f);
+        assert_close(z, loop_z, 0.0002f);
+        assert_close(width, loop_width, 0.0002f);
+        assert(start_cursor.path_index == 0U);
+        assert(start_cursor.distance_on_edge == 0.0f);
+    }
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -496,6 +556,8 @@ int main(void)
     test_edge_local_sampling_clamps_and_rejects_invalid_queries();
     fprintf(stderr, "[route-test] test_generated_topology_cursor_uses_edge_sampler\n");
     test_generated_topology_cursor_uses_edge_sampler();
+    fprintf(stderr, "[route-test] test_cursor_relative_sampling_matches_loop_across_seam\n");
+    test_cursor_relative_sampling_matches_loop_across_seam();
     fprintf(stderr, "[route-test] test_nonfinite_distance_returns_safe_defaults\n");
     test_nonfinite_distance_returns_safe_defaults();
     puts("Native route-graph sampler C tests passed.");
