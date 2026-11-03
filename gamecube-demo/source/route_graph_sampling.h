@@ -306,50 +306,9 @@ static inline void boonta_route_graph_sampler_sample_at(
     edge_index = edge_low;
     edge_target = target - sampler->edge_start_distances[edge_index];
 
-    /*
-     * The LUT has 128 intervals per edge. Binary search keeps each runtime
-     * sample bounded to at most seven interval comparisons instead of a
-     * linear walk across the whole edge.
-     */
-    {
-        unsigned int lower = 0U;
-        unsigned int upper = BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
-        float t;
-        float span;
-
-        while (lower + 1U < upper) {
-            const unsigned int middle = lower + (upper - lower) / 2U;
-            if (sampler->distance_lut[edge_index][middle] <= edge_target) {
-                lower = middle;
-            } else {
-                upper = middle;
-            }
-        }
-
-        span = sampler->distance_lut[edge_index][lower + 1U]
-             - sampler->distance_lut[edge_index][lower];
-        if (span > 0.000001f) {
-            const float fraction = (edge_target
-                - sampler->distance_lut[edge_index][lower]) / span;
-            t = ((float)lower + fraction) /
-                (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
-            if (t < 0.0f) t = 0.0f;
-            if (t > 1.0f) t = 1.0f;
-        } else {
-            t = (float)lower /
-                (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
-        }
-
-        boonta_route_graph_evaluate_edge(edge_index, t, x_out, y_out, z_out);
-        if (width_out != NULL) {
-            *width_out = boonta_route_graph_width_at(
-                edge_index, t, fallback_half_width);
-        }
-        if (y_out != NULL) {
-            if (*y_out < -3.0f) *y_out = -3.0f;
-            if (*y_out > 3.0f) *y_out = 3.0f;
-        }
-    }
+    boonta_route_graph_sampler_sample_edge_at(
+        sampler, edge_index, edge_target, fallback_half_width,
+        x_out, y_out, z_out, width_out);
 }
 
 #endif /* BOONTA_REBORN_ROUTE_GRAPH_SAMPLING_H */
