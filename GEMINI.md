@@ -7,7 +7,7 @@
 - Inspect the actual checked-out branch and files before making claims. Do not assume files from draft PRs or ChatGPT uploads are present in the current checkout.
 - The full Step 102 archive is not automatically available to GitHub Actions or Gemini just because it was uploaded to ChatGPT. Request a controlled, reviewed import if needed.
 - Do not claim native compilation, Dolphin boot, graphics, controls, or gameplay have been validated unless the corresponding run/log/evidence exists.
-- Follow `docs/PROJECT_OPERATING_RULES.md`: one active implementation task, one write-capable agent at a time, explicit owner approval for writes, no scheduled AI work, and no agent-driven merges or branch deletions.
+- Follow `docs/PROJECT_OPERATING_RULES.md`: one active implementation task and one write-capable agent at a time. The owner has authorized the separately gated Boonta Autonomous Loop to select bounded tasks and open PRs without per-task `continue` prompts. No agent-driven merges, settings changes, force-pushes or branch deletions.
 
 ## Provenance and assets
 - Assume the repository is public. Never commit ROMs, disc images, BIOS files, or complete commercial game payloads.
@@ -23,9 +23,9 @@
 - Use the Gemini API-key route only. Do not enable Vertex AI, Google Cloud billing, or Code Assist fallbacks.
 
 ## Safe engineering protocol
-- For a substantial change, inspect first and post a clear plan with files and acceptance criteria. Wait for explicit maintainer approval before modifying code.
+- For manual requests, inspect first and obtain approval for the exact plan. The scheduled Boonta Autonomous Loop is separately owner-authorized to select one bounded task from issue #226 when `GEMINI_AUTONOMOUS_ENABLED` is exactly `true`; it must follow `.github/commands/gemini-autonomous-loop.toml`.
 - After approval, create a unique branch based on the latest default-branch commit, make small changes and open a pull request.
 - Never push directly to main, merge a pull request, enable auto-merge, delete unrelated files or weaken tests.
-- The plan-execute workflow must be blocked unless repository variable GEMINI_WRITE_ENABLED is exactly true. That variable must remain unset until the owner protects main against direct/force pushes and deletion and adds the GEMINI_API_KEY secret.
+- The manual plan-execute path must be blocked unless `GEMINI_WRITE_ENABLED` is exactly `true`. Scheduled autonomous execution must be blocked unless `GEMINI_AUTONOMOUS_ENABLED` is exactly `true`, `GEMINI_FREE_TIER_CONFIRMED` is exactly `true`, `GEMINI_API_KEY`, `APP_ID`, and `APP_PRIVATE_KEY` are configured, and the run originates from the Boonta Autonomous Loop workflow for issue #226.
 - If the owner has not verified branch protection and the free API secret, stay read-only and do not run code-writing tools.
 - Report commands and outcomes accurately. Keep host tests, native GameCube DOL builds, Dolphin process tests and interactive graphics/controls validation distinct.
