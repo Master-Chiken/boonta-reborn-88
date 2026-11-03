@@ -380,6 +380,11 @@ if "Actions: read" not in setup:
 wii64_trigger = wii64_tests.split("permissions:", 1)[0]
 if '"tools/**"' in wii64_trigger:
     errors.append("Wii64 tooling tests must not run for unrelated tools/ changes")
+wii64_branches = wii64_trigger.split("branches:", 1)[1].split("paths:", 1)[0]
+if not all(branch in wii64_branches for branch in ('      - main', '      - "tools/**"', '      - "ci/**"')):
+    errors.append("Wii64 push branch filters must retain main, tools/** and ci/**")
+if '"tools/**"' in wii64_trigger.split("paths:", 1)[1]:
+    errors.append("Wii64 tooling test path filters must remain narrower than all tools/**")
 for required_path in (
     '      - "tools/compare_wii64_rice_ini.py"',
     '      - "tools/compare_wii64_rice_profiles.py"',

@@ -4,11 +4,7 @@ on:
   push:
     branches:
       - main
-      - "tools/compare_wii64_rice_ini.py"
-      - "tools/compare_wii64_rice_profiles.py"
-      - "tools/inspect_wii64_rice_ini.py"
-      - "tools/verify_wii64_archive.py"
-      - "tools/tests/**"
+      - "tools/**"
       - "ci/**"
     paths:
       - "tools/compare_wii64_rice_ini.py"
