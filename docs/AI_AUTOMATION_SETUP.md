@@ -26,7 +26,7 @@ L'exécution d'écriture reste fermée tant que toutes les conditions suivantes 
 - La variable Actions `GEMINI_AUTONOMOUS_ENABLED` vaut exactement `true`.
 - `GEMINI_FREE_TIER_CONFIRMED` vaut exactement `true` après vérification personnelle du Free tier et de l'absence de compte Cloud Billing lié.
 - Le secret `GEMINI_API_KEY` est configuré.
-- La variable `APP_ID` et le secret `APP_PRIVATE_KEY` sont configurés pour que les PR créées puissent déclencher les workflows CI.
+- La variable `APP_ID` et le secret `APP_PRIVATE_KEY` sont configurés. Le GitHub App doit disposer de `Contents: write`, `Issues: write`, `Pull requests: write` et `Actions: read` : les trois premières permissions permettent de créer des branches/PR et de publier le suivi, la dernière permet à l'agent de lire les exécutions CI et les journaux d'échec.
 - Les rulesets `main`/`dev` protègent les branches concernées. L'agent ne reçoit aucun droit de fusion, de modification des paramètres, de force-push ou de suppression.
 
 Le mode autonome ne contourne pas le budget de 0 €. Les quotas gratuits peuvent limiter ou interrompre les cycles ; aucun modèle, fournisseur ou service payant de secours ne sera utilisé. Une exécution planifiée n'est pas un processus permanent : GitHub Actions démarre un cycle, puis s'arrête. Les cycles suivants reprennent à partir des issues, branches et PR visibles.
