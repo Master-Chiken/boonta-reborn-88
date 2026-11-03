@@ -418,9 +418,8 @@ static void test_generated_topology_cursor_uses_edge_sampler(void)
     assert(state.path_index == BOONTA_RUNTIME_ROUTE_EDGE_COUNT);
     assert(state.history_count == BOONTA_RUNTIME_ROUTE_EDGE_COUNT + 1U);
     assert(!state.finished);
-    boonta_route_graph_sampler_sample_edge_at(
-        &g_sampler, state.edge, cursor.distance_on_edge,
-        BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+    boonta_route_graph_sampler_sample_cursor_at(
+        &g_sampler, &cursor, BOONTA_REFERENCE_ROAD_HALF_WIDTH,
         &cursor_x, &cursor_y, &cursor_z, &cursor_width);
     sample(g_sampler.total_length + offset,
            &loop_x, &loop_y, &loop_z, &loop_width);
@@ -428,6 +427,18 @@ static void test_generated_topology_cursor_uses_edge_sampler(void)
     assert_close(cursor_y, loop_y, 0.0002f);
     assert_close(cursor_z, loop_z, 0.0002f);
     assert_close(cursor_width, loop_width, 0.0002f);
+
+    /* The adapter refuses a cursor backed by a different LUT. */
+    {
+        BoontaRouteCursor invalid_cursor = cursor;
+        invalid_cursor.edge_lengths = NULL;
+        cursor_x = 9.0f; cursor_y = 9.0f; cursor_z = 9.0f; cursor_width = 0.0f;
+        boonta_route_graph_sampler_sample_cursor_at(
+            &g_sampler, &invalid_cursor, BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+            &cursor_x, &cursor_y, &cursor_z, &cursor_width);
+        assert(cursor_x == 0.0f && cursor_y == 0.0f && cursor_z == 0.0f);
+        assert(cursor_width == BOONTA_REFERENCE_ROAD_HALF_WIDTH);
+    }
 
     /* Reverse across the seam, then replay the cached start edge. */
     assert(boonta_route_cursor_move(&cursor, -0.1f, NULL, 0U) ==
