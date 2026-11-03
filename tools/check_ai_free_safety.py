@@ -415,9 +415,9 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
-    "run.event === 'schedule'",
-    "run.event === 'workflow_dispatch'",
+    "['schedule', 'workflow_dispatch'].includes(run.event)",
     "run.name === 'Boonta Autonomous Loop'",
+    "run.head_branch === 'main'",
     "targetIssueNumber = 226",
 ):
     if required_guard not in ci_triage:
