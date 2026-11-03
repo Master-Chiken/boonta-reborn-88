@@ -161,13 +161,23 @@ static inline int boonta_route_graph_sampler_prepare(
     return 1;
 }
 
+#if !BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
+static inline float boonta_route_graph_edge_width_sample(
+    unsigned int edge_index, unsigned int sample_index)
+{
+    if (sample_index >= BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE) {
+        return boonta_runtime_route_width_end_samples[edge_index];
+    }
+    return boonta_runtime_route_width_samples[
+        edge_index * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE + sample_index];
+}
+#endif
+
 static inline float boonta_route_graph_width_at(
     unsigned int edge_index, float t, float fallback_half_width)
 {
-    const unsigned int sample_count = BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT;
-    float coordinate;
-    unsigned int base;
-    float fraction;
+    float width;
+
     if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT || !isfinite(t)) {
         return fallback_half_width;
     }
@@ -175,21 +185,63 @@ static inline float boonta_route_graph_width_at(
      * arbitrary/NaN parameter become an out-of-bounds sample index. */
     if (t < 0.0f) t = 0.0f;
     if (t > 1.0f) t = 1.0f;
-    coordinate =
-        (float)(edge_index * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE)
-        + t * (float)BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
-    base = (unsigned int)floorf(coordinate);
-    fraction = coordinate - (float)base;
-    const unsigned int i1 = base % sample_count;
-    const unsigned int i0 = (i1 + sample_count - 1U) % sample_count;
-    const unsigned int i2 = (i1 + 1U) % sample_count;
-    const unsigned int i3 = (i1 + 2U) % sample_count;
-    const float width = boonta_route_graph_catmull_component(
-        boonta_runtime_route_width_samples[i0],
-        boonta_runtime_route_width_samples[i1],
-        boonta_runtime_route_width_samples[i2],
-        boonta_runtime_route_width_samples[i3],
-        fraction);
+
+#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
+    {
+        const unsigned int sample_count = BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT;
+        const float coordinate =
+            (float)(edge_index * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE)
+            + t * (float)BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
+        const unsigned int base = (unsigned int)floorf(coordinate);
+        const float fraction = coordinate - (float)base;
+        const unsigned int i1 = base % sample_count;
+        const unsigned int i0 = (i1 + sample_count - 1U) % sample_count;
+        const unsigned int i2 = (i1 + 1U) % sample_count;
+        const unsigned int i3 = (i1 + 2U) % sample_count;
+
+        /* Preserve the periodic single-loop width curve byte-for-byte. */
+        width = boonta_route_graph_catmull_component(
+            boonta_runtime_route_width_samples[i0],
+            boonta_runtime_route_width_samples[i1],
+            boonta_runtime_route_width_samples[i2],
+            boonta_runtime_route_width_samples[i3],
+            fraction);
+    }
+#else
+    {
+        const float coordinate =
+            t * (float)BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
+        unsigned int base = (unsigned int)floorf(coordinate);
+        float fraction;
+        unsigned int i0;
+        unsigned int i1;
+        unsigned int i2;
+        unsigned int i3;
+
+        /* The t=1 endpoint is stored separately for this exact edge. */
+        if (base >= BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE) {
+            base = BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE - 1U;
+            fraction = 1.0f;
+        } else {
+            fraction = coordinate - (float)base;
+        }
+        i0 = base > 0U ? base - 1U : 0U;
+        i1 = base;
+        i2 = base + 1U;
+        i3 = i2 + 1U;
+        if (i3 > BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE) {
+            i3 = BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
+        }
+
+        /* Never read a sibling edge's width samples at a branch endpoint. */
+        width = boonta_route_graph_catmull_component(
+            boonta_route_graph_edge_width_sample(edge_index, i0),
+            boonta_route_graph_edge_width_sample(edge_index, i1),
+            boonta_route_graph_edge_width_sample(edge_index, i2),
+            boonta_route_graph_edge_width_sample(edge_index, i3),
+            fraction);
+    }
+#endif
 
     if (!isfinite(width)) return fallback_half_width;
     if (width < 2.2f) return 2.2f;
