@@ -1,4 +1,5 @@
 #include "../source/track_sampling.h"
+#include "../source/gameplay_state.h"
 
 #include <assert.h>
 #include <math.h>
@@ -100,6 +101,45 @@ static void test_closed_loop_seam_position_and_tangent_are_continuous(void)
     assert(direction_dot > 0.99f);
 }
 
+
+static void test_compiled_lap_length_drives_three_lap_finish_and_sampler_wrap(void)
+{
+    const float lap_length = BOONTA_TRACK_LENGTH;
+    float start_x, start_y, start_z, start_width;
+    float x, y, z, width;
+    unsigned int lap_count = 0U;
+    unsigned int lap;
+
+    assert(isfinite(lap_length) && lap_length > 1.0f);
+    sample(0.0f, &start_x, &start_y, &start_z, &start_width);
+
+    /*
+     * The actual renderer sampler wraps its Catmull-Rom position while the
+     * gameplay counter stays unwrapped and counts this compiled header length.
+     * These values must remain aligned over the complete three-lap race.
+     */
+    for (lap = 1U; lap <= 3U; ++lap) {
+        const float boundary = (float)lap * lap_length;
+        const float previous_distance = boundary - 0.01f;
+        const float current_distance = boundary + 0.01f;
+
+        sample(boundary, &x, &y, &z, &width);
+        assert_close(x, start_x, 0.001f);
+        assert_close(y, start_y, 0.001f);
+        assert_close(z, start_z, 0.001f);
+        assert_close(width, start_width, 0.001f);
+
+        lap_count = boonta_lap_count_after_frame(
+            lap_count, previous_distance, current_distance, lap_length);
+        assert(lap_count == lap);
+        assert(boonta_race_is_finished(lap_count, 3U) == (lap == 3U));
+    }
+
+    /* A single large update must count every crossed boundary on this track. */
+    assert(boonta_lap_count_after_frame(
+        0U, lap_length * 0.25f, lap_length * 3.25f, lap_length) == 3U);
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -114,6 +154,7 @@ int main(void)
     test_all_internal_chord_boundaries_land_on_the_next_track_point();
     test_positive_negative_and_multiple_lap_sampling_wraps();
     test_closed_loop_seam_position_and_tangent_are_continuous();
+    test_compiled_lap_length_drives_three_lap_finish_and_sampler_wrap();
     test_nonfinite_distance_returns_safe_defaults();
     puts("Production track-sampling C tests passed.");
     return 0;
