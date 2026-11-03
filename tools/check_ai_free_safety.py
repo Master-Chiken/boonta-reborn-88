@@ -353,6 +353,108 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in s
 if "Actions: read" not in setup:
     errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
 
+# Freeze the autonomous entry points and least-privilege boundary.
+# A scheduled run is allowed; a manual run is owner-only; no other event may
+# invoke the autonomous writer.
+autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", autonomous_trigger)
+if autonomous_events != ["schedule", "workflow_dispatch"]:
+    errors.append(
+        "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
+        f"found {autonomous_events!r}"
+    )
+if "if: github.event_name == 'schedule' || github.actor == github.repository_owner" not in autonomous:
+    errors.append("Manual autonomous dispatch must be restricted to the repository owner")
+if "workflow_dispatch:\\n    inputs:" in autonomous_trigger:
+    errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
+
+caller_permission_block = autonomous.split("permissions:", 1)[1].split("concurrency:", 1)[0]
+caller_permissions = dict(
+    re.findall(r"(?m)^  ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$", caller_permission_block)
+)
+expected_caller_permissions = {
+    "contents": "write",
+    "issues": "write",
+    "pull-requests": "write",
+}
+if caller_permissions != expected_caller_permissions:
+    errors.append(
+        "Autonomous caller permissions must be exactly the contents/issues/PR write set; "
+        f"found {caller_permissions!r}"
+    )
+
+autonomous_job = autonomous.split("jobs:", 1)[1]
+job_permissions_match = re.search(
+    r"(?ms)^    permissions:\\n(?P<block>(?:      [^\\n]*\\n)+)",
+    autonomous_job,
+)
+if not job_permissions_match:
+    errors.append("Autonomous reusable-workflow job must declare an explicit least-privilege permission set")
+else:
+    job_permissions = dict(
+        re.findall(
+            r"(?m)^      ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$",
+            job_permissions_match.group("block"),
+        )
+    )
+    if job_permissions != expected_caller_permissions:
+        errors.append(
+            "Autonomous reusable-workflow job permissions must be exactly the contents/issues/PR write set; "
+            f"found {job_permissions!r}"
+        )
+
+if "secrets: inherit" not in autonomous:
+    errors.append("Autonomous caller must pass only the repository-scoped secrets required by its reusable workflow")
+if "workflow_dispatch" in autonomous_trigger and "github.actor == github.repository_owner" not in autonomous:
+    errors.append("Manual dispatch must remain owner-only")
+
+# The autonomous model can create/update branches and PRs, but the MCP allowlist
+# must never expose merge, deletion, repository administration, or secret tools.
+tool_match = re.search(r'"includeTools":\\s*\\[(.*?)\\]', execute, re.DOTALL)
+if not tool_match:
+    errors.append("Autonomous Gemini MCP allowlist is missing or cannot be audited")
+else:
+    mcp_tools = re.findall(r'"([^"]+)"', tool_match.group(1))
+    forbidden_tool_fragments = (
+        "merge",
+        "delete",
+        "repository_settings",
+        "repository_ruleset",
+        "secret",
+        "variable",
+    )
+    forbidden_tools = [
+        tool for tool in mcp_tools
+        if any(fragment in tool.lower() for fragment in forbidden_tool_fragments)
+    ]
+    if forbidden_tools:
+        errors.append(
+            "Autonomous Gemini MCP allowlist must not expose merge/delete/admin/secret tools; "
+            f"found {forbidden_tools!r}"
+        )
+    for required_tool in ("create_branch", "create_pull_request", "push_files", "get_job_logs"):
+        if required_tool not in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist is missing required bounded capability {required_tool!r}")
+
+# The action must stop at the model/API boundary when the owner gates fail.
+guard_position = execute.find("id: free_tier_guard")
+mint_position = execute.find("name: 'Mint identity token'")
+checkout_position = execute.find("name: 'Checkout Code'")
+model_position = execute.find("name: 'Run Gemini CLI'")
+if not (0 <= guard_position < mint_position < checkout_position < model_position):
+    errors.append("Autonomous free-tier/owner gate must run before token mint, checkout, and model invocation")
+for guarded_step in (
+    "name: 'Mint identity token'\\n        id: 'mint_identity_token'\\n        if: |-",
+    "name: 'Checkout Code'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: 'Prepare prompt context'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: 'Run Gemini CLI'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+):
+    if guarded_step not in execute:
+        errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
+if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
+    errors.append("Autonomous workflow must keep the explicitly reviewed Gemini 3.5 Flash-Lite model")
+if "upload_artifacts: 'false'" not in execute:
+    errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
+
 if errors:
     print("AI free-tier safety checks FAILED:")
     for error in errors:
