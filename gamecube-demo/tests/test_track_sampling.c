@@ -140,6 +140,47 @@ static void test_compiled_lap_length_drives_three_lap_finish_and_sampler_wrap(vo
         0U, lap_length * 0.25f, lap_length * 3.25f, lap_length) == 3U);
 }
 
+
+static void test_runtime_catmull_rom_length_matches_compiled_lap_distance(void)
+{
+    const unsigned int subdivisions_per_segment = 128U;
+    float travelled = 0.0f;
+    float runtime_curve_length = 0.0f;
+    float previous_x, previous_y, previous_z, width;
+    unsigned int segment;
+
+    sample(0.0f, &previous_x, &previous_y, &previous_z, &width);
+    for (segment = 0U; segment < BOONTA_TRACK_POINT_COUNT; ++segment) {
+        const float segment_length = g_sampler.segment_lengths[segment];
+        unsigned int step;
+        for (step = 1U; step <= subdivisions_per_segment; ++step) {
+            const float distance = travelled + segment_length *
+                ((float)step / (float)subdivisions_per_segment);
+            float x, y, z;
+            sample(distance, &x, &y, &z, &width);
+            {
+                const float dx = x - previous_x;
+                const float dy = y - previous_y;
+                const float dz = z - previous_z;
+                runtime_curve_length += sqrtf(dx * dx + dy * dy + dz * dz);
+            }
+            previous_x = x;
+            previous_y = y;
+            previous_z = z;
+        }
+        travelled += segment_length;
+    }
+
+    {
+        const float relative_error =
+            fabsf(runtime_curve_length - BOONTA_TRACK_LENGTH) / BOONTA_TRACK_LENGTH;
+        printf("Runtime Catmull-Rom sampler length: %.6f m; "
+               "compiled lap distance: %.6f m; difference: %.5f%%\\n",
+               runtime_curve_length, BOONTA_TRACK_LENGTH, relative_error * 100.0f);
+        assert(relative_error < 0.0002f);
+    }
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -155,6 +196,7 @@ int main(void)
     test_positive_negative_and_multiple_lap_sampling_wraps();
     test_closed_loop_seam_position_and_tangent_are_continuous();
     test_compiled_lap_length_drives_three_lap_finish_and_sampler_wrap();
+    test_runtime_catmull_rom_length_matches_compiled_lap_distance();
     test_nonfinite_distance_returns_safe_defaults();
     puts("Production track-sampling C tests passed.");
     return 0;
