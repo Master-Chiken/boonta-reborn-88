@@ -1,13 +1,14 @@
 # GitHub AI agents — current operating rules
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-11-03
 
 ## What is available
 
 The repository has GitHub Actions workflows for:
 - **Gemini on-demand review/invocation:** triggered by an authorized issue/PR comment or review beginning with `@gemini-cli`. Read-only review requests have been tested and can post a report back to the PR.
-- **Gemini plan/execute:** a separate writer workflow exists, but code-writing is gated by an owner-only `@gemini-cli /approve` request and the repository Actions variable `GEMINI_WRITE_ENABLED=true`. The write path must remain disabled until the owner has deliberately verified main protection, the free-tier API setup, and the variable/secret configuration.
-- **Daily project coordination:** scheduled read-only reporting. This is a scheduled workflow, not a permanent agent that independently works on code all day.
+- **Gemini plan/execute:** manual code-writing remains gated by the owner-only `@gemini-cli /approve` request and `GEMINI_WRITE_ENABLED=true`.
+- **Boonta Autonomous Loop:** a separate six-hour scheduled workflow can select one bounded task from issue #226, continue its own existing PR, run checks and open a PR without per-task `continue` prompts. It requires `GEMINI_AUTONOMOUS_ENABLED=true`, the free-tier gate, Gemini API key and GitHub App credentials. It cannot merge, change settings, force-push or delete branches.
+- **Read-only project coordination:** the separate coordinator is manual-only. The autonomous engineering loop is not a permanent background process; GitHub Actions starts bounded runs and resumes from repository state.
 - **Deterministic CI failure triage:** summarizes failed workflow job/step metadata; it does not execute PR code or infer a root cause.
 - **OpenRouter Free reviewer:** a separate manual, comment-only reviewer is documented in the repository. It requires its own provider key and has no right to merge or write code.
 
@@ -26,7 +27,7 @@ For substantial changes:
 2. Keep implementation on a named branch and open a reviewable PR.
 3. Review changed files, license/provenance, dependencies, and test commands.
 4. Verify the relevant CI checks on the exact PR head before integration.
-5. Only the repository owner may choose to enable a writer path; an agent must never approve or merge its own work.
+5. The owner has authorized the separately gated autonomous loop to select tasks and open PRs; an agent must never approve or merge its own work.
 
 ## Current project context
 
@@ -70,4 +71,4 @@ Use [the shared playbook](MULTI_AGENT_RESEARCH_PLAYBOOK.md) as the project-speci
 - **OpenRouter Free:** optional and only if the manual reviewer is configured; text opinions cannot substitute for code, emulator or hardware validation.
 - **Biddy-Pinky:** human independent review after a single candidate diff and exact-head CI are ready.
 
-Do not add a scheduled coordinator or expand CI for this. The owner already has a manual read-only coordination workflow; the blocker is task routing and duplicate detection, not missing automation.
+Do not add additional scheduled read-only coordination reports. The scheduled autonomous engineering loop is a separate, explicitly gated workflow; it must serialize writers and use the canonical queue rather than create parallel task streams.
