@@ -76,7 +76,9 @@ static void test_disconnected_and_wrong_expansion_are_neutral(void)
     assert(frame.buttons_held == 0U);
     assert(frame.stick_x == 0 && frame.stick_y == 0);
     assert(frame.trigger_l == 0U && frame.trigger_r == 0U);
+    assert(frame.status == BOONTA_INPUT_STATUS_WII_NO_CLASSIC);
     assert(boonta_classic_input_translate(0).buttons_held == 0U);
+    assert(boonta_classic_input_translate(0).status == BOONTA_INPUT_STATUS_WII_NO_CLASSIC);
 
     sample.classic_connected = 1;
     sample.buttons_held = BOONTA_CLASSIC_BUTTON_A;
@@ -87,6 +89,7 @@ static void test_disconnected_and_wrong_expansion_are_neutral(void)
     frame = boonta_classic_input_translate(&sample);
     assert(frame.buttons_held == BOONTA_BUTTON_A);
     assert(frame.stick_x == -44 && frame.stick_y == 51);
+    assert(frame.status == BOONTA_INPUT_STATUS_WII_CLASSIC_READY);
 }
 
 static void test_shoulders_keep_analog_range_and_digital_clicks(void)
