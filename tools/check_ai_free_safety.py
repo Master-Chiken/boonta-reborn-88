@@ -436,6 +436,9 @@ for required_phrase in (
     "Do not push empty commits",
     "read only the failing job logs",
     "no documented safe rerun action",
+    "five minutes beyond that timeout",
+    "likely stale runner/Actions state",
+    "do not wait indefinitely",
     "optional `continue-on-error` diagnostics",
 ):
     if required_phrase not in autonomous_prompt:
