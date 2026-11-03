@@ -34,9 +34,10 @@ class RouteCursorRuntimeSourceTests(unittest.TestCase):
         marker = "g_distance = boonta_distance_after_pitch_scaled("
         distance_index = self.source.index(marker)
         update_index = self.source.index(
-            "advance_runtime_route_cursor(\\n                    g_distance - previous_distance, steering)",
-            distance_index,
+            "advance_runtime_route_cursor(", distance_index
         )
+        call = self.source[update_index:update_index + 220]
+        self.assertIn("g_distance - previous_distance, steering)", call)
         branch_lap_index = self.source.index(
             "g_lap_count = route_state.completed_laps;", distance_index
         )
