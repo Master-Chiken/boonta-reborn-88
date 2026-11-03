@@ -126,3 +126,83 @@ Sources: [race](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd
 5. **Platform-specific comparison:** only after the PC call paths are coherent, add the N64 and Dreamcast evidence row-by-row. Existing N64 recompilation work is MIPS evidence about that N64 build; it is not an independent PC or GameCube/Wii validation source.
 
 **Interpretation boundary:** the 153 `HANG("TODO")` bodies identify where this PC reconstruction currently leaves explicit holes. They do not mean that 153 retail game systems are missing, nor that the corresponding behavior is absent from the commercial PC game. Some function bodies may be available in the separately pinned Steam-PC Ghidra reference, but its executable build and address space differ and its repository's root licence was not identified. Cross-match by function semantics and version first; keep it read-only.
+
+
+## Steam-PC address-correlation audit — 2026-11-03
+
+A recursive tree comparison was performed between:
+
+- `SW_RACER_RE` at `66120be334a3fd38c10a259f3528cffbfed8ddc5`, scanning the 153 literal `HANG("TODO")` bodies across 11 source modules and reading each adjacent function-address comment;
+- `DeonPoncini/swep1r_decomp` at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, whose README explicitly identifies its target as the **Steam version** and which contains the frozen `c/` and `asm/` Ghidra exports.
+
+### Exact-address file coverage
+
+A candidate was counted only when **both** `c/FUN_<address>.c` and `asm/FUN_<address>.s` exist at the exact address. This is a filesystem/tree correlation, not proof of identical executable bytes, code equivalence or a successful runtime match.
+
+| SW_RACER_RE module | TODO bodies | Steam C+ASM exact-address candidates | No candidate in either Steam export |
+|---|---:|---:|---:|
+| `swrRace.c` | 31 | 27 | 4 |
+| `swrObj.c` | 58 | 41 | 17 |
+| `swrSpline.c` | 2 | 1 | 1 |
+| `swrControl.c` | 11 | 10 | 1 |
+| `swrModel.c` | 12 | 12 | 0 |
+| `swrRender.c` | 15 | 15 | 0 |
+| `swrSound.c` | 3 | 2 | 1 |
+| `swrUI.c` | 9 | 9 | 0 |
+| `swrMultiplayer.c` | 8 | 8 | 0 |
+| `swrWeather.c` | 3 | 3 | 0 |
+| `swrLoader.c` | 1 | 1 | 0 |
+| **Total** | **153** | **129 (84.3%)** | **24 (15.7%)** |
+
+### The 24 unresolved address candidates
+
+No matching `c/FUN_<address>.c` + `asm/FUN_<address>.s` pair was found in the pinned Steam export tree for these addresses:
+
+| SW_RACER_RE function | Address | File / line |
+|---|---:|---|
+| `swrRace_SelectProfileMenu` | `0x00401340` | `src/Swr/swrRace.c:33` |
+| `swrRace_AdvanceSplineCursor` | `0x0047F8E0` | `src/Swr/swrRace.c:4753` |
+| `swrRace_UpdateSplineBinding` | `0x0047FBB0` | `src/Swr/swrRace.c:4759` |
+| `swrRace_ComputeTrackOffset` | `0x0047FCA0` | `src/Swr/swrRace.c:4765` |
+| `swrObjcMan_F0` | `0x00451CD0` | `src/Swr/swrObj.c:181` |
+| `swrObjcMan_F2` | `0x00451D40` | `src/Swr/swrObj.c:187` |
+| `swrObjcMan_F3` | `0x004542E0` | `src/Swr/swrObj.c:193` |
+| `swrObjcMan_F4` | `0x004543F0` | `src/Swr/swrObj.c:199` |
+| `swrObjScene_F0` | `0x00454A10` | `src/Swr/swrObj.c:206` |
+| `swrObjScene_F4` | `0x00454A30` | `src/Swr/swrObj.c:212` |
+| `swrObjHang_F2` | `0x00457B00` | `src/Swr/swrObj.c:261` |
+| `swrObjHang_F3` | `0x00457B90` | `src/Swr/swrObj.c:267` |
+| `swrObjHang_F4` | `0x0045A040` | `src/Swr/swrObj.c:298` |
+| `swrObjJdge_UpdateSplineGuideNodes` | `0x0045E970` | `src/Swr/swrObj.c:909` |
+| `swrObjJdge_UpdateOvertakeSounds` | `0x0045EF70` | `src/Swr/swrObj.c:1073` |
+| `swrObjElmo_F0` | `0x00467CD0` | `src/Swr/swrObj.c:2057` |
+| `swrObjElmo_F3` | `0x00468570` | `src/Swr/swrObj.c:2063` |
+| `swrObjElmo_F4` | `0x00468660` | `src/Swr/swrObj.c:2069` |
+| `swrObjToss_F2` | `0x0047B9E0` | `src/Swr/swrObj.c:2486` |
+| `swrObjToss_F3` | `0x0047BA30` | `src/Swr/swrObj.c:2492` |
+| `swrObjToss_F4` | `0x0047BBA0` | `src/Swr/swrObj.c:2498` |
+| `swrSpline_ProjectPointStub` | `0x0047EB50` | `src/Swr/swrSpline.c:524` |
+| `swrControl_MappingsMenu` | `0x00402250` | `src/Main/swrControl.c:10` |
+| `swrSound_SelectPlanetIntroMusic` | `0x00427AD0` | `src/Swr/swrSound.c:1312` |
+
+Steam export references for representative, high-value matched functions:
+- [Track initialization — `FUN_00466bd0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00466bd0.c)
+- [Track model setup — `FUN_00465510`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465510.c)
+- [Spline loader — `FUN_00465d00`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465d00.c)
+- [Ground contact — `FUN_00479e10`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479e10.c)
+- [Pod update/control — `FUN_0047ab40`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ab40.c)
+- [Pod contact/physics — `FUN_0047b520`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c)
+
+### Call-chain reconstruction now supported by both PC references
+
+The pinned `SW_RACER_RE` source provides names, types, call sites and explicit reconstruction gaps; the Steam snapshot supplies address-correlated candidate decompilation for a large majority of those gaps. The following is the first coherent track/race chain:
+
+1. `swrObjJdge_F4` handles the `'Begn'` race sub-event and reads the selected player count, planet, model ID, spline ID, camera spline, track number, lap count and AI speed from its payload.
+2. It calls `swrObjJdge_InitTrack` at `0x00466BD0`. In the Steam candidate, this entry initializes per-race globals and player bookkeeping, then calls, in order, model setup (`0x00465510`), planet/track environment setup (`0x00464630`), spline setup (`0x00465D00`), camera setup (`0x00465D50`), primary light (`0x00466370`), AI settings (`0x004667E0`) and racer spawning (`0x004663E0`).
+3. The model setup candidate at `0x00465510` initializes resource buffers, resolves the track model resource and invokes dust/fireball/trigger-related setup helpers before publishing the loaded-scene state.
+4. The spline setup candidate at `0x00465D00` loads the selected spline ID, stores the loaded spline pointer, invokes the spline/model binding helper and the secondary setup helper.
+5. Back in `swrObjJdge_F4`, after `InitTrack` returns, the caller marks scene objects loaded, switches the judge to race-preparation state 4, sets its transition timer, selects planet intro music and establishes the viewport layout.
+6. During the race tick, `swrObjJdge_F2` calls the implemented `swrRace_UpdateRaceProgress`. That function calls three unresolved cursor/binding/offset stubs (`0x0047F8E0`, `0x0047FBB0`, `0x0047FCA0)), but then runs lap-completion and checkpoint accounting. This gives a narrow, testable next research seam: identify these three spline functions, rather than treating the entire race tick as missing.
+7. The implemented PC ground-contact orchestrator (`0x00479E10`) already combines ground raycast, surface-normal / gravity handling, slope steering, local wall scrape/collision and hover-pad updates; several of its callees are among the address-correlated Steam candidates.
+
+**Important platform/build caveat:** the Steam README identifies the Steam release as its target, while the exact executable/revision that the `SW_RACER_RE` snapshot targets has not been independently hash-identified. The 129/153 result therefore means **same numeric function address plus both exported Steam C and assembly files exist**, not "same bytes", not "same retail build", and not verified behavior in that other build. Before a candidate is treated as matching, compare the function prologue/call structure and reconcile release identity. Use the Steam decompilation as a read-only semantic reference; no source is copied into Boonta.
