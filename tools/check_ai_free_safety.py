@@ -353,6 +353,21 @@ for required_phrase in (
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
+
+# Enforce a reuse-first engineering method and efficient evidence-based validation.
+for required_phrase in (
+    "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST",
+    "Extend the canonical implementation",
+    "Never hand-edit generated headers or artifacts",
+    "Optimize only a measured hot path",
+    "Reuse passing checks for an unchanged exact SHA",
+    "Group related file edits into one logical commit",
+    "full historical appendices/comments",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
+if "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST" not in instructions:
+    errors.append("GEMINI.md must preserve the owner's make-it-work/good/fast engineering sequence")
 if "contents: write" not in autonomous or "issues: write" not in autonomous or "pull-requests: write" not in autonomous:
     errors.append("Autonomous workflow must grant only the scoped repository/issue/PR permissions required by its gated writer")
 if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in setup:
