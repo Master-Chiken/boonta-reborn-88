@@ -458,6 +458,58 @@ static void test_generated_topology_cursor_uses_edge_sampler(void)
     assert_close(cursor.distance_on_edge, offset, 0.00002f);
 }
 
+static void test_generated_cursor_completes_three_laps_and_resets(void)
+{
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+    float x, y, z, width;
+    float expected_x, expected_y, expected_z, expected_width;
+    const float three_laps = 3.0f * BOONTA_RUNTIME_ROUTE_LENGTH;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    assert(boonta_route_cursor_init(
+        &cursor, &g_generated_route_cursor_graph,
+        g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, three_laps, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_START_NODE_INDEX);
+    assert(state.path_index == 3U * BOONTA_RUNTIME_ROUTE_EDGE_COUNT);
+    assert(state.history_count == 3U * BOONTA_RUNTIME_ROUTE_EDGE_COUNT + 1U);
+    assert(state.history_count < BOONTA_ROUTE_CURSOR_MAX_HISTORY);
+    assert(!state.finished);
+    assert_close(cursor.distance_on_edge, 0.0f, 0.0001f);
+
+    /* A final-lap camera look-behind can cross the third finish seam. */
+    assert(boonta_route_graph_sampler_sample_relative_to_cursor(
+        &g_sampler, &cursor, three_laps, three_laps - 0.25f,
+        BOONTA_REFERENCE_ROAD_HALF_WIDTH, &x, &y, &z, &width) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    sample(three_laps - 0.25f,
+           &expected_x, &expected_y, &expected_z, &expected_width);
+    assert_close(x, expected_x, 0.0002f);
+    assert_close(y, expected_y, 0.0002f);
+    assert_close(z, expected_z, 0.0002f);
+    assert_close(width, expected_width, 0.0002f);
+
+    /* The same reset used by the game returns to the first edge with no history. */
+    assert(boonta_route_cursor_init(
+        &cursor, &g_generated_route_cursor_graph,
+        g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_START_NODE_INDEX);
+    assert(state.path_index == 0U);
+    assert(state.history_count == 1U);
+    assert_close(cursor.distance_on_edge, 0.0f, 0.000001f);
+}
+
 static void test_cursor_relative_sampling_matches_loop_across_seam(void)
 {
     BoontaRouteCursor cursor;
@@ -557,6 +609,8 @@ int main(void)
     test_edge_local_sampling_clamps_and_rejects_invalid_queries();
     fprintf(stderr, "[route-test] test_generated_topology_cursor_uses_edge_sampler\n");
     test_generated_topology_cursor_uses_edge_sampler();
+    fprintf(stderr, "[route-test] test_generated_cursor_completes_three_laps_and_resets\n");
+    test_generated_cursor_completes_three_laps_and_resets();
     fprintf(stderr, "[route-test] test_cursor_relative_sampling_matches_loop_across_seam\n");
     test_cursor_relative_sampling_matches_loop_across_seam();
     fprintf(stderr, "[route-test] test_nonfinite_distance_returns_safe_defaults\n");
