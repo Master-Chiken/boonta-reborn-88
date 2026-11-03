@@ -343,35 +343,6 @@ static inline int boonta_route_graph_edge_horizontal_tangent(
  * chooses the straightest continuation. Project axes are x lateral, y up,
  * z forward; positive cross here represents a left turn.
  */
-/*
- * Signed horizontal turn in the project's x-right / z-forward plane.
- * Negative steering means left, so a left turn (forward to -x) must produce
- * a positive angle and a right turn (forward to +x) a negative angle.
- */
-static inline int boonta_route_graph_signed_horizontal_turn_angle(
-    float incoming_x, float incoming_z,
-    float outgoing_x, float outgoing_z,
-    float *angle_out)
-{
-    float dot;
-    float cross;
-    float angle;
-
-    if (angle_out == NULL ||
-        !isfinite(incoming_x) || !isfinite(incoming_z) ||
-        !isfinite(outgoing_x) || !isfinite(outgoing_z)) {
-        return BOONTA_ROUTE_CURSOR_INVALID;
-    }
-
-    dot = incoming_x * outgoing_x + incoming_z * outgoing_z;
-    cross = incoming_x * outgoing_z - incoming_z * outgoing_x;
-    angle = atan2f(cross, dot);
-    if (!isfinite(angle)) return BOONTA_ROUTE_CURSOR_INVALID;
-
-    *angle_out = angle;
-    return BOONTA_ROUTE_CURSOR_OK;
-}
-
 static inline int boonta_route_graph_choose_outgoing_edge(
     const BoontaRouteCursor *cursor, unsigned int node, int direction,
     unsigned int *selected_edge)
@@ -403,7 +374,7 @@ static inline int boonta_route_graph_choose_outgoing_edge(
 
     for (edge = 0U; edge < cursor->graph->edge_count; ++edge) {
         float outgoing_x, outgoing_z;
-        float angle, score;
+        float dot, cross, angle, score;
         int better;
 
         if (cursor->graph->edges[edge].from_node != node) continue;
@@ -413,11 +384,10 @@ static inline int boonta_route_graph_choose_outgoing_edge(
             continue;
         }
 
-        if (boonta_route_graph_signed_horizontal_turn_angle(
-                incoming_x, incoming_z, outgoing_x, outgoing_z,
-                &angle) != BOONTA_ROUTE_CURSOR_OK) {
-            continue;
-        }
+        dot = incoming_x * outgoing_x + incoming_z * outgoing_z;
+        cross = incoming_z * outgoing_x - incoming_x * outgoing_z;
+        angle = atan2f(cross, dot);
+        if (!isfinite(angle)) continue;
 
         if (direction < 0) {
             score = angle;
