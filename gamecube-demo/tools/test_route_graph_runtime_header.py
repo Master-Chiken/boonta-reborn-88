@@ -565,6 +565,126 @@ int main(void)
                     + (exc.stdout or "") + (exc.stderr or "")
                 )
 
+    def test_closed_loop_split_rejoin_header_runs_both_variable_laps(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/closed-loop-split-rejoin.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+        c_source = r"""
+#include <assert.h>
+#include <math.h>
+#include <string.h>
+#define BOONTA_ROUTE_GRAPH_HEADER "branch_route.h"
+#include "route_graph_sampling.h"
+
+static const BoontaRouteCursorGraph graph = {
+    boonta_runtime_route_topology_edges,
+    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+};
+
+static float verify_branch_lap(
+    BoontaRouteGraphSampler *sampler, int direction,
+    unsigned int expected_first_branch)
+{
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+    float distance_to_finish = 0.0f;
+
+    assert(boonta_route_cursor_init(
+        &cursor, &graph, sampler->edge_lengths, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+
+    /* Cache the chosen split plus the selected return-to-start route. */
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        sampler, &cursor, direction, 40.0f, 100.0f) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(cursor.path_index == 0U);
+    assert(cursor.path_history[0] == 0U);
+    assert(cursor.path_history[1] == expected_first_branch);
+
+    assert(boonta_route_cursor_distance_to_next_lap(
+        &cursor, &distance_to_finish) == BOONTA_ROUTE_CURSOR_OK);
+    assert(distance_to_finish > 20.0f);
+
+    /* The measured finish follows this branch and increments one lap. */
+    assert(boonta_route_cursor_move(
+        &cursor, distance_to_finish + 0.01f, NULL, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.completed_laps == 1U);
+    assert(state.edge == 0U);
+    assert(cursor.distance_on_edge > 0.0f);
+
+    /* Backing through the exact same seam decrements the lap count. */
+    assert(boonta_route_cursor_move(
+        &cursor, -(distance_to_finish + 0.02f), NULL, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.completed_laps == 0U);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U ||
+           state.edge == 0U);
+    return distance_to_finish;
+}
+
+int main(void)
+{
+    BoontaRouteGraphSampler sampler;
+    float left_distance;
+    float right_distance;
+
+    assert(BOONTA_RUNTIME_ROUTE_CLOSED_LOOP == 1);
+    assert(BOONTA_RUNTIME_ROUTE_HAS_BRANCHES == 1);
+    assert(BOONTA_RUNTIME_ROUTE_EDGE_COUNT == 5U);
+    memset(&sampler, 0, sizeof(sampler));
+    assert(boonta_route_graph_sampler_prepare(&sampler));
+
+    /* Authored left edge is index 1; the two-edge right path starts at index 2. */
+    left_distance = verify_branch_lap(&sampler, -1, 1U);
+    right_distance = verify_branch_lap(&sampler, 1, 2U);
+    assert(fabsf(left_distance - right_distance) > 0.01f);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            header_path = temp / "branch_route.h"
+            source_path = temp / "branch_route_test.c"
+            binary_path = temp / "branch_route_test"
+            header_path.write_text(header, encoding="utf-8")
+            source_path.write_text(c_source, encoding="utf-8")
+            try:
+                subprocess.run(
+                    [
+                        "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(temp),
+                        "-I", str(ROOT / "gamecube-demo" / "source"),
+                        str(source_path), "-lm", "-o", str(binary_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                subprocess.run(
+                    [str(binary_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "closed-loop split/rejoin native runtime regression failed:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
+
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
             (ROUTE_TOOLS / "fixtures/open-bezier.json").read_text(encoding="utf-8")
