@@ -364,6 +364,11 @@ for required_phrase in (
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
     "full historical appendices/comments",
+    "compact inventory of all open pull requests",
+    "Deep-inspect changed files and exact-head CI only for PRs",
+    "Read logs only for failed jobs",
+    "Reuse a successful check for an unchanged exact SHA",
+    "without launching duplicate runs",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
@@ -380,6 +385,11 @@ if "Actions: read" not in setup:
 wii64_trigger = wii64_tests.split("permissions:", 1)[0]
 wii64_branches = wii64_trigger.split("branches:", 1)[1].split("paths:", 1)[0]
 wii64_paths = wii64_trigger.split("paths:", 1)[1]
+wii64_concurrency = wii64_tests.split("concurrency:", 1)[1].split("jobs:", 1)[0] if "concurrency:" in wii64_tests else ""
+if "group: wii64-tool-tests-${{ github.event.pull_request.number || github.ref }}" not in wii64_concurrency:
+    errors.append("Wii64 test runs must be serialized per PR/ref to avoid duplicate runner usage")
+if "cancel-in-progress: true" not in wii64_concurrency:
+    errors.append("A newer Wii64 test run must replace a stale run on the same PR/ref")
 if not all(branch in wii64_branches for branch in ('      - main', '      - "tools/**"', '      - "ci/**"')):
     errors.append("Wii64 push branch filters must retain main, tools/** and ci/**")
 if '"tools/**"' in wii64_paths:
