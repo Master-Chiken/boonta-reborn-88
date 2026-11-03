@@ -419,7 +419,7 @@ if "actions: read" not in triage_permissions or "issues: write" not in triage_pe
 for required_phrase in (
     "intentionally has no general-purpose local shell",
     "exact PR head SHA",
-    "do not push empty commits",
+    "Do not push empty commits",
     "read only the failing job logs",
     "no documented safe rerun action",
     "optional `continue-on-error` diagnostics",
