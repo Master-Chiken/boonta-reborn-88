@@ -312,3 +312,32 @@ Do not bulk-copy PC, N64, Dolphin, GPL or AGPL code into the MIT Boonta reposito
 ### Asset-format rule
 
 Keep separate format workspaces for PC `data/lev01` blocks and GameCube/Wii disc files. A shared extension such as `.bin` or `.arc` is not proof that their internal layouts are identical. For every parser, record the exact input platform/version, hashes, supported block IDs, round-trip guarantees, and known unsupported sections. A no-op round-trip proves preservation for the tested format and fixture, not that the format is universal.
+
+
+## Additional porting leads discovered during the audit
+
+### dguillot-gh/star-wars-racer-recomp — N64 Android host port
+
+- Repository: [dguillot-gh/star-wars-racer-recomp](https://github.com/dguillot-gh/star-wars-racer-recomp)
+- Audited ref: `main` at `68d3d2709cf71c07b5abed3627e01b03696cefd2`
+- License: MIT for repository tooling/runtime; its LICENSE explicitly excludes the original game and game-derived output.
+- Fit: **Useful N64 runtime/porting case study; not GC/Wii code.**
+
+The README says this is an Android native port of the **Nintendo 64** release. It is built on `sp00nznet/racer` and N64Recomp; it carries the existing N64 function map/config/runtime glue and adds Android host work. It documents a full Tournament race from start to finish on a Pixel 8, with touch controls, sound and save persistence; the README also lists untested gamepad support and audio long-session checks. It requires a legally dumped USA N64 ROM with a documented SHA-1 and builds the recompiled code locally. Its generated game code/APK are ignored and must not be shared.
+
+Best use: inspect the platform/runtime boundary, Android input and persistence adaptation, the documented sequence of low-level bring-up fixes, and how it preserves original game data locally. Do not treat it as independent reverse engineering of the GC/Wii release; much of its game function map and core runtime glue comes from sp00nznet/racer.
+
+A related [dguillot-gh/racer-android](https://github.com/dguillot-gh/racer-android) branch/fork contains an earlier Android bring-up stage and documents the intro/menu/rendering milestones. Use the newer `star-wars-racer-recomp` repository as the primary reference for that porting work.
+
+### n64hub/racer-web — N64 web-host fork (low priority)
+
+- Repository: [n64hub/racer-web](https://github.com/n64hub/racer-web)
+- Audited ref: `main` at `4e64f8065a98b6cbd567143d94739400729b535e`.
+- Its README explicitly identifies it as a fork of `sp00nznet/racer`, with AI-written work on the fork's own web branch and a WebGPU browser frontend. It says it is not upstream or supported by sp00nznet.
+- Best use: optional study of a separate N64 browser host, not a new source of original-game knowledge and not a basis for Boonta's GameCube/Wii target.
+
+### Unverified Dreamcast recompilation catalogue entry
+
+A RecompHub catalogue page lists a recently active “Star Wars: Episode I - Racer Recomp” credited to Ned Heller, release `v0.4.0`, with Windows/macOS/Linux as targets. Its own catalogue record says the original version, exact required files, license and playability are **unknown**; the page categorizes it with Dreamcast ports, but I did not resolve an authoritative source repository or verify the source platform from project files in this audit.
+
+Treat this only as a **lead to identify**, not as a verified project to depend on. Before using it, find its official repository and inspect the source platform, exact original release/version, commit history, license, dependencies and build/acceptance evidence. Do not infer that it targets the Dreamcast binary solely from a third-party catalogue category.
