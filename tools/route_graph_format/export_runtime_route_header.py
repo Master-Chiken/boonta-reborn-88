@@ -139,6 +139,18 @@ def generate_runtime_route_header(
     if not math.isfinite(route_length) or route_length <= EPSILON:
         raise RuntimeRouteExportError("closed route must have a finite positive length")
 
+    node_indices = {
+        node["id"]: index for index, node in enumerate(graph["nodes"])
+    }
+    topology_lines = []
+    for edge in ordered_edges:
+        progress = edge["progress"]
+        topology_lines.append(
+            f"    /* {edge['id']} */\\n"
+            f"    {{ {node_indices[edge['from']]}U, {node_indices[edge['to']]}U, "
+            f"{_c_float(progress['start'])}, {_c_float(progress['end'])} }}"
+        )
+
     edge_lines = []
     for edge, (p0, c1, c2, p3) in zip(ordered_edges, controls):
         edge_lines.append(
@@ -160,7 +172,12 @@ def generate_runtime_route_header(
         "#ifndef BOONTA_GENERATED_RUNTIME_ROUTE_GRAPH_H",
         "#define BOONTA_GENERATED_RUNTIME_ROUTE_GRAPH_H",
         "",
+        '#include "route_cursor.h"',
+        "",
+        f"#define BOONTA_RUNTIME_ROUTE_NODE_COUNT {len(graph['nodes'])}U",
         f"#define BOONTA_RUNTIME_ROUTE_EDGE_COUNT {len(ordered_edges)}U",
+        f"#define BOONTA_RUNTIME_ROUTE_START_NODE_INDEX {node_indices[graph['start_node_id']]}U",
+        f"#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP {1 if graph['closed_loop'] else 0}",
         f"#define BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS {distance_subdivisions}U",
         f"#define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE {WIDTH_SAMPLES_PER_EDGE}U",
         "#define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT \\",
@@ -173,6 +190,10 @@ def generate_runtime_route_header(
         "    float control2[3];",
         "    float p3[3];",
         "} BoontaRuntimeRouteEdge;",
+        "",
+        "static const BoontaRouteCursorEdge boonta_runtime_route_topology_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {",
+        ",\\n".join(topology_lines),
+        "};",
         "",
         "static const BoontaRuntimeRouteEdge boonta_runtime_route_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {",
         ",\n".join(edge_lines),
