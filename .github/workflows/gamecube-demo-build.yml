@@ -2,7 +2,8 @@ name: GameCube first-render prototype build
 
 on:
   push:
-    branches: [main]
+    # Re-run the complete prototype validation after gameplay changes merge to dev.
+    branches: [main, dev]
     paths:
       - "gamecube-demo/Makefile"
       - "gamecube-demo/source/**"

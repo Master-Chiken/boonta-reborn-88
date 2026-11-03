@@ -32,6 +32,7 @@ execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
 setup = read("docs/AI_AUTOMATION_SETUP.md")
 ci_triage = read(".github/workflows/ci-failure-triage.yml")
+gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
 wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
@@ -414,6 +415,11 @@ if "contents: write" in triage_permissions or "pull-requests: write" in triage_p
     errors.append("CI failure triage must not have code or pull-request write permission")
 if "actions: read" not in triage_permissions or "issues: write" not in triage_permissions:
     errors.append("CI failure triage needs only Actions read and issue-comment write for diagnostics")
+
+# Gameplay integration into dev must receive post-merge native validation too.
+gamecube_push_trigger = gamecube_build.split("  push:", 1)[1].split("  pull_request:", 1)[0]
+if "branches: [main, dev]" not in gamecube_push_trigger:
+    errors.append("GameCube prototype CI must run after merges/pushes to both main and dev")
 
 # The autonomous agent must use exact-head CI rather than invent local test results.
 for required_phrase in (
