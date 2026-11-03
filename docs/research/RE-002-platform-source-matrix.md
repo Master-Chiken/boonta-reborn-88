@@ -82,3 +82,47 @@ Allowed confidence states:
 
 
 **Activation decision (2026-11-03):** the owner has explicitly activated this bounded comparative track in issue #279. Research may proceed independently from the native GameCube/Wii implementation queue only because the platforms and deliverables are non-overlapping. One write-capable agent at a time remains mandatory; RE-002 must not produce gameplay changes or duplicate RE-001's runtime work.
+
+
+## Function-level placeholder triage — SW_RACER_RE
+
+**Pinned source:** `Master-Chiken/SW_RACER_RE` commit `66120be334a3fd38c10a259f3528cffbfed8ddc5`. This is a fresh source-tree scan of the reviewed PC research repository, not an executable runtime test.
+
+### Marker inventory
+
+The scan distinguishes three different things: (1) `HANG("TODO")` placeholder bodies; (2) `HANG(...)` calls that reject invalid/unsupported input; and (3) comments that mention TODO, crashes or unfinished behavior. They must not be counted as the same kind of missing implementation.
+
+| Module | `HANG("TODO")` bodies | `HANG` guards / invalid-input stops | Other TODO / crash comments | Primary subsystem signal |
+|---|---:|---:|---:|---|
+| `swrRace.c` | 31 | 0 | 6 | Race/menu flow, vehicle setup, parts/damage, engine UI, triggers, spline binding/progression, wall collision and hover pads |
+| `swrObj.c` | 58 | 0 | 0 | Hangar/scene lifecycle, track setup/loading, judge/HUD, pod animation/physics, dust/fireballs and world triggers |
+| `swrSpline.c` | 2 | 0 | 0 | Point projection and nearby-point collection |
+| `swrControl.c` | 11 | 0 | 0 | Input mappings, input polling/startup/shutdown and force feedback |
+| `swrModel.c` | 12 | 4 | 8 | Model/texture/animation loading, puppet/model scene management, light streaks and text |
+| `swrRender.c` | 15 | 0 | 0 | Mesh conversion, normals/fog, scene submission, transforms, frustum and LOD |
+| `swrSound.c` | 3 | 0 | 0 | Audio startup, spatial playback and planet-intro music selection |
+| `swrUI.c` | 9 | 0 | 2 | UI message/key handling, circuits/track selection, unlock condition, UI audio and window element loading |
+| `swrMultiplayer.c` | 8 | 0 | 0 | Player/session state, in-race synchronization and event transport |
+| `swrWeather.c` | 3 | 0 | 0 | Weather velocity, particle cap and stretch |
+| `swrLoader.c` | 1 | 0 | 3 | LZSS decompression plus file-type/read/open plumbing |
+| **Total** | **153** | **4** | **19** | **176 distinct scan hits; not 176 missing retail-game features** |
+
+Sources: [race](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.c), [object/judge/scene](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrObj.c), [spline](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrSpline.c), [control](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Main/swrControl.c), [model](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrModel.c), [render](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRender.c), [sound](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrSound.c), [UI](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrUI.c), [multiplayer](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrMultiplayer.c), [weather](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrWeather.c), [loader](https://github.com/Master-Chiken/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrLoader.c).
+
+### What the placeholders actually point to
+
+- **Race lifecycle and race simulation:** `swrRace_UpdatePartsHealth` (1035), `swrRace_CheckResetInput` (2755), `swrRace_ApplyEngineDamage` (2761), `swrRace_SpawnFlameAttack` (2767), `swrRace_SendFlameAttackEvent` (2773), and `swrRace_TriggerHandler` (4654) leave damage, reset, hazard/event and trigger behavior unresolved in this reconstruction. The route-to-world binding path is also stubbed at `swrRace_GetTrackMeshAtCursor` (4745), `swrRace_AdvanceSplineCursor` (4753), `swrRace_UpdateSplineBinding` (4759), and `swrRace_ComputeTrackOffset` (4765). Collision/vehicle-ground response has explicit stubs at `swrRace_CollideBlockMove` (4848), `swrRace_DetectWallScrape` (4854), `swrRace_ApplyWallCollision` (4860), and `swrRace_UpdateHoverPads` (4866).
+- **Course setup and scene construction:** `swrObjJdge_InitTrack` (2051), `LoadTrackModels` (1961), `LoadTrackSpline` (1967), `InitPrimaryLight` (1973), `swrObjJdge_AddTriggersToScene` (1931), and the trigger scene/load functions (3048–3066) form a cluster around preparing the race world. These are especially important to inspect as one caller/callee chain rather than independent TODO entries.
+- **Pod and world physics/animation:** `swrObjTest_UpdateControlAndMove` (2474), `swrObjTest_UpdatePhysicsContact` (2480), `swrRace_PoddAnimateVariousThings` (2369), `swrRace_PoddAnimateSteeringParts` (2375), and `swrRace_Explode` (2461) indicate an unfinished or unhooked area spanning movement, contact response, visual animation and destruction. The marker scan alone does not prove which behavior is present elsewhere or what the retail executable does.
+- **Rendering and assets:** `swrModel_LoadModelIntoScene` (1663), `swrModel_ClearLoadedModels` (1669), `swrModel_ReloadAnimations` (1675), `swrModel_LoadTextureDataAndPalette` (1738), `swrModel_LoadModelTexture` (1757), `swrModel_LoadPuppet` (1842), and the render-scene functions in `swrRender.c` (14–199) cover major asset and draw submission boundaries. The four model `HANG` guards reject invalid primitive/node/animation/texture state; they are not counted as missing feature implementations.
+- **Input, audio, progression and multiplayer:** the control module has stubs for mapping management and polling (`swrControl_ProcessInputs`, line 23, plus lines 10–69); audio has startup, spatial play and planet-intro selection (lines 24, 1077, 1312); UI has key/message handlers, circuit/track navigation and a tournament unlock predicate; multiplayer's eight stubs include player/session state and event sending. These systems need to be traced to determine which are genuinely absent from the reconstruction and which are intentionally platform-hook placeholders.
+
+### Prioritized RE-002 investigation order
+
+1. **Track/world bring-up chain:** trace `swrObjJdge_InitTrack` → model/spline loading → model/trigger scene registration → race-ready state. Record exact callers/callees, data dependencies and the smallest confirmed boot-to-first-course chain. This is the most useful bridge between asset loading, track construction, scene graph and race start.
+2. **Race update chain:** map the callers and state dependencies around `swrRace_UpdateRaceProgress`, cursor advancement/binding, collision, hover-pad response, damage and finish progression. Preserve the known TODO boundary; do not infer that the HANG body is the same as the commercial binary's body.
+3. **Pod control and physics chain:** connect input sampling to control forces, movement, track contact, wall scrape/collision, slide/boost/heat, damage and repair. Distinguish the existence of named hooks from verified end-to-end behavior.
+4. **Front-end/progression chain:** trace menu state and course selection through vehicle/pilot selection, save/profile settings, tournament/circuit unlocks and results persistence.
+5. **Platform-specific comparison:** only after the PC call paths are coherent, add the N64 and Dreamcast evidence row-by-row. Existing N64 recompilation work is MIPS evidence about that N64 build; it is not an independent PC or GameCube/Wii validation source.
+
+**Interpretation boundary:** the 153 `HANG("TODO")` bodies identify where this PC reconstruction currently leaves explicit holes. They do not mean that 153 retail game systems are missing, nor that the corresponding behavior is absent from the commercial PC game. Some function bodies may be available in the separately pinned Steam-PC Ghidra reference, but its executable build and address space differ and its repository's root licence was not identified. Cross-match by function semantics and version first; keep it read-only.
