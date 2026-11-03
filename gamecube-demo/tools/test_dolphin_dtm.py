@@ -14,6 +14,8 @@ from make_dolphin_dtm import (
     DEFAULT_GAME_ID,
     FINISH_RESET_PRESS_FRAME,
     FINISH_RESET_HOLD_FRAMES,
+    FINISH_RESTART_PRESS_FRAME,
+    FINISH_RESTART_HOLD_FRAMES,
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
@@ -306,6 +308,45 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertEqual(state[0], 0)  # Leave the restarted race stationary.
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_finish_restart_profile_presses_start_alone_after_three_lap_window(self) -> None:
+        frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
+        blob = build_dtm(frames, steering="none", scenario="finish-restart-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+
+        start = record(blob, 0)
+        self.assertEqual(start[0], A | Y)
+        self.assertTrue(start[1] & IS_CONNECTED)
+        self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        before_restart = record(blob, FINISH_RESTART_PRESS_FRAME - 1)
+        self.assertEqual(before_restart[0], A)
+        self.assertFalse(before_restart[0] & (B | START | X | Y))
+
+        for frame in range(FINISH_RESTART_PRESS_FRAME,
+                           FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES):
+            with self.subTest(restart_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], START)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES, frames - 1):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+    def test_finish_restart_profile_rejects_directional_steering(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(16000, steering="left", scenario="finish-restart-check")
+
+    def test_finish_restart_profile_rejects_too_short_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "needs enough frames"):
+            build_dtm(12000, steering="none", scenario="finish-restart-check")
 
     def test_finish_reset_profile_rejects_directional_steering(self) -> None:
         with self.assertRaises(ValueError):

@@ -5,6 +5,16 @@
 
 int main(void)
 {
+    /* Y always resets; Start restarts only after the race has finished. */
+    assert(boonta_race_should_reset(0, 0, 0) == 0);
+    assert(boonta_race_should_reset(0, 1, 0) == 0);
+    assert(boonta_race_should_reset(0, 0, 1) == 1);
+    assert(boonta_race_should_reset(0, 1, 1) == 1);
+    assert(boonta_race_should_reset(1, 0, 0) == 0);
+    assert(boonta_race_should_reset(1, 1, 0) == 1);
+    assert(boonta_race_should_reset(1, 0, 1) == 1);
+    assert(boonta_race_should_reset(1, 1, 1) == 1);
+
     /* No button press preserves the current state. */
     assert(boonta_pause_state_next(0, 0, 0) == 0);
     assert(boonta_pause_state_next(1, 0, 0) == 1);
