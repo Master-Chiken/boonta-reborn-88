@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import copy
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -52,6 +54,74 @@ class RuntimeRouteHeaderTests(unittest.TestCase):
         self.assertLess(header.index("/* d2-left */"), header.index("/* d2-right */"))
         self.assertLess(header.index("/* d3-left */"), header.index("/* d3-right */"))
         self.assertIn("{ 1U, 2U, 0.100000000f, 0.400000000f }", header)
+
+    def test_branched_runtime_header_compiles_and_initial_cursor_selects_an_edge(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/three-branch-decisions.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+        c_source = r"""
+#include <assert.h>
+#include "branch_route.h"
+
+int main(void)
+{
+    static const float edge_lengths[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {
+        1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f
+    };
+    static const BoontaRouteCursorGraph graph = {
+        boonta_runtime_route_topology_edges,
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+        BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+        BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+        BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+    };
+    const BoontaRouteBranchChoice choice = { 1U, 2U };
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+
+    assert(BOONTA_RUNTIME_ROUTE_HAS_BRANCHES == 1);
+    assert(BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP == 0);
+    assert(boonta_runtime_route_edges[0].p0[2] == 0.0f);
+    assert(boonta_runtime_route_width_samples[0] > 0.0f);
+    assert(boonta_route_cursor_init(&cursor, &graph, edge_lengths, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 1.1f, &choice, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == 2U);
+    assert(cursor.path_history[1] == 2U);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            header_path = temp / "branch_route.h"
+            source_path = temp / "branch_route_test.c"
+            binary_path = temp / "branch_route_test"
+            header_path.write_text(header, encoding="utf-8")
+            source_path.write_text(c_source, encoding="utf-8")
+            subprocess.run(
+                [
+                    "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                    "-I", str(ROOT / "gamecube-demo" / "source"),
+                    str(source_path), "-lm", "-o", str(binary_path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            subprocess.run(
+                [str(binary_path)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
 
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
