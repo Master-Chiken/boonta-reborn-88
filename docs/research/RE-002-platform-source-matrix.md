@@ -241,3 +241,77 @@ This is useful **PC spline asset-format evidence** for the Windows-patch executa
 - The OpenSWE1R spline loader explains input data layout for an older Windows patch executable, but does not explain runtime cursor state, direction/reversal, node-plane crossing interpolation, local offset or mesh binding.
 
 **Do not synthesize a replacement yet.** The next valid step is to inspect the named cursor's structure and all fields read/written by the implemented neighboring functions, then compare those field semantics against the Steam assembly and the older patch-version documentation. Any derived algorithm must be tagged `INFERENCE` until corroborated by another source or exact-build runtime evidence. For Boonta's actual GameCube/Wii implementation, no transfer is permitted until the relevant DOL/REL target evidence is independently established.
+
+
+## Spline cursor: what the surrounding PC source already establishes
+
+This section narrows the next task to explicit contracts and separates observed behavior from inferred missing logic. Source snapshot: `Master-Chiken/SW_RACER_RE` commit `66120be334a3fd38c10a259f3528cffbfed8ddc5`.
+
+### Runtime state layout — source-defined
+
+The current `swrSplineCursor` definition is 0x30 bytes:
+
+| Offset | Field | Documented role |
+|---:|---|---|
+| `+0x00` | `spline` | active spline pointer |
+| `+0x04` | `velocity` | signed cursor velocity; positive and negative directions are treated separately by the generic evaluator |
+| `+0x08` | `segmentT` | parameter within the current segment, clamped to 0..1 by `CursorEvaluate` |
+| `+0x0C` | `tangentLength` | length of the last evaluated path tangent |
+| `+0x10..+0x1C` | `nodeLookahead[4]` | current node and three-node lookahead window |
+| `+0x20` | `endFlag` | forward graph end reached |
+| `+0x24` | `startFlag` | backward graph end reached |
+| `+0x28` | `branchSelector` | branch choice when a control point has multiple outgoing/incoming edges |
+| `+0x2C` | `branchFlags` | history/branch selection used by graph lookup |
+
+The race object embeds this cursor at `+0xAC`; the judge object also embeds separate cursors for camera-follow and post-race camera sweep. These are separate walkers over the same spline graph, not one global race cursor.
+
+### Generic spline mechanics — implemented PC source
+
+The neighbouring primitives are already described/implemented in `swrSpline.c`:
+
+- `swrSpline_CursorStep` (`0x0044EAA0`) advances through the control-point graph using `next1/next2`, or retreats through `prev1/prev2`; it shifts the 4-node lookahead and preserves branch history.
+- `swrSpline_CursorEvaluate` (`0x0044EC40`) applies `velocity * deltaTime` to `segmentT), crosses segment boundaries via `CursorStep`, clamps at graph ends, and interpolates position, tangent and up vector.
+- `swrSpline_CursorSeekToProgress` (`0x0047E8B0`) maps integer progress to a node band (`progress / 10`) and a fractional segment parameter; it handles branch tables when the progress band exceeds the direct node range.
+- `swrSpline_ProjectPoint` (`0x0047EB60`) marches by small parameter steps to find the nearest point on a spline segment relative to a world-space point and tangent plane. This is a separate active function from `swrSpline_ProjectPointStub` (`0x0047EB50`), which the source comments describe as compiled out / constant-zero in the retail path.
+- `swrSpline_BakeSampleTrackMesh` samples the spline 10 times per node, raycasts to the track model, and writes a baked sample-to-mesh lookup. `swrRace_GetTrackMeshAtCursor` uses that table to return the mesh under the cursor.
+
+### The missing race-specific functions: contracts, not invented implementations
+
+**A. `swrRace_AdvanceSplineCursor` (`0x0047F8E0`)**
+
+Source comment: steps the cursor over each node plane the pod passed, using `segmentT += 0.01` per step; entering node 0 calculates `outCrossTime` by line-plane interpolation between `positionPrev` and `position`, scaled by the raw frame delta. The caller consumes two outputs: `outForward` and `outBackward`.
+
+- Confirmed interface contract: mutates the per-pod cursor and returns forward/backward movement signals plus a sub-frame crossing time when the start/finish node is entered.
+- Not yet confirmed: exact plane origin/normal, branch selection policy, treatment of multiple node crossings in one frame, reverse traversal edge cases, and the exact interpolation/rounding rules.
+- It is not equivalent to generic `CursorEvaluate`: that routine advances by a supplied cursor velocity/time-step, while this race-specific routine is described as reconciling the pod's actual world-space motion against spline node planes.
+
+**B. `swrRace_UpdateSplineBinding` (`0x0047FBB0`)**
+
+The race struct records the function's result in `splineRebindResult`; the current field annotation describes `-1 = blocked`, `0 = no rebind`, and `1 = rebound to the mesh the pod is standing on`.
+
+- Supported contract: the caller treats return value 1 as a progress event eligible to trigger lap-crossing logic, even when the cursor did not report a forward node crossing.
+- Hypothesis to verify: this function reconciles the spline cursor/track chunk to the ground-contact mesh when the racer is physically standing on a neighbouring mesh. Do not yet claim it picks a particular projection, branch or cursor seek routine.
+
+**C. `swrRace_ComputeTrackOffset` (`0x0047FCA0`)**
+
+The race struct labels `trackOffset` at `+0x118` as a 4-vector whose xyz encode a unit direction from the spline toward the pod and whose w stores raw distance.
+
+- Supported field contract: writes or refreshes a four-component spline-to-pod offset used alongside the current spline/track mesh.
+- Unknown: the exact origin point (current sample vs another projected sample), distance threshold, zeroing behavior, use of the w component, and how lateral displacement is fed into AI or handling.
+- The direction/distance interpretation is a source annotation, not yet independently validated against a caller or runtime trace.
+
+### End-to-end progress calculation already implemented around the gaps
+
+`swrRace_UpdateRaceProgress` calls, in sequence:
+
+1. `AdvanceSplineCursor` -> node-crossing flags and possible sub-frame start/finish time;
+2. `GetTrackMeshAtCursor` -> current and previous track chunk; clear a vestigial counter when the mesh changes;
+3. the retail-constant-zero projection stub twice;
+4. `UpdateSplineBinding` -> -1/0/1 result;
+5. `ComputeTrackOffset`;
+6. `LapCompletion` -> lap fraction is computed from `spline_progress_values[node].x + segmentT * spline_progress_values[node].y`, with closed-track wrap and open-track finish handling;
+7. update the checkpoint/backtracking counter and persist `splineRebindResult`.
+
+This makes the exact priority unambiguous: resolve A first, then B/C, and use generic cursor and spline primitives as constraints. A synthetic test suite should cover forward crossing, backward crossing, branching, graph endpoints, zero movement, a high-delta frame crossing multiple nodes, mesh-boundary changes, open point-to-point finish, closed-lap wrap and finish-line crossing partway through a frame. Expected outputs must be obtained from evidence, not guessed.
+
+**No implementation is authorized by this note.** These contracts guide the next RE-002 evidence pass. Any eventual independent implementation must be separately scoped, licence-clean, based on confirmed executable/version evidence and validated against owner-local runtime traces before it can be considered for Boonta's own code.
