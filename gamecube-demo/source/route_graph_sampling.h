@@ -311,4 +311,32 @@ static inline void boonta_route_graph_sampler_sample_at(
         x_out, y_out, z_out, width_out);
 }
 
+/*
+ * Adapter for the topology cursor: sample its selected edge using the exact
+ * arc-length table the cursor was initialized with. Keeping geometry lookup
+ * here avoids duplicating edge-index/distance handling in gameplay code.
+ */
+static inline void boonta_route_graph_sampler_sample_cursor_at(
+    BoontaRouteGraphSampler *sampler, const BoontaRouteCursor *cursor,
+    float fallback_half_width,
+    float *x_out, float *y_out, float *z_out, float *width_out)
+{
+    BoontaRouteCursorState state;
+
+    if (x_out != NULL) *x_out = 0.0f;
+    if (y_out != NULL) *y_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
+    if (width_out != NULL) *width_out = fallback_half_width;
+    if (sampler == NULL || cursor == NULL || cursor->graph == NULL ||
+        cursor->edge_lengths != sampler->edge_lengths ||
+        cursor->graph->edge_count != BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
+        boonta_route_cursor_get_state(cursor, &state) != BOONTA_ROUTE_CURSOR_OK) {
+        return;
+    }
+
+    boonta_route_graph_sampler_sample_edge_at(
+        sampler, state.edge, cursor->distance_on_edge, fallback_half_width,
+        x_out, y_out, z_out, width_out);
+}
+
 #endif /* BOONTA_REBORN_ROUTE_GRAPH_SAMPLING_H */
