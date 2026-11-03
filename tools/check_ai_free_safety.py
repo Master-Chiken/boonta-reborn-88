@@ -24,6 +24,8 @@ invoke = read(".github/workflows/gemini-invoke.yml")
 execute = read(".github/workflows/gemini-plan-execute.yml")
 daily = read(".github/workflows/ai-daily-coordinator.yml")
 daily_prompt = read(".github/commands/gemini-daily-coordinator.toml")
+autonomous = read(".github/workflows/boonta-autonomous-loop.yml")
+autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
@@ -313,6 +315,37 @@ if (
     errors.append("AI coordinator must follow the latest owner-directed RE-001 resumption while keeping RE-002 parked")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
+
+# The autonomous loop is scheduled, serialized, owner-authorized, and independently gated.
+autonomous_trigger = autonomous.split("permissions:", 1)[0]
+if "schedule:" not in autonomous_trigger or "workflow_dispatch:" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must support scheduled and owner-manual execution")
+if "- cron: '17 */6 * * *'" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must use the bounded six-hour schedule")
+if "group: boonta-autonomous-loop" not in autonomous or "cancel-in-progress: false" not in autonomous:
+    errors.append("Boonta autonomous loop must serialize writers without cancelling active work")
+if "uses: ./.github/workflows/gemini-plan-execute.yml" not in autonomous or "autonomous_mode: true" not in autonomous:
+    errors.append("Boonta autonomous loop must call the separately gated reusable writer in autonomous mode")
+if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in execute:
+    errors.append("Autonomous writes must be restricted to the canonical queue and explicit owner gate")
+if "GEMINI_AUTONOMOUS_ENABLED" not in execute or "APP_PRIVATE_KEY" not in execute or "CALLER_WORKFLOW" not in execute:
+    errors.append("Autonomous writer must require its separate gate, approved caller, and GitHub App identity")
+if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
+    errors.append("Reusable writer must select the autonomous prompt only for the explicit autonomous input")
+for required_phrase in (
+    "without asking for another \\\"continue\\\" message",
+    "one bounded task",
+    "Do not start RE-002 until the live queue explicitly marks RE-001 complete",
+    "Never merge a PR",
+    "strict project budget is €0",
+    "Never push directly to either protected branch",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
+if "contents: write" not in autonomous or "issues: write" not in autonomous or "pull-requests: write" not in autonomous:
+    errors.append("Autonomous workflow must grant only the scoped repository/issue/PR permissions required by its gated writer")
+if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in setup:
+    errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
