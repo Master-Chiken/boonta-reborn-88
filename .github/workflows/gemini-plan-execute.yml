@@ -7,6 +7,23 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
+      task_title:
+        type: 'string'
+        description: 'Explicit task title for a scheduled autonomous cycle'
+        required: false
+      task_description:
+        type: 'string'
+        description: 'Explicit task context for a scheduled autonomous cycle'
+        required: false
+      issue_number:
+        type: 'number'
+        description: 'Issue receiving the task context and report'
+        required: false
+      autonomous_mode:
+        type: 'boolean'
+        description: 'Run the separately gated owner-authorized autonomous loop'
+        required: false
+        default: false
 
 concurrency:
   group: '${{ github.workflow }}-plan-execute-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
