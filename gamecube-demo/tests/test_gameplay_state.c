@@ -617,14 +617,14 @@ static void road_width_alignment_tests(void) {
 }
 
 static void offroad_and_rail_tests(void) {
- /* No speed loss on the road, including the exact 3.15 boundary. */
+ /* No speed loss on the road, including its exact 3.6-unit edge. */
  assert(nearf(boonta_speed_after_offroad(0.5f, 0.0f), 0.5f));
- assert(nearf(boonta_speed_after_offroad(0.5f, 3.15f), 0.5f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.15f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.6f), 0.5f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.6f), 0.5f));
 
- /* The existing off-road drag starts just outside the road edge and is symmetric. */
- assert(nearf(boonta_speed_after_offroad(0.5f, 3.16f), 0.49188f));
- assert(nearf(boonta_speed_after_offroad(0.5f, -3.16f), 0.49188f));
+ /* Off-road drag starts strictly outside the rendered road edge and is symmetric. */
+ assert(nearf(boonta_speed_after_offroad(0.5f, 3.61f), 0.49188f));
+ assert(nearf(boonta_speed_after_offroad(0.5f, -3.61f), 0.49188f));
  assert(nearf(boonta_speed_after_offroad(0.01f, 3.85f), 0.0f));
  assert(nearf(boonta_speed_after_offroad(1.0f, 100.0f), 0.0f));
 
