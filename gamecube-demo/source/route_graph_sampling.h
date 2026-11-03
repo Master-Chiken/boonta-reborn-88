@@ -585,16 +585,28 @@ static inline int boonta_route_graph_sampler_prime_lookahead(
         if (outgoing_count == 0U) break;
 
         if (outgoing_count > 1U) {
-            const int branch_direction =
-                (branch_decisions == 0U &&
-                 distance_to_node <= selection_distance)
-                    ? direction : 0;
-            result = boonta_route_graph_sampler_prime_branch_choice(
-                sampler, &preview, branch_direction,
-                distance_to_node + 4.0f * BOONTA_ROUTE_CURSOR_EPSILON);
-            if (result != BOONTA_ROUTE_CURSOR_OK) {
-                *cursor = backup;
-                return result;
+            const int has_cached_choice =
+                preview.path_index + 1U < preview.history_count;
+            const int replace_with_steering =
+                branch_decisions == 0U &&
+                distance_to_node <= selection_distance &&
+                direction != 0;
+            /*
+             * Keep an earlier player choice while the junction is still in
+             * look-ahead. Only replace it when fresh directional input is
+             * present inside the selection radius. With no cached edge, use
+             * the straightest continuation as the deterministic default.
+             */
+            if (replace_with_steering || !has_cached_choice) {
+                const int branch_direction =
+                    replace_with_steering ? direction : 0;
+                result = boonta_route_graph_sampler_prime_branch_choice(
+                    sampler, &preview, branch_direction,
+                    distance_to_node + 4.0f * BOONTA_ROUTE_CURSOR_EPSILON);
+                if (result != BOONTA_ROUTE_CURSOR_OK) {
+                    *cursor = backup;
+                    return result;
+                }
             }
             ++branch_decisions;
         }
