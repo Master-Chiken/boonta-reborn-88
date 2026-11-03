@@ -505,6 +505,141 @@ static inline int boonta_route_graph_sampler_prime_branch_choice(
     return BOONTA_ROUTE_CURSOR_OK;
 }
 
+
+/*
+ * Prime every junction inside a bounded renderer look-ahead window. The first
+ * branch uses current steering only when it is inside selection_distance;
+ * later branches use the straightest continuation as a provisional preview.
+ * The cursor's current edge and physical position are restored on success.
+ */
+static inline int boonta_route_graph_sampler_prime_lookahead(
+    const BoontaRouteGraphSampler *sampler, BoontaRouteCursor *cursor,
+    int direction, float selection_distance, float preview_distance)
+{
+    BoontaRouteCursor backup;
+    BoontaRouteCursor preview;
+    unsigned int step;
+    float remaining_preview;
+    unsigned int branch_decisions = 0U;
+
+    if (sampler == NULL || cursor == NULL || !sampler->lengths_ready ||
+        cursor->graph == NULL || cursor->graph->edges == NULL ||
+        cursor->edge_lengths != sampler->edge_lengths ||
+        cursor->graph->edge_count != BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
+        direction < -1 || direction > 1 ||
+        !isfinite(selection_distance) || selection_distance < 0.0f ||
+        !isfinite(preview_distance) || preview_distance < 0.0f) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+    if (preview_distance <= BOONTA_ROUTE_CURSOR_EPSILON) {
+        return BOONTA_ROUTE_CURSOR_OK;
+    }
+
+    backup = *cursor;
+    preview = *cursor;
+    remaining_preview = preview_distance;
+
+    /*
+     * A single pass over the edge catalogue bounds work even for a closed
+     * graph. The history retains each selected edge for the renderer's copy.
+     */
+    for (step = 0U; step < preview.graph->edge_count; ++step) {
+        BoontaRouteCursorState state;
+        unsigned int edge;
+        unsigned int node;
+        unsigned int outgoing_count;
+        float edge_length;
+        float distance_to_node;
+        float transition_distance;
+        int result;
+
+        result = boonta_route_cursor_get_state(&preview, &state);
+        if (result != BOONTA_ROUTE_CURSOR_OK) {
+            *cursor = backup;
+            return result;
+        }
+
+        edge = state.edge;
+        edge_length = preview.edge_lengths[edge];
+        if (!isfinite(edge_length) || edge_length <= 0.001f ||
+            !isfinite(preview.distance_on_edge) ||
+            preview.distance_on_edge < 0.0f ||
+            preview.distance_on_edge > edge_length) {
+            *cursor = backup;
+            return BOONTA_ROUTE_CURSOR_INVALID;
+        }
+
+        distance_to_node = edge_length - preview.distance_on_edge;
+        if (distance_to_node > remaining_preview +
+                BOONTA_ROUTE_CURSOR_EPSILON) {
+            break;
+        }
+
+        node = preview.graph->edges[edge].to_node;
+        if (node >= preview.graph->node_count) {
+            *cursor = backup;
+            return BOONTA_ROUTE_CURSOR_INVALID;
+        }
+        outgoing_count = boonta_route_cursor_outgoing_count(
+            preview.graph, node, NULL);
+        if (outgoing_count == 0U) break;
+
+        if (outgoing_count > 1U) {
+            const int branch_direction =
+                (branch_decisions == 0U &&
+                 distance_to_node <= selection_distance)
+                    ? direction : 0;
+            result = boonta_route_graph_sampler_prime_branch_choice(
+                sampler, &preview, branch_direction,
+                distance_to_node + 4.0f * BOONTA_ROUTE_CURSOR_EPSILON);
+            if (result != BOONTA_ROUTE_CURSOR_OK) {
+                *cursor = backup;
+                return result;
+            }
+            ++branch_decisions;
+        }
+
+        transition_distance = distance_to_node +
+            4.0f * BOONTA_ROUTE_CURSOR_EPSILON;
+        if (!isfinite(transition_distance)) {
+            *cursor = backup;
+            return BOONTA_ROUTE_CURSOR_INVALID;
+        }
+        result = boonta_route_cursor_move(
+            &preview, transition_distance, NULL, 0U);
+        if (result != BOONTA_ROUTE_CURSOR_OK) {
+            *cursor = backup;
+            return result;
+        }
+
+        if (remaining_preview > distance_to_node) {
+            remaining_preview -= distance_to_node;
+        } else {
+            remaining_preview = 0.0f;
+        }
+        if (preview.finished ||
+            remaining_preview <= BOONTA_ROUTE_CURSOR_EPSILON) {
+            break;
+        }
+    }
+
+    if (preview.history_count <= backup.path_index ||
+        preview.path_index < backup.path_index ||
+        preview.path_history[backup.path_index] !=
+            backup.path_history[backup.path_index]) {
+        *cursor = backup;
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    /* Keep all planned future edges but restore the live simulation position. */
+    preview.path_index = backup.path_index;
+    preview.distance_on_edge = backup.distance_on_edge;
+    preview.finished = backup.finished;
+    preview.started = backup.started;
+    *cursor = preview;
+    return BOONTA_ROUTE_CURSOR_OK;
+}
+
 static inline void boonta_route_graph_sampler_sample_at(
     BoontaRouteGraphSampler *sampler, float travelled,
     float fallback_half_width,
