@@ -412,6 +412,96 @@ static inline int boonta_route_graph_choose_outgoing_edge(
     return found ? BOONTA_ROUTE_CURSOR_OK : BOONTA_ROUTE_CURSOR_INVALID;
 }
 
+
+/*
+ * Cache the next junction choice before the vehicle reaches the node. The
+ * cursor is moved just beyond the current edge endpoint and then reversed;
+ * its physical position is restored while the chosen future edge remains in
+ * path_history. Renderer look-ahead can then follow the same selected branch.
+ *
+ * selection_distance is measured in the sampler's arc-distance units. A new
+ * steering choice can replace an already-cached future edge while still on
+ * the incoming edge.
+ */
+static inline int boonta_route_graph_sampler_prime_branch_choice(
+    const BoontaRouteGraphSampler *sampler, BoontaRouteCursor *cursor,
+    int direction, float selection_distance)
+{
+    BoontaRouteCursor backup;
+    BoontaRouteCursorState state;
+    BoontaRouteBranchChoice choice;
+    unsigned int node;
+    unsigned int selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    unsigned int outgoing_count;
+    float edge_length;
+    float remaining_distance;
+    float transition_distance;
+    int result;
+
+    if (sampler == NULL || cursor == NULL ||
+        cursor->graph == NULL ||
+        cursor->edge_lengths != sampler->edge_lengths ||
+        cursor->graph->edge_count != BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
+        !isfinite(selection_distance) || selection_distance < 0.0f ||
+        direction < -1 || direction > 1) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    result = boonta_route_cursor_get_state(cursor, &state);
+    if (result != BOONTA_ROUTE_CURSOR_OK) return result;
+
+    edge_length = cursor->edge_lengths[state.edge];
+    if (!isfinite(edge_length) || edge_length <= 0.001f ||
+        !isfinite(cursor->distance_on_edge) ||
+        cursor->distance_on_edge < 0.0f ||
+        cursor->distance_on_edge > edge_length) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    node = cursor->graph->edges[state.edge].to_node;
+    outgoing_count = boonta_route_cursor_outgoing_count(
+        cursor->graph, node, NULL);
+    if (outgoing_count <= 1U) return BOONTA_ROUTE_CURSOR_OK;
+
+    remaining_distance = edge_length - cursor->distance_on_edge;
+    if (remaining_distance > selection_distance) {
+        return BOONTA_ROUTE_CURSOR_OK;
+    }
+
+    result = boonta_route_graph_choose_outgoing_edge(
+        cursor, node, direction, &selected_edge);
+    if (result != BOONTA_ROUTE_CURSOR_OK) return result;
+
+    backup = *cursor;
+    choice.node = node;
+    choice.edge = selected_edge;
+    transition_distance = remaining_distance +
+        4.0f * BOONTA_ROUTE_CURSOR_EPSILON;
+    if (!isfinite(transition_distance)) return BOONTA_ROUTE_CURSOR_INVALID;
+
+    result = boonta_route_cursor_move(
+        cursor, transition_distance, &choice, 1U);
+    if (result != BOONTA_ROUTE_CURSOR_OK) {
+        *cursor = backup;
+        return result;
+    }
+
+    result = boonta_route_cursor_move(
+        cursor, -transition_distance, NULL, 0U);
+    if (result != BOONTA_ROUTE_CURSOR_OK ||
+        cursor->path_index != backup.path_index ||
+        cursor->path_history[cursor->path_index] !=
+            backup.path_history[backup.path_index] ||
+        fabsf(cursor->distance_on_edge - backup.distance_on_edge) >
+            0.0001f) {
+        *cursor = backup;
+        return result == BOONTA_ROUTE_CURSOR_OK
+            ? BOONTA_ROUTE_CURSOR_INVALID : result;
+    }
+
+    return BOONTA_ROUTE_CURSOR_OK;
+}
+
 static inline void boonta_route_graph_sampler_sample_at(
     BoontaRouteGraphSampler *sampler, float travelled,
     float fallback_half_width,
