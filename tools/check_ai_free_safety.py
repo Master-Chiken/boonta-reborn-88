@@ -31,6 +31,7 @@ invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
 setup = read("docs/AI_AUTOMATION_SETUP.md")
+ci_triage = read(".github/workflows/ci-failure-triage.yml")
 wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
@@ -380,6 +381,26 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in s
     errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
 if "Actions: read" not in setup:
     errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
+
+# Deterministic CI failure triage must cover the two protected integration targets.
+triage_trigger = ci_triage.split("permissions:", 1)[0]
+if "workflow_run:" not in triage_trigger or "GameCube first-render prototype build" not in triage_trigger:
+    errors.append("CI failure triage must remain attached to completed GameCube build workflows")
+for required_guard in (
+    "['main', 'dev'].includes(item.base?.ref)",
+    "['main', 'dev'].includes(pr.base.ref)",
+    "item.head?.repo?.full_name === expectedRepo",
+    "pr.head.repo?.full_name !== expectedRepo",
+    "item.head?.sha === run.head_sha",
+    "pr.head.sha !== run.head_sha",
+):
+    if required_guard not in ci_triage:
+        errors.append(f"CI failure triage is missing safe main/dev exact-head guard {required_guard!r}")
+triage_permissions = ci_triage.split("permissions:", 1)[1].split("concurrency:", 1)[0]
+if "contents: write" in triage_permissions or "pull-requests: write" in triage_permissions:
+    errors.append("CI failure triage must not have code or pull-request write permission")
+if "actions: read" not in triage_permissions or "issues: write" not in triage_permissions:
+    errors.append("CI failure triage needs only Actions read and issue-comment write for diagnostics")
 
 # Keep Wii64 unit-test CI scoped to the files its tests actually exercise.
 wii64_trigger = wii64_tests.split("permissions:", 1)[0]

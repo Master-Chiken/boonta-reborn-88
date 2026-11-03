@@ -30,23 +30,28 @@ jobs:
           script: |
             const run = context.payload.workflow_run;
             // Prefer the PR association supplied by GitHub, but verify the exact
-            // head SHA. Some workflow_run payloads have no pull_requests entry.
-            let candidate = (run.pull_requests || []).find(item =>
-              item && item.number && item.head && item.head.sha === run.head_sha
-            );
+            // head SHA, same-repository origin, and an allowed integration base.
+            // Some workflow_run payloads have no pull_requests entry.
+            const expectedRepo = context.repo.owner + '/' + context.repo.repo;
+            const isEligiblePr = item =>
+              item &&
+              Number.isInteger(Number(item.number)) &&
+              item.head?.sha === run.head_sha &&
+              item.head?.repo?.full_name === expectedRepo &&
+              ['main', 'dev'].includes(item.base?.ref);
+            let candidate = (run.pull_requests || []).find(isEligiblePr);
             if (!candidate && run.head_branch && run.head_sha) {
               const { data: candidates } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
-                base: 'main',
                 head: context.repo.owner + ':' + String(run.head_branch),
                 per_page: 100,
               });
-              candidate = candidates.find(item => item.head.sha === run.head_sha);
+              candidate = candidates.find(isEligiblePr);
             }
             if (!candidate) {
-              core.info('No open PR targeting main matches this exact workflow-run head SHA; no comment will be posted.');
+              core.info('No open same-repository PR targeting main/dev matches this exact workflow-run head SHA; no comment will be posted.');
               return;
             }
 
@@ -61,8 +66,13 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber,
             });
-            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.head.sha !== run.head_sha) {
-              core.info('PR is closed, does not target main, or no longer matches the failed run SHA; no comment will be posted.');
+            if (
+              pr.state !== 'open' ||
+              !['main', 'dev'].includes(pr.base.ref) ||
+              pr.head.repo?.full_name !== expectedRepo ||
+              pr.head.sha !== run.head_sha
+            ) {
+              core.info('PR is closed, does not target main/dev, is not from this repository, or no longer matches the failed run SHA; no comment will be posted.');
               return;
             }
 
