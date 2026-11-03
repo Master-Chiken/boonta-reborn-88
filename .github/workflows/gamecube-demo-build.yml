@@ -74,6 +74,7 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
 
   build-gamecube-demo:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitppc:latest

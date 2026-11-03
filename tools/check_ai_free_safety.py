@@ -426,6 +426,8 @@ if "actions: read" not in triage_permissions or "issues: write" not in triage_pe
 gamecube_push_trigger = gamecube_build.split("  push:", 1)[1].split("  pull_request:", 1)[0]
 if "branches: [main, dev]" not in gamecube_push_trigger:
     errors.append("GameCube prototype CI must run after merges/pushes to both main and dev")
+if "  build-gamecube-demo:\n    timeout-minutes: 15\n" not in gamecube_build:
+    errors.append("Native GameCube CI build job must have a bounded 15-minute timeout")
 
 # The autonomous agent must use exact-head CI rather than invent local test results.
 for required_phrase in (
