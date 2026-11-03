@@ -299,6 +299,84 @@ static void test_width_sampler_rejects_invalid_queries_and_clamps_t(void)
     assert_close(boonta_route_graph_width_at(0U, 2.0f, fallback), width_end, 0.000001f);
 }
 
+static void test_edge_local_sampling_matches_loop_positions(void)
+{
+    unsigned int edge;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        const float edge_length = g_sampler.edge_lengths[edge];
+        const float local_distances[3] = {
+            0.0f, edge_length * 0.5f, edge_length
+        };
+        unsigned int sample_index;
+
+        for (sample_index = 0U; sample_index < 3U; ++sample_index) {
+            const float local_distance = local_distances[sample_index];
+            const float global_distance =
+                g_sampler.edge_start_distances[edge] + local_distance;
+            float local_x, local_y, local_z, local_width;
+            float loop_x, loop_y, loop_z, loop_width;
+
+            boonta_route_graph_sampler_sample_edge_at(
+                &g_sampler, edge, local_distance,
+                BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+                &local_x, &local_y, &local_z, &local_width);
+            sample(global_distance, &loop_x, &loop_y, &loop_z, &loop_width);
+
+            assert_close(local_x, loop_x, 0.0002f);
+            assert_close(local_y, loop_y, 0.0002f);
+            assert_close(local_z, loop_z, 0.0002f);
+            assert_close(local_width, loop_width, 0.0002f);
+        }
+    }
+}
+
+static void test_edge_local_sampling_clamps_and_rejects_invalid_queries(void)
+{
+    float start_x, start_y, start_z, start_width;
+    float end_x, end_y, end_z, end_width;
+    float actual_x, actual_y, actual_z, actual_width;
+    const float fallback = 99.0f;
+    const unsigned int edge = 0U;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    boonta_route_graph_evaluate_edge(edge, 0.0f, &start_x, &start_y, &start_z);
+    boonta_route_graph_evaluate_edge(edge, 1.0f, &end_x, &end_y, &end_z);
+    start_width = boonta_route_graph_width_at(edge, 0.0f, fallback);
+    end_width = boonta_route_graph_width_at(edge, 1.0f, fallback);
+
+    boonta_route_graph_sampler_sample_edge_at(
+        &g_sampler, edge, -1.0f, fallback,
+        &actual_x, &actual_y, &actual_z, &actual_width);
+    assert_close(actual_x, start_x, 0.000001f);
+    assert_close(actual_y, start_y, 0.000001f);
+    assert_close(actual_z, start_z, 0.000001f);
+    assert_close(actual_width, start_width, 0.000001f);
+
+    boonta_route_graph_sampler_sample_edge_at(
+        &g_sampler, edge, g_sampler.edge_lengths[edge] + 1.0f, fallback,
+        &actual_x, &actual_y, &actual_z, &actual_width);
+    assert_close(actual_x, end_x, 0.000001f);
+    assert_close(actual_y, end_y, 0.000001f);
+    assert_close(actual_z, end_z, 0.000001f);
+    assert_close(actual_width, end_width, 0.000001f);
+
+    actual_x = 9.0f; actual_y = 9.0f; actual_z = 9.0f; actual_width = 0.0f;
+    boonta_route_graph_sampler_sample_edge_at(
+        &g_sampler, BOONTA_RUNTIME_ROUTE_EDGE_COUNT, 0.5f, fallback,
+        &actual_x, &actual_y, &actual_z, &actual_width);
+    assert(actual_x == 0.0f && actual_y == 0.0f && actual_z == 0.0f);
+    assert(actual_width == fallback);
+
+    actual_x = 9.0f; actual_y = 9.0f; actual_z = 9.0f; actual_width = 0.0f;
+    boonta_route_graph_sampler_sample_edge_at(
+        &g_sampler, edge, NAN, fallback,
+        &actual_x, &actual_y, &actual_z, &actual_width);
+    assert(actual_x == 0.0f && actual_y == 0.0f && actual_z == 0.0f);
+    assert(actual_width == fallback);
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -331,6 +409,10 @@ int main(void)
     test_curve_evaluator_clamps_finite_t();
     fprintf(stderr, "[route-test] test_width_sampler_rejects_invalid_queries_and_clamps_t\n");
     test_width_sampler_rejects_invalid_queries_and_clamps_t();
+    fprintf(stderr, "[route-test] test_edge_local_sampling_matches_loop_positions\n");
+    test_edge_local_sampling_matches_loop_positions();
+    fprintf(stderr, "[route-test] test_edge_local_sampling_clamps_and_rejects_invalid_queries\n");
+    test_edge_local_sampling_clamps_and_rejects_invalid_queries();
     fprintf(stderr, "[route-test] test_nonfinite_distance_returns_safe_defaults\n");
     test_nonfinite_distance_returns_safe_defaults();
     puts("Native route-graph sampler C tests passed.");
