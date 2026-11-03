@@ -30,25 +30,47 @@ class RouteCursorRuntimeSourceTests(unittest.TestCase):
         self.assertGreaterEqual(self.source.count("(void)reset_runtime_route_cursor();"), 2)
         self.assertIn("boonta_route_cursor_init(", self.source)
 
-    def test_cursor_advances_by_the_same_physical_distance_as_the_race(self):
+    def test_cursor_advances_with_steering_and_uses_route_laps_for_branches(self):
         marker = "g_distance = boonta_distance_after_pitch_scaled("
         distance_index = self.source.index(marker)
         update_index = self.source.index(
-            "advance_runtime_route_cursor(g_distance - previous_distance);",
+            "advance_runtime_route_cursor(\\n                    g_distance - previous_distance, steering)",
             distance_index,
         )
-        lap_index = self.source.index(
+        branch_lap_index = self.source.index(
+            "g_lap_count = route_state.completed_laps;", distance_index
+        )
+        legacy_lap_index = self.source.index(
             "g_lap_count = boonta_lap_count_after_frame(", distance_index
         )
         self.assertLess(distance_index, update_index)
-        self.assertLess(update_index, lap_index)
+        self.assertLess(update_index, branch_lap_index)
+        self.assertLess(branch_lap_index, legacy_lap_index)
+        self.assertIn("g_distance = previous_distance;", self.source[update_index:branch_lap_index])
 
-    def test_cursor_failure_keeps_a_safe_closed_loop_render_fallback(self):
-        start = self.source.index("static void advance_runtime_route_cursor(")
+    def test_branch_runtime_primes_lookahead_and_maps_steering_direction(self):
+        start = self.source.index("static int advance_runtime_route_cursor(")
         end = self.source.index("static void track_sample_at(", start)
         block = self.source[start:end]
-        self.assertIn("g_route_cursor_ready = 0;", block)
+        self.assertIn("BOONTA_RUNTIME_ROUTE_HAS_BRANCHES", block)
+        self.assertIn("ROUTE_BRANCH_STEERING_DEADZONE", block)
+        self.assertIn("steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1", block)
+        self.assertIn("steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1", block)
+        self.assertIn("boonta_route_graph_sampler_prime_lookahead(", block)
+        self.assertIn("boonta_route_cursor_move(", block)
+
+    def test_branch_finish_stripe_uses_selected_path_history(self):
+        self.assertIn("boonta_route_cursor_distance_to_next_lap(", self.source)
+        self.assertIn("ROUTE_RENDER_LOOKAHEAD_DISTANCE", self.source)
+        self.assertIn("ROUTE_BRANCH_SELECTION_DISTANCE", self.source)
+
+    def test_cursor_failure_pauses_route_distance_without_corrupting_history(self):
+        start = self.source.index("static int advance_runtime_route_cursor(")
+        end = self.source.index("static void track_sample_at(", start)
+        block = self.source[start:end]
+        self.assertIn("return boonta_route_cursor_move(", block)
         self.assertIn("BOONTA_ROUTE_CURSOR_OK", block)
+        self.assertIn("g_distance = previous_distance;", self.source)
 
 
 if __name__ == "__main__":
