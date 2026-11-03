@@ -258,14 +258,14 @@ static void test_closed_branch_laps_follow_selected_path_and_reverse(void)
     assert_close(cursor.distance_on_edge, 0.1f, 0.00001f);
 
     /* Reversing over the start seam removes exactly one completed lap. */
-    assert(boonta_route_cursor_move(&cursor, -0.2f, NULL, 0U) ==
+    assert(boonta_route_cursor_move(&cursor, -0.3f, NULL, 0U) ==
            BOONTA_ROUTE_CURSOR_OK);
     state = state_of(&cursor);
     assert(state.edge == 2U);
     assert(state.completed_laps == 1U);
 
     /* Moving forward over the same seam restores that lap. */
-    assert(boonta_route_cursor_move(&cursor, 0.2f, NULL, 0U) ==
+    assert(boonta_route_cursor_move(&cursor, 0.3f, NULL, 0U) ==
            BOONTA_ROUTE_CURSOR_OK);
     state = state_of(&cursor);
     assert(state.edge == 0U);
