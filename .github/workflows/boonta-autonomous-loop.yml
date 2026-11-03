@@ -18,7 +18,7 @@ concurrency:
 jobs:
   autonomous-cycle:
     name: Select and execute one safe project task
-    if: github.event_name == 'schedule' || github.actor == github.repository_owner
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
