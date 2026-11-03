@@ -206,3 +206,38 @@ The pinned `SW_RACER_RE` source provides names, types, call sites and explicit r
 7. The implemented PC ground-contact orchestrator (`0x00479E10`) already combines ground raycast, surface-normal / gravity handling, slope steering, local wall scrape/collision and hover-pad updates; several of its callees are among the address-correlated Steam candidates.
 
 **Important platform/build caveat:** the Steam README identifies the Steam release as its target, while the exact executable/revision that the `SW_RACER_RE` snapshot targets has not been independently hash-identified. The 129/153 result therefore means **same numeric function address plus both exported Steam C and assembly files exist**, not "same bytes", not "same retail build", and not verified behavior in that other build. Before a candidate is treated as matching, compare the function prologue/call structure and reconcile release identity. Use the Steam decompilation as a read-only semantic reference; no source is copied into Boonta.
+
+
+## Follow-up search for the three missing race-spline functions — 2026-11-03
+
+### Upstream SW_RACER_RE parent check
+
+The project repository is a fork of `tim-tim707/SW_RACER_RE`. I checked the upstream `master` snapshot at `258f67aa858ba2e281ce8a6791e49c554b85fae0`, including `src/Swr/swrRace.c` and `src/Swr/swrSpline.c`. The following three functions are still explicit `HANG("TODO")` stubs in that upstream snapshot:
+
+- `swrRace_AdvanceSplineCursor` — `0x0047F8E0`
+- `swrRace_UpdateSplineBinding` — `0x0047FBB0`
+- `swrRace_ComputeTrackOffset` — `0x0047FCA0`
+
+The spline projection placeholder `swrSpline_ProjectPointStub` at `0x0047EB50` is also still present. Thus the fork did not contain a newer implementation of the critical cursor trio that was missed by the earlier scan.
+
+### Independent older PC reverse-engineering documentation
+
+[OpenSWE1R/swe1r-re](https://github.com/OpenSWE1R/swe1r-re) is explicitly documented as an older Windows-patch analysis set, using executable MD5 `d86d5d03638c24ab6279f24079825794` unless otherwise noted. Its `Splines.md` documents a spline-block loader at `0x00446FC0`:
+
+- opens the spline block and reads the spline count;
+- reads the selected spline's start/end offsets from a directory table;
+- loads that data chunk;
+- byte-swaps its header and per-point fields;
+- iterates a fixed record stride of 42 16-bit words (84 bytes) per spline point;
+- closes the block.
+
+This is useful **PC spline asset-format evidence** for the Windows-patch executable, but it is not a cursor traversal or lap-crossing implementation. The old documentation does not identify the missing cursor trio and must not be silently combined with the Steam-PC or GameCube/Wii target. Sources: [OpenSWE1R README](https://github.com/OpenSWE1R/swe1r-re/blob/57638c19ed092d52c152d8119e0cfe55e9c9f129/README.md) and [Splines.md](https://github.com/OpenSWE1R/swe1r-re/blob/57638c19ed092d52c152d8119e0cfe55e9c9f129/swep1rcr.exe/Splines.md).
+
+### Current conclusion and next method
+
+- `swrRace_GetTrackMeshAtCursor` (`0x0047F890`) has an address-correlated Steam C/ASM candidate; it is a compact lookup into the per-node baked track-mesh table.
+- `swrRace_AdvanceSplineCursor`, `swrRace_UpdateSplineBinding` and `swrRace_ComputeTrackOffset` have no exact-address C/ASM pair in the Steam export tree and remain unresolved in the upstream SW_RACER_RE source.
+- `swrSpline_ProjectPointStub` is likewise unresolved in both candidate lists.
+- The OpenSWE1R spline loader explains input data layout for an older Windows patch executable, but does not explain runtime cursor state, direction/reversal, node-plane crossing interpolation, local offset or mesh binding.
+
+**Do not synthesize a replacement yet.** The next valid step is to inspect the named cursor's structure and all fields read/written by the implemented neighboring functions, then compare those field semantics against the Steam assembly and the older patch-version documentation. Any derived algorithm must be tagged `INFERENCE` until corroborated by another source or exact-build runtime evidence. For Boonta's actual GameCube/Wii implementation, no transfer is permitted until the relevant DOL/REL target evidence is independently established.
