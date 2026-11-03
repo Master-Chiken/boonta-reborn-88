@@ -438,8 +438,8 @@ static inline int boonta_route_graph_sampler_prime_branch_choice(
     float transition_distance;
     int result;
 
-    if (sampler == NULL || cursor == NULL ||
-        cursor->graph == NULL ||
+    if (sampler == NULL || cursor == NULL || !sampler->lengths_ready ||
+        cursor->graph == NULL || cursor->graph->edges == NULL ||
         cursor->edge_lengths != sampler->edge_lengths ||
         cursor->graph->edge_count != BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
         !isfinite(selection_distance) || selection_distance < 0.0f ||
@@ -459,6 +459,9 @@ static inline int boonta_route_graph_sampler_prime_branch_choice(
     }
 
     node = cursor->graph->edges[state.edge].to_node;
+    if (node >= cursor->graph->node_count) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
     outgoing_count = boonta_route_cursor_outgoing_count(
         cursor->graph, node, NULL);
     if (outgoing_count <= 1U) return BOONTA_ROUTE_CURSOR_OK;
