@@ -7,6 +7,13 @@
 #include "../source/route_graph_sampling.h"
 
 static BoontaRouteGraphSampler g_sampler;
+static const BoontaRouteCursorGraph g_generated_route_cursor_graph = {
+    boonta_runtime_route_topology_edges,
+    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+};
 
 static void sample(float travelled, float *x, float *y, float *z, float *width)
 {
@@ -377,6 +384,69 @@ static void test_edge_local_sampling_clamps_and_rejects_invalid_queries(void)
     assert(actual_width == fallback);
 }
 
+static void test_generated_topology_cursor_uses_edge_sampler(void)
+{
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+    float cursor_x, cursor_y, cursor_z, cursor_width;
+    float loop_x, loop_y, loop_z, loop_width;
+    const float offset = 0.05f;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    assert(g_generated_route_cursor_graph.edge_count ==
+           BOONTA_RUNTIME_ROUTE_EDGE_COUNT);
+    assert(g_generated_route_cursor_graph.node_count ==
+           BOONTA_RUNTIME_ROUTE_NODE_COUNT);
+    assert(g_generated_route_cursor_graph.closed_loop == 1);
+    assert(boonta_route_cursor_init(
+        &cursor, &g_generated_route_cursor_graph,
+        g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U) ==
+        BOONTA_ROUTE_CURSOR_INVALID);
+    assert(boonta_route_cursor_init(
+        &cursor, &g_generated_route_cursor_graph,
+        g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
+        BOONTA_ROUTE_CURSOR_OK);
+
+    /* Walk one complete generated lap and a small distance into the next. */
+    assert(boonta_route_cursor_move(
+        &cursor, g_sampler.total_length + offset, NULL, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_START_NODE_INDEX);
+    assert(state.path_index == BOONTA_RUNTIME_ROUTE_EDGE_COUNT);
+    assert(state.history_count == BOONTA_RUNTIME_ROUTE_EDGE_COUNT + 1U);
+    assert(!state.finished);
+    boonta_route_graph_sampler_sample_edge_at(
+        &g_sampler, state.edge, cursor.distance_on_edge,
+        BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+        &cursor_x, &cursor_y, &cursor_z, &cursor_width);
+    sample(g_sampler.total_length + offset,
+           &loop_x, &loop_y, &loop_z, &loop_width);
+    assert_close(cursor_x, loop_x, 0.0002f);
+    assert_close(cursor_y, loop_y, 0.0002f);
+    assert_close(cursor_z, loop_z, 0.0002f);
+    assert_close(cursor_width, loop_width, 0.0002f);
+
+    /* Reverse across the seam, then replay the cached start edge. */
+    assert(boonta_route_cursor_move(&cursor, -0.1f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U);
+    assert(state.path_index == BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U);
+
+    assert(boonta_route_cursor_move(&cursor, 0.1f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    state = (BoontaRouteCursorState){0};
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == BOONTA_RUNTIME_ROUTE_START_NODE_INDEX);
+    assert_close(cursor.distance_on_edge, offset, 0.00002f);
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -413,6 +483,8 @@ int main(void)
     test_edge_local_sampling_matches_loop_positions();
     fprintf(stderr, "[route-test] test_edge_local_sampling_clamps_and_rejects_invalid_queries\n");
     test_edge_local_sampling_clamps_and_rejects_invalid_queries();
+    fprintf(stderr, "[route-test] test_generated_topology_cursor_uses_edge_sampler\n");
+    test_generated_topology_cursor_uses_edge_sampler();
     fprintf(stderr, "[route-test] test_nonfinite_distance_returns_safe_defaults\n");
     test_nonfinite_distance_returns_safe_defaults();
     puts("Native route-graph sampler C tests passed.");
