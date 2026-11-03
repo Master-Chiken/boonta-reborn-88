@@ -346,15 +346,17 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(cursor.path_index, 0)
         self.assertAlmostEqual(cursor.t, 0.0)
 
-    def test_cursor_distance_tables_are_lazy_and_reused(self):
+    def test_cursor_distance_tables_are_lazy_per_edge_and_reused(self):
         graph = fixture("open-bezier.json")
         cursor = RouteCursor(graph, distance_samples=32)
-        self.assertIsNone(cursor._distance_tables)
+        self.assertEqual(cursor._distance_tables, {})
         first = cursor.move_distance(1.0)
         tables = cursor._distance_tables
-        second = cursor.move_distance(1.0)
+        self.assertEqual(set(tables), {"start-middle"})
+        second = cursor.move_distance(2.5)
         self.assertIs(cursor._distance_tables, tables)
-        self.assertGreater(second["distance_on_edge"], first["distance_on_edge"])
+        self.assertEqual(set(tables), {"start-middle", "middle-finish"})
+        self.assertGreater(second["distance_on_edge"], 0.0)
 
     def test_cursor_move_reuses_its_validated_graph(self):
         graph = fixture("open-bezier.json")

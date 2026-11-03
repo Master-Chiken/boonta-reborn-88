@@ -634,7 +634,7 @@ class RouteCursor:
         self.graph = validate_route_graph(graph_data)
         self.distance_samples = _validate_sample_count(distance_samples)
         self._nodes_by_id, self._edges_by_id = _index_validated_graph(self.graph)
-        self._distance_tables: dict[str, tuple[float, ...]] | None = None
+        self._distance_tables: dict[str, tuple[float, ...]] = {}
         self.edges = {edge["id"]: edge for edge in self.graph["edges"]}
         self.outgoing: dict[str, list[str]] = defaultdict(list)
         for edge in self.graph["edges"]:
@@ -657,42 +657,37 @@ class RouteCursor:
         return self.path_history[self.path_index]
 
 
-    def _ensure_distance_tables(self) -> None:
-        """Build bounded per-edge 3D arc-length lookups once, on first metre-based move."""
-        if self._distance_tables is not None:
+    def _ensure_edge_distance_table(self, edge_id: str) -> None:
+        """Build and cache one edge's bounded 3D arc-length lookup on demand."""
+        if edge_id in self._distance_tables:
             return
-        tables: dict[str, tuple[float, ...]] = {}
-        for edge_id in self.edges:
-            previous = _evaluate_edge_validated(
-                self.graph, edge_id, 0.0, self._nodes_by_id, self._edges_by_id
+        previous = _evaluate_edge_validated(
+            self.graph, edge_id, 0.0, self._nodes_by_id, self._edges_by_id
+        )["position"]
+        cumulative = [0.0]
+        total = 0.0
+        for sample_index in range(1, self.distance_samples + 1):
+            position = _evaluate_edge_validated(
+                self.graph,
+                edge_id,
+                sample_index / self.distance_samples,
+                self._nodes_by_id,
+                self._edges_by_id,
             )["position"]
-            cumulative = [0.0]
-            total = 0.0
-            for sample_index in range(1, self.distance_samples + 1):
-                position = _evaluate_edge_validated(
-                    self.graph,
-                    edge_id,
-                    sample_index / self.distance_samples,
-                    self._nodes_by_id,
-                    self._edges_by_id,
-                )["position"]
-                step = math.dist(previous, position)
-                if not math.isfinite(step):
-                    raise RouteGraphError(
-                        f"edge {edge_id!r} produced a non-finite distance lookup step"
-                    )
-                total += step
-                cumulative.append(total)
-                previous = position
-            if not math.isfinite(total) or total <= EPSILON:
+            step = math.dist(previous, position)
+            if not math.isfinite(step):
                 raise RouteGraphError(
-                    f"edge {edge_id!r} has no measurable 3D length"
+                    f"edge {edge_id!r} produced a non-finite distance lookup step"
                 )
-            tables[edge_id] = tuple(cumulative)
-        self._distance_tables = tables
+            total += step
+            cumulative.append(total)
+            previous = position
+        if not math.isfinite(total) or total <= EPSILON:
+            raise RouteGraphError(f"edge {edge_id!r} has no measurable 3D length")
+        self._distance_tables[edge_id] = tuple(cumulative)
 
     def _edge_distance_at_t(self, edge_id: str, t: float) -> float:
-        assert self._distance_tables is not None
+        self._ensure_edge_distance_table(edge_id)
         table = self._distance_tables[edge_id]
         scaled = min(1.0, max(0.0, t)) * self.distance_samples
         lower = int(scaled)
@@ -702,7 +697,7 @@ class RouteCursor:
         return table[lower] + (table[lower + 1] - table[lower]) * fraction
 
     def _edge_t_at_distance(self, edge_id: str, distance: float) -> float:
-        assert self._distance_tables is not None
+        self._ensure_edge_distance_table(edge_id)
         table = self._distance_tables[edge_id]
         target = min(table[-1], max(0.0, distance))
         upper = bisect_left(table, target)
@@ -861,8 +856,6 @@ class RouteCursor:
             branch_choices = {}
         if not isinstance(branch_choices, dict):
             raise RouteGraphError("branch_choices must be an object keyed by node id")
-        self._ensure_distance_tables()
-
         old_state = (
             self.path_history[:], self.path_index, self.t, self.finished, self.started
         )
@@ -871,8 +864,9 @@ class RouteCursor:
             transitions = 0
             while remaining > EPSILON:
                 edge_id = self.edge_id
+                self._ensure_edge_distance_table(edge_id)
                 edge_distance = self._edge_distance_at_t(edge_id, self.t)
-                edge_length = self._distance_tables[edge_id][-1]  # type: ignore[index]
+                edge_length = self._distance_tables[edge_id][-1]
 
                 if delta_distance > 0.0:
                     available = max(0.0, edge_length - edge_distance)
@@ -942,7 +936,7 @@ class RouteCursor:
             "path_history": tuple(self.path_history),
             "path_index": self.path_index,
             "distance_on_edge": self._edge_distance_at_t(edge_id, self.t),
-            "edge_length": self._distance_tables[edge_id][-1],  # type: ignore[index]
+            "edge_length": self._distance_tables[edge_id][-1],
         }
 
 
