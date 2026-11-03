@@ -75,6 +75,11 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_track_sampling.c -lm -o /tmp/test_track_sampling
           /tmp/test_track_sampling
 
+      - name: Compile and run native route-graph sampler tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_graph_sampling.c -lm -o /tmp/test_route_graph_sampling
+          /tmp/test_route_graph_sampling
+
       - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 

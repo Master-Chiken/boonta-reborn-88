@@ -14,16 +14,13 @@
 
 #include "pause_state.h"
 #include "gameplay_state.h"
-#include "generated_track.h"
-#include "track_sampling.h"
+#include "generated_route_graph.h"
+#include "route_graph_sampling.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
 
-#if !BOONTA_TRACK_CLOSED_LOOP
-#error "The scrolling GameCube race runtime currently requires a closed-loop track."
-#endif
-#if BOONTA_TRACK_POINT_COUNT < 4U
-#error "Closed-loop Catmull-Rom runtime tracks require at least four points."
+#if BOONTA_RUNTIME_ROUTE_EDGE_COUNT < 1U
+#error "The native route-graph runtime requires at least one closed-loop edge."
 #endif
 
 #include <math.h>
@@ -37,7 +34,7 @@
 #define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
 #define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
-#define RACE_LAP_DISTANCE   BOONTA_TRACK_LENGTH
+#define RACE_LAP_DISTANCE   BOONTA_RUNTIME_ROUTE_LENGTH
 #define RACE_LAP_LIMIT       3U
 #define PLAYER_ANCHOR_LOCAL_Z 1.0f
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
@@ -152,18 +149,17 @@ static const u8 g_font5x7[128][7] = {
 
 
 /*
- * Map the generated-header travelled-distance coordinate onto the closed-loop
- * Catmull-Rom course. Each segment maps its chord-distance share linearly to
- * local t; this is not exact arc-length inversion of the smoothed curve. Runtime
- * points remain in world coordinates; scene meshes are built locally and mapped
- * into the actual course frame vertex by vertex.
+ * Sample the clean-room route graph directly in the native runtime. Cubic
+ * Bezier geometry comes from generated_route_graph.h; a bounded 3D distance
+ * lookup is cached on first use. This first runtime path is one closed,
+ * unbranched loop. Road widths remain independent surface samples.
  */
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
-    static BoontaTrackSampler sampler;
-    boonta_track_sampler_sample_at(&sampler, travelled, ROAD_HALF_WIDTH,
-                                   x_out, y_out, z_out, width_out);
+    static BoontaRouteGraphSampler sampler;
+    boonta_route_graph_sampler_sample_at(&sampler, travelled, ROAD_HALF_WIDTH,
+                                         x_out, y_out, z_out, width_out);
 }
 
 static float track_center_x_at(float travelled)

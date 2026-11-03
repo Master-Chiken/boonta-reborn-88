@@ -17,7 +17,7 @@ Run the synthetic host suite with:
 
     python3 -m unittest discover -s tests -p 'test_route_graph_format.py' -v
 
-The existing boonta-track-v1 parser, exporter, source fixture and generated header remain backward-compatible. The route graph is still not loaded on-console: the bridge is an offline bake step that produces track-v1 JSON, which the existing track exporter can turn into the C header consumed by the current GameCube/Wii runtime.
+The existing boonta-track-v1 parser, exporter, source fixture and generated header remain backward-compatible as a compatibility and regression path. The first native curve-runtime representation is generated separately from the route graph; see **Native GameCube/Wii runtime curve evaluation** below.
 
 ## Contract
 
@@ -63,7 +63,7 @@ The native prototype's active test oval has now been converted into the canonica
 
 The checked-in `gamecube-demo/source/generated_track.h` is deterministically baked from this route graph using 16 samples per edge, then exported through the existing track-v1 header generator. Host test `test_runtime_oval_route_graph_is_the_canonical_header_source` checks this entire conversion against the committed C header. The 8-node source is deliberately the same original prototype oval; no commercial course coordinates or retail assets are involved.
 
-This moves the **current simple loop's authoring source** to route-graph-v1 while preserving the existing runtime data contract. It does not yet move curve evaluation or branch selection into GX/gameplay code: the executable still consumes the sampled track header, and its Catmull-Rom sampler interpolates the baked points. Branching/rejoining graphs remain host-side only until an explicit runtime route-choice design is implemented.
+This moves the **current simple loop's authoring source** to route-graph-v1. The native runtime now evaluates the generated cubic Bezier curves directly through a shared, host-tested C sampler; the legacy track-v1 header remains checked for deterministic compatibility and as a geometric comparison baseline. Live branch selection and route-history management are still not connected to vehicle movement. Branching/rejoining graphs therefore remain host-side only until an explicit runtime route-choice design is implemented.
 
 ## Evidence and deliberate limits
 
@@ -148,3 +148,44 @@ For any future console-binary research, keep the owner's lawful local dump and d
 The validator checks missing/duplicate IDs, malformed links, reachability, open/closed endpoint rules, progress continuity across branches/rejoins, curve parameters, finite values and sorted surface bindings. It does not decode source binaries, infer track width, or import proprietary coordinates. The fixtures are synthetic and carry source.platform = synthetic.
 
 This is a **schema/host-fixture milestone**, not proof that a complete original Racer course or race is playable.
+
+
+## Native GameCube/Wii runtime curve evaluation (2026-11-03)
+
+The clean-room oval now has a second generated C representation at
+`gamecube-demo/source/generated_route_graph.h`. Regenerate it with:
+
+```sh
+python3 tools/route_graph_format/export_runtime_route_header.py \
+  gamecube-demo/data/original-test-oval-route-graph.json \
+  gamecube-demo/data/original-test-oval-surface-widths.json \
+  gamecube-demo/source/generated_route_graph.h \
+  --default-half-width 3.6 --distance-subdivisions 128
+```
+
+The generator accepts a single unbranched closed loop made of cubic Bezier edges.
+It rejects branching/rejoining topology and curve types that this first native
+runtime does not yet implement; it never silently picks a route or approximates
+an unsupported curve type. Widths are emitted as a separate cyclic sample array,
+not embedded in route topology.
+
+`gamecube-demo/source/route_graph_sampling.h` is now the production C sampler
+used by `main.c`. On its first sample it builds a 128-interval-per-edge 3D
+distance lookup, scales the lookup to the generated lap coordinate, and caches
+it for subsequent GX scene sampling. It evaluates the cubic Bezier curve itself
+instead of Catmull-Rom interpolation over the 128-point compatibility bake.
+The race lap counter and finish stripe use the same generated route length.
+
+The shared C implementation is compiled both into the GameCube DOL and into
+`gamecube-demo/tests/test_route_graph_sampling.c`. The host regression checks
+all eight edge endpoints, closed-loop positive/negative wrapping, seam tangent
+continuity, route length against the previous track-v1 lap coordinate, and a
+16,384-step measurement of the actual C Bezier sampler. A Python regression
+regenerates the header and compares it byte-for-byte with the checked-in file.
+
+**Deliberate limit:** this is native evaluation of the current eight-edge loop,
+not yet a general runtime graph cursor. Split/rejoin choices, branch history,
+B-spline edges, checkpoint progression inside a branch, and collision/projection
+onto alternate route paths are not yet wired into gameplay. The previous
+track-v1 sampler remains available for regression comparison; the live game uses
+the new Bezier route sampler.
