@@ -243,6 +243,37 @@ static void test_dense_runtime_curve_length_matches_lap_coordinate(void)
     }
 }
 
+static void test_curve_evaluator_rejects_invalid_queries(void)
+{
+    float x = 9.0f, y = 9.0f, z = 9.0f;
+
+    boonta_route_graph_evaluate_edge(
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT, 0.5f, &x, &y, &z);
+    assert(x == 0.0f && y == 0.0f && z == 0.0f);
+
+    x = 9.0f; y = 9.0f; z = 9.0f;
+    boonta_route_graph_evaluate_edge(0U, NAN, &x, &y, &z);
+    assert(x == 0.0f && y == 0.0f && z == 0.0f);
+
+    x = 9.0f; y = 9.0f; z = 9.0f;
+    boonta_route_graph_evaluate_edge(0U, INFINITY, &x, &y, &z);
+    assert(x == 0.0f && y == 0.0f && z == 0.0f);
+}
+
+static void test_width_sampler_rejects_invalid_queries_and_clamps_t(void)
+{
+    const float fallback = 99.0f;
+    const float width_start = boonta_route_graph_width_at(0U, 0.0f, fallback);
+    const float width_end = boonta_route_graph_width_at(0U, 1.0f, fallback);
+
+    assert_close(boonta_route_graph_width_at(
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT, 0.5f, fallback), fallback, 0.0f);
+    assert_close(boonta_route_graph_width_at(0U, NAN, fallback), fallback, 0.0f);
+    assert_close(boonta_route_graph_width_at(0U, INFINITY, fallback), fallback, 0.0f);
+    assert_close(boonta_route_graph_width_at(0U, -1.0f, fallback), width_start, 0.000001f);
+    assert_close(boonta_route_graph_width_at(0U, 2.0f, fallback), width_end, 0.000001f);
+}
+
 static void test_nonfinite_distance_returns_safe_defaults(void)
 {
     float x = 9.0f, y = 9.0f, z = 9.0f, width = 0.0f;
@@ -261,6 +292,8 @@ int main(void)
     test_closed_loop_wrap_and_negative_distance();
     test_bezier_seam_tangent_is_continuous();
     test_dense_runtime_curve_length_matches_lap_coordinate();
+    test_curve_evaluator_rejects_invalid_queries();
+    test_width_sampler_rejects_invalid_queries_and_clamps_t();
     test_nonfinite_distance_returns_safe_defaults();
     puts("Native route-graph sampler C tests passed.");
     return 0;
