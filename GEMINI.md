@@ -24,7 +24,7 @@
 
 ## Safe engineering protocol
 - For manual requests, inspect first and obtain approval for the exact plan. The scheduled Boonta Autonomous Loop is separately owner-authorized to select one bounded task from issue #226 when `GEMINI_AUTONOMOUS_ENABLED` is exactly `true`; it must follow `.github/commands/gemini-autonomous-loop.toml`.
-- After approval, create a unique branch based on the latest default-branch commit, make small changes and open a pull request.
+- For either authorized path, create a unique branch based on the latest commit of the correct target branch, make small changes and open a pull request.
 - Never push directly to main, merge a pull request, enable auto-merge, delete unrelated files or weaken tests.
 - The manual plan-execute path must be blocked unless `GEMINI_WRITE_ENABLED` is exactly `true`. Scheduled autonomous execution must be blocked unless `GEMINI_AUTONOMOUS_ENABLED` is exactly `true`, `GEMINI_FREE_TIER_CONFIRMED` is exactly `true`, `GEMINI_API_KEY`, `APP_ID`, and `APP_PRIVATE_KEY` are configured, and the run originates from the Boonta Autonomous Loop workflow for issue #226.
 - If the owner has not verified branch protection and the free API secret, stay read-only and do not run code-writing tools.
