@@ -409,7 +409,7 @@ if "workflow_dispatch" in autonomous_trigger and "github.actor == github.reposit
 
 # The autonomous model can create/update branches and PRs, but the MCP allowlist
 # must never expose merge, deletion, repository administration, or secret tools.
-tool_match = re.search(r'"includeTools":\s*\\[(.*?)\\]', execute, re.DOTALL)
+tool_match = re.search(r'"includeTools":\s*\[(.*?)\]', execute, re.DOTALL)
 if not tool_match:
     errors.append("Autonomous Gemini MCP allowlist is missing or cannot be audited")
 else:
