@@ -25,6 +25,7 @@ execute = read(".github/workflows/gemini-plan-execute.yml")
 daily = read(".github/workflows/ai-daily-coordinator.yml")
 daily_prompt = read(".github/commands/gemini-daily-coordinator.toml")
 autonomous = read(".github/workflows/boonta-autonomous-loop.yml")
+readiness = read(".github/workflows/boonta-autonomous-readiness.yml")
 autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
@@ -352,6 +353,64 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in s
     errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
 if "Actions: read" not in setup:
     errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
+
+# The owner-only readiness workflow checks configuration and App access without
+# calling a model or performing repository writes.
+readiness_trigger = readiness.split("permissions:", 1)[0]
+readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", readiness_trigger)
+if readiness_events != ["workflow_dispatch"]:
+    errors.append(
+        "Autonomous readiness must be manually dispatched only; "
+        f"found {readiness_events!r}"
+    )
+if "if: github.actor == github.repository_owner" not in readiness:
+    errors.append("Autonomous readiness must be restricted to the repository owner")
+readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
+readiness_permissions = dict(
+    re.findall(
+        r"(?m)^  ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$",
+        readiness_permission_block,
+    )
+)
+expected_readiness_permissions = {
+    "contents": "read",
+    "issues": "read",
+    "pull-requests": "read",
+}
+if readiness_permissions != expected_readiness_permissions:
+    errors.append(
+        "Autonomous readiness GITHUB_TOKEN permissions must be read-only and exact; "
+        f"found {readiness_permissions!r}"
+    )
+if "gemini_api_key:" in readiness or "run-gemini-cli" in readiness or "gemini_model:" in readiness:
+    errors.append("Autonomous readiness must never invoke a Gemini model or send an API request")
+if "GEMINI_AUTONOMOUS_ENABLED" not in readiness or "GEMINI_FREE_TIER_CONFIRMED" not in readiness:
+    errors.append("Autonomous readiness must verify both exact-true owner gates")
+for required_secret in ("GEMINI_API_KEY", "APP_ID", "APP_PRIVATE_KEY"):
+    if required_secret not in readiness:
+        errors.append(f"Autonomous readiness must verify presence of {required_secret}")
+for required_permission in (
+    "permission-contents: write",
+    "permission-issues: write",
+    "permission-pull-requests: write",
+    "permission-actions: read",
+):
+    if required_permission not in readiness:
+        errors.append(f"Autonomous readiness must test GitHub App permission {required_permission!r}")
+for required_probe in (
+    "/issues/156",
+    "/issues/226",
+    "/actions/runs?per_page=1",
+    "/git/ref/heads/\\feat/boonta-autonomous-loop-20261103",
+):
+    if required_probe not in readiness:
+        errors.append(f"Autonomous readiness is missing required read-only API probe {required_probe!r}")
+if "No repository write was performed" not in readiness or "does not independently verify Google billing status" not in readiness:
+    errors.append("Autonomous readiness must state that it performs no writes and cannot verify Google billing")
+if "rulesets protect main and dev" not in readiness:
+    errors.append("Autonomous readiness must remind the owner to verify main/dev branch protection manually")
+if "curl --fail --silent --show-error" not in readiness or "-X POST" in readiness or "--request POST" in readiness:
+    errors.append("Autonomous readiness API probes must remain GET-only")
 
 # Freeze the autonomous entry points and least-privilege boundary.
 # A scheduled run is allowed; a manual run is owner-only; no other event may
