@@ -157,8 +157,6 @@ static inline int boonta_route_cursor_choose_next(
     unsigned int *next_edge, int *has_next)
 {
     const BoontaRouteCursorGraph *graph = cursor->graph;
-    const unsigned int candidate_count =
-        boonta_route_cursor_outgoing_count(graph, node, NULL);
     const unsigned int cached_edge =
         cursor->path_index + 1U < cursor->history_count
             ? cursor->path_history[cursor->path_index + 1U]
@@ -166,19 +164,22 @@ static inline int boonta_route_cursor_choose_next(
     unsigned int only_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
     unsigned int requested_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
     const unsigned int actual_count =
-        boonta_route_cursor_outgoing_count(graph, node, &only_edge);
+        (!graph->closed_loop && node == graph->start_node)
+            ? 0U : boonta_route_cursor_outgoing_count(graph, node, &only_edge);
     const int choice_found = boonta_route_cursor_find_choice(
         choices, choice_count, node, &requested_edge);
     unsigned int selected = BOONTA_ROUTE_CURSOR_NO_EDGE;
     int append_history = 0;
     unsigned int edge;
 
-    (void)candidate_count;
     if (choice_found < 0) return BOONTA_ROUTE_CURSOR_INVALID;
     *next_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
     *has_next = 0;
 
-    if (actual_count == 0U) return BOONTA_ROUTE_CURSOR_OK;
+    if (actual_count == 0U) {
+        return choice_found == 1
+            ? BOONTA_ROUTE_CURSOR_INVALID : BOONTA_ROUTE_CURSOR_OK;
+    }
 
     if (choice_found == 1) {
         int is_outgoing = 0;
@@ -235,7 +236,11 @@ static inline int boonta_route_cursor_move(
 
     if (cursor == NULL || cursor->graph == NULL ||
         cursor->edge_lengths == NULL || !isfinite(delta_distance) ||
-        (choice_count > 0U && choices == NULL)) {
+        (choice_count > 0U && choices == NULL) ||
+        cursor->history_count == 0U ||
+        cursor->history_count > BOONTA_ROUTE_CURSOR_MAX_HISTORY ||
+        cursor->path_index >= cursor->history_count ||
+        cursor->path_history[cursor->path_index] >= cursor->graph->edge_count) {
         return BOONTA_ROUTE_CURSOR_INVALID;
     }
 
