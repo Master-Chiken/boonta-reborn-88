@@ -279,3 +279,36 @@ Do not bulk-copy PC, N64, Dolphin, GPL or AGPL code into the MIT Boonta reposito
 - No installation of AeroMESH or other distributed LLM infrastructure without a demonstrated need and compatible hardware.
 
 **Bottom line:** the best shortcut is not one universal AI decompiler. It is a combined, target-correct GC/Wii toolchain (dtk + Gekko-aware Ghidra + powerpc-rs + objdiff), supported by PC/N64 reverse-engineering references and optional runtime introspection. First identify and analyse the exact local target; then reconstruct connected original systems and only then implement their clean-room equivalents in Boonta.
+
+
+## Additional asset-format research — PC-only unless proven otherwise
+
+### swe1r-assets — strongest bit-perfect PC block library
+
+- Repository: [akopetsch/swe1r-assets](https://github.com/akopetsch/swe1r-assets)
+- Audited ref: `main` at `922ef535f6598a1330ff93d6b07258956f990b34` (last push recorded 2024-07-10).
+- License: MIT.
+- README states support for `out_modelblock.bin`, `out_splineblock.bin`, `out_spriteblock.bin` and `out_textureblock.bin`, with deserialize/modify/serialize and bit-perfect no-op reserialization.
+- The README places these files in the PC game's `data/lev01` directory. Treat it as a **PC asset-format tool** until a GameCube/Wii compatibility proof exists.
+- Best first use: read its format definitions and no-op round-trip tests, compare the supported fields with the other PC tools, and make a private synthetic or user-local fixture. Do not commit the resulting game-derived blocks/assets to Boonta.
+
+### blender-swe1r — model/collision/spline editing workflow
+
+- Repository: [louriccia/blender-swe1r](https://github.com/louriccia/blender-swe1r)
+- Audited ref: `main` at the 2026-11-02 tree state (repository was pushed on 2026-11-02; README blob `f421c025147e1db84d7ad1447a486c1c46d9b3db`).
+- License: GPL-3.0.
+- README describes an active Work In Progress Blender 5 extension for importing/exporting models and editing mesh, collision, texture, vertex colour, animation and spline data. Its Blender round-trip test procedure reads local PC `data/lev01` files, exports to a temporary copy, and checks geometry, collision triangles, materials, animation samples, spline points and that unrelated block data remains byte-identical.
+- Known issue documented upstream: template-built pods do not export LODs/animations/far-LOD and have an empty high-detail MAlt model; imported pods are exported in full.
+- Best use: study its format coverage and round-trip test methodology; consider it a local PC-asset editor only after a target version is confirmed. It is not evidence of GameCube/Wii block compatibility. GPL-3.0 means no code copy into Boonta's current MIT codebase without an explicit license decision.
+
+### SWE1R-Mods — useful unpack/repack scripts, but content is not a reusable asset pack
+
+- Repository: [louriccia/SWE1R-Mods](https://github.com/louriccia/SWE1R-Mods)
+- Audited ref: `main` at README blob `faf4fa2d1d668705364ea0fa228875b054647e51`.
+- No root license was established in this audit; do not copy its scripts or contents until licensing is clarified.
+- README documents Node.js unpack/repack scripts for model, texture and other PC block files, using earlier swe1r-tools/Sw_Racer groundwork. It also contains actual track/texture mods, including N64-labelled texture content.
+- Best use: inspect its parser/repacker assumptions and format documentation as research leads. Do not import its model/texture/mod output into Boonta. The existence of PC block unpackers does not establish console-format support.
+
+### Asset-format rule
+
+Keep separate format workspaces for PC `data/lev01` blocks and GameCube/Wii disc files. A shared extension such as `.bin` or `.arc` is not proof that their internal layouts are identical. For every parser, record the exact input platform/version, hashes, supported block IDs, round-trip guarantees, and known unsupported sections. A no-op round-trip proves preservation for the tested format and fixture, not that the format is universal.
