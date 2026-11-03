@@ -102,6 +102,7 @@ jobs:
           permission-contents: 'write'
           permission-issues: 'write'
           permission-pull-requests: 'write'
+          permission-actions: 'read'
 
       - name: 'Checkout Code'
         if: steps.free_tier_guard.outputs.allowed == 'true'
@@ -192,6 +193,11 @@ jobs:
                     "get_commit",
                     "get_file_contents",
                     "list_commits",
+                    "list_workflow_runs",
+                    "list_workflow_jobs",
+                    "get_workflow_run",
+                    "get_workflow_job",
+                    "get_job_logs",
                     "push_files",
                     "search_code"
                   ],
