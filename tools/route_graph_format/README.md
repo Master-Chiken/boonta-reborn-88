@@ -177,38 +177,53 @@ and the selected edge's local arc-distance lookup.
 used by `main.c`. It builds a 128-interval-per-edge 3D distance lookup and caches
 the result for subsequent GX scene sampling. The cursor follows the same
 physical distance delta as race state, and the renderer samples look-ahead and
-look-behind positions from a copy of that cursor. The current eight-edge demo
-oval still uses its generated single-loop lap coordinate for lap counting and
-the finish stripe; the cursor path history is host-tested through three laps and
-reset.
+look-behind positions from a copy of that cursor.
+
+When a generated header sets `BOONTA_RUNTIME_ROUTE_HAS_BRANCHES`, `main.c`
+maps steering beyond a 0.20 deadzone to left/right/neutral branch input and
+primes the path history ahead of the car. The selection radius is six road
+segments (16.8 m); the preview covers the ground renderer's 42 forward segments
+(117.6 m). A cached branch remains selected when the player releases the stick,
+and a new directional input can replace it while the junction is still inside
+the selection radius. Later junctions in the preview use the straightest
+continuation until they become the immediate player choice.
+
+For branched closed routes, the native cursor counts laps at each actual
+crossing of the graph's start node, including reverse traversal. The finish
+stripe uses the next start-node seam in the selected path history, so a shorter
+or longer branch changes its physical distance without changing lap counting.
+If the future path is not yet cached, the runtime does not guess a finish
+position. The existing generated eight-edge oval still sets
+`BOONTA_RUNTIME_ROUTE_HAS_BRANCHES=0`; it continues to use its historical
+single-loop lap coordinate and finish stripe. The live branch path is therefore
+integrated but has not yet been exercised by the currently selected demo course.
 
 The shared C implementation is compiled both into the GameCube DOL and into
-`gamecube-demo/tests/test_route_graph_sampling.c`. The host regression checks
-all eight edge endpoints, closed-loop positive/negative wrapping, seam tangent
-continuity, route length against the previous track-v1 lap coordinate, and a
-16,384-step measurement of the actual C Bezier sampler. A Python regression
-regenerates the header and compares it byte-for-byte with the checked-in file.
+`gamecube-demo/tests/test_route_graph_sampling.c`. Host regressions check all
+eight current-oval edge endpoints, closed-loop positive/negative wrapping,
+seam tangent continuity, route length against the previous track-v1 lap
+coordinate, and a 16,384-step measurement of the actual C Bezier sampler. A
+Python regression regenerates the current header and compares it byte-for-byte.
 
-The C cursor is now a general topology component with bounded branch history,
-explicit outgoing-edge choices, reverse/forward replay and open-route finish
-behavior. Host tests exercise a synthetic three-decision graph; another test
-generates a temporary branched native header, compiles it as strict C99, and
-traverses one branch with the C cursor.
+The C cursor is a general topology component with bounded branch history,
+explicit outgoing-edge choices, reverse/forward replay, route-based lap
+counting, next-finish distance lookup, and open-route finish behavior. Host
+tests compile temporary branched headers as strict C99, traverse synthetic
+three-decision paths, verify that look-ahead preserves cached choices after
+steering is released, and measure finish distance on unequal-length closed
+branches.
 
-The optional
-`boonta_route_graph_choose_outgoing_edge()` helper compares normalized
-horizontal endpoint tangents and chooses the most left-turning, right-turning,
-or straightest outgoing edge. Endpoint tangent extraction falls back from the
-first derivative to the next useful derivative and then to the endpoint chord.
-This is defensive handling for malformed or legacy generated C geometry: the
-route-graph validator continues to reject degenerate authoring tangents. Strict
-C99 host tests cover all fallback levels and left/right/neutral branch choice.
-The helper is not yet connected to live controller input.
+The optional `boonta_route_graph_choose_outgoing_edge()` helper compares
+normalized horizontal endpoint tangents and chooses the most left-turning,
+right-turning, or straightest outgoing edge. Endpoint tangent extraction falls
+back from the first derivative to the next useful derivative and then to the
+endpoint chord. This is defensive handling for malformed or legacy generated C
+geometry: the route-graph validator continues to reject degenerate authoring
+tangents. Strict C99 host tests cover all fallback levels and left/right/neutral
+branch choice.
 
-The live demo runtime remains on the existing unbranched oval: no
-branch-choice control or split/rejoin route is yet connected to player input,
-collision, lap progression or GX rendering. Native B-spline evaluation and
-checkpoint progression inside alternate branches also remain unimplemented.
-The previous track-v1 sampler remains available for regression comparison;
-the live game uses the new Bezier route sampler and synchronized cursor on the
-current oval.
+The current game still selects the original unbranched oval, so there is no
+claim yet of a player-visible split/rejoin course or hardware-tested branch
+handling. Native B-spline evaluation remains unsupported. The previous
+track-v1 sampler remains available for regression comparison; the live game
+uses the new Bezier route sampler and synchronized cursor on the current oval.
