@@ -390,4 +390,74 @@ static inline int boonta_route_cursor_get_state(
     return BOONTA_ROUTE_CURSOR_OK;
 }
 
+
+/*
+ * Return physical distance from the cursor to the next closed-loop start
+ * seam along the already selected path history. A branch with no cached
+ * continuation is reported as BRANCH_REQUIRED rather than guessing an edge.
+ */
+static inline int boonta_route_cursor_distance_to_next_lap(
+    const BoontaRouteCursor *cursor, float *distance_out)
+{
+    unsigned int path_index;
+    unsigned int previous_edge;
+    float distance;
+
+    if (distance_out != NULL) *distance_out = 0.0f;
+    if (cursor == NULL || distance_out == NULL || cursor->graph == NULL ||
+        cursor->edge_lengths == NULL || !cursor->graph->closed_loop ||
+        cursor->history_count == 0U ||
+        cursor->history_count > BOONTA_ROUTE_CURSOR_MAX_HISTORY ||
+        cursor->path_index >= cursor->history_count) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    previous_edge = cursor->path_history[cursor->path_index];
+    if (previous_edge >= cursor->graph->edge_count ||
+        !isfinite(cursor->distance_on_edge) ||
+        !isfinite(cursor->edge_lengths[previous_edge]) ||
+        cursor->edge_lengths[previous_edge] <= 0.001f ||
+        cursor->distance_on_edge < 0.0f ||
+        cursor->distance_on_edge >
+            cursor->edge_lengths[previous_edge] +
+                BOONTA_ROUTE_CURSOR_EPSILON) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    distance = cursor->edge_lengths[previous_edge] -
+        cursor->distance_on_edge;
+    if (cursor->graph->edges[previous_edge].to_node ==
+            cursor->graph->start_node) {
+        *distance_out = distance;
+        return BOONTA_ROUTE_CURSOR_OK;
+    }
+
+    for (path_index = cursor->path_index + 1U;
+         path_index < cursor->history_count; ++path_index) {
+        const unsigned int edge = cursor->path_history[path_index];
+        const BoontaRouteCursorEdge *item;
+
+        if (edge >= cursor->graph->edge_count) {
+            return BOONTA_ROUTE_CURSOR_INVALID;
+        }
+        item = &cursor->graph->edges[edge];
+        if (item->from_node !=
+                cursor->graph->edges[previous_edge].to_node ||
+            !isfinite(cursor->edge_lengths[edge]) ||
+            cursor->edge_lengths[edge] <= 0.001f) {
+            return BOONTA_ROUTE_CURSOR_INVALID;
+        }
+
+        distance += cursor->edge_lengths[edge];
+        if (!isfinite(distance)) return BOONTA_ROUTE_CURSOR_INVALID;
+        if (item->to_node == cursor->graph->start_node) {
+            *distance_out = distance;
+            return BOONTA_ROUTE_CURSOR_OK;
+        }
+        previous_edge = edge;
+    }
+
+    return BOONTA_ROUTE_CURSOR_BRANCH_REQUIRED;
+}
+
 #endif /* BOONTA_REBORN_ROUTE_CURSOR_H */
