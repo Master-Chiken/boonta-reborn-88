@@ -10,8 +10,8 @@ on:
       - Branch automation self-test
       - Step 102 source-import provenance guard
       - Trusted source-import path guard
-      - BRRES probe tests
-      - Dreamcast native build
+      - Synthetic BRRES MDL0 probe
+      - Dreamcast KallistiOS build
     types:
       - completed
 

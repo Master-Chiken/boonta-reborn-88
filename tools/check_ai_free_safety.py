@@ -394,8 +394,8 @@ for workflow_name in (
     "Branch automation self-test",
     "Step 102 source-import provenance guard",
     "Trusted source-import path guard",
-    "BRRES probe tests",
-    "Dreamcast native build",
+    "Synthetic BRRES MDL0 probe",
+    "Dreamcast KallistiOS build",
 ):
     if f"      - {workflow_name}" not in triage_trigger:
         errors.append(f"CI failure triage is missing workflow {workflow_name!r}")
