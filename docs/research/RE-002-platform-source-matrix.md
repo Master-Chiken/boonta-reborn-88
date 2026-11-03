@@ -285,12 +285,15 @@ Source comment: steps the cursor over each node plane the pod passed, using `seg
 - Not yet confirmed: exact plane origin/normal, branch selection policy, treatment of multiple node crossings in one frame, reverse traversal edge cases, and the exact interpolation/rounding rules.
 - It is not equivalent to generic `CursorEvaluate`: that routine advances by a supplied cursor velocity/time-step, while this race-specific routine is described as reconciling the pod's actual world-space motion against spline node planes.
 
-**B. `swrRace_UpdateSplineBinding` (`0x0047FBB0`)**
+**B. `swrRace_UpdateSplineBinding` (`0x0047FBB0`)
 
-The race struct records the function's result in `splineRebindResult`; the current field annotation describes `-1 = blocked`, `0 = no rebind`, and `1 = rebound to the mesh the pod is standing on`.
+The race struct records the function's result in `splineRebindResult`: `-1 = blocked`, `0 = no rebind`, and `1 = rebound to the mesh the pod is standing on`. The merged upstream [PR #264](https://github.com/tim-tim707/SW_RACER_RE/pull/264) supplies stronger, author-attributed evidence: `swrModel_Mesh.splineSampleIndex` at mesh offset `+0x3C` is the first baked spline sample index that hit that mesh, encoded as `node * 10 + sub-sample` (0 is the unset sentinel). Its commit message explicitly says that `UpdateSplineBinding` uses this inverse mapping to re-seek the cursor to the mesh the pod is standing on. A later commit in the same PR corrected the earlier name "node index" to **sample index**, because `CursorSeekToProgress` divides the supplied progress by 10.
 
-- Supported contract: the caller treats return value 1 as a progress event eligible to trigger lap-crossing logic, even when the cursor did not report a forward node crossing.
-- Hypothesis to verify: this function reconciles the spline cursor/track chunk to the ground-contact mesh when the racer is physically standing on a neighbouring mesh. Do not yet claim it picks a particular projection, branch or cursor seek routine.
+The merged upstream [PR #264 commit `24cda80`](https://github.com/tim-tim707/SW_RACER_RE/commit/24cda80a7e21c151f0b10f2987256347fc5a2332) also documents the bake behavior: if a collision mesh is shared across different spline traversal branches, it is marked with behavior bit `0x8` ("spline-ambiguous"). That bit blocks `UpdateSplineBinding` rebinds and also feeds the judge's not-racing-zone logic.
+
+- **Supported contract:** if a physical ground-contact mesh can be mapped unambiguously back to a baked spline sample, the race cursor can be re-seeked to that sample; return value 1 tells the caller this was a progress event and can trigger lap-crossing logic even without a forward node crossing.
+- **Supported blocker:** a mesh carrying behavior bit `0x8` is not a valid rebind target because it is shared between spline branches.
+- **Still unknown:** exact null/zero handling, whether the function first compares `terrainModel` and `splineTrackMesh`, all conditions that return -1 vs 0, whether it seeks directly to `splineSampleIndex` or applies a local correction, and how it handles an unset sample index. The public PR notes give the semantic contract but not the function body.
 
 **C. `swrRace_ComputeTrackOffset` (`0x0047FCA0`)**
 
@@ -301,6 +304,25 @@ The race struct annotates `trackOffset` at `+0x118` as a 4-vector whose xyz enco
 - **Unknown:** whether the original executable still writes/reads this field elsewhere, whether the reconstruction simply omits all uses, the exact origin point, threshold, zeroing behavior, or any AI/handling consumer.
 
 Therefore `ComputeTrackOffset` remains an unresolved stub and the current field comment is not sufficient evidence to specify its algorithm.
+
+
+
+### Evidence from upstream mesh/sample mapping — UpdateSplineBinding narrowed further
+
+The merged upstream PR #264 (commit `dabc7c35309fc5bc6f1b26a8590c24c3016ebbb5`) is particularly relevant:
+- `swrModel_Mesh +0x3C` was initially called a spline node index, then corrected by merged follow-up commit [`24cda80`](https://github.com/tim-tim707/SW_RACER_RE/commit/24cda80a7e21c151f0b10f2987256347fc5a2332) to `splineSampleIndex`: it records the first of ten baked samples per node that hit that collision mesh. It is a baked inverse lookup from physical mesh back to spline sample.
+- `swrSpline_BakeSampleTrackMesh` creates the forward lookup (spline sample → collision mesh); the mesh's `splineSampleIndex` provides the inverse mapping (mesh → spline sample).
+- A shared mesh may be hit by samples from more than one spline traversal order. The baker marks this with behavior `unk1 & 0x8` ("spline-ambiguous"); the PR's binary evidence says this specifically blocks `UpdateSplineBinding` rebinding and is also used to mark a not-racing zone.
+- `swrSpline_CursorSeekToProgress` converts a sample/progress index into a node band and fractional `segmentT`: band = floor(index / 10), fractional parameter = (index - band * 10) / 10; it then follows the encoded branch bits to rebuild the lookahead.
+
+This supports the following **candidate control flow**, not an implementation claim:
+
+1. Obtain the current ground-contact mesh (from `player->terrainModel`, set by `swrRace_RaycastGround`).
+2. Reject meshes which are not a valid track mesh, have no baked sample index (zero sentinel), or are flagged ambiguous (the exact -1/0 result split is not yet verified).
+3. If the ground-contact mesh maps to a different unambiguous sample than the current cursor/track chunk, seek the cursor using the mesh's `splineSampleIndex` and report a successful rebind.
+4. Otherwise leave the cursor unchanged.
+
+Only the semantic mapping and ambiguous-mesh blocker are supported by upstream decompilation notes; the four control-flow steps above are an explicit **HYPOTHESIS** until the actual function body / matching build is recovered.
 
 ### End-to-end progress calculation already implemented around the gaps
 
