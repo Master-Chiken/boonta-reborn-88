@@ -842,6 +842,37 @@ static void append_text(const char *text, float x, float y, float scale,
     }
 }
 
+static float current_lap_progress(void)
+{
+    float progress;
+
+    if (g_race_finished) return 1.0f;
+
+    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+        /*
+         * Branch paths can have different physical lengths. Use the active
+         * edge's authored normalized progress span rather than fmodf over a
+         * single oval-length constant.
+         */
+        if (g_route_cursor_ready &&
+            boonta_route_cursor_lap_progress(&g_route_cursor, &progress) ==
+                BOONTA_ROUTE_CURSOR_OK) {
+            return progress;
+        }
+        return 0.0f;
+    }
+
+    if (!isfinite(g_distance) || !isfinite(RACE_LAP_DISTANCE) ||
+        RACE_LAP_DISTANCE <= 0.001f) {
+        return 0.0f;
+    }
+    progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
+    if (!isfinite(progress)) return 0.0f;
+    if (progress < 0.0f) return 0.0f;
+    if (progress > 1.0f) return 1.0f;
+    return progress;
+}
+
 static void append_formatted_time(char *buffer, size_t size, float seconds)
 {
     unsigned int tenths;
@@ -874,7 +905,7 @@ static void draw_hud(void)
     const GXColor white = { 238, 246, 255, 255 };
     const float bar_left = 24.0f;
     const float bar_bottom = h - 24.0f;
-    const float lap_progress = g_race_finished ? 1.0f : fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
+    const float lap_progress = current_lap_progress();
     const float bar_width = (w < 500.0f) ? 130.0f : 190.0f;
 
     append_formatted_time(time_text, sizeof(time_text), g_race_seconds);

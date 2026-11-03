@@ -391,6 +391,35 @@ static inline int boonta_route_cursor_get_state(
 }
 
 
+
+/*
+ * Return normalized authored lap progress for the currently selected path.
+ * Unlike a single scalar lap length, graph progress spans remain valid when
+ * alternative branches have different physical lengths.
+ */
+static inline int boonta_route_cursor_lap_progress(
+    const BoontaRouteCursor *cursor, float *progress_out)
+{
+    BoontaRouteCursorState state;
+    int result;
+
+    if (progress_out != NULL) *progress_out = 0.0f;
+    if (cursor == NULL || progress_out == NULL || cursor->graph == NULL ||
+        !cursor->graph->closed_loop) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    result = boonta_route_cursor_get_state(cursor, &state);
+    if (result != BOONTA_ROUTE_CURSOR_OK) return result;
+    if (!isfinite(state.progress)) return BOONTA_ROUTE_CURSOR_INVALID;
+
+    *progress_out = state.progress;
+    if (*progress_out < 0.0f) *progress_out = 0.0f;
+    if (*progress_out > 1.0f) *progress_out = 1.0f;
+    return BOONTA_ROUTE_CURSOR_OK;
+}
+
+
 /*
  * Return physical distance from the cursor to the next closed-loop start
  * seam along the already selected path history. A branch with no cached

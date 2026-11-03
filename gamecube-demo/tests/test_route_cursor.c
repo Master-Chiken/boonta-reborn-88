@@ -273,6 +273,59 @@ static void test_closed_branch_laps_follow_selected_path_and_reverse(void)
     assert(state.completed_laps == 2U);
 }
 
+static void test_lap_progress_uses_selected_branch_span(void)
+{
+    BoontaRouteCursor left;
+    BoontaRouteCursor right;
+    float left_progress = -1.0f;
+    float right_progress = -1.0f;
+    const BoontaRouteBranchChoice choose_left = { 1U, 1U };
+    const BoontaRouteBranchChoice choose_right = { 1U, 3U };
+
+    assert(boonta_route_cursor_init(
+        &left, &g_closed_branch_graph, g_closed_branch_lengths, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_init(
+        &right, &g_closed_branch_graph, g_closed_branch_lengths, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+
+    /*
+     * Both cursors travel 1.1 m, but the left branch is 1 m long and the
+     * right branch is 2 m long. Their normalized authored progress differs.
+     */
+    assert(boonta_route_cursor_move(&left, 1.1f, &choose_left, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&right, 1.1f, &choose_right, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+
+    assert(boonta_route_cursor_lap_progress(&left, &left_progress) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_lap_progress(&right, &right_progress) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert_close(left_progress, 0.24f, 0.00001f);
+    assert_close(right_progress, 0.22f, 0.00001f);
+    assert(left_progress != right_progress);
+
+    /* Open routes have no lap progress and must not leak a stale output. */
+    {
+        static const BoontaRouteCursorGraph open_graph = {
+            g_split_rejoin_edges,
+            sizeof(g_split_rejoin_edges) / sizeof(g_split_rejoin_edges[0]),
+            6U,
+            0U,
+            0
+        };
+        BoontaRouteCursor open_cursor;
+        float open_progress = 0.75f;
+        assert(boonta_route_cursor_init(
+            &open_cursor, &open_graph, g_split_rejoin_lengths, 0U) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_cursor_lap_progress(
+            &open_cursor, &open_progress) == BOONTA_ROUTE_CURSOR_INVALID);
+        assert_close(open_progress, 0.0f, 0.000001f);
+    }
+}
+
 static void test_distance_to_next_lap_uses_selected_variable_length_path(void)
 {
     BoontaRouteCursor cursor;
@@ -389,6 +442,7 @@ int main(void)
     test_open_route_finishes_at_exact_terminal_distance();
     test_closed_loop_replays_start_edge_without_finishing();
     test_closed_branch_laps_follow_selected_path_and_reverse();
+    test_lap_progress_uses_selected_branch_span();
     test_distance_to_next_lap_uses_selected_variable_length_path();
     test_open_route_never_wraps_to_start_node();
     test_history_capacity_failure_is_atomic();

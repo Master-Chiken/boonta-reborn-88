@@ -76,6 +76,15 @@ class RouteCursorRuntimeSourceTests(unittest.TestCase):
         self.assertIn("boonta_route_graph_sampler_prime_lookahead(", block)
         self.assertIn("boonta_route_cursor_move(", block)
 
+    def test_branched_hud_progress_uses_active_cursor_span(self):
+        start = self.source.index("static float current_lap_progress(void)")
+        end = self.source.index("static void append_formatted_time(", start)
+        block = self.source[start:end]
+        self.assertIn("BOONTA_RUNTIME_ROUTE_HAS_BRANCHES", block)
+        self.assertIn("boonta_route_cursor_lap_progress", block)
+        self.assertIn("fmodf(g_distance, RACE_LAP_DISTANCE)", block)
+        self.assertIn("g_race_finished", block)
+
     def test_branch_finish_stripe_uses_selected_path_history(self):
         self.assertIn("boonta_route_cursor_distance_to_next_lap(", self.source)
         self.assertIn("ROUTE_RENDER_LOOKAHEAD_DISTANCE", self.source)
