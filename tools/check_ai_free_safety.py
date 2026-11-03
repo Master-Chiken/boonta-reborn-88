@@ -331,8 +331,14 @@ if "uses: ./.github/workflows/gemini-plan-execute.yml" not in autonomous or "aut
     errors.append("Boonta autonomous loop must call the separately gated reusable writer in autonomous mode")
 if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in execute:
     errors.append("Autonomous writes must be restricted to the canonical queue and explicit owner gate")
-if "GEMINI_AUTONOMOUS_ENABLED" not in execute or "APP_PRIVATE_KEY" not in execute or "CALLER_WORKFLOW" not in execute:
-    errors.append("Autonomous writer must require its separate gate, approved caller, and GitHub App identity")
+if (
+    "GEMINI_AUTONOMOUS_ENABLED" not in execute
+    or "APP_PRIVATE_KEY" not in execute
+    or "CALLER_WORKFLOW" not in execute
+    or "CALLER_REF" not in execute
+    or 'CALLER_REF:-}" != "refs/heads/main"' not in execute
+):
+    errors.append("Autonomous writer must require its separate gate, approved caller on protected main, and GitHub App identity")
 if "permission-actions: 'read'" not in execute or '"list_workflow_runs"' not in execute or '"get_job_logs"' not in execute:
     errors.append("Autonomous writer must be able to inspect CI runs and failed-job logs using Actions read permission")
 if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
@@ -363,8 +369,8 @@ if readiness_events != ["workflow_dispatch"]:
         "Autonomous readiness must be manually dispatched only; "
         f"found {readiness_events!r}"
     )
-if "if: github.actor == github.repository_owner" not in readiness:
-    errors.append("Autonomous readiness must be restricted to the repository owner")
+if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
+    errors.append("Autonomous readiness must be owner-only and pinned to protected main")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
 readiness_permissions = dict(
     re.findall(
@@ -428,8 +434,8 @@ if autonomous_events != ["schedule", "workflow_dispatch"]:
         "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
         f"found {autonomous_events!r}"
     )
-if "if: github.event_name == 'schedule' || github.actor == github.repository_owner" not in autonomous:
-    errors.append("Manual autonomous dispatch must be restricted to the repository owner")
+if "if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+    errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
 
