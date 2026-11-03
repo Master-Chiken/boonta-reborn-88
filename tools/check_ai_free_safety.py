@@ -401,10 +401,11 @@ for required_probe in (
     "/issues/156",
     "/issues/226",
     "/actions/runs?per_page=1",
-    "/git/ref/heads/\\feat/boonta-autonomous-loop-20261103",
+    "/git/ref/heads/\${branch}",
 ):
     if required_probe not in readiness:
         errors.append(f"Autonomous readiness is missing required read-only API probe {required_probe!r}")
+
 if "No repository write was performed" not in readiness or "does not independently verify Google billing status" not in readiness:
     errors.append("Autonomous readiness must state that it performs no writes and cannot verify Google billing")
 if "rulesets protect main and dev" not in readiness:
