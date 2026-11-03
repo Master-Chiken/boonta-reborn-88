@@ -441,6 +441,119 @@ int main(void)
                     + (exc.stdout or "") + (exc.stderr or "")
                 )
 
+    def test_lookahead_primes_all_decisions_and_preserves_current_position(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/three-branch-decisions.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+        c_source = r"""
+#include <assert.h>
+#include <math.h>
+#include <string.h>
+#define BOONTA_ROUTE_GRAPH_HEADER "branch_route.h"
+#include "route_graph_sampling.h"
+
+int main(void)
+{
+    static const BoontaRouteCursorGraph graph = {
+        boonta_runtime_route_topology_edges,
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+        BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+        BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+        BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+    };
+    BoontaRouteGraphSampler sampler;
+    BoontaRouteCursor cursor;
+    BoontaRouteCursor preview;
+    BoontaRouteCursorState state;
+    float original_distance;
+
+    memset(&sampler, 0, sizeof(sampler));
+    assert(boonta_route_graph_sampler_prepare(&sampler));
+    assert(boonta_route_cursor_init(
+        &cursor, &graph, sampler.edge_lengths, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(sampler.edge_lengths[0] > 0.5f);
+    assert(boonta_route_cursor_move(
+        &cursor, sampler.edge_lengths[0] - 0.5f, NULL, 0U) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    original_distance = cursor.distance_on_edge;
+
+    /* Left is player-selected at the nearby first split; later previews are neutral. */
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        &sampler, &cursor, -1, 1.0f, sampler.total_length) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(cursor.path_index == 0U);
+    assert(cursor.path_history[0] == 0U);
+    assert(cursor.history_count == 4U);
+    assert(cursor.path_history[1] == 1U);
+    assert(cursor.path_history[2] == 3U);
+    assert(cursor.path_history[3] == 5U);
+    assert(fabsf(cursor.distance_on_edge - original_distance) < 0.0001f);
+
+    /* Full look-ahead can pass all three decisions and reach the open finish. */
+    preview = cursor;
+    assert(boonta_route_cursor_move(
+        &preview, sampler.total_length, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&preview, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.finished == 1);
+
+    /* Re-priming from the same live position changes the first split to right. */
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        &sampler, &cursor, 1, 1.0f, sampler.total_length) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(cursor.path_index == 0U);
+    assert(cursor.history_count == 4U);
+    assert(cursor.path_history[1] == 2U);
+    assert(cursor.path_history[2] == 4U);
+    assert(cursor.path_history[3] == 6U);
+    assert(fabsf(cursor.distance_on_edge - original_distance) < 0.0001f);
+
+    preview = cursor;
+    assert(boonta_route_cursor_move(
+        &preview, sampler.total_length, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&preview, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.finished == 1);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            header_path = temp / "branch_route.h"
+            source_path = temp / "branch_route_test.c"
+            binary_path = temp / "branch_route_test"
+            header_path.write_text(header, encoding="utf-8")
+            source_path.write_text(c_source, encoding="utf-8")
+            try:
+                subprocess.run(
+                    [
+                        "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(temp),
+                        "-I", str(ROOT / "gamecube-demo" / "source"),
+                        str(source_path), "-lm", "-o", str(binary_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                subprocess.run(
+                    [str(binary_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "multi-junction look-ahead regression failed:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
+
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
             (ROUTE_TOOLS / "fixtures/open-bezier.json").read_text(encoding="utf-8")
