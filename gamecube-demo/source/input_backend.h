@@ -39,6 +39,17 @@
 #define BOONTA_CLASSIC_BUTTON_DOWN     (0x4000u << 16)
 #define BOONTA_CLASSIC_BUTTON_RIGHT    (0x8000u << 16)
 
+typedef enum {
+    BOONTA_INPUT_STATUS_UNKNOWN = 0,
+    BOONTA_INPUT_STATUS_GAMECUBE_READY,
+    BOONTA_INPUT_STATUS_WII_NO_CONTROLLER,
+    BOONTA_INPUT_STATUS_WII_NO_CLASSIC,
+    BOONTA_INPUT_STATUS_WII_CONFIGURING,
+    BOONTA_INPUT_STATUS_WII_WAITING_FOR_DATA,
+    BOONTA_INPUT_STATUS_WII_SETUP_FAILED,
+    BOONTA_INPUT_STATUS_WII_CLASSIC_READY
+} BoontaInputStatus;
+
 typedef struct {
     uint32_t buttons_down;
     uint32_t buttons_held;
@@ -46,6 +57,7 @@ typedef struct {
     int8_t stick_y;
     uint8_t trigger_l;
     uint8_t trigger_r;
+    BoontaInputStatus status;
 } BoontaInputFrame;
 
 /* A sample is accepted only after WPAD_Probe reports WPAD_EXP_CLASSIC. */
@@ -132,10 +144,13 @@ static inline uint32_t boonta_classic_buttons_to_logical(uint32_t buttons)
 static inline BoontaInputFrame boonta_classic_input_translate(
     const BoontaClassicInputSample *sample)
 {
-    BoontaInputFrame frame = {0U, 0U, 0, 0, 0U, 0U};
+    BoontaInputFrame frame = {0};
 
     /* Disconnected pads and non-Classic expansions always become neutral. */
-    if (sample == 0 || !sample->classic_connected) return frame;
+    if (sample == 0 || !sample->classic_connected) {
+        frame.status = BOONTA_INPUT_STATUS_WII_NO_CLASSIC;
+        return frame;
+    }
 
     frame.buttons_down = boonta_classic_buttons_to_logical(sample->buttons_down);
     frame.buttons_held = boonta_classic_buttons_to_logical(sample->buttons_held);
@@ -143,6 +158,7 @@ static inline BoontaInputFrame boonta_classic_input_translate(
     frame.stick_y = sample->stick_y;
     frame.trigger_l = boonta_classic_trigger_to_byte(sample->left_shoulder);
     frame.trigger_r = boonta_classic_trigger_to_byte(sample->right_shoulder);
+    frame.status = BOONTA_INPUT_STATUS_WII_CLASSIC_READY;
     return frame;
 }
 
