@@ -27,5 +27,6 @@
 - For either authorized path, create a unique branch based on the latest commit of the correct target branch, make small changes and open a pull request.
 - Never push directly to main, merge a pull request, enable auto-merge, delete unrelated files or weaken tests.
 - The manual plan-execute path must be blocked unless `GEMINI_WRITE_ENABLED` is exactly `true`. Scheduled autonomous execution must be blocked unless `GEMINI_AUTONOMOUS_ENABLED` is exactly `true`, `GEMINI_FREE_TIER_CONFIRMED` is exactly `true`, `GEMINI_API_KEY`, `APP_ID`, and `APP_PRIVATE_KEY` are configured, and the run originates from the Boonta Autonomous Loop workflow for issue #226.
+- The required write-enable value is the literal text exactly true; any other value keeps the corresponding writer disabled.
 - If the owner has not verified branch protection and the free API secret, stay read-only and do not run code-writing tools.
 - Report commands and outcomes accurately. Keep host tests, native GameCube DOL builds, Dolphin process tests and interactive graphics/controls validation distinct.
