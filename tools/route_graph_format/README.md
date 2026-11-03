@@ -112,6 +112,19 @@ A density sweep points in the same direction: at 32 samples per edge the paramet
 
 **Decision:** retain `parameter` as the default and keep the checked-in 16-sample oval unchanged. Do not select the experimental arc-length bake for the current Catmull-Rom runtime. A 32-sample parameter-space bake is a candidate for a separately validated visual/build comparison, not an automatic upgrade. Arc-length mode remains available for future runtime/interpolation designs that consume true distance parameterization.
 
+
+### Runtime lap-distance versus smoothed-curve length (2026-11-03)
+
+The legacy eight-control-point oval in an earlier development snapshot had a straight-chord lap distance of 181.232191 m, while its Catmull–Rom reconstruction measured about 184.563 m (roughly 1.84% longer). The RE-001 route-graph bridge now bakes the same clean-room oval to 128 points (16 per Bezier edge), reducing the mismatch substantially:
+
+- Generated header / polyline lap distance: **184.532595 m**.
+- Reconstructed 128-segment Catmull–Rom length: **184.563791 m** (converged using up to 1024 subdivisions per runtime segment).
+- Difference: **0.031196 m per lap**, or **0.01691%**.
+
+This is the actual relationship in the 128-point branch build: the lap counter uses the generated polyline length while `track_sample_at` draws Catmull–Rom between those points. The residual is small, but not mathematically zero. A host regression now requires the reconstructed Catmull–Rom length to remain within 0.02% of the polyline length when regenerating the canonical oval. This guards the current distance/render alignment without changing speed, lap timing, or the runtime interpolation algorithm.
+
+This is host-side geometric validation, not proof of visible race behavior or retail GameCube/Wii course parity. The code-bearing change remains in PR #274; `dev` is not updated until that PR is reviewed and merged.
+
 ## External reverse-engineering tool references (2026-11-03)
 
 Two public projects provide useful workflow patterns, but neither is a drop-in GameCube/Wii implementation:

@@ -119,6 +119,64 @@ class TrackFormatTests(unittest.TestCase):
         )
         self.assertEqual(checked_in, expected)
 
+
+    def test_runtime_oval_spline_length_stays_close_to_lap_polyline_distance(self):
+        graph = json.loads(RUNTIME_ROUTE_GRAPH_PATH.read_text(encoding="utf-8"))
+        widths = json.loads(RUNTIME_SURFACE_WIDTHS_PATH.read_text(encoding="utf-8"))
+        track = export_closed_loop_track(
+            graph,
+            default_half_width=3.5,
+            samples_per_edge=16,
+            surface_widths=widths,
+        )
+        points = track["points"]
+        point_count = len(points)
+
+        def position(index):
+            point = points[index % point_count]
+            return (point["x"], point["y"], point["z"])
+
+        def catmull(index, t):
+            p0, p1, p2, p3 = (
+                position(index - 1), position(index),
+                position(index + 1), position(index + 2),
+            )
+            t2 = t * t
+            t3 = t2 * t
+            return tuple(
+                0.5 * (
+                    2.0 * p1[axis]
+                    + (-p0[axis] + p2[axis]) * t
+                    + (2.0 * p0[axis] - 5.0 * p1[axis]
+                       + 4.0 * p2[axis] - p3[axis]) * t2
+                    + (-p0[axis] + 3.0 * p1[axis]
+                       - 3.0 * p2[axis] + p3[axis]) * t3
+                )
+                for axis in range(3)
+            )
+
+        polyline_length = sum(
+            math.dist(position(index), position(index + 1))
+            for index in range(point_count)
+        )
+        spline_length = 0.0
+        subdivisions = 64
+        for index in range(point_count):
+            previous = catmull(index, 0.0)
+            for step in range(1, subdivisions + 1):
+                current = catmull(index, step / subdivisions)
+                spline_length += math.dist(previous, current)
+                previous = current
+
+        relative_error = abs(spline_length - polyline_length) / polyline_length
+        self.assertGreater(polyline_length, 0.0)
+        self.assertLess(
+            relative_error,
+            0.0002,
+            f"runtime Catmull-Rom length differs from lap distance by "
+            f"{relative_error:.5%} ({spline_length - polyline_length:.6f} m)",
+        )
+
     def test_header_exports_closed_loop_polyline_length(self):
         track = load_track(EXAMPLE_PATH)
         points = track["points"]
