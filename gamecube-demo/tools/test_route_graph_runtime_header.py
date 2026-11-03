@@ -685,6 +685,86 @@ int main(void)
                     + (exc.stdout or "") + (exc.stderr or "")
                 )
 
+    def test_branched_width_interpolation_stays_within_selected_edge(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/closed-loop-split-rejoin.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        width_values = [3.1, 4.2, 2.7, 3.7, 3.3]
+        surface_widths = {}
+        for index, edge in enumerate(graph["edges"]):
+            surface_id = f"edge-width-{index}"
+            surface_widths[surface_id] = width_values[index]
+            edge["surface_binding"] = [
+                {"t": 0.0, "surface_id": surface_id},
+                {"t": 1.0, "surface_id": surface_id},
+            ]
+
+        header = generate_runtime_route_header(
+            graph, surface_widths, default_half_width=3.6
+        )
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP 0", header)
+        self.assertIn("boonta_runtime_route_width_end_samples", header)
+
+        c_source = r"""
+#include <assert.h>
+#include <math.h>
+#define BOONTA_ROUTE_GRAPH_HEADER "branch_width_route.h"
+#include "route_graph_sampling.h"
+
+static void assert_width(float actual, float expected)
+{
+    assert(isfinite(actual));
+    assert(fabsf(actual - expected) < 0.00001f);
+}
+
+int main(void)
+{
+    /* Edge 1 is the left path; edge 2 is its sibling right-path-a. */
+    assert(BOONTA_RUNTIME_ROUTE_HAS_BRANCHES == 1);
+    assert_width(boonta_route_graph_width_at(1U, 0.0f, 3.6f), 4.2f);
+    assert_width(boonta_route_graph_width_at(1U, 0.5f, 3.6f), 4.2f);
+    assert_width(boonta_route_graph_width_at(1U, 0.999f, 3.6f), 4.2f);
+    assert_width(boonta_route_graph_width_at(1U, 1.0f, 3.6f), 4.2f);
+
+    assert_width(boonta_route_graph_width_at(2U, 0.001f, 3.6f), 2.7f);
+    assert_width(boonta_route_graph_width_at(2U, 0.5f, 3.6f), 2.7f);
+    assert_width(boonta_route_graph_width_at(2U, 1.0f, 3.6f), 2.7f);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            header_path = temp / "branch_width_route.h"
+            source_path = temp / "branch_width_test.c"
+            binary_path = temp / "branch_width_test"
+            header_path.write_text(header, encoding="utf-8")
+            source_path.write_text(c_source, encoding="utf-8")
+            try:
+                subprocess.run(
+                    [
+                        "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(temp),
+                        "-I", str(ROOT / "gamecube-demo" / "source"),
+                        str(source_path), "-lm", "-o", str(binary_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                subprocess.run(
+                    [str(binary_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "branched edge-local width interpolation failed:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
+
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
             (ROUTE_TOOLS / "fixtures/open-bezier.json").read_text(encoding="utf-8")
