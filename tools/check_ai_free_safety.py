@@ -31,6 +31,7 @@ invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
 setup = read("docs/AI_AUTOMATION_SETUP.md")
+wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
@@ -374,6 +375,21 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in s
     errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
 if "Actions: read" not in setup:
     errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
+
+# Keep Wii64 unit-test CI scoped to the files its tests actually exercise.
+wii64_trigger = wii64_tests.split("permissions:", 1)[0]
+if '"tools/**"' in wii64_trigger:
+    errors.append("Wii64 tooling tests must not run for unrelated tools/ changes")
+for required_path in (
+    '      - "tools/compare_wii64_rice_ini.py"',
+    '      - "tools/compare_wii64_rice_profiles.py"',
+    '      - "tools/inspect_wii64_rice_ini.py"',
+    '      - "tools/verify_wii64_archive.py"',
+    '      - "tools/tests/**"',
+    '      - ".github/workflows/wii64-tool-tests.yml"',
+):
+    if required_path not in wii64_trigger:
+        errors.append(f"Wii64 tooling test path filters are missing {required_path!r}")
 
 # Keep the one-item autonomous queue aligned with its live canonical issue and
 # prevent the agent from repeating the already-merged route-graph contract.
