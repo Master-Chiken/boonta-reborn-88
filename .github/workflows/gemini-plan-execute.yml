@@ -122,15 +122,21 @@ jobs:
             --arg num "${ISSUE_NUMBER}" \
             --arg repo "${REPOSITORY}" \
             --arg context "${ADDITIONAL_CONTEXT}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context}' > .gemini/context.json
+            --arg task_title "${TASK_TITLE}" \
+            --arg task_description "${TASK_DESCRIPTION}" \
+            --arg autonomous_mode "${AUTONOMOUS_MODE}" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_title: $task_title, task_description: $task_description}' > .gemini/context.json
         env:
-          TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
-          DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'
+          TITLE: '${{ inputs.task_title || github.event.pull_request.title || github.event.issue.title }}'
+          DESCRIPTION: '${{ inputs.task_description || github.event.pull_request.body || github.event.issue.body }}'
           EVENT_NAME: '${{ github.event_name }}'
           IS_PULL_REQUEST: '${{ !!github.event.pull_request }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          TASK_TITLE: '${{ inputs.task_title }}'
+          TASK_DESCRIPTION: '${{ inputs.task_description }}'
+          AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
 
       - name: 'Run Gemini CLI'
         if: steps.free_tier_guard.outputs.allowed == 'true'
@@ -150,7 +156,7 @@ jobs:
           # Assistant workflows can be triggered by comments on either Issues or PRs.
           # We explicitly map both fields so the CLI can correctly categorize the interaction.
           github_pr_number: '${{ github.event.pull_request.number }}'
-          github_issue_number: '${{ github.event.issue.number }}'
+          github_issue_number: '${{ inputs.issue_number || github.event.issue.number }}'
           settings: |-
             {
               "model": {
@@ -198,7 +204,7 @@ jobs:
                 "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '/gemini-plan-execute'
+          prompt: '${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}'
 
       - name: Explain why Gemini was not called
         if: steps.free_tier_guard.outputs.allowed != 'true'
