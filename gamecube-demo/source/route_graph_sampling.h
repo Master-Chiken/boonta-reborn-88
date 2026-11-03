@@ -15,6 +15,7 @@ typedef struct {
     float distance_lut[BOONTA_RUNTIME_ROUTE_EDGE_COUNT]
                       [BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS + 1U];
     float edge_lengths[BOONTA_RUNTIME_ROUTE_EDGE_COUNT];
+    float edge_start_distances[BOONTA_RUNTIME_ROUTE_EDGE_COUNT];
     float total_length;
     int lengths_ready;
 } BoontaRouteGraphSampler;
@@ -137,6 +138,7 @@ static inline int boonta_route_graph_sampler_prepare(
             sampler->distance_lut[edge_index][BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS] =
                 BOONTA_RUNTIME_ROUTE_LENGTH - scaled_prefix;
         }
+        sampler->edge_start_distances[edge_index] = scaled_prefix;
         sampler->edge_lengths[edge_index] =
             sampler->distance_lut[edge_index][BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS];
         scaled_prefix += sampler->edge_lengths[edge_index];
@@ -180,6 +182,9 @@ static inline void boonta_route_graph_sampler_sample_at(
 {
     unsigned int edge_index;
     float target;
+    float edge_target;
+    unsigned int edge_low = 0U;
+    unsigned int edge_high = BOONTA_RUNTIME_ROUTE_EDGE_COUNT;
 
     if (x_out != NULL) *x_out = 0.0f;
     if (y_out != NULL) *y_out = 0.0f;
@@ -193,48 +198,65 @@ static inline void boonta_route_graph_sampler_sample_at(
     target = fmodf(travelled, sampler->total_length);
     if (target < 0.0f) target += sampler->total_length;
 
-    for (edge_index = 0U;
-         edge_index < BOONTA_RUNTIME_ROUTE_EDGE_COUNT;
-         ++edge_index) {
-        const float edge_length = sampler->edge_lengths[edge_index];
-        if (target <= edge_length ||
-            edge_index + 1U == BOONTA_RUNTIME_ROUTE_EDGE_COUNT) {
-            unsigned int lower = 0U;
-            const float edge_target = target;
-            float t;
-            float span;
-
-            while (lower + 1U < BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS &&
-                   sampler->distance_lut[edge_index][lower + 1U] < edge_target) {
-                ++lower;
-            }
-            span = sampler->distance_lut[edge_index][lower + 1U]
-                 - sampler->distance_lut[edge_index][lower];
-            if (span > 0.000001f) {
-                const float fraction = (edge_target
-                    - sampler->distance_lut[edge_index][lower]) / span;
-                t = ((float)lower + fraction) /
-                    (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
-                if (t < 0.0f) t = 0.0f;
-                if (t > 1.0f) t = 1.0f;
-            } else {
-                t = (float)lower /
-                    (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
-            }
-
-            boonta_route_graph_evaluate_edge(
-                edge_index, t, x_out, y_out, z_out);
-            if (width_out != NULL) {
-                *width_out = boonta_route_graph_width_at(
-                    edge_index, t, fallback_half_width);
-            }
-            if (y_out != NULL) {
-                if (*y_out < -3.0f) *y_out = -3.0f;
-                if (*y_out > 3.0f) *y_out = 3.0f;
-            }
-            return;
+    /*
+     * Find the last edge whose start is at or before target. At an exact
+     * edge boundary this selects the following edge; connected endpoints
+     * and the shared width samples make that representation continuous.
+     */
+    while (edge_low + 1U < edge_high) {
+        const unsigned int middle = edge_low + (edge_high - edge_low) / 2U;
+        if (target < sampler->edge_start_distances[middle]) {
+            edge_high = middle;
+        } else {
+            edge_low = middle;
         }
-        target -= edge_length;
+    }
+    edge_index = edge_low;
+    edge_target = target - sampler->edge_start_distances[edge_index];
+
+    /*
+     * The LUT has 128 intervals per edge. Binary search keeps each runtime
+     * sample bounded to at most seven interval comparisons instead of a
+     * linear walk across the whole edge.
+     */
+    {
+        unsigned int lower = 0U;
+        unsigned int upper = BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+        float t;
+        float span;
+
+        while (lower + 1U < upper) {
+            const unsigned int middle = lower + (upper - lower) / 2U;
+            if (sampler->distance_lut[edge_index][middle] <= edge_target) {
+                lower = middle;
+            } else {
+                upper = middle;
+            }
+        }
+
+        span = sampler->distance_lut[edge_index][lower + 1U]
+             - sampler->distance_lut[edge_index][lower];
+        if (span > 0.000001f) {
+            const float fraction = (edge_target
+                - sampler->distance_lut[edge_index][lower]) / span;
+            t = ((float)lower + fraction) /
+                (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+            if (t < 0.0f) t = 0.0f;
+            if (t > 1.0f) t = 1.0f;
+        } else {
+            t = (float)lower /
+                (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+        }
+
+        boonta_route_graph_evaluate_edge(edge_index, t, x_out, y_out, z_out);
+        if (width_out != NULL) {
+            *width_out = boonta_route_graph_width_at(
+                edge_index, t, fallback_half_width);
+        }
+        if (y_out != NULL) {
+            if (*y_out < -3.0f) *y_out = -3.0f;
+            if (*y_out > 3.0f) *y_out = 3.0f;
+        }
     }
 }
 

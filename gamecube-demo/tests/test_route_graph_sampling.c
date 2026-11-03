@@ -50,6 +50,67 @@ static void test_every_edge_boundary_matches_its_authored_node(void)
     }
 }
 
+static void test_binary_search_boundaries_and_midpoints(void)
+{
+    unsigned int edge;
+
+    assert(boonta_route_graph_sampler_prepare(&g_sampler));
+    assert_close(g_sampler.edge_start_distances[0], 0.0f, 0.000001f);
+
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        const float edge_start = g_sampler.edge_start_distances[edge];
+        unsigned int step;
+
+        if (edge > 0U) {
+            assert(edge_start > g_sampler.edge_start_distances[edge - 1U]);
+            assert_close(
+                edge_start,
+                g_sampler.edge_start_distances[edge - 1U] +
+                    g_sampler.edge_lengths[edge - 1U],
+                0.00002f);
+        }
+
+        for (step = 0U;
+             step <= BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+             ++step) {
+            const float t = (float)step /
+                (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+            const float travelled = edge_start +
+                g_sampler.distance_lut[edge][step];
+            float expected_x, expected_y, expected_z;
+            float actual_x, actual_y, actual_z;
+
+            boonta_route_graph_evaluate_edge(
+                edge, t, &expected_x, &expected_y, &expected_z);
+            sample(travelled, &actual_x, &actual_y, &actual_z, NULL);
+            assert_close(actual_x, expected_x, 0.00015f);
+            assert_close(actual_y, expected_y, 0.00015f);
+            assert_close(actual_z, expected_z, 0.00015f);
+
+            if (step < BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS) {
+                const float midpoint_distance = edge_start +
+                    0.5f * (g_sampler.distance_lut[edge][step] +
+                            g_sampler.distance_lut[edge][step + 1U]);
+                const float midpoint_t = ((float)step + 0.5f) /
+                    (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+
+                boonta_route_graph_evaluate_edge(
+                    edge, midpoint_t, &expected_x, &expected_y, &expected_z);
+                sample(midpoint_distance, &actual_x, &actual_y, &actual_z, NULL);
+                assert_close(actual_x, expected_x, 0.00015f);
+                assert_close(actual_y, expected_y, 0.00015f);
+                assert_close(actual_z, expected_z, 0.00015f);
+            }
+        }
+    }
+
+    assert_close(
+        g_sampler.edge_start_distances[BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U] +
+            g_sampler.edge_lengths[BOONTA_RUNTIME_ROUTE_EDGE_COUNT - 1U],
+        g_sampler.total_length,
+        0.00002f);
+}
+
 static void test_bezier_samples_match_legacy_track_bake(void)
 {
     unsigned int edge;
@@ -158,6 +219,7 @@ int main(void)
 {
     test_route_length_matches_legacy_lap_distance();
     test_every_edge_boundary_matches_its_authored_node();
+    test_binary_search_boundaries_and_midpoints();
     test_bezier_samples_match_legacy_track_bake();
     test_closed_loop_wrap_and_negative_distance();
     test_bezier_seam_tangent_is_continuous();
