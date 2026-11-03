@@ -286,6 +286,10 @@ static inline void boonta_route_graph_sampler_sample_at(
         !boonta_route_graph_sampler_prepare(sampler)) {
         return;
     }
+#if !BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
+    /* A catalogue of branched edges has no single global wrap coordinate. */
+    return;
+#endif
 
     target = fmodf(travelled, sampler->total_length);
     if (target < 0.0f) target += sampler->total_length;
@@ -366,7 +370,8 @@ static inline int boonta_route_graph_sampler_sample_relative_to_cursor(
 
     sample_cursor = *cursor;
     delta_distance = target_route_distance - current_route_distance;
-    if (sample_cursor.graph != NULL && sample_cursor.graph->closed_loop &&
+    if (BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP &&
+        sample_cursor.graph != NULL && sample_cursor.graph->closed_loop &&
         sample_cursor.path_index == 0U &&
         sample_cursor.distance_on_edge <= BOONTA_ROUTE_CURSOR_EPSILON &&
         delta_distance < 0.0f) {
