@@ -407,6 +407,12 @@ for required_guard in (
     "pr.head.repo?.full_name !== expectedRepo",
     "item.head?.sha === run.head_sha",
     "pr.head.sha !== run.head_sha",
+    "run.event === 'push'",
+    "['main', 'dev'].includes(run.head_branch)",
+    "github.rest.repos.getBranch",
+    "branchInfo.commit?.sha !== run.head_sha",
+    "targetBranch === 'dev' ? 226 : 156",
+    "issue_number: prNumber || targetIssueNumber",
 ):
     if required_guard not in ci_triage:
         errors.append(f"CI failure triage is missing safe main/dev exact-head guard {required_guard!r}")

@@ -57,29 +57,46 @@ jobs:
               });
               candidate = candidates.find(isEligiblePr);
             }
-            if (!candidate) {
-              core.info('No open same-repository PR targeting main/dev matches this exact workflow-run head SHA; no comment will be posted.');
-              return;
-            }
+            let targetIssueNumber = null;
+            let prNumber = null;
+            if (candidate) {
+              prNumber = Number(candidate.number);
+              if (!Number.isInteger(prNumber) || prNumber < 1) {
+                core.warning('No valid pull request number found.');
+                return;
+              }
 
-            const prNumber = Number(candidate.number);
-            if (!Number.isInteger(prNumber) || prNumber < 1) {
-              core.warning('No valid pull request number found.');
-              return;
-            }
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            if (
-              pr.state !== 'open' ||
-              !['main', 'dev'].includes(pr.base.ref) ||
-              pr.head.repo?.full_name !== expectedRepo ||
-              pr.head.sha !== run.head_sha
-            ) {
-              core.info('PR is closed, does not target main/dev, is not from this repository, or no longer matches the failed run SHA; no comment will be posted.');
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              if (
+                pr.state !== 'open' ||
+                !['main', 'dev'].includes(pr.base.ref) ||
+                pr.head.repo?.full_name !== expectedRepo ||
+                pr.head.sha !== run.head_sha
+              ) {
+                core.info('PR is closed, does not target main/dev, is not from this repository, or no longer matches the failed run SHA; no PR comment will be posted.');
+                return;
+              }
+            } else if (run.event === 'push' && ['main', 'dev'].includes(run.head_branch)) {
+              // Merged gameplay PRs receive a fresh push build on dev. If that
+              // post-merge build fails, report to the canonical queue even
+              // though GitHub has already closed the merged PR.
+              const targetBranch = String(run.head_branch);
+              const { data: branchInfo } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: targetBranch,
+              });
+              if (branchInfo.commit?.sha !== run.head_sha) {
+                core.info('The protected branch has advanced since this failed run; no stale issue report will be posted.');
+                return;
+              }
+              targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
+            } else {
+              core.info('No eligible open PR or current protected-branch push matches this exact workflow-run head SHA; no comment will be posted.');
               return;
             }
 
@@ -114,6 +131,7 @@ jobs:
               '',
               '**Workflow:** ' + String(run.name || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180),
               '**Branch:** ' + branch,
+              '**Target:** ' + (prNumber ? 'PR #' + prNumber : 'canonical issue #' + targetIssueNumber),
               '**Run:** ' + runUrl,
               '',
               '**Failed jobs/steps:**',
@@ -125,6 +143,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
+              issue_number: prNumber || targetIssueNumber,
               body: body.slice(0, 12000),
             });
