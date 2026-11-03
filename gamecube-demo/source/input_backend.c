@@ -60,8 +60,14 @@ void boonta_input_poll(BoontaInputFrame *frame)
             const int is_classic = probe_succeeded &&
                 expansion_type == WPAD_EXP_CLASSIC;
 
-            if (!probe_succeeded || !is_classic) {
+            if (!probe_succeeded) {
+                frame->status = BOONTA_INPUT_STATUS_WII_NO_CONTROLLER;
+                g_wpad_classic_format_ready = 0;
+                return;
+            }
+            if (!is_classic) {
                 /* A later connection or newly attached Classic pad needs setup. */
+                frame->status = BOONTA_INPUT_STATUS_WII_NO_CLASSIC;
                 g_wpad_classic_format_ready = 0;
                 return;
             }
@@ -75,9 +81,11 @@ void boonta_input_poll(BoontaInputFrame *frame)
                  */
                 if (WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR) !=
                     WPAD_ERR_NONE) {
+                    frame->status = BOONTA_INPUT_STATUS_WII_SETUP_FAILED;
                     return;
                 }
                 g_wpad_classic_format_ready = 1;
+                frame->status = BOONTA_INPUT_STATUS_WII_CONFIGURING;
                 return;
             }
         }
@@ -86,6 +94,7 @@ void boonta_input_poll(BoontaInputFrame *frame)
         if (data == 0 ||
             (data->data_present & WPAD_DATA_EXPANSION) == 0U ||
             data->exp.type != WPAD_EXP_CLASSIC) {
+            frame->status = BOONTA_INPUT_STATUS_WII_WAITING_FOR_DATA;
             return;
         }
 
@@ -114,5 +123,6 @@ void boonta_input_poll(BoontaInputFrame *frame)
     frame->stick_y = (int8_t)PAD_StickY(0);
     frame->trigger_l = (uint8_t)PAD_TriggerL(0);
     frame->trigger_r = (uint8_t)PAD_TriggerR(0);
+    frame->status = BOONTA_INPUT_STATUS_GAMECUBE_READY;
 #endif
 }
