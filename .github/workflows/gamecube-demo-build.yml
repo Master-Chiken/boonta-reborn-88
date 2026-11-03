@@ -472,7 +472,7 @@ jobs:
                 sleep 6
                 if ! kill -0 "$emu_pid" 2>/dev/null; then
                   cat "$log"
-                  echo "Dolphin exited before the finish/reset window became available."
+                  echo "Dolphin exited before the finish/restart window became available."
                   return 1
                 fi
                 for attempt in $(seq 1 15); do

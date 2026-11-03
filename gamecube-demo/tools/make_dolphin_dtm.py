@@ -152,7 +152,7 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
     if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check", "finish-restart-check"):
-        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-reset-check")
+        raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-reset-check, finish-restart-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
     if scenario in ("full-race", "finish-reset-check", "finish-restart-check") and steering != "none":

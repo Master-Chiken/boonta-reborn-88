@@ -24,28 +24,15 @@ The procedural course, rival craft, controls, dynamic exhaust and HUD remain sep
 
 ## Runtime track source
 
-The current demo oval is now authored as the clean-room `boonta-route-graph-v1` source in `gamecube-demo/data/original-test-oval-route-graph.json`. Its separate `original-test-oval-surface-widths.json` map supplies the road-width classes referenced by the graph's surface bindings.
+The current demo oval is authored as the clean-room `boonta-route-graph-v1` source in `gamecube-demo/data/original-test-oval-route-graph.json`. Its separate `original-test-oval-surface-widths.json` map supplies road widths independently of route topology.
 
-The graph contains eight topology nodes and eight cubic Bezier edges. Each Bezier edge is the exact Catmull-Rom-to-Bezier conversion of the prior eight-point test oval, and the graph's progress spans are proportional to sampled physical edge lengths. The offline bake samples each edge 16 times, writes `boonta-track-v1`, and the existing track exporter produces `source/generated_track.h`. The native renderer still consumes this compiled C header; it does **not** parse route-graph JSON at runtime. The denser baked points approximate the authored Bezier path through the existing Catmull-Rom track sampler.
+The graph has eight nodes and eight cubic Bezier edges. The native runtime now evaluates those Bezier edges directly through `source/route_graph_sampling.h`, using the generated `source/generated_route_graph.h`; it no longer uses the older Catmull–Rom track sampler as its live geometry path. The offline exporter samples the same clean-room graph into a dense legacy `boonta-track-v1` fixture for format/compatibility regression tests, but the renderer's active centerline is the direct runtime Bezier representation.
 
-The production sampler is shared in `source/track_sampling.h`; the native renderer and `tests/test_track_sampling.c` call the same C implementation. The host regression checks every generated-point boundary, negative camera look-behind and multi-lap wrap, seam position/tangent continuity, and the three-lap finish counter using the compiled `BOONTA_TRACK_LENGTH`. It also measures the actual C sampler over 16,384 substeps: **184.563812 m** of Catmull-Rom path versus **184.532593 m** of compiled lap distance (**0.01692%** difference, below the 0.02% guard). This is a numerical/runtime-code regression, not a human-driven race acceptance result. The sampler now scales all chord intervals by one common factor so its modulo period is exactly the same `BOONTA_TRACK_LENGTH` constant used by the lap counter; relative segment proportions and course geometry are preserved.
+At first use, the C sampler builds a 128-interval distance lookup for each edge and caches the start distance of every edge. Per-frame samples use binary search over the eight edges (at most three comparisons) and each edge's 128 intervals (at most seven comparisons), instead of scanning the arrays linearly. Road widths remain separate surface samples and are interpolated independently. The lookup's scaled distance coordinates use the generated `BOONTA_RUNTIME_ROUTE_LENGTH` period so route wrapping and lap counting share the same lap coordinate.
 
-Regenerate the committed header from the route source with:
+The dense native C regression measures the current runtime Bezier curve at **184.563965 m** against the generated lap coordinate **184.563477 m** (**0.00026% difference**). Tests compare direct edge samples at every one of the 128 lookup boundaries and every interval midpoint on all eight edges, as well as authored-node joins, legacy bake samples, negative and multi-lap wrap, seam continuity, and non-finite inputs. The separate older Catmull–Rom compatibility test still reports its own 0.01692% difference against the legacy track-v1 lap period; that is not the current runtime curve measurement.
 
-```sh
-python3 tools/route_graph_format/export_closed_loop_track.py \
-  gamecube-demo/data/original-test-oval-route-graph.json \
-  /tmp/original-test-oval-track.json \
-  --half-width 3.5 --samples-per-edge 16 \
-  --surface-widths gamecube-demo/data/original-test-oval-surface-widths.json
-
-python3 tools/track_format/validate_track.py /tmp/original-test-oval-track.json
-python3 tools/track_format/export_track_header.py \
-  /tmp/original-test-oval-track.json \
-  gamecube-demo/source/generated_track.h --symbol "original test oval"
-```
-
-Branched graphs remain preserved in route-graph format; they are not yet executable by this single-loop runtime.
+The runtime currently supports one unbranched closed oval. The neutral route-graph format and host-side cursor can represent branch metadata, but runtime branch selection/history, split/rejoin traversal, and B-spline playback are not connected to vehicle movement, collision or lap state. Branched graphs remain data/tooling capability, not a claim of playable runtime support.
 
 ## Controls
 
@@ -55,7 +42,7 @@ Branched graphs remain preserved in route-graph format; they are not yet executa
 - A: accelerate.
 - B: brake.
 - Hold X + A: engage boost while accelerating; energy drains and recharges on release. Heat rises during boost; at 98% heat, boost locks out until the engine cools to 60% or below.
-- Start: toggle pause/resume; the pause icon appears in the center of the HUD.
+- Start: toggle pause/resume during a live race; after the FINISH state, Start begins a fresh run. The pause icon appears in the center of the HUD.
 - Y: reset the run, lap counter, rival, overtake indicators, and pause state.
 
 ## Build
