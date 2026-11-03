@@ -22,6 +22,10 @@ This check is an explicit owner attestation, **not an automated billing-status c
 
 Le workflow [Boonta Autonomous Loop](../.github/workflows/boonta-autonomous-loop.yml) s'exécute toutes les six heures et peut aussi être lancé manuellement par le propriétaire. Il appelle le writer Gemini réutilisable avec le prompt autonome dédié, lit la file canonique #226 et le tableau de bord #156, puis sélectionne ou poursuit une seule tâche. Il doit continuer une PR autonome existante plutôt que créer des doublons, respecter la priorité RE-001 et le ratio de recherche 80/20, et ouvrir une PR sans jamais la fusionner.
 
+Avant d'activer l'agent, le propriétaire peut lancer [Boonta Autonomous Readiness](../.github/workflows/boonta-autonomous-readiness.yml) depuis **Actions → Boonta Autonomous Readiness → Run workflow**. Ce contrôle vérifie la présence des variables/secrets, la création d'un jeton GitHub App avec les permissions attendues, puis l'accès en lecture aux issues #156/#226, aux exécutions Actions et aux références `main`/`dev`. Il ne lance pas Gemini, ne consomme pas de quota API et ne modifie ni le code, ni les issues, ni les PR.
+
+Ce précontrôle ne prouve pas que la clé Gemini est valide ou que le projet Google est réellement au Free tier. Il ne peut pas non plus vérifier les rulesets de protection, car le GitHub App n'obtient volontairement aucun droit d'administration. Le propriétaire doit encore vérifier manuellement l'absence de Cloud Billing lié et la protection de `main`/`dev`.
+
 L'exécution d'écriture reste fermée tant que toutes les conditions suivantes ne sont pas réunies :
 - La variable Actions `GEMINI_AUTONOMOUS_ENABLED` vaut exactement `true`.
 - `GEMINI_FREE_TIER_CONFIRMED` vaut exactement `true` après vérification personnelle du Free tier et de l'absence de compte Cloud Billing lié.
