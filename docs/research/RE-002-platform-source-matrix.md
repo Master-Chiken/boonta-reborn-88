@@ -330,3 +330,19 @@ The pinned scan covered the 19 C modules in the `SW_RACER_RE` source tree, not j
 This scan strengthens the A/B contracts but leaves C deliberately blocked on additional evidence.
 
 **No implementation is authorized by this note.** These contracts guide the next RE-002 evidence pass. Any eventual independent implementation must be separately scoped, licence-clean, based on confirmed executable/version evidence and validated against owner-local runtime traces before it can be considered for Boonta's own code.
+
+
+## Upstream work already completed vs. the unfinished handoff
+
+A review of the merged public pull requests in the source project's upstream repository `tim-tim707/SW_RACER_RE` confirms that most of the generic spline foundation was already completed by earlier contributors. This prevents RE-002 from reopening solved work.
+
+| Upstream PR | Merged | What it actually delivered | Relevance to the current gap |
+|---|---|---|---|
+| [#41 — complete LoadSpline byteswap + map spline runtime](https://github.com/tim-tim707/SW_RACER_RE/pull/41) | 2026-06-08 | Spline loading, point/graph structures, cursor primitives, interpolation, evaluation, projection and post-load baking map | Foundation already in current source |
+| [#50 — map track/level load pipeline](https://github.com/tim-tim707/SW_RACER_RE/pull/50) | 2026-06-08 | Named the `InitTrack` orchestration helpers for model/spline/environment setup, starting grid and racer spawning | Use its established track-start call graph; do not remap from scratch |
+| [#120 — name engine-fire FX + spline-cursor functions](https://github.com/tim-tim707/SW_RACER_RE/pull/120) | 2026-06-18 | Added address names and prototypes for `AdvanceSplineCursor`, `UpdateSplineBinding`, `ComputeTrackOffset` (plus two fire-effect functions); **declaration/naming only** | This is the unfinished race-specific handoff |
+| [#208 — reimplement cursor + evaluation runtime (14 functions)](https://github.com/tim-tim707/SW_RACER_RE/pull/208) | 2026-07-01 | Implemented 14 generic spline cursor/evaluation functions and reported clean build/link; left the separate post-load baking follow-up | Confirms generic cursor engine is not the missing piece |
+
+The merged PR metadata reports #120 changed only one file with 14 additions; its own description explicitly says the five functions were declaration-only. PR #208 is a separate later merge and implemented the generic spline cursor/evaluation runtime. These are separate components: the race-specific cursor reconciler is called from `swrRace_UpdateRaceProgress`, while the generic spline engine provides graph traversal, interpolation and cursor evaluation.
+
+**RE-002 therefore targets the gap left by #120, not the work completed in #41/#50/#208.** The three remaining functions need to be recovered from a matching executable/decompilation or described from verified call/data evidence; their implementation is not present in the current public upstream master.
