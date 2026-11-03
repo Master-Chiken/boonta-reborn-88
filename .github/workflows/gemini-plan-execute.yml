@@ -210,7 +210,8 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed != 'true'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
+          SKIP_REASON: '${{ steps.free_tier_guard.outputs.reason }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
         with:
           script: |
@@ -223,7 +224,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
-              body: 'Gemini was not called. The workflow requires the repository Actions variable GEMINI_FREE_TIER_CONFIRMED to equal the exact string true, plus a configured GEMINI_API_KEY. Before setting the variable, verify in Google AI Studio that this project is on the Free tier and is not linked to Cloud Billing. The variable is an owner attestation, not an automated billing check. No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
+              body: 'Gemini was not called: ' + (process.env.SKIP_REASON || 'a required authorization/configuration gate failed') + ' No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
             });
 
       - name: 'Publish Gemini response to the issue or PR'
@@ -232,7 +233,7 @@ jobs:
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();
