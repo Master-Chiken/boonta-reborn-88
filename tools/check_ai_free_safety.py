@@ -429,6 +429,11 @@ if "branches: [main, dev]" not in gamecube_push_trigger:
     errors.append("GameCube prototype CI must run after merges/pushes to both main and dev")
 if "  build-gamecube-demo:\n    timeout-minutes: 15\n" not in gamecube_build:
     errors.append("Native GameCube CI build job must have a bounded 15-minute timeout")
+gamecube_concurrency = gamecube_build.split("concurrency:", 1)[1].split("jobs:", 1)[0] if "concurrency:" in gamecube_build else ""
+if "group: gamecube-demo-${{ github.event.pull_request.number || github.ref }}" not in gamecube_concurrency:
+    errors.append("GameCube build workflow must serialize executions by PR/ref")
+if "cancel-in-progress: true" not in gamecube_concurrency:
+    errors.append("New GameCube commits must cancel stale same-PR/ref CI runs")
 
 # The autonomous agent must use exact-head CI rather than invent local test results.
 for required_phrase in (

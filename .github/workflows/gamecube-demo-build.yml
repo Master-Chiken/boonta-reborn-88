@@ -41,6 +41,11 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest build for a PR/ref; stale builds must not consume CI minutes.
+concurrency:
+  group: gamecube-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   host-pause-state-tests:
     name: Host pause/resume state tests
