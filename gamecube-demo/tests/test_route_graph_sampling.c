@@ -33,6 +33,31 @@ static void assert_close(float actual, float expected, float tolerance)
     }
 }
 
+static void test_signed_turn_angle_matches_left_right_steering(void)
+{
+    float left_angle = 0.0f;
+    float right_angle = 0.0f;
+    float straight_angle = 9.0f;
+
+    /* Forward is +z; steering left is -x and must produce a positive angle. */
+    assert(boonta_route_graph_signed_horizontal_turn_angle(
+        0.0f, 1.0f, -1.0f, 0.0f, &left_angle) == BOONTA_ROUTE_CURSOR_OK);
+    assert(left_angle > 1.5f && left_angle < 1.6f);
+
+    /* Steering right is +x and must produce a negative angle. */
+    assert(boonta_route_graph_signed_horizontal_turn_angle(
+        0.0f, 1.0f, 1.0f, 0.0f, &right_angle) == BOONTA_ROUTE_CURSOR_OK);
+    assert(right_angle < -1.5f && right_angle > -1.6f);
+
+    assert(boonta_route_graph_signed_horizontal_turn_angle(
+        0.0f, 1.0f, 0.0f, 1.0f, &straight_angle) == BOONTA_ROUTE_CURSOR_OK);
+    assert(fabsf(straight_angle) < 0.00001f);
+
+    assert(boonta_route_graph_signed_horizontal_turn_angle(
+        0.0f, 1.0f, NAN, 0.0f, &straight_angle) ==
+        BOONTA_ROUTE_CURSOR_INVALID);
+}
+
 static void test_route_length_matches_legacy_lap_distance(void)
 {
     assert(boonta_route_graph_sampler_prepare(&g_sampler));
@@ -581,6 +606,8 @@ static void test_nonfinite_distance_returns_safe_defaults(void)
 
 int main(void)
 {
+    fprintf(stderr, "[route-test] test_signed_turn_angle_matches_left_right_steering\n");
+    test_signed_turn_angle_matches_left_right_steering();
     fprintf(stderr, "[route-test] test_route_length_matches_legacy_lap_distance\n");
     test_route_length_matches_legacy_lap_distance();
     fprintf(stderr, "[route-test] test_every_edge_boundary_matches_its_authored_node\n");
