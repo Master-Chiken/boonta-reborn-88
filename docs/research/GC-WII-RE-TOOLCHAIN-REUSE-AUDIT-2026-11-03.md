@@ -341,3 +341,40 @@ A related [dguillot-gh/racer-android](https://github.com/dguillot-gh/racer-andro
 A RecompHub catalogue page lists a recently active “Star Wars: Episode I - Racer Recomp” credited to Ned Heller, release `v0.4.0`, with Windows/macOS/Linux as targets. Its own catalogue record says the original version, exact required files, license and playability are **unknown**; the page categorizes it with Dreamcast ports, but I did not resolve an authoritative source repository or verify the source platform from project files in this audit.
 
 Treat this only as a **lead to identify**, not as a verified project to depend on. Before using it, find its official repository and inspect the source platform, exact original release/version, commit history, license, dependencies and build/acceptance evidence. Do not infer that it targets the Dreamcast binary solely from a third-party catalogue category.
+
+
+## Additional GameCube research runtimes and recompiler candidates
+
+### pureikyubu — strongest newly found dynamic-analysis candidate
+
+- Repository: [emu-russia/pureikyubu](https://github.com/emu-russia/pureikyubu)
+- Audited ref: `master` at `69572aa22ca44646807b9973dc830592c5d266e8`
+- License: CC0-1.0 in the root LICENSE.
+- Fit: **High as a separate read-only emulator/debugger and hardware-reference environment.**
+
+The current README describes a work-in-progress GameCube emulator whose aim explicitly includes researching GameCube hardware and reverse-engineering game technologies. It now documents a debugger, a local MCP server, headless runs, save states and controller/I/O support; its CPU/DSP implementation includes Gekko and DSP paths. The README documents a native macOS Apple Silicon build, as well as Windows and Linux builds.
+
+Potential Boonta use:
+- run the exact local GameCube executable in a second emulator implementation and compare behaviour with Dolphin;
+- use its debugger/MCP/headless mode to inspect memory, function calls, OS structures, controller state and graphics/audio scheduling where supported;
+- cross-check hardware assumptions against its source and documentation.
+
+Important limitation: its own README says compatibility remains a work in progress and some titles still fail to render or hang. No successful Star Wars Episode I: Racer run was confirmed in this audit. First check compatibility with the exact title/revision; never treat an untested emulator as a source of truth. The user's previously reported macOS 10.15.7 is not the documented Apple Silicon macOS target, so do not assume it will build on that machine.
+
+### KaiserGranatapfel/GameCubeRecompiled — inspect only after EULA review
+
+- Repository: [KaiserGranatapfel/GameCubeRecompiled](https://github.com/KaiserGranatapfel/GameCubeRecompiled)
+- Audited ref: `main` at `d380537add5aa4116c94c3513b8e3a7dd89f2331`
+- Root LICENSE: CC0-1.0.
+- Fit: **Research lead only; do not select as a dependency yet.**
+
+The README describes a PowerPC DOL-to-Rust static recompiler with Ghidra export, CFG/data-flow analysis and a native runtime. But its status text is internally uneven: the top labels it “production-ready”, while the same README lists SDK stubs, graphics, DSP audio and input integration as in progress and lists full game boot support as a medium-term goal. The inspected instruction feature list did not explicitly confirm GameCube Gekko paired-single `psq_*` instructions. The repository also uses a placeholder `yourusername/GCRecomp.git` in its quick-start command.
+
+**Major licensing caveat:** alongside CC0, the repository contains an `EULA.md` that restricts use to educational/research/archival/personal non-commercial purposes, prohibits distribution of recompiled outputs without rights-holder permission, includes indemnification language and claims revocable use rights. This is not a simple CC0-only reuse position. Do not install it as a project dependency, copy code, contribute or use it as part of Boonta's published toolchain until the EULA/licence interaction and the exact technical capabilities have been independently reviewed.
+
+### Distinguish the two GameCube recompiler candidates
+
+- `sp00nznet/gcrecomp`: C/C++ Gekko-to-C toolkit; README explicitly claims DOL/REL and paired-single support, but GX vertex/draw/TEV and audio pieces are in progress. README says Windows 11 / D3D11 toolchain. Root LICENSE says MIT; confirm the third-party notices and actual code before reuse.
+- `KaiserGranatapfel/GameCubeRecompiled`: Rust DOL-to-Rust recompiler; root CC0 is accompanied by a restrictive EULA, and the README's own roadmap indicates substantial runtime/graphics/audio work remains. Do not assume paired-single support from generic PowerPC claims.
+
+Neither has been shown to run Racer in this audit. Keep both as separate experiments, not as the foundation of Boonta.
