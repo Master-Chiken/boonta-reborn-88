@@ -28,6 +28,8 @@ The current demo oval is now authored as the clean-room `boonta-route-graph-v1` 
 
 The graph contains eight topology nodes and eight cubic Bezier edges. Each Bezier edge is the exact Catmull-Rom-to-Bezier conversion of the prior eight-point test oval, and the graph's progress spans are proportional to sampled physical edge lengths. The offline bake samples each edge 16 times, writes `boonta-track-v1`, and the existing track exporter produces `source/generated_track.h`. The native renderer still consumes this compiled C header; it does **not** parse route-graph JSON at runtime. The denser baked points approximate the authored Bezier path through the existing Catmull-Rom track sampler.
 
+The production sampler is shared in `source/track_sampling.h`; the native renderer and `tests/test_track_sampling.c` call the same C implementation. The host regression checks every generated-point boundary, negative camera look-behind and multi-lap wrap, seam position/tangent continuity, and the three-lap finish counter using the compiled `BOONTA_TRACK_LENGTH`. It also measures the actual C sampler over 16,384 substeps: **184.563507 m** of Catmull-Rom path versus **184.532593 m** of compiled lap distance (**0.01675%** difference, below the 0.02% guard). This is a numerical/runtime-code regression, not a human-driven race acceptance result.
+
 Regenerate the committed header from the route source with:
 
 ```sh

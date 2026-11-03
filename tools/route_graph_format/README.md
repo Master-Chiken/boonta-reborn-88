@@ -125,6 +125,14 @@ This is the actual relationship in the 128-point branch build: the lap counter u
 
 This is host-side geometric validation, not proof of visible race behavior or retail GameCube/Wii course parity. The code-bearing change remains in PR #274; `dev` is not updated until that PR is reviewed and merged.
 
+### Production C sampler regression (2026-11-03)
+
+The runtime implementation was extracted without changing its interpolation or distance-selection rules into `gamecube-demo/source/track_sampling.h`. Both `main.c` and `gamecube-demo/tests/test_track_sampling.c` now call that same C function. The host test covers all 128 generated chord boundaries, positive/negative and multi-lap wrapping, the seam tangent, and alignment between the compiled lap counter and sampler at all three race boundaries. It uses `BOONTA_TRACK_LENGTH`, the same compiled length used by the runtime's `RACE_LAP_DISTANCE`.
+
+The test also samples the actual C Catmull-Rom output at 128 subdivisions per each of the 128 generated chord segments (16,384 substeps) and measures **184.563507 m** against the compiled **184.532593 m** lap distance. The measured difference is **0.01675%**, under the 0.02% regression threshold. This discrete C measurement is slightly below the earlier high-subdivision host reconstruction (184.563791 m); both independently show a mismatch well below 0.02%. The new test reports the measured C value in the CI log and guards the threshold.
+
+This closes a source-level testing gap: the geometric regression now exercises the production C sampler rather than only a Python reimplementation. It does not connect the route-graph cursor to vehicle movement, prove exact mathematical arc length, or replace visible Dolphin/hardware acceptance.
+
 ## External reverse-engineering tool references (2026-11-03)
 
 Two public projects provide useful workflow patterns, but neither is a drop-in GameCube/Wii implementation:

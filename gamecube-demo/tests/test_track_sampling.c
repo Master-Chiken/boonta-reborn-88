@@ -175,7 +175,7 @@ static void test_runtime_catmull_rom_length_matches_compiled_lap_distance(void)
         const float relative_error =
             fabsf(runtime_curve_length - BOONTA_TRACK_LENGTH) / BOONTA_TRACK_LENGTH;
         printf("Runtime Catmull-Rom sampler length: %.6f m; "
-               "compiled lap distance: %.6f m; difference: %.5f%%\\n",
+               "compiled lap distance: %.6f m; difference: %.5f%%\n",
                runtime_curve_length, BOONTA_TRACK_LENGTH, relative_error * 100.0f);
         assert(relative_error < 0.0002f);
     }
