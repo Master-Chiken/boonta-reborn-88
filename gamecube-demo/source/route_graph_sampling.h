@@ -646,6 +646,7 @@ static inline int boonta_route_graph_sampler_prime_lookahead(
     /* Keep all planned future edges but restore the live simulation position. */
     preview.path_index = backup.path_index;
     preview.distance_on_edge = backup.distance_on_edge;
+    preview.completed_laps = backup.completed_laps;
     preview.finished = backup.finished;
     preview.started = backup.started;
     *cursor = preview;
