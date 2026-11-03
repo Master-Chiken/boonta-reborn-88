@@ -5,6 +5,13 @@ on:
     workflows:
       - GameCube first-render prototype build
       - GameCube native build
+      - Wii64 tooling tests
+      - AI free-tier safety checks
+      - Branch automation self-test
+      - Step 102 source-import provenance guard
+      - Trusted source-import path guard
+      - BRRES probe tests
+      - Dreamcast native build
     types:
       - completed
 

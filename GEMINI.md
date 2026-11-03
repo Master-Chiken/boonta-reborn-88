@@ -31,3 +31,4 @@
 - The required write-enable value is the literal text exactly true; any other value keeps the corresponding writer disabled.
 - If the owner has not verified branch protection and the free API secret, stay read-only and do not run code-writing tools.
 - Report commands and outcomes accurately. Keep host tests, native GameCube DOL builds, Dolphin process tests and interactive graphics/controls validation distinct.
+- The autonomous Gemini job has no general-purpose build shell. GitHub Actions is the authoritative test executor: inspect exact-PR-head runs and failed-job logs, never claim local test execution, never push empty commits to trigger CI, and never claim a green state from an older SHA. Repair demonstrated failures on the existing PR branch; leave transient runner failures untouched when no safe rerun action is available.

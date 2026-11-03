@@ -384,8 +384,21 @@ if "Actions: read" not in setup:
 
 # Deterministic CI failure triage must cover the two protected integration targets.
 triage_trigger = ci_triage.split("permissions:", 1)[0]
-if "workflow_run:" not in triage_trigger or "GameCube first-render prototype build" not in triage_trigger:
-    errors.append("CI failure triage must remain attached to completed GameCube build workflows")
+if "workflow_run:" not in triage_trigger:
+    errors.append("CI failure triage must remain attached to completed workflow runs")
+for workflow_name in (
+    "GameCube first-render prototype build",
+    "GameCube native build",
+    "Wii64 tooling tests",
+    "AI free-tier safety checks",
+    "Branch automation self-test",
+    "Step 102 source-import provenance guard",
+    "Trusted source-import path guard",
+    "BRRES probe tests",
+    "Dreamcast native build",
+):
+    if f"      - {workflow_name}" not in triage_trigger:
+        errors.append(f"CI failure triage is missing workflow {workflow_name!r}")
 for required_guard in (
     "['main', 'dev'].includes(item.base?.ref)",
     "['main', 'dev'].includes(pr.base.ref)",
@@ -401,6 +414,20 @@ if "contents: write" in triage_permissions or "pull-requests: write" in triage_p
     errors.append("CI failure triage must not have code or pull-request write permission")
 if "actions: read" not in triage_permissions or "issues: write" not in triage_permissions:
     errors.append("CI failure triage needs only Actions read and issue-comment write for diagnostics")
+
+# The autonomous agent must use exact-head CI rather than invent local test results.
+for required_phrase in (
+    "intentionally has no general-purpose local shell",
+    "exact PR head SHA",
+    "do not push empty commits",
+    "read only the failing job logs",
+    "no documented safe rerun action",
+    "optional `continue-on-error` diagnostics",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing CI execution/recovery rule {required_phrase!r}")
+if "GitHub Actions is the authoritative test executor" not in instructions:
+    errors.append("GEMINI.md must state that GitHub Actions is the authoritative test executor for the autonomous agent")
 
 # Keep Wii64 unit-test CI scoped to the files its tests actually exercise.
 wii64_trigger = wii64_tests.split("permissions:", 1)[0]
