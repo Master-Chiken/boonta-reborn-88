@@ -4,7 +4,10 @@
 #include <math.h>
 #include <stddef.h>
 
-#include "generated_route_graph.h"
+#ifndef BOONTA_ROUTE_GRAPH_HEADER
+#define BOONTA_ROUTE_GRAPH_HEADER "generated_route_graph.h"
+#endif
+#include BOONTA_ROUTE_GRAPH_HEADER
 
 /*
  * Native sampler for the clean-room route-graph curve representation.
@@ -265,6 +268,97 @@ static inline void boonta_route_graph_sampler_sample_edge_at(
         if (*y_out < -3.0f) *y_out = -3.0f;
         if (*y_out > 3.0f) *y_out = 3.0f;
     }
+}
+
+/*
+ * Select an outgoing edge from its horizontal turn relative to the incoming
+ * tangent. direction < 0 means steer left, > 0 means steer right, and 0
+ * chooses the straightest continuation. Project axes are x lateral, y up,
+ * z forward; positive cross here represents a left turn.
+ */
+static inline int boonta_route_graph_choose_outgoing_edge(
+    const BoontaRouteCursor *cursor, unsigned int node, int direction,
+    unsigned int *selected_edge)
+{
+    unsigned int current_edge;
+    unsigned int edge;
+    float incoming_x, incoming_z, incoming_length;
+    float best_score = 0.0f;
+    int found = 0;
+
+    if (selected_edge != NULL) *selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    if (cursor == NULL || cursor->graph == NULL ||
+        cursor->history_count == 0U ||
+        cursor->path_index >= cursor->history_count ||
+        node >= cursor->graph->node_count ||
+        direction < -1 || direction > 1 ||
+        selected_edge == NULL) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    current_edge = cursor->path_history[cursor->path_index];
+    if (current_edge >= cursor->graph->edge_count ||
+        cursor->graph->edges[current_edge].to_node != node) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    incoming_x =
+        boonta_runtime_route_edges[current_edge].p3[0] -
+        boonta_runtime_route_edges[current_edge].control2[0];
+    incoming_z =
+        boonta_runtime_route_edges[current_edge].p3[2] -
+        boonta_runtime_route_edges[current_edge].control2[2];
+    incoming_length = sqrtf(incoming_x * incoming_x + incoming_z * incoming_z);
+    if (!isfinite(incoming_length) || incoming_length <= 0.000001f) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+    incoming_x /= incoming_length;
+    incoming_z /= incoming_length;
+
+    for (edge = 0U; edge < cursor->graph->edge_count; ++edge) {
+        float outgoing_x, outgoing_z, outgoing_length;
+        float dot, cross, angle, score;
+        int better;
+
+        if (cursor->graph->edges[edge].from_node != node) continue;
+
+        outgoing_x =
+            boonta_runtime_route_edges[edge].control1[0] -
+            boonta_runtime_route_edges[edge].p0[0];
+        outgoing_z =
+            boonta_runtime_route_edges[edge].control1[2] -
+            boonta_runtime_route_edges[edge].p0[2];
+        outgoing_length = sqrtf(outgoing_x * outgoing_x + outgoing_z * outgoing_z);
+        if (!isfinite(outgoing_length) || outgoing_length <= 0.000001f) continue;
+        outgoing_x /= outgoing_length;
+        outgoing_z /= outgoing_length;
+
+        dot = incoming_x * outgoing_x + incoming_z * outgoing_z;
+        cross = incoming_z * outgoing_x - incoming_x * outgoing_z;
+        angle = atan2f(cross, dot);
+        if (!isfinite(angle)) continue;
+
+        if (direction < 0) {
+            score = angle;
+            better = !found || score > best_score + 0.000001f;
+        } else if (direction > 0) {
+            score = angle;
+            better = !found || score < best_score - 0.000001f;
+        } else {
+            score = fabsf(angle);
+            better = !found || score < best_score - 0.000001f;
+        }
+
+        /* Stable edge-index tie break makes identical branches deterministic. */
+        if (better || (!better && found &&
+            fabsf(score - best_score) <= 0.000001f && edge < *selected_edge)) {
+            best_score = score;
+            *selected_edge = edge;
+            found = 1;
+        }
+    }
+
+    return found ? BOONTA_ROUTE_CURSOR_OK : BOONTA_ROUTE_CURSOR_INVALID;
 }
 
 static inline void boonta_route_graph_sampler_sample_at(
