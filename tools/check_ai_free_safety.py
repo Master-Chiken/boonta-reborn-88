@@ -357,7 +357,7 @@ if "Actions: read" not in setup:
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
-readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", readiness_trigger)
+readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", readiness_trigger)
 if readiness_events != ["workflow_dispatch"]:
     errors.append(
         "Autonomous readiness must be manually dispatched only; "
@@ -368,7 +368,7 @@ if "if: github.actor == github.repository_owner" not in readiness:
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
 readiness_permissions = dict(
     re.findall(
-        r"(?m)^  ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$",
+        r"(?m)^  ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
         readiness_permission_block,
     )
 )
@@ -401,7 +401,7 @@ for required_probe in (
     "/issues/156",
     "/issues/226",
     "/actions/runs?per_page=1",
-    "/git/ref/heads/\${branch}",
+    "/git/ref/heads/${branch}",
 ):
     if required_probe not in readiness:
         errors.append(f"Autonomous readiness is missing required read-only API probe {required_probe!r}")
