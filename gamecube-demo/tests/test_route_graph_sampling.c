@@ -307,9 +307,34 @@ static void test_nonfinite_distance_returns_safe_defaults(void)
     assert(width == BOONTA_REFERENCE_ROAD_HALF_WIDTH);
 }
 
-#define RUN_ROUTE_TEST(test_name) do { \\
-    fprintf(stderr, "[route-test] %s\\n", #test_name); \\
-    test_name(); \\
+int main(void)
+{
+    fprintf(stderr, "[route-test] test_route_length_matches_legacy_lap_distance\n");
+    test_route_length_matches_legacy_lap_distance();
+    fprintf(stderr, "[route-test] test_every_edge_boundary_matches_its_authored_node\n");
+    test_every_edge_boundary_matches_its_authored_node();
+    fprintf(stderr, "[route-test] test_every_bezier_join_has_continuous_tangent_and_width\n");
+    test_every_bezier_join_has_continuous_tangent_and_width();
+    fprintf(stderr, "[route-test] test_binary_search_boundaries_and_midpoints\n");
+    test_binary_search_boundaries_and_midpoints();
+    fprintf(stderr, "[route-test] test_bezier_samples_match_legacy_track_bake\n");
+    test_bezier_samples_match_legacy_track_bake();
+    fprintf(stderr, "[route-test] test_closed_loop_wrap_and_negative_distance\n");
+    test_closed_loop_wrap_and_negative_distance();
+    fprintf(stderr, "[route-test] test_bezier_seam_tangent_is_continuous\n");
+    test_bezier_seam_tangent_is_continuous();
+    fprintf(stderr, "[route-test] test_dense_runtime_curve_length_matches_lap_coordinate\n");
+    test_dense_runtime_curve_length_matches_lap_coordinate();
+    fprintf(stderr, "[route-test] test_curve_evaluator_rejects_invalid_queries\n");
+    test_curve_evaluator_rejects_invalid_queries();
+    fprintf(stderr, "[route-test] test_curve_evaluator_clamps_finite_t\n");
+    test_curve_evaluator_clamps_finite_t();
+    fprintf(stderr, "[route-test] test_width_sampler_rejects_invalid_queries_and_clamps_t\n");
+    test_width_sampler_rejects_invalid_queries_and_clamps_t();
+    fprintf(stderr, "[route-test] test_nonfinite_distance_returns_safe_defaults\n");
+    test_nonfinite_distance_returns_safe_defaults();
+    puts("Native route-graph sampler C tests passed.");
+    return 0;
 } while (0)
 
 int main(void)
