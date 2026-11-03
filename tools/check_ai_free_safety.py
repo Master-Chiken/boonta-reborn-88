@@ -397,6 +397,7 @@ for workflow_name in (
     "Trusted source-import path guard",
     "Synthetic BRRES MDL0 probe",
     "Dreamcast KallistiOS build",
+    "Boonta Autonomous Loop",
 ):
     if f"      - {workflow_name}" not in triage_trigger:
         errors.append(f"CI failure triage is missing workflow {workflow_name!r}")
@@ -414,6 +415,10 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
+    "run.event === 'schedule'",
+    "run.event === 'workflow_dispatch'",
+    "run.name === 'Boonta Autonomous Loop'",
+    "targetIssueNumber = 226",
 ):
     if required_guard not in ci_triage:
         errors.append(f"CI failure triage is missing safe main/dev exact-head guard {required_guard!r}")

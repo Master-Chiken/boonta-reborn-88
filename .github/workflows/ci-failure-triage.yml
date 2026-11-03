@@ -12,6 +12,7 @@ on:
       - Trusted source-import path guard
       - Synthetic BRRES MDL0 probe
       - Dreamcast KallistiOS build
+      - Boonta Autonomous Loop
     types:
       - completed
 
@@ -98,6 +99,20 @@ jobs:
                 return;
               }
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
+            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && run.name === 'Boonta Autonomous Loop' && run.head_branch === 'main') {
+              // Do not let a silent autonomous-cycle failure disappear. Report
+              // to the active queue only while the failed run is still for the
+              // exact current main SHA.
+              const { data: branchInfo } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: 'main',
+              });
+              if (branchInfo.commit?.sha !== run.head_sha) {
+                core.info('main has advanced since this failed autonomous run; no stale issue report will be posted.');
+                return;
+              }
+              targetIssueNumber = 226;
             }
             if (!prNumber && !targetIssueNumber) {
               core.info('No eligible open PR or current protected-branch push matches this exact workflow-run head SHA; no comment will be posted.');
