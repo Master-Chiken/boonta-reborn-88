@@ -152,9 +152,11 @@ static const u8 g_font5x7[128][7] = {
 
 
 /*
- * Sample the authored closed-loop spline by travelled arc length. Runtime track
- * points remain in world coordinates; existing scene meshes are built in a local
- * forward plane and mapped into the actual course frame vertex by vertex.
+ * Map the generated-header travelled-distance coordinate onto the closed-loop
+ * Catmull-Rom course. Each segment maps its chord-distance share linearly to
+ * local t; this is not exact arc-length inversion of the smoothed curve. Runtime
+ * points remain in world coordinates; scene meshes are built locally and mapped
+ * into the actual course frame vertex by vertex.
  */
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
