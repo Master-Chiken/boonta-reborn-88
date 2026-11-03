@@ -203,7 +203,7 @@ int main(void)
                 index for index in range(geometry_start + 1, len(lines))
                 if lines[index].strip() == marker
             )
-            vectors = re.findall(r"\\{([^{}]+)\\}", lines[marker_index + 1])
+            vectors = re.findall(r"\{([^{}]+)\}", lines[marker_index + 1])
             self.assertEqual(len(vectors), 4)
             vectors[control_index] = ", ".join(
                 f"{component:.9f}f" for component in point
@@ -221,7 +221,7 @@ int main(void)
         replace_control("d3-left", 2, finish)
         replace_control("d3-right", 1, decision3)
         replace_control("d3-right", 2, decision3)
-        header = "\\n".join(lines) + "\\n"
+        header = "\n".join(lines) + "\n"
         c_source = r"""
 #include <assert.h>
 #include <math.h>
