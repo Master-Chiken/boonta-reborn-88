@@ -192,7 +192,7 @@ def generate_runtime_route_header(
         "} BoontaRuntimeRouteEdge;",
         "",
         "static const BoontaRouteCursorEdge boonta_runtime_route_topology_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {",
-        ",\\n".join(topology_lines),
+        ",\n".join(topology_lines),
         "};",
         "",
         "static const BoontaRuntimeRouteEdge boonta_runtime_route_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {",
