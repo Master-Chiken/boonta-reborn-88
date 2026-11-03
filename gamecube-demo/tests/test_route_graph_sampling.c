@@ -50,6 +50,42 @@ static void test_every_edge_boundary_matches_its_authored_node(void)
     }
 }
 
+static void test_every_bezier_join_has_continuous_tangent_and_width(void)
+{
+    unsigned int edge;
+
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        const unsigned int next =
+            (edge + 1U) % BOONTA_RUNTIME_ROUTE_EDGE_COUNT;
+        const BoontaRuntimeRouteEdge *incoming =
+            &boonta_runtime_route_edges[edge];
+        const BoontaRuntimeRouteEdge *outgoing =
+            &boonta_runtime_route_edges[next];
+        unsigned int axis;
+
+        /*
+         * A cubic Bezier's endpoint derivatives are 3*(P3-C2) and
+         * 3*(C1-P0). Matching these vectors preserves C1 continuity at
+         * every node, including the closed-loop seam.
+         */
+        for (axis = 0U; axis < 3U; ++axis) {
+            const float incoming_tangent =
+                3.0f * (incoming->p3[axis] - incoming->control2[axis]);
+            const float outgoing_tangent =
+                3.0f * (outgoing->control1[axis] - outgoing->p0[axis]);
+            assert_close(incoming_tangent, outgoing_tangent, 0.00001f);
+        }
+
+        /* Width is a separate periodic surface signal and must meet at joins. */
+        assert_close(
+            boonta_route_graph_width_at(
+                edge, 1.0f, BOONTA_REFERENCE_ROAD_HALF_WIDTH),
+            boonta_route_graph_width_at(
+                next, 0.0f, BOONTA_REFERENCE_ROAD_HALF_WIDTH),
+            0.000001f);
+    }
+}
+
 static void test_binary_search_boundaries_and_midpoints(void)
 {
     unsigned int edge;
@@ -219,6 +255,7 @@ int main(void)
 {
     test_route_length_matches_legacy_lap_distance();
     test_every_edge_boundary_matches_its_authored_node();
+    test_every_bezier_join_has_continuous_tangent_and_width();
     test_binary_search_boundaries_and_midpoints();
     test_bezier_samples_match_legacy_track_bake();
     test_closed_loop_wrap_and_negative_distance();
