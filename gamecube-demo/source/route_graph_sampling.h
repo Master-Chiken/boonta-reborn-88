@@ -276,13 +276,80 @@ static inline void boonta_route_graph_sampler_sample_edge_at(
  * chooses the straightest continuation. Project axes are x lateral, y up,
  * z forward; positive cross here represents a left turn.
  */
+/*
+ * Return a normalized horizontal endpoint tangent for a cubic Bezier edge.
+ * A collapsed first handle has a valid second-/third-order direction, so do
+ * not reject a curve merely because its endpoint derivative is zero.
+ */
+static inline int boonta_route_graph_edge_horizontal_tangent(
+    unsigned int edge_index, int at_end, float *x_out, float *z_out)
+{
+    const BoontaRuntimeRouteEdge *edge;
+    float tangent_x;
+    float tangent_z;
+    float length;
+
+    if (x_out != NULL) *x_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
+    if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
+        (at_end != 0 && at_end != 1) || x_out == NULL || z_out == NULL) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+
+    edge = &boonta_runtime_route_edges[edge_index];
+    if (at_end) {
+        /* B'(1), then its first useful higher-order direction, then chord. */
+        tangent_x = edge->p3[0] - edge->control2[0];
+        tangent_z = edge->p3[2] - edge->control2[2];
+        length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        if (!isfinite(length) || length <= 0.000001f) {
+            tangent_x = edge->p3[0] - edge->control1[0];
+            tangent_z = edge->p3[2] - edge->control1[2];
+            length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        }
+        if (!isfinite(length) || length <= 0.000001f) {
+            tangent_x = edge->p3[0] - edge->p0[0];
+            tangent_z = edge->p3[2] - edge->p0[2];
+            length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        }
+    } else {
+        /* B'(0), then its first useful higher-order direction, then chord. */
+        tangent_x = edge->control1[0] - edge->p0[0];
+        tangent_z = edge->control1[2] - edge->p0[2];
+        length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        if (!isfinite(length) || length <= 0.000001f) {
+            tangent_x = edge->control2[0] - edge->p0[0];
+            tangent_z = edge->control2[2] - edge->p0[2];
+            length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        }
+        if (!isfinite(length) || length <= 0.000001f) {
+            tangent_x = edge->p3[0] - edge->p0[0];
+            tangent_z = edge->p3[2] - edge->p0[2];
+            length = sqrtf(tangent_x * tangent_x + tangent_z * tangent_z);
+        }
+    }
+
+    if (!isfinite(length) || length <= 0.000001f) {
+        return BOONTA_ROUTE_CURSOR_INVALID;
+    }
+    *x_out = tangent_x / length;
+    *z_out = tangent_z / length;
+    return BOONTA_ROUTE_CURSOR_OK;
+}
+
+/*
+ * Select an outgoing edge from its horizontal turn relative to the incoming
+ * tangent. direction < 0 means steer left, > 0 means steer right, and 0
+ * chooses the straightest continuation. Project axes are x lateral, y up,
+ * z forward; positive cross here represents a left turn.
+ */
 static inline int boonta_route_graph_choose_outgoing_edge(
     const BoontaRouteCursor *cursor, unsigned int node, int direction,
     unsigned int *selected_edge)
 {
     unsigned int current_edge;
     unsigned int edge;
-    float incoming_x, incoming_z, incoming_length;
+    float incoming_x, incoming_z;
     float best_score = 0.0f;
     int found = 0;
 
@@ -298,40 +365,24 @@ static inline int boonta_route_graph_choose_outgoing_edge(
 
     current_edge = cursor->path_history[cursor->path_index];
     if (current_edge >= cursor->graph->edge_count ||
-        cursor->graph->edges[current_edge].to_node != node) {
+        cursor->graph->edges[current_edge].to_node != node ||
+        boonta_route_graph_edge_horizontal_tangent(
+            current_edge, 1, &incoming_x, &incoming_z) !=
+            BOONTA_ROUTE_CURSOR_OK) {
         return BOONTA_ROUTE_CURSOR_INVALID;
     }
-
-    incoming_x =
-        boonta_runtime_route_edges[current_edge].p3[0] -
-        boonta_runtime_route_edges[current_edge].control2[0];
-    incoming_z =
-        boonta_runtime_route_edges[current_edge].p3[2] -
-        boonta_runtime_route_edges[current_edge].control2[2];
-    incoming_length = sqrtf(incoming_x * incoming_x + incoming_z * incoming_z);
-    if (!isfinite(incoming_length) || incoming_length <= 0.000001f) {
-        return BOONTA_ROUTE_CURSOR_INVALID;
-    }
-    incoming_x /= incoming_length;
-    incoming_z /= incoming_length;
 
     for (edge = 0U; edge < cursor->graph->edge_count; ++edge) {
-        float outgoing_x, outgoing_z, outgoing_length;
+        float outgoing_x, outgoing_z;
         float dot, cross, angle, score;
         int better;
 
         if (cursor->graph->edges[edge].from_node != node) continue;
-
-        outgoing_x =
-            boonta_runtime_route_edges[edge].control1[0] -
-            boonta_runtime_route_edges[edge].p0[0];
-        outgoing_z =
-            boonta_runtime_route_edges[edge].control1[2] -
-            boonta_runtime_route_edges[edge].p0[2];
-        outgoing_length = sqrtf(outgoing_x * outgoing_x + outgoing_z * outgoing_z);
-        if (!isfinite(outgoing_length) || outgoing_length <= 0.000001f) continue;
-        outgoing_x /= outgoing_length;
-        outgoing_z /= outgoing_length;
+        if (boonta_route_graph_edge_horizontal_tangent(
+                edge, 0, &outgoing_x, &outgoing_z) !=
+            BOONTA_ROUTE_CURSOR_OK) {
+            continue;
+        }
 
         dot = incoming_x * outgoing_x + incoming_z * outgoing_z;
         cross = incoming_z * outgoing_x - incoming_x * outgoing_z;
