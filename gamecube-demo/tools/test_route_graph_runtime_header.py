@@ -173,6 +173,103 @@ int main(void)
                     + (exc.stdout or "") + (exc.stderr or "")
                 )
 
+    def test_branch_selection_handles_degenerate_endpoint_handles(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/three-branch-decisions.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        nodes = {node["id"]: node for node in graph["nodes"]}
+        edges = {edge["id"]: edge for edge in graph["edges"]}
+
+        # The approach ends with a collapsed last handle; d1-left begins with
+        # a collapsed first handle. Both curves remain valid cubic Beziers.
+        decision = nodes["decision-1"]["position"]
+        edges["approach"]["curve"]["control2"] = list(decision)
+        edges["d1-left"]["curve"]["control1"] = list(decision)
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+        c_source = r"""
+#include <assert.h>
+#include <math.h>
+#define BOONTA_ROUTE_GRAPH_HEADER "branch_route.h"
+#include "route_graph_sampling.h"
+
+int main(void)
+{
+    static const float edge_lengths[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {
+        1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f
+    };
+    static const BoontaRouteCursorGraph graph = {
+        boonta_runtime_route_topology_edges,
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+        BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+        BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+        BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+    };
+    BoontaRouteCursor cursor;
+    unsigned int selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    float tangent_x = 0.0f;
+    float tangent_z = 0.0f;
+
+    assert(boonta_route_cursor_init(&cursor, &graph, edge_lengths, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 1.0f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+
+    /* The end tangent falls back from P3-P2 to the endpoint chord. */
+    assert(boonta_route_graph_edge_horizontal_tangent(
+        0U, 1, &tangent_x, &tangent_z) == BOONTA_ROUTE_CURSOR_OK);
+    assert(fabsf(tangent_x) < 0.00001f);
+    assert(tangent_z > 0.999f);
+
+    /* The left edge's start tangent falls back from P1-P0 to P2-P0. */
+    assert(boonta_route_graph_edge_horizontal_tangent(
+        1U, 0, &tangent_x, &tangent_z) == BOONTA_ROUTE_CURSOR_OK);
+    assert(tangent_x > 0.5f);
+    assert(tangent_z > 0.5f);
+
+    assert(boonta_route_graph_choose_outgoing_edge(
+        &cursor, 1U, -1, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
+    assert(selected_edge == 1U);
+    assert(boonta_route_graph_choose_outgoing_edge(
+        &cursor, 1U, 1, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
+    assert(selected_edge == 2U);
+    return 0;
+}
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            header_path = temp / "branch_route.h"
+            source_path = temp / "branch_route_test.c"
+            binary_path = temp / "branch_route_test"
+            header_path.write_text(header, encoding="utf-8")
+            source_path.write_text(c_source, encoding="utf-8")
+            try:
+                subprocess.run(
+                    [
+                        "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(temp),
+                        "-I", str(ROOT / "gamecube-demo" / "source"),
+                        str(source_path), "-lm", "-o", str(binary_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                subprocess.run(
+                    [str(binary_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "degenerate-endpoint branch selector regression failed:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
+
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
             (ROUTE_TOOLS / "fixtures/open-bezier.json").read_text(encoding="utf-8")
