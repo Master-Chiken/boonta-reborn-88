@@ -7,6 +7,7 @@ routes remain in boonta-route-graph-v1 and are rejected rather than flattened.
 
 from __future__ import annotations
 
+from bisect import bisect_left
 import argparse
 import json
 import math
@@ -31,6 +32,8 @@ MAX_TRACK_POINTS = 4096
 MIN_HALF_WIDTH = 0.5
 MAX_HALF_WIDTH = 100.0
 EPSILON = 1e-9
+MIN_ARC_LOOKUP_SAMPLES = 128
+MAX_ARC_LOOKUP_SAMPLES = 8192
 
 
 class RouteGraphExportError(ValueError):
@@ -94,18 +97,86 @@ def _ordered_single_loop(graph: dict[str, Any]) -> list[dict[str, Any]]:
     return ordered
 
 
+
+def _arc_length_parameters(
+    graph: dict[str, Any],
+    edge_id: str,
+    samples_per_edge: int,
+    nodes_by_id: dict[str, dict[str, Any]],
+    edges_by_id: dict[str, dict[str, Any]],
+) -> list[float]:
+    """Approximate equal-distance curve parameters using a bounded lookup table.
+
+    The lookup is local to one edge. Output still omits t=1 so the next edge
+    owns the shared topology node, exactly as in parameter-space sampling.
+    """
+    lookup_samples = max(
+        MIN_ARC_LOOKUP_SAMPLES,
+        min(MAX_ARC_LOOKUP_SAMPLES, samples_per_edge * 16),
+    )
+    previous = _evaluate_edge_validated(
+        graph, edge_id, 0.0, nodes_by_id, edges_by_id
+    )["position"]
+    cumulative_lengths = [0.0]
+    total_length = 0.0
+
+    for lookup_index in range(1, lookup_samples + 1):
+        t = lookup_index / lookup_samples
+        position = _evaluate_edge_validated(
+            graph, edge_id, t, nodes_by_id, edges_by_id
+        )["position"]
+        step_length = math.dist(previous, position)
+        if not math.isfinite(step_length):
+            raise RouteGraphExportError(
+                f"edge {edge_id!r} produced a non-finite arc-length lookup step"
+            )
+        total_length += step_length
+        cumulative_lengths.append(total_length)
+        previous = position
+
+    if not math.isfinite(total_length) or total_length <= EPSILON:
+        raise RouteGraphExportError(
+            f"edge {edge_id!r} has no measurable length for arc-length sampling"
+        )
+
+    parameters: list[float] = []
+    for sample_index in range(samples_per_edge):
+        target_length = total_length * sample_index / samples_per_edge
+        upper = bisect_left(cumulative_lengths, target_length)
+        if upper <= 0:
+            parameters.append(0.0)
+            continue
+        if upper >= len(cumulative_lengths):
+            parameters.append(1.0)
+            continue
+
+        lower_length = cumulative_lengths[upper - 1]
+        span_length = cumulative_lengths[upper] - lower_length
+        if span_length <= EPSILON:
+            # A repeated lookup position carries no distance; keep the nearest
+            # upper parameter rather than dividing by a degenerate span.
+            parameters.append(upper / lookup_samples)
+            continue
+        fraction = (target_length - lower_length) / span_length
+        parameters.append(((upper - 1) + fraction) / lookup_samples)
+
+    return parameters
+
+
 def export_closed_loop_track(
     graph_data: Any,
     *,
     default_half_width: float,
     samples_per_edge: int = 24,
     surface_widths: dict[str, Any] | None = None,
+    sampling_mode: str = "parameter",
 ) -> dict[str, Any]:
     """Convert a simple closed route into sampled track-v1 control points.
 
-    Each edge contributes samples at t = 0 .. (n-1)/n. The next edge owns
-    the shared topology node, so a closed-loop start point is not duplicated.
-    Road widths are geometry data and must be supplied separately from the graph.
+    Parameter-space sampling remains the compatibility default. Arc-length mode
+    inverts a bounded per-edge distance lookup so the runtime's chord-based
+    sampler receives more evenly spaced points on curved edges. The next edge
+    owns the shared topology node; road widths remain separate geometry data.
     """
     graph = validate_route_graph(graph_data)
     default_width = _checked_half_width(default_half_width, "default_half_width")
@@ -114,6 +185,10 @@ def export_closed_loop_track(
         raise RouteGraphExportError("samples_per_edge must be an integer")
     if samples_per_edge < 2 or samples_per_edge > 2048:
         raise RouteGraphExportError("samples_per_edge must be between 2 and 2048")
+    if sampling_mode not in ("parameter", "arc_length"):
+        raise RouteGraphExportError(
+            "sampling_mode must be 'parameter' or 'arc_length'"
+        )
 
     ordered_edges = _ordered_single_loop(graph)
     point_count = len(ordered_edges) * samples_per_edge
@@ -142,9 +217,15 @@ def export_closed_loop_track(
         edge_id = edge["id"]
         bindings = edge.get("surface_binding", [])
         binding_index = 0
+        sample_parameters = (
+            [sample_index / samples_per_edge for sample_index in range(samples_per_edge)]
+            if sampling_mode == "parameter"
+            else _arc_length_parameters(
+                graph, edge_id, samples_per_edge, nodes_by_id, edges_by_id
+            )
+        )
 
-        for sample_index in range(samples_per_edge):
-            t = sample_index / samples_per_edge
+        for sample_index, t in enumerate(sample_parameters):
             while (
                 bindings
                 and binding_index + 1 < len(bindings)
@@ -198,6 +279,11 @@ def main(argv: list[str] | None = None) -> int:
         help="fixed curve samples per edge (default: 24; track limit: 4096 points)",
     )
     parser.add_argument(
+        "--sampling-mode", choices=("parameter", "arc_length"),
+        default="parameter",
+        help="curve sampling: legacy parameter spacing (default) or approximate equal arc length",
+    )
+    parser.add_argument(
         "--surface-widths",
         help="optional JSON object mapping surface IDs to half-widths in metres",
     )
@@ -215,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             default_half_width=args.half_width,
             samples_per_edge=args.samples_per_edge,
             surface_widths=widths,
+            sampling_mode=args.sampling_mode,
         )
         output = Path(args.output_track)
         output.parent.mkdir(parents=True, exist_ok=True)

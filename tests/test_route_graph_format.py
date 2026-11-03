@@ -472,6 +472,61 @@ class RouteGraphFormatTests(unittest.TestCase):
         # The closing node is represented by the first point, not duplicated.
         self.assertNotEqual(track["points"][-1]["x"], track["points"][0]["x"])
 
+
+    def test_arc_length_sampling_reduces_spacing_variation_on_nonuniform_curve(self):
+        graph = fixture("closed-loop.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "a-b")
+        # The line remains straight, but its Bezier parameter speed is strongly
+        # non-uniform. This isolates parameterization from curve-shape effects.
+        edge["curve"]["control1"] = [0.2, 0.0, 0.0]
+        edge["curve"]["control2"] = [8.0, 0.0, 0.0]
+
+        parameter_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="parameter",
+        )
+        arc_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="arc_length",
+        )
+
+        def first_edge_spacing(track):
+            edge_points = track["points"][:9]
+            return [
+                math.dist(
+                    tuple(edge_points[index][axis] for axis in ("x", "y", "z")),
+                    tuple(edge_points[index + 1][axis] for axis in ("x", "y", "z")),
+                )
+                for index in range(8)
+            ]
+
+        parameter_steps = first_edge_spacing(parameter_track)
+        arc_steps = first_edge_spacing(arc_track)
+        parameter_ratio = max(parameter_steps) / min(parameter_steps)
+        arc_ratio = max(arc_steps) / min(arc_steps)
+        self.assertLess(arc_ratio, parameter_ratio * 0.5)
+        self.assertAlmostEqual(arc_steps[0], arc_steps[-1], delta=0.02)
+
+    def test_default_sampling_is_byte_data_equivalent_to_parameter_mode(self):
+        graph = fixture("closed-loop.json")
+        default_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8
+        )
+        explicit_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="parameter",
+        )
+        self.assertEqual(default_track, explicit_track)
+
+    def test_closed_loop_export_rejects_unknown_sampling_mode(self):
+        with self.assertRaisesRegex(RouteGraphExportError, "sampling_mode"):
+            export_closed_loop_track(
+                fixture("closed-loop.json"),
+                default_half_width=3.6,
+                samples_per_edge=4,
+                sampling_mode="unknown",
+            )
+
     def test_closed_loop_export_maps_surface_ids_to_explicit_road_widths(self):
         graph = fixture("closed-loop.json")
         edge = next(item for item in graph["edges"] if item["id"] == "a-b")
@@ -540,6 +595,7 @@ class RouteGraphFormatTests(unittest.TestCase):
                     str(output),
                     "--half-width", "3.6",
                     "--samples-per-edge", "4",
+                    "--sampling-mode", "arc_length",
                 ],
                 capture_output=True, text=True, check=False,
             )

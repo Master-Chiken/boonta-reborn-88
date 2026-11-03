@@ -43,6 +43,8 @@ Example using only the synthetic closed-loop fixture:
     python3 tools/route_graph_format/export_closed_loop_track.py \
         tools/route_graph_format/fixtures/closed-loop.json \
         /tmp/route-track.json --half-width 3.6 --samples-per-edge 24
+
+For an experimental equal-distance bake, add `--sampling-mode arc_length`. The default `parameter` mode preserves the earlier byte-for-byte export behavior.
     python3 tools/track_format/validate_track.py /tmp/route-track.json
     python3 tools/track_format/export_track_header.py \
         /tmp/route-track.json /tmp/generated_route_track.h --symbol "route graph demo"
@@ -50,6 +52,8 @@ Example using only the synthetic closed-loop fixture:
 Geometry stays separate from topology. `--half-width` is required; an edge with `surface_binding` additionally needs a JSON object mapping every referenced surface ID to an explicit half-width, supplied with `--surface-widths widths.json`. Missing mappings and widths outside track-v1's 0.5–100 metre range are errors, not guessed defaults.
 
 Each edge contributes a fixed number of samples; the shared endpoint is emitted once by the next edge. The first point alone is marked as the current track-v1 start/finish checkpoint. The current runtime still counts laps by closed-loop distance and does not consume intermediate checkpoint gates.
+
+The default `--sampling-mode parameter` uses equally spaced curve parameters and preserves existing output. The optional `--sampling-mode arc_length` builds a bounded lookup (128–8192 intervals per edge) and numerically inverts sampled 3D distance to place the same number of samples more evenly along that edge. Surface bindings are still evaluated at the resulting curve parameter `t`. This is an approximation, not analytic arc-length inversion; it is a host-side bake option, not a runtime change. Compare both outputs and run visible-Dolphin acceptance before replacing the current checked-in oval header.
 
 **Not yet exported:** open routes and branching/rejoining graphs. These remain valid in route-graph-v1 and are rejected by this first bake path; selecting a branch and flattening it requires an explicit route choice, not an arbitrary edge ordering. This is a deterministic offline conversion, not a runtime graph loader, a live branch selector, or proof of GameCube/Wii source-format parity. The baked samples are then interpolated by the existing track-v1 Catmull-Rom runtime, so sampling density affects the approximation.
 
@@ -76,6 +80,17 @@ The PC cursor uses the fourth lookahead node for a B-spline forward-link decisio
 The sampled progress allocator apportions a caller-supplied normalized interval in proportion to already-sampled physical edge lengths. Use `sample_route_edge_lengths()` to bake all graph edges at one chosen sample density with one validation/index pass, then select the edge lengths for each branch path and feed them to `allocate_progress_spans()`. The per-edge `sample_edge_length()` helper remains available for focused queries. This mirrors the documented progress-mapping responsibility but is not a reverse-engineered importer.
 
 The host cursor records the actual chosen edge path. Reverse movement walks that stored history, so a rejoin does not guess which incoming branch was used. Forward movement replays history unless an explicit new branch choice replaces the future path. Its `move(delta_parameter)` argument is a change in the current edge's local normalized curve parameter `t`; it is **not** metres, arc length, elapsed time, speed, or a vehicle integrator. Use sampled edge lengths plus `allocate_progress_spans` for the separate normalized-progress mapping. The cursor is a testable logical component only; it is not connected to gameplay runtime, projection/rebinding, collision, lap events, or GX.
+
+
+## External reverse-engineering tool references (2026-11-03)
+
+Two public projects provide useful workflow patterns, but neither is a drop-in GameCube/Wii implementation:
+
+- [sp00nznet/racer](https://github.com/sp00nznet/racer/tree/694c5663b3a7c30e2862fc240344f34683f99a9c) is an **N64 MIPS static recompilation** using N64Recomp. Its ROM analyzer, symbol inventory, function differ, string dumper and progress report demonstrate a repeatable pipeline: identify the exact local binary, inventory functions, retain address/symbol mappings, compare one function at a time, and track unknowns explicitly. These tools target that N64 ROM/MIPS project; they are not a GameCube/Wii DOL/ELF PowerPC decoder and no code or ROM data is imported here.
+
+- [giveen/decomp.anything](https://github.com/giveen/decomp.anything/tree/b410ac528ded6fa9adb7fad4f000cebbf5f341e6) describes itself as a decomp.wtf fork with Windows PE matching and optional REA analysis. Its [objdiff guide](https://github.com/giveen/decomp.anything/blob/b410ac528ded6fa9adb7fad4f000cebbf5f341e6/src/decompnet/app/guide/objdiff.md) gives a transferable comparison order: match control flow/instruction count first, then operands and relocations, and leave register allocation/scheduling until last. Its x86/PE matching backend is not evidence of PowerPC support; use that order as a review method only unless a PowerPC-capable matcher is separately verified.
+
+For any future console-binary research, keep the owner's lawful local dump and derived disassembly local, record the exact binary hash, platform/region/revision, address range and tool version, and distinguish a named match from a hypothesis. A public N64 symbol or a PC-only route observation must never be promoted to GameCube/Wii fact without target-specific evidence.
 
 ## Validation boundary
 
