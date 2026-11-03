@@ -2,7 +2,8 @@ name: GameCube first-render prototype build
 
 on:
   push:
-    branches: [main]
+    # Re-run the complete prototype validation after gameplay changes merge to dev.
+    branches: [main, dev]
     paths:
       - "gamecube-demo/Makefile"
       - "gamecube-demo/source/**"
@@ -40,6 +41,11 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest build for a PR/ref; stale builds must not consume CI minutes.
+concurrency:
+  group: gamecube-demo-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   host-pause-state-tests:
     name: Host pause/resume state tests
@@ -73,6 +79,7 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
 
   build-gamecube-demo:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     container:
       image: devkitpro/devkitppc:latest

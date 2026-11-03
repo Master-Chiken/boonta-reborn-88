@@ -5,6 +5,14 @@ on:
     workflows:
       - GameCube first-render prototype build
       - GameCube native build
+      - Wii64 tooling tests
+      - AI free-tier safety checks
+      - Branch automation self-test
+      - Step 102 source-import provenance guard
+      - Trusted source-import path guard
+      - Synthetic BRRES MDL0 probe
+      - Dreamcast KallistiOS build
+      - Boonta Autonomous Loop
     types:
       - completed
 
@@ -30,39 +38,84 @@ jobs:
           script: |
             const run = context.payload.workflow_run;
             // Prefer the PR association supplied by GitHub, but verify the exact
-            // head SHA. Some workflow_run payloads have no pull_requests entry.
-            let candidate = (run.pull_requests || []).find(item =>
-              item && item.number && item.head && item.head.sha === run.head_sha
-            );
+            // head SHA, same-repository origin, and an allowed integration base.
+            // Some workflow_run payloads have no pull_requests entry.
+            const expectedRepo = context.repo.owner + '/' + context.repo.repo;
+            const isEligiblePr = item =>
+              item &&
+              Number.isInteger(Number(item.number)) &&
+              item.head?.sha === run.head_sha &&
+              item.head?.repo?.full_name === expectedRepo &&
+              ['main', 'dev'].includes(item.base?.ref);
+            let candidate = (run.pull_requests || []).find(isEligiblePr);
             if (!candidate && run.head_branch && run.head_sha) {
               const { data: candidates } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 state: 'open',
-                base: 'main',
                 head: context.repo.owner + ':' + String(run.head_branch),
                 per_page: 100,
               });
-              candidate = candidates.find(item => item.head.sha === run.head_sha);
+              candidate = candidates.find(isEligiblePr);
             }
-            if (!candidate) {
-              core.info('No open PR targeting main matches this exact workflow-run head SHA; no comment will be posted.');
-              return;
-            }
+            let targetIssueNumber = null;
+            let prNumber = null;
+            if (candidate) {
+              prNumber = Number(candidate.number);
+              if (!Number.isInteger(prNumber) || prNumber < 1) {
+                core.warning('No valid pull request number found.');
+                return;
+              }
 
-            const prNumber = Number(candidate.number);
-            if (!Number.isInteger(prNumber) || prNumber < 1) {
-              core.warning('No valid pull request number found.');
-              return;
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              if (
+                pr.state === 'open' &&
+                ['main', 'dev'].includes(pr.base.ref) &&
+                pr.head.repo?.full_name === expectedRepo &&
+                pr.head.sha === run.head_sha
+              ) {
+                // Valid open PR: post the failure on its PR thread.
+              } else {
+                core.info('PR association is closed, ineligible or stale; checking the protected push route when applicable.');
+                prNumber = null;
+              }
             }
-
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prNumber,
-            });
-            if (pr.state !== 'open' || pr.base.ref !== 'main' || pr.head.sha !== run.head_sha) {
-              core.info('PR is closed, does not target main, or no longer matches the failed run SHA; no comment will be posted.');
+            if (!prNumber && run.event === 'push' && ['main', 'dev'].includes(run.head_branch)) {
+              // Merged gameplay PRs receive a fresh push build on dev. If that
+              // post-merge build fails, report to the canonical queue even
+              // though GitHub has already closed the merged PR.
+              const targetBranch = String(run.head_branch);
+              const { data: branchInfo } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: targetBranch,
+              });
+              if (branchInfo.commit?.sha !== run.head_sha) {
+                core.info('The protected branch has advanced since this failed run; no stale issue report will be posted.');
+                return;
+              }
+              targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
+            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && run.name === 'Boonta Autonomous Loop' && run.head_branch === 'main') {
+              // Do not let a silent autonomous-cycle failure disappear. Report
+              // to the active queue only while the failed run is still for the
+              // exact current main SHA.
+              const { data: branchInfo } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: 'main',
+              });
+              if (branchInfo.commit?.sha !== run.head_sha) {
+                core.info('main has advanced since this failed autonomous run; no stale issue report will be posted.');
+                return;
+              }
+              targetIssueNumber = 226;
+            }
+            if (!prNumber && !targetIssueNumber) {
+              core.info('No eligible open PR or current protected-branch push matches this exact workflow-run head SHA; no comment will be posted.');
               return;
             }
 
@@ -97,6 +150,7 @@ jobs:
               '',
               '**Workflow:** ' + String(run.name || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180),
               '**Branch:** ' + branch,
+              '**Target:** ' + (prNumber ? 'PR #' + prNumber : 'canonical issue #' + targetIssueNumber),
               '**Run:** ' + runUrl,
               '',
               '**Failed jobs/steps:**',
@@ -108,6 +162,6 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: prNumber,
+              issue_number: prNumber || targetIssueNumber,
               body: body.slice(0, 12000),
             });

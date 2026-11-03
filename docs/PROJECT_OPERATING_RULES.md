@@ -24,7 +24,7 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 - A research dossier must record: question, exact source/revision, evidence links, observed facts, inferences, target-platform caveats, unknowns, Step 102 mapping status, and the next reproducible test.
 - Finish each work block with a small note: what was established, what was not established, and the next action. Do not start an unrelated task mid-session.
 - Do not create a branch for every note. Gather research evidence in the active issue/dossier; make one focused documentation PR when a coherent result is ready.
-- No new CI/AI workflow or repository policy change unless it removes a demonstrated blocker to the active task. No scheduled AI coordination reports.
+- No new CI/AI workflow or repository policy change unless it removes a demonstrated blocker to the active task. The read-only AI coordinator remains manual-only; scheduled autonomous engineering is permitted only through the separately gated Boonta Autonomous Loop.
 
 ## 3. Evidence-led study → map → implement → validate
 
@@ -33,6 +33,7 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 3. **Specify:** write the behavior independently, state what is fact vs inference, and choose a measurable acceptance test.
 4. **Implement only when justified:** spend part of the 20% engineering allocation on the smallest implementation that follows the evidence. A finding does not automatically require a code change.
 5. **Validate:** run exact-head host tests and the native DOL/ELF build. Use visible Dolphin/controller checks for gameplay behavior and mark physical GameCube/Wii results separately.
+   The maintained GameCube first-render workflow must run both on relevant PRs and on pushes to protected `main` and `dev`, so a gameplay merge receives post-merge validation as well as pre-merge PR validation.
 6. **Record:** link the dossier, commits, tests and unresolved questions to the canonical issue #156.
 
 ## 4. Product direction and active tasks
@@ -47,7 +48,9 @@ Use this source hierarchy:
 3. **Dreamcast** — secondary console comparison when a traceable local artifact or reliable public evidence is available.
 4. **GameCube/Wii** — native delivery targets. There is no identified retail Racer DOL/REL/ISO for these platforms; use the platform toolchain to build and profile our port, not to pretend a matching original GameCube/Wii decompilation exists.
 
-- **Active research queue:** [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). The pinned PC source plus the frozen Steam Ghidra cross-check now document the route graph, split/rejoin progress bake, player cursor/binding, cross-track offset, lap crossing, and AI look-ahead/branch choice. The next single task is to finalize a versioned, platform-neutral route-graph contract and prove its invariants with synthetic host fixtures. Keep `boonta-track-v1` untouched as the existing playable test harness; do not import PC/N64 track data or wire an unproven parser into the runtime.
+- **Active research queue:** [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). The platform-neutral route-graph contract and synthetic host fixtures are complete and were integrated by [PR #271](https://github.com/Master-Chiken/boonta-reborn-88/pull/271) into `dev` at `cdc4f35c7533fdefee428da5eabca324c247f618`. The exact post-merge validation [#41528877645](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41528877645) completed successfully on 2026-11-03: host state/gameplay/route tests, native DOL/ELF build and artifact validation, Dolphin null-backend process smoke, and the optional scripted Software Renderer frame diagnostic all passed. This is automated evidence, not human-operated gameplay or hardware acceptance.
+- **Current next-up task:** review the existing [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) as the single candidate for the native GameCube/Wii route-runtime hookup. Its current head is `faae371403176eb2198cf376ebb97ecd0ea75db5` and its last exact-head host/build/Dolphin/Wii64 checks passed. Review scope is to verify the runtime's use of the route graph/cursor, preserve the existing `boonta-track-v1` compatibility path, check whether branch history actually drives gameplay or remains test-only, and record the remaining collision/surface/finish gaps. Do not create another route-runtime branch or duplicate PR. Do not merge PR #274 automatically. If the review finds a gap, record one precise next test or blocker before changing code.
+- Keep [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) separate as a draft input-backend candidate; physical Wii/Under Control Classic Controller acceptance remains outstanding. Keep RE-002 parked. Do not import PC/N64 track data or treat platform-specific observations as GameCube/Wii proof.
 - The N64 finish-to-Results work remains preserved as historical, platform-specific static evidence with an unverified runtime edge. It is not the current blocker for the native GameCube/Wii port. N64 findings do not establish retail GameCube/Wii parity.
 - After the graph contract/fixtures are complete, select one next research question at a time: target-surface/collision binding and coordinate transform; then race/lap/finish state; then pod physics/handling and AI progression. Do not run these tracks concurrently.
 - **Existing validation gate:** [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Keep its manual checks distinct from static research and exact-head CI.
@@ -63,7 +66,7 @@ Tool selection must follow the artifact:
 ## 5. One responsible writer, no branch sprawl
 
 - Use **one write-capable AI/agent at a time**. Read-only research can be parallelized only when it has non-overlapping, explicit questions; to avoid overload, prefer one investigator and one synthesis.
-- A substantial change requires an approved scope, bounded file list, and observable acceptance criteria before writing begins.
+- A substantial change requires a bounded scope, named files, and observable acceptance criteria before writing begins. Manual writers require owner approval; the separately authorized autonomous loop may select its scope only from the canonical queue and must record its criteria before editing.
 - One implementation task normally means one short-lived branch and one PR. Base new branches on the current intended target.
 - `main` is stable/release integration and must not receive direct pushes. Gameplay changes target protected `dev`; docs/policy may target `main`.
 - `archive/branch-heads-20261019` is a protected recovery archive, never a development base and never merged wholesale.
@@ -73,8 +76,10 @@ Tool selection must follow the artifact:
 ## 6. AI and budget controls
 
 - Project budget: **€0**. No paid model, billing, payment method, paid fallback, paid cloud resource or upgrade. If free quota is exhausted, stop.
-- The read-only Gemini coordinator is manual-only and posts requested reports to the canonical issue #156.
-- Planning mode is read-only. Keep `GEMINI_WRITE_ENABLED` absent or not equal to `true` unless the owner deliberately approves one exact implementation plan and decides to unlock the separate write workflow.
+- The read-only Gemini coordinator remains manual-only and posts requested reports to canonical issue #156.
+- The owner has authorized scheduled autonomous task selection and branch/PR work through `.github/workflows/boonta-autonomous-loop.yml`; it is not a background process outside GitHub Actions. It runs on a six-hour schedule and serializes writer runs.
+- Autonomous writes require `GEMINI_AUTONOMOUS_ENABLED=true`, `GEMINI_FREE_TIER_CONFIRMED=true`, the `GEMINI_API_KEY` secret, and the GitHub App `APP_ID` variable plus `APP_PRIVATE_KEY` secret. The manual plan/execute path remains separately gated by `GEMINI_WRITE_ENABLED=true` and its owner approval command.
+- Agents may open or update focused PRs, but may not merge, enable auto-merge, alter settings/secrets/variables, force-push or delete branches. If free quota is unavailable, stop without a paid fallback.
 - One agent-generated summary or green configuration check is not evidence that the game works.
 - Never send secrets, ROMs, disc images, BIOS, commercial archives, extracted proprietary models/textures/audio, or uncertain-provenance data to hosted AI services, public issues, CI artifacts, or the repository.
 

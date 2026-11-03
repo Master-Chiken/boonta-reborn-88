@@ -24,10 +24,16 @@ invoke = read(".github/workflows/gemini-invoke.yml")
 execute = read(".github/workflows/gemini-plan-execute.yml")
 daily = read(".github/workflows/ai-daily-coordinator.yml")
 daily_prompt = read(".github/commands/gemini-daily-coordinator.toml")
+autonomous = read(".github/workflows/boonta-autonomous-loop.yml")
+readiness = read(".github/workflows/boonta-autonomous-readiness.yml")
+autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
 setup = read("docs/AI_AUTOMATION_SETUP.md")
+ci_triage = read(".github/workflows/ci-failure-triage.yml")
+gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
+wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
@@ -314,6 +320,347 @@ if (
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
 
+# The autonomous loop is scheduled, serialized, owner-authorized, and independently gated.
+autonomous_trigger = autonomous.split("permissions:", 1)[0]
+if "schedule:" not in autonomous_trigger or "workflow_dispatch:" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must support scheduled and owner-manual execution")
+if "- cron: '17 */6 * * *'" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must use the bounded six-hour schedule")
+if "group: boonta-autonomous-loop" not in autonomous or "cancel-in-progress: false" not in autonomous:
+    errors.append("Boonta autonomous loop must serialize writers without cancelling active work")
+if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" not in execute:
+    errors.append("All manual and autonomous Gemini writers must share one non-cancelling concurrency group")
+if "uses: ./.github/workflows/gemini-plan-execute.yml" not in autonomous or "autonomous_mode: true" not in autonomous:
+    errors.append("Boonta autonomous loop must call the separately gated reusable writer in autonomous mode")
+if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in execute:
+    errors.append("Autonomous writes must be restricted to the canonical queue and explicit owner gate")
+if (
+    "GEMINI_AUTONOMOUS_ENABLED" not in execute
+    or "APP_PRIVATE_KEY" not in execute
+    or "CALLER_WORKFLOW" not in execute
+    or "CALLER_REF" not in execute
+    or 'CALLER_REF:-}" != "refs/heads/main"' not in execute
+):
+    errors.append("Autonomous writer must require its separate gate, approved caller on protected main, and GitHub App identity")
+if "permission-actions: 'read'" not in execute or '"list_workflow_runs"' not in execute or '"get_job_logs"' not in execute:
+    errors.append("Autonomous writer must be able to inspect CI runs and failed-job logs using Actions read permission")
+if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
+    errors.append("Reusable writer must select the autonomous prompt only for the explicit autonomous input")
+for required_phrase in (
+    "without asking for another",
+    "one bounded task",
+    "Do not start RE-002 until the live queue explicitly marks RE-001 complete",
+    "Never merge a PR",
+    "strict project budget is €0",
+    "Never push directly to either protected branch",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
+
+# Enforce a reuse-first engineering method and efficient evidence-based validation.
+for required_phrase in (
+    "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST",
+    "Extend the canonical implementation",
+    "Never hand-edit generated headers or artifacts",
+    "Optimize only a measured hot path",
+    "Reuse passing checks for an unchanged exact SHA",
+    "Group related file edits into one logical commit",
+    "full historical appendices/comments",
+    "compact inventory of all open pull requests",
+    "Deep-inspect changed files and exact-head CI only for PRs",
+    "Read logs only for failed jobs",
+    "Reuse a successful check for an unchanged exact SHA",
+    "without launching duplicate runs",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
+if "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST" not in instructions:
+    errors.append("GEMINI.md must preserve the owner's make-it-work/good/fast engineering sequence")
+if "contents: write" not in autonomous or "issues: write" not in autonomous or "pull-requests: write" not in autonomous:
+    errors.append("Autonomous workflow must grant only the scoped repository/issue/PR permissions required by its gated writer")
+if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in setup:
+    errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
+if "Actions: read" not in setup:
+    errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
+
+# Deterministic CI failure triage must cover the two protected integration targets.
+triage_trigger = ci_triage.split("permissions:", 1)[0]
+if "workflow_run:" not in triage_trigger:
+    errors.append("CI failure triage must remain attached to completed workflow runs")
+for workflow_name in (
+    "GameCube first-render prototype build",
+    "GameCube native build",
+    "Wii64 tooling tests",
+    "AI free-tier safety checks",
+    "Branch automation self-test",
+    "Step 102 source-import provenance guard",
+    "Trusted source-import path guard",
+    "Synthetic BRRES MDL0 probe",
+    "Dreamcast KallistiOS build",
+    "Boonta Autonomous Loop",
+):
+    if f"      - {workflow_name}" not in triage_trigger:
+        errors.append(f"CI failure triage is missing workflow {workflow_name!r}")
+for required_guard in (
+    "['main', 'dev'].includes(item.base?.ref)",
+    "['main', 'dev'].includes(pr.base.ref)",
+    "item.head?.repo?.full_name === expectedRepo",
+    "pr.state === 'open'",
+    "pr.head.repo?.full_name === expectedRepo",
+    "item.head?.sha === run.head_sha",
+    "pr.head.sha === run.head_sha",
+    "run.event === 'push'",
+    "['main', 'dev'].includes(run.head_branch)",
+    "github.rest.repos.getBranch",
+    "branchInfo.commit?.sha !== run.head_sha",
+    "targetBranch === 'dev' ? 226 : 156",
+    "issue_number: prNumber || targetIssueNumber",
+    "['schedule', 'workflow_dispatch'].includes(run.event)",
+    "run.name === 'Boonta Autonomous Loop'",
+    "run.head_branch === 'main'",
+    "targetIssueNumber = 226",
+):
+    if required_guard not in ci_triage:
+        errors.append(f"CI failure triage is missing safe main/dev exact-head guard {required_guard!r}")
+triage_permissions = ci_triage.split("permissions:", 1)[1].split("concurrency:", 1)[0]
+if "contents: write" in triage_permissions or "pull-requests: write" in triage_permissions:
+    errors.append("CI failure triage must not have code or pull-request write permission")
+if "actions: read" not in triage_permissions or "issues: write" not in triage_permissions:
+    errors.append("CI failure triage needs only Actions read and issue-comment write for diagnostics")
+
+# Gameplay integration into dev must receive post-merge native validation too.
+gamecube_push_trigger = gamecube_build.split("  push:", 1)[1].split("  pull_request:", 1)[0]
+if "branches: [main, dev]" not in gamecube_push_trigger:
+    errors.append("GameCube prototype CI must run after merges/pushes to both main and dev")
+if "  build-gamecube-demo:\n    timeout-minutes: 15\n" not in gamecube_build:
+    errors.append("Native GameCube CI build job must have a bounded 15-minute timeout")
+gamecube_concurrency = gamecube_build.split("concurrency:", 1)[1].split("jobs:", 1)[0] if "concurrency:" in gamecube_build else ""
+if "group: gamecube-demo-${{ github.event.pull_request.number || github.ref }}" not in gamecube_concurrency:
+    errors.append("GameCube build workflow must serialize executions by PR/ref")
+if "cancel-in-progress: true" not in gamecube_concurrency:
+    errors.append("New GameCube commits must cancel stale same-PR/ref CI runs")
+
+# The autonomous agent must use exact-head CI rather than invent local test results.
+for required_phrase in (
+    "intentionally has no general-purpose local shell",
+    "exact PR head SHA",
+    "Do not push empty commits",
+    "read only the failing job logs",
+    "no documented safe rerun action",
+    "five minutes beyond that timeout",
+    "likely stale runner/Actions state",
+    "do not wait indefinitely",
+    "optional `continue-on-error` diagnostics",
+):
+    if required_phrase not in autonomous_prompt:
+        errors.append(f"Autonomous prompt is missing CI execution/recovery rule {required_phrase!r}")
+if "GitHub Actions is the authoritative test executor" not in instructions:
+    errors.append("GEMINI.md must state that GitHub Actions is the authoritative test executor for the autonomous agent")
+
+# Keep Wii64 unit-test CI scoped to the files its tests actually exercise.
+wii64_trigger = wii64_tests.split("permissions:", 1)[0]
+wii64_branches = wii64_trigger.split("branches:", 1)[1].split("paths:", 1)[0]
+wii64_paths = wii64_trigger.split("paths:", 1)[1]
+wii64_concurrency = wii64_tests.split("concurrency:", 1)[1].split("jobs:", 1)[0] if "concurrency:" in wii64_tests else ""
+if "group: wii64-tool-tests-${{ github.event.pull_request.number || github.ref }}" not in wii64_concurrency:
+    errors.append("Wii64 test runs must be serialized per PR/ref to avoid duplicate runner usage")
+if "cancel-in-progress: true" not in wii64_concurrency:
+    errors.append("A newer Wii64 test run must replace a stale run on the same PR/ref")
+if not all(branch in wii64_branches for branch in ('      - main', '      - "tools/**"', '      - "ci/**"')):
+    errors.append("Wii64 push branch filters must retain main, tools/** and ci/**")
+if '"tools/**"' in wii64_paths:
+    errors.append("Wii64 tooling test path filters must remain narrower than all tools/**")
+for required_path in (
+    '      - "tools/compare_wii64_rice_ini.py"',
+    '      - "tools/compare_wii64_rice_profiles.py"',
+    '      - "tools/inspect_wii64_rice_ini.py"',
+    '      - "tools/verify_wii64_archive.py"',
+    '      - "tools/tests/**"',
+    '      - ".github/workflows/wii64-tool-tests.yml"',
+):
+    if required_path not in wii64_trigger:
+        errors.append(f"Wii64 tooling test path filters are missing {required_path!r}")
+
+# Keep the one-item autonomous queue aligned with its live canonical issue and
+# prevent the agent from repeating the already-merged route-graph contract.
+if "PR #271" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must identify the integrated route-graph contract PR #271")
+if "41528877645" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must record the successful post-merge validation of PR #271")
+if "PR #274" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must direct the next cycle to review the existing runtime candidate PR #274")
+if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must prevent duplicate route-runtime branches")
+if "Keep RE-002 parked" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must keep RE-002 parked during the active review")
+
+# The owner-only readiness workflow checks configuration and App access without
+# calling a model or performing repository writes.
+readiness_trigger = readiness.split("permissions:", 1)[0]
+readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", readiness_trigger)
+if readiness_events != ["workflow_dispatch"]:
+    errors.append(
+        "Autonomous readiness must be manually dispatched only; "
+        f"found {readiness_events!r}"
+    )
+if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
+    errors.append("Autonomous readiness must be owner-only and pinned to protected main")
+readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
+readiness_permissions = dict(
+    re.findall(
+        r"(?m)^  ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
+        readiness_permission_block,
+    )
+)
+expected_readiness_permissions = {
+    "contents": "read",
+    "issues": "read",
+    "pull-requests": "read",
+}
+if readiness_permissions != expected_readiness_permissions:
+    errors.append(
+        "Autonomous readiness GITHUB_TOKEN permissions must be read-only and exact; "
+        f"found {readiness_permissions!r}"
+    )
+if "gemini_api_key:" in readiness or "run-gemini-cli" in readiness or "gemini_model:" in readiness:
+    errors.append("Autonomous readiness must never invoke a Gemini model or send an API request")
+if "GEMINI_AUTONOMOUS_ENABLED" not in readiness or "GEMINI_FREE_TIER_CONFIRMED" not in readiness:
+    errors.append("Autonomous readiness must check both the disabled writer gate and the Free-tier attestation")
+if '[[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]' not in readiness:
+    errors.append("Readiness preflight must require the autonomous writer to remain disabled until checks pass")
+if '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]]' not in readiness:
+    errors.append("Readiness preflight must require the owner's exact Free-tier attestation")
+if "still disabled (false/unset)" not in readiness:
+    errors.append("Readiness report must state that the autonomous gate remains disabled during preflight")
+for required_secret in ("GEMINI_API_KEY", "APP_ID", "APP_PRIVATE_KEY"):
+    if required_secret not in readiness:
+        errors.append(f"Autonomous readiness must verify presence of {required_secret}")
+for required_permission in (
+    "permission-contents: write",
+    "permission-issues: write",
+    "permission-pull-requests: write",
+    "permission-actions: read",
+):
+    if required_permission not in readiness:
+        errors.append(f"Autonomous readiness must test GitHub App permission {required_permission!r}")
+for required_probe in (
+    "/issues/156",
+    "/issues/226",
+    "/actions/runs?per_page=1",
+    "/git/ref/heads/${branch}",
+):
+    if required_probe not in readiness:
+        errors.append(f"Autonomous readiness is missing required read-only API probe {required_probe!r}")
+
+if "No repository write was performed" not in readiness or "does not independently verify Google billing status" not in readiness:
+    errors.append("Autonomous readiness must state that it performs no writes and cannot verify Google billing")
+if "rulesets protect main and dev" not in readiness:
+    errors.append("Autonomous readiness must remind the owner to verify main/dev branch protection manually")
+if "curl --fail --silent --show-error" not in readiness or "-X POST" in readiness or "--request POST" in readiness:
+    errors.append("Autonomous readiness API probes must remain GET-only")
+
+# Freeze the autonomous entry points and least-privilege boundary.
+# A scheduled run is allowed; a manual run is owner-only; no other event may
+# invoke the autonomous writer.
+autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", autonomous_trigger)
+if autonomous_events != ["schedule", "workflow_dispatch"]:
+    errors.append(
+        "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
+        f"found {autonomous_events!r}"
+    )
+if "if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+    errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
+if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
+    errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
+
+caller_permission_block = autonomous.split("permissions:", 1)[1].split("concurrency:", 1)[0]
+caller_permissions = dict(
+    re.findall(r"(?m)^  ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", caller_permission_block)
+)
+expected_caller_permissions = {
+    "contents": "write",
+    "issues": "write",
+    "pull-requests": "write",
+}
+if caller_permissions != expected_caller_permissions:
+    errors.append(
+        "Autonomous caller permissions must be exactly the contents/issues/PR write set; "
+        f"found {caller_permissions!r}"
+    )
+
+autonomous_job = autonomous.split("jobs:", 1)[1]
+job_permissions_match = re.search(
+    r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
+    autonomous_job,
+)
+if not job_permissions_match:
+    errors.append("Autonomous reusable-workflow job must declare an explicit least-privilege permission set")
+else:
+    job_permissions = dict(
+        re.findall(
+            r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
+            job_permissions_match.group("block"),
+        )
+    )
+    if job_permissions != expected_caller_permissions:
+        errors.append(
+            "Autonomous reusable-workflow job permissions must be exactly the contents/issues/PR write set; "
+            f"found {job_permissions!r}"
+        )
+
+if "secrets: inherit" not in autonomous:
+    errors.append("Autonomous caller must pass only the repository-scoped secrets required by its reusable workflow")
+if "workflow_dispatch" in autonomous_trigger and "github.actor == github.repository_owner" not in autonomous:
+    errors.append("Manual dispatch must remain owner-only")
+
+# The autonomous model can create/update branches and PRs, but the MCP allowlist
+# must never expose merge, deletion, repository administration, or secret tools.
+tool_match = re.search(r'"includeTools":\s*\[(.*?)\]', execute, re.DOTALL)
+if not tool_match:
+    errors.append("Autonomous Gemini MCP allowlist is missing or cannot be audited")
+else:
+    mcp_tools = re.findall(r'"([^"]+)"', tool_match.group(1))
+    forbidden_tool_fragments = (
+        "merge",
+        "delete",
+        "repository_settings",
+        "repository_ruleset",
+        "secret",
+        "variable",
+    )
+    forbidden_tools = [
+        tool for tool in mcp_tools
+        if any(fragment in tool.lower() for fragment in forbidden_tool_fragments)
+    ]
+    if forbidden_tools:
+        errors.append(
+            "Autonomous Gemini MCP allowlist must not expose merge/delete/admin/secret tools; "
+            f"found {forbidden_tools!r}"
+        )
+    for required_tool in ("create_branch", "create_pull_request", "push_files", "get_job_logs"):
+        if required_tool not in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist is missing required bounded capability {required_tool!r}")
+
+# The action must stop at the model/API boundary when the owner gates fail.
+guard_position = execute.find("id: free_tier_guard")
+mint_position = execute.find("name: 'Mint identity token'")
+checkout_position = execute.find("name: 'Checkout Code'")
+model_position = execute.find("name: 'Run Gemini CLI'")
+if not (0 <= guard_position < mint_position < checkout_position < model_position):
+    errors.append("Autonomous free-tier/owner gate must run before token mint, checkout, and model invocation")
+for guarded_step in (
+    "name: 'Mint identity token'\n        id: 'mint_identity_token'\n        if: |-",
+    "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: 'Run Gemini CLI'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+):
+    if guarded_step not in execute:
+        errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
+if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
+    errors.append("Autonomous workflow must keep the explicitly reviewed Gemini 3.5 Flash-Lite model")
+if "upload_artifacts: 'false'" not in execute:
+    errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
+
 if errors:
     print("AI free-tier safety checks FAILED:")
     for error in errors:
@@ -321,8 +668,8 @@ if errors:
     sys.exit(1)
 
 print("AI free-tier safety checks passed.")
-print("- Only the repository owner can authorize the Gemini write workflow.")
-print("- Gemini write path remains gated by GEMINI_WRITE_ENABLED=true.")
+print("- Manual writing remains owner-approved; scheduled autonomous writing has a separate exact-true owner gate.")
+print("- Gemini manual and autonomous write paths use separate exact-true gates.")
 print("- OpenRouter uses only the manual, capped, free-route PR reviewer; no paid fallback or code-write permissions.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")

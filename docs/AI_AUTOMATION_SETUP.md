@@ -1,6 +1,6 @@
 # Configurer l'automatisation IA de Racer
 
-Cette page décrit les automatismes disponibles dans le dépôt. **La règle de fonctionnement actuelle est volontairement conservatrice : audit à la demande, une seule tâche d'écriture autorisée à la fois, et aucune fusion automatique.**
+Cette page décrit les automatismes disponibles dans le dépôt. **Boonta Autonomous peut sélectionner et exécuter une tâche bornée toutes les six heures, avec un seul agent écrivain à la fois et des PR obligatoires. Aucune fusion automatique n'est autorisée.**
 
 ## Budget et données
 
@@ -18,6 +18,27 @@ Before any Gemini workflow can call a model, the repository Actions variable `GE
 
 This check is an explicit owner attestation, **not an automated billing-status check**: GitHub Actions cannot establish the billing state through this workflow. If the tier or billing linkage is uncertain, leave the variable absent or set it to anything other than `true`. Do not add a payment method, enable billing, buy credits, or switch to a paid tier. If free quota is unavailable, stop and wait for quota to reset rather than upgrading.
 
+## Boucle autonome Boonta — activation contrôlée
+
+Le workflow [Boonta Autonomous Loop](../.github/workflows/boonta-autonomous-loop.yml) s'exécute toutes les six heures et peut aussi être lancé manuellement par le propriétaire. Le lancement planifié GitHub utilise uniquement le dernier commit de la branche par défaut et peut être retardé en période de charge ; dans les dépôts publics, GitHub désactive automatiquement les workflows planifiés après 60 jours sans activité du dépôt ([documentation officielle](https://docs.github.com/fr/actions/reference/workflows-and-actions/events-that-trigger-workflows)). Le dépôt doit donc rester actif et il faut surveiller l'onglet Actions. Après activation, lance une première exécution manuelle pour valider le cycle immédiatement plutôt que d'attendre le prochain créneau. Il appelle le writer Gemini réutilisable avec le prompt autonome dédié, lit la file canonique #226 et le tableau de bord #156, puis sélectionne ou poursuit une seule tâche. Il doit continuer une PR autonome existante plutôt que créer des doublons, respecter la priorité RE-001 et le ratio de recherche 80/20, et ouvrir une PR sans jamais la fusionner.
+
+Avant d'activer l'agent, le propriétaire peut lancer [Boonta Autonomous Readiness](../.github/workflows/boonta-autonomous-readiness.yml) depuis **Actions → Boonta Autonomous Readiness → Run workflow**. Ce contrôle vérifie la présence des secrets/variables, la création d'un jeton GitHub App avec les permissions attendues, puis l'accès en lecture aux issues #156/#226, aux exécutions Actions et aux références `main`/`dev`. Il ne lance pas Gemini, ne consomme pas de quota API et ne modifie ni le code, ni les issues, ni les PR. **Il exige volontairement que `GEMINI_AUTONOMOUS_ENABLED` soit encore absent ou différent de `true` : la boucle doit rester arrêtée pendant le précontrôle.** Le menu GitHub doit également être réglé sur la branche `main` : le workflow refuse désormais les lancements depuis les autres branches.
+
+Ce précontrôle ne prouve pas que la clé Gemini est valide ou que le projet Google est réellement au Free tier. Il ne peut pas non plus vérifier les rulesets de protection, car le GitHub App n'obtient volontairement aucun droit d'administration. Le propriétaire doit encore vérifier manuellement l'absence de Cloud Billing lié et la protection de `main`/`dev`.
+
+Ordre d'activation recommandé : (1) fusionner la PR #277 ; (2) configurer `GEMINI_FREE_TIER_CONFIRMED=true`, `GEMINI_API_KEY`, `APP_ID` et `APP_PRIVATE_KEY`, en laissant `GEMINI_AUTONOMOUS_ENABLED` désactivé ; (3) vérifier les règles de protection `main`/`dev` ; (4) lancer le précontrôle et exiger son succès ; (5) définir `GEMINI_AUTONOMOUS_ENABLED=true` en dernier ; (6) lancer **Boonta Autonomous Loop** depuis Actions en sélectionnant `main`, puis contrôler la PR et le rapport de cycle.
+
+L'exécution d'écriture reste fermée tant que toutes les conditions suivantes ne sont pas réunies :
+- La variable Actions `GEMINI_AUTONOMOUS_ENABLED` vaut exactement `true`.
+- `GEMINI_FREE_TIER_CONFIRMED` vaut exactement `true` après vérification personnelle du Free tier et de l'absence de compte Cloud Billing lié.
+- Le secret `GEMINI_API_KEY` est configuré.
+- La variable `APP_ID` et le secret `APP_PRIVATE_KEY` sont configurés. Le GitHub App doit disposer de `Contents: write`, `Issues: write`, `Pull requests: write` et `Actions: read` : les trois premières permissions permettent de créer des branches/PR et de publier le suivi, la dernière permet à l'agent de lire les exécutions CI et les journaux d'échec.
+- Les rulesets `main`/`dev` protègent les branches concernées. L'agent ne reçoit aucun droit de fusion, de modification des paramètres, de force-push ou de suppression.
+
+Le mode autonome ne contourne pas le budget de 0 €. Les quotas gratuits peuvent limiter ou interrompre les cycles ; aucun modèle, fournisseur ou service payant de secours ne sera utilisé. Une exécution planifiée n'est pas un processus permanent : GitHub Actions démarre un cycle, puis s'arrête. Les cycles suivants reprennent à partir des issues, branches et PR visibles.
+
+Ne pas activer la variable autonome avant d'avoir vérifié les secrets, les règles de branche et les conditions de confidentialité du fournisseur. Le contenu du dépôt public transmis à Gemini peut être traité selon les conditions du Free tier Google.
+
 ## Relecture de PR via OpenRouter Free — à la demande
 
 Le workflow [OpenRouter Free PR review](../.github/workflows/openrouter-free-review.yml) est présent sur `main` depuis la fusion de [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il est manuel, réservé au propriétaire du dépôt, transmet au maximum 30 000 octets du diff après un contrôle de motifs de secrets et utilise uniquement `openrouter/free`. Il peut publier un commentaire mais ne peut écrire du code, pousser, créer une PR ou fusionner. Il apparaît dans Actions, mais il ne doit pas être considéré opérationnel tant que `OPENROUTER_API_KEY` n'est pas configuré et qu'un premier lancement réel n'a pas réussi.
@@ -32,18 +53,18 @@ Un contrôle réussi ne remplace pas la revue d'une PR.
 
 ## Protection de main avant toute écriture IA
 
-Avant d'envisager l'activation de `GEMINI_WRITE_ENABLED`, vérifie dans **Settings → Rules → Rulesets** qu'une règle protège `main` contre les mises à jour directes, les force-push et la suppression, et qu'une pull request est exigée avant fusion. Ne configure pas de contournement pour un agent IA. Si cette protection n'est pas en place ou ne peut pas être vérifiée, laisse l'écriture IA verrouillée.
+Avant d'envisager l'activation de `GEMINI_WRITE_ENABLED` ou `GEMINI_AUTONOMOUS_ENABLED`, vérifie dans **Settings → Rules → Rulesets** qu'une règle protège `main` et `dev` contre les mises à jour directes, les force-push et la suppression, et qu'une pull request est exigée avant fusion. Ne configure pas de contournement pour un agent IA. Si cette protection n'est pas en place ou ne peut pas être vérifiée, laisse l'écriture IA verrouillée.
 
 ## Coordinateur en lecture seule — lancement manuel uniquement
 
-Le workflow [Manual read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) **n'a plus de déclenchement planifié**. Il ne consomme le quota Gemini que lorsque le propriétaire clique volontairement sur **Actions → Manual read-only AI project coordinator → Run workflow**.
+Le workflow [Manual read-only AI project coordinator](../.github/workflows/ai-daily-coordinator.yml) **n'a plus de déclenchement planifié**. Il reste un outil d'audit manuel. La nouvelle boucle autonome est un workflow distinct, avec un writer et des garde-fous séparés.
 
 - Il lit l'état de \`main\`, les issues/PR et les résultats CI.
 - Il publie son rapport dans l'issue canonique [#156 — priorité produit](https://github.com/Master-Chiken/boonta-reborn-88/issues/156), pas dans l'ancienne issue #23, qui est fermée.
 - Il ne peut pas écrire de code, créer de branche ou de PR, fusionner ou modifier les paramètres. Seul le commentaire final du rapport nécessite \`issues: write\`.
 - Le rapport donne une recommandation, pas une autorisation de coder. Il faut examiner la proposition et décider de la prochaine tâche.
 
-Il n'y a plus de rapport IA quotidien automatique. Aucun rapport ne doit être considéré comme un contrôle d'avancement de fond ou comme une validation de jeu.
+Le coordinateur en lecture seule ne produit pas de rapport quotidien automatique. Boonta Autonomous, lui, lance un cycle d'ingénierie borné toutes les six heures lorsque ses variables et secrets de sécurité sont configurés. Aucun rapport IA ne vaut validation du jeu.
 
 ## Gemini à la demande
 
@@ -55,7 +76,7 @@ Le chemin de modification est séparé et verrouillé :
 - il doit créer une branche dédiée puis ouvrir une PR ;
 - il ne doit jamais pousser sur \`main\`, fusionner une PR, activer l'auto-merge ou supprimer des branches.
 
-**Règle de gestion actuelle : laisse \`GEMINI_WRITE_ENABLED\` absent ou différent de \`true\` pendant que nous finissons les PR existantes et la validation Dolphin.** Ne l'active que pour une tâche précise, après revue du plan et décision explicite du propriétaire. Un seul agent capable d'écrire doit travailler à la fois.
+Le chemin manuel reste contrôlé par `GEMINI_WRITE_ENABLED` et la commande d'approbation du propriétaire. Le chemin autonome est contrôlé séparément par `GEMINI_AUTONOMOUS_ENABLED` et la configuration listée ci-dessus. Le propriétaire a autorisé le principe de la sélection automatique des tâches ; l'activation technique reste conditionnée aux protections, secrets et vérifications de gratuité. Un seul agent capable d'écrire doit travailler à la fois.
 
 Je ne peux pas confirmer depuis la connexion de cette conversation la valeur actuelle de cette variable Actions ; elle doit être vérifiée dans les paramètres du dépôt.
 

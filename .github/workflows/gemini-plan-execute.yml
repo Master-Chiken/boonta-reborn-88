@@ -7,10 +7,27 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
+      task_title:
+        type: 'string'
+        description: 'Explicit task title for a scheduled autonomous cycle'
+        required: false
+      task_description:
+        type: 'string'
+        description: 'Explicit task context for a scheduled autonomous cycle'
+        required: false
+      issue_number:
+        type: 'number'
+        description: 'Issue receiving the task context and report'
+        required: false
+      autonomous_mode:
+        type: 'boolean'
+        description: 'Run the separately gated owner-authorized autonomous loop'
+        required: false
+        default: false
 
 concurrency:
-  group: '${{ github.workflow }}-plan-execute-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
-  cancel-in-progress: true
+  group: boonta-single-writer
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -32,26 +49,49 @@ jobs:
         env:
           GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
           GEMINI_FREE_TIER_CONFIRMED: '${{ vars.GEMINI_FREE_TIER_CONFIRMED }}'
+          GEMINI_WRITE_ENABLED: '${{ vars.GEMINI_WRITE_ENABLED }}'
+          GEMINI_AUTONOMOUS_ENABLED: '${{ vars.GEMINI_AUTONOMOUS_ENABLED }}'
+          AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
+          AUTONOMOUS_ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          CALLER_WORKFLOW: '${{ github.workflow }}'
+          CALLER_REF: '${{ github.ref }}'
+          APP_ID: '${{ vars.APP_ID }}'
+          APP_PRIVATE_KEY: '${{ secrets.APP_PRIVATE_KEY }}'
         run: |-
           set -euo pipefail
+          reason=""
           if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
-            echo "allowed=false" >> "$GITHUB_OUTPUT"
-            {
-              echo "## Gemini model call skipped safely"
-              echo
-              echo "No Gemini API request was sent because GEMINI_FREE_TIER_CONFIRMED is not exactly true."
-              echo "Verify the project's Free tier and confirm it has no linked Cloud Billing account before setting the repository Actions variable. This workflow cannot inspect Google billing."
-            } >> "$GITHUB_STEP_SUMMARY"
+            reason="GEMINI_FREE_TIER_CONFIRMED must equal true after the owner verifies Free tier and no linked Cloud Billing account."
           elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
+            reason="The GEMINI_API_KEY repository secret is missing."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
+            reason="The separate GEMINI_AUTONOMOUS_ENABLED repository variable is not exactly true."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" ]]; then
+            reason="Autonomous mode may only be invoked by the Boonta Autonomous Loop workflow."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_REF:-}" != "refs/heads/main" ]]; then
+            reason="Autonomous mode may only be invoked from the protected default branch main."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
+            reason="Autonomous mode is restricted to the canonical active research queue issue #226."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && ( -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ) ]]; then
+            reason="Autonomous mode requires the GitHub App ID variable and APP_PRIVATE_KEY secret so PRs can trigger CI."
+          elif [[ "${AUTONOMOUS_MODE:-false}" != "true" && "${GEMINI_WRITE_ENABLED:-}" != "true" ]]; then
+            reason="The manual writer path requires GEMINI_WRITE_ENABLED=true after owner approval."
+          else
+            reason="none"
+          fi
+          if [[ "$reason" != "none" ]]; then
             echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=$reason" >> "$GITHUB_OUTPUT"
             {
               echo "## Gemini model call skipped safely"
               echo
-              echo "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing."
+              echo "$reason"
+              echo "No model call or paid fallback was attempted."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "allowed=true" >> "$GITHUB_OUTPUT"
-            echo "Free-tier attestation and API key are present; no provider or paid fallback is configured." >> "$GITHUB_STEP_SUMMARY"
+            echo "reason=none" >> "$GITHUB_OUTPUT"
+            echo "Free-tier and appropriate write authorization gates passed; no provider or paid fallback is configured." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: 'Mint identity token'
@@ -65,6 +105,7 @@ jobs:
           permission-contents: 'write'
           permission-issues: 'write'
           permission-pull-requests: 'write'
+          permission-actions: 'read'
 
       - name: 'Checkout Code'
         if: steps.free_tier_guard.outputs.allowed == 'true'
@@ -85,15 +126,21 @@ jobs:
             --arg num "${ISSUE_NUMBER}" \
             --arg repo "${REPOSITORY}" \
             --arg context "${ADDITIONAL_CONTEXT}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context}' > .gemini/context.json
+            --arg task_title "${TASK_TITLE}" \
+            --arg task_description "${TASK_DESCRIPTION}" \
+            --arg autonomous_mode "${AUTONOMOUS_MODE}" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_title: $task_title, task_description: $task_description}' > .gemini/context.json
         env:
-          TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
-          DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'
+          TITLE: '${{ inputs.task_title || github.event.pull_request.title || github.event.issue.title }}'
+          DESCRIPTION: '${{ inputs.task_description || github.event.pull_request.body || github.event.issue.body }}'
           EVENT_NAME: '${{ github.event_name }}'
           IS_PULL_REQUEST: '${{ !!github.event.pull_request }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          TASK_TITLE: '${{ inputs.task_title }}'
+          TASK_DESCRIPTION: '${{ inputs.task_description }}'
+          AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
 
       - name: 'Run Gemini CLI'
         if: steps.free_tier_guard.outputs.allowed == 'true'
@@ -113,7 +160,7 @@ jobs:
           # Assistant workflows can be triggered by comments on either Issues or PRs.
           # We explicitly map both fields so the CLI can correctly categorize the interaction.
           github_pr_number: '${{ github.event.pull_request.number }}'
-          github_issue_number: '${{ github.event.issue.number }}'
+          github_issue_number: '${{ inputs.issue_number || github.event.issue.number }}'
           settings: |-
             {
               "model": {
@@ -149,6 +196,11 @@ jobs:
                     "get_commit",
                     "get_file_contents",
                     "list_commits",
+                    "list_workflow_runs",
+                    "list_workflow_jobs",
+                    "get_workflow_run",
+                    "get_workflow_job",
+                    "get_job_logs",
                     "push_files",
                     "search_code"
                   ],
@@ -161,13 +213,14 @@ jobs:
                 "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '/gemini-plan-execute'
+          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
 
       - name: Explain why Gemini was not called
         if: steps.free_tier_guard.outputs.allowed != 'true'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
+          SKIP_REASON: '${{ steps.free_tier_guard.outputs.reason }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
         with:
           script: |
@@ -180,7 +233,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
-              body: 'Gemini was not called. The workflow requires the repository Actions variable GEMINI_FREE_TIER_CONFIRMED to equal the exact string true, plus a configured GEMINI_API_KEY. Before setting the variable, verify in Google AI Studio that this project is on the Free tier and is not linked to Cloud Billing. The variable is an owner attestation, not an automated billing check. No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
+              body: 'Gemini was not called: ' + (process.env.SKIP_REASON || 'a required authorization/configuration gate failed') + ' No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
             });
 
       - name: 'Publish Gemini response to the issue or PR'
@@ -189,7 +242,7 @@ jobs:
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();

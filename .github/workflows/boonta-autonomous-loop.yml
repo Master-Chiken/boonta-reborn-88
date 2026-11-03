@@ -1,0 +1,44 @@
+name: Boonta Autonomous Loop
+
+on:
+  schedule:
+    # Four bounded opportunities per day; concurrency prevents overlapping writers.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: boonta-autonomous-loop
+  cancel-in-progress: false
+
+jobs:
+  autonomous-cycle:
+    name: Select and execute one safe project task
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
+    uses: ./.github/workflows/gemini-plan-execute.yml
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      autonomous_mode: true
+      issue_number: 226
+      task_title: "Boonta Reborn autonomous work cycle"
+      task_description: >-
+        Read the live canonical dashboard issue #156, active research queue #226,
+        current repository instructions, open pull requests, branch state and recent
+        CI. Select or continue exactly one safe, bounded task. Respect the active
+        RE-001 queue and its 80/20 research-first policy. Continue existing
+        autonomous work instead of creating duplicates. Open a reviewable PR and
+        record evidence; never merge it.
+      additional_context: >-
+        This is the scheduled Boonta Autonomous Loop. The owner explicitly approved
+        autonomous task selection and branch/PR work. Do not ask for a new "continue"
+        message or per-task approval. The €0 budget, free-tier gate, provenance
+        restrictions, one-writer rule, exact-head validation, and no-merge policy
+        remain mandatory.
+    secrets: inherit

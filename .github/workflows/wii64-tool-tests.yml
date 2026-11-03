@@ -7,16 +7,28 @@ on:
       - "tools/**"
       - "ci/**"
     paths:
-      - "tools/**"
+      - "tools/compare_wii64_rice_ini.py"
+      - "tools/compare_wii64_rice_profiles.py"
+      - "tools/inspect_wii64_rice_ini.py"
+      - "tools/verify_wii64_archive.py"
+      - "tools/tests/**"
       - ".github/workflows/wii64-tool-tests.yml"
   pull_request:
     paths:
-      - "tools/**"
+      - "tools/compare_wii64_rice_ini.py"
+      - "tools/compare_wii64_rice_profiles.py"
+      - "tools/inspect_wii64_rice_ini.py"
+      - "tools/verify_wii64_archive.py"
+      - "tools/tests/**"
       - ".github/workflows/wii64-tool-tests.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: wii64-tool-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   python-tests:
