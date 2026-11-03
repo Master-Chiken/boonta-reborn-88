@@ -36,11 +36,8 @@ static inline void boonta_route_graph_evaluate_edge(
     unsigned int edge_index, float t, float *x, float *y, float *z)
 {
     const BoontaRuntimeRouteEdge *edge;
-    const float u = 1.0f - t;
-    const float b0 = u * u * u;
-    const float b1 = 3.0f * u * u * t;
-    const float b2 = 3.0f * u * t * t;
-    const float b3 = t * t * t;
+    float u;
+    float b0, b1, b2, b3;
 
     if (x != NULL) *x = 0.0f;
     if (y != NULL) *y = 0.0f;
@@ -49,6 +46,12 @@ static inline void boonta_route_graph_evaluate_edge(
     /* A route edge is parameterized only on its closed interval [0, 1]. */
     if (t < 0.0f) t = 0.0f;
     if (t > 1.0f) t = 1.0f;
+    /* Coefficients must be calculated after clamping the parameter. */
+    u = 1.0f - t;
+    b0 = u * u * u;
+    b1 = 3.0f * u * u * t;
+    b2 = 3.0f * u * t * t;
+    b3 = t * t * t;
     edge = &boonta_runtime_route_edges[edge_index];
     if (x != NULL) {
         *x = b0 * edge->p0[0] + b1 * edge->control1[0]
