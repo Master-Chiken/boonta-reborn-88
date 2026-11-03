@@ -2,7 +2,12 @@
 #ifndef BOONTA_GENERATED_RUNTIME_ROUTE_GRAPH_H
 #define BOONTA_GENERATED_RUNTIME_ROUTE_GRAPH_H
 
+#include "route_cursor.h"
+
+#define BOONTA_RUNTIME_ROUTE_NODE_COUNT 8U
 #define BOONTA_RUNTIME_ROUTE_EDGE_COUNT 8U
+#define BOONTA_RUNTIME_ROUTE_START_NODE_INDEX 0U
+#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP 1
 #define BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS 128U
 #define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE 16U
 #define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT \
@@ -15,6 +20,25 @@ typedef struct {
     float control2[3];
     float p3[3];
 } BoontaRuntimeRouteEdge;
+
+static const BoontaRouteCursorEdge boonta_runtime_route_topology_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {
+    /* segment-0 */
+    { 0U, 1U, 0.000000000f, 0.142503984f },
+    /* segment-1 */
+    { 1U, 2U, 0.142503984f, 0.237468376f },
+    /* segment-2 */
+    { 2U, 3U, 0.237468376f, 0.332420464f },
+    /* segment-3 */
+    { 3U, 4U, 0.332420464f, 0.474916451f },
+    /* segment-4 */
+    { 4U, 5U, 0.474916451f, 0.617236365f },
+    /* segment-5 */
+    { 5U, 6U, 0.617236365f, 0.737432040f },
+    /* segment-6 */
+    { 6U, 7U, 0.737432040f, 0.857656332f },
+    /* segment-7 */
+    { 7U, 0U, 0.857656332f, 1.000000000f }
+};
 
 static const BoontaRuntimeRouteEdge boonta_runtime_route_edges[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {
     /* segment-0 */
