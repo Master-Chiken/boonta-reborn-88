@@ -346,6 +346,28 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertEqual(cursor.path_index, 0)
         self.assertAlmostEqual(cursor.t, 0.0)
 
+
+    def test_cursor_move_distance_marks_exact_open_finish_and_can_reverse(self):
+        cursor = RouteCursor(fixture("open-bezier.json"), distance_samples=128)
+        first_edge = cursor.move_distance(3.0)
+        self.assertEqual(first_edge["edge_id"], "start-middle")
+        self.assertAlmostEqual(first_edge["t"], 1.0)
+        self.assertFalse(first_edge["finished"])
+
+        finish = cursor.move_distance(3.0)
+        self.assertEqual(finish["edge_id"], "middle-finish")
+        self.assertAlmostEqual(finish["t"], 1.0)
+        self.assertTrue(finish["finished"])
+
+        reversed_state = cursor.move_distance(-0.25)
+        self.assertEqual(reversed_state["edge_id"], "middle-finish")
+        self.assertFalse(reversed_state["finished"])
+        self.assertAlmostEqual(reversed_state["t"], 11.0 / 12.0, places=3)
+
+    def test_cursor_distance_sample_count_must_be_bounded(self):
+        with self.assertRaisesRegex(RouteGraphError, "samples must be an integer"):
+            RouteCursor(fixture("open-bezier.json"), distance_samples=1)
+
     def test_cursor_distance_tables_are_lazy_per_edge_and_reused(self):
         graph = fixture("open-bezier.json")
         cursor = RouteCursor(graph, distance_samples=32)

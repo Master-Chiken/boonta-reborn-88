@@ -81,6 +81,20 @@ The sampled progress allocator apportions a caller-supplied normalized interval 
 
 The host cursor records the actual chosen edge path. Reverse movement walks that stored history, so a rejoin does not guess which incoming branch was used. Forward movement replays history unless an explicit new branch choice replaces the future path. Its `move(delta_parameter)` argument remains a local normalized-parameter step, not metres. A separate `move_distance(delta_distance)` now advances through per-edge 3D arc-length lookup tables, built lazily only for edges actually visited and cached at a configurable sample density (128 intervals by default). It converts distance to local `t`, crosses edges with explicit branch choices, and reverses through the recorded path. Its result includes `distance_on_edge` and `edge_length`; normalized `progress` still follows the graph-authored progress interval interpolated by local `t`, not a separately inferred distance coordinate. Both APIs are host-testable and neither is connected to gameplay runtime, projection/rebinding, collision, lap events, or GX.
 
+Example distance-driven host use (using the route fixture names):
+
+```python
+from validate_route_graph import RouteCursor
+
+cursor = RouteCursor(graph, distance_samples=128)
+state = cursor.move_distance(18.0, {"split": "right-1"})
+print(state["edge_id"], state["distance_on_edge"], state["progress"])
+cursor.move_distance(-2.5)  # reverse follows the recorded right-branch history
+```
+
+The distance lookup uses sampled 3D chord lengths and linear inversion, so `t` is approximate at the selected lookup density. The graph-authored normalized progress remains `progress.start + t * (progress.end - progress.start)`; it is deliberately not silently replaced by a new distance-progress interpretation.
+
+
 
 
 ### Measured bake comparison on the existing clean-room oval (2026-11-03)

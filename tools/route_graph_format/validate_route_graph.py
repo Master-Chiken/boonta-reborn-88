@@ -656,7 +656,6 @@ class RouteCursor:
     def edge_id(self) -> str:
         return self.path_history[self.path_index]
 
-
     def _ensure_edge_distance_table(self, edge_id: str) -> None:
         """Build and cache one edge's bounded 3D arc-length lookup on demand."""
         if edge_id in self._distance_tables:
