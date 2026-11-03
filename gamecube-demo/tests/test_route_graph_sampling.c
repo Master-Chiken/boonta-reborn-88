@@ -50,6 +50,32 @@ static void test_every_edge_boundary_matches_its_authored_node(void)
     }
 }
 
+static void test_bezier_samples_match_legacy_track_bake(void)
+{
+    unsigned int edge;
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        unsigned int sample_index;
+        for (sample_index = 0U;
+             sample_index < BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
+             ++sample_index) {
+            const unsigned int point_index =
+                edge * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE + sample_index;
+            const float t = (float)sample_index /
+                (float)BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
+            const BoontaTrackPoint *legacy =
+                &boonta_track_points_original_test_oval[point_index];
+            float x, y, z;
+            boonta_route_graph_evaluate_edge(edge, t, &x, &y, &z);
+            assert_close(x, legacy->x, 0.0001f);
+            assert_close(y, legacy->y, 0.0001f);
+            assert_close(z, legacy->z, 0.0001f);
+            assert_close(
+                boonta_runtime_route_width_samples[point_index],
+                legacy->half_width, 0.0001f);
+        }
+    }
+}
+
 static void test_closed_loop_wrap_and_negative_distance(void)
 {
     float x0, y0, z0, w0;
@@ -132,6 +158,7 @@ int main(void)
 {
     test_route_length_matches_legacy_lap_distance();
     test_every_edge_boundary_matches_its_authored_node();
+    test_bezier_samples_match_legacy_track_bake();
     test_closed_loop_wrap_and_negative_distance();
     test_bezier_seam_tangent_is_continuous();
     test_dense_runtime_curve_length_matches_lap_coordinate();
