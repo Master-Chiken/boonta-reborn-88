@@ -335,22 +335,4 @@ int main(void)
     test_nonfinite_distance_returns_safe_defaults();
     puts("Native route-graph sampler C tests passed.");
     return 0;
-} while (0)
-
-int main(void)
-{
-    RUN_ROUTE_TEST(test_route_length_matches_legacy_lap_distance);
-    RUN_ROUTE_TEST(test_every_edge_boundary_matches_its_authored_node);
-    RUN_ROUTE_TEST(test_every_bezier_join_has_continuous_tangent_and_width);
-    RUN_ROUTE_TEST(test_binary_search_boundaries_and_midpoints);
-    RUN_ROUTE_TEST(test_bezier_samples_match_legacy_track_bake);
-    RUN_ROUTE_TEST(test_closed_loop_wrap_and_negative_distance);
-    RUN_ROUTE_TEST(test_bezier_seam_tangent_is_continuous);
-    RUN_ROUTE_TEST(test_dense_runtime_curve_length_matches_lap_coordinate);
-    RUN_ROUTE_TEST(test_curve_evaluator_rejects_invalid_queries);
-    RUN_ROUTE_TEST(test_curve_evaluator_clamps_finite_t);
-    RUN_ROUTE_TEST(test_width_sampler_rejects_invalid_queries_and_clamps_t);
-    RUN_ROUTE_TEST(test_nonfinite_distance_returns_safe_defaults);
-    puts("Native route-graph sampler C tests passed.");
-    return 0;
 }
