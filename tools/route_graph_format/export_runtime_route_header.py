@@ -146,7 +146,7 @@ def generate_runtime_route_header(
     for edge in ordered_edges:
         progress = edge["progress"]
         topology_lines.append(
-            f"    /* {edge['id']} */\\n"
+            f"    /* {edge['id']} */\n"
             f"    {{ {node_indices[edge['from']]}U, {node_indices[edge['to']]}U, "
             f"{_c_float(progress['start'])}, {_c_float(progress['end'])} }}"
         )
