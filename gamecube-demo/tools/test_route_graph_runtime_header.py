@@ -520,6 +520,17 @@ int main(void)
     assert(boonta_route_cursor_get_state(&preview, &state) ==
            BOONTA_ROUTE_CURSOR_OK);
     assert(state.finished == 1);
+
+    /* Neutral input must preserve the player's previously cached right path. */
+    assert(boonta_route_graph_sampler_prime_lookahead(
+        &sampler, &cursor, 0, 1.0f, sampler.total_length) ==
+        BOONTA_ROUTE_CURSOR_OK);
+    assert(cursor.path_index == 0U);
+    assert(cursor.history_count == 4U);
+    assert(cursor.path_history[1] == 2U);
+    assert(cursor.path_history[2] == 4U);
+    assert(cursor.path_history[3] == 6U);
+    assert(fabsf(cursor.distance_on_edge - original_distance) < 0.0001f);
     return 0;
 }
 """
