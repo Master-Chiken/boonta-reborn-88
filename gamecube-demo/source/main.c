@@ -33,6 +33,11 @@
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
 #define VERTEX_CAPACITY    8192U
 #define ROAD_SEGMENTS      32U
+#define ROUTE_SEGMENT_LENGTH 2.8f
+#define ROUTE_BRANCH_STEERING_DEADZONE 0.20f
+#define ROUTE_BRANCH_SELECTION_DISTANCE (6.0f * ROUTE_SEGMENT_LENGTH)
+/* Ground mesh reaches 42 segments ahead of the player (44 total, 2 behind). */
+#define ROUTE_RENDER_LOOKAHEAD_DISTANCE (42.0f * ROUTE_SEGMENT_LENGTH)
 #define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
 #define RACE_LAP_DISTANCE   BOONTA_RUNTIME_ROUTE_LENGTH
 #define RACE_LAP_LIMIT       3U
@@ -174,17 +179,36 @@ static int reset_runtime_route_cursor(void)
         boonta_route_cursor_init(
             &g_route_cursor, &g_runtime_route_cursor_graph,
             g_route_sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK;
+    if (g_route_cursor_ready && BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+        /* Default to the straightest route until the player approaches a split. */
+        if (boonta_route_graph_sampler_prime_lookahead(
+                &g_route_sampler, &g_route_cursor, 0,
+                ROUTE_BRANCH_SELECTION_DISTANCE,
+                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
+            g_route_cursor_ready = 0;
+        }
+    }
     return g_route_cursor_ready;
 }
 
-static void advance_runtime_route_cursor(float distance_delta)
+static int advance_runtime_route_cursor(float distance_delta, float steering)
 {
-    if (!g_route_cursor_ready) return;
-    if (boonta_route_cursor_move(
-            &g_route_cursor, distance_delta, NULL, 0U) != BOONTA_ROUTE_CURSOR_OK) {
-        /* The loop sampler remains available as a safe rendering fallback. */
-        g_route_cursor_ready = 0;
+    if (!g_route_cursor_ready) return 0;
+
+    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+        const int branch_direction =
+            steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
+            steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
+        if (boonta_route_graph_sampler_prime_lookahead(
+                &g_route_sampler, &g_route_cursor, branch_direction,
+                ROUTE_BRANCH_SELECTION_DISTANCE,
+                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
+            return 0;
+        }
     }
+
+    return boonta_route_cursor_move(
+        &g_route_cursor, distance_delta, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK;
 }
 
 static void track_sample_at(float travelled, float *x_out, float *y_out,
@@ -515,12 +539,25 @@ static void add_road(void)
         }
     }
 
-    /* The finish stripe is placed at the next actual lap crossing along the spline. */
+    /* The finish stripe follows the selected route, including variable-length laps. */
     {
-        const float next_finish =
-            (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) * RACE_LAP_DISTANCE;
-        const float remaining = next_finish - g_distance;
-        if (remaining >= 0.0f && remaining < (float)ROAD_SEGMENTS * segment_length) {
+        float remaining = 0.0f;
+        int has_next_finish = 0;
+        if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+            has_next_finish = g_route_cursor_ready &&
+                boonta_route_cursor_distance_to_next_lap(
+                    &g_route_cursor, &remaining) == BOONTA_ROUTE_CURSOR_OK;
+        } else {
+            const float next_finish =
+                (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) *
+                RACE_LAP_DISTANCE;
+            remaining = next_finish - g_distance;
+            has_next_finish = 1;
+        }
+
+        if (has_next_finish && remaining >= 0.0f &&
+            remaining < (float)ROAD_SEGMENTS * segment_length) {
+            const float next_finish = g_distance + remaining;
             const TrackFrame finish0 = track_frame_at(next_finish);
             const TrackFrame finish1 = track_frame_at(next_finish + 0.55f);
             const float w0 = boonta_effective_road_half_width(finish0.half_width);
@@ -1251,10 +1288,25 @@ int main(int argc, char **argv)
         {
             const float previous_distance = g_distance;
             const unsigned int previous_laps = g_lap_count;
-            g_distance = boonta_distance_after_pitch_scaled(g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
-            advance_runtime_route_cursor(g_distance - previous_distance);
-            g_lap_count = boonta_lap_count_after_frame(
-                g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
+            g_distance = boonta_distance_after_pitch_scaled(
+                g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
+            if (g_route_cursor_ready &&
+                !advance_runtime_route_cursor(
+                    g_distance - previous_distance, steering)) {
+                /* Cursor movement is atomic; pause distance and retry next frame. */
+                g_distance = previous_distance;
+            }
+            if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+                BoontaRouteCursorState route_state;
+                if (g_route_cursor_ready &&
+                    boonta_route_cursor_get_state(
+                        &g_route_cursor, &route_state) == BOONTA_ROUTE_CURSOR_OK) {
+                    g_lap_count = route_state.completed_laps;
+                }
+            } else {
+                g_lap_count = boonta_lap_count_after_frame(
+                    g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
+            }
             if (g_lap_count > previous_laps) {
                 g_last_lap_seconds = g_lap_seconds;
                 g_best_lap_seconds = boonta_best_lap_after_finish(
