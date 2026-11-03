@@ -43,11 +43,11 @@ Example using only the synthetic closed-loop fixture:
     python3 tools/route_graph_format/export_closed_loop_track.py \
         tools/route_graph_format/fixtures/closed-loop.json \
         /tmp/route-track.json --half-width 3.6 --samples-per-edge 24
-
-For an experimental equal-distance bake, add `--sampling-mode arc_length`. The default `parameter` mode preserves the earlier byte-for-byte export behavior.
     python3 tools/track_format/validate_track.py /tmp/route-track.json
     python3 tools/track_format/export_track_header.py \
         /tmp/route-track.json /tmp/generated_route_track.h --symbol "route graph demo"
+
+For an experimental equal-distance bake, add `--sampling-mode arc_length`. The default `parameter` mode preserves the earlier byte-for-byte export behavior.
 
 Geometry stays separate from topology. `--half-width` is required; an edge with `surface_binding` additionally needs a JSON object mapping every referenced surface ID to an explicit half-width, supplied with `--surface-widths widths.json`. Missing mappings and widths outside track-v1's 0.5–100 metre range are errors, not guessed defaults.
 
