@@ -46,6 +46,9 @@ static inline void boonta_route_graph_evaluate_edge(
     if (y != NULL) *y = 0.0f;
     if (z != NULL) *z = 0.0f;
     if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT || !isfinite(t)) return;
+    /* A route edge is parameterized only on its closed interval [0, 1]. */
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
     edge = &boonta_runtime_route_edges[edge_index];
     if (x != NULL) {
         *x = b0 * edge->p0[0] + b1 * edge->control1[0]
