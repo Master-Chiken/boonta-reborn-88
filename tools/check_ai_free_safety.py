@@ -310,7 +310,7 @@ if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup
 
 if (
     '"body": issue.get("body")' not in daily
-    or "Current-state resolution: read the body of tracked issue #226 in the LIVE SNAPSHOT" not in daily
+    or "Current-state resolution: read the live bodies of #226 and #279 in the LIVE SNAPSHOT" not in daily
     or "RE-001 #226 and RE-002 #279" not in daily
     or "read-only PC/N64/Dreamcast" not in daily
     or "RE-002 (issue #279) is ACTIVE" not in daily_prompt
