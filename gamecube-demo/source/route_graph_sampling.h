@@ -42,7 +42,10 @@ static inline void boonta_route_graph_evaluate_edge(
     const float b2 = 3.0f * u * t * t;
     const float b3 = t * t * t;
 
-    if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT) return;
+    if (x != NULL) *x = 0.0f;
+    if (y != NULL) *y = 0.0f;
+    if (z != NULL) *z = 0.0f;
+    if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT || !isfinite(t)) return;
     edge = &boonta_runtime_route_edges[edge_index];
     if (x != NULL) {
         *x = b0 * edge->p0[0] + b1 * edge->control1[0]
@@ -153,11 +156,21 @@ static inline float boonta_route_graph_width_at(
     unsigned int edge_index, float t, float fallback_half_width)
 {
     const unsigned int sample_count = BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT;
-    const float coordinate =
+    float coordinate;
+    unsigned int base;
+    float fraction;
+    if (edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT || !isfinite(t)) {
+        return fallback_half_width;
+    }
+    /* Width lookup is defined on one edge; never let conversion of an
+     * arbitrary/NaN parameter become an out-of-bounds sample index. */
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    coordinate =
         (float)(edge_index * BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE)
         + t * (float)BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE;
-    const unsigned int base = (unsigned int)floorf(coordinate);
-    const float fraction = coordinate - (float)base;
+    base = (unsigned int)floorf(coordinate);
+    fraction = coordinate - (float)base;
     const unsigned int i1 = base % sample_count;
     const unsigned int i0 = (i1 + sample_count - 1U) % sample_count;
     const unsigned int i2 = (i1 + 1U) % sample_count;
