@@ -100,7 +100,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${APP_TOKEN}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${api}/git/ref/heads/${branch}" | jq -e '.ref == "refs/heads/'"${branch}"'"' >/dev/null
+              "${api}/git/ref/heads/${branch}" | jq -e --arg branch "${branch}" '.ref == ("refs/heads/" + $branch)' >/dev/null
           done
 
           {
