@@ -250,7 +250,8 @@ static void test_closed_branch_laps_follow_selected_path_and_reverse(void)
     /* The next left-hand lap is only 4 m; lap count does not use one fixed length. */
     assert(boonta_route_cursor_move(&cursor, 1.1f, &choose_left, 1U) ==
            BOONTA_ROUTE_CURSOR_OK);
-    assert(boonta_route_cursor_move(&cursor, 3.0f, NULL, 0U) ==
+    /* The left route is 4 m total; after the first 1.1 m, move 2.9 m. */
+    assert(boonta_route_cursor_move(&cursor, 2.9f, NULL, 0U) ==
            BOONTA_ROUTE_CURSOR_OK);
     state = state_of(&cursor);
     assert(state.edge == 0U);
