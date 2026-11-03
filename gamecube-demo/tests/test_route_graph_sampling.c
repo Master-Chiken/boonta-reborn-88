@@ -500,6 +500,7 @@ static void test_cursor_relative_sampling_matches_loop_across_seam(void)
     {
         BoontaRouteCursor start_cursor;
         float x, y, z, width;
+        float expected_x, expected_y, expected_z, expected_width;
         assert(boonta_route_cursor_init(
             &start_cursor, &g_generated_route_cursor_graph,
             g_sampler.edge_lengths, BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) ==
@@ -508,11 +509,11 @@ static void test_cursor_relative_sampling_matches_loop_across_seam(void)
             &g_sampler, &start_cursor, 0.0f, -0.25f,
             BOONTA_REFERENCE_ROAD_HALF_WIDTH, &x, &y, &z, &width) ==
             BOONTA_ROUTE_CURSOR_OK);
-        sample(-0.25f, &loop_x, &loop_y, &loop_z, &loop_width);
-        assert_close(x, loop_x, 0.0002f);
-        assert_close(y, loop_y, 0.0002f);
-        assert_close(z, loop_z, 0.0002f);
-        assert_close(width, loop_width, 0.0002f);
+        sample(-0.25f, &expected_x, &expected_y, &expected_z, &expected_width);
+        assert_close(x, expected_x, 0.0002f);
+        assert_close(y, expected_y, 0.0002f);
+        assert_close(z, expected_z, 0.0002f);
+        assert_close(width, expected_width, 0.0002f);
         assert(start_cursor.path_index == 0U);
         assert(start_cursor.distance_on_edge == 0.0f);
     }
