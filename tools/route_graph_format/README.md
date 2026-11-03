@@ -82,6 +82,22 @@ The sampled progress allocator apportions a caller-supplied normalized interval 
 The host cursor records the actual chosen edge path. Reverse movement walks that stored history, so a rejoin does not guess which incoming branch was used. Forward movement replays history unless an explicit new branch choice replaces the future path. Its `move(delta_parameter)` argument is a change in the current edge's local normalized curve parameter `t`; it is **not** metres, arc length, elapsed time, speed, or a vehicle integrator. Use sampled edge lengths plus `allocate_progress_spans` for the separate normalized-progress mapping. The cursor is a testable logical component only; it is not connected to gameplay runtime, projection/rebinding, collision, lap events, or GX.
 
 
+
+### Measured bake comparison on the existing clean-room oval (2026-11-03)
+
+The two sample distributions were compared on the eight-edge, 128-point oval (16 samples per edge). The reference was each authored Bezier edge evaluated at 4096 parameter intervals; the runtime side reproduced the current `track_sample_at` behavior: chord-length segment selection followed by uniform Catmull-Rom interpolation. At nine positions per runtime segment, the reconstructed position was compared with the authored route at the same accumulated travelled distance.
+
+| Bake mode | Chord-spacing CV | Maximum route deviation | RMS route deviation |
+|---|---:|---:|---:|
+| Legacy parameter (16/edge) | 20.67% | 0.0368 m | 0.0170 m |
+| Experimental arc length (16/edge) | 15.67% | 0.0610 m | 0.0318 m |
+
+Arc-length mode makes adjacent point spacing more uniform (about 24% lower coefficient of variation), but it increases the current Catmull-Rom runtime's maximum route deviation by about 66% and RMS deviation by about 86% at this density. The likely reason is that the current runtime interpolates each sample interval in uniform local parameter space; resampling the source curve at nonuniform Bezier parameters changes the assumptions of that interpolator.
+
+A density sweep points in the same direction: at 32 samples per edge the parameter bake measured 0.00969 m max / 0.00428 m RMS deviation, versus 0.02061 m / 0.00815 m for arc length; at 64 per edge the respective maxima were 0.00390 m and 0.01017 m. These are deterministic host-side calculations, not emulator captures or visual/console acceptance.
+
+**Decision:** retain `parameter` as the default and keep the checked-in 16-sample oval unchanged. Do not select the experimental arc-length bake for the current Catmull-Rom runtime. A 32-sample parameter-space bake is a candidate for a separately validated visual/build comparison, not an automatic upgrade. Arc-length mode remains available for future runtime/interpolation designs that consume true distance parameterization.
+
 ## External reverse-engineering tool references (2026-11-03)
 
 Two public projects provide useful workflow patterns, but neither is a drop-in GameCube/Wii implementation:
