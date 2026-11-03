@@ -214,6 +214,17 @@ static int advance_runtime_route_cursor(float distance_delta, float steering)
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
+#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
+    /*
+     * g_distance and the live cursor are advanced/reset atomically together.
+     * For this compiled unbranched loop, the scalar sampler is equivalent to
+     * cursor-relative sampling but avoids two full cursor/history copies and
+     * cursor traversal for every road, wall, camera and vehicle sample.
+     */
+    boonta_route_graph_sampler_sample_at(
+        &g_route_sampler, travelled, ROAD_HALF_WIDTH,
+        x_out, y_out, z_out, width_out);
+#else
     if (g_route_cursor_ready &&
         boonta_route_graph_sampler_sample_relative_to_cursor(
             &g_route_sampler, &g_route_cursor, g_distance, travelled,
@@ -222,12 +233,6 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         return;
     }
 
-#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
-    /* Preserve the validated single-loop path if cursor sampling is unavailable. */
-    boonta_route_graph_sampler_sample_at(
-        &g_route_sampler, travelled, ROAD_HALF_WIDTH,
-        x_out, y_out, z_out, width_out);
-#else
     /*
      * A branched edge catalogue has no flattened fallback route. Keep the
      * last valid cursor edge visible rather than wrapping across unrelated

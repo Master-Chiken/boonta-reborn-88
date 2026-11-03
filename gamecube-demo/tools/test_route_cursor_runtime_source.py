@@ -18,13 +18,29 @@ class RouteCursorRuntimeSourceTests(unittest.TestCase):
         self.assertIn("BOONTA_RUNTIME_ROUTE_START_NODE_INDEX", self.source)
         self.assertIn("BOONTA_RUNTIME_ROUTE_CLOSED_LOOP", self.source)
 
-    def test_track_sampling_uses_cursor_relative_adapter_with_loop_fallback(self):
+    def test_single_loop_uses_direct_sampler_and_branching_keeps_cursor_adapter(self):
         start = self.source.index("static void track_sample_at(")
         end = self.source.index("static float track_center_x_at", start)
         block = self.source[start:end]
-        self.assertIn("boonta_route_graph_sampler_sample_relative_to_cursor", block)
-        self.assertIn("boonta_route_graph_sampler_sample_at", block)
-        self.assertIn("if (g_route_cursor_ready", block)
+        single_loop = block.split("#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP", 1)[1].split("#else", 1)[0]
+        branched = block.split("#else", 1)[1].split("#endif", 1)[0]
+
+        self.assertIn("boonta_route_graph_sampler_sample_at", single_loop)
+        self.assertNotIn("sample_relative_to_cursor", single_loop)
+        self.assertIn("two full cursor/history copies", single_loop)
+
+        self.assertIn("if (g_route_cursor_ready", branched)
+        self.assertIn("boonta_route_graph_sampler_sample_relative_to_cursor", branched)
+        self.assertIn("boonta_route_graph_sampler_sample_cursor_at", branched)
+
+    def test_single_loop_direct_and_cursor_relative_samplers_are_equivalent(self):
+        # The C regression test compares their positions and widths across the
+        # complete closed-loop seam, including negative start-line look-behind.
+        test_source = (
+            ROOT / "gamecube-demo" / "tests" / "test_route_graph_sampling.c"
+        ).read_text(encoding="utf-8")
+        self.assertIn("test_cursor_relative_sampling_matches_loop_across_seam", test_source)
+        self.assertIn("sample(target_distance", test_source)
 
     def test_cursor_is_reset_at_startup_and_on_race_reset(self):
         self.assertGreaterEqual(self.source.count("(void)reset_runtime_route_cursor();"), 2)
