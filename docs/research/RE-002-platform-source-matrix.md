@@ -1,9 +1,9 @@
 # RE-002 — PC / Nintendo 64 / Dreamcast source matrix
 
-> **Queue status: PARKED — reference index only.** The active RE-001 deliverable in [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) is the versioned neutral route-graph contract and synthetic fixtures. This file preserves PC/N64/Dreamcast source leads for later; it does **not** authorize a second active research workstream. Keep RE-002 parked until the route-graph contract is reviewed and a separate next question is explicitly selected.
+> **Queue status: ACTIVE — research-only comparative evidence track.** The owner activated [RE-002 / issue #279](https://github.com/Master-Chiken/boonta-reborn-88/issues/279) on 2026-11-03. [RE-001 / issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) remains the native GameCube/Wii research and implementation queue. RE-002 is limited to PC/N64/Dreamcast public-source and documented-behavior comparison; it creates no gameplay implementation branch and does not establish GameCube/Wii parity.
 
-**Status:** research inventory; no game code changed  
-**Date:** 2026-10-20  
+**Status:** ACTIVE; comparative research and documentation only; no game code changed  
+**Last updated:** 2026-11-03  
 **Purpose:** use the original released game versions as behavioral references, then use public reverse-engineering repositories to explain what can be observed. This is not a claim that original commercial source code is public.
 
 ## Decision
@@ -11,6 +11,18 @@
 Treat the original PC, N64 and Dreamcast releases as three separate evidence targets. The PC version is currently the strongest code-level reference because public projects document its Windows executable. N64 and Dreamcast are essential comparison targets, but this audit has **not yet found a verified public, complete source decompilation for either console version**.
 
 Do not infer that a PC implementation is identical on a console. For every mechanic, record the platform, game revision, observation, source/repository evidence, confidence and test still needed.
+
+## Resumed scope and baseline — 2026-11-03
+
+The existing matrix and cross-platform notes are being completed rather than replaced. The following evidence is already available and is the starting baseline for #279:
+
+- **PC source map:** the latest inspected [Master-Chiken/SW_RACER_RE snapshot](https://github.com/Master-Chiken/SW_RACER_RE/tree/66120be334a3fd38c10a259f3528cffbfed8ddc5) is pinned to `66120be334a3fd38c10a259f3528cffbfed8ddc5` and declares AGPL-3.0. Its source tree has distinct race, object/judge, spline, model/animation, render, sound, UI, multiplayer, weather and loader modules. A first marker screen recorded 31 `HANG` markers in `swrRace.c`, 58 in `swrObj.c`, 2 in `swrSpline.c`, 11 in `swrControl.c`, 16 in `swrModel.c`, 15 in `swrRender.c`, 3 in `swrSound.c`, 9 in `swrUI.c`, 8 in `swrMultiplayer.c`, 3 in `swrWeather.c`, and 1 in `swrLoader.c`. These are triage counts only: each marker still needs function/call-path classification, and a `HANG("TODO")` in a hook/reconstruction does not establish that the retail PC binary lacks that behavior.
+- **PC cross-check:** the frozen [Steam-PC Ghidra reference](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef) is pinned separately at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`. No root license was identified in the reviewed snapshot; read-only function/type comparison only. Do not merge its symbols or addresses into the other PC executable without version reconciliation.
+- **N64 research references:** [sp00nznet/racer](https://github.com/sp00nznet/racer/tree/694c5663b3a7c30e2862fc240344f34683f99a9c) is a pinned N64/MIPS static-recompilation project, useful for methods and platform bring-up, not an original GC/Wii or PC codebase. [dguillot-gh/star-wars-racer-recomp](https://github.com/dguillot-gh/star-wars-racer-recomp/tree/68d3d2709cf71c07b5abed3627e01b03696cefd2) is an Android host port of that N64 recompile, not an independent game implementation. [OpenSWE1R/swe1r-tools](https://github.com/OpenSWE1R/swe1r-tools) documents an N64-specific `Comp` model-block decompression path; the tool is GPL-2.0-or-later and is a format reference, not permission to publish extracted assets.
+- **Dreamcast asset evidence:** [swe1r-assets](https://github.com/akopetsch/swe1r-assets/tree/922ef535f6598a1330ff93d6b07258956f990b34) at `922ef535f6598a1330ff93d6b07258956f990b34` maps Dreamcast release selectors to the same generic block IDs as Windows International/Mac in its `Release.csv`. Its checksum catalogue does not expose separate Dreamcast model/spline/texture hashes; the combined `win_de__mac__dc` sprite label is not proof of whole-file identity. This is tool-author metadata, not independent verification from a retail Dreamcast disc.
+- **Dreamcast code gap:** no verified public complete Dreamcast decompilation or source-level parser has been established in the reviewed evidence. Interviews/previews remain documentary leads; announced features must not be treated as shipped runtime facts.
+
+The work remaining is to turn the PC marker inventory into function-level subsystem maps; update N64 source/format/render/input/audio evidence with exact revisions; check for stronger Dreamcast-specific code or primary evidence; and reconcile all three into one confidence-labelled matrix. No external game binaries, ROMs, discs, BIOS or proprietary assets were inspected or uploaded as part of this baseline.
 
 ## Source priority
 
@@ -52,13 +64,13 @@ Allowed evidence types:
 Allowed confidence states:
 - `CONFIRMED`, `SUPPORTED`, `HYPOTHESIS`, `UNKNOWN`, `CONFLICTING`.
 
-## Parked future sequence — not active
+## Active sequence — RE-002 / issue #279
 
 1. **PC subsystem map:** continue from RE-001 route/spline/progress and map the next highest-value areas in SW_RACER_RE: handling/physics, collision, AI/racing line, boost/heat, track loading, camera and race completion. Pin each function to an exact commit and binary revision.
 2. **N64 evidence audit:** inspect only public tool/source repositories and published documentation for N64-specific formats, memory/rendering constraints, controller and rumble behavior. Search for a genuine N64 reverse-engineering project before assuming one exists.
 3. **Dreamcast evidence audit:** search for public Dreamcast-specific repositories, format notes and developer documentation. Separate announced features from the retail release. If no code-level source is found, record that as an evidence gap rather than filling it with PC assumptions.
 4. **Cross-platform behavior matrix:** compare one mechanic at a time across PC/N64/Dreamcast, then mark what remains unknown for GameCube/Wii. Do not use a PC-only finding as proof of target-console behavior.
-5. **Only after the research:** propose a small independent implementation or test that addresses one measured gap. No broad rewrite and no third-party code copied into Boonta by default.
+5. **Handoff only:** recommend any target-port specification or test to RE-001 / issue #226 with exact platform boundaries. RE-002 itself remains documentation-only; do not implement gameplay or copy third-party code.
 
 ## Handling and licensing boundaries
 
@@ -69,4 +81,4 @@ Allowed confidence states:
 - Step 102 is intentionally outside this research sequence and is not a blocker for this platform/source audit.
 
 
-**Activation gate:** all items in this section remain backlog candidates. No one should pick them up in parallel while RE-001 is active; the owner must explicitly select a single next question first.
+**Activation decision (2026-11-03):** the owner has explicitly activated this bounded comparative track in issue #279. Research may proceed independently from the native GameCube/Wii implementation queue only because the platforms and deliverables are non-overlapping. One write-capable agent at a time remains mandatory; RE-002 must not produce gameplay changes or duplicate RE-001's runtime work.
