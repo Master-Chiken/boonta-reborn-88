@@ -468,7 +468,7 @@ static void box_add(float cx, float cy, float cz,
 static void add_road(void)
 {
     unsigned int i;
-    const float segment_length = 2.8f;
+    const float segment_length = ROUTE_SEGMENT_LENGTH;
     const unsigned int passed_sections = boonta_track_section_index(g_distance, segment_length);
     /* The floor follows the same spline as the road, with a short reach behind the
      * player and a little more reach than the visible canyon panels. This keeps the
