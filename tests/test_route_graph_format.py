@@ -347,6 +347,36 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(cursor.t, 0.0)
 
 
+
+    def test_cursor_move_distance_inverts_nonuniform_bezier_speed(self):
+        graph = fixture("open-bezier.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "start-middle")
+        edge["curve"]["control1"] = [0.1, 0.0, 0.0]
+        edge["curve"]["control2"] = [0.4, 0.0, 0.0]
+        cursor = RouteCursor(graph, distance_samples=512)
+
+        state = cursor.move_distance(1.5)
+        self.assertAlmostEqual(state["distance_on_edge"], 1.5, places=2)
+        self.assertAlmostEqual(state["edge_length"], 3.0, places=2)
+        self.assertGreater(state["t"], 0.5)
+        self.assertAlmostEqual(state["progress"], 0.5 * state["t"], places=8)
+        self.assertNotAlmostEqual(state["progress"], 0.25, places=2)
+
+    def test_cursor_move_distance_can_replace_branch_after_reversing(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        first_choice = cursor.move_distance(15.0, {"split": "right-1"})
+        self.assertEqual(first_choice["path_history"], ("approach", "right-1"))
+
+        backed_up = cursor.move_distance(-6.0)
+        self.assertEqual(backed_up["edge_id"], "approach")
+        self.assertEqual(backed_up["path_history"], ("approach", "right-1"))
+
+        changed_choice = cursor.move_distance(2.0, {"split": "left-1"})
+        self.assertEqual(changed_choice["edge_id"], "left-1")
+        self.assertEqual(changed_choice["path_history"], ("approach", "left-1"))
+        self.assertAlmostEqual(changed_choice["distance_on_edge"], 1.0, places=2)
+
     def test_cursor_move_distance_marks_exact_open_finish_and_can_reverse(self):
         cursor = RouteCursor(fixture("open-bezier.json"), distance_samples=128)
         first_edge = cursor.move_distance(3.0)
