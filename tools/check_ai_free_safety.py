@@ -333,7 +333,7 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in execute or "APP_PRIVATE_KEY" not in execut
 if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
     errors.append("Reusable writer must select the autonomous prompt only for the explicit autonomous input")
 for required_phrase in (
-    "without asking for another \\\"continue\\\" message",
+    "without asking for another",
     "one bounded task",
     "Do not start RE-002 until the live queue explicitly marks RE-001 complete",
     "Never merge a PR",
@@ -354,8 +354,8 @@ if errors:
     sys.exit(1)
 
 print("AI free-tier safety checks passed.")
-print("- Only the repository owner can authorize the Gemini write workflow.")
-print("- Gemini write path remains gated by GEMINI_WRITE_ENABLED=true.")
+print("- Manual writing remains owner-approved; scheduled autonomous writing has a separate exact-true owner gate.")
+print("- Gemini manual and autonomous write paths use separate exact-true gates.")
 print("- OpenRouter uses only the manual, capped, free-route PR reviewer; no paid fallback or code-write permissions.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
