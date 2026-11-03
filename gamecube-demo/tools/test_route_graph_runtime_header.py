@@ -143,22 +143,34 @@ int main(void)
             binary_path = temp / "branch_route_test"
             header_path.write_text(header, encoding="utf-8")
             source_path.write_text(c_source, encoding="utf-8")
-            subprocess.run(
-                [
-                    "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
-                    "-I", str(ROOT / "gamecube-demo" / "source"),
-                    str(source_path), "-lm", "-o", str(binary_path),
-                ],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            subprocess.run(
-                [str(binary_path)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
+            try:
+                subprocess.run(
+                    [
+                        "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(ROOT / "gamecube-demo" / "source"),
+                        str(source_path), "-lm", "-o", str(binary_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "generated branched header failed strict C compilation:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
+            try:
+                subprocess.run(
+                    [str(binary_path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+            except subprocess.CalledProcessError as exc:
+                self.fail(
+                    "generated branched cursor executable failed:\\n"
+                    + (exc.stdout or "") + (exc.stderr or "")
+                )
 
     def test_runtime_header_exports_open_unbranched_topology(self):
         graph = json.loads(
