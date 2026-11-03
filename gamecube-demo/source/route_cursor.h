@@ -41,6 +41,7 @@ typedef struct {
     unsigned int edge;
     float t;
     float progress;
+    unsigned int completed_laps;
     int finished;
     int at_start;
     unsigned int path_index;
@@ -59,6 +60,7 @@ typedef struct {
     unsigned int history_count;
     unsigned int path_index;
     float distance_on_edge;
+    unsigned int completed_laps;
     int finished;
     int started;
 } BoontaRouteCursor;
@@ -110,6 +112,7 @@ static inline int boonta_route_cursor_init(
     cursor->path_index = 0U;
     cursor->path_history[0] = start_edge;
     cursor->distance_on_edge = 0.0f;
+    cursor->completed_laps = 0U;
     cursor->finished = 0;
     cursor->started = 1;
     return BOONTA_ROUTE_CURSOR_OK;
@@ -276,6 +279,11 @@ static inline int boonta_route_cursor_move(
         }
 
         cursor->distance_on_edge -= cursor->edge_lengths[current_edge];
+        if (cursor->graph->closed_loop &&
+            node == cursor->graph->start_node &&
+            cursor->completed_laps < 0xffffffffU) {
+            ++cursor->completed_laps;
+        }
         ++cursor->path_index;
         cursor->finished = 0;
     }
@@ -303,6 +311,13 @@ static inline int boonta_route_cursor_move(
             return BOONTA_ROUTE_CURSOR_INVALID;
         }
 
+        if (cursor->graph->closed_loop &&
+            cursor->graph->edges[
+                cursor->path_history[cursor->path_index]].from_node ==
+                cursor->graph->start_node &&
+            cursor->completed_laps > 0U) {
+            --cursor->completed_laps;
+        }
         --cursor->path_index;
         cursor->distance_on_edge += cursor->edge_lengths[previous_edge];
         cursor->finished = 0;
@@ -367,6 +382,7 @@ static inline int boonta_route_cursor_get_state(
         cursor->graph->edges[edge].progress_start +
         (cursor->graph->edges[edge].progress_end -
          cursor->graph->edges[edge].progress_start) * t;
+    state->completed_laps = cursor->completed_laps;
     state->finished = cursor->finished;
     state->at_start = cursor->started;
     state->path_index = cursor->path_index;
