@@ -190,6 +190,32 @@ static void test_closed_loop_replays_start_edge_without_finishing(void)
     assert_close(cursor.distance_on_edge, 0.1f, 0.00001f);
 }
 
+static void test_open_route_never_wraps_to_start_node(void)
+{
+    static const BoontaRouteCursorEdge edges[] = {
+        { 0U, 1U, 0.0f, 0.5f },
+        { 1U, 0U, 0.5f, 1.0f }
+    };
+    static const float lengths[] = { 1.0f, 1.0f };
+    static const BoontaRouteCursorGraph graph = {
+        edges, 2U, 2U, 0U, 0
+    };
+    BoontaRouteCursor cursor;
+    BoontaRouteCursorState state;
+
+    assert(boonta_route_cursor_init(&cursor, &graph, lengths, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 2.1f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+
+    state = state_of(&cursor);
+    assert(state.edge == 1U);
+    assert(state.finished);
+    assert(state.path_index == 1U);
+    assert(state.history_count == 2U);
+    assert_close(state.t, 1.0f, 0.000001f);
+}
+
 static void test_history_capacity_failure_is_atomic(void)
 {
     static const BoontaRouteCursorEdge edges[] = {
@@ -224,6 +250,7 @@ int main(void)
     test_new_branch_choice_replaces_cached_future();
     test_open_route_finishes_at_exact_terminal_distance();
     test_closed_loop_replays_start_edge_without_finishing();
+    test_open_route_never_wraps_to_start_node();
     test_history_capacity_failure_is_atomic();
     puts("Native route cursor tests passed.");
     return 0;
