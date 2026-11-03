@@ -70,6 +70,21 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
+      - name: Compile and run production track-sampling tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_track_sampling.c -lm -o /tmp/test_track_sampling
+          /tmp/test_track_sampling
+
+      - name: Compile and run native route-graph sampler tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_graph_sampling.c -lm -o /tmp/test_route_graph_sampling
+          /tmp/test_route_graph_sampling
+
+      - name: Compile and run native route cursor tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_cursor.c -lm -o /tmp/test_route_cursor
+          /tmp/test_route_cursor
+
       - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
@@ -275,9 +290,9 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          # Run finish and post-finish reset checks automatically for this gameplay candidate.
+          # Run the three-lap finish and post-finish Start-restart checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017' || github.head_ref == 'recovery/all-branch-heads-20261102')) }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
         run: |
@@ -320,10 +335,10 @@ jobs:
           export RACE_LOG="$GITHUB_WORKSPACE/dolphin-full-race.log"
           export RACE_CAPTURE="$GITHUB_WORKSPACE/dolphin-full-race.png"
           export RACE_USER="$GITHUB_WORKSPACE/dolphin-full-race-user"
-          export FINISH_RESET_DTM="$GITHUB_WORKSPACE/dolphin-finish-reset.dtm"
-          export FINISH_RESET_LOG="$GITHUB_WORKSPACE/dolphin-finish-reset.log"
-          export FINISH_RESET_CAPTURE="$GITHUB_WORKSPACE/dolphin-finish-reset.png"
-          export FINISH_RESET_USER="$GITHUB_WORKSPACE/dolphin-finish-reset-user"
+          export FINISH_RESTART_DTM="$GITHUB_WORKSPACE/dolphin-finish-restart.dtm"
+          export FINISH_RESTART_LOG="$GITHUB_WORKSPACE/dolphin-finish-restart.log"
+          export FINISH_RESTART_CAPTURE="$GITHUB_WORKSPACE/dolphin-finish-restart.png"
+          export FINISH_RESTART_USER="$GITHUB_WORKSPACE/dolphin-finish-restart-user"
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$BASELINE_DTM" --frames 3600 --game-id ID-boo --steering none
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$DTM" --frames 3600 --game-id ID-boo --steering right
           python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$LEFT_DTM" --frames 3600 --game-id ID-boo --steering left
@@ -432,11 +447,11 @@ jobs:
                 wait "$emu_pid" >/dev/null 2>&1 || true
                 sleep 2
               }
-              # Do not use a fixed post-movie sleep for the finish/reset check:
+              # Do not use a fixed post-movie sleep for the finish/restart check:
               # that can let the restarted race run for several minutes before capture.
               # Poll one live Dolphin session until we first see the finish banner,
-              # then retain the first frame whose HUD matches the clean reset state.
-              capture_finish_then_reset() {
+              # then retain the first frame whose HUD matches the clean restarted state.
+              capture_finish_then_restart() {
                 local movie="$1"
                 local log="$2"
                 local capture="$3"
@@ -448,7 +463,7 @@ jobs:
                 local width=""
                 local height=""
                 local saw_finish=0
-                local saw_reset=0
+                local saw_restart=0
                 flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
                   --video_backend="Software Renderer" \
                   --config=Logger.Options.WriteToFile=True \
@@ -462,7 +477,7 @@ jobs:
                 sleep 6
                 if ! kill -0 "$emu_pid" 2>/dev/null; then
                   cat "$log"
-                  echo "Dolphin exited before the finish/reset window became available."
+                  echo "Dolphin exited before the finish/restart window became available."
                   return 1
                 fi
                 for attempt in $(seq 1 15); do
@@ -480,7 +495,7 @@ jobs:
                   sleep 1
                 done
                 if [[ -z "$window" ]]; then
-                  echo "No visible Dolphin main window was found for the finish/reset diagnostic."
+                  echo "No visible Dolphin main window was found for the finish/restart diagnostic."
                   xwininfo -root -tree || true
                   flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                   kill -KILL "$emu_pid" >/dev/null 2>&1 || true
@@ -500,10 +515,10 @@ jobs:
                       saw_finish=1
                     fi
                   else
-                    if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log" 2>&1; then
-                      echo "Clean reset HUD detected after the finish banner on capture poll #$attempt."
-                      cat "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log"
-                      saw_reset=1
+                    if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-restart-detector.log" 2>&1; then
+                      echo "Clean restart HUD detected after the finish banner on capture poll #$attempt."
+                      cat "$GITHUB_WORKSPACE/dolphin-finish-restart-detector.log"
+                      saw_restart=1
                       break
                     fi
                   fi
@@ -514,12 +529,12 @@ jobs:
                 wait "$emu_pid" >/dev/null 2>&1 || true
                 if [[ "$saw_finish" -ne 1 ]]; then
                   [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-detector.log"
-                  echo "The finish banner was not detected during the post-finish reset movie."
+                  echo "The finish banner was not detected during the post-finish Start-restart movie."
                   return 1
                 fi
-                if [[ "$saw_reset" -ne 1 ]]; then
-                  [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-reset-detector.log"
-                  echo "The clean reset HUD was not detected after the finish banner."
+                if [[ "$saw_restart" -ne 1 ]]; then
+                  [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-restart-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-restart-detector.log"
+                  echo "The clean restarted HUD was not detected after Start."
                   return 1
                 fi
               }
@@ -574,14 +589,14 @@ jobs:
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
                   echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
-                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Y reset."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESET_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
-                mkdir -p "$FINISH_RESET_USER/Config"
-                chmod 700 "$FINISH_RESET_USER"
-                printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESET_USER/Config/Dolphin.ini"
-                capture_finish_then_reset "$FINISH_RESET_DTM" "$FINISH_RESET_LOG" "$FINISH_RESET_CAPTURE" "$FINISH_RESET_USER"
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESET_CAPTURE" --expect-reset
-                echo "Post-finish Y reset restored a clean visible HUD state."
+                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Start-only restart."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-restart-check
+                mkdir -p "$FINISH_RESTART_USER/Config"
+                chmod 700 "$FINISH_RESTART_USER"
+                printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
+                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER"
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
+                echo "Post-finish Start restarted the race into a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
@@ -596,10 +611,10 @@ jobs:
           [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
           [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
           [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
-          [[ ! -f "$FINISH_RESET_LOG" ]] || cat "$FINISH_RESET_LOG"
+          [[ ! -f "$FINISH_RESTART_LOG" ]] || cat "$FINISH_RESTART_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" "$FINISH_RESET_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs" "$FINISH_RESET_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" "$FINISH_RESTART_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs" "$FINISH_RESTART_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -631,11 +646,11 @@ jobs:
             dolphin-reset-state.dtm
             dolphin-pause-state.dtm
             dolphin-resume-state.dtm
-            dolphin-finish-reset.dtm
-            dolphin-finish-reset.png
-            dolphin-finish-reset.log
+            dolphin-finish-restart.dtm
+            dolphin-finish-restart.png
+            dolphin-finish-restart.log
             dolphin-finish-detector.log
-            dolphin-finish-reset-detector.log
+            dolphin-finish-restart-detector.log
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
@@ -657,6 +672,6 @@ jobs:
             dolphin-left-stick-steered-user/Logs/**
             dolphin-reset-user/Logs/**
             dolphin-full-race-user/Logs/**
-            dolphin-finish-reset-user/Logs/**
+            dolphin-finish-restart-user/Logs/**
           if-no-files-found: warn
           retention-days: 7

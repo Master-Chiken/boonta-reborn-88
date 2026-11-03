@@ -1,0 +1,863 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "original-test-oval",
+  "name": "original-test-oval",
+  "source": {
+    "platform": "synthetic",
+    "release": "Boonta Reborn 88 clean-room prototype",
+    "revision": "route-graph-v1-2026-11-02"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": true,
+  "start_node_id": "n0",
+  "nodes": [
+    {
+      "id": "n0",
+      "position": [
+        22,
+        0,
+        42
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n1",
+      "position": [
+        12,
+        -0.4,
+        66
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n2",
+      "position": [
+        0,
+        0,
+        78
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n3",
+      "position": [
+        -12,
+        0.3,
+        66
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n4",
+      "position": [
+        -22,
+        0,
+        42
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n5",
+      "position": [
+        -12,
+        0.2,
+        18
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n6",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "n7",
+      "position": [
+        12,
+        0.5,
+        18
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "segment-0",
+      "from": "n0",
+      "to": "n1",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          22,
+          -0.15,
+          50
+        ],
+        "control2": [
+          15.666666666666666,
+          -0.4,
+          60
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.1425039836145034
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3400000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3394141"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3389062"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3384766"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3381250"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3378516"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3376563"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3375391"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3375000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3375391"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3376562"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3378516"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3381250"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3384766"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3389062"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3394141"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3400000"
+        }
+      ]
+    },
+    {
+      "id": "segment-1",
+      "from": "n1",
+      "to": "n2",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          8.333333333333334,
+          -0.4,
+          72
+        ],
+        "control2": [
+          4,
+          -0.11666666666666665,
+          78
+        ]
+      },
+      "progress": {
+        "start": 0.1425039836145034,
+        "end": 0.2374683758164748
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3400000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3407373"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3416797"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3427979"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3440625"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3454443"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3469141"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3484424"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3500000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3515576"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3530859"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3545557"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3559375"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3572021"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3583203"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3592627"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3600000"
+        }
+      ]
+    },
+    {
+      "id": "segment-2",
+      "from": "n2",
+      "to": "n3",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -4,
+          0.11666666666666665,
+          78
+        ],
+        "control2": [
+          -8.333333333333334,
+          0.3,
+          72
+        ]
+      },
+      "progress": {
+        "start": 0.2374683758164748,
+        "end": 0.33242046356103583
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3600000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3605859"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3610938"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3615234"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3618750"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3621484"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3623438"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3624609"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3625000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3624609"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3623438"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3621484"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3618750"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3615234"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3610938"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3605859"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3600000"
+        }
+      ]
+    },
+    {
+      "id": "segment-3",
+      "from": "n3",
+      "to": "n4",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -15.666666666666666,
+          0.3,
+          60
+        ],
+        "control2": [
+          -22,
+          0.016666666666666663,
+          50
+        ]
+      },
+      "progress": {
+        "start": 0.33242046356103583,
+        "end": 0.47491645114599407
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3600000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3592627"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3583203"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3572021"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3559375"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3545557"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3530859"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3515576"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3500000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3484424"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3469141"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3454443"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3440625"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3427979"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3416797"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3407373"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3400000"
+        }
+      ]
+    },
+    {
+      "id": "segment-4",
+      "from": "n4",
+      "to": "n5",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -22,
+          -0.016666666666666663,
+          34
+        ],
+        "control2": [
+          -15.666666666666666,
+          0.2,
+          25
+        ]
+      },
+      "progress": {
+        "start": 0.47491645114599407,
+        "end": 0.6172363645094826
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3400000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3394141"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3389062"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3384766"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3381250"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3378516"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3376563"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3375391"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3375000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3375391"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3376562"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3378516"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3381250"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3384766"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3389062"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3394141"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3400000"
+        }
+      ]
+    },
+    {
+      "id": "segment-5",
+      "from": "n5",
+      "to": "n6",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -8.333333333333334,
+          0.2,
+          11
+        ],
+        "control2": [
+          -4,
+          -0.049999999999999996,
+          0
+        ]
+      },
+      "progress": {
+        "start": 0.6172363645094826,
+        "end": 0.7374320399934984
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3400000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3407373"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3416797"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3427979"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3440625"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3454443"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3469141"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3484424"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3500000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3515576"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3530859"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3545557"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3559375"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3572021"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3583203"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3592627"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3600000"
+        }
+      ]
+    },
+    {
+      "id": "segment-6",
+      "from": "n6",
+      "to": "n7",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          4,
+          0.049999999999999996,
+          0
+        ],
+        "control2": [
+          8.333333333333334,
+          0.5,
+          11
+        ]
+      },
+      "progress": {
+        "start": 0.7374320399934984,
+        "end": 0.8576563323491246
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3600000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3605859"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3610938"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3615234"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3618750"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3621484"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3623438"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3624609"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3625000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3624609"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3623438"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3621484"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3618750"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3615234"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3610938"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3605859"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3600000"
+        }
+      ]
+    },
+    {
+      "id": "segment-7",
+      "from": "n7",
+      "to": "n0",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          15.666666666666666,
+          0.5,
+          25
+        ],
+        "control2": [
+          22,
+          0.15,
+          34
+        ]
+      },
+      "progress": {
+        "start": 0.8576563323491246,
+        "end": 1
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-width-3600000"
+        },
+        {
+          "t": 0.0625,
+          "surface_id": "road-width-3592627"
+        },
+        {
+          "t": 0.125,
+          "surface_id": "road-width-3583203"
+        },
+        {
+          "t": 0.1875,
+          "surface_id": "road-width-3572021"
+        },
+        {
+          "t": 0.25,
+          "surface_id": "road-width-3559375"
+        },
+        {
+          "t": 0.3125,
+          "surface_id": "road-width-3545557"
+        },
+        {
+          "t": 0.375,
+          "surface_id": "road-width-3530859"
+        },
+        {
+          "t": 0.4375,
+          "surface_id": "road-width-3515576"
+        },
+        {
+          "t": 0.5,
+          "surface_id": "road-width-3500000"
+        },
+        {
+          "t": 0.5625,
+          "surface_id": "road-width-3484424"
+        },
+        {
+          "t": 0.625,
+          "surface_id": "road-width-3469141"
+        },
+        {
+          "t": 0.6875,
+          "surface_id": "road-width-3454443"
+        },
+        {
+          "t": 0.75,
+          "surface_id": "road-width-3440625"
+        },
+        {
+          "t": 0.8125,
+          "surface_id": "road-width-3427979"
+        },
+        {
+          "t": 0.875,
+          "surface_id": "road-width-3416797"
+        },
+        {
+          "t": 0.9375,
+          "surface_id": "road-width-3407373"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-width-3400000"
+        }
+      ]
+    }
+  ]
+}

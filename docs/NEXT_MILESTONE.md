@@ -1,10 +1,10 @@
 # Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-10-24
+Last updated: 2026-11-03
 
 ## Owner priority update
 
-Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. Finish the current rail-collision, steering-deadzone, and finish/restart work, then refine handling, rival behavior, camera, and track readability in small, testable changes. Defer the broader visible-Dolphin playtest until the race slice is more consolidated, when testers can provide more useful feedback. Physical GameCube/Wii testing comes later still.
+Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. The current active research queue is RE-001; keep RE-002 parked. The GameCube runtime now evaluates the eight authored cubic Bezier edges directly for its one closed oval, and the post-finish Start-restart transition has been ported into the current route-graph candidate. Continue refining this playable closed-loop slice, its handling, rival behavior, camera, and track readability in small, regression-tested changes. Runtime branch selection remains future work. Defer the human-operated visible-Dolphin checklist until the race slice is consolidated; physical GameCube/Wii testing comes later still.
 
 The manual checklist below remains required before claiming the prototype is fully playable. It is not a blanket blocker for independent code, design, or automated-test improvements. Keep test claims evidence-based, keep the €0/tooling and clean-room constraints, and do not merge without appropriate independent review and required checks.
 
@@ -13,6 +13,16 @@ The manual checklist below remains required before claiming the prototype is ful
 Build and refine the current clean-room prototype in `gamecube-demo/` into a convincing, stable racing slice. Use host tests, native builds, and scripted Dolphin diagnostics for development; reserve human-operated visible-Dolphin acceptance for the consolidated candidate, then test physical hardware separately.
 
 The manual acceptance checklist is the gate for declaring full playability, not a reason to pause all vertical-slice development.
+
+## Development snapshot — 2026-11-03
+
+- [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) carries the direct native Bezier runtime and active RE-001 work. It remains open and unmerged.
+- The runtime sampler caches 128 distance intervals per edge and uses bounded binary searches for edge and interval lookup. Exact-head host tests cover all 1,024 interval boundaries and their midpoints; the current direct Bezier curve measurement differs from the compiled lap coordinate by 0.00026%.
+- Start toggles pause/resume during a live race. In the finished state, Start now follows the same full-state reset path as Y and begins a new run. Host C decision-table tests and a scripted DTM profile cover the finished/live × Start/Y cases.
+- The current race is still one unbranched loop. Route-graph branch choices/history, runtime JSON loading, multiple playable routes, and B-spline execution are not implemented.
+- [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) remains draft pending physical Wii tests of the official Nintendo and Under Control Classic Controllers.
+- Human-operated visible-Dolphin acceptance remains **NOT TESTED** in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Scripted movie/render checks never substitute for that manual checklist.
+
 
 ## What is already verified (CI)
 
