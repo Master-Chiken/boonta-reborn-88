@@ -24,7 +24,7 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 - A research dossier must record: question, exact source/revision, evidence links, observed facts, inferences, target-platform caveats, unknowns, Step 102 mapping status, and the next reproducible test.
 - Finish each work block with a small note: what was established, what was not established, and the next action. Do not start an unrelated task mid-session.
 - Do not create a branch for every note. Gather research evidence in the active issue/dossier; make one focused documentation PR when a coherent result is ready.
-- No new CI/AI workflow or repository policy change unless it removes a demonstrated blocker to the active task. No scheduled AI coordination reports.
+- No new CI/AI workflow or repository policy change unless it removes a demonstrated blocker to the active task. The read-only AI coordinator remains manual-only; scheduled autonomous engineering is permitted only through the separately gated Boonta Autonomous Loop.
 
 ## 3. Evidence-led study → map → implement → validate
 
@@ -73,8 +73,10 @@ Tool selection must follow the artifact:
 ## 6. AI and budget controls
 
 - Project budget: **€0**. No paid model, billing, payment method, paid fallback, paid cloud resource or upgrade. If free quota is exhausted, stop.
-- The read-only Gemini coordinator is manual-only and posts requested reports to the canonical issue #156.
-- Planning mode is read-only. Keep `GEMINI_WRITE_ENABLED` absent or not equal to `true` unless the owner deliberately approves one exact implementation plan and decides to unlock the separate write workflow.
+- The read-only Gemini coordinator remains manual-only and posts requested reports to canonical issue #156.
+- The owner has authorized scheduled autonomous task selection and branch/PR work through `.github/workflows/boonta-autonomous-loop.yml`; it is not a background process outside GitHub Actions. It runs on a six-hour schedule and serializes writer runs.
+- Autonomous writes require `GEMINI_AUTONOMOUS_ENABLED=true`, `GEMINI_FREE_TIER_CONFIRMED=true`, the `GEMINI_API_KEY` secret, and the GitHub App `APP_ID` variable plus `APP_PRIVATE_KEY` secret. The manual plan/execute path remains separately gated by `GEMINI_WRITE_ENABLED=true` and its owner approval command.
+- Agents may open or update focused PRs, but may not merge, enable auto-merge, alter settings/secrets/variables, force-push or delete branches. If free quota is unavailable, stop without a paid fallback.
 - One agent-generated summary or green configuration check is not evidence that the game works.
 - Never send secrets, ROMs, disc images, BIOS, commercial archives, extracted proprietary models/textures/audio, or uncertain-provenance data to hosted AI services, public issues, CI artifacts, or the repository.
 
