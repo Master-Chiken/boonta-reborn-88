@@ -147,6 +147,7 @@ int main(void)
                 subprocess.run(
                     [
                         "cc", "-std=c99", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                        "-I", str(temp),
                         "-I", str(ROOT / "gamecube-demo" / "source"),
                         str(source_path), "-lm", "-o", str(binary_path),
                     ],
