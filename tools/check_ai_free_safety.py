@@ -332,6 +332,8 @@ if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in e
     errors.append("Autonomous writes must be restricted to the canonical queue and explicit owner gate")
 if "GEMINI_AUTONOMOUS_ENABLED" not in execute or "APP_PRIVATE_KEY" not in execute or "CALLER_WORKFLOW" not in execute:
     errors.append("Autonomous writer must require its separate gate, approved caller, and GitHub App identity")
+if "permission-actions: 'read'" not in execute or '"list_workflow_runs"' not in execute or '"get_job_logs"' not in execute:
+    errors.append("Autonomous writer must be able to inspect CI runs and failed-job logs using Actions read permission")
 if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
     errors.append("Reusable writer must select the autonomous prompt only for the explicit autonomous input")
 for required_phrase in (
@@ -348,6 +350,8 @@ if "contents: write" not in autonomous or "issues: write" not in autonomous or "
     errors.append("Autonomous workflow must grant only the scoped repository/issue/PR permissions required by its gated writer")
 if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in setup:
     errors.append("Setup documentation must explain the autonomous enable gate and scheduled loop")
+if "Actions: read" not in setup:
+    errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
