@@ -324,6 +324,8 @@ if "- cron: '17 */6 * * *'" not in autonomous_trigger:
     errors.append("Boonta autonomous loop must use the bounded six-hour schedule")
 if "group: boonta-autonomous-loop" not in autonomous or "cancel-in-progress: false" not in autonomous:
     errors.append("Boonta autonomous loop must serialize writers without cancelling active work")
+if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" not in execute:
+    errors.append("All manual and autonomous Gemini writers must share one non-cancelling concurrency group")
 if "uses: ./.github/workflows/gemini-plan-execute.yml" not in autonomous or "autonomous_mode: true" not in autonomous:
     errors.append("Boonta autonomous loop must call the separately gated reusable writer in autonomous mode")
 if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in execute:
