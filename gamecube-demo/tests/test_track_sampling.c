@@ -24,7 +24,7 @@ static void test_sampler_length_matches_generated_lap_length(void)
     sample(0.0f, &x, &y, &z, &width);
     assert(g_sampler.lengths_ready);
     assert(g_sampler.total_length > 0.0f);
-    assert_close(g_sampler.total_length, BOONTA_TRACK_LENGTH, 0.001f);
+    assert(g_sampler.total_length == BOONTA_TRACK_LENGTH);
 }
 
 static void test_all_internal_chord_boundaries_land_on_the_next_track_point(void)

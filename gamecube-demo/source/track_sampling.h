@@ -63,6 +63,24 @@ static inline void boonta_track_sampler_sample_at(
             sampler->segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
             sampler->total_length += sampler->segment_lengths[i];
         }
+        /*
+         * Match the renderer's wrap period to the exact generated lap length
+         * used by the gameplay counter. The common scale preserves every
+         * segment's relative chord share and only removes float accumulation
+         * drift between the independently stored header constant and this sum.
+         */
+        if (!isfinite(sampler->total_length) || sampler->total_length <= 0.001f ||
+            !isfinite(BOONTA_TRACK_LENGTH) || BOONTA_TRACK_LENGTH <= 0.001f) {
+            return;
+        }
+        {
+            const float distance_scale = BOONTA_TRACK_LENGTH / sampler->total_length;
+            if (!isfinite(distance_scale) || distance_scale <= 0.0f) return;
+            for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
+                sampler->segment_lengths[i] *= distance_scale;
+            }
+            sampler->total_length = BOONTA_TRACK_LENGTH;
+        }
         sampler->lengths_ready = 1;
     }
 
