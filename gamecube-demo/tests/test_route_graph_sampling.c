@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 
+#include "../source/gameplay_state.h"
 #include "../source/generated_track.h"
 #include "../source/route_graph_sampling.h"
 
