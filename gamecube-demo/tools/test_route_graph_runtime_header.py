@@ -187,6 +187,13 @@ int main(void)
         decision = nodes["decision-1"]["position"]
         edges["approach"]["curve"]["control2"] = list(decision)
         edges["d1-left"]["curve"]["control1"] = list(decision)
+        decision3 = nodes["decision-3"]["position"]
+        finish = nodes["finish"]["position"]
+        # Force the third-order/chord fallback at both ends of separate edges.
+        edges["d3-left"]["curve"]["control1"] = list(finish)
+        edges["d3-left"]["curve"]["control2"] = list(finish)
+        edges["d3-right"]["curve"]["control1"] = list(decision3)
+        edges["d3-right"]["curve"]["control2"] = list(decision3)
         header = generate_runtime_route_header(
             graph, {}, default_half_width=3.6
         )
@@ -229,6 +236,16 @@ int main(void)
         1U, 0, &tangent_x, &tangent_z) == BOONTA_ROUTE_CURSOR_OK);
     assert(tangent_x > 0.5f);
     assert(tangent_z > 0.5f);
+
+    /* Fully collapsed handles fall back to the endpoint chord at either end. */
+    assert(boonta_route_graph_edge_horizontal_tangent(
+        5U, 1, &tangent_x, &tangent_z) == BOONTA_ROUTE_CURSOR_OK);
+    assert(fabsf(tangent_x) < 0.00001f);
+    assert(tangent_z > 0.999f);
+    assert(boonta_route_graph_edge_horizontal_tangent(
+        6U, 0, &tangent_x, &tangent_z) == BOONTA_ROUTE_CURSOR_OK);
+    assert(fabsf(tangent_x) < 0.00001f);
+    assert(tangent_z > 0.999f);
 
     assert(boonta_route_graph_choose_outgoing_edge(
         &cursor, 1U, -1, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
