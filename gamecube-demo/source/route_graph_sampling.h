@@ -194,6 +194,79 @@ static inline float boonta_route_graph_width_at(
     return width;
 }
 
+/*
+ * Sample one selected edge by its local arc distance. Unlike sample_at(), this
+ * API does not wrap at the whole-loop seam: callers that own a route cursor can
+ * select the next edge explicitly and clamp progress at that edge's endpoints.
+ */
+static inline void boonta_route_graph_sampler_sample_edge_at(
+    BoontaRouteGraphSampler *sampler, unsigned int edge_index,
+    float distance_on_edge, float fallback_half_width,
+    float *x_out, float *y_out, float *z_out, float *width_out)
+{
+    unsigned int lower = 0U;
+    unsigned int upper = BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+    float edge_length;
+    float target;
+    float span;
+    float t;
+
+    if (x_out != NULL) *x_out = 0.0f;
+    if (y_out != NULL) *y_out = 0.0f;
+    if (z_out != NULL) *z_out = 0.0f;
+    if (width_out != NULL) *width_out = fallback_half_width;
+    if (sampler == NULL || edge_index >= BOONTA_RUNTIME_ROUTE_EDGE_COUNT ||
+        !isfinite(distance_on_edge) ||
+        !boonta_route_graph_sampler_prepare(sampler)) {
+        return;
+    }
+
+    edge_length = sampler->edge_lengths[edge_index];
+    if (!isfinite(edge_length) || edge_length <= 0.001f) return;
+
+    /* Edge-local traversal stops at the endpoints; only the loop API wraps. */
+    target = distance_on_edge;
+    if (target < 0.0f) target = 0.0f;
+    if (target > edge_length) target = edge_length;
+
+    /*
+     * Locate the LUT interval with bounded binary search. The same arc-distance
+     * table is shared with the closed-loop sampler and the future route cursor.
+     */
+    while (lower + 1U < upper) {
+        const unsigned int middle = lower + (upper - lower) / 2U;
+        if (sampler->distance_lut[edge_index][middle] <= target) {
+            lower = middle;
+        } else {
+            upper = middle;
+        }
+    }
+
+    span = sampler->distance_lut[edge_index][lower + 1U]
+         - sampler->distance_lut[edge_index][lower];
+    if (span > 0.000001f) {
+        const float fraction = (target
+            - sampler->distance_lut[edge_index][lower]) / span;
+        t = ((float)lower + fraction) /
+            (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+        if (t < 0.0f) t = 0.0f;
+        if (t > 1.0f) t = 1.0f;
+    } else {
+        t = (float)lower /
+            (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
+    }
+
+    boonta_route_graph_evaluate_edge(edge_index, t, x_out, y_out, z_out);
+    if (width_out != NULL) {
+        *width_out = boonta_route_graph_width_at(
+            edge_index, t, fallback_half_width);
+    }
+    if (y_out != NULL) {
+        if (*y_out < -3.0f) *y_out = -3.0f;
+        if (*y_out > 3.0f) *y_out = 3.0f;
+    }
+}
+
 static inline void boonta_route_graph_sampler_sample_at(
     BoontaRouteGraphSampler *sampler, float travelled,
     float fallback_half_width,
