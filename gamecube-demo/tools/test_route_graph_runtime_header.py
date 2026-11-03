@@ -66,7 +66,8 @@ class RuntimeRouteHeaderTests(unittest.TestCase):
         )
         c_source = r"""
 #include <assert.h>
-#include "branch_route.h"
+#define BOONTA_ROUTE_GRAPH_HEADER "branch_route.h"
+#include "route_graph_sampling.h"
 
 int main(void)
 {
@@ -80,22 +81,58 @@ int main(void)
         BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
         BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
     };
-    const BoontaRouteBranchChoice choice = { 1U, 2U };
     BoontaRouteCursor cursor;
     BoontaRouteCursorState state;
+    unsigned int selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    BoontaRouteBranchChoice choice;
 
     assert(BOONTA_RUNTIME_ROUTE_HAS_BRANCHES == 1);
     assert(BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP == 0);
     assert(boonta_runtime_route_edges[0].p0[2] == 0.0f);
     assert(boonta_runtime_route_width_samples[0] > 0.0f);
+
+    /* Reach decision-1 without crossing it, then classify its tangent branches. */
     assert(boonta_route_cursor_init(&cursor, &graph, edge_lengths, 0U) ==
            BOONTA_ROUTE_CURSOR_OK);
-    assert(boonta_route_cursor_move(&cursor, 1.1f, &choice, 1U) ==
+    assert(boonta_route_cursor_move(&cursor, 1.0f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_graph_choose_outgoing_edge(
+        &cursor, 1U, -1, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
+    assert(selected_edge == 1U);
+    choice.node = 1U;
+    choice.edge = selected_edge;
+    assert(boonta_route_cursor_move(&cursor, 0.1f, &choice, 1U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_get_state(&cursor, &state) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(state.edge == 1U);
+
+    /* Reinitialize and choose the right-turn branch from the same junction. */
+    selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    assert(boonta_route_cursor_init(&cursor, &graph, edge_lengths, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 1.0f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_graph_choose_outgoing_edge(
+        &cursor, 1U, 1, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
+    assert(selected_edge == 2U);
+    choice.node = 1U;
+    choice.edge = selected_edge;
+    assert(boonta_route_cursor_move(&cursor, 0.1f, &choice, 1U) ==
            BOONTA_ROUTE_CURSOR_OK);
     assert(boonta_route_cursor_get_state(&cursor, &state) ==
            BOONTA_ROUTE_CURSOR_OK);
     assert(state.edge == 2U);
-    assert(cursor.path_history[1] == 2U);
+
+    /* Neutral selects the straightest continuation, with stable edge tie-break. */
+    selected_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    assert(boonta_route_cursor_init(&cursor, &graph, edge_lengths, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_cursor_move(&cursor, 1.0f, NULL, 0U) ==
+           BOONTA_ROUTE_CURSOR_OK);
+    assert(boonta_route_graph_choose_outgoing_edge(
+        &cursor, 1U, 0, &selected_edge) == BOONTA_ROUTE_CURSOR_OK);
+    assert(selected_edge == 1U);
     return 0;
 }
 """
