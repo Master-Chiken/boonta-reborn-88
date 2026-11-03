@@ -15,6 +15,7 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "generated_track.h"
+#include "track_sampling.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
 
@@ -160,78 +161,12 @@ static float clampf_local(float value, float low, float high)
  * points remain in world coordinates; existing scene meshes are built in a local
  * forward plane and mapped into the actual course frame vertex by vertex.
  */
-static float catmull_rom_component(float p0, float p1, float p2, float p3, float t)
-{
-    const float t2 = t * t;
-    const float t3 = t2 * t;
-    return 0.5f * (
-        2.0f * p1 + (-p0 + p2) * t
-        + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2
-        + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3
-    );
-}
-
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
-    /* Segment lengths are cached because many road vertices sample each frame. */
-    static float segment_lengths[BOONTA_TRACK_POINT_COUNT];
-    static float total_length;
-    static int lengths_ready;
-    unsigned int i;
-    float target;
-
-    if (x_out != NULL) *x_out = 0.0f;
-    if (y_out != NULL) *y_out = 0.0f;
-    if (z_out != NULL) *z_out = 0.0f;
-    if (width_out != NULL) *width_out = ROAD_HALF_WIDTH;
-
-    if (!lengths_ready) {
-        for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
-            const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
-            const float dx = boonta_track_points_original_test_oval[next].x -
-                             boonta_track_points_original_test_oval[i].x;
-            const float dy = boonta_track_points_original_test_oval[next].y -
-                             boonta_track_points_original_test_oval[i].y;
-            const float dz = boonta_track_points_original_test_oval[next].z -
-                             boonta_track_points_original_test_oval[i].z;
-            segment_lengths[i] = sqrtf(dx * dx + dy * dy + dz * dz);
-            total_length += segment_lengths[i];
-        }
-        lengths_ready = 1;
-    }
-
-    if (!isfinite(travelled) || total_length <= 0.001f) return;
-    target = fmodf(travelled, total_length);
-    if (target < 0.0f) target += total_length;
-
-    for (i = 0U; i < BOONTA_TRACK_POINT_COUNT; ++i) {
-        const unsigned int next = (i + 1U) % BOONTA_TRACK_POINT_COUNT;
-        const float length = segment_lengths[i];
-        if (target <= length || i + 1U == BOONTA_TRACK_POINT_COUNT) {
-            const unsigned int previous =
-                (i + BOONTA_TRACK_POINT_COUNT - 1U) % BOONTA_TRACK_POINT_COUNT;
-            const unsigned int following = (next + 1U) % BOONTA_TRACK_POINT_COUNT;
-            const float t = length > 0.001f
-                ? clampf_local(target / length, 0.0f, 1.0f) : 0.0f;
-            const BoontaTrackPoint *p0 = &boonta_track_points_original_test_oval[previous];
-            const BoontaTrackPoint *p1 = &boonta_track_points_original_test_oval[i];
-            const BoontaTrackPoint *p2 = &boonta_track_points_original_test_oval[next];
-            const BoontaTrackPoint *p3 = &boonta_track_points_original_test_oval[following];
-            const float smooth_x = catmull_rom_component(p0->x, p1->x, p2->x, p3->x, t);
-            const float smooth_y = catmull_rom_component(p0->y, p1->y, p2->y, p3->y, t);
-            const float smooth_z = catmull_rom_component(p0->z, p1->z, p2->z, p3->z, t);
-            const float smooth_width = catmull_rom_component(
-                p0->half_width, p1->half_width, p2->half_width, p3->half_width, t);
-
-            if (x_out != NULL) *x_out = smooth_x;
-            if (y_out != NULL) *y_out = clampf_local(smooth_y, -3.0f, 3.0f);
-            if (z_out != NULL) *z_out = smooth_z;
-            if (width_out != NULL) *width_out = clampf_local(smooth_width, 2.2f, 4.8f);
-            return;
-        }
-        target -= length;
-    }
+    static BoontaTrackSampler sampler;
+    boonta_track_sampler_sample_at(&sampler, travelled, ROAD_HALF_WIDTH,
+                                   x_out, y_out, z_out, width_out);
 }
 
 static float track_center_x_at(float travelled)
