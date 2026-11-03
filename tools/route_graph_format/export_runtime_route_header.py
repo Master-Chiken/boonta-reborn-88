@@ -98,6 +98,7 @@ def generate_runtime_route_header(
         ordered_edges = list(graph["edges"])
     controls: list[tuple[list[float], list[float], list[float], list[float]]] = []
     route_widths: list[float] = []
+    route_width_end_samples: list[float] = []
     route_length = 0.0
 
     for edge in ordered_edges:
@@ -151,6 +152,22 @@ def generate_runtime_route_header(
                 )
             route_widths.append(checked_widths[surface_id])
 
+        if not bindings:
+            route_width_end_samples.append(default_width)
+        else:
+            while (
+                binding_index + 1 < len(bindings)
+                and 1.0 + EPSILON >= bindings[binding_index + 1]["t"]
+            ):
+                binding_index += 1
+            surface_id = bindings[binding_index]["surface_id"]
+            if surface_id not in checked_widths:
+                raise RuntimeRouteExportError(
+                    f"edge {edge['id']!r} references surface {surface_id!r} "
+                    "without an explicit width"
+                )
+            route_width_end_samples.append(checked_widths[surface_id])
+
     if not math.isfinite(route_length) or route_length <= EPSILON:
         raise RuntimeRouteExportError("runtime route graph must have a finite positive total edge length")
 
@@ -180,6 +197,13 @@ def generate_runtime_route_header(
     for start in range(0, len(route_widths), 8):
         width_lines.append(
             "    " + ", ".join(_c_float(v) for v in route_widths[start:start + 8])
+        )
+    width_end_lines = []
+    for start in range(0, len(route_width_end_samples), 8):
+        width_end_lines.append(
+            "    " + ", ".join(
+                _c_float(v) for v in route_width_end_samples[start:start + 8]
+            )
         )
 
     lines = [
@@ -218,6 +242,10 @@ def generate_runtime_route_header(
         "",
         "static const float boonta_runtime_route_width_samples[BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT] = {",
         ",\n".join(width_lines),
+        "};",
+        "",
+        "static const float boonta_runtime_route_width_end_samples[BOONTA_RUNTIME_ROUTE_EDGE_COUNT] = {",
+        ",\n".join(width_end_lines),
         "};",
         "",
         "#endif /* BOONTA_GENERATED_RUNTIME_ROUTE_GRAPH_H */",
