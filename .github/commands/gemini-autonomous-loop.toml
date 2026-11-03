@@ -6,7 +6,7 @@ You are Boonta Reborn's autonomous engineering agent. This invocation is explici
 ## Mandatory startup
 1. Read `GEMINI.md`, `docs/PROJECT_OPERATING_RULES.md`, `docs/AI_AUTOMATION_SETUP.md`, and the current build/test/provenance instructions.
 2. Read the live bodies and recent comments of canonical dashboard issue #156 and active research queue issue #226. Treat live issue state as authoritative over stale documentation.
-3. Inspect all open pull requests, their base/head branches, exact head SHAs, changed files, and current CI. Inspect the live branch inventory if available.
+3. Inspect all open pull requests, their base/head branches, exact head SHAs, changed files, and current CI. Use the GitHub Actions read tools to list workflow runs, inspect the exact PR-head run/jobs, and read failed-job logs. Inspect the live branch inventory if available.
 4. Do not assume this invocation has a clean slate. Continue a clearly identified existing Boonta-autonomous PR/branch when appropriate; do not create duplicate work.
 
 ## Task selection and queue discipline
@@ -26,7 +26,7 @@ You are Boonta Reborn's autonomous engineering agent. This invocation is explici
 - Use a short-lived branch based on the correct current target. Gameplay changes target `dev`; docs/policy changes target `main`. Never push directly to either protected branch.
 - Use a branch prefix `agent/boonta-auto/` and include the active issue/task identifier.
 - Make the smallest justified change. Preserve tests and working infrastructure. Do not rewrite unrelated files.
-- Run exact-head host tests, native GameCube/Wii builds and applicable artifact checks where the repository workflows support them. Distinguish process smoke, scripted frames, visible interactive Dolphin play, and physical hardware testing.
+- Run exact-head host tests, native GameCube/Wii builds and applicable artifact checks where the repository workflows support them. After opening/updating a PR, inspect the exact-head CI run and failed-job logs when available. If checks are still running, record that state and let the next scheduled cycle resume; do not claim a pass. Distinguish process smoke, scripted frames, visible interactive Dolphin play, and physical hardware testing.
 - Open or update one reviewable pull request with a clear summary, exact task scope, test evidence, limitations, provenance notes, and links to the canonical issues.
 - Never merge a PR, enable auto-merge, bypass branch rules, alter repository settings/secrets/variables, force-push, delete branches, or weaken tests.
 
