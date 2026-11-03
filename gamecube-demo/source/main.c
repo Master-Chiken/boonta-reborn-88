@@ -70,6 +70,7 @@ static float g_vehicle_anchor_progress;
 static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
+static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
 #define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
@@ -955,6 +956,47 @@ static void draw_hud(void)
                     g_slide_active ? boost_fill : empty);
     }
 
+#ifdef BOONTA_WII
+    /* Show the actual WPAD state so physical Classic detection can be verified
+     * without confusing a Wii Remote connection with a Classic expansion. */
+    {
+        const char *status_text = "INPUT UNKNOWN";
+        GXColor status_color = heat_hot;
+        switch (g_input_status) {
+        case BOONTA_INPUT_STATUS_GAMECUBE_READY:
+            status_text = "GAMECUBE INPUT";
+            status_color = lap_done;
+            break;
+        case BOONTA_INPUT_STATUS_WII_NO_CONTROLLER:
+            status_text = "NO WIIMOTE";
+            break;
+        case BOONTA_INPUT_STATUS_WII_NO_CLASSIC:
+            status_text = "NO CLASSIC";
+            break;
+        case BOONTA_INPUT_STATUS_WII_CONFIGURING:
+            status_text = "WPAD CONFIG";
+            status_color = heat_cool;
+            break;
+        case BOONTA_INPUT_STATUS_WII_WAITING_FOR_DATA:
+            status_text = "WAIT REPORT";
+            status_color = heat_cool;
+            break;
+        case BOONTA_INPUT_STATUS_WII_SETUP_FAILED:
+            status_text = "WPAD ERROR";
+            break;
+        case BOONTA_INPUT_STATUS_WII_CLASSIC_READY:
+            status_text = "CLASSIC READY";
+            status_color = lap_done;
+            break;
+        case BOONTA_INPUT_STATUS_UNKNOWN:
+        default:
+            break;
+        }
+        append_screen_quad(w - 136.0f, 67.0f, w - 12.0f, 86.0f, 0.55f, dark);
+        append_text(status_text, w - 130.0f, 74.0f, 1.0f, status_color);
+    }
+#endif
+
     /* Finish banner: a readable FINISH label and checkered flag made from original GX quads. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
@@ -1173,6 +1215,7 @@ int main(int argc, char **argv)
         float frame_scale;
 
         boonta_input_poll(&input);
+        g_input_status = input.status;
         frame_tick = gettime();
         frame_delta_seconds = (float)diff_usec(previous_tick, frame_tick) * 0.000001f;
         frame_scale = boonta_frame_scale_from_delta(frame_delta_seconds);
