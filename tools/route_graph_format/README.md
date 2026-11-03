@@ -63,7 +63,7 @@ The native prototype's active test oval has now been converted into the canonica
 
 The checked-in `gamecube-demo/source/generated_track.h` is deterministically baked from this route graph using 16 samples per edge, then exported through the existing track-v1 header generator. Host test `test_runtime_oval_route_graph_is_the_canonical_header_source` checks this entire conversion against the committed C header. The 8-node source is deliberately the same original prototype oval; no commercial course coordinates or retail assets are involved.
 
-This moves the **current simple loop's authoring source** to route-graph-v1. The native runtime now evaluates the generated cubic Bezier curves directly through a shared, host-tested C sampler; the legacy track-v1 header remains checked for deterministic compatibility and as a geometric comparison baseline. Live branch selection and route-history management are still not connected to vehicle movement. Branching/rejoining graphs therefore remain host-side only until an explicit runtime route-choice design is implemented.
+This moves the **current simple loop's authoring source** to route-graph-v1. The native runtime evaluates generated cubic Bezier curves through a shared, host-tested C sampler and advances a topology cursor alongside race distance. The cursor and edge-local sampler are connected for the current oval; live branch-choice input is not yet connected. The legacy track-v1 header remains checked for deterministic compatibility and as a geometric comparison baseline.
 
 ## Evidence and deliberate limits
 
@@ -163,18 +163,24 @@ python3 tools/route_graph_format/export_runtime_route_header.py \
   --default-half-width 3.6 --distance-subdivisions 128
 ```
 
-The generator accepts a single unbranched closed loop made of cubic Bezier edges.
-It rejects branching/rejoining topology and curve types that this first native
-runtime does not yet implement; it never silently picks a route or approximates
-an unsupported curve type. Widths are emitted as a separate cyclic sample array,
-not embedded in route topology.
+The generator accepts validated open or closed route graphs made of cubic
+Bezier edges. A single unbranched loop keeps its historical traversal ordering;
+branched/rejoining and open graphs preserve the authored edge order and emit
+node/edge indices, progress spans, start-node, closed-loop and branch flags for
+the topology cursor. It rejects unsupported curve types such as uniform cubic
+B-splines rather than approximating them. Widths remain a separate per-edge
+surface sample array, not part of route topology. For branched graphs the native
+sampler's global wrapping API is disabled; callers must sample through a cursor
+and the selected edge's local arc-distance lookup.
 
 `gamecube-demo/source/route_graph_sampling.h` is now the production C sampler
-used by `main.c`. On its first sample it builds a 128-interval-per-edge 3D
-distance lookup, scales the lookup to the generated lap coordinate, and caches
-it for subsequent GX scene sampling. It evaluates the cubic Bezier curve itself
-instead of Catmull-Rom interpolation over the 128-point compatibility bake.
-The race lap counter and finish stripe use the same generated route length.
+used by `main.c`. It builds a 128-interval-per-edge 3D distance lookup and caches
+the result for subsequent GX scene sampling. The cursor follows the same
+physical distance delta as race state, and the renderer samples look-ahead and
+look-behind positions from a copy of that cursor. The current eight-edge demo
+oval still uses its generated single-loop lap coordinate for lap counting and
+the finish stripe; the cursor path history is host-tested through three laps and
+reset.
 
 The shared C implementation is compiled both into the GameCube DOL and into
 `gamecube-demo/tests/test_route_graph_sampling.c`. The host regression checks
@@ -183,9 +189,14 @@ continuity, route length against the previous track-v1 lap coordinate, and a
 16,384-step measurement of the actual C Bezier sampler. A Python regression
 regenerates the header and compares it byte-for-byte with the checked-in file.
 
-**Deliberate limit:** this is native evaluation of the current eight-edge loop,
-not yet a general runtime graph cursor. Split/rejoin choices, branch history,
-B-spline edges, checkpoint progression inside a branch, and collision/projection
-onto alternate route paths are not yet wired into gameplay. The previous
-track-v1 sampler remains available for regression comparison; the live game uses
-the new Bezier route sampler.
+The C cursor is now a general topology component with bounded branch history,
+explicit outgoing-edge choices, reverse/forward replay and open-route finish
+behavior. Host tests exercise a synthetic three-decision graph; another test
+generates a temporary branched native header, compiles it as strict C99, and
+traverses one branch with the C cursor. The live demo runtime remains on the
+existing unbranched oval: no branch-choice control or split/rejoin route is yet
+connected to player input, collision, lap progression or GX rendering. Native
+B-spline evaluation and checkpoint progression inside alternate branches also
+remain unimplemented. The previous track-v1 sampler remains available for
+regression comparison; the live game uses the new Bezier route sampler and
+synchronized cursor on the current oval.
