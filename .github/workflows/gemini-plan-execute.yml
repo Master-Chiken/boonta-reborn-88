@@ -54,6 +54,7 @@ jobs:
           AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
           AUTONOMOUS_ISSUE_NUMBER: '${{ inputs.issue_number }}'
           CALLER_WORKFLOW: '${{ github.workflow }}'
+          CALLER_REF: '${{ github.ref }}'
           APP_ID: '${{ vars.APP_ID }}'
           APP_PRIVATE_KEY: '${{ secrets.APP_PRIVATE_KEY }}'
         run: |-
@@ -67,6 +68,8 @@ jobs:
             reason="The separate GEMINI_AUTONOMOUS_ENABLED repository variable is not exactly true."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" ]]; then
             reason="Autonomous mode may only be invoked by the Boonta Autonomous Loop workflow."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_REF:-}" != "refs/heads/main" ]]; then
+            reason="Autonomous mode may only be invoked from the protected default branch main."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
             reason="Autonomous mode is restricted to the canonical active research queue issue #226."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && ( -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ) ]]; then
