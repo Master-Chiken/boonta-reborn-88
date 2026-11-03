@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the native C runtime representation of a clean-room closed route graph.
+"""Generate the native C runtime representation of a clean-room route graph.
 
-The generated file contains cubic Bezier control points and sampled surface widths.
-Distance lookup tables are built once by the shared C runtime sampler at startup.
-Only unbranched closed graphs composed of cubic Bezier edges are accepted.
+The generated file contains cubic Bezier geometry, edge topology and sampled
+surface widths. Single closed loops retain their historical ordering; branched
+and open graphs keep their authored edge order for topology-cursor traversal.
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def generate_runtime_route_header(
     default_half_width: float = 3.6,
     distance_subdivisions: int = DEFAULT_DISTANCE_SUBDIVISIONS,
 ) -> str:
-    """Render one deterministic C header for a closed cubic-Bezier route."""
+    """Render a deterministic C header for cubic-Bezier route topology."""
     graph = validate_route_graph(graph_data)
     if (
         isinstance(distance_subdivisions, bool)
@@ -76,11 +76,26 @@ def generate_runtime_route_header(
             width, f"surface_widths[{surface_id!r}]"
         )
 
-    try:
-        ordered_edges = _ordered_single_loop(graph)
-    except RouteGraphExportError as exc:
-        raise RuntimeRouteExportError(str(exc)) from exc
     nodes_by_id, edges_by_id = _index_validated_graph(graph)
+    incoming_counts = {node["id"]: 0 for node in graph["nodes"]}
+    outgoing_counts = {node["id"]: 0 for node in graph["nodes"]}
+    for edge in graph["edges"]:
+        incoming_counts[edge["to"]] += 1
+        outgoing_counts[edge["from"]] += 1
+    has_branches = any(
+        count > 1 for count in (*incoming_counts.values(), *outgoing_counts.values())
+    )
+    is_single_loop = graph["closed_loop"] and not has_branches
+
+    if is_single_loop:
+        try:
+            ordered_edges = _ordered_single_loop(graph)
+        except RouteGraphExportError as exc:
+            raise RuntimeRouteExportError(str(exc)) from exc
+    else:
+        # Branched/open graphs keep authored edge order; topology indices,
+        # not an arbitrary flattened path, determine cursor traversal.
+        ordered_edges = list(graph["edges"])
     controls: list[tuple[list[float], list[float], list[float], list[float]]] = []
     route_widths: list[float] = []
     route_length = 0.0
@@ -137,7 +152,7 @@ def generate_runtime_route_header(
             route_widths.append(checked_widths[surface_id])
 
     if not math.isfinite(route_length) or route_length <= EPSILON:
-        raise RuntimeRouteExportError("closed route must have a finite positive length")
+        raise RuntimeRouteExportError("runtime route graph must have a finite positive total edge length")
 
     node_indices = {
         node["id"]: index for index, node in enumerate(graph["nodes"])
@@ -178,6 +193,8 @@ def generate_runtime_route_header(
         f"#define BOONTA_RUNTIME_ROUTE_EDGE_COUNT {len(ordered_edges)}U",
         f"#define BOONTA_RUNTIME_ROUTE_START_NODE_INDEX {node_indices[graph['start_node_id']]}U",
         f"#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP {1 if graph['closed_loop'] else 0}",
+        f"#define BOONTA_RUNTIME_ROUTE_HAS_BRANCHES {1 if has_branches else 0}",
+        f"#define BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP {1 if is_single_loop else 0}",
         f"#define BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS {distance_subdivisions}U",
         f"#define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLES_PER_EDGE {WIDTH_SAMPLES_PER_EDGE}U",
         "#define BOONTA_RUNTIME_ROUTE_WIDTH_SAMPLE_COUNT \\",
