@@ -193,10 +193,22 @@ The C cursor is now a general topology component with bounded branch history,
 explicit outgoing-edge choices, reverse/forward replay and open-route finish
 behavior. Host tests exercise a synthetic three-decision graph; another test
 generates a temporary branched native header, compiles it as strict C99, and
-traverses one branch with the C cursor. The live demo runtime remains on the
-existing unbranched oval: no branch-choice control or split/rejoin route is yet
-connected to player input, collision, lap progression or GX rendering. Native
-B-spline evaluation and checkpoint progression inside alternate branches also
-remain unimplemented. The previous track-v1 sampler remains available for
-regression comparison; the live game uses the new Bezier route sampler and
-synchronized cursor on the current oval.
+traverses one branch with the C cursor.
+
+The optional
+`boonta_route_graph_choose_outgoing_edge()` helper compares normalized
+horizontal endpoint tangents and chooses the most left-turning, right-turning,
+or straightest outgoing edge. Endpoint tangent extraction falls back from the
+first derivative to the next useful derivative and then to the endpoint chord.
+This is defensive handling for malformed or legacy generated C geometry: the
+route-graph validator continues to reject degenerate authoring tangents. Strict
+C99 host tests cover all fallback levels and left/right/neutral branch choice.
+The helper is not yet connected to live controller input.
+
+The live demo runtime remains on the existing unbranched oval: no
+branch-choice control or split/rejoin route is yet connected to player input,
+collision, lap progression or GX rendering. Native B-spline evaluation and
+checkpoint progression inside alternate branches also remain unimplemented.
+The previous track-v1 sampler remains available for regression comparison;
+the live game uses the new Bezier route sampler and synchronized cursor on the
+current oval.
