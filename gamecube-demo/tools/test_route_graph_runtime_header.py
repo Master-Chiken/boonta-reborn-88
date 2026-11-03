@@ -32,16 +32,37 @@ class RuntimeRouteHeaderTests(unittest.TestCase):
         )
         self.assertEqual(self.generated_path.read_text(encoding="utf-8"), expected)
 
-    def test_runtime_header_rejects_branching_or_open_topology(self):
-        open_graph = json.loads(
+    def test_runtime_header_exports_branched_topology_in_authored_edge_order(self):
+        graph = json.loads(
             (ROUTE_TOOLS / "fixtures/three-branch-decisions.json").read_text(
                 encoding="utf-8"
             )
         )
-        with self.assertRaisesRegex(RuntimeRouteExportError, "closed_loop=true"):
-            generate_runtime_route_header(
-                open_graph, {}, default_half_width=3.6
-            )
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_NODE_COUNT 5U", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_EDGE_COUNT 7U", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_START_NODE_INDEX 0U", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP 0", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_HAS_BRANCHES 1", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP 0", header)
+        self.assertLess(header.index("/* d1-left */"), header.index("/* d1-right */"))
+        self.assertLess(header.index("/* d2-left */"), header.index("/* d2-right */"))
+        self.assertLess(header.index("/* d3-left */"), header.index("/* d3-right */"))
+        self.assertIn("{ 1U, 2U, 0.100000000f, 0.400000000f }", header)
+
+    def test_runtime_header_exports_open_unbranched_topology(self):
+        graph = json.loads(
+            (ROUTE_TOOLS / "fixtures/open-bezier.json").read_text(encoding="utf-8")
+        )
+        header = generate_runtime_route_header(
+            graph, {}, default_half_width=3.6
+        )
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_CLOSED_LOOP 0", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_HAS_BRANCHES 0", header)
+        self.assertIn("#define BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP 0", header)
 
     def test_runtime_header_rejects_unimplemented_curve_type(self):
         graph = copy.deepcopy(self.graph)
