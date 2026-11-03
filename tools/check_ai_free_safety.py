@@ -360,6 +360,19 @@ if "GEMINI_AUTONOMOUS_ENABLED" not in setup or "Boonta Autonomous Loop" not in s
 if "Actions: read" not in setup:
     errors.append("Setup documentation must require GitHub App Actions read permission for CI feedback")
 
+# Keep the one-item autonomous queue aligned with its live canonical issue and
+# prevent the agent from repeating the already-merged route-graph contract.
+if "PR #271" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must identify the integrated route-graph contract PR #271")
+if "41528877645" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must record the successful post-merge validation of PR #271")
+if "PR #274" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must direct the next cycle to review the existing runtime candidate PR #274")
+if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must prevent duplicate route-runtime branches")
+if "Keep RE-002 parked" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must keep RE-002 parked during the active review")
+
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
