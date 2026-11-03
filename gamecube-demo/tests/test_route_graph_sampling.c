@@ -17,8 +17,13 @@ static void sample(float travelled, float *x, float *y, float *z, float *width)
 
 static void assert_close(float actual, float expected, float tolerance)
 {
-    assert(isfinite(actual));
-    assert(fabsf(actual - expected) <= tolerance);
+    if (!isfinite(actual) || fabsf(actual - expected) > tolerance) {
+        fprintf(stderr,
+                "assert_close failed: actual=%.9g expected=%.9g tolerance=%.9g\\n",
+                (double)actual, (double)expected, (double)tolerance);
+        assert(isfinite(actual));
+        assert(fabsf(actual - expected) <= tolerance);
+    }
 }
 
 static void test_route_length_matches_legacy_lap_distance(void)
@@ -302,20 +307,25 @@ static void test_nonfinite_distance_returns_safe_defaults(void)
     assert(width == BOONTA_REFERENCE_ROAD_HALF_WIDTH);
 }
 
+#define RUN_ROUTE_TEST(test_name) do { \\
+    fprintf(stderr, "[route-test] %s\\n", #test_name); \\
+    test_name(); \\
+} while (0)
+
 int main(void)
 {
-    test_route_length_matches_legacy_lap_distance();
-    test_every_edge_boundary_matches_its_authored_node();
-    test_every_bezier_join_has_continuous_tangent_and_width();
-    test_binary_search_boundaries_and_midpoints();
-    test_bezier_samples_match_legacy_track_bake();
-    test_closed_loop_wrap_and_negative_distance();
-    test_bezier_seam_tangent_is_continuous();
-    test_dense_runtime_curve_length_matches_lap_coordinate();
-    test_curve_evaluator_rejects_invalid_queries();
-    test_curve_evaluator_clamps_finite_t();
-    test_width_sampler_rejects_invalid_queries_and_clamps_t();
-    test_nonfinite_distance_returns_safe_defaults();
+    RUN_ROUTE_TEST(test_route_length_matches_legacy_lap_distance);
+    RUN_ROUTE_TEST(test_every_edge_boundary_matches_its_authored_node);
+    RUN_ROUTE_TEST(test_every_bezier_join_has_continuous_tangent_and_width);
+    RUN_ROUTE_TEST(test_binary_search_boundaries_and_midpoints);
+    RUN_ROUTE_TEST(test_bezier_samples_match_legacy_track_bake);
+    RUN_ROUTE_TEST(test_closed_loop_wrap_and_negative_distance);
+    RUN_ROUTE_TEST(test_bezier_seam_tangent_is_continuous);
+    RUN_ROUTE_TEST(test_dense_runtime_curve_length_matches_lap_coordinate);
+    RUN_ROUTE_TEST(test_curve_evaluator_rejects_invalid_queries);
+    RUN_ROUTE_TEST(test_curve_evaluator_clamps_finite_t);
+    RUN_ROUTE_TEST(test_width_sampler_rejects_invalid_queries_and_clamps_t);
+    RUN_ROUTE_TEST(test_nonfinite_distance_returns_safe_defaults);
     puts("Native route-graph sampler C tests passed.");
     return 0;
 }
