@@ -63,7 +63,7 @@ Tool selection must follow the artifact:
 ## 5. One responsible writer, no branch sprawl
 
 - Use **one write-capable AI/agent at a time**. Read-only research can be parallelized only when it has non-overlapping, explicit questions; to avoid overload, prefer one investigator and one synthesis.
-- A substantial change requires an approved scope, bounded file list, and observable acceptance criteria before writing begins.
+- A substantial change requires a bounded scope, named files, and observable acceptance criteria before writing begins. Manual writers require owner approval; the separately authorized autonomous loop may select its scope only from the canonical queue and must record its criteria before editing.
 - One implementation task normally means one short-lived branch and one PR. Base new branches on the current intended target.
 - `main` is stable/release integration and must not receive direct pushes. Gameplay changes target protected `dev`; docs/policy may target `main`.
 - `archive/branch-heads-20261019` is a protected recovery archive, never a development base and never merged wholesale.
