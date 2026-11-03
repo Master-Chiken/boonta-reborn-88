@@ -45,6 +45,7 @@ class RouteGraphFormatTests(unittest.TestCase):
             "split-rejoin-unequal-lengths.json",
             "three-branch-decisions.json",
             "closed-loop.json",
+            "closed-loop-split-rejoin.json",
         ):
             with self.subTest(fixture=name):
                 graph = fixture(name)
