@@ -204,7 +204,7 @@ jobs:
                 "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}'
+          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
 
       - name: Explain why Gemini was not called
         if: steps.free_tier_guard.outputs.allowed != 'true'
