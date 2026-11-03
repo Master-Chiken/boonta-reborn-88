@@ -15,7 +15,6 @@ typedef struct {
     float distance_lut[BOONTA_RUNTIME_ROUTE_EDGE_COUNT]
                       [BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS + 1U];
     float edge_lengths[BOONTA_RUNTIME_ROUTE_EDGE_COUNT];
-    float edge_distance_scales[BOONTA_RUNTIME_ROUTE_EDGE_COUNT];
     float total_length;
     int lengths_ready;
 } BoontaRouteGraphSampler;
@@ -129,7 +128,6 @@ static inline int boonta_route_graph_sampler_prepare(
             : BOONTA_RUNTIME_ROUTE_LENGTH / raw_total;
 
         if (!isfinite(scale) || scale <= 0.0f) return 0;
-        sampler->edge_distance_scales[edge_index] = scale;
         for (step = 0U;
              step <= BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
              ++step) {
@@ -202,19 +200,18 @@ static inline void boonta_route_graph_sampler_sample_at(
         if (target <= edge_length ||
             edge_index + 1U == BOONTA_RUNTIME_ROUTE_EDGE_COUNT) {
             unsigned int lower = 0U;
-            const float scale = sampler->edge_distance_scales[edge_index];
-            const float raw_target = scale > 0.0f ? target / scale : 0.0f;
+            const float edge_target = target;
             float t;
             float span;
 
             while (lower + 1U < BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS &&
-                   sampler->distance_lut[edge_index][lower + 1U] < raw_target) {
+                   sampler->distance_lut[edge_index][lower + 1U] < edge_target) {
                 ++lower;
             }
             span = sampler->distance_lut[edge_index][lower + 1U]
                  - sampler->distance_lut[edge_index][lower];
             if (span > 0.000001f) {
-                const float fraction = (raw_target
+                const float fraction = (edge_target
                     - sampler->distance_lut[edge_index][lower]) / span;
                 t = ((float)lower + fraction) /
                     (float)BOONTA_RUNTIME_ROUTE_DISTANCE_SUBDIVISIONS;
