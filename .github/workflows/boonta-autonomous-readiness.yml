@@ -29,8 +29,8 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]] || missing+=("GEMINI_AUTONOMOUS_ENABLED must be exactly true")
-          [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true")
+          [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]] || missing+=("Keep GEMINI_AUTONOMOUS_ENABLED false or unset until this readiness check passes")
+          [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
           [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY secret is missing")
           [[ -n "${APP_ID:-}" ]] || missing+=("APP_ID variable is missing")
           [[ -n "${APP_PRIVATE_KEY:-}" ]] || missing+=("APP_PRIVATE_KEY secret is missing")
@@ -49,7 +49,7 @@ jobs:
           {
             echo "## Boonta Autonomous: owner gates and secret presence"
             echo
-            echo "- Autonomous enable variable: present and exactly true"
+            echo "- Autonomous writer gate: still disabled (false/unset); enable it only after this preflight passes"
             echo "- Free-tier owner attestation: present and exactly true"
             echo "- Gemini API key: secret present (value not inspected or printed)"
             echo "- GitHub App ID/private key: present (values not printed)"
@@ -114,6 +114,7 @@ jobs:
             echo
             echo "## Owner-only checks still required"
             echo "- Verify in Google AI Studio that this Gemini API project is Free tier and has no linked Cloud Billing account."
+            echo "- After this preflight passes and branch protection is verified, set GEMINI_AUTONOMOUS_ENABLED=true as the final activation step."
             echo "- Verify GitHub rulesets protect main and dev against direct updates, force-push and deletion, and require PR review."
             echo "- Confirm the GitHub App installation is limited to this repository."
             echo
