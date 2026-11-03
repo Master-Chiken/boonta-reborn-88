@@ -294,11 +294,13 @@ The race struct records the function's result in `splineRebindResult`; the curre
 
 **C. `swrRace_ComputeTrackOffset` (`0x0047FCA0`)**
 
-The race struct labels `trackOffset` at `+0x118` as a 4-vector whose xyz encode a unit direction from the spline toward the pod and whose w stores raw distance.
+The race struct annotates `trackOffset` at `+0x118` as a 4-vector whose xyz encode a unit direction from the spline toward the pod and whose w stores raw distance. However, a scan of all 19 C modules in the pinned source tree found only four writes in `swrRace_ResetToSpline` (`swrObj.c:2402–2405`), which assign the neutral-looking value `{0, 0, 1, 1}`; no operational reader or non-initialization writer was found in those modules.
 
-- Supported field contract: writes or refreshes a four-component spline-to-pod offset used alongside the current spline/track mesh.
-- Unknown: the exact origin point (current sample vs another projected sample), distance threshold, zeroing behavior, use of the w component, and how lateral displacement is fed into AI or handling.
-- The direction/distance interpretation is a source annotation, not yet independently validated against a caller or runtime trace.
+- **Confirmed source fact:** reset writes `trackOffset = {0, 0, 1, 1}`.
+- **Unverified annotation:** xyz direction and w distance.
+- **Unknown:** whether the original executable still writes/reads this field elsewhere, whether the reconstruction simply omits all uses, the exact origin point, threshold, zeroing behavior, or any AI/handling consumer.
+
+Therefore `ComputeTrackOffset` remains an unresolved stub and the current field comment is not sufficient evidence to specify its algorithm.
 
 ### End-to-end progress calculation already implemented around the gaps
 
@@ -313,5 +315,18 @@ The race struct labels `trackOffset` at `+0x118` as a 4-vector whose xyz encode 
 7. update the checkpoint/backtracking counter and persist `splineRebindResult`.
 
 This makes the exact priority unambiguous: resolve A first, then B/C, and use generic cursor and spline primitives as constraints. A synthetic test suite should cover forward crossing, backward crossing, branching, graph endpoints, zero movement, a high-delta frame crossing multiple nodes, mesh-boundary changes, open point-to-point finish, closed-lap wrap and finish-line crossing partway through a frame. Expected outputs must be obtained from evidence, not guessed.
+
+
+
+### Additional field-reader/writer scan
+
+The pinned scan covered the 19 C modules in the `SW_RACER_RE` source tree, not just `swrRace.c`:
+
+- `positionPrev` is seeded from the pod transform in `swrRace_ResetToSpline` (`swrObj.c:2438`) and is subsequently read to derive motion direction and trigger velocities; the explicit `AdvanceSplineCursor` source comment says the finish-line crossing fraction interpolates from this previous position to the current position.
+- `splineRebindResult` is reset to 0 in `swrRace_ResetToSpline` and assigned from the return value of `swrRace_UpdateSplineBinding` at the end of `swrRace_UpdateRaceProgress`. The caller treats 1 as a progress/lap-crossing signal.
+- `splineTrackMesh` is set to NULL during reset, assigned from the cursor's baked track-mesh table during race progress, then used as the fast ground-raycast target and as the cached-ground terrain model.
+- `trackOffset` is only set to its reset value in the scanned C modules. Its operational semantics remain unconfirmed.
+
+This scan strengthens the A/B contracts but leaves C deliberately blocked on additional evidence.
 
 **No implementation is authorized by this note.** These contracts guide the next RE-002 evidence pass. Any eventual independent implementation must be separately scoped, licence-clean, based on confirmed executable/version evidence and validated against owner-local runtime traces before it can be considered for Boonta's own code.
