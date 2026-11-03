@@ -198,10 +198,21 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         return;
     }
 
-    /* Preserve the validated closed-loop path if cursor sampling is unavailable. */
+#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
+    /* Preserve the validated single-loop path if cursor sampling is unavailable. */
     boonta_route_graph_sampler_sample_at(
         &g_route_sampler, travelled, ROAD_HALF_WIDTH,
         x_out, y_out, z_out, width_out);
+#else
+    /*
+     * A branched edge catalogue has no flattened fallback route. Keep the
+     * last valid cursor edge visible rather than wrapping across unrelated
+     * edges while an explicit branch decision is still unavailable.
+     */
+    boonta_route_graph_sampler_sample_cursor_at(
+        &g_route_sampler, &g_route_cursor, ROAD_HALF_WIDTH,
+        x_out, y_out, z_out, width_out);
+#endif
 }
 
 static float track_center_x_at(float travelled)
