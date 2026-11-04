@@ -1,15 +1,6 @@
 """Tests for the persistent Boonta task ledger validator."""
-import copy
 import importlib.util
 import unittest
-\nimport importlib.util
-from pathlib import Path
-
-AUDIT_PATH = Path(__file__).with_name("audit_task_ledger_github.py")
-AUDIT_SPEC = importlib.util.spec_from_file_location("audit_task_ledger_github", AUDIT_PATH)
-audit = importlib.util.module_from_spec(AUDIT_SPEC)
-assert AUDIT_SPEC and AUDIT_SPEC.loader
-AUDIT_SPEC.loader.exec_module(audit)
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("check_task_ledger.py")
@@ -17,6 +8,12 @@ SPEC = importlib.util.spec_from_file_location("check_task_ledger", MODULE_PATH)
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
 SPEC.loader.exec_module(ledger)
+
+AUDIT_PATH = Path(__file__).with_name("audit_task_ledger_github.py")
+AUDIT_SPEC = importlib.util.spec_from_file_location("audit_task_ledger_github", AUDIT_PATH)
+audit = importlib.util.module_from_spec(AUDIT_SPEC)
+assert AUDIT_SPEC and AUDIT_SPEC.loader
+AUDIT_SPEC.loader.exec_module(audit)
 
 
 def valid_task(task_id="TASK-001", status="queued"):
