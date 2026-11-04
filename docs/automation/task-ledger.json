@@ -139,11 +139,16 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047aee0.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L501-L560",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L150-L188",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9856459ee3de441a102d1e29e5bc93cba80c38c9",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444740.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c"
       ],
-      "next_action": "Human review of PR #282. Latest wall-helper trace identifies separate PC functions: DetectWallScrape (two tilt-adjusted collision probes, scrape-spray condition, then block-move check); ApplyWallCollision (normal-based deflection, velocityCollision impulse, throttle-settled cooldown, strong-hit clamp and Hitt sub-events); CollideBlockMove (swept query that snaps the proposed position back to previous on hit). SWR names/type offsets help map these, but several corresponding bodies remain TODO. Steam/SWR identity and GC/Wii parity unproven.",
+      "next_action": "Human review of PR #282. Latest PC-only addendum identifies FUN_00444740 as the sphere-vs-model sweep used twice by DetectWallScrape: setup sphere query, recursively traverse the model, then resolve contact. This confirms the scrape probes are swept spheres with a tilt-adjusted radius, not point rays. Extra sweep parameters and probe placement remain unresolved; SWR exposes the matching address/signature but not a completed implementation. Steam/SWR build identity and GC/Wii parity remain unproven.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a5dba37d8b92b9c1825fab72ed58bcff3765828c",
+      "head_sha": "9856459ee3de441a102d1e29e5bc93cba80c38c9",
       "updated_at": "2026-11-04"
     },
     {
@@ -282,12 +287,17 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047aee0.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L501-L560",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L150-L188",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9856459ee3de441a102d1e29e5bc93cba80c38c9",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444740.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c"
       ],
-      "next_action": "Human review of PR #282. New Steam-PC trace resolves DetectWallScrape, ApplyWallCollision and CollideBlockMove internals. Velocity impulse is stored at +0x1D0, turnModifier at +0x1F4 (distinct from contactSteerKick +0x1FC), wallHitCooldown at +0x264; strong-hit flag is FLAG0_WALL_IMPACT_CLAMP 0x40000, consumed by F2 to clamp accelThrust. Next: trace the scrape probe helper FUN_00444740 and compare field writes against SWR TODOs. No GameCube/Wii parity.",
+      "next_action": "Human review of PR #282. Latest exact head maps FUN_00444740 to the sphere-vs-model collision pipeline called twice by DetectWallScrape: FUN_00444200 setup, FUN_004440E0 recursive model traversal, FUN_00444300 resolution. The two probes use a tilt-adjusted sphere radius; additional sweep parameters and physical probe placement are still unknown. Continue by decoding the sphere sweep state / triangle contact outputs and compare with SWR TODO signatures; no GC/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a5dba37d8b92b9c1825fab72ed58bcff3765828c"
+      "head_sha": "9856459ee3de441a102d1e29e5bc93cba80c38c9"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
