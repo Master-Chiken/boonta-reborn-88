@@ -1096,6 +1096,47 @@ These conditions are direct reads of the pinned reconstructed C, not a complete 
 
 ### Important limitation
 
-The body of the stock `swrMain_RunFrame` is not recovered in the inspected SWR C file. The ordering above is supported by the SWR header's phase description, the four dispatcher implementations, and the project's fixed-timestep hook/replacement. The hook is not the original executable itself; it is evidence of the recovered call sequence used by the project, not independent runtime validation of the retail binary. The Steam-PC export and SWR snapshot also remain distinct builds with no verified identity link.
+The stock `swrMain_RunFrame` body is absent from the inspected SWR C file, but a subsequent read-only audit recovered its corresponding frame routine in the separately pinned Steam-PC Ghidra export as `FUN_00445980`. The correction is documented below. The fixed-timestep hook remains supplemental reconstruction evidence, not a substitute for the Steam-PC function body or runtime validation. The Steam-PC and SWR snapshots remain separate builds with no verified executable-identity link.
 
 No callback sequence or flag behavior is promoted to GameCube/Wii. The native target still requires its own platform-specific evidence.
+
+
+
+## 2026-11-04 — direct Steam-PC recovery of the stock frame scheduler
+
+A further source check located the Steam-PC function corresponding to SWR's `swrMain_RunFrame` address. This supersedes the earlier statement that only the hook and SWR header exposed the order.
+
+**Pinned source:** [Steam-PC `FUN_00445980.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445980.c), revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`. SWR maps `swrMain_RunFrame_ADDR` to the same numeric address `0x00445980` in [`swrMain.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Main/swrMain.h). This is PC cross-snapshot correspondence, not proof the executable builds are identical.
+
+### Direct call sequence in Steam-PC code
+
+When `param_2` is 1 or 0, `FUN_00445980` enters its world-update phase. It calls several pre/post helpers, then:
+1. Calls `FUN_00445690()`, which returns global state `DAT_0050C5F0`.
+2. When that return value is zero, it calls `FUN_00426660` — mapped by SWR to `swrModel_UpdateAnimations` — then:
+   - `FUN_004508B0`: global F0 dispatch;
+   - `FUN_004270C0`: conditional helper;
+   - `FUN_00450930`: global F1 dispatch;
+   - `FUN_004509B0`: global F2 dispatch;
+   - `FUN_004270C0`: same conditional helper again;
+   - `FUN_00450A30`: global F3 dispatch;
+   - `FUN_00429540`: mapped by SWR to `swrViewport_UpdateCameras`.
+3. When `FUN_00445690()` is nonzero, it calls `FUN_00445860` instead of the active object-update chain.
+4. The routine then runs another `FUN_004270C0` call before leaving the simulation phase.
+
+This direct body confirms the central **global phase barrier** and adds the previously missing placement of model-animation update before F0 and camera update after F3. The exact role of `FUN_004270C0` remains UNKNOWN; its visible body conditionally calls `FUN_00426910` when `DAT_0050C68C` is nonzero, and should not be renamed speculatively.
+
+The routine's second branch runs when `param_2` is 2 or 0 and contains a separate rendering path. Its helper names and exact rendering responsibilities remain unassigned here. The SWR header describes phase 1 as world update and phase 2 as render, which is consistent with this Steam-PC body.
+
+### Pause/state gate — narrow conclusion only
+
+The state gate reads `DAT_0050C5F0`; it does not directly read a boolean pause flag in the recovered body. The SWR header characterizes the world-update phase as pause-gated. Steam-PC `FUN_00445860` contains transitions involving state values 2 and 3 and calls judge/pause-related functions, but the complete enum and state ownership are not yet established. The safe conclusion is: **the active F0–F3 update chain is selected only when the queried state equals zero; a separate state-update path runs otherwise**. Do not infer the full pause-menu state machine from these values.
+
+### Evidence status and boundary update
+
+- **CONFIRMED-IN-CODE / Steam-PC snapshot:** `FUN_00445980` contains the scheduler and the ordered F0–F3 calls.
+- **CONFIRMED-IN-CODE / SWR reconstruction:** dispatcher addresses, per-object callback mapping and symbolic mappings for `swrModel_UpdateAnimations` (`0x00426660`) and `swrViewport_UpdateCameras` (`0x00429540`).
+- **SUPPORTED cross-snapshot correspondence:** both projects map the frame scheduler and callback dispatchers to the same numeric addresses, but neither a verified executable checksum nor a same-build assertion has been established.
+- **NOT CONFIRMED-IN-RUN:** no Steam-PC retail runtime trace or frame capture was produced by this analysis.
+- **NOT ESTABLISHED:** no GameCube/Wii frame scheduler, update order, state layout or pause behavior is inferred.
+
+No code was imported or changed; no commercial executable, ROM, disc image, DOL/REL, extracted asset or proprietary output was used.
