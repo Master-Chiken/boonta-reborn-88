@@ -1996,3 +1996,64 @@ References:
 - Steam-PC [`FUN_004741D0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c), [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c), [`FUN_0047B000.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c), [`FUN_0047CE60.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c).
 
 **Evidence boundary:** direct code/call-site evidence only. The helper's complete audiovisual/gameplay semantics and the identity of PC/SWR snapshots remain unresolved.
+
+ 
+## 2026-11-04 — course bootstrap dependency chain and critical reconstruction gaps
+
+**Question:** what must be ready before a selected course can become a live race scene?  
+**Evidence class:** STATIC-ANALYZED, Windows-PC reference only. The SW_RACER_RE and Steam-PC exports are separate snapshots; matching addresses do not prove an identical executable build. No native GameCube/Wii behavior is inferred.
+
+### PC initialization order recovered
+
+The pinned Steam-PC FUN_00466BD0 is the track/race initialization entry aligned by address with SWR's swrObjJdge_InitTrack stub. Its body resets per-track/session state and then calls the following setup sequence:
+
+1. **FUN_00465510** — load the course model/scene resources selected through the Judge record at +0x1B0; initialize scene/model groups and supporting objects; call **FUN_004651F0** to create the Trig manager and dispatch the planet/track-specific trigger-scene setup. The trigger recursion/activation details are already documented in the earlier **Updated trigger lifecycle** section; they are not repeated here.
+2. **FUN_00464630** — configure race/HUD presentation resources for the selected race mode and local-player count. This is a caller-order observation; the full semantic inventory for every slot is not assigned here.
+3. **FUN_00465D00** — obtain the course spline resource selected through the Judge record at +0x1B4, store the result at +0x2C, then pass it with the track-model root at +0x30 to **FUN_0047F6F0** and initialize the associated cursor/transform state through **FUN_00465CB0**.
+4. **FUN_00465D50** — prepare additional track-relative transform/probe state. Its complete field semantics remain unresolved.
+5. **FUN_00466370** — primary-light setup.
+6. **FUN_004667E0** — initialize per-course AI tuning from the planet/track selection and AI-speed option. This function is implemented in the inspected SWR snapshot and separately detailed in the source.
+7. **FUN_004663E0** — prepare the race participants/ Test object group from the roster and their resource descriptors.
+
+The order above is directly visible in FUN_00466BD0; the descriptions are bounded by the called bodies and do not imply a target-console execution trace.
+
+### Spline resource path
+
+The Steam-PC FUN_00465D00 calls FUN_004472E0, which is a wrapper around FUN_00446FC0. The latter reads from loader block type 2, checks the indexed resource range, obtains the selected entry's byte span, allocates a destination buffer, and byte-swaps fields in the loaded record before returning it. The resulting pointer is then handed to the spline setup helper with the selected track-model root.
+
+This establishes a concrete PC data dependency from the Judge's spline-resource selector to a typed block read and subsequent spline setup. It does **not** establish that loader block type 2, its record layout, byte order, or resource selector is used by GameCube/Wii. The exact purpose of every nested structure and the semantics of FUN_0047F6F0's helper callbacks remain open.
+
+### Corresponding unfinished SW_RACER_RE path
+
+The pinned SWR reconstruction leaves these course-bootstrap entry points as HANG("TODO"):
+
+| SWR function | Address | Why it is a critical gap |
+|---|---:|---|
+| swrObjJdge_InitTrack | 0x00466BD0 | Top-level race/course initialization sequence |
+| LoadTrackModels | 0x00465510 | Course model/scene resource setup |
+| LoadTrackSpline | 0x00465D00 | Selected course spline loading and setup |
+| swrObjJdge_AddTriggersToScene | 0x004651F0 | Trigger manager and track trigger-scene entry |
+| InitPrimaryLight | 0x00466370 | Track lighting initialization |
+
+The adjacent trigger subsystem also remains incomplete in the SWR implementation: swrObjTrig_AddNodeToScene, swrObjTrig_FindAndInitializeTriggersInNode, swrObjTrig_CreateTriggerSceneNode, and swrObjTrig_LoadAndInitializeTriggerModels are TODO stubs, as is swrRace_ActivateTriggersInRange. The pinned SWR swrModel.c also leaves model insertion/clearing/reload and texture-data/model-texture loading helpers unfinished; swrLoader_DecompressLZSS is separately a TODO. These are reconstruction gaps, not evidence that the retail game omits those functions.
+
+### Revised priority
+
+**Course bring-up is P0 / a full-game dependency.** It sits upstream of almost every playable race feature: without a verified track scene and spline resource, collision/surface queries, route progress, AI, camera framing, hazards/triggers, lighting and course presentation cannot be integrated into a coherent race. The source shows these systems being initialized as one ordered sequence rather than as independent cosmetic add-ons.
+
+**Next highest-value research procedure:** build one *course resource dependency manifest* for a single identified PC course, without extracting or committing game content. Record, for each selector and call edge: caller, selected block/resource identifier, loader type, destination object, consumer, expected lifetime/ownership, source revision and confidence. Use the PC chain only as a reference checklist; separately seek the native GC/Wii resource selectors, formats and initialization order from lawful target-specific evidence. Then compare parser/tool coverage (including swe1r-assets) against the manifest using synthetic fixtures first. Do not port code or assume PC block type/layout parity.
+
+**Pinned evidence**
+- SW_RACER_RE swrObj.c: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1930-L2060
+- SW_RACER_RE swrRace.c: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3288-L3300
+- SW_RACER_RE swrModel.c: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1658-L1762
+- SW_RACER_RE swrLoader.c: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrLoader.c#L1-L16
+- Steam-PC FUN_00466BD0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00466bd0.c
+- Steam-PC FUN_00465510: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465510.c
+- Steam-PC FUN_00465D00: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465d00.c
+- Steam-PC FUN_00446FC0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00446fc0.c
+- Steam-PC FUN_0047F6F0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047f6f0.c
+- Steam-PC FUN_004651F0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004651f0.c
+- Steam-PC FUN_004667E0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004667e0.c
+
+No game code/assets were copied and no gameplay implementation or runtime test was performed.
