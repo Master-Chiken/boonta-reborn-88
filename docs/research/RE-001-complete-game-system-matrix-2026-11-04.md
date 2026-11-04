@@ -1584,3 +1584,58 @@ Steam-PC references:
 - [`FUN_00441710.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c)
 
 **Evidence boundary:** pinned Windows-PC static code only. The geometric helper links above are direct in the visible decompiled bodies; callback-to-helper linkage, same-build identity with the other PC snapshots, runtime behavior and GameCube/Wii parity remain UNKNOWN.
+
+
+## SWR ray-callback implementation cross-check; sphere callback gap narrowed — 2026-11-04
+
+This addendum corrects the earlier evidence boundary: **the Steam-PC Ghidra export does not expose standalone callback bodies, but the separately pinned SWR reconstruction does contain the complete mode-1 ray callback family.** This is a cross-snapshot comparison only; it does not prove the snapshots represent the same executable build.
+
+### Mode 1 ray callbacks are present in SWR
+
+At `tim-tim707/SW_RACER_RE@258f67aa858ba2e281ce8a6791e49c554b85fae0`, `src/Swr/swrModel.c` contains the following address-mapped implementations:
+
+| Address | SWR source implementation | What the body establishes |
+|---|---|---|
+| `0x00442550` | `swrModel_CollideRayTriangle` (line 1921) | Front/back face acceptance, ray/plane intersection, nearest-distance rejection, point-in-triangle test, and recording the winning hit position/normal/node. Back-face hits reverse the reported normal. |
+| `0x00442720` | `swrModel_MeshCollisionFaceCallbackIndexed` (line 1984) | Gathers 3/4 vertices via the index list, face-AABB rejects, computes triangle normal(s), then calls `swrModel_CollideRayTriangle`. |
+| `0x00442C30` | `swrModel_MeshCollisionFaceCallback` (line 2015) | Same face tests for sequential/non-indexed vertex records. |
+| `0x004439F0` | `swrModel_MeshIterateOverCollisionFaces` (line 2045) | Chooses indexed or sequential callback and iterates the mesh's primitive records. |
+| `0x00444910` | `swrModel_CollideMeshNodeRay` (line 2228) | Transforms the ray when needed, performs node/child-mesh AABB rejection, enumerates faces and transforms accepted results back. |
+| `0x00444BF0` | `swrModel_CollideNodeRecursiveRay` (line 2263) | Recurses the model tree and matrix stack, using the mesh-group leaf handler. |
+| `0x00444F10` | `swrModel_CollideRayWithMesh` (line 2301) | Configures mode 1, ray data, callback pair and face acceptance, then returns the nearest hit and output point/normal. |
+
+These bodies agree with the Steam-PC address map and the mode-1 setup/dispatcher pattern previously traced. The agreement supports the family-level mapping but does not establish an identical executable, compiler output, or byte-for-byte implementation between the two repositories.
+
+### Primitive mapping now available as a reconstruction-side interpretation
+
+The SWR `swrModel_MeshIterateOverCollisionFaces` implementation names raw mesh primitive types as follows:
+- type 3: independent triangles;
+- type 4: independent quads, split into two triangles for collision;
+- types 5 and 7: triangle strips, emitting `n-2` triangles and alternating winding between successive faces.
+
+For indexed meshes, the dispatcher reads indices; for sequential meshes, it advances directly through the vertex array. The Steam-PC export's raw types 3/4/5/7 and its observed `n-2` / alternating selector pattern are consistent with this interpretation. Label these as **SWR reconstruction mapping / cross-snapshot corroboration**, not as a separately verified Steam executable semantic enum.
+
+### Mode 3 sphere callback family remains a source-reconstruction gap
+
+The same SWR `swrModel.c` file contains no function definitions for:
+- `swrModel_MeshCollisionFaceCallback2Indexed` (`0x00443560`);
+- `swrModel_MeshCollisionFaceCallback2` (`0x004437C0`);
+- `swrModel_CollideSphereTriangle` (`0x00442090`);
+- `swrModel_SetupSphereCollision` (`0x00444200`);
+- `swrModel_ResolveSphereCollision` (`0x00444300`);
+- `swrModel_CollideSphereWithModel` (`0x00444740`).
+
+The SWR `swrModel.h` does declare and address-map these entry points (including the two `Callback2` functions), but the code search and the inspected `swrModel.c` body do not provide their implementations. In the pinned Steam-PC Ghidra export, searches of `_text10.c`–`_text13.c` and attempted standalone function source/assembly paths also did not recover the mode-3 callback bodies. This is a bounded source-availability finding, not proof that no implementation exists in any uninspected file or other build.
+
+Accordingly, the refined state is:
+- **Mode 1 ray callbacks:** bodies available in SWR; Steam-PC call-path/addresses independently agree at the family level.
+- **Mode 3 sphere callbacks:** addresses, indexed/non-indexed dispatch, broadphase, and adjacent sphere-contact helpers are recovered from Steam-PC; SWR header declarations and IDA names exist, but callback/setup/resolve implementations remain unavailable in the inspected reconstruction source.
+- **Exact Steam callback-to-helper wiring for mode 3:** UNKNOWN.
+- **Same-build identity and runtime parity:** UNKNOWN.
+
+SWR references:
+- [`swrModel.c` — ray triangle, callbacks, face enumerator and ray traversals](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1921-L2345)
+- [`swrModel.h` — address map and declarations for ray/sphere APIs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121)
+- [`swrModel.h` — callback and sphere API declarations](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345)
+
+**License / reuse boundary:** SWR is used here as a read-only research reference. No source code or generated source has been copied into Boonta. Any future reuse requires a separate explicit compatibility and AGPL-3.0 review. The Boonta matrix records behavior, not a port.
