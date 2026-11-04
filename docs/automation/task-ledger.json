@@ -78,11 +78,12 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now show a concrete Results continuation: Results menu screen5 unlocks pilot by setting Hang screen17; Hang F0 case17 waits for unlock-scene completion then sets pending screen5; the common menu transition applies screen5. This is only the unlock-scene return to Results, not the initial postrace Judge-to-Hang transition. The initial activation/writer path and Swee-to-Hang handoff remain unproven. Keep PC-only boundary; native GC/Wii requires exact lawful local DOL.",
+      "next_action": "Human review of #282. New bounded source trace confirms the Steam-PC generic event manager routes Judge Swee(false) through cMan F4 callback slot +0x24 across active members of the six-instance cMan pool; IDA names the callback EntityCManCallback0x24_4543F0. Its callback body, normal F4-to-Hangar activation, and initial Results screen-5 writer remain UNKNOWN. Keep PC-only boundaries.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "bbebf353279ac6297b3aa1e665c448b82dc8e18f",
+      "head_sha": "bae7b753df627531f0cceb76c74021441c5fce94",
       "updated_at": "2026-11-04"
     },
     {
@@ -167,12 +168,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now show a concrete Results continuation: Results menu screen5 unlocks pilot by setting Hang screen17; Hang F0 case17 waits for unlock-scene completion then sets pending screen5; the common menu transition applies screen5. This is only the unlock-scene return to Results, not the initial postrace Judge-to-Hang transition. The initial activation/writer path and Swee-to-Hang handoff remain unproven. Keep PC-only boundary; native GC/Wii requires exact lawful local DOL.",
+      "next_action": "Human review of #282. New bounded source trace confirms the Steam-PC generic event manager routes Judge Swee(false) through cMan F4 callback slot +0x24 across active members of the six-instance cMan pool; IDA names the callback EntityCManCallback0x24_4543F0. Its callback body, normal F4-to-Hangar activation, and initial Results screen-5 writer remain UNKNOWN. Keep PC-only boundaries.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "bbebf353279ac6297b3aa1e665c448b82dc8e18f"
+      "head_sha": "bae7b753df627531f0cceb76c74021441c5fce94"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -224,11 +226,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/449bf336ef9a7c3e0d56a7ac1df9d0a696be2713",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874632826",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/4d88bb95a4b0f02e316a707a17a18260a4f77a42",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1e229a1716d69ef9684b579ec27ceb26a6ff9155",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/dad92c6b84ad01aecfcf9358422b75d8ea445b5a"
       ],
-      "next_action": "After PR #287 is merged, retarget this combined provider-cooldown and context-budget PR to main, rerun the exact-head branch self-test plus full AI safety and provenance checks, then review/merge only when all required checks are green.",
+      "next_action": "After #287 is human-reviewed/merged, retarget this stacked provider-cooldown PR to main, rerun its exact-head branch self-test + full AI safety/provenance, and obtain human review. Security hardening now trusts only github-actions[bot]-authored cooldown markers during both active-date lookup and update lookup, preventing public issue-comment spoofing. No merge or secret/attestation changes.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-      "head_sha": "449bf336ef9a7c3e0d56a7ac1df9d0a696be2713",
+      "head_sha": "dad92c6b84ad01aecfcf9358422b75d8ea445b5a",
       "updated_at": "2026-11-04"
     },
     {
