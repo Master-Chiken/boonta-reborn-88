@@ -191,11 +191,13 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cb7fe5bd08e5821f442169ceb103f7f86c29f92f"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cb7fe5bd08e5821f442169ceb103f7f86c29f92f",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6a4572f76cfcfa36a8f195e7657f969270c27b01",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c85aa652c2b75c90c5caee71cc44353b3fc8652e"
       ],
-      "next_action": "Review exact-head CI for PR #287, then verify the first real scheduled cycle after merge.",
+      "next_action": "Human review/merge remains required. New hardening also disables Gemini verbose/debug response streaming for scheduled autonomous runs while preserving manually requested debug; the static AI safety check enforces this. After #287 is merged, verify the next scheduled cycle rejects generic/no-op reports and accepts only exact-head PR evidence or a named blocker. Then rebase/revalidate #289.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
-      "head_sha": "cb7fe5bd08e5821f442169ceb103f7f86c29f92f",
+      "head_sha": "c85aa652c2b75c90c5caee71cc44353b3fc8652e",
       "updated_at": "2026-11-04"
     },
     {
