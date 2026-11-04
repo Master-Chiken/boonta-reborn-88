@@ -903,3 +903,74 @@ This establishes a strong PC-family cross-reference that the SWR loader TODO cor
 Before any clean-room decoder is implemented, the next evidence should be a lawful, locally held, non-published test stream or a source-backed fixture with known input/output lengths. It must validate literal ordering, signed back-reference fields, ring-window initialization, overlap-copy behavior, terminator handling, truncated input, malformed offsets, maximum output and declared-size mismatch. No commercial model block, ROM, DOL/REL, extracted asset or derived game data is to be committed as a fixture.
 
 No third-party implementation code was copied. This entire finding remains Windows-PC comparative evidence; it is not a GameCube/Wii format claim.
+
+
+## 2026-11-04 — PC model-block post-decompression fix-ups and a cross-snapshot size discrepancy
+
+The model loader does substantially more than decompress bytes. Its mask-driven pass converts marked disk words into process-local references before the model-specific structure walk. Comparing the pinned Steam-PC implementation with the pinned SW_RACER_RE reconstruction also exposed a potentially important loop-bound mismatch.
+
+**Pinned references**
+- Steam-PC [`FUN_00448780.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448780.c), revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, blob `0d5cca3cb86922df3ba5809a1e3e55cc13ce9f52`.
+- Steam-PC [`FUN_004485d0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004485d0.c), blob `d7dc30619a9b99d5e603ebdf1427f89077ad1f83`.
+- Steam-PC [`FUN_00448bd0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448bd0.c), blob `4540a9c7624c3421c3944a602265c96eb3d85681`.
+- SW_RACER_RE [`swrModel.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c), revision `258f67aa858ba2e281ce8a6791e49c554b85fae0`, blob `63a97f70cbbf67a37f5aafd9eaa337dbdf0b023d`.
+
+### 1. Block directory and model-span interpretation
+
+The Steam loader reads the model count from the start of the model block, then reads three adjacent 32-bit offsets at `8 * model_id + 4`:
+- mask start;
+- model data start;
+- following boundary, used as the end of this model span.
+
+It derives `mask_size = model_start - mask_start` and `model_size = following_boundary - model_start`. The mask is read to a separate fixed workspace and byte-swapped word-by-word before use. The model record itself is 8-byte aligned in the asset arena.
+
+This is direct PC export evidence for the loader's local offset arithmetic. Do not generalize the apparent directory layout to GameCube/Wii or assume the same block layout in another PC release without a matching target sample.
+
+### 2. Compressed and uncompressed model paths converge on a size-aware fix-up pass
+
+The loader checks the first model word for the `Comp` tag. In the compressed branch, header word 2 supplies the declared decompressed byte count; the compressed payload is copied into a separate high-end arena region, decompressed into the low-end model region, and the asset cursor is advanced by the declared decompressed size. The uncompressed branch reads the full stored model span and advances by that span.
+
+The Steam export keeps a working size value consistent with the actual in-memory model extent:
+- compressed branch: the value is overwritten with the header's decompressed byte count;
+- uncompressed branch: it remains the stored model span.
+
+The same value bounds the subsequent pointer-fixup loop in 32-bit words.
+
+### 3. The pointer mask distinguishes relocatable addresses from texture references
+
+For each 32-bit word marked by the mask:
+1. The loader byte-swaps the word into host order.
+2. A value with the texture-reference tag (high byte `0x0A`) is passed to the texture/material loader, which writes the resulting resource references into the model data.
+3. Any other nonzero marked value is treated as a model-relative pointer and rebased by adding the loaded model base address.
+4. Zero remains zero.
+
+After this relocation pass, Steam calls `FUN_004485D0`:
+- it byte-swaps the root model tag;
+- walks the root node-entry list until the `0xFFFFFFFF` sentinel and byte-swaps each non-null node;
+- processes an optional `Data` section, including its word count and payload words;
+- processes an optional `Anim` section by walking animation references until a zero entry;
+- processes the optional `AltN` section, with additional alternate-node fix-ups for the `MAlt` root type.
+
+This establishes a two-stage loader boundary: **mask-driven pointer/resource relocation first, structured node/data/animation byte-swapping second**. It is not simply a decompression routine.
+
+### 4. Cross-snapshot discrepancy: compressed-size versus decompressed-size loop bound
+
+The Steam-PC `FUN_00448780` assigns the header's decompressed size to its working size value in the `Comp` branch; the relocation loop then iterates over that value divided by four. For an uncompressed model, the same working value remains the stored model span, which is appropriate for that path.
+
+In the pinned SW_RACER_RE `swrModel_LoadFromId`, the compressed branch calculates `decompressed_size` and uses it to advance the asset cursor, but the later mask relocation loop is written as `i < model_size / 4`. Here `model_size` was calculated from the stored block boundaries before the compression check. If a compressed record has a stored span smaller than its decompressed size, SWR's loop would examine fewer words than the Steam-PC loop.
+
+**Classification: cross-snapshot source discrepancy / candidate reconstruction defect, not confirmed retail bug.** The snapshots are not proven to be the same executable build, and no matching lawful compressed model fixture was used to exercise this condition. Before changing or adapting anything, verify the expected relationship between mask bit count, stored span and decompressed size using an independently generated non-proprietary fixture or an owner-held lawful test input. Do not silently patch the third-party AGPL reference or copy its implementation into Boonta.
+
+### 5. What this adds to the clean-room architecture
+
+A future independently written loader needs explicit stages and error boundaries:
+- validate block directory offsets and monotonic spans before subtracting;
+- validate mask length against the number of words in the decompressed model;
+- validate compressed input length, output capacity, and decoded byte count;
+- perform tagged texture-reference resolution and relative-pointer relocation in a bounded pass;
+- parse and byte-swap root nodes, data, animations and alternate nodes only after relocation succeeds;
+- unwind all arena/resource allocations on any failure.
+
+These are architecture requirements derived from PC reference behavior and memory-safety analysis. They are **not** a claim about the native GameCube/Wii model format or an implementation request until target evidence exists.
+
+No source code, game model, compressed game block, ROM, DOL/REL, disc image, BIOS or extracted asset was copied or committed.
