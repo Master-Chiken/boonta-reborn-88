@@ -224,7 +224,7 @@
       ],
       "next_action": "Find a version-matched, authorized source/trace for the 28 g_aTrackIDs values, four circuit counts and 25 TrackInfo row values. A second public consumer (annodue collision viewer) corroborates the 25/28 address dimensions but contains only live-memory macros, not table values. Do not infer how the three-slot difference resolves; retain separate PC/SWR/console provenance.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "de492c535871587dbf40bdf9b9e11318a520cd64",
+      "head_sha": "fb290295ccfec3dc357380fb6fa5082ba3efe122",
       "updated_at": "2026-11-05"
     },
     {
@@ -445,12 +445,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/de492c535871587dbf40bdf9b9e11318a520cd64"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/de492c535871587dbf40bdf9b9e11318a520cd64",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/fb290295ccfec3dc357380fb6fa5082ba3efe122"
       ],
-      "next_action": "The SWR source directly calls TeardownRace from Judge F0 state 6 after Clear's 0.5s delay. The PC source export omits the Judge F0 body at 0x0045E200; independent IDA metadata confirms a function entry there (0x74C bytes), but no body/xrefs are available. Do not treat NOT_INVOKED as proof of absence. Next obtain lawful full disassembly/function-body xrefs or independent retail-PC runtime evidence to verify whether it calls 0x0045DD80; keep PC/SWR build identity and GC/Wii parity unknown.",
+      "next_action": "Independent IDA notes identify 0x0045E200 as Judge callback slot +0x14; the entity scheduler runs all +0x14 callbacks as a phase, and state 6 is described as race exit/reload. SWR F0 directly calls TeardownRace after Clear's 0.5s delay. The Steam-PC C export omits the callback body and IDA notes give no callsite instructions. Next obtain lawful body/xrefs or retail-PC runtime evidence to determine whether 0x0045E200 calls 0x0045DD80 directly or indirectly; keep that PC edge UNKNOWN and do not infer same-build identity or GC/Wii parity.",
       "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "de492c535871587dbf40bdf9b9e11318a520cd64"
+      "head_sha": "fb290295ccfec3dc357380fb6fa5082ba3efe122"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
