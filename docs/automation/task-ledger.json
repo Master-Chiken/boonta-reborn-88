@@ -186,11 +186,18 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L4618",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/232bd7a216bc640d48a87a21aea5a0000451c490",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bec0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1506-L1527",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L199-L210",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2807-L3089",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c"
       ],
-      "next_action": "Human review of PR #282. Latest powertrain/repair gap map: SWR UpdateHeat, ApplyBoost and TakeDamage match address-level PC helpers; ApplyEngineDamage (0x46AA30), Repair (0x46AB10), and BoostCharge (0x46BD20) remain HANG/TODO. PC BoostCharge is a 0/1/2 timer/input state gate whose return is consumed to latch BOOSTING; the SWR stub returns 0, so that player-control activation path cannot latch boost. PC ApplyEngineDamage iterates six parts with status bit 0x8 and calls TakeDamage; PC Repair progresses per-part recovery and side effects. Continue only as behavioral spec with unknown input globals preserved, no copied code and no GC/Wii claims.",
+      "next_action": "Human review of PR #282. Boost input names now cross-checked from pinned SWR symbols: ThrottleInput 0xEC8830, PitchInput 0xEC883C, ThrustInput 0xEC884C, BoostInput 0xEC8850; hold timers 0xEC88AC/0xEC88B0. Separate normal charge meter (Thrust or throttle>0.6 plus pitch>0.7, timer>1.0s, final __ftol predicate UNKNOWN) from race-start boost window (race time 0.05-0.30s; thrust tap or throttle>0.6+boost tap within 0.20s; cancels above 290). Do not infer button for final __ftol gate or combine the two mechanisms. PC/SWR snapshots separate, no same-build or GC/Wii claim.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "9871f4d95f907c3e72d15b8cfab88e126804bca8",
+      "head_sha": "232bd7a216bc640d48a87a21aea5a0000451c490",
       "updated_at": "2026-11-04"
     },
     {
@@ -376,12 +383,19 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L4618",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/232bd7a216bc640d48a87a21aea5a0000451c490",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bec0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1506-L1527",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L199-L210",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2807-L3089",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c"
       ],
-      "next_action": "Human review of PR #282. Latest powertrain/repair gap map: SWR UpdateHeat, ApplyBoost and TakeDamage match address-level PC helpers; ApplyEngineDamage (0x46AA30), Repair (0x46AB10), and BoostCharge (0x46BD20) remain HANG/TODO. PC BoostCharge is a 0/1/2 timer/input state gate whose return is consumed to latch BOOSTING; the SWR stub returns 0, so that player-control activation path cannot latch boost. PC ApplyEngineDamage iterates six parts with status bit 0x8 and calls TakeDamage; PC Repair progresses per-part recovery and side effects. Continue only as behavioral spec with unknown input globals preserved, no copied code and no GC/Wii claims.",
+      "next_action": "Human review of PR #282. Boost input names now cross-checked from pinned SWR symbols: ThrottleInput 0xEC8830, PitchInput 0xEC883C, ThrustInput 0xEC884C, BoostInput 0xEC8850; hold timers 0xEC88AC/0xEC88B0. Separate normal charge meter (Thrust or throttle>0.6 plus pitch>0.7, timer>1.0s, final __ftol predicate UNKNOWN) from race-start boost window (race time 0.05-0.30s; thrust tap or throttle>0.6+boost tap within 0.20s; cancels above 290). Do not infer button for final __ftol gate or combine the two mechanisms. PC/SWR snapshots separate, no same-build or GC/Wii claim.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "9871f4d95f907c3e72d15b8cfab88e126804bca8"
+      "head_sha": "232bd7a216bc640d48a87a21aea5a0000451c490"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
