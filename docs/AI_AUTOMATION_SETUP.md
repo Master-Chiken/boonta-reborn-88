@@ -69,7 +69,7 @@ Le registre canonique est `docs/automation/task-ledger.json`. Il conserve un ide
 - `queued` : tâche en attente ; `active` : seule tâche actuellement travaillée ; `blocked` : dépendance humaine/externe nommée ; `in_review` : PR ouverte ; `completed` : PR fusionnée et preuves conservées ; `superseded` : tâche remplacée avec justification.
 - Une seule tâche peut être `active`. Une PR ouverte ne doit jamais être marquée `completed`. Le registre ne remplace pas GitHub : issues, PR, branches et contrôles CI en direct restent la source de vérité.
 - Chaque cycle substantiel met à jour le registre dans la même branche/PR que le travail correspondant. Les cycles suivants peuvent ainsi reprendre sans reconstituer l'historique depuis zéro.
-- Le contrôle sans API `python3 tools/check_task_ledger.py` vérifie le format, les identifiants uniques, la limite d'une tâche active et les références exactes des PR. Ses tests de régression sont exécutés par le workflow AI free-tier safety.
+- Le contrôle sans API `python3 tools/check_task_ledger.py` vérifie le format, les identifiants uniques, la limite d'une tâche active et les références exactes des PR. Ses tests de régression sont exécutés par le workflow AI free-tier safety. Le contrôle complémentaire `tools/audit_task_ledger_github.py` utilise uniquement `pull-requests: read` pour vérifier l'état ouvert/fusionné et le SHA réel de chaque PR indexée ; il échoue si le registre est périmé.
 
 ## Contrôle statique
 
