@@ -1639,3 +1639,61 @@ SWR references:
 - [`swrModel.h` — callback and sphere API declarations](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345)
 
 **License / reuse boundary:** SWR is used here as a read-only research reference. No source code or generated source has been copied into Boonta. Any future reuse requires a separate explicit compatibility and AGPL-3.0 review. The Boonta matrix records behavior, not a port.
+
+
+## Wall-contact implementation gap map across Steam-PC and SWR — 2026-11-04
+
+The mode-3 sphere-sweep gap is not an isolated collision primitive omission. The pinned SWR reconstruction also leaves most of the wall-contact chain unimplemented, while retaining a working ground/raycast path.
+
+### Steam-PC wall-contact call path
+
+The Steam-PC F2 update `FUN_0047B520` selects the wall-contact path `FUN_0047A200` when the relevant object flag is set; otherwise it calls the ground-contact path `FUN_00479E10`. In the wall-contact function:
+- when its wall/flight condition and local-wall flag are satisfied, it calls `FUN_00477940` (wall scrape), computes the resulting wall delta from pushback plus the probe's movement delta, then calls `FUN_00479920` (wall collision response);
+- the alternate blocking path calls `FUN_0044ABC0` (`CollideBlockMove`);
+- other branches update vertical/spline-follow state and return a ground-distance value.
+
+The scrape routine `FUN_00477940` computes a lean-adjusted sphere radius from collision width (`+0xA8)) with a minimum 1.5, performs up to two `FUN_00444740` sphere-vs-model probes, optionally emits scrape effects, then calls `FUN_0044ABC0` for the blocking move test. Thus the wall path depends on both the mode-3 sphere query and the block-move query; the later `FUN_00479920` routine applies the velocity/acceleration response.
+
+The sibling ground path `FUN_00479E10` is a separate terrain-follow/ground-contact routine. This distinction matters: `FUN_0044ABC0` is not the same algorithm as `swrRace_CollideTrack`; the Steam body blocks/snaps the attempted move rather than doing the ray-based push-out used by the track collision routine.
+
+### What SWR actually implements at the pinned revision
+
+At `tim-tim707/SW_RACER_RE@258f67aa858ba2e281ce8a6791e49c554b85fae0`:
+
+| Address / subsystem | SWR source state | Evidence in source |
+|---|---|---|
+| `0x0047A200` `swrRace_UpdateWallContact` | Declaration only; no body found in `swrRace.c` | `swrRace.h` declares the function and describes wall-scrape/collision-response versus terrain-follow dispatch. |
+| `0x00477940` `swrRace_DetectWallScrape` | Explicit `HANG("TODO")` stub | `swrRace.c` line 4852. |
+| `0x00479920` `swrRace_ApplyWallCollision` | Explicit `HANG("TODO")` stub | `swrRace.c` line 4858. |
+| `0x0044ABC0` `swrRace_CollideBlockMove` | Explicit `HANG("TODO")` stub | `swrRace.c` line 4848. |
+| `0x00444740` `swrModel_CollideSphereWithModel` | Address/declaration only in inspected SWR source | `swrModel.h` API declaration; no body in the inspected `swrModel.c`. |
+| `0x00443560` / `0x004437C0` sphere face callbacks | Address/declaration only | `swrModel.h` declares the indexed/non-indexed `Callback2` pair; no body in the inspected `swrModel.c`. |
+| `0x00479E10` `swrRace_UpdateGroundContact` | Body present | `swrRace.c` line 3758; includes terrain raycast/follow and ground/spline logic. |
+| `0x0044ACB0` `swrRace_CollideTrack` | Body present | `swrRace.c` line 4461; swept ray segment then normal push-out with a 2-unit skin. |
+| `0x00444910` / `0x00444BF0` ray mesh handler / recursive walker | Bodies present | `swrModel.c` lines 2228 and 2263; see preceding ray-callback addendum. |
+
+The SWR source therefore has a usable raycast/ground-contact foundation but not the full wall-scrape, sphere-sweep, block-move and wall-response path that the PC trace exposes. This is a concrete reconstruction TODO/HANG inventory, not evidence that the retail program lacks those functions.
+
+### Priority consequence
+
+For a faithful independently implemented collision system, the next research/implementation specification should keep three separate contracts:
+1. **Ground/surface following** — already has a reconstructed SWR body and raycast helpers; continue to distinguish its fast cached-mesh ray from full model raycast and spline fallback.
+2. **Wall scrape / sphere sweep** — PC behavior is statically traced, but SWR's sphere setup, callbacks, face tests and resolve bodies remain unavailable in its inspected source.
+3. **Blocking move / wall response** — PC `FUN_0044ABC0` and `FUN_00479920` are separate from the sphere query; SWR leaves their corresponding functions as HANG stubs.
+
+Do not merge these into one generic “collision” routine or port PC/SWR code. The immediate highest-value reverse-engineering step is still to recover the missing mode-3 face callbacks and sphere result resolver from a verified PC disassembly/cross-reference, then separately specify block-move and wall-response acceptance behavior. No GC/Wii equivalent is known from these sources.
+
+Steam-PC pinned references:
+- [`FUN_0047B520.c` — F2 collision update](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c)
+- [`FUN_0047A200.c` — wall/ground dispatch](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047a200.c)
+- [`FUN_00477940.c` — wall scrape](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477940.c)
+- [`FUN_00479920.c` — wall response](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479920.c)
+- [`FUN_0044ABC0.c` — blocking move](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0044abc0.c)
+- [`FUN_00479E10.c` — ground contact](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479e10.c)
+
+SWR pinned references:
+- [`swrRace.c` — ground contact and HANG stubs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3758-L4866)
+- [`swrRace.h` — wall-contact declaration](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549)
+- [`swrModel.h` — sphere and ray APIs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121)
+
+**Evidence boundary:** Steam-PC static decompilation plus separately pinned SWR source. Same-build identity, runtime behavior, and GameCube/Wii parity remain unproven. SWR is a read-only AGPL-3.0 research reference; no code was copied.
