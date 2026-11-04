@@ -603,3 +603,36 @@ Therefore `checkpointCount > 4`—which is increased by backward cursor reports 
 - **Standing rank / catch-up:** based on lap progress and finish time, with separate leader/local-player/pacer gaps. Do not conflate these values with the lateral trackOffset vector.
 
 **Sources:** [`swrObj.c` race tick](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L912-L1067), [HUD helper](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1385-L1440), [F3 HUD dispatch](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1719-L1748), and [standings rank path](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L413-L473). All findings remain confined to this pinned PC reconstruction.
+
+## 2026-11-04 — Bounded Steam-PC field-reader search for spline outputs
+
+This follow-up tests whether the stored outputs from the three race-spline routines have identifiable downstream readers in the pinned Steam-PC export. It is deliberately a bounded static search, not a claim that every indirect, aliased, or optimized access has been enumerated.
+
+**Pinned sources**
+- Steam-PC Ghidra export: `DeonPoncini/swep1r_decomp` at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, especially [`src/_text23.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c#L257-L398), [racer initialization `FUN_00475ad0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00475ad0.c#L120-L145), and [camera-manager snapshot `FUN_00451d60`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451d60.c#L1-L40) / [restore `FUN_00452aa0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00452aa0.c#L210-L235).
+- Independent public reconstruction: `tim-tim707/SW_RACER_RE` at `258f67aa858ba2e281ce8a6791e49c554b85fae0`, [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h) for the racer field layout and [`swrObj.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.h) for named camera-manager routines.
+
+### Search method and deconfliction
+
+The pinned Steam-PC repository was searched for the literal field offsets in both typed and generic forms: `0x10e`, `0x118`, `0x11c`, `0x120`, and `0x124`, including direct float/short access patterns. Results were checked against the candidate function and its apparent base object; identical numeric offsets are not treated as the same field unless the base is demonstrably the racer object.
+
+Two tempting `+0x118..+0x124` matches are not evidence of a racer-field read:
+- Steam `FUN_00451d60` copies a camera object's state slots `+0x118/+0x11c/+0x120/+0x124` into its staged snapshot at `+0x274..+0x280`; the corresponding restore is `FUN_00452aa0`. The pinned SW_RACER_RE header identifies these addresses as `swrObjcMan_CommitStagedCamera` and `swrObjcMan_UpdateChaseCamera`, respectively. The same offsets occur in a different camera-manager record.
+- Steam `FUN_00482f10` writes a float at `param_1 + 0x118`, but the bounded search did not establish that `param_1` is the racer object. It is therefore an untyped candidate, not a confirmed reader or consumer of `trackOffset`.
+
+### Field-by-field result
+
+| Racer field | Confirmed Steam-PC initialization/writer in inspected sources | Bounded search result | Conclusion |
+|---|---|---|---|
+| `splineRebindResult` (+0x10E) | `FUN_00475ad0` initializes it; `FUN_0047ffb0` stores the `FUN_0047fbb0` result as a short at the end of `src/_text23.c` | No direct read of the short at this racer offset was found. Other `0x10e` hits were initialization/writer contexts or unrelated literal/constant uses. | A later field consumer is **UNKNOWN / not recovered**. The transient local `binding` value is still used immediately in the lap-crossing gate before the value is stored; do not confuse that local use with a read of the stored field. |
+| `trackOffset.x/y/z` (+0x118/+0x11C/+0x120) | `FUN_00475ad0` initializes the vector; `FUN_0047fca0` writes the projected direction/fallback | Exact direct float searches returned the writer in `src/_text23.c`; the `+0x118` search also found an untyped write in `FUN_00482f10` and camera-state copies, neither established as a racer-field access. No verified downstream racer read was identified. | Downstream effect remains **UNKNOWN**. Do not label it steering, AI, collision, ground contact, or rendering input yet. |
+| `trackOffset.w` (+0x124) | `FUN_00475ad0` initializes it; `FUN_0047fca0` stores the measured magnitude | The bounded exact float search returned the `FUN_0047fca0` writer; other generic `+0x124` hits belonged to different object layouts. | No verified downstream racer read identified; semantics beyond “stored magnitude” remain **UNKNOWN**. |
+
+The public reconstruction's field declarations and Steam-PC writer are mutually consistent about the racer layout, but numeric offset matches alone are insufficient to upgrade a candidate xref. This search narrows the public evidence; it does **not** prove no reader exists in the Steam executable.
+
+### What would resolve the remaining question
+
+A decisive result needs a complete typed xref/data-flow pass over the exact local Steam-PC executable (or its matching analysis database), including register-relative accesses and aliases, with the racer base pointer followed from its creation/callers. The current public Steam export and the pinned SW_RACER_RE source do not establish that complete chain. If the owner does not have the matching lawful executable and analysis context, keep these readers marked UNKNOWN rather than inventing a gameplay role.
+
+**Platform boundary:** all findings above are Steam-PC source/search evidence only. They establish no Windows retail-build identity, N64, Dreamcast, GameCube, or Wii behavior. No binary, ROM, disc image, BIOS, extracted asset, analysis database, or third-party code was copied or uploaded.
+
