@@ -2276,3 +2276,44 @@ Pinned references:
 - SWR SPLINEID / Switch MODELID enum: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h
 - SWR TrackInfo schema: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h
 - SWR custom-track hash/pairing logic and stock record counts: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/custom_tracks.cpp
+
+
+## 2026-11-04 — unresolved track-index cardinality: 28 selectable slots vs 25 TrackInfo records
+
+The current public SWR source snapshot contains a real cardinality/index-space discrepancy that must be resolved before asserting a complete named-track manifest.
+
+### What the source says
+
+| Evidence | Declared quantity / behavior | What it establishes |
+|---|---|---|
+| tracks_delta.h | DEFAULT_NB_TRACKS = 28; DEFAULT_NB_CIRCUIT_PER_TRACK = 4; DEFAULT_NB_CIRCUIT = 28 / 4 = 7 | The custom-track/menu layer models 28 vanilla track IDs arranged as four groups of seven slots |
+| tracks_delta.c | trackCount initially equals DEFAULT_NB_TRACKS (28); GetTrackInfo accepts IDs below trackCount and returns g_aNewTrackInfos[TrackID] | Lookup accepts 28 IDs at this layer |
+| tracks_delta.c | Menu selection assigns hang->track_index = g_aTrackIDs[circuitIdx * 7 + SelectedTrackIdx] | The four-circuit menu has a 28-slot mapping table, and selection resolves through it before TrackInfo lookup |
+| data_symbols.syms | g_aTracksInCircuits is char[4]; g_aTrackInfos is TrackInfo[25]; g_aTrackIDs is int[28] | The original symbol map identifies 25 TrackInfo rows and a separate 28-entry selection mapping |
+| custom_tracks.cpp | copies exactly 25 stock rows from g_aTrackInfos into g_aNewTrackInfos; logs a stock block count of 25 track models and 91 splines | The inspected custom-track hook treats 25 as the stock model/TrackInfo count; it does not expose those rows' values |
+| swrRace_delta.cpp | save image has 50 record slots, described as 25 vanilla tracks × mirror; custom tracks have no record slot | Save-record indexing is bounded by 25 track indices, independently of the 28-ID menu constant |
+
+### Why this does not yet produce a 28-row table
+
+The menu's 28 entries are not shown to be 28 distinct TrackInfo row indexes. The g_aTrackIDs[28] table is the bridge from circuit/menu slot to track_index, but its actual 28 values are not emitted in the inspected source. The source also does not prove whether the extra three menu slots are aliases, special/invitational identifiers, stale constants, or an inconsistency introduced by the reconstruction/mod layer.
+
+There is another boundary to preserve: types_enums.h has a separately named MODELID // SWITCH VERSION enum with 25 course-model labels, but TrackInfo.trackID is declared as INGAME_MODELID. The Switch model enum is not a valid substitute for the TrackInfo table.
+
+**Current defensible state:** 28 menu/selectable ID slots and 25 declared/copied TrackInfo records are both directly documented in this SWR snapshot. Their exact mapping is unresolved. The save record layout also caps valid record indices at 25 vanilla tracks. No conclusion is drawn that any particular three entries are duplicates, invitational tracks, or unused.
+
+### Required next evidence
+
+1. Recover the values of g_aTrackIDs[28] and g_aTracksInCircuits[4] from a version-matched, authorized data source or trace.
+2. Recover the actual 25 TrackInfo rows, including trackID, splineID, planetTrackNumber, PlanetIdx and FavoritePilot.
+3. For every one of the 28 menu slots, resolve the mapped track index and test whether it falls within the 25-row TrackInfo table; record duplicates/out-of-range/special cases rather than silently normalizing them.
+4. Only then join a TrackInfo row to the independent Steam-PC model selector (+0x1B0), main spline selector (+0x1B4), and camera spline tuple. Keep platform/build provenance per column.
+
+Pinned evidence:
+- SWR tracks_delta.h: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/tracks_delta.h
+- SWR tracks_delta.c: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/tracks_delta.c
+- SWR custom_tracks.cpp: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/custom_tracks.cpp
+- SWR data_symbols.syms: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms
+- SWR types.h: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h
+- SWR imgui_utils.cpp: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/imgui_utils.cpp
+- SWR swrRace_delta.cpp: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrRace_delta.cpp
+
