@@ -163,11 +163,18 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444910.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004447b0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442090.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/df2817ec01eee9f3466bb7140cdb70fd3854be0d",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442470.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441810.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004414e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441390.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441040.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only trace separates mode-1 ray-style traversal (callback pair 0x00442C30/0x00442720; FUN_00444BF0 -> FUN_00444910) from mode-3 sphere sweep (0x004437C0/0x00443560; FUN_004440E0 -> FUN_00443F10). Both share FUN_004439F0 face enumeration. IDA labels are provisional. FUN_00442090 and FUN_00442550 are nearby geometric helpers, but no direct callback call edge is established. Callback bodies and exact narrowphase wiring remain UNKNOWN; do not infer GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest PC-only trace maps direct geometric helper cores: ray-style FUN_00442550 -> plane hit FUN_00442470 + triangle inclusion FUN_00441040; sphere-radius FUN_00442090 -> face projection/edge fallback and (mode 3) FUN_00441810 -> interval-clipped triangle fragments -> FUN_004414E0 -> result reducer FUN_00441390. These helper-to-helper edges are direct in source; the final callback-to-helper edges remain UNKNOWN because callback bodies are not present. Preserve separate snapshots and no GC/Wii inference.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "4eeb7acb5cb40d230f69ddce766511071b5d0ad2",
+      "head_sha": "df2817ec01eee9f3466bb7140cdb70fd3854be0d",
       "updated_at": "2026-11-04"
     },
     {
@@ -330,12 +337,19 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444910.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004447b0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442090.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/df2817ec01eee9f3466bb7140cdb70fd3854be0d",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442470.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441810.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004414e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441390.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441040.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only trace separates mode-1 ray-style traversal (callback pair 0x00442C30/0x00442720; FUN_00444BF0 -> FUN_00444910) from mode-3 sphere sweep (0x004437C0/0x00443560; FUN_004440E0 -> FUN_00443F10). Both share FUN_004439F0 face enumeration. IDA labels are provisional. FUN_00442090 and FUN_00442550 are nearby geometric helpers, but no direct callback call edge is established. Callback bodies and exact narrowphase wiring remain UNKNOWN; do not infer GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest PC-only trace maps direct geometric helper cores: ray-style FUN_00442550 -> plane hit FUN_00442470 + triangle inclusion FUN_00441040; sphere-radius FUN_00442090 -> face projection/edge fallback and (mode 3) FUN_00441810 -> interval-clipped triangle fragments -> FUN_004414E0 -> result reducer FUN_00441390. These helper-to-helper edges are direct in source; the final callback-to-helper edges remain UNKNOWN because callback bodies are not present. Preserve separate snapshots and no GC/Wii inference.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "4eeb7acb5cb40d230f69ddce766511071b5d0ad2"
+      "head_sha": "df2817ec01eee9f3466bb7140cdb70fd3854be0d"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
