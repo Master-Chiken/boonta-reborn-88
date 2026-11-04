@@ -304,3 +304,28 @@ The independent IDA notes and Steam-PC Ghidra source allow a narrower statement 
 - The SW_RACER_RE Hang F0/F2/F3/F4 handlers remain `HANG("TODO")` stubs. Do not promote Steam/IDA callback addresses or object offsets into native GameCube/Wii assumptions.
 
 **Updated lifecycle statement:** the Results routine is now mapped to a concrete Hang F0 callback branch: *active Hang + menu screen 5 → Results routine*. The unresolved edge is the preceding writer/activation path that makes this condition true after the race. This is stronger than merely finding a Results function, but it is not yet a complete race-manager-to-Hangar runtime trace.
+
+
+## 2026-11-04 — Results → pilot-unlock scene → Results return path
+
+A further source trace found a concrete way the Hang menu can return to screen 5 after a pilot-unlock scene. This is a **Results continuation path**, not proof of the initial Judge-to-Results handoff.
+
+**Pinned Steam-PC source:** `DeonPoncini/swep1r_decomp` revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`; independent IDA menu labels are from `everalert/swe1r-decomp` revision `8d066b9c12ecb57bd819aaab586fd6bd2dd078a7`.
+
+### Exact continuation chain
+
+1. **The Results routine selects the pilot-unlock scene.** In `FUN_00439ce0` (Hang menu screen 5 / Results), when a newly eligible pilot has not already been unlocked, the routine sets the unlock bit, saves the profile, and calls `FUN_00454d40(param_1, 0x11)` (Steam source lines 263–270). Thus it transitions the Hang menu from Results screen 5 to screen 17.
+2. **Hang F0 processes screen 17.** `FUN_00457620` has case `0x11` and calls `FUN_0043d4e0` (lines 145–150). IDA `Entity_Hang.txt` labels Hang menu 17 as the new-racer unlock scene.
+3. **The scene completion callback schedules screen 5.** `FUN_0043d4e0` waits on the scene transition/timer and checks the unlock-scene flags `DAT_004d6b48` / `DAT_004d6b44`. When either indicates the animation is ready to finish, it sets `DAT_0050c944 = -1` and the pending Hang screen `DAT_004bfedc = 5` (lines 40–50).
+4. **Hang F0 applies the pending transition.** Later in `FUN_00457620`, while `DAT_0050c944 == -1`, it calls `FUN_0043e330` (lines 164–167). Once its transition timer/conditions complete, `FUN_0043e330` calls `FUN_00454d40(param_1, DAT_004bfedc)` (lines 33–42); with the value scheduled above, this sets Hang menu screen 5, which IDA labels `POST_RACE_INFO`.
+
+This proves the code-level **Results screen 5 → new-pilot scene 17 → scheduled Results screen 5** continuation in the inspected PC source. It also gives one actual writer of menu screen 5: the pending-screen global `DAT_004bfedc` is set to 5 by the unlock-scene completion callback, then applied by the common menu transition helper.
+
+### What this does not prove
+
+- This is the post-Results pilot-unlock continuation only. It does **not** explain how the initial end-of-race camera sequence enters Hang screen 5 when no pilot unlock occurs.
+- It does not establish that the Judge state-4/5 `Swee` camera sweep directly activates Hang or writes the pending screen 5.
+- The separate Steam teardown candidate `FUN_0045dd80` remains annotated `NOT_INVOKED`; do not insert it into this chain.
+- All addresses, menu fields and event semantics remain Windows-PC evidence. No native GameCube/Wii parity is implied.
+
+**Sources:** [Results routine and unlock transition](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c), [Hang F0 screen-17 callback and transition dispatch](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c), [unlock-scene completion / pending screen 5](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c), [common menu transition helper](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c), [IDA Hang menu-state labels](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Hang.txt).
