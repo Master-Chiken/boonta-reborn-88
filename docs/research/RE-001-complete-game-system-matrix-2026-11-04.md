@@ -974,3 +974,21 @@ A future independently written loader needs explicit stages and error boundaries
 These are architecture requirements derived from PC reference behavior and memory-safety analysis. They are **not** a claim about the native GameCube/Wii model format or an implementation request until target evidence exists.
 
 No source code, game model, compressed game block, ROM, DOL/REL, disc image, BIOS or extracted asset was copied or committed.
+
+
+### 6. Texture-reference cache and animation registration continuation
+
+The texture-marker branch is not an opaque generic pointer fix-up. Steam-PC `FUN_00447490` (revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, blob `5b8382eb7d221aae55e650c2043e6071f96ade8b`) performs a resource lookup:
+- invalid or out-of-range texture IDs clear both output references;
+- a populated cache entry supplies the cached pair of references;
+- otherwise it reads the corresponding three-offset record from the texture block, passes it through the texture-data/material creation helpers, and stores the resulting reference pair in the cache;
+- a small set of hard-coded texture IDs also update dedicated global references or invoke a special post-load helper.
+
+This confirms the `0x0A` model-word tag is a texture/resource lookup path with caching, not a model-relative address.
+
+After model parsing, Steam-PC `FUN_00448bd0` (same revision, blob `4540a9c7624c3421c3944a602265c96eb3d85681`) walks past the root entry list and any optional `Data` section. If the next section is `Anim`, it iterates the animation references until a zero entry, calls the animation loader for each and tracks the earliest animation start value to update shared animation-buffer timing offsets. The preceding `FUN_004485d0` / `FUN_00448180` pass performs the structure-specific byte swaps for the animation records and their track payloads.
+
+This adds an explicit dependency chain after decompression:
+**model bytes → mask relocation → texture-ID cache resolution → root/node/data/animation byte-swap → animation registration/timing bookkeeping**.
+
+The exact resource IDs, cache capacity, texture payload format and console-specific equivalent remain outside the evidence established here. No texture or animation asset was extracted or committed.
