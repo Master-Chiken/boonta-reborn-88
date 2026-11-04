@@ -2332,3 +2332,87 @@ Pinned references:
 - Annodue globals: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/src/collision_viewer/globals.h
 - Annodue collision viewer use: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/src/collision_viewer/main.cpp
 - Annodue project README: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/README.md
+
+
+## 2026-11-04 — spline bake pipeline, mesh association and runtime race-progress state
+
+**Evidence boundary:** Steam-PC code at commit \`d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef\` and SWR reconstruction at commit \`258f67aa858ba2e281ce8a6791e49c554b85fae0\` are separate snapshots. Names/structures from SWR are used as a cross-reference, not proof of same-build identity. No console behavior is inferred.
+
+### Post-load PC spline construction is a two-stage bake
+
+Steam-PC \`FUN_0047F6F0\` (SWR header address-map name: \`swrSpline_Build\`) performs the following post-load work after the spline and track model have been loaded:
+
+1. It resets the per-spline build state and resets progress data for start/junction nodes where the graph requires it.
+2. It calls \`FUN_0047F470(spline, 100.0f, scratch)\`. This is the progress-table pass: it walks each reachable spline graph path and traces distance along sampled curve positions using \`FUN_0047F060\`. That path-trace helper accumulates distance and writes the per-node progress-band information used later to convert a cursor's node + segment parameter into overall race progress.
+3. It calls \`FUN_0047EE20(spline, 10.0f, trackModelRoot, progressTable, callback)\`. The sample walker enumerates forward branches and subdivides each eligible segment into 10 samples. The first callback pointer is the address mapped in the SWR header as \`swrSpline_BakeSampleTrackMesh\`; the optional second pass, gated by a PC global, uses the callback mapped as \`swrSpline_ValidateSampleTrackMesh\`.
+
+The two tables serve different jobs and must not be conflated:
+
+- **Progress table:** one pair per spline node, with a start/accumulated progress value and a segment-progress span. Runtime lap progress is computed as node-start + \`segmentT × segment span\`.
+- **Sample-to-track-mesh table:** 10 mesh associations per spline node. The SWR source describes this region as packed after the progress values (at the region beginning \`+0xFC\)); \`swrSpline_ResetNodeProgress\` clears both the progress pair and its 10 mesh slots. The PC \`FUN_0047F890\` lookup uses the current node index × 10 plus the current segment sample index to return the associated track mesh.
+
+SWR's \`swrSpline_ForEachSample\` implementation is present and confirms the graph walk/subdivision callback contract. The callback implementation itself, however, is not present as a normal SWR C body in the inspected revision: the header documents that \`swrSpline_BakeSampleTrackMesh\` raycasts from the spline sample down (then up) against the track model and records the hit mesh; it also documents a mesh anchor sample index and an ambiguity flag for meshes shared between traversal orders. Those details are **header-comment evidence**, not a recovered callback body. The optional validation callback is similarly documented in the header, but its full executable body was not recovered from the public C export.
+
+### Runtime cursor and track-mesh binding
+
+The PC runtime functions form a coherent data path even though the exact phase-level caller for the aggregate update remains unverified:
+
+- **\`FUN_0047F8E0\` — advance cursor:** it evaluates the current spline frame and compares the pod's previous/current positions against the cursor's tangent plane. It advances or retreats \`segmentT\` in 0.01 increments while a node plane has been crossed. It reports forward/backward crossing flags; when crossing into node 0 it derives a sub-frame crossing fraction from the previous/current positions for lap timing.
+- **\`FUN_0047F890\` — mesh lookup:** resolves the current track-model node from the baked 10-samples-per-node association table.
+- **\`FUN_0047FBB0\` — binding/rebind:** compares the pod's current terrain/collision mesh with its previous spline-associated mesh. When the mesh changes and its guard checks permit rebinding, it reads that mesh's stored spline-sample anchor, seeks the cursor to that sample, advances it against the pod position, then refreshes the mesh association and the legacy projection/sample-spacing output slots.
+- **\`FUN_0047FCA0\` — lateral track offset:** evaluates the cursor frame, projects the pod onto the spline frame's tangent plane, and stores the vector from the racing line to the pod as a normalized direction plus raw distance. The SWR field map names this \`trackOffset\` at player offset \`+0x118\`; the distance is at \`+0x124\`.
+- **\`FUN_0047FFB0\` — aggregate race-progress update:** runs cursor advance, current/previous mesh lookup, binding, lateral-offset calculation and the lap-progress/crossing helper \`FUN_0047FDD0\`; it also updates forward/backward movement counters and checkpoint-related state.
+
+The per-pod SWR data layout corroborates the roles of the corresponding fields: cursor at \`+0xAC\), bound track mesh at \`+0xEC\), prior mesh at \`+0xF0\), rebind result at \`+0x10E\), and track offset at \`+0x118\). The SWR source implements \`swrRace_LapProgress\` and \`swrRace_LapCompletion\`: normalized progress is derived from the current node's progress pair and \`segmentT\`; closed courses clamp just below 1.0 so the wrap can be detected, while an open point-to-point course clamps at 1.0. The finish helper accounts for crossing the line rather than simply checking a high-water mark, and the SWR body also contains a separate remote-player progress path.
+
+**Phase/caller caveat:** the SWR race source comments that \`swrRace_UpdateRaceProgress\` is called from the Judge F2 path, but the corresponding SWR \`swrObjTest_UpdatePhysicsContact\` body is a \`HANG("TODO")\` stub. The inspected Steam-PC \`FUN_0047B520\` body is the physical contact/ground-or-wall path and contains no direct call to \`FUN_0047FFB0\`; the published search of the inspected PC export did not establish the aggregate updater's incoming phase call. Therefore the internal update sequence is recovered, but its precise retail-PC frame-phase caller remains **UNKNOWN**. Do not assert F2 parity from the SWR comment alone.
+
+### Important compiled-out/vestigial helpers
+
+The two projection-related functions are not interchangeable:
+
+- PC \`FUN_0047EB50\` (SWR name \`swrSpline_ProjectPointStub\`) simply writes zero to its output slot and returns zero. The per-frame race-progress update calls this stub twice; the four associated player fields therefore remain zero in the inspected PC behavior.
+- PC \`FUN_0047EB60\` (SWR name \`swrSpline_ProjectPoint\`) is a separate implemented cursor-projection routine that adjusts the cursor parameter in fine increments against the supplied world point. Its existence does not mean the race-progress update invokes it.
+- PC/SWR \`swrSpline_GetSampleSpacing\` returns the constant \`0.0f\`; the \`splineSampleSpacing\` field is consequently vestigial in this path.
+
+This distinction matters for a clean reconstruction: do not implement the retired/stub path as though it were the active nearest-point projector, and do not add an assumed non-zero spacing value.
+
+### Exact unfinished reconstruction surface
+
+The pinned SWR source tree contains the following important gaps:
+
+**Declared in \`swrSpline.h\`, but no function body found in the inspected \`src/Swr/*.c\` files:**
+- \`swrSpline_Build\` (0x0047F6F0)
+- \`swrSpline_BuildProgressTable\` (0x0047F470)
+- \`swrSpline_TraceProgress\` (0x0047F060)
+- \`swrSpline_BakeSampleTrackMesh\` (0x0047EA20)
+- \`swrSpline_ValidateSampleTrackMesh\` (0x0047ECE0)
+
+**Present as TODO/HANG stubs:**
+- \`swrSpline_ProjectPointStub\` (0x0047EB50)
+- \`swrSpline_CollectNearbyPoints\` (0x00480170), documented as sampling nearby spline segments for the in-race minimap.
+- \`swrRace_GetTrackMeshAtCursor\` (0x0047F890)
+- \`swrRace_AdvanceSplineCursor\` (0x0047F8E0)
+- \`swrRace_UpdateSplineBinding\` (0x0047FBB0)
+- \`swrRace_ComputeTrackOffset\` (0x0047FCA0)
+
+**Implemented building blocks / partial orchestration in SWR:**
+- \`swrSpline_ForEachSample\` (0x0047EE20), core cursor evaluation/seek/interpolation, and \`swrSpline_ProjectPoint\` (0x0047EB60) are present.
+- \`swrSpline_ResetNodeProgress\` clears the per-node progress pair and its 10 mesh associations.
+- \`swrSpline_GetSampleSpacing\` is present and returns zero.
+- \`swrRace_LapProgress\` (0x0047F810) and \`swrRace_LapCompletion\` (0x0047FDD0) are implemented.
+- \`swrRace_UpdateRaceProgress\` (0x0047FFB0) is present as an orchestration body, but depends on the TODO race/spline helpers above.
+
+### Why this is P0 for a complete playable race
+
+The course's spline is not merely decorative. It supplies (a) a normalized route-progress coordinate for lap/finish logic, (b) the per-sample track-mesh association used by the cached ground-contact path, and (c) a racing-line frame/distance used to express lateral offset. The course loader can produce a spline pointer yet still fail to produce a usable race if the progress bake, sample-to-mesh association, cursor movement or mesh rebind are missing. The same table bridges path progress with track geometry; it is a core dependency between track loading, collision/surface contact, lap state and later AI/race-position calculations.
+
+**Research next step:** trace the actual model-node \`splineSampleIndex\` writer and all readers; identify the exact 10-slot lookup initialization and lifecycle; then locate the retail-PC caller for \`FUN_0047FFB0\` or an independent runtime trace. For SWR implementation planning, separate the declaration-only bake pipeline, TODO mesh/cursor helpers, existing graph cursor primitives and already-implemented lap-completion logic into testable modules. Use synthetic spline graphs and synthetic track meshes first; do not import AGPL code or original game assets.
+
+**Pinned references**
+- Steam-PC \`FUN_0047F6F0\`, \`FUN_0047F470\`, \`FUN_0047F060\`, \`FUN_0047F810\`, \`FUN_0047F890\`: https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c
+- Steam-PC monolithic \`_text22.c\` (project-point stub and active projector): https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text22.c
+- Steam-PC monolithic \`_text23.c\` (ForEachSample, cursor/mesh binding, offset, lap and aggregate race update): https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c
+- SWR \`swrSpline.h\`, \`swrSpline.c\`, \`swrRace.h\`, \`swrRace.c\`, \`types.h\`: https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr
+
+No game code/assets were copied and no gameplay implementation or runtime test was performed.
