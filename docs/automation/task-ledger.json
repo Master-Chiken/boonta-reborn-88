@@ -256,6 +256,34 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
       "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
       "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
+      "title": "Recover PC race-spline cursor/rebind/offset routines and trace their consumers",
+      "queue": "#279",
+      "platform_scope": [
+        "Windows PC reference only"
+      ],
+      "status": "in_review",
+      "question": "What do the recovered Steam-PC race-specific spline routines do, and which downstream consumers of trackOffset, splineRebindResult and movement flags are actually established in the pinned public source?",
+      "acceptance_criteria": [
+        "Preserve exact SW_RACER_RE, Steam-PC and independent IDA revisions and keep their executable/build identities separate",
+        "Document the recovered routines 0x0047F8E0, 0x0047FBB0 and 0x0047FCA0 with supported evidence and explicit limitations",
+        "Trace downstream readers of trackOffset (+0x118..+0x124), splineRebindResult (+0x10E), movedForward and wentBackward only where exact call paths are visible",
+        "Keep PC-only conclusions separate from GameCube/Wii behavior and mark unobserved consumers UNKNOWN",
+        "Copy no third-party code or proprietary game data; make no gameplay-code changes in this comparative queue"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
+        "https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0",
+        "https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef",
+        "https://github.com/everalert/swe1r-decomp/tree/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483"
+      ],
+      "next_action": "Human review of PR #284 and its exact-head checks. After review, continue only the next unanswered PC spline-consumer question identified by issue #279; do not infer GC/Wii parity or recreate the recovered function bodies.",
+      "updated_at": "2026-11-04",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
+      "head_sha": "82fca158d6acdfc56fd9d45fc188bbf135a1f483"
     }
   ]
 }
