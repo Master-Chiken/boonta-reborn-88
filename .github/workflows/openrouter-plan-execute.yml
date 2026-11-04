@@ -175,4 +175,24 @@ jobs:
           PROMPT
           )"
 
-          opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT"
+          opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
+
+          REPORT="$RUNNER_TEMP/opencode-cycle-report.txt"
+          if grep -q '^BOONTA_CYCLE_STATUS: PROGRESS "$REPORT"; then
+            grep -q '^BOONTA_CYCLE_EVIDENCE: [^[:space:]].* "$REPORT" || {
+              echo "OpenRouter report claims progress without traceable evidence." >&2
+              exit 1
+            }
+          elif grep -q '^BOONTA_CYCLE_STATUS: BLOCKED "$REPORT"; then
+            grep -q '^BOONTA_CYCLE_BLOCKER: [^[:space:]].* "$REPORT" || {
+              echo "OpenRouter blocked report is missing its named blocker." >&2
+              exit 1
+            }
+            grep -q '^BOONTA_CYCLE_NEXT_ACTION: [^[:space:]].* "$REPORT" || {
+              echo "OpenRouter blocked report is missing its next action." >&2
+              exit 1
+            }
+          else
+            echo "OpenRouter completed without a valid BOONTA_CYCLE_STATUS report." >&2
+            exit 1
+          fi
