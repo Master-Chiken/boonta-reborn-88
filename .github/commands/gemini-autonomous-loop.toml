@@ -59,6 +59,9 @@ Every autonomous invocation must finish its user-visible report with exactly one
 For traceable progress, the work must be represented by an open, non-empty pull request in this repository (a research dossier or implementation PR). The workflow checks that the PR exists, is open, has changed files, and that its live head SHA exactly matches the reported SHA:
 BOONTA_CYCLE_STATUS: PROGRESS
 BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
+BOONTA_CYCLE_EVIDENCE_BASE: main|dev
+
+The evidence PR must be new in this cycle or have a head SHA different from the pre-cycle snapshot. Do not cite an unchanged PR that was already open or closed when this cycle started. Set the evidence base to the PR's actual target: main for research/documentation and dev for gameplay. The workflow compares this against its pre-cycle PR inventory and rejects unchanged PRs, stale heads and wrong bases.
 
 For a genuine blocker where no safe progress can be made:
 BOONTA_CYCLE_STATUS: BLOCKED
