@@ -1697,3 +1697,78 @@ SWR pinned references:
 - [`swrModel.h` — sphere and ray APIs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121)
 
 **Evidence boundary:** Steam-PC static decompilation plus separately pinned SWR source. Same-build identity, runtime behavior, and GameCube/Wii parity remain unproven. SWR is a read-only AGPL-3.0 research reference; no code was copied.
+
+
+## Engine heat, failure, damage, repair and boost-charge state machine — 2026-11-04
+
+This pass separates the thermal model, boost thrust, boost activation, engine failure damage and repair. Their SWR implementation coverage is not uniform.
+
+### Implemented thermal and thrust pieces in SWR
+
+The pinned SWR `swrRace.c` has bodies at the matching PC addresses:
+- `swrRace_UpdateHeat` (`0x004788C0`, line 4333): temperature changes by `heatRate` while boosting, recovers by `coolRate) otherwise, and drains at 20 units/s on lava. At/below zero it selects one of six engine components, biased toward one side by manual tilt, spawns a fireball if that component was not already in failure state, sets `engineStatus[part] |= 8`, and clears the boosting flag. The gauge is clamped to 100 on the high side and zero on failure.
+- `swrRace_ApplyBoost` (`0x004787F0`, line 4594): bleeds `boostValue` when not boosting, increases it by 1.5/s while boosting, cancels boost during air-brake, and returns boost thrust as `boostValue * boost_thrust / (boostValue + 0.33)).
+- `swrRace_TakeDamage` (`0x00474CD0`, line 3266): refuses damage while invincible, dead/respawn-invincible or finished; cancels active boost; accumulates a per-engine health/damage value scaled by `damageImmunity`, caps it at 1.0, sets status bit 1, updates the worst-damage record and total damage.
+
+The PC counterparts `FUN_004788C0`, `FUN_004787F0), and `FUN_00474CD0` use the same addresses/field offsets and materially matching operations in the pinned Steam-PC export. This is a strong address-level cross-check for these particular bodies, still not proof of same executable build.
+
+### Engine-failure damage loop is a TODO in SWR
+
+SWR `swrRace_ApplyEngineDamage` at `0x0046AA30` is an explicit `HANG("TODO")` stub (line 2759). The Steam-PC body `FUN_0046AA30`:
+1. Iterates six engine-part records beginning at `player + 0x2A0), with a 4-byte stride.
+2. For each record with status bit `0x8), samples the game RNG and calls `FUN_00474CD0(player, partIndex, randomScaledAmount * deltaTime)`.
+3. Tracks whether any such part was present; if none, it takes a separate HUD/effect-flag path. If at least one was present, it enters a local UI/audio/effect branch.
+
+The directly called damage helper `FUN_00474CD0` is the same-address SWR `swrRace_TakeDamage` routine described above. The thermal function's bit-8 write therefore feeds the per-frame failure-damage loop. The exact semantics of all HUD/audio globals in the no-failed-part and failed-part branches remain unresolved; they are not given speculative names here.
+
+### Repair orchestration is also a TODO in SWR
+
+SWR `swrRace_Repair` (`0x0046AB10`, line 2336) is a TODO stub, even though `swrRace_UpdatePlayerControl` calls both `swrRace_ApplyEngineDamage` and `swrRace_Repair` every frame (lines 3050–3051).
+
+The PC body `FUN_0046AB10` shows that repair is not just a direct health reset:
+- It advances a repair timer at `player + 0x2BC), with a short reset while the repairing flag is set.
+- It walks six engine-part records at `+0x2A0), clears temporary status bits, selects an already-marked repair target or the most damaged component, and maintains per-part repair flags.
+- It moves component damage/health toward the repaired state over time; a separate probability check may clear the component's bit-8 failure marker.
+- It updates player-local repair audio/UI state, tracks damage on the left/right groups of three components, and invokes `FUN_004741D0` with a repair-side result when the repair timer permits.
+
+Exact constants and the full event/audio meanings are preserved in the pinned source rather than guessed. The six-component grouping and the repair-side selection are visible; the detailed meaning of every temporary bit and global remains partially unresolved.
+
+### Boost activation is distinct from boost thrust
+
+SWR `swrRace_BoostCharge` (`0x0046BD20`, line 3871) is a TODO stub that returns `0`. It is called from `swrRace_UpdatePlayerControl` at line 2887. Later in that same input routine, the return value is combined with `FLAG0_CAN_CHARGE_BOOST`; only a nonzero result sets `FLAG0_BOOSTING` (lines 3158–3165). Therefore, in this reconstruction path, the current stub prevents this input-control code from latching a boost, even though `swrRace_ApplyBoost` can compute thrust once the flag is set.
+
+The Steam-PC body `FUN_0046BD20` is a three-state gate using `player + 0x210` (states 0/1/2) and an elapsed-time field at `player + 0x214`. In outline:
+- State 0 checks global timing/input conditions and arms state 1, clearing elapsed time.
+- State 1 continues only while the conditions remain valid, increments the elapsed-time field by frame delta, and advances to state 2 after a fixed threshold.
+- State 2 requires an additional integerized-input gate; when it passes, the function resets the state, emits a trigger/effect through `FUN_00426D10), and returns 1. Invalidated conditions reset the state.
+- The exact meaning of all global input/timing predicates and the `__ftol()`-derived gate is not yet grounded, so they remain raw conditions rather than renamed controls.
+
+### Completion status and priority
+
+| Gameplay stage | Steam-PC source | SWR pinned source | Current gap |
+|---|---|---|---|
+| Heat accumulation / overheat selection | Body at `FUN_004788C0` | Implemented `swrRace_UpdateHeat` | Relatively low; cross-check confirms address-level behavior |
+| Boost thrust calculation | Body at `FUN_004787F0` | Implemented `swrRace_ApplyBoost` | Relatively low |
+| Boost activation gate | Body at `FUN_0046BD20` | TODO returns 0 | High; input path cannot latch boost through this result |
+| Per-part failure damage | Body at `FUN_0046AA30` | HANG TODO | High |
+| Underlying damage accumulator | Body at `FUN_00474CD0` | Implemented `swrRace_TakeDamage` | Lower; helper exists |
+| Repair orchestration | Body at `FUN_0046AB10` | TODO | High |
+
+Highest-value next step for this subsystem: recover and document the boost gate's exact external conditions and the six-engine repair/damage flags, then design independent tests for state transitions, damage accumulation, repair progression and overheat interruption. Do not copy the SWR or Steam implementation into Boonta; use these only as behavioral references. No GameCube/Wii parity is asserted.
+
+Steam-PC references:
+- [`FUN_0046BD20.c` — boost-charge state gate](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bd20.c)
+- [`FUN_0046AA30.c` — per-part failure damage](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046aa30.c)
+- [`FUN_0046AB10.c` — repair orchestration](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c)
+- [`FUN_00474CD0.c` — damage accumulator](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c)
+- [`FUN_004787F0.c` — boost thrust](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c)
+- [`FUN_004788C0.c` — heat/overheat](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c)
+
+SWR pinned references:
+- [`swrRace.c` — stubs and control caller](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2375)
+- [`swrRace.c` — boost-charge caller/latch and damage helper](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2887-L3165)
+- [`swrRace.c` — damage accumulator](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3260-L3288)
+- [`swrRace.c` — heat and boost thrust](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4333-L4618)
+- [`swrRace.h` — address map](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121)
+
+**Evidence boundary:** static code from separately pinned PC/SWR snapshots. The SWR and Steam code are not proven identical builds; no runtime confirmation or GameCube/Wii parity. No third-party code was copied.
