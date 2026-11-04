@@ -2483,3 +2483,30 @@ Pinned IDA notes:
 - Judge state machine and event fields: https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Jdge.txt
 
 No new binary, executable or game asset was accessed or copied. Separate snapshots remain unproven same-build; no GameCube/Wii parity or runtime result is claimed.
+
+
+## PC teardown entry sequence recovered; final F0 caller still missing — 2026-11-05
+
+The Steam-PC export does contain the race-exit trigger immediately before the missing Judge callback range. This closes the state-entry side of the teardown path, not the final caller edge.
+
+### `FUN_0045D0B0`: enter state 6 and mark race entities for freeing
+
+The pinned Steam-PC body of `FUN_0045D0B0` first checks `DAT_0050CA34`; when clear, it sets the gate, calls `FUN_004258E0`, writes `0.5f` to the Judge timer at `+0x0C`, stores the event word at `+0x128`, and changes the low state nibble at `+0x08` to 6. It then calls `FUN_00450DB0` for the five manager types `Test`, `Toss`, `Smok`, `Trig` and `Chsr`.
+
+The neighboring Steam-PC `FUN_00450DB0` iterates the selected manager's entities. For each non-freed object it sends a `Free` event through `FUN_00450C00` and then sets the object's low header flag bit. `FUN_00450C00` resolves the object's manager and dispatches through that manager's callback at descriptor offset `+0x24`, provided the handler exists and the object is not already freed.
+
+The distinct `FUN_00450C50` is the mass-dispatch counterpart: it walks one selected manager, or all managers for the `All!` keyword, and invokes their `+0x24` event handlers for non-freed entities. This clarifies the event-dispatch plumbing used by race exit and later manager transitions; it is not the missing F0 phase callback.
+
+### Cross-check with the available lifecycle evidence
+
+The PC entry routine's timer, event field, state 6 and five pool types match the separately documented SWR `swrObjJdge_Clear` entry behavior. The independent IDA Judge notes identify state 6 as return-to-cantina / race reload and associate the event word at `+0x128` with `Abrt`, `RStr`, and `Fini`. The separate Steam-PC teardown-like routine at `0x0045DD80` later clears the same pool set and routes result/menu work.
+
+However, the Steam-PC export still omits the Judge `+0x14` F0 callback body at `0x0045E200`. Its IDA function-table entry and state notes establish that a callback exists and that state 6 is the exit/reload branch; they do not supply a machine-code call xref from `0x0045E200` to `0x0045DD80`. Keep that final PC direct/indirect caller edge **UNKNOWN**.
+
+Pinned Steam-PC sources:
+- State-6 entry and pool transition: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045d0b0.c
+- Single-entity event callback dispatch: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450c00.c
+- Manager event broadcast: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450c50.c
+- Pool `Free` dispatch: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450db0.c
+
+These remain pinned Steam-PC static sources; no same-build identity with SWR or the separate IDA snapshot is established. No runtime test, GameCube/Wii parity, implementation change or game asset use is claimed.
