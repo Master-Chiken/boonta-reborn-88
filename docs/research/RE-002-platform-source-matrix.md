@@ -243,6 +243,26 @@ This is useful **PC spline asset-format evidence** for the Windows-patch executa
 **Do not synthesize a replacement yet.** The next valid step is to inspect the named cursor's structure and all fields read/written by the implemented neighboring functions, then compare those field semantics against the Steam assembly and the older patch-version documentation. Any derived algorithm must be tagged `INFERENCE` until corroborated by another source or exact-build runtime evidence. For Boonta's actual GameCube/Wii implementation, no transfer is permitted until the relevant DOL/REL target evidence is independently established.
 
 
+
+
+## Additional resolvable PC spline gap — `swrRace_GetTrackMeshAtCursor`
+
+The current `SW_RACER_RE` snapshot at `258f67aa858ba2e281ce8a6791e49c554b85fae0` also leaves `swrRace_GetTrackMeshAtCursor` at `0x0047F890` as `HANG("TODO")`. Unlike the three race-specific functions below it, the frozen Steam-PC export contains both `c/FUN_0047f890.c` and `asm/FUN_0047f890.s` at that exact numeric address.
+
+The decompilation plus the current upstream `swrRace.h` comment establish the following lookup:
+
+1. Resolve the cursor's current control-point ID with `swrSpline_getControlPoint(cursor, 0)`. This helper honours the cursor's current branch flags; it is not always a raw `nodeLookahead[0]` read.
+2. Convert `segmentT` to a per-node sample slot using the ten-samples-per-node convention (`segmentT * 10`; the x86 sequence has a boundary/negative-value correction before integer conversion, so exact rounding at exceptional endpoints should be preserved from the matching build rather than guessed).
+3. Index the baked mesh-pointer table at global address `0x00E23240` with `controlPointId * 10 + sampleSlot`, and return the stored mesh pointer.
+
+This agrees with the upstream data layout:
+- `swrSpline_ResetNodeProgress(node)` clears ten consecutive 4-byte entries at `spline_progress_values + node * 5 * sizeof(rdVector2) + 0xFC`; five `rdVector2` values are 40 bytes, exactly ten mesh pointers.
+- The upstream header documents `swrModel_Mesh.splineSampleIndex` as the inverse mapping (first sample that hit a mesh), whereas this table is the forward mapping (sample → mesh).
+- `swrRace_UpdateRaceProgress` caches the returned pointer in `player->splineTrackMesh`. The ground-raycast fast path uses that mesh as its collision target; the cached-ground path promotes it to `terrainModel`. A change from the previous frame clears a per-racer collision/cache counter.
+
+**Evidence status:** `CODE` in the pinned Steam-PC decompilation and corroborated by the current SW_RACER_RE type/header comments. Exact binary/release identity between those two PC references remains unproven. This function is therefore a high-confidence algorithmic recovery candidate, not permission to copy Steam decompilation source into Boonta. It should be documented/recovered as a discrete table lookup before tackling the remaining three functions.
+
+
 ## Spline cursor: what the surrounding PC source already establishes
 
 This section narrows the next task to explicit contracts and separates observed behavior from inferred missing logic. Source snapshot: `Master-Chiken/SW_RACER_RE` commit `66120be334a3fd38c10a259f3528cffbfed8ddc5`.
