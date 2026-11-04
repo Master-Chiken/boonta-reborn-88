@@ -192,3 +192,49 @@ This audit inspected public GitHub source files at the exact pinned revision and
 ## Triage of the previously suggested AeroMESH reference
 
 [AeroMESH](https://github.com/tex1ure/AeroMESH) was checked at its public `main` branch on 2026-11-04. Its README describes a Rust peer-to-peer pipeline-parallel LLM/diffusion inference engine for distributing model execution across consumer GPUs; the repository declares Apache-2.0. It is **not** a game reverse-engineering tool, binary decompiler, asset parser, mesh-format workbench or racing-game engine. It therefore does not solve a Boonta RE-001/RE-002 problem and should not be integrated into the game repository. Its only possible relevance is as a separate AI-infrastructure project, but the current GitHub Actions/OpenCode fallback already addresses the bounded agent-execution need without adding a distributed GPU cluster. This is an explicit non-adoption decision, not a negative judgment about AeroMESH itself.
+
+
+## 2026-11-04 — cMan instance registry and the recovered F3 callback (Steam-PC cross-check)
+
+A targeted follow-up to the unresolved post-race manager edge establishes more about the camera-manager pool, but still does not recover the receiver for the post-race `Swee` message.
+
+**Pinned reference:** DeonPoncini/swep1r_decomp at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef` (Steam-PC Ghidra export). This is a separate PC snapshot; the exact executable identity relative to SW_RACER_RE remains unresolved.
+
+### Manager pool and callback dispatch
+
+- In `FUN_00448f40`, the branch guarded by `DAT_004c17e0 == -1` configures six `cMan` objects, one `Jdge`, and one `Hang`. It does this through `FUN_00447300`.
+- `FUN_00447300` reserves/initializes the requested object-manager pool and immediately dispatches a `Load` message to that manager class. `FUN_00449040` calls this setup sequence as part of allocating the large manager storage block.
+- `FUN_004490a0` iterates the indexed `cMan` instances and associates each with a camera slot beginning at index 7, using the instance's transform/focus-related fields. This supports the interpretation of `cMan` as a set of per-camera manager objects, not one singleton.
+- `FUN_00450c50` dispatches F4 by manager type (or `All!`). It obtains the manager F4 callback from record offset `+0x24`, iterates the manager's object array, skips objects with the `0x100` flag, and stops the dispatch when a callback returns 2. Thus a `Swee` event sent to `cMan` is routed through the F4 callback for eligible cMan instances; it is not a direct Results-menu call.
+
+### A newly located cMan F3 body
+
+The Steam export includes `FUN_004542e0` in `src/_text15.c` (lines 2685–2711), at the same numeric address assigned to `swrObjcMan_F3` in SW_RACER_RE. The body:
+- calls `FUN_00453e00` first, which performs a substantial camera update using the cMan state/mode;
+- advances a bounded oscillation using fields at `+0x39C`, `+0x3A0`, and `+0x3A4`;
+- applies the resulting offset to camera-related values at `+0x140` and `+0x58`, then invokes a small update helper;
+- conditionally emits surface/weather text through `FUN_00454060`.
+
+This is a useful PC-only F3 implementation lead, not the missing `Swee` F4 handler. There is also an unresolved field-layout discrepancy: the SW_RACER_RE type note labels a `camShake` vector at `+0x38C`, followed by scalars at `+0x398)–`+0x3A4`; the Steam F3 body reads the later scalar fields, not the vector at `+0x38C`. Do not silently equate those fields or port the interpretation across builds.
+
+The checked Steam source search found `FUN_004542e0` but did not find same-address bodies for cMan F0 (`0x00451CD0)), F2 (`0x00451D40)) or F4 (`0x004543F0)). This is a bounded negative search result, not proof those routines do not exist in another executable or source snapshot.
+
+### Post-race messages and teardown candidate
+
+- Steam `FUN_0045dfe0), the same-address counterpart of SW_RACER_RE `swrObjJdge_StartPostRaceSequence`, sends `Swee` with payload 0 to `cMan` F4, then changes Judge flags/timer and proceeds with the post-race viewport transition. The cMan receiver's behavior remains unknown.
+- The SW_RACER_RE Judge F0 state-4 branch also sends `Swee` with payload 1. A search of this pinned Steam export found the payload-0 sender at `FUN_0045dfe0`, but no second `Swee` sender. Whether that reflects an executable/build difference or an incomplete Steam source/xref export remains UNKNOWN.
+- Steam `FUN_0045dd80` (the candidate teardown routine) sends `RSet` to `cMan`, performs cleanup of the race object groups, then broadcasts the supplied event through `All!`. Its own dependency graph labels `FUN_0045dd80` `NOT_INVOKED`; this is candidate teardown code, not proof of the normal race-to-Hangar handoff.
+- The one-object `Hang` manager is created in the same setup branch, but neither the cMan F4 result nor the Hangar callback body is recovered by this trace. The Results panel's concrete entry edge is still not proven.
+
+### Evidence links
+
+- [Steam manager-count setup `FUN_00448f40`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448f40.c)
+- [Steam pool initialization `FUN_00447300`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00447300.c)
+- [Steam cMan camera-slot association `FUN_004490a0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004490a0.c)
+- [Steam F4 event dispatcher `FUN_00450c50`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450c50.c)
+- [Steam cMan F3 body `FUN_004542e0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L2685-L2711)
+- [Steam post-race Swee sender `FUN_0045dfe0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dfe0.c)
+- [Steam teardown candidate `FUN_0045dd80`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c)
+- [Steam dependency graph and NOT_INVOKED annotations](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54)
+
+**Conclusion:** the manager pool, F4 routing contract, and one camera-manager F3 body are better understood. The key missing edge is still the cMan F4 reaction to `Swee` and how/when the race manager causes the Hangar/Results object state to change. Keep that gap explicit; this remains Windows-PC evidence only and does not establish native GameCube/Wii behavior.
