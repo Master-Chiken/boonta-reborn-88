@@ -1264,3 +1264,74 @@ The F2 routine derives a signed vertical/contact speed from the corrected positi
 **Next highest-value research task:** finish the Steam-PC wall-contact path by tracing the internals of `FUN_00477940`, `FUN_00479920`, and `FUN_0044ABC0`; then compare their field writes against the SWR TODO signatures without importing source code. Keep the PC and native GameCube/Wii evidence separate.
 
 No third-party source was copied into the repository; this addition is original analysis and citations only. No proprietary binary, ROM, DOL/REL, disc image, BIOS, model, texture or extracted game asset was used or committed.
+
+
+## 2026-11-04 — Steam-PC internals of wall scrape, impact impulse and blocking move
+
+This follow-up traces the three wall helpers called by the ZON contact path and distinguishes their roles. The Steam-PC export is the primary body evidence; the SWR header/types supply the cross-reconstruction names and field annotations.
+
+### 1. `DetectWallScrape` — two scrape probes, spray condition, then blocking move
+
+At Steam-PC address `0x00477940`, `FUN_00477940`:
+- derives a live collision probe radius from the pod's collision-width field at `+0xA8), modified by the absolute tilt/manual-roll field at `+0x208), with a floor of 1.5;
+- calls the collision-query helper `FUN_00444740` using the pod collision model and current movement data;
+- when the first probe reports a hit, reads the collision-hit object and performs a second probe;
+- only when one or two hits occurred, speed is above its threshold and the contact normal is sufficiently close to perpendicular to the pod-forward basis does it call `FUN_00477850` (mapped to `swrRace_SetupScrapeSpray`) to produce scrape spray;
+- finally calls `FUN_0044ABC0` (`swrRace_CollideBlockMove`) so the proposed move can be rejected if the swept segment is blocked.
+
+This is more specific than a single static side-ray: the probe radius is adjusted with pod tilt and collision response has a two-query path. The primitive inside `FUN_00444740` and its numeric thresholds are not renamed beyond the evidence in the decompilation.
+
+Source: [Steam-PC `FUN_00477940.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477940.c).
+
+### 2. `ApplyWallCollision` — redirect velocity, set impact state and dispatch hit events
+
+At `0x00479920`, Steam-PC `FUN_00479920`:
+- computes the incoming vector's component along the supplied collision normal, removes that component to derive a deflected direction, and normalizes the result;
+- calculates an impact-strength term from the incidence geometry and pod speed;
+- adds a scaled collision impulse to the pod's `velocityCollision` vector at offset `+0x1D0);
+- updates the turn-modifier field at `+0x1F4) from contact geometry (this is not the separate `contactSteerKick` field at `+0x1FC));
+- when the impact exceeds the strong-hit threshold, clears `FLAG0_THROTTLE_SETTLED` and, when the pod is not in the excluded state mask, arms `wallHitCooldown` at `+0x264) for 0.1 seconds;
+- for sufficiently strong/high-speed impact, scales down `accelThrust` at `+0x1A4), sets `FLAG0_WALL_IMPACT_CLAMP` (`0x40000)), and dispatches the `Hitt` sub-event through `swrEvent_CallF4`. The sub-event payload distinguishes a strong `KPow` response from directional side/front hit categories.
+
+The SWR field map confirms `velocityCollision` at `0x1D0), `turnModifier` at `0x1F4), `contactSteerKick` at `0x1FC), and `wallHitCooldown` at `0x264). It names `FLAG0_WALL_IMPACT_CLAMP` as the one-shot bit consumed by F2 to clamp acceleration. This prevents a common field-offset mistake: the `+0x1F4) write is **not** the yaw-kick field at `+0x1FC).
+
+Sources:
+- Steam-PC [`FUN_00479920.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479920.c).
+- SWR [`swrRace` field layout, `types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L501-L560).
+- SWR [flag names, `types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L150-L188).
+
+### 3. `CollideBlockMove` — stop the proposed move on a swept hit
+
+Steam-PC `FUN_0044ABC0` is materially different from `swrRace_CollideTrack`:
+- computes the proposed segment `current - previous`;
+- ignores segments below a small minimum length;
+- normalizes the segment direction and scales the query range to a bounded probe distance;
+- raycasts the collision model from the previous position along that direction;
+- if the hit distance reaches the routine's collision threshold, returns a hit and copies the previous position back over the proposed current position.
+
+This is a **blocking rollback** (snap to the previous point), not the normal-pushout correction performed by `CollideTrack`. The SWR header explicitly documents that distinction; the SWR body for `swrRace_CollideBlockMove` remains TODO.
+
+Source: [Steam-PC `FUN_0044ABC0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0044abc0.c); SWR address/signature and contrast: [`swrRace.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+
+### 4. Collision/contact graph after this trace
+
+The current PC evidence supports the following distinct operations:
+
+`F2 → ResolvePodCollision → (ZON ? UpdateWallContact : UpdateGroundContact)`
+
+- Pod-pod response operates on a nearest candidate and updates both pods' position/velocity state.
+- Normal ground contact uses ground raycasts, slope/gravity integration, local wall-scrape response or remote block-move rollback, and hover-pad sampling.
+- ZON wall contact uses scrape probes, a normal-based impact response, collision impulse state and hit sub-events; the SWR wall helper bodies are still TODO.
+- F1's swept `CollideTrack` remains a separate push-out solver applied after motion integration, with up to six correction passes.
+
+This makes collision implementation planning more precise: do not collapse pod-pod, ground raycast, wall scrape, wall impact, block-move rollback and swept track push-out into one generic overlap solver.
+
+### 5. Remaining unknowns and target-platform boundary
+
+- Exact semantic names/units for the geometry thresholds in the Steam export remain unresolved.
+- The `FUN_00444740` probe primitive has not been fully mapped to a named SWR API.
+- The SWR wall scrape / ApplyWallCollision / CollideBlockMove bodies remain TODO; the names and type comments are useful maps, not executable implementations.
+- Steam-PC and SWR snapshots are still not proven to be the same executable build.
+- None of these PC field offsets, flags, event payloads or collision constants is evidence of GameCube/Wii behavior.
+
+No source code was copied; this addition is original analysis of the pinned public reconstructions with provenance links only.
