@@ -355,3 +355,12 @@ This pass follows the *dispatch layer* between the Judge's post-race camera mess
 
 **Updated lifecycle conclusion:** the route from `swrObjJdge_StartPostRaceSequence` to the cMan F4 event-dispatch slot is now explicit: *post-race sender → `Swee(false)` → typed cMan pool → active cMan objects → manager F4 callback at +0x24*. IDA independently identifies the expected cMan F4 callback as `0x004543F0`, but its body/dispatch effects remain unrecovered. The normal F4-to-Hangar activation and initial Results screen-5 writer remain **UNKNOWN**. All findings here are pinned Windows-PC evidence only; no GameCube/Wii parity is inferred.
 
+### Bounded callback-body availability check (same pinned Steam revision)
+
+A final availability check targeted the exact symbol rather than searching only by address:
+- The pinned Steam tree has no `c/FUN_004543f0.c` and no `asm/FUN_004543f0.s` at revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef` (both exact content paths return not found).
+- The inspected aggregate text exports `src/_text15.c` (blob `673cbacba8fbcda3008c3788cab4501059a11b76`) and `src/_text16.c` (blob `2115bc3484118a7e89e9fc95a9239119cf608fa8`) contain no `004543F0` / `FUN_004543f0` definition; the generated prototype header is declarations only.
+- A GitHub-wide search for the bare address/name returns homonymous functions in unrelated executables/projects (for example, Lucky.exe and eco.exe). Those are excluded: an x86 address/name is not a cross-executable identity.
+
+This confirms only that the body is **not available in the inspected public Steam decompilation snapshot**; it does not prove the body cannot exist in a separate local analysis database or another correctly identified build. The IDA function name/extent and event notes remain metadata-level evidence. The cMan F4 implementation and its effects on the post-race handoff therefore remain **UNKNOWN** until the matching function body or a typed runtime trace is available.
+
