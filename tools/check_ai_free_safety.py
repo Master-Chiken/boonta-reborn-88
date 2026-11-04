@@ -759,20 +759,36 @@ if expected_gemini_debug not in execute:
     errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
 
 
-# Autonomous cycle progress must be backed by a live same-repository PR at the exact head.
+# Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
     if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
         errors.append(f"{label} must require the machine-readable PROGRESS status")
     if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
         errors.append(f"{label} must support an explicit BLOCKED report")
-    if "BOONTA_CYCLE_EVIDENCE" not in workflow:
-        errors.append(f"{label} must require a traceable evidence field")
-    if "github.rest.pulls.get" not in workflow:
-        errors.append(f"{label} must verify progress against live GitHub PR state")
+    if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in workflow:
+        errors.append(f"{label} must require the declared evidence base")
+    if "id: snapshot_pr_heads" not in workflow or "state: 'all'" not in workflow:
+        errors.append(f"{label} must snapshot existing open and closed PR heads before the model call")
+    if "github.paginate(github.rest.pulls.list" not in workflow:
+        errors.append(f"{label} must capture the complete pre-cycle PR inventory")
+    if "PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}" not in workflow:
+        errors.append(f"{label} must pass the pre-cycle head inventory to the progress validator")
+    if "github.rest.pulls.get" not in workflow or "github.rest.repos.getCommit" not in workflow:
+        errors.append(f"{label} must verify the live PR and reported head commit")
     if "pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88'" not in workflow:
         errors.append(f"{label} must reject progress PRs whose head comes from a fork")
-    if "pr.head.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
+    if "pr.head.sha !== evidence[2]" not in workflow or "headCommit.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
         errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
+    if "const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2]" not in workflow:
+        errors.append(f"{label} must reject an unchanged PR that existed at cycle start")
+    if "pr.base.ref !== evidenceBaseMatch[1]" not in workflow:
+        errors.append(f"{label} must check the PR's actual base against its reported main/dev target")
+    if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
+        errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
+if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
+    errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
+if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
+    errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
 if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
     errors.append("OpenRouter fallback must persist its final report for contract validation")
 if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
