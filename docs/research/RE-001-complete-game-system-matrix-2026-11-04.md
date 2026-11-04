@@ -2453,3 +2453,33 @@ Pinned references:
 - Independent IDA metadata: https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt and https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt
 
 Evidence boundaries: these are separate snapshots; same-build identity is unproven. No GameCube/Wii parity or retail runtime test is claimed. No gameplay implementation, executable, ROM, disc image, model, texture, animation or extracted asset was added.
+
+
+## Independent IDA entity notes refine the missing Judge F0 callback — 2026-11-05
+
+A second inspection of the pinned IDA notes adds context around the missing `0x0045E200` body, but still does not recover its call instructions.
+
+### Entity callback scheduler
+
+The independent `EntitySystem.txt` notes describe:
+- `0x004508B0`: iterates all entities and executes each entity's callback pointer at header offset `+0x14`, subject to two entity-flag skip conditions;
+- `0x00450930`, `0x004509B0`, `0x00450A30`: the corresponding `+0x18`, `+0x1C`, and `+0x20` callback stages;
+- the callback stages run as phase groups (all entities' `+0x14` callbacks, then the next stage), rather than completing all phases for one entity before moving to the next.
+
+This agrees with the separate Steam-PC frame export's phase-barrier sequence, and with the SWR Judge event descriptor mapping Judge F0 to the first callback slot. The note is independent IDA analysis, not a retail runtime trace.
+
+### Judge state 6 meaning and event payload
+
+The pinned IDA `Entity_Jdge.txt` notes identify the callback at `0x0045E200` as `cb14` and describe its state-6 branch as “loading back to cantina or reloading race”. The same note describes the Judge word at offset `+0x128` as an event/magic value such as `Abrt`, `RStr` or `Fini`, used together with low-byte state 6 to trigger a load. It also describes `0x0045D0B0` as the function that causes a load to be triggered from within a race.
+
+Those descriptions sharpen the role of the missing callback: its state-6 path is part of race exit/reload handling. They do **not** document a direct call from `0x0045E200` to `0x0045DD80`, nor an indirect route through another function. Therefore the precise PC xref remains **UNKNOWN**.
+
+### Updated evidence boundary
+
+Taken together, the Steam-PC frame sequence, the independent IDA entity-system notes, and the SWR event registration support the interpretation that `0x0045E200` is the Judge's regularly scheduled F0 callback. IDA's state notes associate state 6 with race exit/reload. But the Steam-PC C export omits the callback body and IDA notes do not provide the callsite instructions, so no PC call edge to `FUN_0045dd80` is claimed. The earlier `NOT_INVOKED` graph marker remains insufficient to prove absence.
+
+Pinned IDA notes:
+- Entity callback scheduler: https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/EntitySystem.txt
+- Judge state machine and event fields: https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Jdge.txt
+
+No new binary, executable or game asset was accessed or copied. Separate snapshots remain unproven same-build; no GameCube/Wii parity or runtime result is claimed.
