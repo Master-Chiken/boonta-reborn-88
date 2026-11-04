@@ -87,11 +87,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74"
       ],
-      "next_action": "Human review of #282. Latest PC-only research extends the ground-contact/collision recovery with BoostCharge (0/1/2 indicator + input-gated charge state), ApplyEngineDamage (periodic fire-marked engine section damage), Repair (0.5s hold request, per-section repair using upgrade repairRate, warning timer), Explode (side-specific guarded handler) and CheckResetInput (0x2000 bit -> RESPawn flag, but observed call sites are debug-gated). Full boost eligibility-bit writer, several rdata thresholds, fire-bit origin and normal reset path remain UNKNOWN. No PC-to-GC/Wii inference.",
+      "next_action": "Human review of #282. Latest PC-only follow-up traces boost charge -> controller BOOSTING eligibility -> UpdateSpeed (4.0 vs1.5 accel response) + ApplyBoost (boostValue grows 1.5/s, decays 5/s, separate thrust term) -> traction. Steam F2 physics-contact callback FUN_0047B520 calls UpdateHeat FUN_004788C0: boost drains engineTemp by heatRate, idle cools by coolRate, lava drains 20/s with tilt-biased engine side; at zero, set engineStatus fire bit 0x08 and clear BOOSTING; ApplyEngineDamage then damages burning sections. SWR source has UpdateHeat body but F2 wrapper 0x0047B520 remains TODO and no ordinary source-level caller was found. PC executable identity and all GC/Wii parity remain unresolved.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
+      "head_sha": "46074896b3daf9fb448e193cc97402dfce518a74",
       "updated_at": "2026-11-04"
     },
     {
@@ -185,12 +186,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74"
       ],
-      "next_action": "Human review of #282. Latest PC-only research extends the ground-contact/collision recovery with BoostCharge (0/1/2 indicator + input-gated charge state), ApplyEngineDamage (periodic fire-marked engine section damage), Repair (0.5s hold request, per-section repair using upgrade repairRate, warning timer), Explode (side-specific guarded handler) and CheckResetInput (0x2000 bit -> RESPawn flag, but observed call sites are debug-gated). Full boost eligibility-bit writer, several rdata thresholds, fire-bit origin and normal reset path remain UNKNOWN. No PC-to-GC/Wii inference.",
+      "next_action": "Human review of #282. Latest PC-only follow-up traces boost charge -> controller BOOSTING eligibility -> UpdateSpeed (4.0 vs1.5 accel response) + ApplyBoost (boostValue grows 1.5/s, decays 5/s, separate thrust term) -> traction. Steam F2 physics-contact callback FUN_0047B520 calls UpdateHeat FUN_004788C0: boost drains engineTemp by heatRate, idle cools by coolRate, lava drains 20/s with tilt-biased engine side; at zero, set engineStatus fire bit 0x08 and clear BOOSTING; ApplyEngineDamage then damages burning sections. SWR source has UpdateHeat body but F2 wrapper 0x0047B520 remains TODO and no ordinary source-level caller was found. PC executable identity and all GC/Wii parity remain unresolved.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76"
+      "head_sha": "46074896b3daf9fb448e193cc97402dfce518a74"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
