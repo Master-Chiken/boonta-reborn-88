@@ -214,11 +214,12 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/86114d10b250cd4a1ec19d49f73992fb96d96509",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a"
       ],
       "next_action": "Build a bounded, source-pinned course-resource dependency manifest for one PC reference course (selectors, block/resource IDs, loader type, consumers and ownership); then identify which links need native GC/Wii evidence. Keep the work research-only and reuse the existing RE-001 matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "888c0f20b9cb3a53d80f26df9e24de72409bde44",
+      "head_sha": "c1cbbb5ecad707c8796aa972694c6156e7b3727a",
       "updated_at": "2026-11-04"
     },
     {
@@ -432,12 +433,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/86114d10b250cd4a1ec19d49f73992fb96d96509",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a"
       ],
       "next_action": "Keep the race-completion chain separate from course bootstrap: review the exact Judge Fini → teardown candidate → cMan/Hang/Results receivers, and retain UNKNOWN for the unproven normal runtime edge. Reuse #282 evidence; do not duplicate the dossier or infer console parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "888c0f20b9cb3a53d80f26df9e24de72409bde44"
+      "head_sha": "c1cbbb5ecad707c8796aa972694c6156e7b3727a"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
