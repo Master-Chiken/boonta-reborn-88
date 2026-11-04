@@ -396,3 +396,21 @@ The initial post-race/hangar/results handoff is **still UNKNOWN** because the te
 
 All of the above is Windows-PC evidence only. It does not identify native GameCube/Wii state numbers, flags, callbacks or results transitions.
 
+### Independent IDA state map and exact-address label correction
+
+The independent IDA notes remove the remaining ambiguity about the *meaning of the state numbers*, while still not proving the post-race callback chain:
+- IDA `Entity_Jdge.txt` explicitly labels Judge state 0 as countdown, 1 as racing, 2 as end-race stats, 3 as unknown, 4 as camera-sweep cutscene initialization, 5 as the camera-sweep cutscene's main logic, and 6 as loading back to the cantina or reloading the race. It also notes a condition involving Judge flag/field `+0x130) that can prevent state 4 from advancing to 5. This independently agrees with the pre-race interpretation of 4/5 and supersedes the earlier prose labels in SW_RACER_RE's F0 comments.
+- IDA's function names identify `0x0045DFE0` as `Unk_Jdge_StartCountdown` (extent `0x137`), `0x0045DD80` as `Unk_Jdge_LoadFromRace` (extent `0x254`), and `0x00466BD0` as `Unk_Jdge_LoadFromRaceFini` (extent `0x265`). The SW_RACER_RE reconstruction's function label `swrObjJdge_StartPostRaceSequence` at `0x0045DFE0` is therefore a misleading analyst name: its visible body resets the Judge low nibble to 0 and enters the countdown. Treat the IDA names as analyst labels, not retail symbols.
+- IDA records the `Begn` event as being called from `0x0045B290` and passing a RaceData pointer/configuration to `0x00466BD0`; this agrees with the SW_RACER_RE F4 `Begn` handler and its still-incomplete `swrObjJdge_InitTrack` body.
+
+**Steam-PC teardown candidate at the matching address:** the pinned Steam export contains `FUN_0045dd80` at the same address as SW_RACER_RE's `swrObjJdge_TeardownRace` stub and IDA's `Unk_Jdge_LoadFromRace`. Its body:
+1. performs race cleanup, clears the Test/Toss/Smok/Trig/Chsr pools, and updates the per-racer result/profile records;
+2. on a conditional `Fini` branch (`DAT_0050c9f8 & 2`), calls `FUN_00466bd0`, marks scene objects loaded, and sets Judge state 3;
+3. otherwise sleeps the Judge, sends `RSet` to the cMan pool, and broadcasts the supplied event through `All!` (substituting `Abrt` if `DAT_0050ca2c` is set).
+
+This is useful body-level cross-reference for the missing teardown stub, but **not a proven normal runtime edge**: the Steam snapshot's own dependency graph explicitly says `NOT_INVOKED --> FUN_0045dd80`. The body is therefore a *candidate implementation at a matching PC address*, not proof that the normal post-race path executes it in the sampled build.
+
+**Hang F4 remains the missing receiver.** IDA names `EntityHangCallback0x24_45A040` at `0x0045A040` (extent `0x34C`), but the inspected Steam text export does not contain `c/FUN_0045a040.c` or an equivalent body. If the candidate teardown's `All!` broadcast is reached, the generic event dispatcher would send it to eligible F4 callbacks, including Hang's slot if configured; without the Hang F4 body or a verified runtime trace, it is still unknown whether/how that message sets Hang menu screen 5 (`POST_RACE_INFO`).
+
+**Refined conclusion:** the pre-race intro state sequence is now independently corroborated, and the missing post-race question has narrowed to the state-6 teardown / Fini-or-Abrt broadcast / Hang F4 receiver chain. The teardown body at `0x0045DD80` is a promising PC cross-reference but remains marked NOT_INVOKED in the inspected Steam dependency graph. Do not claim that Judge Fini currently opens Results. No native GameCube/Wii state mapping is implied.
+
