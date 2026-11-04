@@ -200,11 +200,14 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h#L44-L44",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L155-L155",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/89ea54784a670e2992e365e5f1ed3f90ccb5c288",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288"
       ],
-      "next_action": "Human review of PR #282. Repair input is mapped: Repair button slot 9 at 0xEC8864 held >0.5s via 0xEC88C4 sets flags0 REPAIRING 0x400. PC FUN_0046AB10 pins repairTimer +0x2BC to 0.1 while active and schedules six engine parts: engineHealthMin[6] +0x270, engineHealth[6] +0x288 (left/right top-mid-bottom), engineStatus[6] +0x2A0. It chooses a damaged part, advances health, tracks left/right group and calls side-effect helper FUN_004741D0 with side 1/2 on expiry. SWR maps the input and flag but swrRace_Repair remains TODO; do not claim implementation. Keep helper effect semantics and cross-snapshot identity bounded.",
+      "next_action": "Human review of PR #282. Latest engine audit confirms legacy SWR names ENGINE_REPAIR=0x04, ENGINE_ON_FIRE=0x08, ENGINE_LEAN=0x0A (8|2); PC TakeDamage sets raw status bit 0x01; Repair uses temporary 0x10 and 0x04 markers, with 0x10/0x08 interaction in probabilistic fire clear. Despite SWR field name engineHealthMin, PC damage code updates it to the current value whenever current damage exceeds the stored value, so it behaves as a high-water/reference; repair scheduler returns selected engineHealth toward half that reference. Keep bit 0x01 and 0x10 semantically unnamed, no same-build or console claims.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8722a5e5b1b9724bfc73783501efb1b689bbe893",
+      "head_sha": "89ea54784a670e2992e365e5f1ed3f90ccb5c288",
       "updated_at": "2026-11-04"
     },
     {
@@ -404,12 +407,15 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h#L44-L44",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L155-L155",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/89ea54784a670e2992e365e5f1ed3f90ccb5c288",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288"
       ],
-      "next_action": "Human review of PR #282. Repair input is mapped: Repair button slot 9 at 0xEC8864 held >0.5s via 0xEC88C4 sets flags0 REPAIRING 0x400. PC FUN_0046AB10 pins repairTimer +0x2BC to 0.1 while active and schedules six engine parts: engineHealthMin[6] +0x270, engineHealth[6] +0x288 (left/right top-mid-bottom), engineStatus[6] +0x2A0. It chooses a damaged part, advances health, tracks left/right group and calls side-effect helper FUN_004741D0 with side 1/2 on expiry. SWR maps the input and flag but swrRace_Repair remains TODO; do not claim implementation. Keep helper effect semantics and cross-snapshot identity bounded.",
+      "next_action": "Human review of PR #282. Latest engine audit confirms legacy SWR names ENGINE_REPAIR=0x04, ENGINE_ON_FIRE=0x08, ENGINE_LEAN=0x0A (8|2); PC TakeDamage sets raw status bit 0x01; Repair uses temporary 0x10 and 0x04 markers, with 0x10/0x08 interaction in probabilistic fire clear. Despite SWR field name engineHealthMin, PC damage code updates it to the current value whenever current damage exceeds the stored value, so it behaves as a high-water/reference; repair scheduler returns selected engineHealth toward half that reference. Keep bit 0x01 and 0x10 semantically unnamed, no same-build or console claims.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8722a5e5b1b9724bfc73783501efb1b689bbe893"
+      "head_sha": "89ea54784a670e2992e365e5f1ed3f90ccb5c288"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
