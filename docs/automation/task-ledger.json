@@ -115,11 +115,19 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445690.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445860.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8c05c6a1a93051ea8a059d00650f3a8438e05c29",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004457d0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004456b0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445780.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445730.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0042ae00.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004270c0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00426910.c"
       ],
-      "next_action": "Human review of PR #282. Latest addendum directly recovers the separate Steam-PC FUN_00445980 frame scheduler at SWR's swrMain_RunFrame address: model animation → global F0 → F1 → F2 → F3 → camera update, selected only when the queried state value is zero; otherwise a separate state-update path runs. FUN_004270C0 and full state semantics remain UNKNOWN. Steam/SWR executable identity and GameCube/Wii parity are not established.",
+      "next_action": "Human review of PR #282. Latest Steam-PC scheduler/state audit maps the frame function and a supported pause transition model: 0 active; 2 entering pause; 1 paused; 3 leaving pause back to 0. These are inferred labels from numeric state transitions, not an official enum. DAT_0050C5F4 remains an independent gate; FUN_004270C0 is effectively a no-op in the pinned export. PC-only; no target parity.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "fb9001c5e7815112f955f17159dbe4977397b9ea",
+      "head_sha": "8c05c6a1a93051ea8a059d00650f3a8438e05c29",
       "updated_at": "2026-11-04"
     },
     {
@@ -233,12 +241,20 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445690.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445860.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8c05c6a1a93051ea8a059d00650f3a8438e05c29",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004457d0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004456b0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445780.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445730.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0042ae00.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004270c0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00426910.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only addendum recovered FUN_00445980 directly from the pinned Steam export, confirming the global F0/F1/F2/F3 phase barriers and model/camera updates around them. The state gate reads DAT_0050C5F0; only zero selects the active object-update path, while nonzero uses a separate state routine. Full enum, runtime observation and target-platform behavior remain unknown.",
+      "next_action": "Human review of PR #282. Latest exact head adds PC-only evidence for the frame pause gate: pause entry writes state 2 then 1; resume writes 3 then returns to 0; only state zero selects the active F0–F3 global callback passes. Treat the labels as supported inference because the source exposes numeric writes, not a named enum. Full GameCube/Wii behavior remains unknown.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "fb9001c5e7815112f955f17159dbe4977397b9ea"
+      "head_sha": "8c05c6a1a93051ea8a059d00650f3a8438e05c29"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
