@@ -247,6 +247,15 @@ for required in (
         errors.append(f"OpenRouter daily cooldown is missing required failover/persistence behavior: {required!r}")
 if "id: run_opencode" not in openrouter_fallback:
     errors.append("OpenRouter invocation must expose a stable step ID for failure-only cooldown recording")
+
+# Public issue comments cannot spoof provider cooldowns; only our GITHUB_TOKEN-authored marker is trusted.
+for label, workflow, marker in (
+    ("Gemini", execute, "<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:"),
+    ("OpenRouter", openrouter_fallback, "<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:"),
+):
+    trusted_lookup = f"comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('{marker}')"
+    if workflow.count(trusted_lookup) != 2:
+        errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
     errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
 
