@@ -75,11 +75,14 @@
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Hang.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/EntitySystem.txt",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. New Steam/IDA evidence maps Hang menu screen 5 to POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 to Results routine 0x00439CE0, conditional on Hang active. The static graph marks FUN_00457620 NOT_INVOKED; the writer of Hang menu screen 5 and the post-race activation of Hang remain unproven. Next trace is the state-5/active-flag writer and its relation to the Judge Fini/teardown candidate. Keep the PC-only boundary; native GameCube/Wii needs exact lawful local DOL analysis.",
+      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now show a concrete Results continuation: Results menu screen5 unlocks pilot by setting Hang screen17; Hang F0 case17 waits for unlock-scene completion then sets pending screen5; the common menu transition applies screen5. This is only the unlock-scene return to Results, not the initial postrace Judge-to-Hang transition. The initial activation/writer path and Swee-to-Hang handoff remain unproven. Keep PC-only boundary; native GC/Wii requires exact lawful local DOL.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a62172c5285ab37174cd401c61e8b912452c62c2",
+      "head_sha": "bbebf353279ac6297b3aa1e665c448b82dc8e18f",
       "updated_at": "2026-11-04"
     },
     {
@@ -159,12 +162,15 @@
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Hang.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/EntitySystem.txt",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. New Steam/IDA evidence maps Hang menu screen 5 to POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 to Results routine 0x00439CE0, conditional on Hang active. The static graph marks FUN_00457620 NOT_INVOKED; the writer of Hang menu screen 5 and the post-race activation of Hang remain unproven. Next trace is the state-5/active-flag writer and its relation to the Judge Fini/teardown candidate. Keep the PC-only boundary; native GameCube/Wii needs exact lawful local DOL analysis.",
+      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now show a concrete Results continuation: Results menu screen5 unlocks pilot by setting Hang screen17; Hang F0 case17 waits for unlock-scene completion then sets pending screen5; the common menu transition applies screen5. This is only the unlock-scene return to Results, not the initial postrace Judge-to-Hang transition. The initial activation/writer path and Swee-to-Hang handoff remain unproven. Keep PC-only boundary; native GC/Wii requires exact lawful local DOL.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a62172c5285ab37174cd401c61e8b912452c62c2"
+      "head_sha": "bbebf353279ac6297b3aa1e665c448b82dc8e18f"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
