@@ -1175,3 +1175,92 @@ The code supports this transition model:
 ### Updated evidence boundary
 
 This closes the bounded source-level state-gate question for the selected Steam-PC snapshot. It does not prove the exact transition animation, input-device mapping, retail runtime response, or same-build identity with SW_RACER_RE. The native GameCube/Wii implementation must not inherit this numeric state machine without target-specific evidence.
+
+
+## 2026-11-04 — F2 contact dispatch: pod-vs-pod, ground raycast and ZON wall path
+
+This is a bounded PC-only continuation of the pod F2 callback trace. It separates the collision stages and records the conditions visible in the pinned Steam-PC body, then compares them with the independently pinned SW_RACER_RE implementation where one exists.
+
+### 1. F2 order: pod collision first, then one of two contact paths
+
+Steam-PC `FUN_0047B520` calls `FUN_0047B0C0` before selecting a contact helper. It extracts bit 25 from the pod's flags0 word (`flags0 & 0x02000000`):
+- bit clear: call `FUN_00479E10`, mapped in SWR to `swrRace_UpdateGroundContact`;
+- bit set: call `FUN_0047A200`, mapped in SWR to `swrRace_UpdateWallContact`.
+
+The bit is explicitly named `swrObjTest_FLAG0_ZON = 0x02000000` in [SWR `types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h), described as zero-g/orbit. Thus the evidence supports a **normal-ground versus ZON/surface-contact dispatch**. The `UpdateWallContact` name is the SWR address mapping; it should not be mistaken for a fully recovered native GC/Wii function.
+
+### 2. Pod-vs-pod collision is a separate pre-contact stage
+
+Steam-PC `FUN_0047B0C0` (`swrRace_ResolvePodCollision` address) performs a proximity candidate query before ground/wall resolution:
+- It is gated by `(flags0 & 0x6000) == 0` and `(flags1 & 0x02000000) == 0`. These masks are preserved as numeric conditions; their complete semantic names are not assigned here.
+- It queries event type `Test`, excludes the current pod, passes squared-distance threshold `2500.0`, and requests up to four candidates.
+- The common SWR event-query implementation sorts candidates in ascending squared distance. The Steam helper then uses candidate slot zero, so the nearest returned pod is the one considered by this response stage.
+- It checks the candidate's corresponding flag masks again, computes a relative swept/approach quantity via helper `FUN_0047AEE0`, and requires additional separation/approach thresholds before applying a response.
+- On acceptance, it adjusts both pod positions, adds collision-velocity components to both participants, runs the shared collision/death-speed helper and bleeds collision energy into each pod's state.
+
+The distance argument is explicitly a *squared* distance in the SWR `swrEvent_FindNearestObjects` signature/implementation. A value of 2500 therefore corresponds to a 50-unit radius if the coordinate system uses the same linear game units. It is not a 2500-unit radius. The four-slot result capacity is not evidence that all four candidates are resolved in one call: this Steam body only reads slot zero.
+
+Source boundaries:
+- Steam-PC candidate resolver: [`FUN_0047B0C0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b0c0.c).
+- Steam-PC F2 caller and branch: [`FUN_0047B520.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c).
+- SWR event-query implementation and sorted insertion: [`swrEvent.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c).
+- SWR address/symbol map: [`swrRace.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+
+### 3. Normal ground-contact path: raycast, normal, slope, gravity, wall correction
+
+The SWR source implements `swrRace_RaycastGround` and `swrRace_UpdateGroundContact` at the mapped address `0x00479E10`. The recovered steps are:
+
+1. **Choose cast direction.** Normal mode uses `world_gravity`; magnet mode uses `-up`. The cast starts two units above the supplied position and has a long maximum range.
+2. **Choose the ray query.** When `FULL_RAYCAST` is not set, it first tries the track mesh's fast `CollideRayWithMesh` query. A miss falls back to the general model raycast. In magnet mode, if the surface-relative cast misses, it retries along world gravity.
+3. **Record hit/miss.** The hit node becomes `terrainModel`; the hit normal becomes the candidate up vector. A miss returns the sentinel distance 100000 and a world-up normal. The returned distance subtracts a two-unit skin.
+4. **Control the full simulation region.** A fresh ground query runs for pods within approximately 1000 units of the nearest active camera, for the local human pod, or for `FORCE_GROUND` pods. The flat-surface cache can reuse the previous ground Z and up vector.
+5. **Constrain magnet normal.** In magnet mode, `up.z` is clamped to at least 0.05 and renormalized, preventing an inverted/downward normal in this helper.
+6. **Apply slope and gravity.** If the pod is not dead/respawning, slope steering may update the lateral/slope velocity. Magnet mode selects the magnet variant. Gravity is applied unless the pod is in the ZOFF transition.
+7. **Resolve the movement against track geometry.** Non-local pods use `CollideBlockMove`. Local pods run `DetectWallScrape`, combine the immediate displacement with prior `wallPushback`, then call `ApplyWallCollision`. Flat-tagged terrain skips this wall/track correction branch.
+8. **Update hover pads or invalidate stale samples.** The four pad samples are refreshed for nearby pods; beyond the update range they are explicitly marked as no-ground.
+9. **Record ground distance.** The result is cached as `groundToPodMeasure`.
+
+The LOD split matters architecturally: distant AI is not performing the same full raycast/contact workload as local/near-camera/force-ground pods. The distant fallback uses spline position for racing pods and marks a spline snap; it is not a full replacement for close-range terrain collision.
+
+Relevant SWR source:
+- [`swrRace_RaycastGround` / `swrRace_UpdateGroundContact`, lines 3685–3868](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3685-L3868).
+- [`swrRace_ApplyGravity`, lines 3409 onward](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3409-L3490).
+- [Ground-contact declaration and address](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+
+### 4. Swept track collision is not the same as the pod-to-pod query
+
+The SWR `swrRace_CollideTrack` implementation (`0x0044ACB0`) tests the entire segment from previous to current pod position:
+- It computes the displacement and length.
+- For a nontrivial segment, it casts a ray from the previous point along normalized displacement, limited to that segment length.
+- On a hit, it pushes the proposed current point back out along the hit normal, adding a two-unit clearance skin.
+- The motion integrator repeats this correction for up to six passes and records the resulting `wallPushback` delta.
+
+The `swrRace_IntegrateMotion` caller skips this track collision when the pod is on a flat-tagged surface and avoids the expensive collision work for distant non-local pods unless forced to ground. AI acceleration is decelerated when repeated collision corrections occur. This is a separate track-mesh sweep from the F2 pod-to-pod resolver.
+
+Source: [`swrRace_CollideTrack` and `swrRace_IntegrateMotion`, lines 4460–4591](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4460-L4591).
+
+### 5. ZON / wall-contact path: what is and is not recovered
+
+The Steam-PC `FUN_0047A200` body confirms a distinct branch. It clears the airborne-like `flags1` bit `0x200`, then selects between:
+- a near/local/ZOFF case, where the local human path runs `FUN_00477940` (mapped to `DetectWallScrape`) and `FUN_00479920` (mapped to `ApplyWallCollision`), while the non-local path runs `FUN_0044ABC0` (`CollideBlockMove`);
+- a distant fallback that sets a world-up vector, supplies a default contact value and, for one racing state, marks a spline snap.
+
+The SWR header maps these addresses and describes the wall branch, but the corresponding SWR `swrRace_UpdateWallContact`, `swrRace_DetectWallScrape` and `swrRace_ApplyWallCollision` bodies remain incomplete/TODO in the inspected source. Do not claim the full wall solver has been ported or recovered in SWR.
+
+Steam reference:
+- [`FUN_0047A200.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047a200.c).
+- SWR address map: [`swrRace.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+- SWR TODO helper declarations/bodies: [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4850-L4868).
+
+### 6. F2 reconstruction implications and open edges
+
+The PC reference now supports three distinct collision/contact subsystems, in this order:
+1. Pod-vs-pod proximity and pair response.
+2. Contact dispatch: normal ground-raycast/contact when ZON is clear; wall/surface-contact path when ZON is set.
+3. Position/velocity/contact-state bookkeeping, heat update, orientation update and surface-tag refresh.
+
+The F2 routine derives a signed vertical/contact speed from the corrected position delta and the pod's up basis, then updates landing/death/contact state and proceeds to heat/orientation/surface behavior. The exact semantic name for every raw field/bit is not invented where no enum/structure annotation exists.
+
+**Next highest-value research task:** finish the Steam-PC wall-contact path by tracing the internals of `FUN_00477940`, `FUN_00479920`, and `FUN_0044ABC0`; then compare their field writes against the SWR TODO signatures without importing source code. Keep the PC and native GameCube/Wii evidence separate.
+
+No third-party source was copied into the repository; this addition is original analysis and citations only. No proprietary binary, ROM, DOL/REL, disc image, BIOS, model, texture or extracted game asset was used or committed.
