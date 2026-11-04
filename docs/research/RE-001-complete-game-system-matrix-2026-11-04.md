@@ -1834,3 +1834,44 @@ References:
 - SWR [`data_symbols.syms`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1506-L1527), [`engine_config.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h), [`types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L199-L210), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2807-L3089), and [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c).
 
 **Evidence boundary:** PC/SWR static sources pinned separately. The input names are reconstruction-side symbol-map labels matched by address; no same-build proof, runtime input test, or GameCube/Wii parity is claimed.
+
+
+## Repair input, six-engine layout and side event — 2026-11-04
+
+The repair activation is now mapped to a named controller input and the six-engine data layout.
+
+### Input-to-player-flag path
+
+- `0x00EC8864` is `swrControl_repairButton`, processed button-state slot 9.
+- `0x00EC88C4` is `swrControl_repairHoldTime`, the held duration for slot 9.
+- The SWR symbol/config map documents a strict hold threshold of **more than 0.5 seconds** (`SWR_CTL_HALF_HOLD`).
+- In Steam-PC `FUN_0046BEC0`, the corresponding input branch sets its local repair-held boolean only when the processed repair input is nonzero and its hold time exceeds the 0.5-second constant; this boolean then sets or clears `flags0 0x400`.
+- The independent SWR flag table names this as `swrObjTest_FLAG0_REPAIRING` and describes both player-held repair and AI post-finish auto-repair as writers.
+
+In Steam-PC `FUN_0046AB10`, when `flags0 0x400` is set, the per-player repair timer at `+0x2BC` is pinned to 0.1 seconds. Otherwise it counts down or is re-armed according to the engine damage state. This is the bridge between the held input and the actual per-engine repair scheduler.
+
+### Six-engine storage and selection
+
+The pinned SWR `types.h` field map and the PC body agree on the six-entry layout:
+
+| Offset | SWR field | Meaning |
+|---|---|---|
+| `+0x270` | `engineHealthMin[6]` | per-part minimum/threshold health value |
+| `+0x288` | `engineHealth[6]` | six part-health/damage values; order is left top/mid/bottom, then right top/mid/bottom |
+| `+0x2A0` | `engineStatus[6]` | per-part status bits |
+| `+0x2BC` | `repairTimer` | scheduler timer |
+| `+0x2C4` | `totalDamage` | accumulated damage statistic |
+
+The PC repair scheduler clears temporary selection bits, preserves or selects one damaged part (preferring the largest eligible health/damage value if no part is already selected), and updates the chosen part over time. With repair input active, it progressively moves the selected part toward its minimum/healthy state; without active repair input, damaged/fire status can trigger the separate engine-failure/recovery path. The scheduler separately tracks damage on indices 0–2 versus 3–5, i.e. left versus right engine groups.
+
+When its repair timer expires, `FUN_0046AB10` calls `FUN_004741D0` with side code 1 or 2. That helper selects side-specific model-part coordinates (offset groups `+0x3C0` or `+0x400`), sets corresponding temporary side flags, and emits effects/audio. This is a side event associated with the repair scheduler; it is not itself the per-part health update.
+
+### Reconstruction gap
+
+The Steam-PC path exposes the complete input-to-repair-scheduler relationship. In the pinned SWR source, the processed control symbols and `REPAIRING` flag are mapped, and the player-control code derives the hold condition, but `swrRace_Repair` at `0x0046AB10` remains a `TODO` stub. Thus the essential missing behavior is not just controller polling: it is selecting/advancing one of six damaged parts, maintaining the repair timer, selecting left/right repair side, and issuing the associated event. This is static PC/SWR comparison only; no same-build identity or GameCube/Wii parity is claimed.
+
+References:
+- Steam-PC [`FUN_0046BEC0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bec0.c), [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c), [`FUN_004741D0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c).
+- SWR [`data_symbols.syms`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1521-L1527), [`engine_config.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h#L44-L44), [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567), [`types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L155-L155), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339).
+
+**Evidence boundary:** offsets/names and behavior are sourced from separately pinned PC and SWR snapshots. No binary identity, runtime confirmation, or console parity is asserted.
