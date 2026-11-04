@@ -771,3 +771,49 @@ Judge track scene setup → allocate/reset 30-object Trig manager → initialize
 
 The SWR tree still has the corresponding scene-setup and initialization functions as HANG("TODO"); the Steam C/ASM supplies the comparative PC implementation. The two source snapshots are not proven identical builds. The filter bit 0x01, trigger resource/model IDs and every node/visibility mask remain PC-reference facts only. No code/assets were copied, and no native GameCube/Wii trigger model, ID, data layout, or behavior is inferred.
 
+
+
+## 2026-11-04 — special spawner trigger boundary (types 211 and 310)
+
+The enum labels for trigger types 211 and 310 suggest flame/dozer spawning, but their visible handling does not follow the ordinary trigger-effect path. This follow-up separates (a) description-time scene setup, (b) the generic per-object Trig callbacks, and (c) the still-unrecovered spawn/update mechanism. All conclusions remain Windows-PC comparative evidence plus the separately pinned SW_RACER_RE reconstruction; none is native GameCube/Wii evidence.
+
+**Pinned sources**
+- [SW_RACER_RE trigger enum](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h)
+- [SW_RACER_RE Trig callback wiring](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.h)
+- [SW_RACER_RE Trig F0/F2/F4 and setup routines](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c)
+- [Steam-PC static trigger-description initializer FUN_0047D380](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047d380.c)
+- [Steam-PC runtime trigger dispatcher FUN_0047CE60](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c)
+- [Steam-PC Judge scene setup FUN_00465510](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465510.c)
+
+### 1. What the current SWR trigger object actually updates
+
+The pinned SWR enum labels 208 as BalloonSpawner, 211 as FlameSpawner, 308 as SpawnFish, and 310 as DozerSpawner. Its `Trig` event-manager entry wires the 0x58-byte object to `swrObjTrig_F0`, `swrObjTrig_F2`, a no-op F3, and `swrObjTrig_F4`.
+
+In the inspected SWR implementation:
+- `swrObjTrig_F0` has explicit timer/animation/camera-shake cases for several ordinary trigger effects, but no FlameSpawner (211) or DozerSpawner (310) case.
+- `swrObjTrig_F2` has a distinct transform-follow path for BalloonSpawner (208) and SpawnFish (308). It does not list FlameSpawner (211) or DozerSpawner (310); its remaining switch is for FX-animation placement.
+- `swrObjTrig_F4` handles object lifecycle sub-events (allocation/reset/free), not a spawner-specific spawn routine.
+
+This establishes only that the current reconstruction's visible per-object Trig F0/F2/F4 callbacks do not implement those two types. It does **not** prove that the retail game has no separate spawner system or that no other object manager handles them.
+
+### 2. What the Steam-PC initializer does for 211 and 310
+
+Steam FUN_0047D380 is a static trigger-description/scene initializer, not the runtime type dispatcher:
+- For type 211 (0xD3), it obtains a scene helper via FUN_0047D310(description, visibility, 2). When the helper exists, it builds an oriented transform from the description's directional fields and position/height values, applies it to the helper, and sets description byte +0x26 bit 0x01.
+- For type 310 (0x136), it obtains a scene helper via FUN_0047D310(description, visibility, 0). When the helper and affected node are present, it copies the node transform onto the helper and sets the same description bit 0x01.
+
+Neither branch visibly creates a runtime Trig object through FUN_0047C7D0 or performs a spawn. They show per-description scene attachment plus a flag write. The later Steam FUN_0047CE60 runtime dispatcher has no explicit 0xD3 or 0x136 case in its exported body either. Together with the proximity checker skipping descriptions whose +0x26 bit 0x01 is set, this supports treating these types as outside the ordinary proximity/dispatcher route until a separate consumer is identified.
+
+### 3. Numeric namespace collision: trigger type 310 is not model ID 310
+
+The same number appears in two different SWR enums:
+- Trigger-type enum: 310 = `swrModel_TriggerType_DozerSpawner`.
+- Model-ID enum: 310 = `MODELID_gate01_part`, while `MODELID_dozer_part` is 312.
+
+Steam FUN_00465510 independently loads resource/model ID 0x136 (decimal 310) during Judge scene setup. That is a model-resource selector in this call, not evidence that trigger type 310 loads a model with the same semantic name. Do not collapse trigger-type IDs, model IDs, and track-resource selectors into one namespace. The same general caution applies to other equal numeric values such as 211.
+
+### Remaining gap
+
+The evidence now narrows the question: where, if anywhere, do flame/dozer spawner descriptions feed a non-Trig per-frame object or spawn manager after scene initialization? No such consumer has been established in these pinned public exports. The next valid step is a complete xref/caller trace on the exact matching local executable/analysis database or an independently verified source body; absent that, the spawn scheduler, lifetime, node-follow behavior and activation conditions remain UNKNOWN. Do not implement these types from enum comments or scene initialization alone.
+
+No third-party code or proprietary asset was copied; no gameplay code was changed; no GameCube/Wii behavior is inferred.
