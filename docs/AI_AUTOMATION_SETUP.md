@@ -54,7 +54,7 @@ Le workflow utilise OpenCode CLI version `1.19.5`, le modèle fixe `openrouter/o
 
 OpenRouter Free reste soumis à ses quotas, à la disponibilité et à la compatibilité des modèles gratuits avec les appels d'outils. Un échec de quota, de routage ou de function-calling arrête le cycle ; il n'entraîne aucun secours payant. Les contenus du dépôt public nécessaires au travail peuvent être transmis à OpenRouter et au fournisseur gratuit sélectionné : ne jamais envoyer de secrets, d'archives commerciales, de ROM/disc/BIOS, de données privées ou d'actifs de provenance incertaine.
 
-Le workflow ne peut pas être testé depuis cette conversation sans le secret propriétaire. Après fusion de la PR d'intégration et configuration du secret/de la variable, le prochain échec Gemini permettra de tester la bascule réelle. Contrôler les logs et le head exact de toute PR générée ; aucune fusion automatique n'est activée.
+Le workflow [Boonta Autonomous Readiness](../.github/workflows/boonta-autonomous-readiness.yml), lancé manuellement depuis `main`, indique aussi si le secret OpenRouter et l'attestation sont présents, sans afficher leurs valeurs et sans appeler l'API. Ce contrôle ne valide ni la clé, ni le compte Free, ni le quota. Le workflow ne peut pas être testé depuis cette conversation sans le secret propriétaire. Après fusion de la PR d'intégration et configuration du secret/de la variable, le prochain échec Gemini permettra de tester la bascule réelle. Contrôler les logs et le head exact de toute PR générée ; aucune fusion automatique n'est activée.
 
 ## Relecture de PR via OpenRouter Free — à la demande
 
