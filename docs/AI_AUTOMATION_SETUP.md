@@ -5,7 +5,7 @@ Cette page décrit les automatismes disponibles dans le dépôt. **Boonta Autono
 ## Budget et données
 
 - Budget strict : **0 €**. Aucun compte de facturation, moyen de paiement, modèle payant de secours ou service cloud payant.
-- Gemini reste le fournisseur d'API utilisé par les workflows d'assistance existants. OpenRouter est autorisé uniquement pour la relecture manuelle de PR via `openrouter/free`, à condition que le workflow approuvé soit sur `main` et que le secret `OPENROUTER_API_KEY` soit configuré. Si le quota gratuit échoue ou qu'une facturation est réclamée, arrêter ; aucun secours payant n'est autorisé.
+- Gemini reste le fournisseur principal. Si son cycle autonome échoue après le lancement du modèle, le workflow peut appeler le writer OpenRouter Free séparé, uniquement avec la route fixe `openrouter/free` et après validation du garde-fou propriétaire `OPENROUTER_FREE_TIER_CONFIRMED=true`. Le reviewer manuel OpenRouter Free reste également disponible. Aucun modèle payant, aucune autre route OpenRouter, aucun achat de crédits ni moyen de paiement n'est autorisé.
 - Ne jamais mettre une clé dans un fichier, une issue, un commentaire ou cette conversation. Les clés restent dans les secrets GitHub.
 - Ne jamais envoyer à un service IA hébergé les ROMs, images disque, BIOS, archives commerciales, modèles/textures/audio extraits, secrets ou données dont les droits ne sont pas établis.
 - Le dépôt est public. Une réussite de tests de configuration ne prouve ni que le quota gratuit est disponible, ni que les comportements de jeu sont corrects.
@@ -35,9 +35,26 @@ L'exécution d'écriture reste fermée tant que toutes les conditions suivantes 
 - La variable `APP_ID` et le secret `APP_PRIVATE_KEY` sont configurés. Le GitHub App doit disposer de `Contents: write`, `Issues: write`, `Pull requests: write` et `Actions: read` : les trois premières permissions permettent de créer des branches/PR et de publier le suivi, la dernière permet à l'agent de lire les exécutions CI et les journaux d'échec.
 - Les rulesets `main`/`dev` protègent les branches concernées. L'agent ne reçoit aucun droit de fusion, de modification des paramètres, de force-push ou de suppression.
 
-Le mode autonome ne contourne pas le budget de 0 €. Les quotas gratuits peuvent limiter ou interrompre les cycles ; aucun modèle, fournisseur ou service payant de secours ne sera utilisé. Une exécution planifiée n'est pas un processus permanent : GitHub Actions démarre un cycle, puis s'arrête. Les cycles suivants reprennent à partir des issues, branches et PR visibles.
+Le mode autonome ne contourne pas le budget de 0 €. Gemini est essayé en premier ; si son cycle échoue, le writer OpenRouter Free n'est tenté que si sa clé et son attestation propriétaire sont présentes. Si OpenRouter est lui aussi indisponible ou limité, le cycle s'arrête. Aucun modèle, fournisseur ou service payant de secours ne sera utilisé. Une exécution planifiée n'est pas un processus permanent : GitHub Actions démarre un cycle, puis s'arrête. Les cycles suivants reprennent à partir des issues, branches et PR visibles.
 
 Ne pas activer la variable autonome avant d'avoir vérifié les secrets, les règles de branche et les conditions de confidentialité du fournisseur. Le contenu du dépôt public transmis à Gemini peut être traité selon les conditions du Free tier Google.
+
+## Secours autonome OpenRouter Free — après échec Gemini
+
+Le workflow [OpenRouter plan execute](../.github/workflows/openrouter-plan-execute.yml) est appelé automatiquement par [Boonta Autonomous Loop](../.github/workflows/boonta-autonomous-loop.yml) uniquement si le job Gemini a échoué. Il ne possède aucun déclencheur autonome propre. Il réutilise le verrou d'écriture unique, le GitHub App scoped token et le même périmètre d'autorisation : une tâche bornée, une branche et une PR, sans fusion automatique.
+
+**Activation explicite nécessaire dans Settings → Secrets and variables → Actions :**
+
+1. Créer une clé dans [OpenRouter API Keys](https://openrouter.ai/keys) avec le compte Free. Ne pas ajouter de carte, de moyen de paiement ni de crédits. Si OpenRouter exige un paiement, ne pas continuer.
+2. Ajouter le secret de dépôt `OPENROUTER_API_KEY`. Ne jamais copier la clé dans le dépôt, une issue, un commentaire ou cette conversation.
+3. Ajouter la variable de dépôt `OPENROUTER_FREE_TIER_CONFIRMED=true` seulement après avoir vérifié personnellement que le compte est Free et qu'aucun moyen de paiement/crédit n'est activé. Cette variable est une attestation du propriétaire, pas une vérification automatique du compte.
+4. Conserver `GEMINI_AUTONOMOUS_ENABLED=true` comme interrupteur maître de toute écriture autonome. Sans ce verrou, OpenRouter ne peut pas écrire.
+
+Le workflow utilise OpenCode CLI version `1.19.5`, le modèle fixe `openrouter/openrouter/free`, le fournisseur OpenRouter uniquement et le serveur GitHub MCP avec une liste explicite d'outils de lecture, création de branche, envoi de fichiers, création de PR et commentaires. L'exécution shell est bloquée. Les outils de fusion, suppression, administration, secrets et variables ne sont pas exposés. Le modèle ne peut donc pas choisir un modèle payant ou basculer vers un autre fournisseur via cette configuration.
+
+OpenRouter Free reste soumis à ses quotas, à la disponibilité et à la compatibilité des modèles gratuits avec les appels d'outils. Un échec de quota, de routage ou de function-calling arrête le cycle ; il n'entraîne aucun secours payant. Les contenus du dépôt public nécessaires au travail peuvent être transmis à OpenRouter et au fournisseur gratuit sélectionné : ne jamais envoyer de secrets, d'archives commerciales, de ROM/disc/BIOS, de données privées ou d'actifs de provenance incertaine.
+
+Le workflow ne peut pas être testé depuis cette conversation sans le secret propriétaire. Après fusion de la PR d'intégration et configuration du secret/de la variable, le prochain échec Gemini permettra de tester la bascule réelle. Contrôler les logs et le head exact de toute PR générée ; aucune fusion automatique n'est activée.
 
 ## Relecture de PR via OpenRouter Free — à la demande
 
