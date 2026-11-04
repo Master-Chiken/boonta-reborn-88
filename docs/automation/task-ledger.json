@@ -145,12 +145,12 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7b9d197e9f595f5397c46cc33e39647013e33cf8",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/be26ea901d32c544b80a689e172ef118f23061bf",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874179657"
       ],
       "next_action": "After PR #287 is merged, retarget this stacked PR to main, rerun full exact-head safety and provenance checks, inspect independent review, and only then consider merging.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-      "head_sha": "7b9d197e9f595f5397c46cc33e39647013e33cf8",
+      "head_sha": "be26ea901d32c544b80a689e172ef118f23061bf",
       "updated_at": "2026-11-04"
     }
   ]
