@@ -159,7 +159,7 @@ jobs:
             core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
 
       - name: 'Run Gemini CLI'
-        if: steps.free_tier_guard.outputs.allowed == 'true' && (inputs.autonomous_mode != true || steps.snapshot_pr_heads.outcome == 'success')
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
         env:
