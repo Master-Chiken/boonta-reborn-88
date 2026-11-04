@@ -278,12 +278,13 @@
         "https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0",
         "https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef",
         "https://github.com/everalert/swe1r-decomp/tree/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
       ],
-      "next_action": "Human review of PR #284 and its exact-head checks. After review, continue only the next unanswered PC spline-consumer question identified by issue #279; do not infer GC/Wii parity or recreate the recovered function bodies.",
+      "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "82fca158d6acdfc56fd9d45fc188bbf135a1f483"
+      "head_sha": "c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
