@@ -223,64 +223,16 @@ jobs:
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();
-            const status = summary.match(/^BOONTA_CYCLE_STATUS: (PROGRESS|BLOCKED)$/m)?.[1];
-            const hasField = (name) => new RegExp('^' + name + ': \\S.*        if: steps.free_tier_guard.outputs.allowed != 'true'
-        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
-        env:
-          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
-          SKIP_REASON: '${{ steps.free_tier_guard.outputs.reason }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-        with:
-          script: |
-            const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
-            if (!issueNumber) {
-              core.warning('Could not resolve the issue or pull request number; the model call was still skipped.');
-              return;
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: 'Gemini was not called: ' + (process.env.SKIP_REASON || 'a required authorization/configuration gate failed') + ' No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
-            });
-
-      - name: 'Publish Gemini response to the issue or PR'
-        if: always() && steps.run_gemini.outcome != 'skipped'
-        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
-        env:
-          GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
-        with:
-          script: |
-            const summary = (process.env.GEMINI_SUMMARY || '').trim();
-            const maxLength = 60000;
-            let body;
-            if (summary) {
-              const safeSummary = summary.length > maxLength
-                ? `${summary.slice(0, maxLength - 140)}\n\n[Report shortened to fit GitHub's comment limit.]`
-                : summary;
-              body = `## Gemini report\n\n${safeSummary}\n\n---\n[Open GitHub Actions logs](${process.env.RUN_URL})`;
-            } else {
-              body = `## Gemini report unavailable\n\nThe Gemini CLI workflow finished without a readable text summary. No code change is confirmed by this run. [Open GitHub Actions logs](${process.env.RUN_URL}) to inspect the empty response or failure.`;
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: Number(process.env.ISSUE_NUMBER),
-              body,
-            });
-, 'm').test(summary);
-            const valid = status === 'PROGRESS'
-              ? hasField('BOONTA_CYCLE_EVIDENCE')
-              : status === 'BLOCKED'
-                ? hasField('BOONTA_CYCLE_BLOCKER') && hasField('BOONTA_CYCLE_NEXT_ACTION')
+            const lines = summary.split(/\r?\n/);
+            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
+            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
+            const valid = status === 'BOONTA_CYCLE_STATUS: PROGRESS'
+              ? valueExists('BOONTA_CYCLE_EVIDENCE')
+              : status === 'BOONTA_CYCLE_STATUS: BLOCKED'
+                ? valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION')
                 : false;
             if (!valid) {
-              core.setFailed(
-                'Autonomous Gemini invocation returned without a valid traceable cycle report. ' +
-                'The OpenRouter Free fallback may run if its independent owner gates pass.'
-              );
+              core.setFailed('Autonomous Gemini invocation returned without a valid traceable cycle report. The separately gated OpenRouter Free fallback may run.');
             } else {
               core.info('Autonomous cycle report contract satisfied: ' + status);
             }
