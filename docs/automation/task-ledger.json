@@ -494,31 +494,32 @@
         "automation"
       ],
       "status": "in_review",
-      "question": "Can autonomous free-provider failures be remembered for the current UTC day, while both agents restrict historical issue context to current state and the latest relevant comments to reduce repeated quota/context waste?",
+      "question": "Can autonomous provider failures be cooled down independently for the current UTC day, while both agents use bounded current-state context and retain the cycle-fresh evidence contract?",
       "acceptance_criteria": [
-        "One persistent marker on issue #226 records the UTC date of an autonomous Gemini CLI invocation failure",
-        "A matching same-day Gemini marker blocks another Gemini model request before token mint, checkout and model invocation, while the caller may proceed to the independently gated OpenRouter Free fallback",
+        "One persistent marker on issue #226 records an autonomous Gemini CLI invocation failure for the current UTC date",
+        "A matching same-day Gemini marker blocks another autonomous Gemini model request before token mint, checkout and model invocation, while the independently gated OpenRouter Free fallback remains eligible",
         "A separate persistent marker records an autonomous OpenRouter Free invocation failure",
         "A matching same-day OpenRouter marker blocks token mint, checkout, CLI installation and the fallback model request",
         "Only failed provider invocation steps write their respective markers; blocked preflight and same-day skips do not",
         "Each marker is updated in place, is independent from the other provider marker, and expires by date comparison on the next UTC day",
+        "Only github-actions[bot]-authored cooldown markers are trusted during lookup and update",
         "Manual non-autonomous Gemini and manual OpenRouter review workflows remain unaffected",
-        "Both autonomous prompts bound issue history to current-state/owner-direction sections and the latest five relevant comments per issue",
-        "Static AI safety checks validate both provider cooldowns and both prompt context bounds; branch self-test parses both reusable workflows"
+        "Both autonomous prompts use current-state/owner-direction sections and the latest five relevant comments per issue",
+        "Both providers retain PR #287 cycle-fresh snapshot, exact-head, same-repository and main/dev target validation",
+        "Static AI safety and branch self-tests cover the cooldown, anti-spoofing, context limits and both reusable workflows"
       ],
       "evidence": [
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/449bf336ef9a7c3e0d56a7ac1df9d0a696be2713",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874632826",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/4d88bb95a4b0f02e316a707a17a18260a4f77a42",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1e229a1716d69ef9684b579ec27ceb26a6ff9155",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/dad92c6b84ad01aecfcf9358422b75d8ea445b5a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0fbd933b861f3a3f0b74d172d49cf71ded7a6955",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/13ece9ba38dea96bab2209b571d24aed98473f8a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/081e4719b3329e51bc676e846808ee3a206c8283",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d7da2d7d00b81506780cfc223ad7f3c247379b6b",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b3ece967cd812c9a5b5c921d94f42d4e448d7846"
       ],
-      "next_action": "After #287 is human-reviewed/merged, retarget this stacked provider-cooldown PR to main, rerun its exact-head branch self-test + full AI safety/provenance, and obtain human review. Security hardening now trusts only github-actions[bot]-authored cooldown markers during both active-date lookup and update lookup, preventing public issue-comment spoofing. No merge or secret/attestation changes.",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-      "head_sha": "dad92c6b84ad01aecfcf9358422b75d8ea445b5a",
-      "updated_at": "2026-11-04"
+      "next_action": "After PR #287 is human-reviewed/merged, retarget replacement PR #291 to main and rerun exact-head branch self-test, AI safety/live-ledger, source-import provenance and trusted-path checks. Obtain human review before merge. PR #289 remains the superseded stacked predecessor; preserve its branch/history until #291 is fully validated. No merge or secret/attestation changes.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
+      "head_sha": "b3ece967cd812c9a5b5c921d94f42d4e448d7846",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
