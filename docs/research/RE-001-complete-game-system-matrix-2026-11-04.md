@@ -2057,3 +2057,81 @@ The adjacent trigger subsystem also remains incomplete in the SWR implementation
 - Steam-PC FUN_004667E0: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004667e0.c
 
 No game code/assets were copied and no gameplay implementation or runtime test was performed.
+
+
+## 2026-11-04 — partial course-resource manifest: distinct race and camera spline selectors
+
+**Scope:** extend the course-bootstrap chain with the second spline path and fixed support-resource requests visible in the pinned Windows-PC export. This is a partial manifest, not a recovered retail track table: individual stock track model/spline selector values have not been recovered from the public source files inspected here. SWR and Steam-PC remain separate snapshots; no same-build identity or GameCube/Wii parity is claimed.
+
+### Three distinct per-course selectors
+
+The PC source makes three resource selectors visible in the Judge/course record. They must not be collapsed into a single “track ID”.
+
+| Runtime field / source | Role | Resource path | Current confidence |
+|---|---|---|---|
+| Judge +0x1B0 | Selected course model/scene root | FUN_00465510 → FUN_00448780(id) → PC loader block 0; root stored at Judge +0x30 | Direct caller/body evidence |
+| Judge +0x1B4 | Main race spline | FUN_00465D00 → FUN_004472E0(id) → PC loader block 2; pointer stored at Judge +0x2C; then FUN_0047F6F0(spline, trackModelRoot) | Direct caller/body evidence |
+| Judge +0x1B8 | Camera-sweep spline, derived per planet/track rather than read from +0x1B4 | FUN_00464B90 maps (planetId at +0x1AC, planet_track_number at +0x1C0) to an ID, loads via FUN_004472E0 / block 2, stores spline pointer at Judge +0x1A4; initializes the second embedded cursor at +0x134 when the camera model is available | Direct PC mapping; exact console equivalent unknown |
+
+The SWR swrObjJdge layout labels +0x1B0 as the model selector, +0x1B4 as the main spline selector, +0x1B8 as cam_splineId, +0x1AC as planetId, and +0x1C0 as planet_track_number. These names are useful cross-reference labels from that reconstruction, not proof that the separately exported PC image is the identical build.
+
+### Camera-sweep spline lookup observed in the PC body
+
+The lookup in FUN_00464B90 enumerates these 25 valid (planetId, track ordinal) → camera spline resource ID combinations:
+
+| planetId | Track ordinal → camera spline ID |
+|---:|---|
+| 0 | 0 → 0x19; 1 → 0x2D |
+| 1 | 0 → 0x11; 1 → 0x1E; 2 → 0x1F; 3 → 0x2E |
+| 2 | 0 → 0x22; 1 → 0x52; 2 → 0x30 |
+| 3 | 0 → 0x24; 1 → 0x26; 2 → 0x28 |
+| 4 | 0 → 0x53; 1 → 0x58; 2 → 0x59; 3 → 0x2F |
+| 5 | 0 → 0x38; 1 → 0x39; 2 → 0x54 |
+| 6 | 0 → 0x29; 1 → 0x2A; 2 → 0x2B |
+| 7 | 0 → 0x23; 1 → 0x3B; 2 → 0x3E |
+
+For each valid tuple the PC body stores the chosen ID at Judge +0x1B8, loads its spline through the type-2 spline reader, and stores the result at +0x1A4. It then chooses one camera-related model pointer from the loaded track-scene root according to the track ordinal, searches the supplied object list for a matching model-data pointer, and configures the sweep cursor/association. If no camera model is found, the spline can still be loaded but the function does not set up the active camera-sweep cursor through that model path.
+
+**Do not infer planet names or stock-course names from the numeric table.** The public SWR TrackInfo type is 0x0C bytes and the reconstruction's symbol map declares g_aTrackInfos as 25 entries. That cardinality matches the 25 valid numeric combinations above, but the data values and row ordering are not established by the inspected sources, and the two repositories are separate snapshots. Thus no row-by-row join, course name, main model ID, or main race spline ID is claimed here.
+
+### Additional scene resource requests visible during bootstrap
+
+FUN_00465510 loads and registers several additional model/resource selectors as part of course setup. The following list records only the observable request sites; the exact semantic identity of entries not named by the source mapping remains unresolved.
+
+| PC function | Request(s) / setup visible in body | Bounded interpretation |
+|---|---|---|
+| FUN_004651A0 | model IDs 0x92 and 0x31 | SWR address map labels the corresponding helper swrModel_LoadBeamAndSparkModels; the individual model-to-effect assignment is not expanded here |
+| FUN_00465230 | creates typed Toss pool (16 entries); requests model ID 0x13A per entry | dust-kick/effect object setup according to the SWR function label; asset names and per-entry differences remain unknown |
+| FUN_00465310 | creates typed Smok pool (8 entries); requests model ID 0x93 per entry | smoke/fireball-related effect objects according to the SWR helper names; exact asset semantics remain bounded to those names |
+| FUN_004653F0 | requests 0x93 and conditionally 0x13E | additional smoke/fireball scene resource path; conditional resource ownership and exact visual role are not fully decoded |
+| FUN_00465510 | requests IDs 0x72, 0x136, two instances of 0x47, and conditionally 0x129 for one race-mode/track-mode combination | extra scene model handles; do not assign friendly asset names from IDs alone |
+| FUN_004651F0 | constructs/registers the trigger manager and invokes track-specific setup | trigger content is initialized from the track scene; see the existing trigger lifecycle section rather than duplicating it here |
+
+The common model/resource request helper is PC FUN_00448780 (loader block 0), already examined in the model-loader section above. These IDs are numeric PC resource-table indices, not stable cross-platform asset identifiers.
+
+### Partial dependency-manifest rows and explicit gaps
+
+| Dependency | Selector / source | Loader or consumer | Ownership / lifetime | Status |
+|---|---|---|---|---|
+| Main course scene | Judge +0x1B0 | block-0 model loader → FUN_00465510 → scene setup and trigger walk | Root stored in Judge +0x30; exact freeing/ownership contract not fully recovered | PC path mapped; individual stock selector values unknown |
+| Main race spline | Judge +0x1B4 | block-2 spline reader → Judge +0x2C → spline setup helper | Cursor initialized from spline; ownership/freeing not established | PC path mapped; individual stock selector values unknown |
+| Camera sweep spline | planet/ordinal lookup → Judge +0x1B8 | block-2 spline reader → Judge +0x1A4 → camera-sweep cursor at +0x134 | Judge/camera manager relationship visible; full cleanup/lifetime not established | 25 PC numeric mappings recovered; no course-name join |
+| Beam/spark scene helpers | fixed IDs 0x92, 0x31 | block-0 model loader; beam/spark helper | Global scene handles in the inspected PC image | IDs/callers recovered; resource names unknown |
+| Dust and smoke/fireball objects | IDs 0x13A, 0x93, optional 0x13E | typed Toss / Smok object pools | pool-backed scene references; complete teardown path not traced here | request sites and pool counts recovered |
+| Extra scene assets | IDs 0x72, 0x136, 0x47 twice, optional 0x129 | model loader and scene registration | several Judge/global slots; full purpose/lifetime unknown | numeric requests only |
+| Native GC/Wii selectors and file layout | not available from this PC chain | requires target-specific lawful source/format evidence | unknown | explicitly open; do not port PC IDs or block types |
+
+### What is needed to turn this into a one-course manifest
+
+1. Recover one stock course's TrackInfo row (model selector, main spline selector, planet ordinal and planet index) from an independently verified source/table, not by guessing the row order from the 25 camera entries.
+2. Follow the selected model root through the scene-node tree and assign each loaded scene/model handle to its actual consumers, keeping resource IDs distinct from object-pool type tags.
+3. Record creation and teardown/free paths for the model root, race spline, camera spline, beam/spark resources, Toss and Smok pools, and trigger manager.
+4. Build a synthetic, non-game fixture to validate parser/selector handling before any native-console format work; then establish the GameCube/Wii resource IDs and layout independently. The PC block-0/block-2 distinction is a reference hypothesis only, not a console format claim.
+
+**Evidence boundary:** all FUN_00464B90 selector values, block numbers, helper calls and numeric model requests above are from the pinned Steam-PC export. Struct field names, TrackInfo size/count and function labels are from the separate pinned SW_RACER_RE snapshot. No track data, original model, spline, texture, ROM or other game asset was extracted or committed. No gameplay implementation or runtime test was performed.
+
+**Pinned references**
+- Steam-PC FUN_00464B90, FUN_00465510, FUN_00465D00, FUN_00448780, FUN_004651A0, FUN_00465230, FUN_00465310, FUN_004653F0:
+  https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c
+- SW_RACER_RE types.h, data_symbols.syms, swrObj.h, swrRace.c:
+  https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0
