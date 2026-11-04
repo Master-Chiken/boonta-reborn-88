@@ -266,6 +266,16 @@ jobs:
               body: 'Gemini was not called: ' + (process.env.SKIP_REASON || 'a required authorization/configuration gate failed') + ' No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
             });
 
+      - name: Fail autonomous cycle when Gemini preflight blocks the model call
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            core.setFailed(
+              'Gemini did not run because its independent owner/free-tier preflight blocked the call. ' +
+              'The caller may now try OpenRouter Free, which must pass its own independent gates.'
+            );
+
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
