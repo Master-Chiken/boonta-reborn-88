@@ -95,6 +95,43 @@ The current Boonta code is a clean-room native GameCube/Wii scaffold with a proc
 
 **RE-001 target-specific blocker:** the public PC repository cannot answer native GameCube/Wii internals. No original GC/Wii source is established by this audit, and the Step 102 archive remains provenance-held. If the race lifecycle trace is later handed to the native implementation queue, each behavior must be validated against a lawful local target build or kept explicitly as a hypothesis.
 
+## Bounded race-lifecycle trace — pinned Windows-PC evidence
+
+**Snapshot:** [SW_RACER_RE `258f67aa858ba2e281ce8a6791e49c554b85fae0`](https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0), 2026-10-25.  
+**Evidence class:** CONFIRMED-IN-CODE for this Windows-PC reconstruction snapshot only. Not CONFIRMED-IN-RUN and not GameCube/Wii evidence. No external project was built or executed.
+
+### What the source establishes
+
+1. **Per-racer lap/finish accounting — `swrObjJdge_F2` (0x0045EA30).** While the judge low-nibble state is 1, it provisionally sets state 2, walks the score array, and calls `swrRace_UpdateRaceProgress`. A detected line crossing closes the previous lap using the pre-crossing portion of the frame, increments `results_P1_Lap`, then charges the remainder of the raw frame delta to the next lap. At `num_laps`, the score's finished bit (bit 1 / value 2) is set, the multiplayer `fini` event is sent, and the pod's local/boost flags are cleared while finished/AI flags are set. [Source: `swrObj.c`, F2 and continuation](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L918-L1055) · [Score fields](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L1158-L1194)
+
+2. **Local-player completion gate and opponent finalization.** During that same F2 pass, an unfinished local score re-arms the judge low nibble to state 1. If no local racer remains active, state 2 survives: the race timer is frozen and each unfinished racer gets a projected total based on its current progress ratio. This is a manager-level "all local racers finished" condition, not necessarily every AI having physically crossed the line. [Source: F2](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L918-L1055)
+
+3. **Standings calculation — `swrObjJdge_UpdateStandings` (0x0045D4A0).** Finished racers use an inverse-finish-time rank value; unfinished racers use lap progress. The function writes each score's finishing position and updates leader/local-player/pacer gaps. [Source: `swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L407-L590)
+
+4. **Judge state and cleanup paths are only partly understood.** In F0 (0x0045E200), low-nibble state 2 waits on the accept/release input edge and calls `swrObjJdge_Clear(jdge, 'Fini')`. Clear stores the event, sets state 6, starts a 0.5-second timer and frees the Test/Toss/Smok/Trig/Chsr object groups. State 6 later calls `swrObjJdge_TeardownRace(jdge, jdge->event)`. The teardown function is currently a `HANG("TODO")` stub, so the actual cleanup-to-front-end handoff is not recovered. [Clear and teardown](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L350-L365) · [F0 states 2–6](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L770-L900)
+
+5. **A separate post-race/camera/results code path exists.** F0 contains state-3 finish-hold, state-4 camera-sweep and state-5 results/taunt branches. The camera branch can set `swrRace_resultsScreenActive`, transition its low nibble to 5, change viewport/camera settings and send `Swee` to the `cMan` event group. `swrObjJdge_StartPostRaceSequence` also sends `Swee`, changes the racer low-nibble state to POSTRACE, enables UI input and adjusts music/HUD state. [StartPostRaceSequence and F0](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L615-L900)
+
+6. **The actual Results menu routine is substantial — `swrRace_ResultsMenu` (0x00439CE0).** On first entry it sanitizes score times, sorts scores by finishing position, calculates local-player best laps, routes unlinked guest profiles to name entry, commits lap/race records and holder details, applies tournament prize/unlock/beat-place progression, and saves the profile. It then draws each standings row with position, racer identity and total time. Accept/cancel selects a return-to-course-selection state or a podium intro when the tournament final is won. [Source: `swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L324-L585)
+
+### Critical unresolved transitions — do not turn this into a false linear state diagram
+
+- The source labels F0 states 3–5 as finish/camera/results phases, but the `Begn` handler in `swrObjJdge_F4` also initializes the judge low nibble to 4. The exact lifecycle context and all entry conditions for states 3–5 therefore need caller/event-order validation; their labels alone are not enough to prove a single ordered path. [`Begn` handler](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1752-L1835)
+- `swrObjJdge_TeardownRace` is a TODO stub. The object-manager `swrObjcMan_F0/F2/F3/F4` callbacks are also TODO stubs, including the `cMan` dispatcher needed to resolve the `Swee` event. [Object-manager stubs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L177-L220)
+- `swrObjHang_SetMenuState` and `swrObjHang_F0/F2/F3` are TODO stubs. The enum documents `POST_RACE_INFO = 5` and `RESULTS_INTRO = 17`, but this snapshot does not recover the complete front-end dispatcher/call edge that proves precisely when `swrRace_ResultsMenu` is entered. [Hangar stubs](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L245-L275) · [Menu state enum](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L375-L392) · [SetMenuState stub](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L225-L228)
+- `swrObjJdge_F4` handles `Begn/Load/RSet/Join/Mstr/Paws/Slep/Wake/JAsn`; `Fini` is documented under the `All!` event group, not as a Jdge F4 case. The full event-manager dispatch sequence remains only partially reconstructed. [Event mapping and dispatcher layout](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L1084-L1125) · [Jdge F4](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1752-L1905)
+
+### Resulting next procedure for native GameCube/Wii RE-001
+
+The PC trace now gives us a concrete list of semantic checkpoints, not native offsets or state values to copy. For a lawful, owner-held GameCube/Wii build, the next target-specific experiment is:
+
+1. Record disc/game ID, region/revision and SHA-1 of the locally held DOL; keep the binary and all extracted output local.
+2. Use the already-audited GC/Wii DOL/REL toolchain on that exact build; identify the race-manager object callbacks and score/standings storage by cross-reference, not by PC address.
+3. In Dolphin, capture one ordinary three-lap race continuously from the final lap through the first Results frame. Correlate visible transitions with the target-build state writes/callbacks and save/profile mutations.
+4. Produce a separate GC/Wii state/event ledger. Until those observations exist, every PC state number, structure offset, event tag and result transition remains PC-only UNKNOWN for the native target.
+
+This is a research handoff only: no third-party implementation code, ROM/DOL, commercial assets or extracted data is copied into Boonta. The AGPL-3.0 SW_RACER_RE snapshot remains a read-only reference; its README explicitly describes selected analysis/reimplementation rather than a full matching decompilation.
+
 ## Existing dossier links and non-duplication
 
 - [PC-first research plan](../PC_FIRST_RESEARCH_PLAN.md)
