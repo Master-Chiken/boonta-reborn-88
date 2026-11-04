@@ -220,6 +220,45 @@ for guarded_step in (
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
+# OpenRouter Free fallback receives its own autonomous daily failure cooldown.
+or_cooldown_position = openrouter_fallback.find("id: openrouter_cooldown")
+or_guard_position = openrouter_fallback.find("id: free_tier_guard")
+or_mint_position = openrouter_fallback.find("name: Mint scoped GitHub App token")
+or_checkout_position = openrouter_fallback.find("name: Checkout the protected default branch")
+or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
+or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after an invocation failure")
+or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
+if not (0 <= or_cooldown_position < or_guard_position < or_mint_position < or_checkout_position < or_install_position < or_run_position < or_record_position < or_validate_position):
+    errors.append("OpenRouter daily cooldown must run before its gate/model call and record invocation failures before report validation")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "OPENROUTER_COOLDOWN_ACTIVE",
+    "OPENROUTER_COOLDOWN_DATE",
+    "steps.run_opencode.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "id: run_opencode" not in openrouter_fallback:
+    errors.append("OpenRouter invocation must expose a stable step ID for failure-only cooldown recording")
+
+# Public issue comments cannot spoof provider cooldowns; only bot-authored markers are trusted.
+for label, workflow, marker in (
+    ("Gemini", execute, "<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:"),
+    ("OpenRouter", openrouter_fallback, "<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:"),
+):
+    trusted_lookup = f"comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('{marker}')"
+    if workflow.count(trusted_lookup) != 2:
+        errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
+if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
+    errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
+
 tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
 if not tools_match:
     errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
@@ -758,6 +797,41 @@ expected_gemini_debug = "gemini_debug: '${{ inputs.autonomous_mode != true && fr
 if expected_gemini_debug not in execute:
     errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
 
+
+# Failed autonomous Gemini invocations create one persistent same-day cooldown marker.
+cooldown_check_position = execute.find("id: gemini_cooldown")
+cooldown_guard_position = execute.find("id: free_tier_guard")
+cooldown_model_position = execute.find("name: 'Run Gemini CLI'")
+cooldown_record_position = execute.find("name: Record same-day Gemini cooldown after an autonomous model failure")
+if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_record_position):
+    errors.append("Gemini daily cooldown must be checked before the free-tier guard/model call and recorded after an invocation failure")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_GEMINI_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "GEMINI_COOLDOWN_ACTIVE",
+    "GEMINI_COOLDOWN_DATE",
+    "steps.gemini_cooldown.outputs.active != 'true'",
+    "if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in execute:
+        errors.append(f"Gemini daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
+    errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
+
+# Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
+for required in (
+    "only the current-state/owner-direction sections at the top of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279",
+    "latest five relevant comments per issue",
+    "Search older comments only when the selected task needs specific historical evidence",
+    "do not ingest or reproduce full historical appendices/comments",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
 
 # Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
