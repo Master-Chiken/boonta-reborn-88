@@ -42,3 +42,21 @@ jobs:
         restrictions, one-writer rule, exact-head validation, and no-merge policy
         remain mandatory.
     secrets: inherit
+
+  openrouter-fallback:
+    name: Free-only fallback when the Gemini cycle fails
+    needs: autonomous-cycle
+    if: >-
+      always() &&
+      needs.autonomous-cycle.result == 'failure' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.actor == github.repository_owner)
+    uses: ./.github/workflows/openrouter-plan-execute.yml
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      autonomous_mode: true
+      issue_number: 226
+    secrets: inherit
