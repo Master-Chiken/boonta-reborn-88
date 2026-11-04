@@ -64,7 +64,7 @@ def validate_ledger(data: Any) -> list[str]:
         if not isinstance(scope, list) or not scope or not all(isinstance(x, str) and x.strip() for x in scope):
             errors.append(f"{prefix}.platform_scope must be a non-empty string array")
         status = task.get("status")
-        if status not in STATUSES:
+        if not isinstance(status, str) or status not in STATUSES:
             errors.append(f"{prefix}.status must be one of {sorted(STATUSES)}")
         if status == "active":
             active += 1
