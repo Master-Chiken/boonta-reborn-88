@@ -102,6 +102,30 @@
       ],
       "next_action": "After the current automation validation task is verified, use the RE-001 complete-game matrix in PR #282 to trace the race-finish to Results call path from pinned public source evidence; keep platform boundaries explicit and avoid prototype polish.",
       "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
+      "title": "Require verified evidence for autonomous cycle progress",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "in_review",
+      "question": "Do autonomous progress reports correspond to a real open, non-empty same-repository PR at its exact live head?",
+      "acceptance_criteria": [
+        "Gemini and OpenRouter require PROGRESS evidence or a named BLOCKED report",
+        "Live GitHub state confirms the PR is open and its head repository is this repository",
+        "Live PR head SHA equals the reported 40-character SHA",
+        "A missing, forked, stale, closed or empty PR cannot count as progress"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cb7fe5bd08e5821f442169ceb103f7f86c29f92f"
+      ],
+      "next_action": "Review exact-head CI for PR #287, then verify the first real scheduled cycle after merge.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
+      "head_sha": "cb7fe5bd08e5821f442169ceb103f7f86c29f92f",
+      "updated_at": "2026-11-04"
     }
   ]
 }
