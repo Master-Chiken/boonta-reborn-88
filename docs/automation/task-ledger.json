@@ -481,7 +481,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/09182ee0622f328a0fc1c6b999820f007026fa7f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5e86a97934580297fa2731eb0d7a952aeed5e924"
       ],
-      "next_action": "Current exact-head CI: branch automation self-test and source-import provenance PASS; AI static guard, task-ledger validator and 10 regression tests PASS. The AI job\u0027s final live reconciliation is still blocked by main\u0027s stale #282 SHA 897c47fd... versus live 7653bf2d.... The updated #288 ledger branch records the current #287 head and is the bootstrap path to repair main. Human review/merge remains required; after #287 is merged, rebase and fully revalidate #289 with the same cycle-fresh evidence contract.",
+      "next_action": "PR #288's exact-head AI/live-ledger, 10 regression tests, provenance and trusted-path checks pass. Human review/merge of #288 is the bootstrap action to repair main's stale #282 SHA. After #288 is merged, rerun #287's exact-head AI/live-ledger check, obtain human review/merge of #287, then retarget replacement cooldown PR #291 to main and rerun its full exact-head checks. Keep old #289 as superseded history until #291 is validated.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
       "head_sha": "5e86a97934580297fa2731eb0d7a952aeed5e924",
       "updated_at": "2026-11-05"
