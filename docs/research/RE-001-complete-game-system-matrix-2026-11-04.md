@@ -1335,3 +1335,35 @@ This makes collision implementation planning more precise: do not collapse pod-p
 - None of these PC field offsets, flags, event payloads or collision constants is evidence of GameCube/Wii behavior.
 
 No source code was copied; this addition is original analysis of the pinned public reconstructions with provenance links only.
+
+
+## 2026-11-04 — identify the wall-scrape probe primitive: swept sphere vs model
+
+A targeted address lookup resolves the previously unnamed `FUN_00444740` helper called twice by `DetectWallScrape`.
+
+### Direct Steam-PC wrapper sequence
+
+The Steam-PC body at `0x00444740` is a short wrapper:
+1. Return no hit if the model argument is null.
+2. Call `FUN_00444200` to initialize the sphere-collision query state from the center, radius, velocity and two additional parameters.
+3. Call `FUN_004440E0` to recursively traverse the supplied model hierarchy and test eligible mesh nodes.
+4. Call `FUN_00444300` to resolve the sphere collision and populate the output fields.
+
+The SWR model header independently maps those addresses as:
+- `0x00444200` — `swrModel_SetupSphereCollision`;
+- `0x004440E0` — `swrModel_CollideNodeRecursive`;
+- `0x00444300` — `swrModel_ResolveSphereCollision`;
+- `0x00444740` — `swrModel_CollideSphereWithModel`.
+
+Its declared public signature takes a model node, sphere center, radius, velocity, two additional scalar parameters, output normal, an additional output and hit-distance output. The SWR header comments explicitly describe the pipeline as **setup → recursive model traversal → resolve** and call it a sphere sweep. The implementation body is not fully reimplemented in the inspected SWR C source; this is a symbol/signature cross-map, not a claim of a finished sphere solver.
+
+### What this changes in the wall-scrape reconstruction
+
+The two probes in Steam-PC `FUN_00477940` are therefore calls into a sphere-vs-model collision pipeline, not plain point rays. The enclosing routine computes a tilt-adjusted radius from the pod's collision-width field before issuing the probes. It tests two probe configurations and then applies the scrape-spray threshold logic. The exact meaning of the additional sweep parameters and the physical placement of each probe are still unresolved.
+
+Sources:
+- Steam-PC [`FUN_00444740.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444740.c).
+- Steam-PC [`FUN_00444200.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c), [`FUN_004440E0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c), [`FUN_00444300.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c).
+- SWR [`swrModel.h` sphere-sweep addresses and signatures](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h).
+
+**Evidence boundary:** Windows-PC code and SWR symbol/signature correspondence only. No identical-build assertion, runtime collision capture or GameCube/Wii claim is added.
