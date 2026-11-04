@@ -172,7 +172,7 @@ jobs:
           The GitHub MCP server intentionally exposes only read, branch creation, file push, PR creation and issue-comment tools. Never try to merge, delete, force-push, alter settings/secrets/variables, or enable auto-merge. Never claim tests ran unless an exact-head Actions result proves it. Inspect exact-head CI after a PR is opened; read only failed-job logs. Do not rerun unchanged green checks or push empty commits.
           End every report with this machine-readable contract. For traceable progress, use these exact lines:
           BOONTA_CYCLE_STATUS: PROGRESS
-          BOONTA_CYCLE_EVIDENCE: <GitHub PR/commit URL or repository path plus exact source revision>
+          BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
           For a genuine human/external blocker, use:
           BOONTA_CYCLE_STATUS: BLOCKED
           BOONTA_CYCLE_BLOCKER: <specific named dependency>
@@ -186,22 +186,34 @@ jobs:
 
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
-          REPORT="$RUNNER_TEMP/opencode-cycle-report.txt"
-          if grep -Fqx 'BOONTA_CYCLE_STATUS: PROGRESS' "$REPORT"; then
-            grep -Eq '^BOONTA_CYCLE_EVIDENCE: .+' "$REPORT" || {
-              echo "OpenRouter report claims progress without traceable evidence." >&2
-              exit 1
+
+      - name: Validate OpenRouter autonomous cycle report
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const lines = summary.split(/\r?\n/);
+            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
+            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
+            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
+              if (!evidence) {
+                core.setFailed('PROGRESS requires a same-repository PR URL and its exact 40-character head SHA.');
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              if (pr.state !== 'open' || pr.merged_at || pr.head.sha !== evidence[2] || (pr.changed_files ?? 0) < 1) {
+                core.setFailed('PROGRESS evidence does not match an open, non-empty PR at the reported exact head SHA.');
+                return;
+              }
+              core.info('Verified progress PR #' + pr.number + ' at exact head ' + pr.head.sha);
+            } else if (validBlocked) {
+              core.info('OpenRouter cycle reported a named blocker and next action.');
+            } else {
+              core.setFailed('OpenRouter invocation returned without a valid PROGRESS or BLOCKED report.');
             }
-          elif grep -Fqx 'BOONTA_CYCLE_STATUS: BLOCKED' "$REPORT"; then
-            grep -Eq '^BOONTA_CYCLE_BLOCKER: .+' "$REPORT" || {
-              echo "OpenRouter blocked report is missing its named blocker." >&2
-              exit 1
-            }
-            grep -Eq '^BOONTA_CYCLE_NEXT_ACTION: .+' "$REPORT" || {
-              echo "OpenRouter blocked report is missing its next action." >&2
-              exit 1
-            }
-          else
-            echo "OpenRouter completed without a valid BOONTA_CYCLE_STATUS report." >&2
-            exit 1
-          fi
