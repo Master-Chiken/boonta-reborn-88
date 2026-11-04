@@ -364,3 +364,35 @@ A final availability check targeted the exact symbol rather than searching only 
 
 This confirms only that the body is **not available in the inspected public Steam decompilation snapshot**; it does not prove the body cannot exist in a separate local analysis database or another correctly identified build. The IDA function name/extent and event notes remain metadata-level evidence. The cMan F4 implementation and its effects on the post-race handoff therefore remain **UNKNOWN** until the matching function body or a typed runtime trace is available.
 
+## 2026-11-04 — Correction: Judge states 4/5 are pre-race intro, not the Results handoff
+
+A re-check of the exact pinned Windows-PC reconstruction and its PC mod-hook delta found that earlier comments describing Judge F0 states 4/5 as a **post-race camera sweep → Results screen** are not reliable. The current code path instead supports a pre-race intro interpretation. This supersedes earlier statements in this dossier that promoted the state-4/5 comments to a post-race lifecycle fact.
+
+**Pinned evidence**
+- Base reconstruction: [SW_RACER_RE `258f67aa858ba2e281ce8a6791e49c554b85fae0`](https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0), notably [Judge F0/F2/F4 source](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c) and [event dispatcher](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c).
+- PC mod-hook cross-check (same repository snapshot, not vanilla source): [`swrObjJdge_F0_delta`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrObjJdge_delta.cpp#L1205-L1289), blob `fcc9489b533117d1ee8167307cdecc20263da11e`. This is PC mod code and analyst commentary, used as a separate interpretation cross-check; no mod code is copied.
+
+### State path directly visible in the reconstruction
+
+1. **Race setup writes Judge state 4.** The `Jdge` F4 `Begn` handler calls `swrObjJdge_InitTrack` (whose reconstruction body is still `HANG("TODO")`), then explicitly writes `(jdge->flag & 0xfffffff4) | 4` and sets the timer to 0.5. The final explicit write after that incomplete helper is state 4.
+2. **State 4 leads to state 5.** Judge F0 case 4 advances when the camera cursor is absent/finished or the intro is skipped. It writes low-nibble state 5, sets a 9.1-second timer, changes viewport/camera parameters, sends `Swee(true)` to cMan, and initializes the post-state delay.
+3. **State 5 exits to state 0.** Judge F0 case 5 calls the function labelled `swrObjJdge_StartPostRaceSequence` on accept or timer expiry. That routine sends `Swee(false)`, clears the Judge low nibble to 0, sets a 3.2-second timer, changes camera/UI/pod flags, and sets each pod's own low-nibble state to `POSTRACE` (1) until the later `Go!!` dispatch. Judge F0 case 0 is the countdown; on expiry it advances to state 1 and dispatches `Go!!` to the racer objects.
+4. **The separate race-completion path is clearer.** During Judge F0 state 2, finish input/edge handling calls `swrObjJdge_Clear(jdge, 'Fini')`. That helper stores the event, sets Judge state 6, arms a 0.5-second delay, and frees the Test/Toss/Smok/Trig/Chsr pools. State 6 later calls `swrObjJdge_TeardownRace(jdge, jdge->event)`, whose SW_RACER_RE reconstruction body is still a `HANG("TODO")` stub. This is the live unresolved edge toward Hangar/Results, not the state-4/5 intro.
+5. **State 3 remains unexplained.** A complete scan of the pinned `swrObj.c` state writes found no direct writer for Judge low-nibble state 3, although an F0 case-3 handler exists. Do not place that handler into a linear lifecycle without finding its writer/caller context.
+
+### Independent PC mod-hook interpretation
+
+The pinned `swrObjJdge_F0_delta` explicitly refers to state 4 as the **pre-race track sweep** and state 5 as the **pod orbit / binder ignition**; its fast-restart and one-stage-per-press logic skips those two intro stages before reaching the countdown. It also notes that the original track-environment setup has a camera spline available but leaves `camSweepState` null, so the stock F0/F2 paths do not walk the pre-race sweep cursor unless the mod re-enables it. This makes the distinction important: the state-4/5 F0 code can be part of the intro even when the stock sweep is dormant.
+
+The reconstruction's own comments for F0 cases 4/5, plus other comments that call the `swrRace_resultsScreenActive` global a Results flag, conflict with the transition sequence above. Treat those comments/symbol names as analyst labels, not authoritative semantics. In particular, the function name `swrObjJdge_StartPostRaceSequence` is not proof of when it is used: in the visible state-4/5 path it is the transition that clears the Judge state to 0 and begins the countdown sequence.
+
+### Corrected lifecycle conclusion and remaining gap
+
+The evidence now supports this partial **Windows-PC** chain:
+
+`Jdge/Begn` → state 4 intro → state 5 pod orbit → state 0 countdown → state 1 Go/race-start → state 2 active race → `Clear(Fini)` → state 6 cleanup delay → `TeardownRace` (body unavailable in SW_RACER_RE).
+
+The initial post-race/hangar/results handoff is **still UNKNOWN** because the teardown body is a TODO in SW_RACER_RE and the separate Steam-PC teardown candidate `FUN_0045dd80` is still marked `NOT_INVOKED` in that snapshot's dependency graph. The Hang menu's screen-5 → Results branch remains conditional on Hang already being active and on screen 5; it is not a proven continuation of this Judge chain.
+
+All of the above is Windows-PC evidence only. It does not identify native GameCube/Wii state numbers, flags, callbacks or results transitions.
+
