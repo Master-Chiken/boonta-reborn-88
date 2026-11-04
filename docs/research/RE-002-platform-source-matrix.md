@@ -442,3 +442,23 @@ Finally, `idapro/notes/Models.txt` marks the model-behaviour bit `@03` as lap-co
 | Function sizes at 0x47F8E0 / 0x47FBB0 / 0x47FCA0 | `CODE` (IDA metadata) | `CONFIRMED` for this IDA project only | Target executable/build not identified; sizes do not recover function semantics |
 
 **Next evidence step:** recover only the two smaller, bounded functions `0x47FBB0` and `0x47FCA0` from this IDA project if the raw IDB can be inspected locally in an appropriately licensed IDA installation. For `0x47F8E0`, the function is 711 bytes and will need its full disassembly/callers/field accesses; do not infer its full implementation from the short source comment. Keep the IDB local and do not copy any code into Boonta. No function body was extracted in this pass.
+
+
+### Follow-up: exact slot conversion and an independent caller for `GetTrackMeshAtCursor`
+
+The frozen Steam assembly for `FUN_0047f890` provides more detail than the initial C pseudocode:
+
+- It loads the cursor's `segmentT` at cursor offset `+0x08`, multiplies by the sample scale at `0x004ADF38), and compares the result against the boundary constant at `0x004ADF40`.
+- On the less-than branch it subtracts the correction constant at `0x004ADF64`, then calls the x87 float-to-integer helper at `0x0049ED20`.
+- It then resolves the branch-aware node via `FUN_0044E620(cursor, 0)`, computes `node * 10 + sampleSlot`, and loads a pointer from `0x00E23240`.
+
+The companion generic seek routine `FUN_0047e8b0` uses integer division by 10 for the node band and the complementary constants `0x004ADF38` / `0x004ADF3C` to recover the fractional `segmentT`. The constants are used consistently with the ten-samples-per-node layout. Their raw values were not retrieved from the inspected export files; do not hardcode guessed decimal literals from this evidence alone. The less-than branch and correction constant are exact assembly observations; whether the correction is best described as floor, truncation correction or a special endpoint convention should be confirmed from the actual constant value and compiler helper semantics.
+
+An independent Steam-PC caller strengthens the function's role:
+- `FUN_004744B0` calls `FUN_0047f890(player + 0xAC)` on one path to obtain the mesh under the current spline cursor.
+- It obtains the mesh behavior through `FUN_004318B0` and rejects the candidate if no mesh is returned or if the terrain/behavior flags at mesh behavior offset `+0x2C` intersect `0x16000`.
+- A separate path performs a ground/model raycast first, then the same behavior-flag validation. The surrounding function is named in the independent IDA inventory as a possible respawn-point search, but that name is provisional; the secure claim is that the mesh lookup participates in selecting/validating a candidate location.
+
+The independent IDA name table calls the global at `0x00E23240` `Unk_SplinePointMeshes_E23240`, consistent with the sample → mesh pointer table. Its notes also state that mesh pointers at `Test +0xEC/+0xF0` are read by race-progress and the mesh/collision path.
+
+**Updated confidence:** the lookup purpose and table indexing are `SUPPORTED` by two PC research snapshots plus an independent caller. Exact conversion edge behavior and executable-build equivalence remain `UNKNOWN` until the constants and target binary identity are resolved.
