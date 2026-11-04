@@ -1531,3 +1531,56 @@ Steam-PC references:
 - [IDA names](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt) and [IDA function table](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt)
 
 **Evidence boundary:** Windows-PC static references only. Steam-PC Ghidra and IDA snapshots remain separately pinned; their executable/build identity is unproven. Callback machine-code bodies and exact call wiring remain unresolved. No runtime result, GameCube/Wii parity or proprietary game asset/binary access is claimed.
+
+
+## Triangle narrowphase helpers: ray-plane and radius-contact cores — 2026-11-04
+
+A further pass recovers meaningful geometric work in the shared collision code. These are direct function-to-function call relationships from the pinned Steam-PC decompilation. The exact indirect call edge from the installed face callbacks is still not present in the accessible C exports.
+
+### Ray-style candidate: plane intersection plus triangle inclusion
+
+`FUN_00442550` computes a ray/triangle candidate using:
+1. a facing/filter decision from the triangle plane and two global filter flags (`DAT_004c1774`, `DAT_0050c5cc`);
+2. `FUN_00442470`, which computes the ray/plane intersection parameter and candidate point, rejecting out-of-range or negative intersections;
+3. a nearest-hit check against the current query distance `DAT_00e98258`;
+4. `FUN_00441040`, which tests the candidate point against the triangle using its three edges.
+
+On acceptance, it updates the best distance, contact position, collision/mesh reference (`DAT_00e98254`), and normal. In the reverse-facing branch it writes the negated query direction as the output normal. The two filter globals are configured in the mode-1 leaf path (`FUN_00444910`) and the direct mesh entry (`FUN_00444F10`), so this routine consumes the same ray-query filtering state. The available files do not show a direct call from `LAB_00442C30` or `LAB_00442720` to this helper; that last edge remains unverified.
+
+### Radius-contact candidate: face projection and edge fallback
+
+`FUN_00442090` uses `_DAT_00e98e6c`, the radius-squared value established by mode-3 sphere setup `FUN_00444200`. It:
+- applies a plane-side test, with a special fallback gate;
+- projects the query point against the triangle plane using `FUN_00480890`;
+- rejects candidates whose squared separation exceeds the query radius squared;
+- uses `FUN_00441040` for the face/interior test;
+- when the projection is outside the triangle, calls `FUN_004808f0` for each of the three edges and keeps the nearest edge candidate;
+- records optional contact points in a bounded debug/result buffer when the corresponding diagnostic flag is enabled.
+
+When the accepted candidate is within the current best threshold and `DAT_00e98e1c == 3`, it directly calls `FUN_00441810` with the triangle, candidate contact and query direction. That explicit mode-3 branch is a strong link between this helper and the sphere-sweep family, but the public C export still does not show which installed face callback calls `FUN_00442090`.
+
+### Mode-3 triangle clipping and contact reduction
+
+`FUN_00441810` operates on the triangle's projection along the query direction and the interval `[DAT_00e98e00, DAT_00e9827c]`. It classifies the three vertices against the interval, computes edge/plane crossing points with `FUN_00441710`, and submits the resulting triangle fragments to `FUN_004414E0`.
+
+`FUN_004414E0` computes closest-point candidates on each of its three edges using `FUN_004808F0`, selects the smallest squared separation, and forwards candidates within the current best threshold to `FUN_00441390`.
+
+`FUN_00441390` is the shared result reducer: it updates the best distance, contact position, normal, source mesh/model reference and hit flag when the candidate is closer (or wins the tie-direction comparison). This explains how the clipped mode-3 path returns an ordinary collision result without assigning unverified semantics to the original callback labels.
+
+### Evidence boundary and remaining gap
+
+The bodies establish direct calls:
+- `FUN_00442550` → `FUN_00442470`, `FUN_00441040`;
+- `FUN_00442090` → `FUN_00480890`, `FUN_00441040`, `FUN_004808F0`, and conditionally `FUN_00441810` when mode is 3;
+- `FUN_00441810` → `FUN_00441710`, `FUN_004414E0`;
+- `FUN_004414E0` → `FUN_004808F0`, `FUN_00441390`.
+
+What remains unknown is the final indirect edge from one of the four callback entry points to these helpers. The four callback bodies were not present in the fetched decompilation files, and guessed standalone `.c`/`.s` paths for them returned 404. Accordingly, the dossier does not claim that `FUN_00442550` is definitely invoked by the mode-1 callbacks or that `FUN_00442090` is definitely invoked by the mode-3 callbacks, even though their query-state use is consistent with those roles.
+
+Steam-PC references:
+- [`FUN_00442550.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c), [`FUN_00442470.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442470.c)
+- [`FUN_00442090.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442090.c), [`FUN_00441810.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441810.c)
+- [`FUN_004414E0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004414e0.c), [`FUN_00441390.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441390.c), [`FUN_00441040.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441040.c)
+- [`FUN_00441710.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c)
+
+**Evidence boundary:** pinned Windows-PC static code only. The geometric helper links above are direct in the visible decompiled bodies; callback-to-helper linkage, same-build identity with the other PC snapshots, runtime behavior and GameCube/Wii parity remain UNKNOWN.
