@@ -171,7 +171,7 @@ else:
 # The autonomous OpenRouter writer is a reusable fallback only. It must not
 # declare its own schedule or user-controlled entry point.
 fallback_trigger = openrouter_fallback.split("permissions:", 1)[0]
-fallback_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", fallback_trigger)
+fallback_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", fallback_trigger)
 if fallback_events != ["workflow_call"]:
     errors.append(f"OpenRouter fallback must be reusable-only; found {fallback_events!r}")
 for required in (
@@ -190,9 +190,9 @@ for required in (
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter fallback is missing required free-only/safety setting {required!r}")
-if 'OPENROUTER_FREE_TIER_CONFIRMED:-} != "true"' not in openrouter_fallback:
+if 'OPENROUTER_FREE_TIER_CONFIRMED:-}" != "true"' not in openrouter_fallback:
     errors.append("OpenRouter fallback must require the owner's exact-true Free-tier attestation")
-if 'GEMINI_AUTONOMOUS_ENABLED:-} != "true"' not in openrouter_fallback:
+if 'GEMINI_AUTONOMOUS_ENABLED:-}" != "true"' not in openrouter_fallback:
     errors.append("OpenRouter fallback must inherit the master autonomous owner gate")
 fallback_guard = openrouter_fallback.find("id: free_tier_guard")
 fallback_mint = openrouter_fallback.find("name: Mint scoped GitHub App token")
@@ -202,10 +202,10 @@ fallback_model = openrouter_fallback.find("name: Run OpenCode through the OpenRo
 if not (0 <= fallback_guard < fallback_mint < fallback_checkout < fallback_install < fallback_model):
     errors.append("OpenRouter fallback must pass all owner/free gates before token mint, checkout, installation and model call")
 for guarded_step in (
-    "name: Mint scoped GitHub App token\\n        id: mint_identity_token\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Checkout the protected default branch\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Install pinned OpenCode CLI\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Run OpenCode through the OpenRouter Free route\\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
