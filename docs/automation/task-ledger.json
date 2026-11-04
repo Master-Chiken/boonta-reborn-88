@@ -52,11 +52,12 @@
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/307a24dfe3c5c0ba1baf8c5bee9f167f818b969c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7138105425a3db1ae5f7ed14e95418abd8730696"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7138105425a3db1ae5f7ed14e95418abd8730696",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/4df7e420ff01d743a64b7d5a0c3698a9cf676d5c"
       ],
       "next_action": "Human review and merge decision. The consolidated dossier now includes a pinned PC race-lifecycle trace; keep all PC findings separate from native GameCube/Wii evidence.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7138105425a3db1ae5f7ed14e95418abd8730696",
+      "head_sha": "4df7e420ff01d743a64b7d5a0c3698a9cf676d5c",
       "updated_at": "2026-11-04"
     },
     {
@@ -82,7 +83,7 @@
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
-      "title": "Trace race completion through post-race phases to the Results destination (two PC source snapshots)",
+      "title": "Trace race completion through post-race phases and Results dispatch (three PC evidence snapshots)",
       "queue": "#226",
       "platform_scope": [
         "PC reference",
@@ -90,7 +91,7 @@
         "Wii"
       ],
       "status": "in_review",
-      "question": "What is supported by code in the pinned SW_RACER_RE and separate Steam-PC Ghidra snapshots from per-racer finish through manager and Results-menu dispatch, and which runtime/teardown/native-platform edges remain unresolved?",
+      "question": "What is supported across separate pinned PC code and IDA snapshots about lap finish, manager callbacks, Results dispatch and teardown, and which runtime/native-platform edges remain unresolved?",
       "acceptance_criteria": [
         "Pin every consulted public source to an exact commit and executable/version context where known",
         "Trace per-racer finish, manager completion condition, post-race phase writer, and Results destination as separate edges",
@@ -111,12 +112,16 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00454d40.c#L118-L133",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c#L150-L180",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c#L60-L88",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/4df7e420ff01d743a64b7d5a0c3698a9cf676d5c",
+        "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt#L1136",
+        "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt#L1187-L1196",
+        "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/src/4508B0_Entity_CallAll0x14.c#L3-L27"
       ],
-      "next_action": "Human review of the two-snapshot PC-only trace in #282. Do not infer a native GameCube/Wii call path from PC evidence; independently identify and inspect the exact lawful local GC/Wii DOL build before making target-specific claims.",
+      "next_action": "Human review of the three-snapshot PC-only trace in #282. The independent IDA metadata structurally confirms callback slots and labels but not runtime reachability. For native GC/Wii conclusions, identify and inspect the exact lawful local DOL independently.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7138105425a3db1ae5f7ed14e95418abd8730696"
+      "head_sha": "4df7e420ff01d743a64b7d5a0c3698a9cf676d5c"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
