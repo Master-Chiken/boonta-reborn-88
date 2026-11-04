@@ -388,3 +388,57 @@ A review of the merged public pull requests in the source project's upstream rep
 The merged PR metadata reports #120 changed only one file with 14 additions; its own description explicitly says the five functions were declaration-only. PR #208 is a separate later merge and implemented the generic spline cursor/evaluation runtime. These are separate components: the race-specific cursor reconciler is called from `swrRace_UpdateRaceProgress`, while the generic spline engine provides graph traversal, interpolation and cursor evaluation.
 
 **RE-002 therefore targets the gap left by #120, not the work completed in #41/#50/#208.** The three remaining functions need to be recovered from a matching executable/decompilation or described from verified call/data evidence; their implementation is not present in the current public upstream master.
+
+
+## Independent IDA research cross-check — `everalert/swe1r-decomp`
+
+A third public reverse-engineering repository was inspected at pinned commit `8d066b9c12ecb57bd819aaab586fd6bd2dd078a7`:
+
+- Repository: [everalert/swe1r-decomp](https://github.com/everalert/swe1r-decomp)
+- Description: “work on understanding star wars racer binary”
+- Snapshot: `master`, last pushed 2025-05-23
+- Repository tree contains an IDA database at `idapro/SWEP1RCR.EXE.idb`, plus `idapro/functions.txt`, `idapro/names.txt` and subsystem notes. The database itself was **not downloaded, opened, uploaded or committed** in this pass.
+- No root `LICENSE` or SPDX licence was identified in the inspected tree. Treat its notes/database as read-only research material; do not copy its code or redistribute its IDB. The exact executable checksum, region and release identity are not established in the inspected notes.
+
+### Independent function-size and naming metadata
+
+The repository's IDA function inventory independently lists these functions and sizes:
+
+| Address | Provisional IDA name | Function size | Stack/frame metadata | Current SW_RACER_RE mapping |
+|---:|---|---:|---:|---|
+| `0x0047F890` | `Unk_LapComp_GetModelMesh_47F890` | `0x44` | `0x08` frame | `swrRace_GetTrackMeshAtCursor` |
+| `0x0047F8E0` | `Unk_Test_LapTiming__47F8E0` | `0x2C7` | `0x60` frame | `swrRace_AdvanceSplineCursor` |
+| `0x0047FBB0` | `Unk_Test_GroundMeshTransitionCheckMaybe__47FBB0` | `0xED` | `0x10` frame | `swrRace_UpdateSplineBinding` |
+| `0x0047FCA0` | `Unk_Test_UpdateNormalToSplineMaybe__47FCA0` | `0x125` | `0x64` frame | `swrRace_ComputeTrackOffset` |
+| `0x0047FDD0` | `Unk_Test_FinalizeLapCompletion_47FDD0` | `0x1D3` | `0x0C` frame | `swrRace_LapCompletion` |
+| `0x0047FFB0` | `Unk_Test_UpdateLapCompletion__47FFB0` | `0x10D` | `0x0C` frame | `swrRace_UpdateRaceProgress` |
+
+Evidence: `idapro/functions.txt` lines 1418–1421 and the matching names in `idapro/names.txt` lines 1554–1557 (the pinned files are [functions.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt) and [names.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt)). These lengths are useful for confirming IDA's function boundaries and prioritising a later disassembly extraction. They do **not** supply the instructions or prove an exact executable match to either of the other PC snapshots.
+
+### Independent confirmation of the race-spline state
+
+The IDA author's `idapro/notes/Entity_Test.txt` independently records:
+
+- `Test +0xEC`: a mesh associated with the spline point at current lap completion; referenced by `0x47FBB0` and `0x47FFB0`.
+- `Test +0xF0`: previous value of `+0xEC`.
+- `Test +0xF4`, `+0xF8`, `+0xFC`, `+0x100`: notes say these slots are set to zero by `0x47FBB0`. This is consistent with the current reconstruction's observation that the two projection out/result pairs are retail-zero/vestigial, though the old IDA note's field labels are unresolved.
+- `Test +0x10C`: counter associated with backward spline-point movement, referenced by `0x47FFB0`; the author explicitly marks its precise semantics uncertain.
+- `Test +0x10E`: value appears to be only `-1`, `0` or `1` and is calculated by `0x47FBB0`, independently corroborating the later SW_RACER_RE annotation for `splineRebindResult`.
+- `Test +0x118`: vector associated with `0x47FCA0`, but the old IDA note leaves its meaning unknown. This supports keeping the operational meaning of `trackOffset` at UNKNOWN until a body or reader/writer evidence is recovered.
+- `Test +0x140`: identified tentatively as the actual mesh the pod is currently standing on; the note says it matches `+0xEC` when the pod is following the track and cites `0x47FBB0`. This is consistent with the ground-contact mesh being used for cursor re-binding, but the author marks the pointer's exact structure/type as uncertain.
+
+The same repository's `idapro/notes/RaceMechanics.txt` says spline cursor fields at offsets `+0x10` are written in the `0x47E8B0` routine while that routine is reached through `GroundMeshTransitionCheckMaybe__47FBB0`. `0x47E8B0` is the current source's `swrSpline_CursorSeekToProgress`. This independently supports the claim that the binding/recovery function re-seeks the cursor through the generic spline engine, rather than merely refreshing a mesh pointer.
+
+Finally, `idapro/notes/Models.txt` marks the model-behaviour bit `@03` as lap-completion-related and explicitly references `0x47FBB0`. This is consistent with the later upstream description of behavior flag bit `0x8` as the spline-ambiguous/rebind blocker. The old note does not itself explain the exact bit meaning, so the stronger semantics still come from upstream PR #264.
+
+### Updated evidence assessment
+
+| Finding | Evidence label | Confidence | Remaining limit |
+|---|---|---|---|
+| `0x47FBB0` interacts with the spline seek routine `0x47E8B0` | `COMMUNITY-REPORT` (IDA notes) | `SUPPORTED` | The public repository provides call-path notes, not function pseudocode or a full assembly listing |
+| `Test +0x10E` is a small status value derived by `0x47FBB0` | `COMMUNITY-REPORT` + corroborating SW_RACER_RE type annotation | `SUPPORTED` | Exact conditions for -1/0/1 remain unknown |
+| `Test +0x140` is the currently stood-on mesh used during rebind | `COMMUNITY-REPORT` | `SUPPORTED` | Old note says “appears” and leaves type/structure uncertain; compare with the current typed `terrainModel` / collision-hit path |
+| `Test +0x118` meaning | `COMMUNITY-REPORT` | `UNKNOWN` | Independent IDA note also leaves it unknown; do not rely on the later direction/distance comment as a verified operational contract |
+| Function sizes at 0x47F8E0 / 0x47FBB0 / 0x47FCA0 | `CODE` (IDA metadata) | `CONFIRMED` for this IDA project only | Target executable/build not identified; sizes do not recover function semantics |
+
+**Next evidence step:** recover only the three small, bounded functions `0x47FBB0` and `0x47FCA0` from this IDA project if the raw IDB can be inspected locally with an appropriately licensed IDA/Ghidra workflow. For `0x47F8E0`, the function is 711 bytes and will need its full disassembly/callers/field accesses; do not infer its full implementation from the short source comment. Keep the IDB local and do not copy any code into Boonta. No function body was extracted in this pass.
