@@ -129,55 +129,32 @@
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
-      "title": "Skip repeated Gemini attempts after an autonomous invocation failure",
+      "title": "Avoid repeated autonomous Gemini and OpenRouter Free calls after provider failures",
       "queue": "#226",
       "platform_scope": [
         "automation"
       ],
       "status": "in_review",
-      "question": "Can a failed autonomous Gemini model invocation be remembered for the current UTC day so later scheduled cycles skip repeated provider calls and proceed to the separately gated OpenRouter Free fallback?",
+      "question": "Can each autonomous free provider failure be remembered for the current UTC day so subsequent cycles avoid repeated quota/API calls and automatically retry after the next UTC date?",
       "acceptance_criteria": [
         "One persistent marker on issue #226 records the UTC date of an autonomous Gemini CLI invocation failure",
-        "A matching same-day marker blocks another autonomous Gemini model request before token mint, checkout and model invocation",
-        "The cooldown applies only to autonomous mode; the manual writer path remains unaffected",
-        "A cooldown blocks Gemini through the existing fail-closed path so the caller can invoke independently gated OpenRouter Free",
-        "The marker is updated in place, expires by date comparison on the next UTC day, and changes no secrets, settings, billing or provider selection"
+        "A matching same-day Gemini marker blocks another Gemini model request before token mint, checkout and model invocation, while the caller may proceed to the independently gated OpenRouter Free fallback",
+        "A separate persistent marker records an autonomous OpenRouter Free invocation failure",
+        "A matching same-day OpenRouter marker blocks token mint, checkout, CLI installation and the fallback model request",
+        "Only failed provider invocation steps write their respective markers; blocked preflight and same-day skips do not",
+        "Each marker is updated in place, is independent from the other provider marker, and expires by date comparison on the next UTC day",
+        "Manual non-autonomous Gemini and manual OpenRouter review workflows remain unaffected",
+        "Static AI safety checks validate both provider cooldowns, the OpenRouter workflow YAML is parsed in branch self-test, and the €0/owner gates remain unchanged"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/be26ea901d32c544b80a689e172ef118f23061bf",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874179657"
-      ],
-      "next_action": "After PR #287 is merged, retarget this stacked PR to main, rerun full exact-head safety and provenance checks, inspect independent review, and only then consider merging.",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-      "head_sha": "be26ea901d32c544b80a689e172ef118f23061bf",
-      "updated_at": "2026-11-04"
-    },
-    {
-      "task_id": "AUTOMATION-OPENROUTER-DAILY-COOLDOWN",
-      "title": "Skip repeated OpenRouter Free requests after autonomous fallback failures",
-      "queue": "#226",
-      "platform_scope": [
-        "automation"
-      ],
-      "status": "in_review",
-      "question": "Can a failed autonomous OpenRouter Free invocation be remembered for the current UTC day so later scheduled fallback attempts are skipped until the next UTC day?",
-      "acceptance_criteria": [
-        "One persistent marker on issue #226 records the UTC date of an autonomous OpenRouter Free invocation failure",
-        "A matching same-day marker blocks another fallback model request before token mint, checkout, CLI install and model invocation",
-        "The fallback cooldown is independent from Gemini's cooldown and does not change its marker",
-        "Only a failed OpenCode/OpenRouter invocation records the marker; a blocked preflight does not",
-        "The marker is updated in place, expires by date comparison on the next UTC day, and changes no secrets, settings, billing or provider selection",
-        "OpenRouter's static AI safety checker and workflow YAML parser validate the new behavior"
-      ],
-      "evidence": [
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/290",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/92b51e0622c953af69a5f6f30f709c1322d5a04a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874632826",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623"
       ],
-      "next_action": "After #289 is integrated, retarget this stacked PR to main, rerun complete exact-head safety and provenance checks, review and merge only when green.",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/290",
-      "head_sha": "287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+      "next_action": "After PR #287 is merged, retarget this combined provider-cooldown PR to main, rerun the exact-head branch self-test plus full AI safety and provenance checks, then review/merge only when all required checks are green.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
+      "head_sha": "92b51e0622c953af69a5f6f30f709c1322d5a04a",
       "updated_at": "2026-11-04"
     }
   ]
