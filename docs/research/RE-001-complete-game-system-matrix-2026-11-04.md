@@ -428,3 +428,14 @@ Further inspection of the pinned sources narrows the receiver side of the candid
 
 **What is not yet proven:** that the teardown candidate is reached in the sampled Steam build (its dependency graph still marks it `NOT_INVOKED`); that the non-special `Fini` broadcast is the path taken for a normal race completion; and that Hang F4 converts that event into menu screen 5. The end-to-end Judge-Fini → Hang-POST_RACE_INFO edge remains **UNKNOWN** until the matching Hang F4 body or an exact-build runtime trace is available. Do not infer this from the screen renderer, function names, or the existence of transition-state notes.
 
+### Final bounded Hang F4 source-export scan
+
+A final targeted scan tested both exact source paths and the nearby aggregate text exports in the pinned Steam revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`:
+
+- Exact paths `c/FUN_0045a040.c` and `asm/FUN_0045a040.s` both return not found.
+- Neither `FUN_0045a040` nor the bare address `0045a040` appears in the inspected aggregate text exports `src/_text13.c` through `src/_text18.c`. Their inspected blob IDs are respectively `41d6f8858d7854098c130f68245bfd8a3e34b3ed`, `8bbc1cde926b8b19f3eda80d0f06be125521e415`, `673cbacba8fbcda3008c3788cab4501059a11b76`, `2115bc3484118a7e89e9fc95a9239119cf608fa8`, `58abf3a432ea1b2d939c8aff88209aec5aa51aaa`, and `249c3990d4d6fcf7f661d7a43fd44fdc8871cda0`.
+- Positive control: `src/_text16.c` does contain the Hang F0 body `FUN_00457620` (at line 1131), which dispatches Hang menu screen 5 to `FUN_00439ce0). Thus the scan found the known Hang F0 renderer but not the IDA-named Hang F4 callback.
+- The independent IDA inventory still identifies `EntityHangCallback0x24_45A040` at `0x0045A040`, extent `0x34C`. This confirms a named callback exists in that separate metadata snapshot; it does not provide its body here.
+
+This is a bounded **public-source-export availability** result, not proof that the callback is absent from the Steam executable or from a private/local IDA database. The missing F4 receiver remains the concrete evidence blocker for the end-to-end Judge-Fini → Hang-POST_RACE_INFO path.
+
