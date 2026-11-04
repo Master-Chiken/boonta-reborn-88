@@ -28,3 +28,8 @@ jobs:
 
       - name: Run static AI safety checks (no API calls)
         run: python3 tools/check_ai_free_safety.py
+
+      - name: Validate persistent task ledger and regression tests
+        run: |
+          python3 tools/check_task_ledger.py
+          python3 -m unittest tools/test_check_task_ledger.py
