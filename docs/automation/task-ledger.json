@@ -96,11 +96,20 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ad2df684bb09768ebc44aa5a70ceb3b447c9bf90",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc88108edb26a573a44032b2fede7587914866de",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c498b4435cf5afd91758907f18db9a7c6aeda0f8",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/91d18539e8714b46638c937ddd3a903ca6c0ff19"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/91d18539e8714b46638c937ddd3a903ca6c0ff19",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8c907b55f567c79db35d02c486279d7b2b202aa6",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.h#L12-L24",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L2355-L2479",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046d170.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ab40.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00470610.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2783-L3270",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4242-L4625"
       ],
-      "next_action": "Human review of #282. Latest Steam-PC cross-reference recovers model mask relocation, cached texture-ID resolution, root/node/data/animation byte-swap and animation registration. SW_RACER_RE's compressed-model mask loop uses stored model_size while Steam bounds it by decompressed size; this remains a cross-snapshot discrepancy/candidate defect until verified using a lawful bounded fixture. No code imported and no GameCube/Wii inference.",
+      "next_action": "Human review of PR #282. Latest addendum maps the PC Test-object callback addresses F0/F1/F2/F3 across the separate pinned Steam-PC export and SW_RACER_RE snapshot: control/target selection, motion integration, contact/heat/orientation/surface work, and model/effects/audio maintenance. The F0-F3 SWR bodies remain TODO; Steam/SWR executable identity is not proven and no GameCube/Wii parity is claimed. Next research-only question: locate the callback scheduler and verify per-frame ordering, then refine F2 ground/wall/contact branches before considering implementation.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "91d18539e8714b46638c937ddd3a903ca6c0ff19",
+      "head_sha": "8c907b55f567c79db35d02c486279d7b2b202aa6",
       "updated_at": "2026-11-04"
     },
     {
