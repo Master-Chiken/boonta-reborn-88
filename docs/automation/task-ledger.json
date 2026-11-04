@@ -211,11 +211,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1642-L1707",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8"
       ],
-      "next_action": "Human review of PR #282. Repair category 6 increases PodHandlingData.repairRate by upgradeHealth×{0.10,0.20,0.30,0.40,0.45} at levels 1–5, clamped to [0,1]. FUN_004741D0 is a shared side-selected pod effect/event helper with callers FUN_0046AB10 (damageWarningTimer), FUN_0047B000 and FUN_0047CE60; don't describe it as repair itself or exclusively a warning. Per-part repair remains the engineHealth update in FUN_0046AB10. PC/SWR snapshots separate; semantics still bounded.",
+      "next_action": "Build a bounded, source-pinned course-resource dependency manifest for one PC reference course (selectors, block/resource IDs, loader type, consumers and ownership); then identify which links need native GC/Wii evidence. Keep the work research-only and reuse the existing RE-001 matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
+      "head_sha": "e64ecb177778091956237668bf7cd0c43da4ddb8",
       "updated_at": "2026-11-04"
     },
     {
@@ -426,12 +427,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1642-L1707",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8"
       ],
-      "next_action": "Human review of PR #282. Repair category 6 increases PodHandlingData.repairRate by upgradeHealth×{0.10,0.20,0.30,0.40,0.45} at levels 1–5, clamped to [0,1]. FUN_004741D0 is a shared side-selected pod effect/event helper with callers FUN_0046AB10 (damageWarningTimer), FUN_0047B000 and FUN_0047CE60; don't describe it as repair itself or exclusively a warning. Per-part repair remains the engineHealth update in FUN_0046AB10. PC/SWR snapshots separate; semantics still bounded.",
+      "next_action": "Build a bounded, source-pinned course-resource dependency manifest for one PC reference course (selectors, block/resource IDs, loader type, consumers and ownership); then identify which links need native GC/Wii evidence. Keep the work research-only and reuse the existing RE-001 matrix.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "66f4eb6d5ffd10d1c156f76af84f2c347203bf5e"
+      "head_sha": "e64ecb177778091956237668bf7cd0c43da4ddb8"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -516,11 +518,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
         "https://github.com/morluto/rea/tree/d896ab7bd78331efa15e35337c1f8eff45a21623",
         "https://github.com/morluto/rea/blob/46c457f74c474b224dd540d6eae6bc23080cd95f/docs/ghidra-dol.md",
-        "https://github.com/encounter/decomp-toolkit"
+        "https://github.com/encounter/decomp-toolkit",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8"
       ],
-      "next_action": "Human review of #278. When an exact lawful local GameCube/Wii build is available, record region/revision/hash locally, inventory DOL and REL modules with dtk, then use the Gekko/Broadway-aware Ghidra path for static analysis. REA is optional DOL/MEM1/Ghidra-only assistance; no REL, Wii MEM2 or disc image is supported by its lane. Do not upload the original image or analysis database.",
+      "next_action": "Build a bounded, source-pinned course-resource dependency manifest for one PC reference course (selectors, block/resource IDs, loader type, consumers and ownership); then identify which links need native GC/Wii evidence. Keep the work research-only and reuse the existing RE-001 matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
+      "head_sha": "e64ecb177778091956237668bf7cd0c43da4ddb8",
       "updated_at": "2026-11-04"
     },
     {
