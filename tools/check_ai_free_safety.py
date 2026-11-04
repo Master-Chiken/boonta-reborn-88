@@ -753,6 +753,11 @@ if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
+# Scheduled autonomous runs must not stream verbose model output into public Actions logs.
+expected_gemini_debug = "gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'"
+if expected_gemini_debug not in execute:
+    errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
+
 
 # Autonomous cycle progress must be backed by a live same-repository PR at the exact head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
