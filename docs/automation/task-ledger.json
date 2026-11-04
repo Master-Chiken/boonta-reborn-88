@@ -518,12 +518,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
         "https://github.com/morluto/rea/tree/d896ab7bd78331efa15e35337c1f8eff45a21623",
         "https://github.com/morluto/rea/blob/46c457f74c474b224dd540d6eae6bc23080cd95f/docs/ghidra-dol.md",
-        "https://github.com/encounter/decomp-toolkit",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8"
+        "https://github.com/encounter/decomp-toolkit"
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "e64ecb177778091956237668bf7cd0c43da4ddb8",
+      "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
       "updated_at": "2026-11-04"
     },
     {
