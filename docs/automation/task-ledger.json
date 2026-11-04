@@ -109,11 +109,17 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ce1e5f8a496d3679e50db86339d78c654ba355db",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Main/swrMain.h#L36-L40",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c#L48-L128",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrMain_delta.cpp#L115-L134"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrMain_delta.cpp#L115-L134",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/fb9001c5e7815112f955f17159dbe4977397b9ea",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445980.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445690.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445860.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h"
       ],
-      "next_action": "Human review of PR #282. Latest addendum maps the PC Test-object callbacks F0/F1/F2/F3 and their dispatcher-level phase barriers: model animations, then all F0, all F1, all F2, all F3. The call order is supported by the SWR header, dispatcher implementations and the project's fixed-timestep hook; the stock swrMain_RunFrame body/runtime order is not independently recovered. PC-only; Steam/SWR executable identity and GameCube/Wii parity are not established.",
+      "next_action": "Human review of PR #282. Latest addendum directly recovers the separate Steam-PC FUN_00445980 frame scheduler at SWR's swrMain_RunFrame address: model animation → global F0 → F1 → F2 → F3 → camera update, selected only when the queried state value is zero; otherwise a separate state-update path runs. FUN_004270C0 and full state semantics remain UNKNOWN. Steam/SWR executable identity and GameCube/Wii parity are not established.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "ce1e5f8a496d3679e50db86339d78c654ba355db",
+      "head_sha": "fb9001c5e7815112f955f17159dbe4977397b9ea",
       "updated_at": "2026-11-04"
     },
     {
@@ -221,12 +227,18 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ce1e5f8a496d3679e50db86339d78c654ba355db",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Main/swrMain.h#L36-L40",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c#L48-L128",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrMain_delta.cpp#L115-L134"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrMain_delta.cpp#L115-L134",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/fb9001c5e7815112f955f17159dbe4977397b9ea",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445980.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445690.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445860.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrViewport.h"
       ],
-      "next_action": "Human review of PR #282. Latest exact head includes a PC-only pod update call-path addendum: F0 control/target selection, F1 movement integration, F2 contact/heat/orientation/surface updates, F3 model/effects/audio; dispatcher runs global phases F0→F1→F2→F3. The stock swrMain_RunFrame body and runtime execution order remain unverified; no GameCube/Wii parity is claimed.",
+      "next_action": "Human review of PR #282. Latest PC-only addendum recovered FUN_00445980 directly from the pinned Steam export, confirming the global F0/F1/F2/F3 phase barriers and model/camera updates around them. The state gate reads DAT_0050C5F0; only zero selects the active object-update path, while nonzero uses a separate state routine. Full enum, runtime observation and target-platform behavior remain unknown.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "ce1e5f8a496d3679e50db86339d78c654ba355db"
+      "head_sha": "fb9001c5e7815112f955f17159dbe4977397b9ea"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
