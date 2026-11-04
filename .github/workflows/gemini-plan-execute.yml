@@ -324,7 +324,7 @@ jobs:
             }
 
       - name: Explain why Gemini was not called
-        if: steps.free_tier_guard.outputs.allowed != 'true'
+        if: steps.free_tier_guard.outputs.allowed != 'true' && steps.gemini_cooldown.outputs.active != 'true'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
           ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
