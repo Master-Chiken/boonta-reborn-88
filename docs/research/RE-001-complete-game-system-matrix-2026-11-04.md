@@ -1140,3 +1140,38 @@ The state gate reads `DAT_0050C5F0`; it does not directly read a boolean pause f
 - **NOT ESTABLISHED:** no GameCube/Wii frame scheduler, update order, state layout or pause behavior is inferred.
 
 No code was imported or changed; no commercial executable, ROM, disc image, DOL/REL, extracted asset or proprietary output was used.
+
+
+## 2026-11-04 — state gate and pause-transition control path
+
+The scheduler audit was extended to the state getter, its pre-update caller, and the transition routines. This yields a stronger interpretation of the nonzero-state branch, while keeping the original state enum unnamed.
+
+### Direct control flow in the pinned Steam-PC export
+
+- `FUN_00445980` calls `FUN_00445680` before reading the state getter `FUN_00445690`.
+- `FUN_00445680` invokes `FUN_004457D0` when `DAT_0050C5F4 == 0`. `FUN_004457D0` only proceeds from `DAT_0050C5F0 == 0`; it checks the Judge object and the input/state conditions before calling `FUN_004456B0`.
+- `FUN_004456B0`, when the same gate `DAT_0050C5F4 == 0) allows it, sets `DAT_0050C5F0 = 2`, broadcasts the four-character event tag `Paws` with parameter 1, and runs surrounding menu/audio helpers.
+- On later nonzero-state frames, `FUN_00445860` advances the transition scalar. When state is 2 it increments toward 1 and then writes state 1; when state is 3 it decrements toward 0 and eventually calls `FUN_00445730`.
+- `FUN_00445730` writes state 0 and broadcasts the same `Paws` event with parameter -1.
+- `FUN_00445780` writes state 3. The pause/menu handler `FUN_0042AE00` calls it on input bit `0x200`; another menu-state helper `FUN_0042AB80` also uses it in selected transitions.
+
+### Safe interpretation of the four observed values
+
+The code supports this transition model:
+
+| Value in `DAT_0050C5F0` | Observed transition behavior | Working interpretation |
+|---:|---|---|
+| 0 | Selects the F0–F3 active world-update chain | Active simulation |
+| 2 | Set by the pause-entry routine; transition scalar moves toward the upper bound, then state becomes 1 | Entering pause |
+| 1 | Stable target reached from state 2; the active F0–F3 chain remains bypassed | Paused/menu state |
+| 3 | Set by the resume routine; transition scalar moves back toward the lower bound, then state becomes 0 | Leaving pause / resuming |
+
+**Evidence classification:** SUPPORTED interpretation of state transitions from the pinned Steam-PC code; the numeric writes and comparisons are CONFIRMED-IN-CODE. The source does not expose a named enum for `DAT_0050C5F0`, so do not promote these working labels into official symbols. The independent `DAT_0050C5F4` gate also affects whether pause input/state changes are allowed; its full ownership and lifecycle remain UNKNOWN.
+
+### The scheduler's repeated helper is not a timer
+
+`FUN_004270C0` checks `DAT_0050C68C` and conditionally calls `FUN_00426910`. In the pinned export, `FUN_00426910` has an empty body that immediately returns. There is no visible timer, wait, sleep or delta-time update in this pair. Therefore the repeated call between dispatcher phases must remain an **effective no-op in this recovered snapshot**, not a guessed synchronization or frame-timing mechanism.
+
+### Updated evidence boundary
+
+This closes the bounded source-level state-gate question for the selected Steam-PC snapshot. It does not prove the exact transition animation, input-device mapping, retail runtime response, or same-build identity with SW_RACER_RE. The native GameCube/Wii implementation must not inherit this numeric state machine without target-specific evidence.
