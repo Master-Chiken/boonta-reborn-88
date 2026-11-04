@@ -2,6 +2,14 @@
 import copy
 import importlib.util
 import unittest
+\nimport importlib.util
+from pathlib import Path
+
+AUDIT_PATH = Path(__file__).with_name("audit_task_ledger_github.py")
+AUDIT_SPEC = importlib.util.spec_from_file_location("audit_task_ledger_github", AUDIT_PATH)
+audit = importlib.util.module_from_spec(AUDIT_SPEC)
+assert AUDIT_SPEC and AUDIT_SPEC.loader
+AUDIT_SPEC.loader.exec_module(audit)
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("check_task_ledger.py")
@@ -70,6 +78,27 @@ class TaskLedgerTests(unittest.TestCase):
         data = valid_ledger()
         data["tasks"][0]["platform_scope"] = []
         self.assertTrue(any("platform_scope" in e for e in ledger.validate_ledger(data)))
+
+class LiveGitHubReconciliationTests(unittest.TestCase):
+    def test_accepts_open_pr_with_exact_head(self):
+        task = {"task_id": "TASK-001", "status": "in_review", "head_sha": "a" * 40}
+        pr = {"state": "open", "merged_at": None, "head": {"sha": "a" * 40}}
+        self.assertEqual(audit.reconcile_task(task, pr), [])
+
+    def test_rejects_stale_head_sha(self):
+        task = {"task_id": "TASK-001", "status": "in_review", "head_sha": "a" * 40}
+        pr = {"state": "open", "merged_at": None, "head": {"sha": "b" * 40}}
+        self.assertTrue(any("does not match live PR head" in e for e in audit.reconcile_task(task, pr)))
+
+    def test_rejects_closed_unmerged_pr_marked_in_review(self):
+        task = {"task_id": "TASK-001", "status": "in_review", "head_sha": "a" * 40}
+        pr = {"state": "closed", "merged_at": None, "head": {"sha": "a" * 40}}
+        self.assertTrue(any("open, unmerged PR" in e for e in audit.reconcile_task(task, pr)))
+
+    def test_completed_requires_merged_pr(self):
+        task = {"task_id": "TASK-001", "status": "completed", "head_sha": "a" * 40}
+        pr = {"state": "closed", "merged_at": None, "head": {"sha": "a" * 40}}
+        self.assertTrue(any("must point to a merged PR" in e for e in audit.reconcile_task(task, pr)))
 
 
 if __name__ == "__main__":
