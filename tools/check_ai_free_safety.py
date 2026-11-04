@@ -753,6 +753,28 @@ if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
+
+# Autonomous cycle progress must be backed by a live same-repository PR at the exact head.
+for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
+    if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
+        errors.append(f"{label} must require the machine-readable PROGRESS status")
+    if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
+        errors.append(f"{label} must support an explicit BLOCKED report")
+    if "BOONTA_CYCLE_EVIDENCE" not in workflow:
+        errors.append(f"{label} must require a traceable evidence field")
+    if "github.rest.pulls.get" not in workflow:
+        errors.append(f"{label} must verify progress against live GitHub PR state")
+    if "pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88'" not in workflow:
+        errors.append(f"{label} must reject progress PRs whose head comes from a fork")
+    if "pr.head.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
+        errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
+if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
+    errors.append("OpenRouter fallback must persist its final report for contract validation")
+if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
+    errors.append("OpenRouter fallback must validate the report it just produced")
+if "exact-40-character-head-SHA" not in autonomous_prompt:
+    errors.append("Gemini autonomous prompt must show the exact PR-head evidence format")
+
 if errors:
     print("AI free-tier safety checks FAILED:")
     for error in errors:
