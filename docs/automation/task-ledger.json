@@ -90,11 +90,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88"
       ],
-      "next_action": "Human review of #282. Latest read-only PC reference traces trigger scene setup: 30-entry Trig pool, static scene group, planet resource selection, recursive track-node walk, trigger-description initialization and indexed multiplayer activation. Steam type initializer sets filter bit 0x01 for trigger types 211 and 310 even though generic proximity scanning skips that bit; this narrows but does not resolve its global meaning. Keep PC/console boundaries and unknown flags explicit.",
+      "next_action": "Human review of #282. Latest PC-only follow-up separates FlameSpawner (211) / DozerSpawner (310) scene initialization from generic Trig updates: SWR F0/F2 callbacks and Steam FUN_0047CE60 have no dedicated 211/310 runtime cases; the non-Trig spawn consumer remains UNKNOWN. Keep trigger-type and model-ID numeric namespaces separate; keep all PC/console boundaries explicit.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "0564a0653804aa85d8382678ada9033ef30315a4",
+      "head_sha": "5f0bf549e8562ed244143cd1cfff37f0525f6c88",
       "updated_at": "2026-11-04"
     },
     {
@@ -191,12 +192,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88"
       ],
-      "next_action": "Human review of #282. Latest read-only PC reference traces trigger scene setup: 30-entry Trig pool, static scene group, planet resource selection, recursive track-node walk, trigger-description initialization and indexed multiplayer activation. Steam type initializer sets filter bit 0x01 for trigger types 211 and 310 even though generic proximity scanning skips that bit; this narrows but does not resolve its global meaning. Keep PC/console boundaries and unknown flags explicit.",
+      "next_action": "Human review of #282. Latest PC-only follow-up separates FlameSpawner (211) / DozerSpawner (310) scene initialization from generic Trig updates: SWR F0/F2 callbacks and Steam FUN_0047CE60 have no dedicated 211/310 runtime cases; the non-Trig spawn consumer remains UNKNOWN. Keep trigger-type and model-ID numeric namespaces separate; keep all PC/console boundaries explicit.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "0564a0653804aa85d8382678ada9033ef30315a4"
+      "head_sha": "5f0bf549e8562ed244143cd1cfff37f0525f6c88"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
