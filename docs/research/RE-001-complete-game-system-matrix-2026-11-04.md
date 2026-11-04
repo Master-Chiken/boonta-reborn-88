@@ -1481,3 +1481,53 @@ Steam-PC code references:
 - [`FUN_00443380.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443380.c)
 
 **Evidence boundary:** the IDA artifact currently consulted supplies names and function-size metadata, not the callback machine-code bodies or semantic validation. The IDA and Steam-PC snapshots remain separately pinned; same-build identity, runtime behavior, exact primitive predicate and GameCube/Wii parity remain unproven.
+
+
+## Collision query families: mode 1 ray traversal vs mode 3 sphere sweep — 2026-11-04
+
+The separate IDA snapshot and Steam-PC call paths now support a clear split between two query families which share the same mesh-face enumerator but install different callback pairs.
+
+### Mode 1: ray-style traversal
+
+The Steam-PC entry points `FUN_00444D10` and `FUN_00444E40` initialize a query from an origin (`param_2[0..2]), direction (`param_2[3..5])) and maximum parameter/distance (`param_2[6])). Both set `DAT_00e98e1c = 1`, install:
+- non-indexed callback pointer `DAT_00e98e20 = &LAB_00442C30`;
+- indexed callback pointer `DAT_00e985ac = &LAB_00442720`;
+
+and enter the recursive traversal `FUN_00444BF0`. `FUN_00444D10` returns the nearest accepted distance and writes hit position/normal outputs; `FUN_00444E40` returns the selected mesh/node reference when the supplied maximum is not exceeded. These are behavior summaries from their visible bodies; the IDA names remain provisional.
+
+The recursive function `FUN_00444BF0` traverses model nodes and transform-bearing children, using the shared matrix stack (`FUN_00445200` push / `FUN_00445630` pop). Its leaf handler is `FUN_00444910`. When a transformed node is entered, that handler calls `FUN_004447B0` to transform the query's ray-list data into the current node space. It then derives per-axis bounds from the transformed start/end data, rejects non-overlapping node and child-mesh AABBs, and forwards surviving meshes to the common face enumerator `FUN_004439F0`.
+
+A third mode-1 entry, `FUN_00444F10`, configures the same callback pair and query-state mode, derives axis bounds, applies type/filter flags, and invokes `FUN_004439F0` directly for its supplied mesh. Its wider caller contract is not assigned a more specific name here.
+
+### Mode 3: sphere-sweep traversal
+
+The wall-scrape query `FUN_00444740` calls `FUN_00444200`, then `FUN_004440E0`, then `FUN_00444300`. Setup sets `DAT_00e98e1c = 3` and installs:
+- non-indexed callback pointer `DAT_00e98e20 = &LAB_004437C0`;
+- indexed callback pointer `DAT_00e985ac = &LAB_00443560`.
+
+The recursive node walker is `FUN_004440E0`, with leaf evaluator `FUN_00443F10`. Unlike mode 1's transformed ray bounds, mode 3's leaf check compares node and child-mesh AABBs with the query sphere's center±radius bounds before the common `FUN_004439F0` face dispatcher.
+
+### Shared face enumeration, distinct callback ABI
+
+Both families therefore share `FUN_004439F0` but not the callback pair:
+- **Mode 1:** `LAB_00442C30` non-indexed / `LAB_00442720` indexed.
+- **Mode 3:** `LAB_004437C0` non-indexed / `LAB_00443560` indexed.
+
+The independent IDA name map provisionally labels mode-1 entries `Unk_Model_MeshCollisionFaceCallback` and `Unk_Model_MeshCollisionFaceCallbackIndexed`; mode-3 entries receive the corresponding `...Callback2` and `...Callback2Indexed` labels. This makes the separate callback families explicit, but the `Unk_` names remain analyst-generated, not official game symbols.
+
+### Nearby geometric routines — relationship not established
+
+Two other functions in this address neighborhood have meaningful bodies:
+- `FUN_00442090` computes a closest contact candidate against a triangle-like three-vertex input: it tests a projected/interior candidate, falls back to closest points on the three edges when needed, compares squared separation against the global radius-squared threshold, and records the closest accepted contact. This is consistent with a sphere/triangle contact helper.
+- `FUN_00442550` obtains a candidate point from the ray/plane helper `FUN_00442470`, checks whether that point lies in the supplied triangle via `FUN_00441040`, and updates the best distance/contact/normal when accepted.
+
+These functions are recorded as nearby geometric routines only. The accessible decompiled callback bodies for `LAB_00442C30`, `LAB_00442720`, `LAB_004437C0` and `LAB_00443560` are still absent, so no direct call edge from a callback to `FUN_00442090` or `FUN_00442550` is claimed. The exact narrowphase wiring remains **UNKNOWN**.
+
+Steam-PC references:
+- [`FUN_00444D10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444d10.c), [`FUN_00444E40.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444e40.c), [`FUN_00444F10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444f10.c)
+- [`FUN_00444BF0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444bf0.c), [`FUN_00444910.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444910.c), [`FUN_004447B0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004447b0.c)
+- [`FUN_00442090.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442090.c), [`FUN_00442550.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00442550.c)
+- [`FUN_004440E0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c), [`FUN_00443F10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c), [`FUN_004439F0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c)
+- [IDA names](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt) and [IDA function table](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt)
+
+**Evidence boundary:** Windows-PC static references only. Steam-PC Ghidra and IDA snapshots remain separately pinned; their executable/build identity is unproven. Callback machine-code bodies and exact call wiring remain unresolved. No runtime result, GameCube/Wii parity or proprietary game asset/binary access is claimed.
