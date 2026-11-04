@@ -1963,3 +1963,36 @@ References:
 - Steam-PC [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c), [`FUN_00474CD0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c), [`FUN_004741D0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c).
 
 **Evidence boundary:** struct names and upgrade definitions come from the pinned SWR reconstruction; PC field offsets and arithmetic are from the separate Steam-PC export. No same-build identity or console parity is inferred.
+
+
+## Repair upgrade levels and shared side-effect handler — 2026-11-04
+
+The Repair upgrade calculation and the shared caller set for `FUN_004741D0` add two final qualifications to the repair contract.
+
+### Repair upgrade progression
+
+SWR `swrRace_CalculateUpgradedStat`, category 6, adjusts `PodHandlingData.repairRate` by `upgradeHealth * factor`, then clamps the result to [0.0, 1.0]:
+- upgrade level 1: factor 0.10;
+- level 2: 0.20;
+- level 3: 0.30;
+- level 4: 0.40;
+- level 5: 0.45.
+
+Therefore the repair stat enters the PC recovery formula as a tunable pod stat; it is not a universal fixed constant. The exact input `upgradeHealth` is retained as the function parameter and is not reinterpreted as a specific part-health field here.
+
+### `FUN_004741D0` is a shared side-effect helper, not a repair-only routine
+
+The PC function has at least three distinct visible caller sites:
+- `FUN_0046AB10`: called after the `damageWarningTimer +0x2C0` side-selection logic;
+- `FUN_0047B000`: called by a separate high-level condition, then sets another state flag and a five-second timer;
+- `FUN_0047CE60`: called by event case `0x68`, with side 1/2 selected by an RNG comparison.
+
+The helper itself checks activity/eligibility flags, rejects certain status states, marks a shared cooldown at `+0x310), chooses the supplied side's point group (`+0x3C0` or `+0x400`), writes corresponding side flags and emits effect/audio events. Since it is shared, its exact gameplay label should remain generic: **side-selected pod effect/event helper**. The `damageWarningTimer` path is one caller, not proof that every invocation is a repair or damage-warning animation.
+
+This corrects any reading of the helper as a component-repair operation. Actual per-part recovery remains the health update in `FUN_0046AB10`; the side helper is a distinct event/effect layer.
+
+References:
+- SWR [Repair upgrade category 6](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1642-L1707).
+- Steam-PC [`FUN_004741D0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c), [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c), [`FUN_0047B000.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c), [`FUN_0047CE60.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c).
+
+**Evidence boundary:** direct code/call-site evidence only. The helper's complete audiovisual/gameplay semantics and the identity of PC/SWR snapshots remain unresolved.
