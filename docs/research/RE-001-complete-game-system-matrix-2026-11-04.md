@@ -213,9 +213,9 @@ The Steam export includes `FUN_004542e0` in `src/_text15.c` (lines 2685–2711),
 - calls `FUN_00453e00` first, which performs a substantial camera update using the cMan state/mode;
 - advances a bounded oscillation using fields at `+0x39C`, `+0x3A0`, and `+0x3A4`;
 - applies the resulting offset to camera-related values at `+0x140` and `+0x58`, then invokes a small update helper;
-- conditionally emits surface/weather text through `FUN_00454060`.
+- conditionally emits terrain/region status text through `FUN_00454060`.
 
-This is a useful PC-only F3 implementation lead, not the missing `Swee` F4 handler. There is also an unresolved field-layout discrepancy: the SW_RACER_RE type note labels a `camShake` vector at `+0x38C`, followed by scalars at `+0x398)–`+0x3A4`; the Steam F3 body reads the later scalar fields, not the vector at `+0x38C`. Do not silently equate those fields or port the interpretation across builds.
+This is a useful PC-only F3 implementation lead, not the missing `Swee` F4 handler. There is also an unresolved field-layout discrepancy: the SW_RACER_RE type note labels a `camShake` vector at `+0x38C`, followed by scalars at `+0x398`–`+0x3A4`; the Steam F3 body reads the later scalar fields, not the vector at `+0x38C`. Do not silently equate those fields or port the interpretation across builds.
 
 The checked Steam source search found `FUN_004542e0` but did not find same-address bodies for cMan F0 (`0x00451CD0)), F2 (`0x00451D40)) or F4 (`0x004543F0)). This is a bounded negative search result, not proof those routines do not exist in another executable or source snapshot.
 
