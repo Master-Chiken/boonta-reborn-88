@@ -26,6 +26,32 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Check same-day OpenRouter failure cooldown
+        id: openrouter_cooldown
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const markerComment = comments.find((comment) => (comment.body || '').includes('<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:'));
+            const match = markerComment?.body?.match(/<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/);
+            const failedOn = match?.[1] || '';
+            const active = failedOn === todayUtc;
+            core.setOutput('active', String(active));
+            core.setOutput('failed_on', failedOn);
+            if (active) {
+              core.notice('OpenRouter Free already failed during UTC day ' + todayUtc + '; skip another request until the next UTC day.');
+            } else {
+              core.info('No active same-day OpenRouter Free failure cooldown.');
+            }
       - name: Require explicit OpenRouter Free and autonomous owner gates
         id: free_tier_guard
         shell: bash
@@ -40,6 +66,8 @@ jobs:
           CALLER_EVENT: ${{ github.event_name }}
           APP_ID: ${{ vars.APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          OPENROUTER_COOLDOWN_ACTIVE: ${{ steps.openrouter_cooldown.outputs.active }}
+          OPENROUTER_COOLDOWN_DATE: ${{ steps.openrouter_cooldown.outputs.failed_on }}
         run: |
           set -euo pipefail
           set +x
@@ -56,6 +84,8 @@ jobs:
             reason="OpenRouter fallback may only be called by Boonta Autonomous Loop from main."
           elif [[ "${CALLER_EVENT:-}" != "schedule" && "${CALLER_EVENT:-}" != "workflow_dispatch" ]]; then
             reason="Unsupported caller event; no model call is allowed."
+          elif [[ "${OPENROUTER_COOLDOWN_ACTIVE:-}" == "true" ]]; then
+            reason="OpenRouter Free already failed an autonomous invocation on UTC date ${OPENROUTER_COOLDOWN_DATE:-today}; skip repeated requests until the next UTC day. No provider request will be made."
           elif [[ -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ]]; then
             reason="The scoped GitHub App ID variable or private-key secret is missing."
           fi
@@ -107,6 +137,7 @@ jobs:
           opencode --version
 
       - name: Run OpenCode through the OpenRouter Free route
+        id: run_opencode
         if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: bash
         env:
@@ -159,7 +190,7 @@ jobs:
           PROMPT="$(cat <<'PROMPT'
           You are the €0-only OpenRouter fallback agent for Boonta Reborn 88. Gemini has already failed in this scheduled cycle. You are authorized to complete exactly one bounded task without asking the owner to type "continue".
 
-          FIRST: read GEMINI.md, docs/PROJECT_OPERATING_RULES.md, docs/AI_AUTOMATION_SETUP.md, and the current repository research instructions. Then read the live issue bodies and recent comments for #156, #226 and #279, plus the current open PR/branch inventory. Live owner instructions at the top of #226 and #279 supersede stale historical notes and stale docs. RE-001 (#226) is the native GameCube/Wii research and implementation queue. RE-002 (#279) is a separate read-only PC/N64/Dreamcast evidence track. Never mix platform claims or create competing runtime implementations.
+          FIRST: read GEMINI.md, docs/PROJECT_OPERATING_RULES.md, docs/AI_AUTOMATION_SETUP.md, and the current repository research instructions. Then read only the current-state/owner-direction sections of issues #156, #226 and #279 and the latest five relevant comments per issue. Search older comments only when the selected task needs a specific historical source; never ingest full appendices or reproduce issue history. Build a compact open PR/branch inventory (number, title, state/draft, base/head and exact head SHA). Live owner instructions at the top of #156, #226 and #279 supersede stale historical notes and stale docs. RE-001 (#226) is the native GameCube/Wii research and implementation queue. RE-002 (#279) is a separate read-only PC/N64/Dreamcast evidence track. Never mix platform claims or create competing runtime implementations.
 
           Read `docs/automation/task-ledger.json` before task selection. Reconcile it against live issue/PR/branch state and exact head SHAs; GitHub remains authoritative if the ledger is stale. Maintain stable task IDs, one `active` task maximum, `in_review` for open PRs, `blocked` with a named dependency, and `completed` only after merge plus evidence. Update the ledger in the same branch as every substantive task; never duplicate IDs or mark an open PR complete. Run its validator/tests if shell is available, otherwise rely on required safety CI and report pending validation.\n\n          Current priority is roughly 80% evidence-led reverse engineering and 20% focused implementation/integration. The consolidated complete-game system matrix and TODO/HANG audit have now been submitted in PR #282; do not recreate that deliverable. At the start of every cycle, reread the live owner-directed sections at the top of #226 and #279 and inspect all open PRs/diffs. Select the next highest-value unanswered research question from the matrix, prioritizing evidence that can resolve a major subsystem or platform uncertainty. RE-001 (#226) is the native GameCube/Wii research and implementation queue. RE-002 (#279) is read-only PC/N64/Dreamcast comparative evidence; use it only for a distinct, non-overlapping question and never port its findings as GameCube/Wii facts. Keep the 80/20 research-first policy, avoid prototype polish, and do not start broad gameplay implementation until the selected subsystem is sufficiently understood.
 
@@ -187,6 +218,52 @@ jobs:
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
 
+      - name: Record same-day OpenRouter cooldown after an invocation failure
+        if: always() && steps.run_opencode.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              '## OpenRouter Free daily failure cooldown',
+              '',
+              'The autonomous OpenRouter Free invocation failed on UTC date ' + todayUtc + '.',
+              'Further fallback cycles on this UTC date will skip another OpenRouter request. A fresh attempt is allowed on the next UTC date.',
+              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed OpenRouter invocation](' + process.env.RUN_URL + ')',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => (comment.body || '').includes('<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
+            }
       - name: Validate OpenRouter autonomous cycle report
         if: steps.free_tier_guard.outputs.allowed == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
