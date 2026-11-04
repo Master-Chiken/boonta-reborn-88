@@ -279,3 +279,28 @@ The Steam snapshot also reconstructs `FUN_00451EF0` as a timed, track-indexed ca
 - [Steam F3 body FUN_004542e0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L2685-L2711)
 
 **Updated conclusion:** the meaning of the `Swee` Boolean is now independently supported (0 = cancel, 1 = start), and cMan F4 is identified by its exact callback address/extent. Its complete body and the subsequent Hangar/Results handoff remain unverified. These remain Windows-PC findings only; no native GameCube/Wii state or behavior is inferred.
+
+
+## 2026-11-04 — Hang F0 / Results-menu destination recovered, handoff still unproven
+
+The independent IDA notes and Steam-PC Ghidra source allow a narrower statement about the Hangar-side destination.
+
+**Pinned references**
+- everalert/swe1r-decomp IDA notes at `8d066b9c12ecb57bd819aaab586fd6bd2dd078a7`: [Entity_Jdge.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Jdge.txt), [Entity_Hang.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Hang.txt), [EntitySystem.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/EntitySystem.txt), and [functions.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt).
+- Steam-PC source at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`: [Hang F0 callback FUN_00457620](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c) and [Results routine FUN_00439ce0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c).
+
+### What is now directly supported
+
+1. **Hang menu screen 5 is Results / POST_RACE_INFO.** The IDA `Entity_Hang.txt` note maps menu screen enum value 5 to race results and calls it `POST_RACE_INFO` in game code. This is a Hang object menu-screen field, not Judge F0's low-nibble state 5.
+2. **A Steam F0 callback body exists at the Hang callback address.** IDA identifies `EntityHangCallback0x14_457620` at `0x00457620` with a 0x468-byte function extent. The Steam decompilation provides the body at the same address as `FUN_00457620`.
+3. **The callback processes menu screen 5 by calling the Results routine.** In `FUN_00457620`, the code first checks Hang's active flag bit 0. If active, its menu-screen switch has case 5, which calls `FUN_004575d0` and then `FUN_00439ce0` (the Results/menu routine). The latter is therefore the concrete results destination *conditional on this Hang F0 callback running with menu screen 5*.
+4. **The common entity system can call this callback through the F0 slot.** The independent `EntitySystem.txt` describes the per-frame callback at manager/entity-definition offset `+0x14` as F0 and explains that F0–F3 are dispatched in ordered periodic passes. This is consistent with the Steam generic scheduler `FUN_004508b0` and manager layout already recorded above.
+
+### What remains unproven
+
+- The Steam dependency graph explicitly labels `NOT_INVOKED --> FUN_00457620`. This warns that the checked static call graph does not show a direct caller. The callback-table architecture makes indirect scheduler invocation possible, but it does not establish that the Hang entity was active or received the F0 tick during the post-race transition.
+- No inspected source or note yet establishes **who writes Hang menu screen 5**, who sets Hang's active flag bit 0 after race completion, or exactly when that occurs relative to the Judge state-4/5 camera sequence.
+- The Steam candidate teardown `FUN_0045dd80` is also marked `NOT_INVOKED`; its body must not be treated as the proven path that activates Hang or transitions to Results.
+- The SW_RACER_RE Hang F0/F2/F3/F4 handlers remain `HANG("TODO")` stubs. Do not promote Steam/IDA callback addresses or object offsets into native GameCube/Wii assumptions.
+
+**Updated lifecycle statement:** the Results routine is now mapped to a concrete Hang F0 callback branch: *active Hang + menu screen 5 → Results routine*. The unresolved edge is the preceding writer/activation path that makes this condition true after the race. This is stronger than merely finding a Results function, but it is not yet a complete race-manager-to-Hangar runtime trace.
