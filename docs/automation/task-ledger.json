@@ -177,11 +177,20 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a25e52b66783c99f03bce271a16bc7c70af0f632",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3758-L4866",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9871f4d95f907c3e72d15b8cfab88e126804bca8",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bd20.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046aa30.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L4618",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121"
       ],
-      "next_action": "Human review of PR #282. Collision source map now distinguishes implemented SWR ray/ground functions from HANG gaps: UpdateWallContact is declaration-only; DetectWallScrape, ApplyWallCollision and CollideBlockMove are HANG stubs; mode-3 sphere setup/callback/resolve API bodies are not in inspected swrModel.c. Steam-PC FUN_0047B520 -> FUN_0047A200 -> (FUN_00477940 -> two FUN_00444740 probes; then FUN_00479920) or FUN_0044ABC0 establishes the corresponding call path. Keep ground/ray, sphere/wall, and blockmove/response as separate contracts. Mode3 callback/result math still highest-value reverse-engineering gap. No code reuse or GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest powertrain/repair gap map: SWR UpdateHeat, ApplyBoost and TakeDamage match address-level PC helpers; ApplyEngineDamage (0x46AA30), Repair (0x46AB10), and BoostCharge (0x46BD20) remain HANG/TODO. PC BoostCharge is a 0/1/2 timer/input state gate whose return is consumed to latch BOOSTING; the SWR stub returns 0, so that player-control activation path cannot latch boost. PC ApplyEngineDamage iterates six parts with status bit 0x8 and calls TakeDamage; PC Repair progresses per-part recovery and side effects. Continue only as behavioral spec with unknown input globals preserved, no copied code and no GC/Wii claims.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a25e52b66783c99f03bce271a16bc7c70af0f632",
+      "head_sha": "9871f4d95f907c3e72d15b8cfab88e126804bca8",
       "updated_at": "2026-11-04"
     },
     {
@@ -358,12 +367,21 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a25e52b66783c99f03bce271a16bc7c70af0f632",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3758-L4866",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9871f4d95f907c3e72d15b8cfab88e126804bca8",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bd20.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046aa30.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L4618",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121"
       ],
-      "next_action": "Human review of PR #282. Collision source map now distinguishes implemented SWR ray/ground functions from HANG gaps: UpdateWallContact is declaration-only; DetectWallScrape, ApplyWallCollision and CollideBlockMove are HANG stubs; mode-3 sphere setup/callback/resolve API bodies are not in inspected swrModel.c. Steam-PC FUN_0047B520 -> FUN_0047A200 -> (FUN_00477940 -> two FUN_00444740 probes; then FUN_00479920) or FUN_0044ABC0 establishes the corresponding call path. Keep ground/ray, sphere/wall, and blockmove/response as separate contracts. Mode3 callback/result math still highest-value reverse-engineering gap. No code reuse or GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest powertrain/repair gap map: SWR UpdateHeat, ApplyBoost and TakeDamage match address-level PC helpers; ApplyEngineDamage (0x46AA30), Repair (0x46AB10), and BoostCharge (0x46BD20) remain HANG/TODO. PC BoostCharge is a 0/1/2 timer/input state gate whose return is consumed to latch BOOSTING; the SWR stub returns 0, so that player-control activation path cannot latch boost. PC ApplyEngineDamage iterates six parts with status bit 0x8 and calls TakeDamage; PC Repair progresses per-part recovery and side effects. Continue only as behavioral spec with unknown input globals preserved, no copied code and no GC/Wii claims.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a25e52b66783c99f03bce271a16bc7c70af0f632"
+      "head_sha": "9871f4d95f907c3e72d15b8cfab88e126804bca8"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
