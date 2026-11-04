@@ -2225,3 +2225,54 @@ The next evidence target is the missing/indirect F0 invocation path in the Steam
 - Steam-PC FUN_0045dd80.c: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c
 - Steam-PC published dependency graph: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd
 
+
+
+## 2026-11-04 — 25/25 numeric camera-spline ID cross-reference to named SWR enum entries
+
+A separate cross-check resolves the names associated with the PC camera-spline resource IDs without guessing the Judge table row order. Every one of the 25 IDs emitted by Steam-PC FUN_00464B90 exists at the same integer value in the SWR SPLINEID enum and has a descriptive enum label.
+
+| PC planetId | PC track ordinal | PC camera-spline ID | Same-valued SWR SPLINEID label |
+|---:|---:|---:|---|
+| 0 | 0 | 0x19 (25) | SPLINEID_tatooine_mini_track6came |
+| 0 | 1 | 0x2D (45) | SPLINEID_tatooine_track7camm |
+| 1 | 0 | 0x11 (17) | SPLINEID_planeta_track6came |
+| 1 | 1 | 0x1E (30) | SPLINEID_planeta_track7camm |
+| 1 | 2 | 0x1F (31) | SPLINEID_planeta_track8camh |
+| 1 | 3 | 0x2E (46) | SPLINEID_planeth_track6came |
+| 2 | 0 | 0x22 (34) | SPLINEID_planetb1_track6came |
+| 2 | 1 | 0x52 (82) | SPLINEID_planetb2_track7camm |
+| 2 | 2 | 0x30 (48) | SPLINEID_planetb3_track8camh |
+| 3 | 0 | 0x24 (36) | SPLINEID_planetc_track6came |
+| 3 | 1 | 0x26 (38) | SPLINEID_planetc_track7camm |
+| 3 | 2 | 0x28 (40) | SPLINEID_planetc_track8camh |
+| 4 | 0 | 0x53 (83) | SPLINEID_planetd1_track6came |
+| 4 | 1 | 0x58 (88) | SPLINEID_planetd2_track7camm |
+| 4 | 2 | 0x59 (89) | SPLINEID_planetd3_track8camh |
+| 4 | 3 | 0x2F (47) | SPLINEID_planeti_track6came |
+| 5 | 0 | 0x38 (56) | SPLINEID_planete1_track6came |
+| 5 | 1 | 0x39 (57) | SPLINEID_planete2_track7camm |
+| 5 | 2 | 0x54 (84) | SPLINEID_planete3_track8camh |
+| 6 | 0 | 0x29 (41) | SPLINEID_planetf_track6came |
+| 6 | 1 | 0x2A (42) | SPLINEID_planetf_track7camm |
+| 6 | 2 | 0x2B (43) | SPLINEID_planetf_track8camh |
+| 7 | 0 | 0x23 (35) | SPLINEID_planetj1_track6came |
+| 7 | 1 | 0x3B (59) | SPLINEID_planetj2_track7camm |
+| 7 | 2 | 0x3E (62) | SPLINEID_planetj3_track8camh |
+
+**Result:** 25 of 25 PC camera-spline IDs match named SWR enum values exactly. This is an ID-label cross-reference between pinned sources, not proof that the Steam-PC export and SWR enum came from the same executable build. It does not prove the meaning of PC planetId values, nor that a particular camera-spline tuple maps to a particular row in g_aTrackInfos. The outlying names in tuples (1,3) and (4,3), for example, are preserved literally rather than normalized into a guessed planet grouping.
+
+### Separate track-model enum; no row join
+
+The SWR types_enums.h file separately defines a MODELID enum explicitly marked SWITCH VERSION. It contains 25 course-model names: Tatooine and Tatooine Mini, Planet H and I, Planet A1–A3, B1–B3, C1–C3, D1–D3, E1–E3, F1–F3, and J1–J3. That gives a useful *version-specific model-name catalogue*, but it is not the type used by TrackInfo: types.h declares TrackInfo.trackID as INGAME_MODELID. The switch MODELID values must therefore not be substituted into TrackInfo or joined to the Steam-PC Judge +0x1B0 selector without independent evidence.
+
+The custom-track source independently states that the stock PC data/lev01 contains 25 track-model records and 91 spline records; it compares stock model/spline block hashes with candidate custom blocks, then pairs a changed model to the stock TrackInfo spline by ID. This confirms the record counts and matching strategy, but still does not expose the actual 25 stock TrackInfo rows in the inspected source.
+
+### Manifest impact
+
+The manifest can now label the 25 camera-spline *IDs* and retain the planet/ordinal lookup that selects them. It still cannot complete a named-course row because the following fields are missing from the public source material inspected: each stock TrackInfo.trackID, its paired main TrackInfo.splineID, its PlanetIdx, and its FavoritePilot. Recover those from a trusted independent table or native target data before building an exact named-course manifest.
+
+Pinned references:
+- Steam-PC FUN_00464B90: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00464b90.c
+- SWR SPLINEID / Switch MODELID enum: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h
+- SWR TrackInfo schema: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h
+- SWR custom-track hash/pairing logic and stock record counts: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/custom_tracks.cpp
