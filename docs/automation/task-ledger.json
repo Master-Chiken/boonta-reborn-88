@@ -151,11 +151,14 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/83c9dd81b0190f0b4cf80deb386c088c423c4746",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443110.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443380.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only follow-up identifies the two face-dispatch callback slots and distinct raw face-data layouts: null auxiliary-data path uses LAB_004437C0; non-null auxiliary-data path uses LAB_00443560. Mesh candidate AABBs are checked before FUN_004439F0; types 5/7 are emitted as n-2 successive triangles. Callback bodies, exact narrowphase math, selectors' meanings and raw mesh-type semantics remain UNKNOWN. Continue only with pinned public source evidence; no GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest PC-only research cross-checks the installed face callback pair against the independent IDA name map: 0x00443560 is provisionally labelled Indexed and 0x004437C0 non-indexed; IDA also lists adjacent 3/4-point AABB helpers and a separate earlier callback pair. Keep all IDA names provisional, the snapshots separately pinned, and callback bodies/exact narrowphase math UNKNOWN pending accessible body-level evidence. No GC/Wii parity.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8d459beab816033c0a659640c8d6ed5a302b4c99",
+      "head_sha": "83c9dd81b0190f0b4cf80deb386c088c423c4746",
       "updated_at": "2026-11-04"
     },
     {
@@ -306,12 +309,15 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/83c9dd81b0190f0b4cf80deb386c088c423c4746",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443110.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443380.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only follow-up identifies the two face-dispatch callback slots and distinct raw face-data layouts: null auxiliary-data path uses LAB_004437C0; non-null auxiliary-data path uses LAB_00443560. Mesh candidate AABBs are checked before FUN_004439F0; types 5/7 are emitted as n-2 successive triangles. Callback bodies, exact narrowphase math, selectors' meanings and raw mesh-type semantics remain UNKNOWN. Continue only with pinned public source evidence; no GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest PC-only research cross-checks the installed face callback pair against the independent IDA name map: 0x00443560 is provisionally labelled Indexed and 0x004437C0 non-indexed; IDA also lists adjacent 3/4-point AABB helpers and a separate earlier callback pair. Keep all IDA names provisional, the snapshots separately pinned, and callback bodies/exact narrowphase math UNKNOWN pending accessible body-level evidence. No GC/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8d459beab816033c0a659640c8d6ed5a302b4c99"
+      "head_sha": "83c9dd81b0190f0b4cf80deb386c088c423c4746"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
