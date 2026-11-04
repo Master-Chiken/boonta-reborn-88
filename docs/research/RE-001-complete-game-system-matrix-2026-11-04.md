@@ -558,7 +558,7 @@ The local control path sets BOOSTING only when the charge helper returns 1 and t
 
 | SW_RACER_RE TODO | Steam-PC reference | Recovered behavior | Remaining UNKNOWN |
 |---|---|---|---|
-| BoostCharge (0x0046BD20) | C + assembly | 0/1/2 indicator state, input-gated charge timer, consume-ready return | Exact rdata time/input thresholds; full writer of the eligibility bit; downstream boost heat/thrust coupling |
+| BoostCharge (0x0046BD20) | C + assembly | 0/1/2 indicator state, input-gated charge timer, consume-ready return | Exact rdata time/input thresholds; full writer of the eligibility bit |
 | ApplyEngineDamage (0x0046AA30) | C | Random time-scaled damage on fire-marked engine sections; shared local feedback | Fire-bit writer/origin and exact rates |
 | Repair (0x0046AB10) | C + assembly | Half-second hold request, upgrade-based repair rate, per-section repair state, warning timer → explosion | Exact transient flag meanings, damage thresholds, random fire-clear rates |
 | Explode (0x004741D0) | C | Guarded side-specific explosion state/effects | Exact trigger/visual/audio parameters and native target parity |
@@ -567,4 +567,51 @@ The local control path sets BOOSTING only when the charge helper returns 1 and t
 The Steam export and SW_RACER_RE are separate Windows-PC research artifacts. Matching numeric addresses/call context are strong PC-family cross-reference leads, not proof of identical retail executable/release. No code, symbols, assets, binary, ISO, ROM, BIOS, or analysis database was copied into Boonta. No AGPL source was adapted.
 
 **Target-platform boundary:** none of these values/addresses/flags are assigned to GameCube or Wii. A native implementation still requires an exact lawful local console build identity and a console-specific trace of input, boost, engine damage, repair, reset and explosion state. These PC findings are reference evidence only.
+
+## 2026-11-04 — PC boost thrust and overheat loop closed across physics/contact
+
+The previous section recovered the boost charge indicator, damage/repair and fire loop, but left the downstream thrust/heat coupling open. This pass follows the distinct per-frame speed, boost-impulse and temperature routines, then checks the physics-contact caller.
+
+**Pinned Steam-PC bodies**
+- [speed/acceleration routine FUN_004783e0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004783e0.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_004783e0.s)
+- [boost accumulator/impulse FUN_004787f0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004787f0.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_004787f0.s)
+- [engine temperature/overheat routine FUN_004788c0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004788c0.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_004788c0.s)
+- [motion integrator FUN_00478d80](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00478d80.c)
+- [physics-contact caller FUN_0047b520](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c), which calls FUN_004788c0 at line 105.
+- Matching SW_RACER_RE references: [UpdateSpeed / ApplyBoost / UpdateHeat](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.c), [physics-contact callback stub](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrObj.c#L925-L930), and [function declarations](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.h).
+
+### Boost is three distinct operations, not one timer
+
+1. **Charge / ready state** (BoostCharge, 0x0046BD20): the earlier section recovered the 0→1→2 indicator and input gates. The helper's return is consumed by the controller only when the earlier CAN_CHARGE_BOOST eligibility snapshot is set.
+2. **Acceleration response** (UpdateSpeed, 0x004783E0): the boost-active or boost-start state selects an acceleration factor of 4.0 rather than the ordinary 1.5. The same routine still applies throttle, traction/surface, braking, airborne and pod-stat gates; these two factors are not a universal constant multiplier on final speed.
+3. **Separate boost impulse** (ApplyBoost, 0x004787F0): while BOOSTING is set, boostValue accumulates at 1.5 per second. When not boosting it decays with a 5-per-second decelerator and snaps to zero below 0.001. Air-braking clears BOOSTING. For positive boostValue, the routine returns the extra longitudinal term:
+   
+   boostValue * podStats.boost_thrust / (boostValue + 0.33)
+
+   IntegrateMotion calls UpdateSpeed, adds this separate ApplyBoost result, then passes the sum into traction. This distinguishes the normal acceleration response from the additional boost impulse.
+
+### Temperature closes the overheat → engine-fire → damage chain
+
+The Steam-PC F2 physics-contact routine at FUN_0047B520 calls FUN_004788C0 (the matching numeric address for SW_RACER_RE swrRace_UpdateHeat) during the contact update. The recovered body shows:
+
+- On lava, temperature falls by 20 units per second regardless of boost; the pod's tilt biases the failing side (left for tilt below -0.5, right above +0.5).
+- Otherwise, an active BOOSTING flag drains engineTemp at podStats.heatRate; without boost, it recovers at podStats.coolRate.
+- The gauge is capped at 100. At or below zero it is pinned to zero, one of six engine sections is selected (tilt-biased on lava, random otherwise), an engine-fireball helper is called if that section was not already burning, status bit 0x08 is set, and BOOSTING is cleared.
+- The preceding section's ApplyEngineDamage routine scans status bit 0x08 and applies ongoing frame-scaled damage to those burning sections through the damage accumulator. This connects boost/lava heat to the previously recovered per-section damage, repair and explosion logic.
+
+**Important source-wiring qualification:** the SW_RACER_RE tree contains the swrRace_UpdateHeat body and declaration, but its matching swrObjTest_UpdatePhysicsContact callback at 0x0047B520 remains a HANG("TODO") stub. The SWR text search finds no ordinary source-level call to swrRace_UpdateHeat; the Steam-PC caller supplies the concrete F2 call-site evidence for that separate PC snapshot. Do not assume the reconstructed SWR tree has already wired this helper into its frame loop, and do not infer a native console call path.
+
+### Updated boost / thermal evidence table
+
+| Routine | Recovered PC-family behavior | Remaining UNKNOWN |
+|---|---|---|
+| BoostCharge (0x0046BD20) | Charge indicator 0/1/2 and input-gated ready result | Exact rdata thresholds; complete writer of eligibility flag |
+| UpdateSpeed (0x004783E0) | 4.0 vs 1.5 acceleration response when boost/boost-start is active | Symbolic speed/traction threshold constants; exact build identity |
+| ApplyBoost (0x004787F0) | 1.5/sec boost-value growth, 5/sec decay, air-brake cancel, separate boost-thrust formula | Exact native-target equivalence |
+| UpdateHeat (0x004788C0) | Boost heat drain, cooling, lava drain/side bias, section fire and boost cancel | Exact native-target call path; the SWR F2 wrapper remains TODO |
+| ApplyEngineDamage (0x0046AA30) | Burning-section status causes ongoing damage | Complete source/origin of every fire-state path and symbolic damage rates |
+
+The revised PC-family chain is therefore: BoostCharge ready → controller sets BOOSTING when eligible → UpdateSpeed changes acceleration response + ApplyBoost adds a separate longitudinal impulse → physics-contact UpdateHeat drains/cools temperature → overheat sets a per-section fire bit and cancels boost → ApplyEngineDamage accumulates section damage → Repair can restore sections or its warning path can invoke Explode.
+
+This chain is supported in the pinned Windows-PC sources only. The Steam and SW_RACER_RE snapshots do not prove identical executable/release identity. The SWR physics-contact wrapper is still a TODO, and no GameCube/Wii address, flag, constant, update order or behavior is inferred.
 
