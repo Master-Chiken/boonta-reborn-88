@@ -131,11 +131,19 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3685-L3868",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4460-L4591",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a5dba37d8b92b9c1825fab72ed58bcff3765828c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477940.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479920.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0044abc0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047aee0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L501-L560",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L150-L188",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h"
       ],
-      "next_action": "Human review of PR #282. Latest dossier maps F2 collision/contact order on the PC references: pod-vs-pod response first; then ZON flag (0x02000000) selects separate normal-ground raycast/contact or ZON wall/surface contact; later F2 state, heat, orientation and surface updates follow. SWR has reconstructed ground raycast/contact and swept track collision, while wall-contact/scrape helpers remain TODO. Steam/SWR build identity and GC/Wii parity are unproven.",
+      "next_action": "Human review of PR #282. Latest wall-helper trace identifies separate PC functions: DetectWallScrape (two tilt-adjusted collision probes, scrape-spray condition, then block-move check); ApplyWallCollision (normal-based deflection, velocityCollision impulse, throttle-settled cooldown, strong-hit clamp and Hitt sub-events); CollideBlockMove (swept query that snaps the proposed position back to previous on hit). SWR names/type offsets help map these, but several corresponding bodies remain TODO. Steam/SWR identity and GC/Wii parity unproven.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "31b1520b97c607a7d689bcebbccfaa98e4c8b28f",
+      "head_sha": "a5dba37d8b92b9c1825fab72ed58bcff3765828c",
       "updated_at": "2026-11-04"
     },
     {
@@ -266,12 +274,20 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3685-L3868",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4460-L4591",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a5dba37d8b92b9c1825fab72ed58bcff3765828c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477940.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479920.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0044abc0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047aee0.c",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L501-L560",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L150-L188",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h"
       ],
-      "next_action": "Human review of PR #282. New PC-only F2 trace: nearest pod query uses squared-distance limit 2500 (50-unit radius if units match), sorted nearest candidates but resolves slot zero; then ZON bit 0x02000000 chooses ground-contact raycast or separate wall-contact path. Full SWR wall helpers remain TODO. Next: inspect Steam FUN_00477940, FUN_00479920 and FUN_0044ABC0 field writes; no GC/Wii parity.",
+      "next_action": "Human review of PR #282. New Steam-PC trace resolves DetectWallScrape, ApplyWallCollision and CollideBlockMove internals. Velocity impulse is stored at +0x1D0, turnModifier at +0x1F4 (distinct from contactSteerKick +0x1FC), wallHitCooldown at +0x264; strong-hit flag is FLAG0_WALL_IMPACT_CLAMP 0x40000, consumed by F2 to clamp accelThrust. Next: trace the scrape probe helper FUN_00444740 and compare field writes against SWR TODOs. No GameCube/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "31b1520b97c607a7d689bcebbccfaa98e4c8b28f"
+      "head_sha": "a5dba37d8b92b9c1825fab72ed58bcff3765828c"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
