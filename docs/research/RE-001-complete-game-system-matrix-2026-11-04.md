@@ -1772,3 +1772,65 @@ SWR pinned references:
 - [`swrRace.h` — address map](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L95-L121)
 
 **Evidence boundary:** static code from separately pinned PC/SWR snapshots. The SWR and Steam code are not proven identical builds; no runtime confirmation or GameCube/Wii parity. No third-party code was copied.
+
+
+## Boost controls resolved: charge meter versus race-start boost window — 2026-11-04
+
+The remaining boost input labels can now be resolved from the pinned SWR symbol map and compared with the Steam-PC globals. Two separate mechanisms must remain distinct.
+
+### Input globals and button/hold-time arrays
+
+The SWR symbol map at the pinned revision names the Steam-PC addresses as follows:
+
+| Address | SWR symbol | Input meaning in reconstruction map |
+|---|---|---|
+| `0x00EC8830` | `swrRace_ThrottleInput` | normalized analog throttle |
+| `0x00EC883C` | `swrRace_PitchInput` | normalized pitch axis |
+| `0x00EC884C` | `swrRace_ThrustInput` | processed digital thrust input |
+| `0x00EC8850` | `swrRace_BoostInput` | processed digital boost input |
+| `0x00EC88AC` | `swrControl_thrustHoldTime` | seconds that thrust input has been held |
+| `0x00EC88B0` | `swrControl_boostHoldTime` | seconds that boost input has been held |
+
+The symbol map places the processed button floats contiguously from `0x00EC8840`: view (index 0), input-state (1), brake (2), thrust (3), boost (4), then slide/lean (5), roll-left (6), roll-right (7), taunt/flame (8), repair (9). The PC input poller clamps the 16 analog float slots beginning at `0x00EC8830` to [-1,1] and writes processed button-edge/hold-time state in the adjacent arrays. This is an address-level symbol cross-check, not an assertion that every control scheme maps the same physical controller button.
+
+### Normal boost charge meter — PC `FUN_0046BD20`
+
+The PC state gate's globals are no longer wholly anonymous:
+- State 0 starts charging only when `ThrustInput != 0` **or** `ThrottleInput > 0.6`, and `PitchInput > 0.7).
+- State 1 continues while that same thrust/throttle condition and pitch threshold remain satisfied; it accumulates `player + 0x214` by frame delta and advances to state 2 after the timer exceeds 1.0 second.
+- State 2 requires `PitchInput >= 0.7` and a final integerized `__ftol()` predicate to be nonzero; on success it resets the state, emits the charge-ready/trigger effect through `FUN_00426D10`, and returns 1. Otherwise the routine resets to state 0 and returns 0.
+
+The per-player fields map in SWR to `boostIndicatorStatus` at `+0x210` (0 = not ready, 1 = charging, 2 = ready) and `boostChargeTimer` at `+0x214`. The external `CAN_CHARGE_BOOST` eligibility flag is documented in SWR as speed greater than 0.75×maximum speed and alive. The exact origin/meaning of the final `__ftol()` test remains **UNKNOWN**; it is not relabelled as a particular button. The visible helper body does not directly read `BoostInput` at `0x00EC8850`.
+
+The SWR reimplementation's `swrRace_BoostCharge` is still a TODO returning 0. Its caller consumes the return value, so the reconstructed normal charge-meter path remains nonfunctional until this state machine and the final gate are implemented independently.
+
+### Race-start boost — a separate short timing window
+
+A different flag sequence implements the **boost-start** event:
+- `flags1 0x800` = `BOOST_START_WINDOW`;
+- `flags1 0x1000` = `BOOST_START_CANCEL`;
+- `flags1 0x2000` = `BOOST_START`.
+
+The SWR start-window flag is set only while the race timer is greater than 0.05 s and less than 0.30 s. During this interval, the input handler recognizes either:
+1. a nonzero `ThrustInput` with `0 < thrustHoldTime < 0.20 s`; or
+2. `ThrottleInput > 0.6`, nonzero `BoostInput`, and `0 < boostHoldTime < 0.20 s`.
+
+The first qualifying input sets the cancel latch; it sets the actual boost-start flag only if the race-start window flag is already active. While the start flag is active, it cancels when both thrust is released and throttle is at/below 0.6, or when speed exceeds 290. This start sequence is not the same as the normal 1-second charge-meter state machine and must not be used as a substitute for reconstructing it.
+
+These start-window constants come from the separate SWR reconstruction's `engine_config.h` and flag map; their matching global addresses/literals are visible in the pinned PC export, but same-build identity remains unproven.
+
+### Remaining unknowns and testable contracts
+
+| Mechanism | Recovered contract | Still unknown |
+|---|---|---|
+| Normal boost charge | state 0/1/2; thrust or throttle >0.6; pitch >0.7; timer >1.0 s; ready trigger | final `__ftol()` predicate and its exact input/ABI source |
+| Boost-start | race window (0.05, 0.30) s; thrust tap or throttle>0.6 + boost tap within (0,0.20) s; cancel over speed 290 | same-build identity and whether all control profiles feed identical processed inputs |
+| Eligibility | `CAN_CHARGE_BOOST` flag; SWR describes >0.75×max speed and alive | exact timing/phase where all PC profiles set/clear this flag |
+
+Independent clean-room tests should cover the two state machines separately: normal charge enter/hold/release/ready and race-start timing/input/cancel. Also test at exact boundaries (0.05, 0.20, 0.30, 0.60, 0.70, 1.0 s/value and 290 speed) before assigning inclusivity beyond what the source proves.
+
+References:
+- Steam-PC [`FUN_0046BD20.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bd20.c) and [`FUN_0046BEC0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bec0.c).
+- SWR [`data_symbols.syms`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1506-L1527), [`engine_config.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h), [`types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L199-L210), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2807-L3089), and [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c).
+
+**Evidence boundary:** PC/SWR static sources pinned separately. The input names are reconstruction-side symbol-map labels matched by address; no same-build proof, runtime input test, or GameCube/Wii parity is claimed.
