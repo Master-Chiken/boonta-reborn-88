@@ -152,6 +152,33 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
       "head_sha": "be26ea901d32c544b80a689e172ef118f23061bf",
       "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "AUTOMATION-OPENROUTER-DAILY-COOLDOWN",
+      "title": "Skip repeated OpenRouter Free requests after autonomous fallback failures",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "in_review",
+      "question": "Can a failed autonomous OpenRouter Free invocation be remembered for the current UTC day so later scheduled fallback attempts are skipped until the next UTC day?",
+      "acceptance_criteria": [
+        "One persistent marker on issue #226 records the UTC date of an autonomous OpenRouter Free invocation failure",
+        "A matching same-day marker blocks another fallback model request before token mint, checkout, CLI install and model invocation",
+        "The fallback cooldown is independent from Gemini's cooldown and does not change its marker",
+        "Only a failed OpenCode/OpenRouter invocation records the marker; a blocked preflight does not",
+        "The marker is updated in place, expires by date comparison on the next UTC day, and changes no secrets, settings, billing or provider selection",
+        "OpenRouter's static AI safety checker and workflow YAML parser validate the new behavior"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/290",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623"
+      ],
+      "next_action": "After #289 is integrated, retarget this stacked PR to main, rerun complete exact-head safety and provenance checks, review and merge only when green.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/290",
+      "head_sha": "287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+      "updated_at": "2026-11-04"
     }
   ]
 }
