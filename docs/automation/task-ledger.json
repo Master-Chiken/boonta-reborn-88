@@ -207,11 +207,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf3402ff459061bb0e6915a0d045646397a17e03",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L463-L475",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L414-L440",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1642-L1707",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c"
       ],
-      "next_action": "Human review of PR #282. Further repair disambiguation: player+0x98 is PodHandlingData.repairRate (PodHandlingData begins +0x6C, repairRate is field +0x2C); PC recovery formula moves selected engineHealth toward half engineHealthMin at a rate scaled by repairRate*0.5. player+0x2BC is repairTimer; +0x2C0 is SWR-named damageWarningTimer, used to schedule left/right side warning/effect via FUN_004741D0; +0x2C4 totalDamage. Do not conflate the two timers or claim the side event is the per-part healing itself.",
+      "next_action": "Human review of PR #282. Repair category 6 increases PodHandlingData.repairRate by upgradeHealth×{0.10,0.20,0.30,0.40,0.45} at levels 1–5, clamped to [0,1]. FUN_004741D0 is a shared side-selected pod effect/event helper with callers FUN_0046AB10 (damageWarningTimer), FUN_0047B000 and FUN_0047CE60; don't describe it as repair itself or exclusively a warning. Per-part repair remains the engineHealth update in FUN_0046AB10. PC/SWR snapshots separate; semantics still bounded.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "cf3402ff459061bb0e6915a0d045646397a17e03",
+      "head_sha": "66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
       "updated_at": "2026-11-04"
     },
     {
@@ -418,12 +422,16 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf3402ff459061bb0e6915a0d045646397a17e03",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L463-L475",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L414-L440",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/66f4eb6d5ffd10d1c156f76af84f2c347203bf5e",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1642-L1707",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b000.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c"
       ],
-      "next_action": "Human review of PR #282. Further repair disambiguation: player+0x98 is PodHandlingData.repairRate (PodHandlingData begins +0x6C, repairRate is field +0x2C); PC recovery formula moves selected engineHealth toward half engineHealthMin at a rate scaled by repairRate*0.5. player+0x2BC is repairTimer; +0x2C0 is SWR-named damageWarningTimer, used to schedule left/right side warning/effect via FUN_004741D0; +0x2C4 totalDamage. Do not conflate the two timers or claim the side event is the per-part healing itself.",
+      "next_action": "Human review of PR #282. Repair category 6 increases PodHandlingData.repairRate by upgradeHealth×{0.10,0.20,0.30,0.40,0.45} at levels 1–5, clamped to [0,1]. FUN_004741D0 is a shared side-selected pod effect/event helper with callers FUN_0046AB10 (damageWarningTimer), FUN_0047B000 and FUN_0047CE60; don't describe it as repair itself or exclusively a warning. Per-part repair remains the engineHealth update in FUN_0046AB10. PC/SWR snapshots separate; semantics still bounded.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "cf3402ff459061bb0e6915a0d045646397a17e03"
+      "head_sha": "66f4eb6d5ffd10d1c156f76af84f2c347203bf5e"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
