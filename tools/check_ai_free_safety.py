@@ -216,10 +216,40 @@ for guarded_step in (
     "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
     "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
     "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Run OpenCode through the OpenRouter Free route\n        id: run_opencode\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
+# OpenRouter Free fallback receives its own autonomous daily failure cooldown.
+or_cooldown_position = openrouter_fallback.find("id: openrouter_cooldown")
+or_guard_position = openrouter_fallback.find("id: free_tier_guard")
+or_mint_position = openrouter_fallback.find("name: Mint scoped GitHub App token")
+or_checkout_position = openrouter_fallback.find("name: Checkout the protected default branch")
+or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
+or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after an invocation failure")
+or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
+if not (0 <= or_cooldown_position < or_guard_position < or_mint_position < or_checkout_position < or_install_position < or_run_position < or_record_position < or_validate_position):
+    errors.append("OpenRouter daily cooldown must run before its gate/model call and record invocation failures before report validation")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "OPENROUTER_COOLDOWN_ACTIVE",
+    "OPENROUTER_COOLDOWN_DATE",
+    "steps.run_opencode.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "id: run_opencode" not in openrouter_fallback:
+    errors.append("OpenRouter invocation must expose a stable step ID for failure-only cooldown recording")
+if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
+    errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
+
 tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
 if not tools_match:
     errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
