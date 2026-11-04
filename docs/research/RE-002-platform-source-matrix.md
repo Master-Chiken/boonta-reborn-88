@@ -568,3 +568,38 @@ This pass follows the outputs of `swrRace_AdvanceSplineCursor` and the derived r
 | `idleTick` is written/reset based on `moveTick` and lap completion | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | A consequential reader/effect has not been found |
 
 **Next bounded RE-002 task:** follow the judge's F2 race-progress call and F0/status decisions into their actual caller/state transitions, while keeping `checkpointCount`, `splineRebindResult`, and terrain behavior bit 0x8 separate. Then perform a targeted Steam-PC xref search for the racer object fields `+0x10E` and `+0x118..+0x124`; reject apparent offset matches unless the base object is demonstrably the racer structure. If the exact SW_RACER_RE target executable is not available locally, record that executable-level equivalence remains blocked rather than infer from Steam.
+
+
+## 2026-11-04 — Judge F2 / HUD F3 integration of the progress fields
+
+A follow-up through the judge callbacks narrows the effect of the previously recovered counters and separates HUD state from standings/AI ranking.
+
+### F2: race tick and lap timing
+
+At `swrObjJdge_F2` (0x0045EA30), judge state 1 iterates the score array and calls `swrRace_UpdateRaceProgress` for active racers (and also refreshes progress for already-finished entries in the branch shown at lines 938–946). When a lap crossing is reported:
+- the pre-crossing frame slice `crossTime` is added to the current lap and total (lines 986–993);
+- the remainder of the raw frame delta is added to the next/current lap (lines 1027–1039);
+- on the configured final lap, the score is marked finished, the pod's local/boost flags are cleared, its AI flag is enabled and `FLAG1_FINISHED` is set (lines 994–1024).
+After the per-racer pass, standings are recomputed (line 1045). When all local racers have finished, the judge enters state 2 and extrapolates still-unfinished racers' displayed total time from their current progress; in state 2 it continues refreshing each racer's progress (lines 1047–1066).
+
+This is the concrete consumer chain for the sub-frame crossing result: cursor movement -> lap-crossing gate -> `crossTime` split -> lap counters/finish state. The locally stored `splineRebindResult` field is not needed for this chain after the immediate `binding == 1` test in `swrRace_UpdateRaceProgress`.
+
+### F3: checkpoint counter controls the local HUD guide arrow
+
+The public source's `swrObjJdge_UpdatePlayerHUD` calls `swrObjJdge_IsRacerRacing` only during judge state 1. If the helper returns zero, it clears `FLAG0_GUIDE_ARROW` and hides the guide node; otherwise it enables the flag and points the node at a spline position 0.5 ahead of the cursor (lines 1402–1440). Judge F3 calls this HUD function for the local player slots when the state is not 3, 4 or 5 (lines 1719–1748).
+
+Therefore `checkpointCount > 4`—which is increased by backward cursor reports and reset by a forward report—has a directly evidenced consumer: the helper's returned racing/not-racing value, which gates the local HUD spline guide arrow. A second condition in that helper is the low-speed threshold. The planet-1 / track-3 terrain-zone exception (behavior bit 0x8 plus an X/Y rectangle) can force the helper to return zero. The inspected call path does **not** show this helper selecting race placement or directly commanding AI steering.
+
+### Standings and AI tethers use lap progress / finish time
+
+`swrObjJdge_GetRacerProgress` derives its key from `results_P1_Lap`, `lapCompMax` and `lapComp` (lines 413–426). `swrObjJdge_GetRacerRankValue` uses that progress for unfinished racers and `maxRaceTime - total_time` for finished racers (lines 429–435). `swrObjJdge_UpdateStandings` uses those rank values to assign positions and progress gaps, and tags the nearest AI rivals to local players for catch-up tethering (lines 438–473 and onward). This is a separate path from `checkpointCount`, `splineRebindResult` and `trackOffset`.
+
+### Refined evidence conclusions
+
+- **Backward/forward outputs:** confirmed immediate inputs to lap-crossing eligibility and the checkpoint/move counters. The known checkpoint consumer is the HUD guide-arrow gate through `IsRacerRacing`; no direct AI/standings use is demonstrated.
+- **Lap timing:** confirmed F2 receives the crossing result, applies the pre-crossing `crossTime` to the completed lap, and assigns the raw frame remainder to the next lap.
+- **`splineRebindResult` (+0x10E):** still no named reader found after its write. The transient local `binding` value is used immediately to permit the lap-crossing check.
+- **`trackOffset` (+0x118..+0x124):** still no consumer identified. Its public reconstruction writer is a TODO stub; no steering, AI, standings or ground-contact role should be claimed from these sources.
+- **Standing rank / catch-up:** based on lap progress and finish time, with separate leader/local-player/pacer gaps. Do not conflate these values with the lateral trackOffset vector.
+
+**Sources:** [`swrObj.c` race tick](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L912-L1067), [HUD helper](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1385-L1440), [F3 HUD dispatch](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1719-L1748), and [standings rank path](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L413-L473). All findings remain confined to this pinned PC reconstruction.
