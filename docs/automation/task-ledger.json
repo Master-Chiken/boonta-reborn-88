@@ -170,11 +170,15 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004414e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441390.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441040.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d2c289f359ea7b080bfe90be5261cb858ed039e",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1921-L2345",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only trace maps direct geometric helper cores: ray-style FUN_00442550 -> plane hit FUN_00442470 + triangle inclusion FUN_00441040; sphere-radius FUN_00442090 -> face projection/edge fallback and (mode 3) FUN_00441810 -> interval-clipped triangle fragments -> FUN_004414E0 -> result reducer FUN_00441390. These helper-to-helper edges are direct in source; the final callback-to-helper edges remain UNKNOWN because callback bodies are not present. Preserve separate snapshots and no GC/Wii inference.",
+      "next_action": "Human review of PR #282. New SWR cross-check confirms the mode-1 ray callback pair (0x00442720 indexed / 0x00442C30 sequential), ray-triangle test, mesh face enumerator and ray-tree traversal bodies at the matching address family. SWR maps raw types 3/4/5/7 to triangle/quad/strip primitives, but treat this as cross-snapshot interpretation only. Mode-3 Callback2/setup/resolve/sphere bodies remain absent from inspected SWR swrModel.c (header declarations only) and the inspected Steam decompilation. Keep Steam/SWR/IDA snapshots separate; no same-build or GC/Wii parity. Read-only research; no AGPL source reuse.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "df2817ec01eee9f3466bb7140cdb70fd3854be0d",
+      "head_sha": "8d2c289f359ea7b080bfe90be5261cb858ed039e",
       "updated_at": "2026-11-04"
     },
     {
@@ -344,12 +348,16 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004414e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441390.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441040.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00441710.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d2c289f359ea7b080bfe90be5261cb858ed039e",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1921-L2345",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only trace maps direct geometric helper cores: ray-style FUN_00442550 -> plane hit FUN_00442470 + triangle inclusion FUN_00441040; sphere-radius FUN_00442090 -> face projection/edge fallback and (mode 3) FUN_00441810 -> interval-clipped triangle fragments -> FUN_004414E0 -> result reducer FUN_00441390. These helper-to-helper edges are direct in source; the final callback-to-helper edges remain UNKNOWN because callback bodies are not present. Preserve separate snapshots and no GC/Wii inference.",
+      "next_action": "Human review of PR #282. New SWR cross-check confirms the mode-1 ray callback pair (0x00442720 indexed / 0x00442C30 sequential), ray-triangle test, mesh face enumerator and ray-tree traversal bodies at the matching address family. SWR maps raw types 3/4/5/7 to triangle/quad/strip primitives, but treat this as cross-snapshot interpretation only. Mode-3 Callback2/setup/resolve/sphere bodies remain absent from inspected SWR swrModel.c (header declarations only) and the inspected Steam decompilation. Keep Steam/SWR/IDA snapshots separate; no same-build or GC/Wii parity. Read-only research; no AGPL source reuse.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "df2817ec01eee9f3466bb7140cdb70fd3854be0d"
+      "head_sha": "8d2c289f359ea7b080bfe90be5261cb858ed039e"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
