@@ -29,16 +29,20 @@ jobs:
       issue_number: 226
       task_title: "Boonta Reborn autonomous work cycle"
       task_description: >-
-        Read the live canonical dashboard issue #156, active research queue #226,
-        current repository instructions, open pull requests, branch state and recent
-        CI. Select or continue exactly one safe, bounded task. Respect the active
-        RE-001 queue and its 80/20 research-first policy. Continue existing
-        autonomous work instead of creating duplicates. Open a reviewable PR and
-        record evidence; never merge it.
+        Read the live canonical dashboard issue #156, native-target queue #226,
+        and comparative evidence queue #279, plus current repository instructions,
+        open pull requests, branch state and recent CI. #226 owns native
+        GameCube/Wii research and implementation. #279 owns read-only Windows
+        PC/N64/Dreamcast comparative evidence and may change research documentation
+        only. Select or continue exactly one safe, bounded, non-overlapping task
+        from the owner-authorized queues, preserving the 80/20 research-first
+        policy. Continue existing work instead of creating duplicates. Open a
+        reviewable PR and record evidence; never merge it.
       additional_context: >-
         This is the scheduled Boonta Autonomous Loop. The owner explicitly approved
-        autonomous task selection and branch/PR work. Do not ask for a new "continue"
-        message or per-task approval. The €0 budget, free-tier gate, provenance
-        restrictions, one-writer rule, exact-head validation, and no-merge policy
-        remain mandatory.
+        autonomous task selection and branch/PR work. #226 is the native GameCube/Wii
+        queue; #279 is the comparative PC/N64/Dreamcast evidence queue and stays
+        documentation-only. Do not ask for a new "continue" message or per-task
+        approval. The €0 budget, free-tier gate, provenance restrictions, one-writer
+        rule, exact-head validation, and no-merge policy remain mandatory.
     secrets: inherit
