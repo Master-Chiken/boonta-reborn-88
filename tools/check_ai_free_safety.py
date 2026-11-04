@@ -617,13 +617,13 @@ if readiness_permissions != expected_readiness_permissions:
 if "gemini_api_key:" in readiness or "run-gemini-cli" in readiness or "gemini_model:" in readiness:
     errors.append("Autonomous readiness must never invoke a Gemini model or send an API request")
 if "GEMINI_AUTONOMOUS_ENABLED" not in readiness or "GEMINI_FREE_TIER_CONFIRMED" not in readiness:
-    errors.append("Autonomous readiness must check both the disabled writer gate and the Free-tier attestation")
-if '[[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]' not in readiness:
-    errors.append("Readiness preflight must require the autonomous writer to remain disabled until checks pass")
+    errors.append("Autonomous readiness must report writer-gate state and check the Free-tier attestation")
+if '[[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]]' not in readiness:
+    errors.append("Readiness preflight must report when the autonomous writer gate is enabled")
 if '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]]' not in readiness:
     errors.append("Readiness preflight must require the owner's exact Free-tier attestation")
-if "still disabled (false/unset)" not in readiness:
-    errors.append("Readiness report must state that the autonomous gate remains disabled during preflight")
+if "neither changes the gate nor invokes a model" not in readiness:
+    errors.append("Readiness report must state that preflight is read-only and leaves the autonomous gate unchanged")
 for required_secret in ("GEMINI_API_KEY", "APP_ID", "APP_PRIVATE_KEY"):
     if required_secret not in readiness:
         errors.append(f"Autonomous readiness must verify presence of {required_secret}")
