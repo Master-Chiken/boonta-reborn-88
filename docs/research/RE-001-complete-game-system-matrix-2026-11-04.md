@@ -1411,3 +1411,45 @@ Steam-PC sources:
 - [`FUN_00444300.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c)
 
 **Evidence boundary:** static code reading of the pinned Steam-PC export plus SWR's address/signature cross-map. Callback internals, exact sweep parameters, same-build identity, runtime behavior and GameCube/Wii parity remain unresolved.
+
+
+## Sphere narrowphase dispatch and face-layout ABI — 2026-11-04
+
+A deeper pass on the pinned Steam-PC export narrows what is known about the two callback pointers without pretending that their callback bodies have been recovered.
+
+### Query setup and broadphase gate
+
+`FUN_00444200` stores the two callback addresses in global slots:
+- `DAT_00e98e20 = &LAB_004437C0`
+- `DAT_00e985ac = &LAB_00443560`
+
+The same setup stores the sphere center, radius and radius-squared, the supplied motion vector, and projected lower/upper bounds derived from the dot product of center and motion plus the two caller-supplied parameters. The transform-stack initializer remains `FUN_00445150`.
+
+`FUN_00443F10` compares the query's center±radius bounds against the current model-node AABB. It then repeats the overlap test for each child mesh AABB and calls `FUN_004439F0` only for surviving mesh candidates. This is the concrete broadphase rejection point before the per-face callbacks.
+
+### Two callback paths in the face dispatcher
+
+`FUN_004439F0` obtains a raw mesh-type value, face count, a geometry-data pointer and an optional auxiliary pointer through the mesh accessors. The auxiliary pointer's null/non-null state selects which callback slot is used:
+
+| Dispatcher condition | Callback slot | Observable argument pattern |
+|---|---|---|
+| Auxiliary pointer is null | `LAB_004437C0` via `DAT_00e98e20` | Receives per-record geometry pointers. Raw type 3 advances by `0x12` bytes; raw type 4 advances by `0x18` bytes. |
+| Auxiliary pointer is non-null | `LAB_00443560` via `DAT_00e985ac` | Receives the common geometry base plus a small selector and an offset into the auxiliary data. Raw type 3 advances that auxiliary offset by 6 bytes per face; raw type 4 by 8 bytes per face. |
+
+For raw types 5 and 7, the dispatcher reads per-polygon counts and emits successive triangle calls. The observed loop visits `n-2` triangles for a polygon with count `n`, alternates a 0/1 selector between successive triangles, and advances its flattened face-data cursor. In the auxiliary-pointer path, the per-triangle auxiliary offset advances in 2-byte units. These are raw layout/iteration observations only: the numeric mesh types are deliberately left unnamed, and no public semantic names are assigned to the selectors.
+
+This establishes that the broadphase feeds two distinct face-data layouts into two callback ABIs. It does **not** establish the exact sphere/triangle predicate, the meaning of the selectors, the callbacks' return contract, or whether the 6/8/2-byte strides correspond to particular retail structure types.
+
+### What remains unresolved
+
+The pinned export's searchable function files expose the callback pointer assignments and their indirect invocation sites, but do not expose standalone bodies for `LAB_004437C0` or `LAB_00443560`. Searches for the callback labels and apparent function-name variants returned only the setup/dispatch references. The exact narrowphase math therefore remains **UNKNOWN**. `FUN_00444300` remains the final response/output stage; this pass does not reinterpret it as the face predicate.
+
+Steam-PC source references at the pinned revision:
+- [`FUN_00444200.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c)
+- [`FUN_00443F10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c)
+- [`FUN_004439F0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c)
+- [`FUN_00443C50.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c)
+- [`FUN_00443E70.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c)
+- [`FUN_00444300.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c)
+
+**Evidence boundary:** static inspection of the pinned Windows-PC export only. The callback bodies, exact primitive semantics, executable identity with the separate SWR reconstruction, runtime behavior and GameCube/Wii parity remain unresolved. No game executable, ROM, disc image or extracted asset was accessed or added to the repository.
