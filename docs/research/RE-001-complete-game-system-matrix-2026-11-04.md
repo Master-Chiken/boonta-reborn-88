@@ -109,3 +109,8 @@ The current Boonta code is a clean-room native GameCube/Wii scaffold with a proc
 ## Reproduction and provenance
 
 This audit inspected public GitHub source files at the exact pinned revision and recorded their blob SHAs. No external repository was cloned or built here; no ROM, executable, disc image, BIOS, extracted commercial asset, or game-derived payload was read or committed. The upstream license was inspected and is AGPL-3.0. Recheck the upstream default branch before starting a new investigation; do not silently move this snapshot's pin.
+
+
+## Triage of the previously suggested AeroMESH reference
+
+[AeroMESH](https://github.com/tex1ure/AeroMESH) was checked at its public `main` branch on 2026-11-04. Its README describes a Rust peer-to-peer pipeline-parallel LLM/diffusion inference engine for distributing model execution across consumer GPUs; the repository declares Apache-2.0. It is **not** a game reverse-engineering tool, binary decompiler, asset parser, mesh-format workbench or racing-game engine. It therefore does not solve a Boonta RE-001/RE-002 problem and should not be integrated into the game repository. Its only possible relevance is as a separate AI-infrastructure project, but the current GitHub Actions/OpenCode fallback already addresses the bounded agent-execution need without adding a distributed GPU cluster. This is an explicit non-adoption decision, not a negative judgment about AeroMESH itself.
