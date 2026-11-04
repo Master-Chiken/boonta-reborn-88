@@ -101,9 +101,11 @@
         "A post-merge cycle records exact PR state and continues the next unanswered research question"
       ],
       "evidence": [
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41894698584",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122"
       ],
-      "next_action": "After PR #287 is reviewed and merged, inspect the next scheduled autonomous cycle. Verify its exact-head report, reconcile live PR state, and choose the next unanswered RE-001 research task. Do not repeat readiness or activation steps.",
+      "next_action": "Latest live scheduled run #41894698584 completed, but the Gemini report was generic/stale and cited no newly opened PR; no development progress is confirmed. This demonstrates why PR #287's exact PROGRESS/BLOCKED report contract is needed. After #287 is human-reviewed/merged, inspect the next scheduled cycle and require either a live same-repository non-empty PR at its exact head SHA or a named blocker plus one concrete next action. Do not count a green workflow or generic summary as progress.",
       "updated_at": "2026-11-04"
     },
     {
