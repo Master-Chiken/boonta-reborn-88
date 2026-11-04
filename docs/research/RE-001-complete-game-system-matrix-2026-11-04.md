@@ -215,7 +215,7 @@ The Steam export includes `FUN_004542e0` in `src/_text15.c` (lines 2685–2711),
 - applies the resulting offset to camera-related values at `+0x140` and `+0x58`, then invokes a small update helper;
 - conditionally emits terrain/region status text through `FUN_00454060`.
 
-This is a useful PC-only F3 implementation lead, not the missing `Swee` F4 handler. There is also an unresolved field-layout discrepancy: the SW_RACER_RE type note labels a `camShake` vector at `+0x38C`, followed by scalars at `+0x398`–`+0x3A4`; the Steam F3 body reads the later scalar fields, not the vector at `+0x38C`. Do not silently equate those fields or port the interpretation across builds.
+This is a useful PC-only F3 implementation lead, not the missing `Swee` F4 handler. The independent IDA notes below resolve this field interpretation for that separate snapshot: the vector at `+0x38C` is followed by an animation-time scalar at `+0x398`, then camera-shake offset/speed/max-offset scalars at `+0x39C`, `+0x3A0`, and `+0x3A4`. These are consistent with the three fields read by the Steam F3 body; keep the typed/vector and scalar fields distinct.
 
 The checked Steam source search found `FUN_004542e0` but did not find same-address bodies for cMan F0 (`0x00451CD0)), F2 (`0x00451D40)) or F4 (`0x004543F0)). This is a bounded negative search result, not proof those routines do not exist in another executable or source snapshot.
 
@@ -238,3 +238,44 @@ The checked Steam source search found `FUN_004542e0` but did not find same-addre
 - [Steam dependency graph and NOT_INVOKED annotations](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54)
 
 **Conclusion:** the manager pool, F4 routing contract, and one camera-manager F3 body are better understood. The key missing edge is still the cMan F4 reaction to `Swee` and how/when the race manager causes the Hangar/Results object state to change. Keep that gap explicit; this remains Windows-PC evidence only and does not establish native GameCube/Wii behavior.
+
+
+## 2026-11-04 — Independent IDA confirmation of cMan F4 and Swee semantics
+
+A third, independent PC metadata/notes snapshot provides the missing event interpretation that the Steam decompilation alone did not expose.
+
+**Pinned source:** [everalert/swe1r-decomp](https://github.com/everalert/swe1r-decomp) at `8d066b9c12ecb57bd819aaab586fd6bd2dd078a7`. This repository contains a 15 MB IDA database and analyst notes; the database was **not** downloaded or opened. Only the public text notes and function/name metadata were inspected. The exact executable hash/release identity is not established.
+
+### F4 callback and Swee payload
+
+- The IDA name table identifies `EntityCManCallback0x24_4543F0` at `0x004543F0`; its function inventory records a 0x529-byte function extent and 0x10-byte stack frame. This independently corroborates that cMan has a concrete F4 callback at the same address as the SW_RACER_RE TODO stub.
+- The IDA `Entity_cMan.txt` event notes describe `Swee` as a two-field message: `+0x00 = 'Swee'`; `+0x04 = BOOL`, where true starts the camera sweep and false cancels it.
+- This gives the two SW_RACER_RE Judge senders a coherent, supported interpretation: the `StartPostRaceSequence` payload 0 requests cancellation; the Judge camera-to-results branch payload 1 requests the sweep. The Steam Ghidra snapshot only exposed the payload-0 sender in the source search performed here; the independent IDA event note supplies the Boolean meaning, but does not establish why that second sender was absent from the Steam text export.
+- The IDA note also says more than one cMan entity is generated and points to an entity array, independently supporting a manager pool. The exact six-instance count and camera-slot association are directly visible in the separate Steam `FUN_00448f40` / `FUN_004490a0` evidence above.
+
+**Important limit:** the IDA `functions.txt` and `names.txt` prove a named function and its extent, and `Entity_cMan.txt` records the analyst's message interpretation. The callback's full decompiled body was not available in the inspected public text files; no claim is made that its internal control flow was recovered from source. The cMan F4 implementation is therefore now **semantically described by independent notes**, but not body-reconstructed here.
+
+### Camera-shake field cross-check
+
+The same IDA note labels:
+- `+0x398`: camera animation time / frame-time scalar;
+- `+0x39C`: camera-shake offset;
+- `+0x3A0`: camera-shake speed;
+- `+0x3A4`: camera-shake maximum offset.
+
+That independently agrees with the Steam F3 body at `0x004542E0`, which advances the offset by speed, reflects it at the maximum, and applies it to camera-related values. The SW_RACER_RE `rdVector3 camShake` at `+0x38C` is a distinct preceding vector; it should not be conflated with the three shake scalars.
+
+### Separate sweep-mode evidence — do not conflate the cameras
+
+The Steam snapshot also reconstructs `FUN_00451EF0` as a timed, track-indexed camera sweep routine. It reads a per-track record with 0x6C-byte stride, interpolates through three timed stages, writes camera and focus transforms, and calls `FUN_00451D60` to change mode when the animation completes. The IDA notes identify mode 7 as the pre-race camera sweep and mode 6 as a spline camera similar to post-race autopilot. This is useful evidence that the camera manager contains several sweep/spline modes, but it does **not** prove that the Judge-to-Results `Swee` request runs the pre-race mode-7 routine; the IDA note itself warns that post-race camera logic may differ.
+
+### Sources
+
+- [IDA cMan event/entity notes](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_cMan.txt)
+- [IDA function extent for EntityCManCallback0x24_4543F0](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt)
+- [IDA function names](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt)
+- [Steam camera sweep body FUN_00451ef0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451ef0.c)
+- [Steam sweep completion helper FUN_004525d0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L1756-L1764)
+- [Steam F3 body FUN_004542e0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L2685-L2711)
+
+**Updated conclusion:** the meaning of the `Swee` Boolean is now independently supported (0 = cancel, 1 = start), and cMan F4 is identified by its exact callback address/extent. Its complete body and the subsequent Hangar/Results handoff remain unverified. These remain Windows-PC findings only; no native GameCube/Wii state or behavior is inferred.
