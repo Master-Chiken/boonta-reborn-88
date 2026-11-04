@@ -1072,3 +1072,30 @@ This is a **PC reference ordering only**. Remaining gaps:
 **Next highest-value research question:** identify the Steam-PC caller/dispatcher that schedules the four `Test` callbacks and establish whether F0→F1→F2→F3 is the observed per-frame order, then trace the F2 contact/ground/wall branch conditions and the inputs consumed by each. Keep unknown helper names and target-platform behavior explicitly unresolved.
 
 No implementation code was added, no third-party code was copied, and no game-derived asset, ROM, DOL/REL, disc image, BIOS, IDB or proprietary executable was read or committed.
+
+
+## 2026-11-04 — dispatcher-level ordering of the four pod update phases
+
+The callback-map addendum above can now be extended from address correspondence to the per-frame event-manager dispatch structure.
+
+### What the pinned PC reconstruction establishes
+
+1. The SWR main header describes `swrMain_RunFrame` phase 1 as the world update: model animation, event callbacks F0–F3, then viewport-camera update, gated by the pause state ([`swrMain.h` lines 36–40](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Main/swrMain.h#L36-L40)).
+2. The four SWR dispatchers are separate functions at `0x004508B0`, `0x00450930`, `0x004509B0` and `0x00450A30`. Each walks the event-manager table, then iterates the objects of each manager and invokes that manager's matching callback ([`swrEvent.c` lines 48–128](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.c#L48-L128)).
+3. The fixed-timestep hook/replacement in [`swrMain_delta.cpp` lines 115–134](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrMain_delta.cpp#L115-L134) places the world tick calls in this explicit order: model-animation update → CallAllF0 → CallAllF1 → CallAllF2 → CallAllF3.
+
+This demonstrates a **phase-barrier architecture** in the recovered PC update path: all eligible F0 callbacks run before the global F1 pass begins; all F1 callbacks run before F2; and all F2 callbacks run before F3. It is not accurately described as one pod running F0, F1, F2 and F3 to completion before the next pod begins.
+
+### Dispatch filters visible in the event loops
+
+- F0, F1 and F2 require a non-null callback and a manager whose flags do not intersect `swrEvent_f0SkipMask`; each individual object is called only when `(obj->flags & 0x1100) == 0`.
+- F3 also checks for a non-null callback and the per-object `0x1100` mask, but its reconstructed loop does not apply the manager-level `swrEvent_f0SkipMask` condition.
+- The dispatcher iterates object arrays by each manager's declared `size` and `count`. The order is the event-manager table order followed by object order within each manager, not a separately sorted global list.
+
+These conditions are direct reads of the pinned reconstructed C, not a complete semantic explanation of each flag. The flags' full meanings and any effects of mutation/deletion during callbacks remain outside this bounded trace.
+
+### Important limitation
+
+The body of the stock `swrMain_RunFrame` is not recovered in the inspected SWR C file. The ordering above is supported by the SWR header's phase description, the four dispatcher implementations, and the project's fixed-timestep hook/replacement. The hook is not the original executable itself; it is evidence of the recovered call sequence used by the project, not independent runtime validation of the retail binary. The Steam-PC export and SWR snapshot also remain distinct builds with no verified identity link.
+
+No callback sequence or flag behavior is promoted to GameCube/Wii. The native target still requires its own platform-specific evidence.
