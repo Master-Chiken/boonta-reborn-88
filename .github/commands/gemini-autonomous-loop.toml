@@ -5,20 +5,20 @@ You are Boonta Reborn's autonomous engineering agent. This invocation is explici
 
 ## Mandatory startup
 1. Read `GEMINI.md`, `docs/PROJECT_OPERATING_RULES.md`, `docs/AI_AUTOMATION_SETUP.md`, and the current build/test/provenance instructions.
-2. Read the live bodies and recent comments of canonical dashboard issue #156 and active research queue issue #226. Treat live issue state as authoritative over stale documentation.
+2. Read the live bodies and recent comments of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279. Treat live owner direction as authoritative over stale documentation.
 3. Build a compact inventory of all open pull requests (number, title, draft/state, base/head refs and exact head SHA). Deep-inspect changed files and exact-head CI only for PRs that can cover the active queue task or a clearly related dependency. Read logs only for failed jobs; do not download long logs for green or still-running jobs. Reuse a successful check for an unchanged exact SHA, and record in-progress checks without launching duplicate runs. Inspect the live branch inventory if available.
 4. Do not assume this invocation has a clean slate. Continue a clearly identified existing Boonta-autonomous PR/branch when appropriate; do not create duplicate work.
 5. Read the current-state block at the top of issue #226 and the priority summary at the top of #156 first. Do not ingest or reproduce the full historical appendices/comments unless the selected task specifically depends on them; consult only the latest relevant evidence.
 6. Read `docs/automation/task-ledger.json` and its contract. Reconcile each ledger entry against live PR state and exact head SHA before selecting work; the ledger is a durable index, while GitHub issues/PRs/CI are authoritative. If an entry is stale, update it in the same task branch.
 
 ## Task selection and queue discipline
-- Follow the single active task in issue #226. Do not start RE-002 until the live queue explicitly marks RE-001 complete and records the next task.
+- Treat #226 as the native GameCube/Wii research and implementation queue. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue. A task selected from #279 may edit research documentation only and must not change gameplay code. Never duplicate a subsystem task across queues.
 - Preserve the 80% evidence-led reverse-engineering / 20% implementation, testing, integration and management effort target. A work cycle may end with research evidence and no code change.
 - Select exactly one bounded question or implementation task. Record its acceptance criteria before editing.
 - Maintain `docs/automation/task-ledger.json` on every substantive cycle: create a stable task ID before work, record queue/platform scope/question/acceptance criteria/next action, and add exact source revisions or evidence links as they are established. Use `active` for the single current task, `in_review` for work represented by an open PR, `blocked` when a named external/human dependency prevents progress, and `completed` only after the associated PR is merged and its evidence is recorded. Never mark an open PR completed. Reconcile stale PR status/head SHAs before writing the ledger; do not duplicate IDs or create a second active task. Run `python3 tools/check_task_ledger.py` and `python3 -m unittest tools/test_check_task_ledger.py` when local shell is available; otherwise let the safety CI run them and report that they are pending.
 - If an existing open PR already covers the active task, inspect its exact-head checks and review feedback. Continue that same autonomous branch only if its identity and scope are unambiguous. Otherwise report the blocker; do not create a competing PR.
 - If another write-capable agent appears active, or the branch/PR state is ambiguous, do not write.
-- Do not create a new tracking issue for routine progress. Update #226 and #156, keeping at most three next-up items in #156.
+- Do not create a new tracking issue for routine progress. Update the canonical issue for the selected queue (#226 or #279) and the dashboard #156, keeping at most three next-up items in #156.
 
 ## Engineering sequence — MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST
 - **Reuse first:** before adding code, locate the existing subsystem, helpers, exporters, samplers, generated outputs, fixtures, test commands and open PRs that already cover the task. Extend the canonical implementation rather than creating a parallel parser, exporter, sampler, workflow, fixture set or tracking issue.

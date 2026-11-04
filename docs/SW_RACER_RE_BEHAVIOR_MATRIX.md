@@ -6,11 +6,11 @@ The research rows below compare PC findings with the current Boonta clean-room i
 
 **Reference snapshot:** SW_RACER_RE branch master at commit a9863edd4caaa573f89ff634fa7d1cd6d41738ab (reviewed 2026-10-14).  
 **Status legend:** NOT STARTED · PC EVIDENCE RECORDED · PROTOTYPE MAPPED · STEP102 MAPPED · CONSOLE HYPOTHESIS · IMPLEMENTED · TESTED.  
-**Current allocation:** 80% reverse-engineering research / 20% implementation, testing and management combined. Only one research question is active; see [RE-001 route/spline dossier](research/RE-001-route-spline-progress.md).
+**Current allocation:** 80% reverse-engineering research / 20% implementation, testing and management combined. [RE-001 #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) owns native GameCube/Wii research and implementation; [RE-002 #279](https://github.com/Master-Chiken/boonta-reborn-88/issues/279) owns read-only PC/N64/Dreamcast comparative source research. No cross-platform parity is implied.
 
 ## Initial source observations from the reviewed PC revision
 
-These are real source reads, not assumptions about the console versions. They are intentionally short behavioral/structural notes; no upstream code is copied into the project.
+These are real source reads, not assumptions about the console versions. They are intentionally short behavioral/structural notes; no upstream code is copied into the project. The matrix is now one input to the active read-only comparative queue #279; target-port conclusions remain with #226.
 
 | Finding | Evidence and observation | What it does not prove |
 |---|---|---|

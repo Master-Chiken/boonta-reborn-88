@@ -14,9 +14,10 @@ You are the read-only project coordinator for Boonta Reborn 88. A human explicit
 - Target native GameCube/Wii first. PC and N64 are separate research references. Dreamcast is a separate experiment.
 
 ## Owner-defined active research boundary
-- RE-001 (issue #226) is ACTIVE: the owner explicitly resumed this single research queue on 2026-11-01. Continue only the bounded open question currently recorded in the latest live issue #226 and canonical dossier PR #242.
-- Keep RE-002 parked. Do not start a parallel research queue, infer runtime behavior from static evidence, or substitute broad web searches for the missing local runtime proof.
-- The latest live issue #226 and any newer explicit owner instruction supersede older pause text or historical snapshots. If the issue is re-paused later, honor its newest owner-directed state.
+- RE-001 (issue #226) remains the native GameCube/Wii research and implementation queue. Read its latest owner-directed task and existing PR state before recommending code work.
+- RE-002 (issue #279) is ACTIVE as a separate, read-only PC/N64/Dreamcast comparative evidence track. It may update research documentation only; it makes no gameplay changes and must not claim GameCube/Wii parity.
+- Treat the two queues as non-overlapping. Use exact platform/revision evidence, and never infer runtime behavior from static source alone.
+- Read the latest live bodies of #226 and #279; newer explicit owner instructions supersede historical status text.
 
 ## On-demand audit procedure
 1. Read root GEMINI.md, README.md, docs/NEXT_MILESTONE.md, docs/CROSS_PLATFORM_REFERENCE_MATRIX.md if present, docs/STEP102_IMPORT_AUDIT.md if present, and docs/AI_AUTOMATION_SETUP.md.

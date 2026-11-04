@@ -1,11 +1,11 @@
 # Multi-agent research and handoff playbook
 
 **Status:** process proposal on the documentation PR; no automatic merge or writer access is granted by this document.
-**Current active question:** [Issue #226 — versioned neutral route-graph contract and synthetic fixtures](https://github.com/Master-Chiken/boonta-reborn-88/issues/226).
+**Current owner-authorized tracks:** [RE-001 / issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226) — native GameCube/Wii research and implementation; [RE-002 / issue #279](https://github.com/Master-Chicken/boonta-reborn-88/issues/279) — read-only PC/N64/Dreamcast comparative source evidence.
 
 ## Goal
 
-Use every useful participant without creating multiple agents that independently solve the same task, modify the same files, or produce conflicting claims. Parallel work is allowed only as **separate evidence lanes under the one active research question**. The owner remains the decision-maker.
+Use every useful participant without creating multiple agents that independently solve the same task, modify the same files, or produce conflicting claims. Parallel research is allowed only where the owner has explicitly authorized **non-overlapping evidence tracks**. RE-002 is read-only comparative PC/N64/Dreamcast research; it cannot create gameplay code or duplicate the native GameCube/Wii queue in RE-001. The owner remains the decision-maker.
 
 ## Roles for this project
 
@@ -20,11 +20,11 @@ Use every useful participant without creating multiple agents that independently
 | **Copilot cloud agent** | Optional only if already available and the owner explicitly chooses it for a scoped task | GitHub documents this agent as available on paid Copilot plans. It is excluded from the default €0 workflow; do not buy/enable a subscription for this project. |
 | **CI and deterministic tests** | Verify the exact commit against predefined mechanical checks | CI can validate what tests assert. It cannot prove a complete playable race, an untested behavior, source-license clearance, or parity with another platform. |
 
-## Current RE-001: one neutral route-graph contract task
+## Current RE-001 and newly activated RE-002
 
 The PC route/spline and AI consumer evidence is now mapped in the [canonical RE-001 dossier](research/RE-001-route-spline-progress.md): branch topology/history, sampled arc-length progress bake, split/rejoin normalization, player cursor/binding, cross-track offset, lap/high-water logic, and AI look-ahead/branch policy. The active task is now to finalize a versioned platform-neutral graph contract and synthetic host fixtures.
 
-Do not launch parallel research or implementation lanes. Use one writer and one read-only reviewer at most, with the same pinned sources and a bounded file list.
+Do not launch competing implementation lanes. RE-001 owns native GameCube/Wii runtime research and gameplay changes; RE-002 owns comparative PC/N64/Dreamcast source evidence and documentation only. Use one write-capable agent at a time. Read-only research may proceed on the other track only with a distinct question, pinned sources and bounded file list.
 
 Required fixture scope:
 - Bezier and B-spline evaluation;
@@ -37,7 +37,7 @@ Required fixture scope:
 
 Platform boundary: Windows-PC static source is the current algorithm reference. N64's 84-byte records are separate evidence; Dreamcast and retail GameCube/Wii parity remain unproven. Do not merge PC and N64 structures into one assumed-identical binary schema.
 
-The N64 finish-to-Results chain remains a historical runtime-unverified question. It is not the current blocker and must not override the live issue #226 owner-directed task. Step 102/RE-002 and asset/handling work remain parked.
+The N64 finish-to-Results chain remains a historical runtime-unverified question. It must be recorded under RE-002 with its N64-only evidence boundary; it does not override the live native target task in #226. Step 102 remains on provenance hold and is not a prerequisite for either queue.
 
 ## Single-writer and no-duplicate-PR rules
 
@@ -51,11 +51,11 @@ The N64 finish-to-Results chain remains a historical runtime-unverified question
 
 ## Required task request template
 
-Canonical issue: #226
-Active research question: finalize the versioned platform-neutral route-graph contract and synthetic host fixtures from the pinned PC evidence without changing boonta-track-v1.
+Canonical issue: #226 or #279, as explicitly selected by the owner-directed task.
+Active research question: #226 — native GameCube/Wii research/integration; #279 — complete the platform-specific PC/N64/Dreamcast evidence matrix, read-only.
 Agent role: one writer OR one read-only falsification reviewer; never parallel writers.
 Allowed inputs: pinned public SW_RACER_RE and frozen Steam-PC Ghidra references, current Boonta schemas/build/tests, synthetic fixture data.
-Forbidden: private ROM uploads, extracted/proprietary track coordinates or assets, third-party source copying, PC-to-console parity assumptions, route-v1 migration, gameplay runtime changes before contract review, parallel tasks, settings/billing changes.
+Forbidden: private ROM uploads, extracted/proprietary track coordinates or assets, third-party source copying, PC-to-console parity assumptions, route-v1 migration, RE-002 gameplay/runtime changes, overlapping writer tasks, settings/billing changes.
 Required output:
 1. Exact URLs/commit pins and changed-file list.
 2. Versioned node/edge/curve/cursor/progress/surface-binding contract.

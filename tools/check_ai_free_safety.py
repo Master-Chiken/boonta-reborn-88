@@ -402,13 +402,13 @@ if "GEMINI_FREE_TIER_CONFIRMED" not in setup or "owner attestation" not in setup
 
 if (
     '"body": issue.get("body")' not in daily
-    or "Current-state resolution: read the body of tracked issue #226 in the LIVE SNAPSHOT" not in daily
-    or "RE-001 issue #226 is ACTIVE because the owner explicitly resumed it on 2026-11-01" not in daily
-    or "continue only the single bounded question recorded in the latest live issue #226 and canonical dossier PR #242" not in daily
-    or "RE-001 (issue #226) is ACTIVE" not in daily_prompt
-    or "Keep RE-002 parked" not in daily_prompt
+    or "Current-state resolution: read the live bodies of #226 and #279 in the LIVE SNAPSHOT" not in daily
+    or "RE-001 #226 and RE-002 #279" not in daily
+    or "read-only PC/N64/Dreamcast" not in daily
+    or "RE-002 (issue #279) is ACTIVE" not in daily_prompt
+    or "no gameplay changes" not in daily_prompt
 ):
-    errors.append("AI coordinator must follow the latest owner-directed RE-001 resumption while keeping RE-002 parked")
+    errors.append("AI coordinator must preserve the separate native-target and comparative-evidence queues")
 if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in daily_prompt:
     errors.append("Project coordinator prompt must preserve branch and provenance safety")
 
@@ -441,7 +441,7 @@ if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
 for required_phrase in (
     "without asking for another",
     "one bounded task",
-    "Do not start RE-002 until the live queue explicitly marks RE-001 complete",
+    "Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue",
     "Never merge a PR",
     "strict project budget is €0",
     "Never push directly to either protected branch",
@@ -583,8 +583,8 @@ if "PR #274" not in read("docs/PROJECT_OPERATING_RULES.md"):
     errors.append("Operating rules must direct the next cycle to review the existing runtime candidate PR #274")
 if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERATING_RULES.md"):
     errors.append("Operating rules must prevent duplicate route-runtime branches")
-if "Keep RE-002 parked" not in read("docs/PROJECT_OPERATING_RULES.md"):
-    errors.append("Operating rules must keep RE-002 parked during the active review")
+if "RE-002 is active only as read-only comparative evidence" not in read("docs/PROJECT_OPERATING_RULES.md"):
+    errors.append("Operating rules must keep RE-002 limited to read-only comparative evidence")
 
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
