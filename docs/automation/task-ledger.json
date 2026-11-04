@@ -83,11 +83,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a"
       ],
-      "next_action": "Human review of #282. Latest PC-only evidence: Judge states 4/5 are pre-race camera intro, confirmed independently by IDA; visible finish is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 (POST_RACE_INFO) renderer is FUN_00457620 case 5 -> FUN_00439ce0. Hang F4 at 0x0045A040 is named/extent-known but its body unavailable; IDA notes distinguish finish and quit transitions. Steam teardown FUN_0045DD80 has conditional Fini handling and an All! broadcast only on one branch, but its callgraph says NOT_INVOKED. End-to-end Fini->Hang Results remains UNKNOWN. No GC/Wii mapping.",
+      "next_action": "Human review of #282. Current dossier reconciles its earlier summaries: Judge states 4/5 are pre-race intro (state 4 sweep init, state 5 intro/orbit), the local 0x0045DFE0 StartPostRaceSequence label is misleading for the visible state-5-to-0 countdown transition, and Swee(false/true) are cancel/start in the pre-race intro. Race completion is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 Results renderer is identified; Hang F4 callback body remains unavailable. Steam teardown FUN_0045DD80 has conditional Fini handling but is NOT_INVOKED in the pinned graph. End-to-end Fini->Hang Results is UNKNOWN. PC evidence only; no GC/Wii state mapping.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a2be75902658adde4837c29bdaae7d3b1da58e9f",
+      "head_sha": "45f8b204a1384e924a5c668b10169568f9fc4f3a",
       "updated_at": "2026-11-04"
     },
     {
@@ -177,12 +178,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a"
       ],
-      "next_action": "Human review of #282. Latest PC-only evidence: Judge states 4/5 are pre-race camera intro, confirmed independently by IDA; visible finish is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 (POST_RACE_INFO) renderer is FUN_00457620 case 5 -> FUN_00439ce0. Hang F4 at 0x0045A040 is named/extent-known but its body unavailable; IDA notes distinguish finish and quit transitions. Steam teardown FUN_0045DD80 has conditional Fini handling and an All! broadcast only on one branch, but its callgraph says NOT_INVOKED. End-to-end Fini->Hang Results remains UNKNOWN. No GC/Wii mapping.",
+      "next_action": "Human review of #282. Current dossier reconciles its earlier summaries: Judge states 4/5 are pre-race intro (state 4 sweep init, state 5 intro/orbit), the local 0x0045DFE0 StartPostRaceSequence label is misleading for the visible state-5-to-0 countdown transition, and Swee(false/true) are cancel/start in the pre-race intro. Race completion is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 Results renderer is identified; Hang F4 callback body remains unavailable. Steam teardown FUN_0045DD80 has conditional Fini handling but is NOT_INVOKED in the pinned graph. End-to-end Fini->Hang Results is UNKNOWN. PC evidence only; no GC/Wii state mapping.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a2be75902658adde4837c29bdaae7d3b1da58e9f"
+      "head_sha": "45f8b204a1384e924a5c668b10169568f9fc4f3a"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
