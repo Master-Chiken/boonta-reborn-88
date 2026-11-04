@@ -207,7 +207,7 @@ jobs:
                 return;
               }
               const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
-              if (pr.state !== 'open' || pr.merged_at || pr.head.sha !== evidence[2] || (pr.changed_files ?? 0) < 1) {
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || (pr.changed_files ?? 0) < 1) {
                 core.setFailed('PROGRESS evidence does not match an open, non-empty PR at the reported exact head SHA.');
                 return;
               }
