@@ -85,11 +85,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e"
       ],
-      "next_action": "Human review of #282. Latest bounded scan: Steam public export has no c/FUN_0045a040.c or asm/FUN_0045a040.s; aggregates _text13.._text18 contain no FUN_0045a040/bare address, although _text16 does include known Hang F0 FUN_00457620 and screen-5 Results renderer. Independent IDA names Hang F4 at 0x0045A040 (extent 0x34C), but its body remains unavailable in inspected public sources. The Judge Fini -> Hang POST_RACE_INFO edge remains UNKNOWN; Steam teardown candidate FUN_0045DD80 is NOT_INVOKED. PC evidence only; no GC/Wii mapping.",
+      "next_action": "Human review of #282. Latest PC-only addition recovers four ground-contact/collision TODOs from the pinned Steam C/assembly snapshot: UpdateHoverPads (four transformed pad samples/shadow transforms and ground-distance selection), DetectWallScrape (side ray tests/scrape-spark path), ApplyWallCollision (tangent collision impulse, 0.1s throttle-settled cooldown, wall-impact clamp and Hitt tags), and CollideBlockMove (swept raycast/revert candidate position). They are integrated through UpdateGroundContact; local and non-local pods take different collision paths. Exact symbolic constants, some config semantics and the PC executable identity remain UNKNOWN. No GC/Wii inference or port.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
+      "head_sha": "d4f7f321b7004e85f75d7d2f9a228695a28a094e",
       "updated_at": "2026-11-04"
     },
     {
@@ -181,12 +182,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/45f8b204a1384e924a5c668b10169568f9fc4f3a",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e"
       ],
-      "next_action": "Human review of #282. Latest bounded scan: Steam public export has no c/FUN_0045a040.c or asm/FUN_0045a040.s; aggregates _text13.._text18 contain no FUN_0045a040/bare address, although _text16 does include known Hang F0 FUN_00457620 and screen-5 Results renderer. Independent IDA names Hang F4 at 0x0045A040 (extent 0x34C), but its body remains unavailable in inspected public sources. The Judge Fini -> Hang POST_RACE_INFO edge remains UNKNOWN; Steam teardown candidate FUN_0045DD80 is NOT_INVOKED. PC evidence only; no GC/Wii mapping.",
+      "next_action": "Human review of #282. Latest PC-only addition recovers four ground-contact/collision TODOs from the pinned Steam C/assembly snapshot: UpdateHoverPads (four transformed pad samples/shadow transforms and ground-distance selection), DetectWallScrape (side ray tests/scrape-spark path), ApplyWallCollision (tangent collision impulse, 0.1s throttle-settled cooldown, wall-impact clamp and Hitt tags), and CollideBlockMove (swept raycast/revert candidate position). They are integrated through UpdateGroundContact; local and non-local pods take different collision paths. Exact symbolic constants, some config semantics and the PC executable identity remain UNKNOWN. No GC/Wii inference or port.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "edd474ed6a825fcc32e658c8e6a12cbb09bcef2a"
+      "head_sha": "d4f7f321b7004e85f75d7d2f9a228695a28a094e"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
