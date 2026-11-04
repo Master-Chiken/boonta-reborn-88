@@ -32,29 +32,6 @@
       "updated_at": "2026-11-04"
     },
     {
-      "task_id": "AUTOMATION-OPENROUTER-FALLBACK",
-      "title": "Free-only OpenRouter fallback and autonomous task-selection guardrails",
-      "queue": "#226",
-      "platform_scope": [
-        "automation"
-      ],
-      "status": "in_review",
-      "question": "Can the autonomous loop fall back only to a verified owner-attested free route while preserving one-writer and no-merge boundaries?",
-      "acceptance_criteria": [
-        "Only fixed openrouter/free route is allowed",
-        "No paid fallback or billing path exists",
-        "The agent avoids repeating completed matrix work",
-        "Exact-head CI passes"
-      ],
-      "evidence": [
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
-      ],
-      "next_action": "Review the exact PR head and merge only through normal protected-branch review.",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
-      "head_sha": "7dc2e98fef3505e8043c18dd8d371d345a924560",
-      "updated_at": "2026-11-04"
-    },
-    {
       "task_id": "RE001-SYSTEM-MATRIX",
       "title": "Native-target complete-game system matrix and PC reference gap audit",
       "queue": "#226",
@@ -77,6 +54,27 @@
       "next_action": "Human review and merge decision; continue with the next unanswered research question rather than recreating the matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "897c47fd2edb93a518c63532733b47ec98902408",
+      "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+      "title": "Activate and validate persistent autonomous task tracking",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "queued",
+      "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
+      "acceptance_criteria": [
+        "Ledger validator and regression tests pass in CI",
+        "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
+        "One active task maximum is enforced",
+        "A post-merge cycle records exact PR state and continues the next unanswered research question"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
+      ],
+      "next_action": "After PR #281 is reviewed and merged, verify its exact-head checks and run the readiness workflow before the first autonomous cycle.",
       "updated_at": "2026-11-04"
     }
   ]
