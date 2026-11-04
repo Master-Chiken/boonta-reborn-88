@@ -414,3 +414,17 @@ This is useful body-level cross-reference for the missing teardown stub, but **n
 
 **Refined conclusion:** the pre-race intro state sequence is now independently corroborated, and the missing post-race question has narrowed to the state-6 teardown / Fini-or-Abrt broadcast / Hang F4 receiver chain. The teardown body at `0x0045DD80` is a promising PC cross-reference but remains marked NOT_INVOKED in the inspected Steam dependency graph. Do not claim that Judge Fini currently opens Results. No native GameCube/Wii state mapping is implied.
 
+### Hang Results receiver: what is proven and what remains conditional
+
+Further inspection of the pinned sources narrows the receiver side of the candidate path:
+
+- The independent IDA `Entity_Hang.txt` note identifies Hang menu-screen field `+0x08 = 5` as **race results / POST_RACE_INFO**. This is the Hang menu screen, not the Judge F0 low-nibble state.
+- In the Steam-PC export, Hang F0 dispatcher `FUN_00457620` switches on Hang menu screen `+0x08`; case 5 calls `FUN_00439ce0`. The latter creates the `Results` heading and builds the racer/position/time table. This is direct code evidence for rendering the results screen once Hang is already at screen 5.
+- The IDA inventory labels Hang's F4 callback `EntityHangCallback0x24_45A040`, address `0x0045A040`, extent `0x34C`. The public Steam C export does not contain `c/FUN_0045a040.c`; the SW_RACER_RE implementation also leaves `swrObjHang_F4` as a `HANG("TODO")` stub. The callback's event handling is therefore not yet visible in these source exports.
+- IDA's Hang note associates its `+0x14` transition/control field with distinct values described as loading race→cantina after quitting (6) and after finishing (7), and points to code around `0x0045A0A0` / `0x0045A2A1`. This is analyst-note evidence of separate finish/quit transition paths, not a recovered callback body or proven mapping from Fini to menu screen 5.
+- The candidate Steam teardown `FUN_0045DD80` broadcasts the incoming event to `All!` only on its non-special branch. Its special branch, when `(DAT_0050c9f8 & 2) != 0` and event is `Fini`, calls `FUN_00466BD0`, marks scene objects loaded and sets Judge state 3, then returns without the `All!` broadcast. On the other branch it sleeps the Judge, sends cMan `RSet`, and broadcasts the supplied event (or `Abrt` when `DAT_0050ca2c` is set).
+
+**What is now supported:** a Hang Results screen exists at menu screen 5 and its F0 renderer is mapped; an IDA-named Hang F4 callback exists; IDA notes distinguish finish-vs-quit loading states; and a Steam-PC teardown candidate has conditional `Fini` handling plus an `All!` broadcast on one branch.
+
+**What is not yet proven:** that the teardown candidate is reached in the sampled Steam build (its dependency graph still marks it `NOT_INVOKED`); that the non-special `Fini` broadcast is the path taken for a normal race completion; and that Hang F4 converts that event into menu screen 5. The end-to-end Judge-Fini → Hang-POST_RACE_INFO edge remains **UNKNOWN** until the matching Hang F4 body or an exact-build runtime trace is available. Do not infer this from the screen renderer, function names, or the existence of transition-state notes.
+
