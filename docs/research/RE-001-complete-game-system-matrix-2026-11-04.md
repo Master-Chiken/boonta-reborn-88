@@ -2317,3 +2317,18 @@ Pinned evidence:
 - SWR imgui_utils.cpp: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/imgui_utils.cpp
 - SWR swrRace_delta.cpp: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/dinput_hook/game_deltas/swrRace_delta.cpp
 
+
+
+### Independent public consumer cross-check (no table values recovered)
+
+A second project, everalert/annodue at pinned commit 6b3b4d91f43eba649eef70c2caec662d071e522f, independently declares the same process-memory symbols in its collision viewer globals:
+- g_aTracksInCircuits as char[4] at 0x004BFEE0;
+- g_aTrackInfos as TrackInfo[25] at 0x004BFEE8;
+- g_aTrackIDs as int[28] at 0x004C0018.
+
+Its collision viewer reads g_aTrackInfos[hang->track_index].PlanetTrackNumber for collision flags. This is a second public consumer of the same address/size contract, but its header macros still point into the live game's memory; it does not embed the 28 g_aTrackIDs values or the 25 TrackInfo rows. It therefore corroborates the published symbol dimensions/consumer relationship, not the contents or the reason for the 28-vs-25 cardinality. Do not treat it as an independent stock-table dump.
+
+Pinned references:
+- Annodue globals: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/src/collision_viewer/globals.h
+- Annodue collision viewer use: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/src/collision_viewer/main.cpp
+- Annodue project README: https://github.com/everalert/annodue/blob/6b3b4d91f43eba649eef70c2caec662d071e522f/README.md
