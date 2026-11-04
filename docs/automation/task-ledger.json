@@ -11,7 +11,11 @@
       "task_id": "RE002-SYSTEM-MATRIX",
       "title": "PC/N64/Dreamcast complete system evidence matrix",
       "queue": "#279",
-      "platform_scope": ["PC", "Nintendo 64", "Dreamcast"],
+      "platform_scope": [
+        "PC",
+        "Nintendo 64",
+        "Dreamcast"
+      ],
       "status": "completed",
       "question": "What is established across the three comparative platforms, and what remains unknown?",
       "acceptance_criteria": [
@@ -32,7 +36,11 @@
       "task_id": "RE001-SYSTEM-MATRIX",
       "title": "Native-target complete-game system matrix and PC reference gap audit",
       "queue": "#226",
-      "platform_scope": ["GameCube", "Wii", "PC-reference"],
+      "platform_scope": [
+        "GameCube",
+        "Wii",
+        "PC-reference"
+      ],
       "status": "in_review",
       "question": "What systems must a complete clean-room native port implement, and what is evidenced versus unknown?",
       "acceptance_criteria": [
@@ -53,8 +61,10 @@
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
       "title": "Activate and validate persistent autonomous task tracking",
       "queue": "#226",
-      "platform_scope": ["automation"],
-      "status": "queued",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "active",
       "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria": [
         "Ledger validator and regression tests pass in CI",
@@ -65,7 +75,7 @@
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
       ],
-      "next_action": "PR #281 is merged. Run Boonta Autonomous Readiness on main, then verify owner gates and execute the first autonomous cycle; keep the writer disabled until readiness passes.",
+      "next_action": "After PR #287 is reviewed and merged, inspect the next scheduled autonomous cycle. Verify its exact-head report, reconcile live PR state, and choose the next unanswered RE-001 research task. Do not repeat readiness or activation steps.",
       "updated_at": "2026-11-04"
     }
   ]
