@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-04",
+  "policy": {
+    "max_active_tasks": 1,
+    "completed_requires_merged_pr": true,
+    "rule": "One active task; preserve evidence and platform boundaries; an open PR is in_review, never completed."
+  },
+  "tasks": [
+    {
+      "task_id": "RE002-SYSTEM-MATRIX",
+      "title": "PC/N64/Dreamcast complete system evidence matrix",
+      "queue": "#279",
+      "platform_scope": [
+        "PC",
+        "Nintendo 64",
+        "Dreamcast"
+      ],
+      "status": "in_review",
+      "question": "What is established across the three comparative platforms, and what remains unknown?",
+      "acceptance_criteria": [
+        "Evidence is pinned to exact source revisions",
+        "Platform-specific findings remain separated",
+        "Open PR and exact head are recorded"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/280"
+      ],
+      "next_action": "Human review and merge decision; do not duplicate the matrix.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/280",
+      "head_sha": "a0116b2c033e37735f08be0b600c67c3c87c5ffe",
+      "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "AUTOMATION-OPENROUTER-FALLBACK",
+      "title": "Free-only OpenRouter fallback and autonomous task-selection guardrails",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "in_review",
+      "question": "Can the autonomous loop fall back only to a verified owner-attested free route while preserving one-writer and no-merge boundaries?",
+      "acceptance_criteria": [
+        "Only fixed openrouter/free route is allowed",
+        "No paid fallback or billing path exists",
+        "The agent avoids repeating completed matrix work",
+        "Exact-head CI passes"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
+      ],
+      "next_action": "Review the exact PR head and merge only through normal protected-branch review.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
+      "head_sha": "7dc2e98fef3505e8043c18dd8d371d345a924560",
+      "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "RE001-SYSTEM-MATRIX",
+      "title": "Native-target complete-game system matrix and PC reference gap audit",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii",
+        "PC-reference"
+      ],
+      "status": "in_review",
+      "question": "What systems must a complete clean-room native port implement, and what is evidenced versus unknown?",
+      "acceptance_criteria": [
+        "Complete-game systems are inventoried",
+        "Evidence, inference and unknowns are separated",
+        "Source revisions and provenance are recorded",
+        "Next research procedure is identified"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/282"
+      ],
+      "next_action": "Human review and merge decision; continue with the next unanswered research question rather than recreating the matrix.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
+      "head_sha": "897c47fd2edb93a518c63532733b47ec98902408",
+      "updated_at": "2026-11-04"
+    }
+  ]
+}
