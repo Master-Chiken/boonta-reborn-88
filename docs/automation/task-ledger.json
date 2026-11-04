@@ -92,11 +92,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/ad2df684bb09768ebc44aa5a70ceb3b447c9bf90"
       ],
-      "next_action": "Human review of #282. Latest Steam-PC follow-up maps planet-selector-5 scene resources: type 211 FlameSpawner -> helper slot 2 -> model 317 fx_flameanim_part; type 310 DozerSpawner -> helper slot 0 -> model 312 dozer_part. This is a static scene-helper/resource association, not proof of runtime spawning; separate spawner scheduler/lifetime remains UNKNOWN. Keep all findings PC-only.",
+      "next_action": "Human review of #282. Latest Steam-PC follow-up recovers the model-block LZSS decoder at 0x0042D520 and its Comp-tag caller; this is PC-only. Back-reference signed-byte/run-field semantics, dictionary-window initialization and exact output-length verification remain UNKNOWN. Any clean-room decoder requires a bounded, non-proprietary fixture and explicit input/output bounds; do not infer GameCube/Wii format.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc",
+      "head_sha": "ad2df684bb09768ebc44aa5a70ceb3b447c9bf90",
       "updated_at": "2026-11-04"
     },
     {
@@ -195,12 +196,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0564a0653804aa85d8382678ada9033ef30315a4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/ad2df684bb09768ebc44aa5a70ceb3b447c9bf90"
       ],
-      "next_action": "Human review of #282. Latest Steam-PC follow-up maps planet-selector-5 scene resources: type 211 FlameSpawner -> helper slot 2 -> model 317 fx_flameanim_part; type 310 DozerSpawner -> helper slot 0 -> model 312 dozer_part. This is a static scene-helper/resource association, not proof of runtime spawning; separate spawner scheduler/lifetime remains UNKNOWN. Keep all findings PC-only.",
+      "next_action": "Human review of #282. Latest Steam-PC follow-up recovers the model-block LZSS decoder at 0x0042D520 and its Comp-tag caller; this is PC-only. Back-reference signed-byte/run-field semantics, dictionary-window initialization and exact output-length verification remain UNKNOWN. Any clean-room decoder requires a bounded, non-proprietary fixture and explicit input/output bounds; do not infer GameCube/Wii format.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc"
+      "head_sha": "ad2df684bb09768ebc44aa5a70ceb3b447c9bf90"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
