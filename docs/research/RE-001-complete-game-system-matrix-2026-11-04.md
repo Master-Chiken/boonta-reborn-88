@@ -1875,3 +1875,48 @@ References:
 - SWR [`data_symbols.syms`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/data_symbols.syms#L1521-L1527), [`engine_config.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/engine_config.h#L44-L44), [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567), [`types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h#L155-L155), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339).
 
 **Evidence boundary:** offsets/names and behavior are sourced from separately pinned PC and SWR snapshots. No binary identity, runtime confirmation, or console parity is asserted.
+
+
+## Engine-status bit audit and repair-target semantics — 2026-11-04
+
+A final cross-check of the PC bodies against the SWR structure/legacy enum avoids a misleading interpretation of the per-engine fields.
+
+### Explicitly named engine-status values
+
+The pinned SWR legacy type header defines:
+- `ENGINE_REPAIR = 4` (`0x04`);
+- `ENGINE_ON_FIRE = 8` (`0x08`);
+- `ENGINE_LEAN = 10` decimal (`0x0A`), with an inline comment stating it combines `8 + 2` and that bit `0x08` is fire.
+
+The Steam-PC `FUN_00474CD0` damage helper independently sets `engineStatus[i] |= 0x01`. The inspected enum does not name bit `0x01`; it is recorded as a raw damage marker only. The repair scheduler also manipulates bit `0x10` as a temporary per-part marker before a probabilistic fire-state clear. It is not assigned a semantic enum name by the sources inspected.
+
+### Corrected meaning of the field named engineHealthMin
+
+The SWR structure names the array `engineHealthMin[6]` at `+0x270`, but the PC damage helper's write behavior is explicit:
+- after increasing `engineHealth[i]` at `+0x288), it compares `engineHealthMin[i]` with the new current value;
+- if the stored value is lower, it copies the current value into `engineHealthMin[i]`.
+
+Thus, in the PC body this field acts as a per-part **high-water/reference value** for observed damage, despite the reconstruction-side name `engineHealthMin`. Treat the field name as an implementation label, not a proven semantic minimum.
+
+The PC repair scheduler then:
+- clears the per-frame temporary `0x10` and `0x04` markers at the start of its pass;
+- sets `0x04` (`ENGINE_REPAIR`) when `engineHealth[i]` is above half of the stored reference value;
+- for selected parts, updates current `engineHealth[i]` toward half the stored reference value using frame delta and the pod repair-rate field;
+- for fire-marked parts (`0x08`), uses temporary `0x10` and a random test before clearing the fire bit.
+
+This is more precise than saying health simply moves toward zero or toward a generic “healthy” value. It is a time-based per-part recovery toward a fraction of that part's recorded high-water value, with an independent fire-state clearing chance. The exact constants and RNG branch remain in the pinned PC function; audiovisual events are separate.
+
+### Test implications, without guessing
+
+A clean-room test model should retain raw bit masks until an independently validated state machine exists:
+- `0x01`: written by damage helper; meaning not named in the inspected enum.
+- `0x04`: named `ENGINE_REPAIR`; set for parts meeting the repair threshold.
+- `0x08`: named `ENGINE_ON_FIRE`; set when heat failure selects a part.
+- `0x10`: temporary marker used by the repair/fire-recovery pass; semantic enum name unknown.
+- `0x0A`: named composite `ENGINE_LEAN` (decimal 10); source comment says `0x08 | 0x02`, but bit `0x02` is not separately assigned a meaning here.
+
+References:
+- Steam-PC [`FUN_00474CD0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c) and [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c).
+- SWR [`archive/structures.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68), [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288).
+
+**Evidence boundary:** status names come from a pinned legacy SWR enum and are corroborated only where the code writes/consumes the matching bits. Steam-PC and SWR remain separate snapshots; no same-build identity or console parity is claimed.
