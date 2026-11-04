@@ -1367,3 +1367,47 @@ Sources:
 - SWR [`swrModel.h` sphere-sweep addresses and signatures](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h).
 
 **Evidence boundary:** Windows-PC code and SWR symbol/signature correspondence only. No identical-build assertion, runtime collision capture or GameCube/Wii claim is added.
+
+
+## 2026-11-04 — sphere-sweep broadphase and face traversal
+
+The collision query internals were followed one level deeper in the pinned Steam-PC export. This clarifies how the sphere probe reaches candidate mesh faces, without claiming the unresolved callback math is fully reconstructed.
+
+### Query state setup
+
+Steam-PC `FUN_00444200` writes global collision-query state before traversal:
+- center coordinates from the supplied center;
+- sphere radius and radius-squared;
+- the supplied movement/velocity vector;
+- projected lower/upper bounds computed from the center dot movement direction plus the two additional scalar parameters;
+- collision mode value 3 and two callback function pointers (the Ghidra export labels them `LAB_004437C0` and `LAB_00443560`).
+
+`FUN_00445150` resets a query counter and initializes four 4×4 matrix slots to identity, which are used as a transform stack during recursive node traversal. The meaning of every secondary global and callback is not assigned beyond its observed role.
+
+### Recursive hierarchy and broadphase
+
+- `FUN_004440E0` recursively walks the model hierarchy. For transformed nodes it composes/pushes node transforms, recurses eligible children, then restores the transform stack.
+- When it reaches a mesh-node type value `0x3064`, it dispatches to `FUN_00443F10`.
+- `FUN_00443F10` first transforms the query into the node's local context when needed. It builds a simple axis-aligned query bound from the sphere center ± radius, rejects nodes whose AABBs do not overlap that bound, then repeats the AABB check for child meshes before calling the face-level worker `FUN_004439F0`.
+- `FUN_004439F0` obtains the mesh's stored face/vertex data and selects a callback according to the mesh's raw type value. The visible cases are values 3, 4, 5 and 7; the type-5/7 path iterates polygon fans as successive triangles. Since these are raw export values, they remain unnamed format categories here.
+- `FUN_00444300` then resolves the aggregate query state and writes hit outputs (including normal and the saved query center/contact position) or reports no hit.
+
+This establishes a standard two-stage structure: **hierarchical AABB broadphase → mesh-face narrowphase → final sphere-response pass**. It does not establish the exact triangle-sphere distance predicate inside the callback labels, because those callback bodies were not separately recovered in this pass.
+
+### How this relates to the scrape probes
+
+The wall-scrape path now has a bounded call graph:
+
+`FUN_00477940` → `FUN_00444740` → `FUN_00444200` → `FUN_004440E0` → `FUN_00443F10` → `FUN_004439F0` → `FUN_00444300`
+
+The outer scrape helper runs the sphere query twice with different output buffers. The collision model is traversed hierarchically and AABB-culled before face callbacks run. This explains why the two probes can be described as swept-sphere/model queries and why a single broadphase sphere can reject whole subtrees.
+
+Steam-PC sources:
+- [`FUN_00444200.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c)
+- [`FUN_00445150.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445150.c)
+- [`FUN_004440E0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c)
+- [`FUN_00443F10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c)
+- [`FUN_004439F0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c)
+- [`FUN_00444300.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c)
+
+**Evidence boundary:** static code reading of the pinned Steam-PC export plus SWR's address/signature cross-map. Callback internals, exact sweep parameters, same-build identity, runtime behavior and GameCube/Wii parity remain unresolved.
