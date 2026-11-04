@@ -62,6 +62,15 @@ Le workflow [OpenRouter Free PR review](../.github/workflows/openrouter-free-rev
 
 Avant un lancement, examiner la PR cible et exclure tout contenu privé ou incertain. Le diff est transmis à OpenRouter puis au fournisseur du modèle sélectionné ; la détection de secrets est indicative, pas exhaustive. Le routeur est gratuit au tarif affiché, avec des quotas susceptibles de changer. En cas d'indisponibilité, le job échoue sans choisir de modèle payant. La clé doit être stockée uniquement comme secret GitHub `OPENROUTER_API_KEY` et aucun crédit/moyen de paiement ne doit être ajouté.
 
+## Registre persistant des tâches autonomes
+
+Le registre canonique est `docs/automation/task-ledger.json`. Il conserve un identifiant stable par tâche, sa file, son périmètre de plateforme, la question à résoudre, les critères d'acceptation, les preuves, le prochain geste et, pour les PR ouvertes, le lien et le SHA exact.
+
+- `queued` : tâche en attente ; `active` : seule tâche actuellement travaillée ; `blocked` : dépendance humaine/externe nommée ; `in_review` : PR ouverte ; `completed` : PR fusionnée et preuves conservées ; `superseded` : tâche remplacée avec justification.
+- Une seule tâche peut être `active`. Une PR ouverte ne doit jamais être marquée `completed`. Le registre ne remplace pas GitHub : issues, PR, branches et contrôles CI en direct restent la source de vérité.
+- Chaque cycle substantiel met à jour le registre dans la même branche/PR que le travail correspondant. Les cycles suivants peuvent ainsi reprendre sans reconstituer l'historique depuis zéro.
+- Le contrôle sans API `python3 tools/check_task_ledger.py` vérifie le format, les identifiants uniques, la limite d'une tâche active et les références exactes des PR. Ses tests de régression sont exécutés par le workflow AI free-tier safety.
+
 ## Contrôle statique
 
 Le workflow [AI free-tier safety checks](../.github/workflows/ai-free-safety.yml) exécute \`tools/check_ai_free_safety.py\`. Ce contrôle est local au runner, ne lance aucun modèle, n'utilise aucune clé et vérifie notamment le verrou d'écriture, le budget gratuit et les permissions du coordinateur.
