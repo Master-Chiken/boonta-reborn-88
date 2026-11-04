@@ -465,20 +465,25 @@
       "question": "Do autonomous progress reports correspond to a real open, non-empty same-repository PR at its exact live head?",
       "acceptance_criteria": [
         "Gemini and OpenRouter require PROGRESS evidence or a named BLOCKED report",
-        "Live GitHub state confirms the PR is open and its head repository is this repository",
-        "Live PR head SHA equals the reported 40-character SHA",
-        "A missing, forked, stale, closed or empty PR cannot count as progress"
+        "Each autonomous writer snapshots all existing open and closed PR head SHAs before invoking the model",
+        "PROGRESS is accepted only for a new PR or an existing PR whose exact head SHA changed after the pre-cycle snapshot",
+        "Live GitHub state confirms the PR is open, non-empty, same-repository, and at the exact reported head",
+        "The declared evidence base matches the PR's actual main/dev target",
+        "Unchanged pre-existing, forked, stale, closed, empty or wrong-base PRs cannot count as progress"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/cb7fe5bd08e5821f442169ceb103f7f86c29f92f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/6a4572f76cfcfa36a8f195e7657f969270c27b01",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c85aa652c2b75c90c5caee71cc44353b3fc8652e"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c85aa652c2b75c90c5caee71cc44353b3fc8652e",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b345e802c3b618d49c3fd696bded166ca802b95c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6f69cf9c44317ae1df9a2150c9aa7e52fe0948ef",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/09182ee0622f328a0fc1c6b999820f007026fa7f"
       ],
-      "next_action": "Human review/merge remains required. New hardening also disables Gemini verbose/debug response streaming for scheduled autonomous runs while preserving manually requested debug; the static AI safety check enforces this. After #287 is merged, verify the next scheduled cycle rejects generic/no-op reports and accepts only exact-head PR evidence or a named blocker. Then rebase/revalidate #289.",
+      "next_action": "Await exact-head safety, branch-self-test and provenance results for current #287 head 09182ee0622f328a0fc1c6b999820f007026fa7f. Human review/merge remains required. After #287 is merged, rebase and fully revalidate #289 with the same cycle-fresh evidence contract, then reconcile this ledger to actual merged states and SHAs.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
-      "head_sha": "c85aa652c2b75c90c5caee71cc44353b3fc8652e",
-      "updated_at": "2026-11-04"
+      "head_sha": "09182ee0622f328a0fc1c6b999820f007026fa7f",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
