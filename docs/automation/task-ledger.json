@@ -54,11 +54,20 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/307a24dfe3c5c0ba1baf8c5bee9f167f818b969c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/7138105425a3db1ae5f7ed14e95418abd8730696",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/4df7e420ff01d743a64b7d5a0c3698a9cf676d5c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/f734c3353d49fe61a4d7392b05085636bf33434a",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448f40.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00447300.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004490a0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450c50.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L2685-L2711",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dfe0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54"
       ],
-      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The expanded PC event-manager trace distinguishes F0/F2 periodic callbacks, F4 message dispatch, cMan Swee payloads, Judge state values and Hangar POST_RACE_INFO; cMan/Hangar callback bodies and call order remain unresolved. Keep all PC evidence separate from native GameCube/Wii.",
+      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The current dossier extends the PC manager trace with the six-instance cMan pool, F4 dispatch at manager offset +0x24 (return 2 stops iteration), and a Steam F3 body at 0x004542E0. cMan F4 Swee handling and the Hangar/Results handoff remain unresolved; the Steam teardown candidate is marked NOT_INVOKED. Keep all findings PC-only. Native GameCube/Wii remains blocked on identifying and inspecting the exact lawful local DOL.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32",
+      "head_sha": "f734c3353d49fe61a4d7392b05085636bf33434a",
       "updated_at": "2026-11-04"
     },
     {
@@ -118,12 +127,20 @@
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt#L1136",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt#L1187-L1196",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/src/4508B0_Entity_CallAll0x14.c#L3-L27",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/f734c3353d49fe61a4d7392b05085636bf33434a",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448f40.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00447300.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004490a0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00450c50.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text15.c#L2685-L2711",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dfe0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c"
       ],
-      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The expanded PC event-manager trace distinguishes F0/F2 periodic callbacks, F4 message dispatch, cMan Swee payloads, Judge state values and Hangar POST_RACE_INFO; cMan/Hangar callback bodies and call order remain unresolved. Keep all PC evidence separate from native GameCube/Wii.",
+      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The current dossier extends the PC manager trace with the six-instance cMan pool, F4 dispatch at manager offset +0x24 (return 2 stops iteration), and a Steam F3 body at 0x004542E0. cMan F4 Swee handling and the Hangar/Results handoff remain unresolved; the Steam teardown candidate is marked NOT_INVOKED. Keep all findings PC-only. Native GameCube/Wii remains blocked on identifying and inspecting the exact lawful local DOL.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "93e591fbd4bf9c59e41d9ebcfd753b9fb7d2fb32"
+      "head_sha": "f734c3353d49fe61a4d7392b05085636bf33434a"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
