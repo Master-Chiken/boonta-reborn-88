@@ -247,7 +247,7 @@ jobs:
           prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
 
       - name: Record same-day Gemini cooldown after an autonomous model failure
-        if: inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'
+        if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -292,6 +292,7 @@ jobs:
               });
               core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
             }
+
       - name: Validate autonomous cycle report contract
         if: inputs.autonomous_mode == true && steps.run_gemini.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
