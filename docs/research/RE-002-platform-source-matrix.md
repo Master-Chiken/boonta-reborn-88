@@ -462,3 +462,72 @@ An independent Steam-PC caller strengthens the function's role:
 The independent IDA name table calls the global at `0x00E23240` `Unk_SplinePointMeshes_E23240`, consistent with the sample → mesh pointer table. Its notes also state that mesh pointers at `Test +0xEC/+0xF0` are read by race-progress and the mesh/collision path.
 
 **Updated confidence:** the lookup purpose and table indexing are `SUPPORTED` by two PC research snapshots plus an independent caller. Exact conversion edge behavior and executable-build equivalence remain `UNKNOWN` until the constants and target binary identity are resolved.
+
+
+## 2026-11-04 — Steam-PC recovery of the three race-spline routines
+
+A targeted review of the frozen Steam-PC Ghidra export found C pseudocode for all three race-specific functions that remain HANG("TODO") in the public SW_RACER_RE reconstruction. This advances the earlier address-only correlation: the bodies can now be described from a second PC snapshot, while the independent IDA project supplies function-size and field/caller corroboration.
+
+**Pinned evidence**
+- SW_RACER_RE: tim-tim707/SW_RACER_RE commit 258f67aa858ba2e281ce8a6791e49c554b85fae0, especially [swrRace.c](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c) and [swrRace.h](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+- Steam-PC decompilation: DeonPoncini/swep1r_decomp commit d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef, [src/_text23.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c#L126-L389): FUN_0047f8e0 at line 126, FUN_0047fbb0 at line 215, FUN_0047fca0 at line 257, and caller FUN_0047ffb0 at line 360.
+- Independent IDA metadata: everalert/swe1r-decomp commit 8d066b9c12ecb57bd819aaab586fd6bd2dd078a7, [functions.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt) and [Entity_Test.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Test.txt). Its IDB was not opened or redistributed.
+
+**Build boundary:** the Steam export explicitly targets the Steam release. The exact executable hash/release behind the SW_RACER_RE and IDA snapshots has not been established, and matching numeric addresses do not prove identical code. Treat the following as supported PC behavior hypotheses, not retail-build equivalence and not GameCube/Wii evidence. No source code was copied.
+
+### swrRace_AdvanceSplineCursor — 0x0047F8E0
+
+The Steam pseudocode shows a position-driven cursor reconciler, not a speed-times-delta cursor integrator:
+
+1. It initializes the forward/backward outputs and sub-frame crossing time to zero, then evaluates the current spline cursor into a local frame.
+2. It compares the pod's current position (transform position fields at +0x50..+0x58) and previous position (positionPrev at +0x16C..+0x174) against a plane derived from the evaluated spline frame.
+3. If the pod has crossed the current plane in the forward direction, it advances cursor segmentT in 0.01 increments, reevaluating the frame until the pod is no longer beyond the next plane or the cursor's forward-end flag prevents further stepping. It sets the forward output.
+4. If no forward crossing is reported and the cursor has not reached its backward-start boundary, the reverse path steps segmentT backward in 0.01 increments and sets the backward output. The cursor start/end flags are the traversal guards; this is distinct from the sign of the pod's velocity field.
+5. When forward traversal enters node 0 (the start/finish boundary), it computes the crossing instant by linearly interpolating the previous and current pod positions against the plane. The result is multiplied by the raw frame delta for sub-frame lap timing. If displacement along the plane normal is below 0.01, the crossing time is set to zero.
+
+The IDA inventory independently gives this function an extent of 0x2C7 bytes and a 0x60 stack frame. The public header's contract independently describes node-plane stepping, node-0 crossing interpolation and the same 0.01 movement threshold. Together these sources support the algorithm outline above; they do not identify every endpoint/branch edge case or establish the executable identity.
+
+### swrRace_UpdateSplineBinding — 0x0047FBB0
+
+The Steam pseudocode makes the mesh-to-spline inverse mapping substantially more precise:
+
+- Rebinding is considered only when the current cursor-derived mesh (player + 0xEC) and the current terrainModel (player + 0x140) are both non-null and differ, and race flag bit 0x20000000 is clear.
+- It queries the terrain mesh behavior. If the behavior record exists and bit 0x8 is set, the function returns -1 (rebind blocked). This agrees with the upstream PR #264 evidence that a mesh shared by multiple spline branches is marked spline-ambiguous.
+- Otherwise it returns 1 for the rebind. If the terrain mesh's 16-bit splineSampleIndex at +0x3C is nonzero, it calls swrSpline_CursorSeekToProgress (0x0047E8B0) with that sample index, then calls swrRace_AdvanceSplineCursor to reconcile the reseeded cursor against the pod's current position.
+- It refreshes the cursor-derived track mesh and the associated sample-spacing/projection fields before returning. A zero sample index skips the seek/advance pair but does not undo the rebind result.
+
+This refines the earlier candidate flow: the status is -1 for the ambiguous-mesh rejection, 0 when the rebind gate is not entered, and 1 when a changed, valid terrain mesh is accepted. The exact semantic meaning of race flag bit 0x20000000 remains unlabelled here.
+
+The IDA inventory lists 0x0047FBB0 as 0xED bytes with a 0x10 stack frame. Its notes independently connect this routine to CursorSeekToProgress and describe the +0x10E status as -1/0/1.
+
+### swrRace_ComputeTrackOffset — 0x0047FCA0
+
+The Steam pseudocode evaluates the spline cursor frame, projects the pod onto the local cross-section plane defined by that frame, and subtracts that projected point from the pod's current position:
+
+- The magnitude of this offset is stored at player + 0x124 (the fourth component of the trackOffset vector beginning at +0x118).
+- When the magnitude is greater than 0.1, the xyz components at +0x118..+0x120 are normalized to a unit direction from the projected spline point toward the pod.
+- At or below 0.1, xyz is set to the fallback direction (0, 0, 1); the measured magnitude remains stored at +0x124.
+
+This establishes the data written by the routine and the small-distance fallback. It does not prove how every downstream consumer interprets the vector, whether the projection is the globally nearest point on a curve, or what physical units the source's coordinate system uses.
+
+The IDA inventory lists 0x0047FCA0 as 0x125 bytes with a 0x64 stack frame. Its older field note correctly leaves +0x118 unknown; the Steam body now supports the direction/magnitude write pattern, but the target executable identity remains unresolved.
+
+### Caller sequence and practical consequence
+
+The Steam caller FUN_0047ffb0 confirms the same overall order as the public swrRace_UpdateRaceProgress reconstruction:
+
+AdvanceSplineCursor → cache previous/current track mesh → update sample-spacing and projection slots → clear a cache when the mesh changes → UpdateSplineBinding → ComputeTrackOffset → lap completion and forward/backward movement counters.
+
+The key architectural separation is now clearer: the cursor advances by geometric node-plane crossings based on actual pod position; ground-mesh rebinding can reseed that cursor from the baked mesh-to-sample index; and lateral offset is calculated separately from cursor progress. These are three related but distinct operations.
+
+### Updated evidence assessment
+
+| Finding | Evidence label | Confidence | Remaining limit |
+|---|---|---|---|
+| Cursor advancement uses position-vs-spline-frame plane tests and 0.01 segment steps | CODE (Steam-PC pseudocode) + corroborating public header | SUPPORTED | Exact source-build identity and all branch/end-point cases remain unresolved |
+| Node-0 crossing time is interpolated from previous/current position and scaled by raw frame delta | CODE + public header | SUPPORTED | Exact retail-build identity and unusual zero/near-zero movement behavior need runtime validation |
+| Mesh rebind uses terrain mesh splineSampleIndex and generic progress seek | CODE + upstream PR #264 + IDA caller notes | SUPPORTED | The 0x20000000 gate's meaning and all malformed/null cases remain unknown |
+| Behavior bit 0x8 blocks a mesh-to-spline rebind | CODE + upstream PR #264 | SUPPORTED | Applies to the inspected PC source family only |
+| trackOffset.xyz is a normalized projected-to-pod direction above 0.1, otherwise fallback up; w stores magnitude | CODE (Steam-PC pseudocode) | SUPPORTED | Downstream gameplay semantics and target-build equivalence remain unverified |
+
+**Next bounded investigation:** compare the three Steam function bodies against any lawful local binary/disassembly for the exact SW_RACER_RE target build, if such an artifact is available; otherwise trace every reader of trackOffset, splineRebindResult and the movement flags in the pinned source to establish their downstream consumers. Do not port these PC algorithms into GameCube/Wii without a separate target-specific specification.
