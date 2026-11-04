@@ -284,6 +284,30 @@
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
       "head_sha": "82fca158d6acdfc56fd9d45fc188bbf135a1f483"
+    },
+    {
+      "task_id": "AUTOMATION-READINESS-PREFLIGHT",
+      "title": "Make autonomous readiness preflight safely repeatable and keep setup documentation aligned",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "in_review",
+      "question": "Can the owner rerun a GET-only readiness check after initial activation without toggling the autonomous writer, while the documentation accurately explains that behavior?",
+      "acceptance_criteria": [
+        "Readiness reports whether GEMINI_AUTONOMOUS_ENABLED is enabled or disabled without changing it",
+        "Readiness does not call Gemini, modify repository state, or print secret values",
+        "The setup guide states that initial activation should wait for readiness, but later read-only checks do not require disabling an already-enabled writer",
+        "Exact-head AI safety and provenance checks pass after the base ledger is reconciled"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0"
+      ],
+      "next_action": "Human review of #285. After #288 is merged into main, rerun #285 exact-head AI safety and provenance checks against the corrected base; confirm the read-only readiness run can be repeated with the autonomous gate either enabled or disabled.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
+      "head_sha": "14758946b5be63e0eccdb7818807179276f2f4b0",
+      "updated_at": "2026-11-04"
     }
   ]
 }
