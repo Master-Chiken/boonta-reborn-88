@@ -817,3 +817,42 @@ Steam FUN_00465510 independently loads resource/model ID 0x136 (decimal 310) dur
 The evidence now narrows the question: where, if anywhere, do flame/dozer spawner descriptions feed a non-Trig per-frame object or spawn manager after scene initialization? No such consumer has been established in these pinned public exports. The next valid step is a complete xref/caller trace on the exact matching local executable/analysis database or an independently verified source body; absent that, the spawn scheduler, lifetime, node-follow behavior and activation conditions remain UNKNOWN. Do not implement these types from enum comments or scene initialization alone.
 
 No third-party code or proprietary asset was copied; no gameplay code was changed; no GameCube/Wii behavior is inferred.
+
+
+## 2026-11-04 — planet-5 resource slots for the Flame/Dozer scene helpers
+
+A follow-up matched the two special trigger-description helper slots to the planet-specific model-resource setup. This adds a concrete resource association, but still does not recover a spawner scheduler or prove runtime object creation.
+
+**Pinned references**
+- Steam-PC trigger-scene loader [FUN_0047DDC0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ddc0.c), blob `d26c61cc3b2317a6e4621f749bad02342763d23a`.
+- Steam-PC description initializer [FUN_0047D380](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047d380.c), blob `be10b94456a0af738dbaea2ac3ef553b9cb587c9`.
+- Steam-PC helper allocation [FUN_0047D310](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047d310.c), blob `15d434c523d051c1a97f4ab1d857fccdf57b2ae4`.
+- SWR trigger/model enum [types_enums.h](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h), blob `3008282a2a96ef921ad343d51a60cec1a4df9545`.
+
+### Planet selector 5 establishes the matching model resources
+
+In Steam FUN_0047DDC0, the `param_1 == 5` branch:
+- loads model ID `0x138` (decimal 312) and stores its scene pointer in `DAT_00e26fc0`;
+- loads model ID `0x13D` (decimal 317) and stores its scene pointer in `DAT_00e26fc8`;
+- scales the latter resource with a uniform factor represented by `0x4019999A`;
+- then, when the track root is non-null, calls FUN_0047DC40 to walk and initialize the track's trigger descriptions.
+
+The pinned SWR enums name decimal model ID 312 `MODELID_dozer_part` and decimal model ID 317 `MODELID_fx_flameanim_part`. The trigger enum separately names type 310 `DozerSpawner` and type 211 `FlameSpawner`. These are separate namespaces and separate IDs.
+
+### The two trigger descriptions consume those resource slots
+
+Steam FUN_0047D380 shows:
+- Type 211 (`0xD3`) calls FUN_0047D310 with slot index 2, which stores a pointer to `DAT_00e26fc8`. Its helper is positioned using the description's direction/position fields before the description bit 0x01 is set.
+- Type 310 (`0x136`) calls FUN_0047D310 with slot index 0, which stores a pointer to `DAT_00e26fc0`. When its affected node exists, the helper receives that node's transform before the same description bit is set.
+
+FUN_0047D310 obtains a scene helper through FUN_0047C130. That allocator reserves from a 50-entry registry of 0x58-byte helpers initialized with object type `0xD065`; the helper stores a pointer to the selected global resource slot and is added to the trigger-scene helper list. This is a scene-transform/helper object, distinct from the runtime `Trig` manager pool. The current SWR `Trig` F0/F2 callbacks and the inspected Steam FUN_0047CE60 dispatcher still have no dedicated 211/310 runtime effect cases.
+
+### What this proves — and does not prove
+
+For the Steam-PC planet-selector-5 setup, there is now a direct static chain:
+- FlameSpawner description 211 → helper slot 2 → loaded model ID 317 `fx_flameanim_part`.
+- DozerSpawner description 310 → helper slot 0 → loaded model ID 312 `dozer_part`.
+
+This proves the per-description scene-resource/helper association in that specific PC code path. It does **not** prove when the flame/dozer becomes active, whether another manager spawns moving entities, how lifetime/despawn works, or whether the helper itself is the visible instance. No other consumer/scheduler has been established from the inspected public export. Keep runtime spawn behavior UNKNOWN and do not implement it from this static association.
+
+No GameCube/Wii behavior is inferred; no third-party code or game-derived asset was copied.
