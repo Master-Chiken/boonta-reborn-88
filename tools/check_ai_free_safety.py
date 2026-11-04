@@ -221,6 +221,11 @@ else:
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
     for required_tool in ("create_branch", "push_files", "create_pull_request", "issue_read", "pull_request_read"):
+    if "get_workflow_job" in github_tools:
+        errors.append("OpenRouter GitHub MCP allow-list contains a tool absent from the pinned v0.27.0 server")
+    for required_tool in ("get_file_contents", "get_workflow_run", "get_job_logs", "list_workflow_jobs", "list_workflow_runs"):
+        if required_tool not in github_tools:
+            errors.append(f"OpenRouter GitHub MCP allow-list is missing pinned-server tool {required_tool!r}")
         if required_tool not in github_tools:
             errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
 fallback_call_position = autonomous.find("openrouter-fallback:")
