@@ -80,11 +80,12 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
       ],
-      "next_action": "Human review of #282. The latest PC-only dossier now traces Swee(false) through the cMan F4 dispatch slot and confirms the callback body is absent from the inspected Steam decompilation snapshot; IDA gives only name/extent/event notes. F4-to-Hangar activation and initial Results screen-5 writer remain UNKNOWN. Do not infer GC/Wii behavior.",
+      "next_action": "Human review of #282. Latest source audit corrects the F0 state-4/5 interpretation: in the pinned PC reconstruction plus the pinned mod-hook cross-check, these are pre-race intro (track fly-by / pod orbit) leading to countdown, not the Results handoff. Visible finish path is state 2 -> Clear(Fini) -> state 6 -> TeardownRace (TODO). Initial Hang/Results handoff remains UNKNOWN; Steam teardown candidate FUN_0045dd80 remains NOT_INVOKED. Keep all details PC-only and do not infer GC/Wii state mapping.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "b815559c1fab1913733f41aedef0c43e69048058",
+      "head_sha": "490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
       "updated_at": "2026-11-04"
     },
     {
@@ -171,12 +172,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
       ],
-      "next_action": "Human review of #282. The latest PC-only dossier now traces Swee(false) through the cMan F4 dispatch slot and confirms the callback body is absent from the inspected Steam decompilation snapshot; IDA gives only name/extent/event notes. F4-to-Hangar activation and initial Results screen-5 writer remain UNKNOWN. Do not infer GC/Wii behavior.",
+      "next_action": "Human review of #282. Latest source audit corrects the F0 state-4/5 interpretation: in the pinned PC reconstruction plus the pinned mod-hook cross-check, these are pre-race intro (track fly-by / pod orbit) leading to countdown, not the Results handoff. Visible finish path is state 2 -> Clear(Fini) -> state 6 -> TeardownRace (TODO). Initial Hang/Results handoff remains UNKNOWN; Steam teardown candidate FUN_0045dd80 remains NOT_INVOKED. Keep all details PC-only and do not infer GC/Wii state mapping.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "b815559c1fab1913733f41aedef0c43e69048058"
+      "head_sha": "490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
