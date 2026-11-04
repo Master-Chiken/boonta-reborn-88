@@ -1920,3 +1920,46 @@ References:
 - SWR [`archive/structures.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68), [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567), [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288).
 
 **Evidence boundary:** status names come from a pinned legacy SWR enum and are corroborated only where the code writes/consumes the matching bits. Steam-PC and SWR remain separate snapshots; no same-build identity or console parity is claimed.
+
+
+## Repair-rate stat and damage-warning timer disambiguation — 2026-11-04
+
+The structure layout resolves two fields used in the PC repair routine and corrects an easy source of naming confusion.
+
+### `player + 0x98` is the Repair upgrade stat
+
+SWR `swrRace` places `PodHandlingData podStats` at `+0x6C`. Within the 15-float `PodHandlingData`, `repairRate` is field 11 at offset `+0x2C), so its absolute player offset is `+0x98`. The immediately following field `damageImmunity` is at `+0xA0), matching the address used by Steam-PC `FUN_00474CD0`.
+
+The PC `FUN_0046AB10` recovery update for a component carrying `ENGINE_REPAIR` is therefore:
+```text
+engineHealth[i] += dt
+    * (engineHealthMin[i] * 0.5 - engineHealth[i])
+    * podStats.repairRate
+    * 0.5
+```
+The rate is the pod's Repair stat, not an unidentified timer or unrelated player scalar. SWR's upgrade calculator treats Repair as upgrade category 6, progressively adds upgrade health to `repairRate`, and caps the result at 1.0. This is the stat path that controls how quickly the selected damaged engine part approaches half its recorded high-water reference.
+
+### `player + 0x2C0` is damageWarningTimer, not repairTimer
+
+SWR's struct layout names:
+- `+0x2BC` `repairTimer`;
+- `+0x2C0` `damageWarningTimer`;
+- `+0x2C4` `totalDamage`.
+
+Steam-PC `FUN_0046AB10` uses `+0x2BC) as the actual repair scheduler timer: it counts down, or is pinned to 0.1 while `flags0 REPAIRING` is active. By contrast, `+0x2C0` is evaluated against damage across the left (parts 0–2) and right (parts 3–5) groups. When either side meets the source threshold, it counts down; when neither does, it is re-seeded from the RNG. On expiry, the routine chooses a side code (1 or 2, with a random choice if both sides qualify) and calls `FUN_004741D0`.
+
+`FUN_004741D0` has side-specific offsets and flag writes plus effects/audio. Its invocation is therefore a side-specific damage-warning/effect event consistent with the struct's `damageWarningTimer` label; it should not be described as the per-part repair update itself. The helper's complete audiovisual semantics remain only partly identified.
+
+### Corrected timer model
+
+| Offset | Field | Responsibility |
+|---|---|---|
+| `+0x2BC` | `repairTimer` | controls part selection/recovery cadence; forced to 0.1 while repair is held/AI repair flag is active |
+| `+0x2C0` | `damageWarningTimer` | side-specific damage-warning/effect cadence based on left/right component state |
+| `+0x2C4` | `totalDamage` | accumulated damage value |
+
+References:
+- SWR [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L463-L475), [`types.h` engine fields](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L561-L567), [`PodHandlingData`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L414-L440), [Repair upgrade category](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705).
+- Steam-PC [`FUN_0046AB10.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c), [`FUN_00474CD0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c), [`FUN_004741D0.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c).
+
+**Evidence boundary:** struct names and upgrade definitions come from the pinned SWR reconstruction; PC field offsets and arithmetic are from the separate Steam-PC export. No same-build identity or console parity is inferred.
