@@ -77,6 +77,31 @@
       ],
       "next_action": "After PR #287 is reviewed and merged, inspect the next scheduled autonomous cycle. Verify its exact-head report, reconcile live PR state, and choose the next unanswered RE-001 research task. Do not repeat readiness or activation steps.",
       "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "RE001-RACE-LIFECYCLE-TRACE",
+      "title": "Trace race completion through post-race phases to the Results destination",
+      "queue": "#226",
+      "platform_scope": [
+        "PC reference",
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "question": "What is the evidence-backed caller/callee path from per-racer finish through manager-level race completion and post-race phases to the concrete Results panel, substate, or scene/resource transition?",
+      "acceptance_criteria": [
+        "Pin every consulted public source to an exact commit and executable/version context where known",
+        "Trace per-racer finish, manager completion condition, post-race phase writer, and Results destination as separate edges",
+        "Label each edge by platform and evidence level; do not infer GameCube/Wii behavior from PC or N64 findings",
+        "Record unresolved fields, callers, resources and runtime-only questions instead of guessing",
+        "Publish one focused research dossier without copying third-party code or game-derived assets"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226"
+      ],
+      "next_action": "After the current automation validation task is verified, use the RE-001 complete-game matrix in PR #282 to trace the race-finish to Results call path from pinned public source evidence; keep platform boundaries explicit and avoid prototype polish.",
+      "updated_at": "2026-11-04"
     }
   ]
 }
