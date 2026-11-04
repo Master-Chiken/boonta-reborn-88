@@ -77,7 +77,7 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now support Hang menu 5 = POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 -> Results routine 0x00439CE0, conditional on Hang active. The static dependency graph marks this callback NOT_INVOKED; the writer/activation path to Hang state 5 after the race remains unproven. cMan Swee Boolean semantics are independently described, but callback body/handoff are not body-reconstructed. Keep all evidence PC-only; native GC/Wii needs the exact lawful local DOL.",
+      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. New Steam/IDA evidence maps Hang menu screen 5 to POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 to Results routine 0x00439CE0, conditional on Hang active. The static graph marks FUN_00457620 NOT_INVOKED; the writer of Hang menu screen 5 and the post-race activation of Hang remain unproven. Next trace is the state-5/active-flag writer and its relation to the Judge Fini/teardown candidate. Keep the PC-only boundary; native GameCube/Wii needs exact lawful local DOL analysis.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "a62172c5285ab37174cd401c61e8b912452c62c2",
       "updated_at": "2026-11-04"
@@ -161,7 +161,7 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457620.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00439ce0.c"
       ],
-      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. Steam/IDA now support Hang menu 5 = POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 -> Results routine 0x00439CE0, conditional on Hang active. The static dependency graph marks this callback NOT_INVOKED; the writer/activation path to Hang state 5 after the race remains unproven. cMan Swee Boolean semantics are independently described, but callback body/handoff are not body-reconstructed. Keep all evidence PC-only; native GC/Wii needs the exact lawful local DOL.",
+      "next_action": "Human review and merge decision for #282 after corrected main-based ledger integration. New Steam/IDA evidence maps Hang menu screen 5 to POST_RACE_INFO and Hang F0 callback 0x00457620 case 5 to Results routine 0x00439CE0, conditional on Hang active. The static graph marks FUN_00457620 NOT_INVOKED; the writer of Hang menu screen 5 and the post-race activation of Hang remain unproven. Next trace is the state-5/active-flag writer and its relation to the Judge Fini/teardown candidate. Keep the PC-only boundary; native GameCube/Wii needs exact lawful local DOL analysis.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "a62172c5285ab37174cd401c61e8b912452c62c2"
