@@ -768,6 +768,7 @@ for required in (
     "new Date().toISOString().slice(0, 10)",
     "GEMINI_COOLDOWN_ACTIVE",
     "GEMINI_COOLDOWN_DATE",
+    "steps.gemini_cooldown.outputs.active != 'true'",
     "if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
