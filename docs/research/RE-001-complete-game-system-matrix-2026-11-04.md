@@ -2183,3 +2183,45 @@ FUN_00447350 is only a wrapper around FUN_00450CE0(type, 0, 0). FUN_00450CE0 loo
 Outstanding: determine every normal caller of FUN_0045DD80; identify which Free callbacks release child resources versus merely disable objects; trace scene model-root and spline memory ownership through the complete course exit/reload path; and verify whether arena allocations are reclaimed wholesale elsewhere. Keep these as separate edges in the resource manifest. The static PC evidence does not prove the corresponding native GC/Wii lifecycle.
 
 Pinned source directory (exact Steam-PC revision): https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c
+
+
+## 2026-11-04 — race teardown edge: explicit SWR state-6 call vs Steam-PC NOT_INVOKED graph label
+
+This closes part of the earlier “normal caller” question, while leaving a cross-snapshot disagreement explicit.
+
+### SWR reconstruction: the state-machine edge is direct
+
+At the pinned SWR revision:
+
+1. swrObjJdge_Clear(jdge, event) runs once while the cleared guard is unset. It clears scene animations, sets raceTimer_ms to 0.5, stores the event (Fini, Abrt, or another caller-supplied event), changes the Judge low-nibble state to 6, then sends Free notifications to the Test, Toss, Smok, Trig and Chsr groups.
+2. swrObjJdge_F0 handles state 6. It decrements the timer; once the timer is negative it resets the network tick, performs the multiplayer callback path when applicable, then directly calls swrObjJdge_TeardownRace(jdge, jdge->event).
+3. The enum comment for state 6 independently describes it as the teardown state and identifies the timer countdown to swrObjJdge_TeardownRace.
+
+This is a direct, visible call edge in the pinned SWR source. It establishes the intended lifecycle in that reconstruction snapshot; the teardown function body itself remains HANG("TODO") there.
+
+### Steam-PC export: body exists, published graph says NOT_INVOKED
+
+At the separate pinned Steam-PC export:
+
+- The same numeric address 0x0045DD80 has a full decompiled body in FUN_0045DD80. That body performs participant/result bookkeeping, sets the five typed group counts to zero through FUN_00447350, resets other race/UI state, and either takes a special restart branch through FUN_00466BD0 or dispatches a manager/reset event.
+- The repository's published dependency graph explicitly shows NOT_INVOKED → FUN_0045dd80. Its outgoing edge to FUN_00466bd0 describes a conditional callee relationship from within FUN_0045dd80; it does not create an incoming race-loop caller.
+- The corresponding Steam-PC decompilation file for a full FUN_0045e200/F0 body was not present in the inspected per-function C export, and repository search did not expose a caller edge to FUN_0045dd80.
+
+**Correct conclusion:** the SWR snapshot has a direct state-6 → TeardownRace call; the separate Steam-PC evidence has the teardown body but its published graph marks it NOT_INVOKED. The snapshots are not proven to be the same executable build, and the graph may be incomplete or omit indirect dispatch. Therefore the normal retail-PC runtime edge remains UNKNOWN. Do not silently project the SWR caller into the Steam image, and do not treat the graph label as proof that the retail game never tears down.
+
+### Resource-lifetime implication
+
+The SWR Clear path's Free notifications and the Steam-PC teardown body's count-zero operations are distinct:
+- the SWR state entry issues per-group Free notifications before the delay;
+- the PC teardown body later sets manager counts to zero if it is reached;
+- neither source trace, on its own, proves that all scene model/spline arena memory is individually freed.
+
+The next evidence target is the missing/indirect F0 invocation path in the Steam-PC snapshot or an independent retail-PC trace. Until that is available, keep the cleanup caller and complete resource reclamation marked UNKNOWN.
+
+**Pinned references**
+- SWR swrObj.c — swrObjJdge_Clear, swrObjJdge_F0, and the TODO swrObjJdge_TeardownRace: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c
+- SWR types_enums.h — Judge state 6: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types_enums.h
+- Steam-PC FUN_0045d0b0.c: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045d0b0.c
+- Steam-PC FUN_0045dd80.c: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c
+- Steam-PC published dependency graph: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd
+
