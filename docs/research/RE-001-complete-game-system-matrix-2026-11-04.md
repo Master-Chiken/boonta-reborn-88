@@ -856,3 +856,50 @@ For the Steam-PC planet-selector-5 setup, there is now a direct static chain:
 This proves the per-description scene-resource/helper association in that specific PC code path. It does **not** prove when the flame/dozer becomes active, whether another manager spawns moving entities, how lifetime/despawn works, or whether the helper itself is the visible instance. No other consumer/scheduler has been established from the inspected public export. Keep runtime spawn behavior UNKNOWN and do not implement it from this static association.
 
 No GameCube/Wii behavior is inferred; no third-party code or game-derived asset was copied.
+
+
+## 2026-11-04 — PC model-block LZSS recovery: Steam caller cross-reference closes the SWR loader TODO
+
+This is a high-priority *loading dependency* recovered in the Steam-PC reference. The SW_RACER_RE source has a stub at the same numeric address, and the Steam export contains both the corresponding decompressor body and a model-loading caller. This closes a PC-reference understanding gap only; it does not provide a native GameCube/Wii implementation or establish that the two PC snapshots are identical executable builds.
+
+**Pinned evidence**
+- SW_RACER_RE [`swrLoader.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrLoader.c), revision `258f67aa858ba2e281ce8a6791e49c554b85fae0`, blob `57382032b4c6a4dcf41321174a133d1e59df2547`: `swrLoader_DecompressLZSS` at `0x0042D520` is `HANG("TODO")`.
+- SW_RACER_RE [`swrModel.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c), same revision, blob `63a97f70cbbf67a37f5aafd9eaa337dbdf0b023d`: model-block parsing and the compressed-model caller are present.
+- SW_RACER_RE [`swrLoader.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrLoader.h), blob `d9c928f0ea5d700c91db5e26d452ad7ce1c90f02`: the declared function address is `0x0042D520`.
+- Separate Steam-PC export [`FUN_0042d520.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0042d520.c), revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, blob `226d35b161304a01d1d84df79b075d95c075cb1d`, with the matching [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_0042d520.s), blob `815d2dfc045f88dec4680184e25267480cbf9cf6`.
+- Steam-PC model loader [`FUN_00448780.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00448780.c), same revision, blob `0d5cca3cb86922df3ba5809a1e3e55cc13ce9f52`.
+
+### 1. Decoder behavior visible in the Steam-PC body
+
+The inspected body is an LZSS-style token stream with a 4 KiB rolling history area:
+- A control byte governs up to eight following tokens, tested bit-by-bit from bit 0 upward.
+- A set control bit selects a one-byte literal. The byte is copied to the output and also written into the rolling history.
+- A clear control bit selects a two-byte back-reference token. The body derives a history source value and a run control from the token bytes, copies bytes from the history area to output, and mirrors each output byte back into the history area.
+- The history write index starts at 1 and wraps with `& 0xFFF`. The source lookup also masks its running index with `0xFFF`, consistent with a 4096-byte circular window.
+- A decoded source value of zero terminates the decompressor.
+
+**Do not simplify the packed back-reference into a conventional unsigned 12-bit offset / length formula yet.** The Steam C export uses plain `char` values in the token arithmetic, and the assembly uses sign-extending byte loads plus an arithmetic right shift for the run control. That makes the high-bit cases materially different from a naïve unsigned-nibble interpretation. The exact valid byte domain and intended run-length semantics need a controlled valid-stream test or a verified format specification. The dossier records the observable operations rather than assigning an unproven formula.
+
+The assembly independently confirms that the dictionary base is computed as the compressed-input pointer minus `0x1000`. The body does not show an explicit initialization/clear of that preceding 4096-byte region. How its initial contents are made valid, and whether every stream begins with tokens that avoid undefined history, remain UNKNOWN.
+
+### 2. The model-block caller and its safety contract
+
+The Steam `FUN_00448780` caller shows a distinct compressed-model path:
+1. It reads a model record's first 12 bytes and checks for the big-endian tag `Comp`.
+2. The third 32-bit header word is treated as the declared decompressed size.
+3. The compressed payload begins immediately after that 12-byte header; its stored size is the model-record span minus 12 bytes.
+4. The caller chooses an 8-byte-aligned source buffer near the high end of the asset arena and keeps the output model buffer at the low end.
+5. Before reading and decompressing, it checks available asset-buffer capacity for the declared output size plus an 8-byte margin, and checks that the compressed source region does not overlap the declared output span.
+6. It reads the compressed payload, calls `FUN_0042D520(source, output)`, then advances the asset-buffer cursor to output start plus the declared decompressed size. The subsequent model mask pass performs byte-swaps and pointer/resource fix-ups.
+
+The matching SWR `swrModel_LoadFromId` source has the same `Comp` header check, declared-size read, separated input/output buffer placement, preflight capacity/overlap checks, decoder call and cursor advance — but its decoder body is still the HANG stub.
+
+**Important safety limit:** the decompressor signature receives only two pointers; its visible body has no explicit compressed-input length or output-capacity argument and performs no explicit per-token bounds check. The caller's preflight checks protect the declared output span and input/output separation, but the inspected code does not visibly compare an actual decoded byte count with the header's declared decompressed size. The zero-source terminator ends decoding. A clean-room implementation must not copy this unchecked interface as-is: it needs explicit input length, output capacity, checked history references, termination/error reporting and an exact decoded-length check.
+
+### 3. Scope, confidence and next validation
+
+This establishes a strong PC-family cross-reference that the SWR loader TODO corresponds to a live model-block decompressor in the pinned Steam-PC export. It does **not** establish a console compression format, asset compatibility, endian details beyond the observed PC path, or a matching executable identity between the two PC snapshots. A bounded search found the model loader as the visible Steam caller; this is not proof that no other caller exists in the executable or private analysis database.
+
+Before any clean-room decoder is implemented, the next evidence should be a lawful, locally held, non-published test stream or a source-backed fixture with known input/output lengths. It must validate literal ordering, signed back-reference fields, ring-window initialization, overlap-copy behavior, terminator handling, truncated input, malformed offsets, maximum output and declared-size mismatch. No commercial model block, ROM, DOL/REL, extracted asset or derived game data is to be committed as a fixture.
+
+No third-party implementation code was copied. This entire finding remains Windows-PC comparative evidence; it is not a GameCube/Wii format claim.
