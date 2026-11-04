@@ -168,6 +168,17 @@ else:
         errors.append("OpenRouter reviewer must re-check PR eligibility and exact head before sending the diff externally")
 
 
+# Readiness reports OpenRouter's optional secret/attestation presence without
+# making an API request or exposing either value.
+for required in (
+    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+    "OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}",
+    "No OpenRouter API request was made.",
+    "Gemini remains the only active autonomous model path.",
+):
+    if required not in readiness:
+        errors.append(f"Autonomous readiness is missing safe OpenRouter reporting: {required!r}")
+
 # The autonomous OpenRouter writer is a reusable fallback only. It must not
 # declare its own schedule or user-controlled entry point.
 fallback_trigger = openrouter_fallback.split("jobs:", 1)[0]
