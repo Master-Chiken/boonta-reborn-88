@@ -531,3 +531,40 @@ The key architectural separation is now clearer: the cursor advances by geometri
 | trackOffset.xyz is a normalized projected-to-pod direction above 0.1, otherwise fallback up; w stores magnitude | CODE (Steam-PC pseudocode) | SUPPORTED | Downstream gameplay semantics and target-build equivalence remain unverified |
 
 **Next bounded investigation:** compare the three Steam function bodies against any lawful local binary/disassembly for the exact SW_RACER_RE target build, if such an artifact is available; otherwise trace every reader of trackOffset, splineRebindResult and the movement flags in the pinned source to establish their downstream consumers. Do not port these PC algorithms into GameCube/Wii without a separate target-specific specification.
+
+
+## 2026-11-04 — Downstream race-progress consumer trace (PC reconstruction)
+
+This pass follows the outputs of `swrRace_AdvanceSplineCursor` and the derived racer fields beyond the three function bodies. It uses only the same pinned public SW_RACER_RE source revision; it does not establish Steam/retail executable identity or GameCube/Wii behavior.
+
+**Pinned source:** [SW_RACER_RE `swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c) (blob `c623f7fddb7a9bebb3dbe9919e0f24e49d7842d3`), [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c) (blob `f3d0056b624911e7715a4217cead3890a2b3ba84`), and [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h) (blob `1519cd257d5d65e5575cce1ecd9aa0b2fe22686b`).
+
+### Recovered consumers and state transitions
+
+1. **Forward/backward outputs feed lap gating and judge progress state.** In `swrRace_UpdateRaceProgress` (lines 4771–4800), the local `movedForward` and `wentBackward` outputs from `swrRace_AdvanceSplineCursor` are not stored as fields. They are used immediately:
+   - The lap-crossing test is enabled when `movedForward != 0` **or** the mesh-binding result equals 1 (line 4789).
+   - A backward report increments `checkpointCount` and resets `moveTick` to zero (lines 4790–4793).
+   - A forward report clears `checkpointCount`; when the same update did not also report backward movement, `moveTick` increments up to 200 (lines 4794–4798).
+   - The integer binding result is then copied to `splineRebindResult` at +0x10E (line 4799).
+
+2. **The judge reads the backward-progress counter, not the stored binding result.** `swrObjJdge_IsRacerRacing` checks that the racer is not finished and then returns true when `checkpointCount > 4` **or** `speedValue` is below the not-racing speed threshold (lines 1385–1400). A preceding course-specific exception returns false inside planet 1 / track 3's configured rectangle when the stood-on terrain mesh has behavior bit 0x8 (lines 1390–1394). The source therefore supports a link from repeated backward cursor reports to the judge's race-status decision; it does not justify renaming the field to a confirmed “off-track timer.”
+
+3. **`moveTick` gates an idle accumulator, but its downstream effect is not recovered.** `swrRace_LapCompletion` adds frame delta to `idleTick` while `moveTick < 9`, otherwise clears `idleTick` (lines 4709–4712); lap completion also clears it on the open-track completion path and when a finish-line crossing is accepted (lines 4724–4736). No comparison or other read of `idleTick` was found in the pinned public reconstruction's indexed references. Its eventual consumer/effect remains UNKNOWN.
+
+### Unresolved stored fields: do not infer consumers
+
+- **`splineRebindResult` (+0x10E):** the pinned public reconstruction initializes it to zero during racer initialization (`swrObj.c` lines 2393–2409) and writes the current `binding` value at the end of `swrRace_UpdateRaceProgress` (`swrRace.c` line 4799). The searched public source has no other named read. The binding value does affect the immediate lap-crossing gate at line 4789, before it is stored. A separate later consumer of the field itself is **not recovered**.
+- **`trackOffset` (+0x118..+0x124):** the public reconstruction initializes the vector to (0,0,1,1) in `swrObj.c` lines 2402–2405. Its `swrRace_ComputeTrackOffset` definition remains `HANG("TODO")` at `swrRace.c` lines 4762–4766, and no named field read exists in the searched public source. The Steam-PC pseudocode describes the writer, but these findings do not identify a downstream reader. Do not label it as a steering/AI/collision input without a reader/caller chain.
+- **The movement outputs:** the public reconstruction exposes them as local outputs, and its race-progress caller consumes them as listed above. A broader Steam-PC xref inventory for every use outside this caller is not complete.
+
+### Evidence assessment and next question
+
+| Finding | Evidence label | Confidence | Remaining limit |
+|---|---|---|---|
+| Forward movement enables lap crossing and clears `checkpointCount` | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | Exact executable/release identity remains unresolved |
+| Backward movement increments `checkpointCount`, resets `moveTick`, and the judge checks `checkpointCount > 4` | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | Do not infer a frame timer or universal off-track rule |
+| Stored `splineRebindResult` has no named reader in the inspected public source | CODE search + pinned source | UNKNOWN consumer | Steam-wide xrefs and omitted/unimplemented source consumers may exist |
+| `trackOffset` writer and readers are missing from the public reconstruction | CODE (field init and TODO stub) | UNKNOWN consumer | Steam reader inventory and exact target build identity are incomplete |
+| `idleTick` is written/reset based on `moveTick` and lap completion | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | A consequential reader/effect has not been found |
+
+**Next bounded RE-002 task:** follow the judge's F2 race-progress call and F0/status decisions into their actual caller/state transitions, while keeping `checkpointCount`, `splineRebindResult`, and terrain behavior bit 0x8 separate. Then perform a targeted Steam-PC xref search for the racer object fields `+0x10E` and `+0x118..+0x124`; reject apparent offset matches unless the base object is demonstrably the racer structure. If the exact SW_RACER_RE target executable is not available locally, record that executable-level equivalence remains blocked rather than infer from Steam.
