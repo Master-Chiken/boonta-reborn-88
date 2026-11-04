@@ -439,3 +439,69 @@ A final targeted scan tested both exact source paths and the nearby aggregate te
 
 This is a bounded **public-source-export availability** result, not proof that the callback is absent from the Steam executable or from a private/local IDA database. The missing F4 receiver remains the concrete evidence blocker for the end-to-end Judge-Fini → Hang-POST_RACE_INFO path.
 
+## 2026-11-04 — PC hover-pad ground contact and wall-collision TODO recovery
+
+This pass closes four high-value PC-reference TODOs as one connected ground-contact/collision subsystem. It reads the exact SW_RACER_RE function addresses and then checks the corresponding Steam-PC C/assembly exports. It is a **read-only behavioural recovery**, not code reuse or a GameCube/Wii implementation claim.
+
+**Pinned references**
+- SW_RACER_RE: [commit `66120be334a3fd38c10a259f3528cffbfed8ddc5`](https://github.com/tim-tim707/SW_RACER_RE/tree/66120be334a3fd38c10a259f3528cffbfed8ddc5), in particular [`swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.c), [`swrRace.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.h), [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types.h), and [`types_enums.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types_enums.h). The four target routines are still `HANG("TODO")` in this reference revision.
+- Steam-PC Ghidra export: [commit `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef): [ground-contact orchestrator `FUN_00479e10`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479e10.c), [hover pads `FUN_00476740` C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00476740.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_00476740.s), [wall scrape `FUN_00477940` C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477940.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_00477940.s), [wall response `FUN_00479920` C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00479920.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_00479920.s), and [block-move collision helper `FUN_0044abc0` C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0044abc0.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_0044abc0.s). Supporting references: [physics-contact caller `FUN_0047b520`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c), [ground raycast `FUN_004772f0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004772f0.c), and [scrape-spark builder `FUN_00477850`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00477850.c).
+
+### Recovered call order: physics contact → ground contact → local/non-local collision → hover pads
+
+The Steam `FUN_0047b520` physics-contact routine calls `FUN_00479e10` for the normal ground-contact path (or a separate flat/alternate path when the flat-state bit is set). The corresponding SW_RACER_RE `swrRace_UpdateGroundContact` body provides the same high-level ordering:
+
+1. Save the previous position and determine whether the pod is close enough for full ground work, is a local player, or is explicitly force-grounded.
+2. Obtain the ground distance and surface normal through `swrRace_RaycastGround` / Steam `FUN_004772f0`, or reuse the flat-ground cache. Persist the live normal as the pod's `up` vector.
+3. In ordinary or magnet/surface-relative mode, apply the corresponding slope-steering routine; apply gravity unless the zero-G-off transition flag suppresses it.
+4. Resolve collisions differently by pod class: non-local pods call `swrRace_CollideBlockMove`; local human pods call `swrRace_DetectWallScrape`, combine its position/pushback delta, then call `swrRace_ApplyWallCollision`.
+5. When the pod is near enough for pad data, call `swrRace_UpdateHoverPads`. Outside the pad LOD range, write the no-ground sentinel to the four pad records instead.
+6. Cache the returned distance in `groundToPodMeasure` (+0x184).
+
+This makes the split explicit: the same frame's ground solver owns terrain normal/gravity/slope alignment, but uses a conservative block-move path for non-local pods and a scrape/impulse path for local players.
+
+### TODO 1 — `swrRace_UpdateHoverPads` (0x00476740)
+
+**Steam-PC body recovered.** The routine selects a 0x6C-byte-stride configuration record through a pointer chain rooted at the racer object, transforms four configured local sample vectors by the pod's orientation, and derives four candidate pad heights in world space.
+
+- When the live surface normal's Z component is within the routine's accepted range, the sample height is solved against the surface plane using the normal; outside that range it falls back to a direct vertical/Z calculation. The exact rdata boundary constants are retained symbolically because their values were not established from this source inspection.
+- For valid pads, the routine builds one transform per pad at racer offset `+0x1290 + i*0x40`; invalid pads write the `-100000.0` sentinel at the per-record `+0x38) field. The current SW_RACER_RE type map identifies four shadow-node entries in the pod's part-node array (indices `0x3D..0x40`), consistent with the four generated transforms.
+- It derives the returned ground distance from the selected pad-height slots (the body explicitly compares local sample slots 1 and 2), otherwise falling back to the incoming ground distance or a minimum fallback value. The caller stores that result as `groundToPodMeasure` (+0x184).
+
+**Limits:** the semantic name and layout of the 0x6C configuration record, exact rdata threshold values, meaning of the incoming `padFlags`, and why only returned sample slots 1/2 are compared remain unresolved. Do not invent a per-pad collision/physics role beyond the source flow.
+
+### TODO 2 — `swrRace_DetectWallScrape` (0x00477940)
+
+**Steam-PC body recovered.** This routine derives a speed/tilt-dependent wall-scrape reach (with a 1.5-unit minimum), then performs up to two directional ray tests against the pod's collision model, clearing the shared collision-hit result between successful tests. If the impact is within the configured side/height and speed conditions, it calls `FUN_00477850` to build a scrape-spark transform and activate one of the two scrape-spark emitters. It then calls `FUN_0044abc0` to apply the final block-move clamp to the candidate position.
+
+The supporting Steam helper `FUN_00477850` chooses pod part-node slot `0x41` or `0x42` and sets the corresponding `SCRAPE_SPARK_R` / `SCRAPE_SPARK_L` flag (0x10000000 / 0x20000000). This supports a side-specific visual scrape effect. The exact threshold constants and the full meaning of every ray-result/local variable remain symbolic.
+
+### TODO 3 — `swrRace_ApplyWallCollision` (0x00479920)
+
+**Steam-PC body recovered.** The routine consumes the combined wall delta and surface-up vector produced by the local-player branch:
+
+- Projects away the component along the current surface normal, normalizes the remaining impact direction, and transforms it against the pod basis to derive a directional impact response.
+- Accumulates a direction-scaled impulse into `velocityCollision` (+0x1D0..+0x1D8).
+- On a hard impact, clears `THROTTLE_SETTLED` (FLAG0 0x10) and arms `wallHitCooldown` (+0x264) to 0.1; the existing per-frame code later restores the settled flag after the cooldown.
+- Sets the one-shot `WALL_IMPACT_CLAMP` flag (FLAG0 0x40000) on a stronger hit. The Steam physics-contact caller consumes and clears that flag to clamp/reduce `accelThrust` (+0x1A4) as appropriate.
+- Updates the collision/turn modifier field (+0x1F4) and emits a `Hitt` event through the entity callback dispatch. The event payload's second FourCC is selected from `KPow`, `RtSd`, `LtSd`, `LtFt` or `RtFt`; retain those exact tags rather than assigning unverified player-facing meanings.
+
+This links wall collision to steering/throttle recovery and event-driven effects, rather than treating it as only a positional pushback.
+
+### TODO 4 — `swrRace_CollideBlockMove` (0x0044ABC0)
+
+**Steam-PC body recovered.** This is a short swept-motion guard used on non-local pods and at the end of the scrape path. It computes the vector from the previous to candidate position; if it is long enough, it normalizes the travel vector and raycasts against the supplied collision model. When the returned hit distance falls within the configured acceptance range, it resets the candidate position to the previous position and returns 1; otherwise it leaves the candidate in place and returns 0. It is a conservative movement clamp, not the richer normal/impulse response used by the local-player wall-collision path.
+
+### Clean-room evidence boundary and remaining work
+
+| SW_RACER_RE TODO | Steam-PC evidence | What is recovered | What remains UNKNOWN |
+|---|---|---|---|
+| `UpdateHoverPads` (0x00476740) | C + assembly at matching numeric address | Four transformed pad samples, per-pad transform/sentinel records, returned hover-distance selection | Config-record semantics, symbolic thresholds, padFlags semantics, exact meaning of selected pad slots |
+| `DetectWallScrape` (0x00477940) | C + assembly at matching numeric address | Two wall-ray attempts, side-specific scrape effect, final block-move clamp | Symbolic reach/impact thresholds and exact local meanings |
+| `ApplyWallCollision` (0x00479920) | C + assembly at matching numeric address | Tangential collision impulse, cooldown, settled-throttle reset, one-shot accel clamp, `Hitt` event tags | Numeric constants and exact player-facing semantics of the event subtypes |
+| `CollideBlockMove` (0x0044ABC0) | C + assembly at matching numeric address | Swept raycast and revert-to-previous-position condition | Numeric ray-distance thresholds and target-build equivalence |
+
+The Steam snapshot and SW_RACER_RE are separate PC research artifacts. Their equal numeric function addresses and compatible call context make these strong **PC-family cross-reference leads**, but do not prove identical executable/release builds. The Steam export is read-only; no source was copied. SW_RACER_RE is an AGPL-3.0 research project; no code was copied from it either. No binary, ROM, extracted model, sound, texture, asset, or analysis database was uploaded or committed.
+
+**Target-platform boundary:** all four recovered bodies and the surrounding call order above are Windows-PC evidence only. They establish no GameCube/Wii function address, structure offset, shadow layout, collision flag, physics constant or behavior. For Boonta's native target, the next valid step remains to identify the exact lawful local GameCube/Wii executable/build and trace its own ground-contact/collision path with Gekko/Broadway decoding. Do not port these PC offsets or constants by analogy.
+
