@@ -51,14 +51,16 @@ if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
 
 # OpenRouter is allowed only through the audited manual free-model PR reviewer.
 openrouter = read(".github/workflows/openrouter-free-review.yml")
+openrouter_fallback = read(".github/workflows/openrouter-plan-execute.yml")
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files = sorted({*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")})
+allowed_openrouter_workflows = {"openrouter-free-review.yml", "openrouter-plan-execute.yml", "boonta-autonomous-readiness.yml"}
 for path in workflow_files:
-    if path.name == "openrouter-free-review.yml":
+    if path.name in allowed_openrouter_workflows:
         continue
     content = path.read_text(encoding="utf-8").lower()
     if "openrouter_api_key" in content or "openrouter.ai" in content:
-        errors.append(f"OpenRouter references are forbidden outside the allowlisted reviewer: {path.name}")
+        errors.append(f"OpenRouter references are forbidden outside the allowlisted workflows: {path.name}")
 
 trigger_block = openrouter.split("permissions:", 1)[0].lower()
 if "workflow_dispatch:" not in trigger_block:
@@ -164,6 +166,96 @@ else:
         errors.append(f"OpenRouter model call is missing its pre-request PR state/head guard: {missing_preflight!r}")
     if preflight_position < 0 or request_position < 0 or preflight_position >= request_position:
         errors.append("OpenRouter reviewer must re-check PR eligibility and exact head before sending the diff externally")
+
+
+# Readiness reports OpenRouter's optional secret/attestation presence without
+# making an API request or exposing either value.
+for required in (
+    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+    "OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}",
+    "No OpenRouter API request was made.",
+    "Gemini remains the only active autonomous model path.",
+):
+    if required not in readiness:
+        errors.append(f"Autonomous readiness is missing safe OpenRouter reporting: {required!r}")
+
+# The autonomous OpenRouter writer is a reusable fallback only. It must not
+# declare its own schedule or user-controlled entry point.
+fallback_trigger = openrouter_fallback.split("jobs:", 1)[0]
+fallback_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", fallback_trigger)
+if fallback_events != ["workflow_call"]:
+    errors.append(f"OpenRouter fallback must be reusable-only; found {fallback_events!r}")
+for required in (
+    'model": "openrouter/openrouter/free"',
+    'small_model": "openrouter/openrouter/free"',
+    '"enabled_providers": ["openrouter"]',
+    '"bash": "deny"',
+    'GEMINI_AUTONOMOUS_ENABLED',
+    'OPENROUTER_FREE_TIER_CONFIRMED',
+    'OPENROUTER_API_KEY',
+    'No paid model/provider fallback is available',
+    'ghcr.io/github/github-mcp-server:v0.27.0',
+    'GITHUB_TOOLS',
+    'opencode run --model openrouter/openrouter/free --auto',
+    'npm install --global opencode-ai@1.19.5',
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter fallback is missing required free-only/safety setting {required!r}")
+if 'OPENROUTER_FREE_TIER_CONFIRMED:-}" != "true"' not in openrouter_fallback:
+    errors.append("OpenRouter fallback must require the owner's exact-true Free-tier attestation")
+if 'GEMINI_AUTONOMOUS_ENABLED:-}" != "true"' not in openrouter_fallback:
+    errors.append("OpenRouter fallback must inherit the master autonomous owner gate")
+fallback_guard = openrouter_fallback.find("id: free_tier_guard")
+fallback_mint = openrouter_fallback.find("name: Mint scoped GitHub App token")
+fallback_checkout = openrouter_fallback.find("name: Checkout the protected default branch")
+fallback_install = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+fallback_model = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
+if not (0 <= fallback_guard < fallback_mint < fallback_checkout < fallback_install < fallback_model):
+    errors.append("OpenRouter fallback must pass all owner/free gates before token mint, checkout, installation and model call")
+for guarded_step in (
+    "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+):
+    if guarded_step not in openrouter_fallback:
+        errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
+tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
+if not tools_match:
+    errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
+else:
+    github_tools = tools_match.group(1).split(",")
+    forbidden_github_tools = [
+        tool for tool in github_tools
+        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request"))
+    ]
+    if forbidden_github_tools:
+        errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
+    for required_tool in ("create_branch", "push_files", "create_pull_request", "issue_read", "pull_request_read"):
+        if required_tool not in github_tools:
+            errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
+    if "get_workflow_job" in github_tools:
+        errors.append("OpenRouter GitHub MCP allow-list contains a tool absent from the pinned v0.27.0 server")
+    for required_tool in ("get_file_contents", "get_workflow_run", "get_job_logs", "list_workflow_jobs", "list_workflow_runs"):
+        if required_tool not in github_tools:
+            errors.append(f"OpenRouter GitHub MCP allow-list is missing pinned-server tool {required_tool!r}")
+fallback_call_position = autonomous.find("openrouter-fallback:")
+if fallback_call_position < 0:
+    errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
+else:
+    fallback_call = autonomous[fallback_call_position:]
+    for required in (
+        "needs: autonomous-cycle",
+        "needs.autonomous-cycle.result == 'failure'",
+        "uses: ./.github/workflows/openrouter-plan-execute.yml",
+        "autonomous_mode: true",
+        "issue_number: 226",
+        "secrets: inherit",
+    ):
+        if required not in fallback_call:
+            errors.append(f"OpenRouter fallback caller is missing {required!r}")
+    if "github.ref == 'refs/heads/main'" not in fallback_call or "github.actor == github.repository_owner" not in fallback_call:
+        errors.append("OpenRouter fallback caller must remain pinned to main and owner/schedule-gated")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -670,7 +762,7 @@ if errors:
 print("AI free-tier safety checks passed.")
 print("- Manual writing remains owner-approved; scheduled autonomous writing has a separate exact-true owner gate.")
 print("- Gemini manual and autonomous write paths use separate exact-true gates.")
-print("- OpenRouter uses only the manual, capped, free-route PR reviewer; no paid fallback or code-write permissions.")
+print("- OpenRouter uses a capped manual reviewer and a separately gated free-only autonomous fallback; no paid model fallback, merge, or delete tools.")
 print("- API-key route and artifact-upload disablement are present.")
 print("- Read-only planning and branch/PR safeguards are present.")
 print("- Project instructions retain the strict €0 requirement.")

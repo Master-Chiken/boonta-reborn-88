@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ai-free-safety-${{ github.event.pull_request.number || github.ref }}
@@ -28,3 +29,14 @@ jobs:
 
       - name: Run static AI safety checks (no API calls)
         run: python3 tools/check_ai_free_safety.py
+
+      - name: Validate persistent task ledger and regression tests
+        run: |
+          python3 tools/check_task_ledger.py
+          python3 -m unittest tools/test_check_task_ledger.py
+
+      - name: Reconcile ledger with live PR state (read-only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 tools/audit_task_ledger_github.py
