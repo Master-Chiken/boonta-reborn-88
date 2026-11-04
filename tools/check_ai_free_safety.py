@@ -810,6 +810,16 @@ for required in (
 if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
     errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
 
+# The Gemini autonomous prompt bounds issue history to keep scheduled context costs predictable.
+for required in (
+    "only the current-state/owner-direction sections at the top of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279",
+    "latest five relevant comments per issue",
+    "Search older comments only when the selected task needs specific historical evidence",
+    "do not ingest or reproduce full historical appendices/comments",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+
 # Autonomous cycle progress must be backed by a live same-repository PR at the exact head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
     if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
