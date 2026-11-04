@@ -11,12 +11,8 @@
       "task_id": "RE002-SYSTEM-MATRIX",
       "title": "PC/N64/Dreamcast complete system evidence matrix",
       "queue": "#279",
-      "platform_scope": [
-        "PC",
-        "Nintendo 64",
-        "Dreamcast"
-      ],
-      "status": "in_review",
+      "platform_scope": ["PC", "Nintendo 64", "Dreamcast"],
+      "status": "completed",
       "question": "What is established across the three comparative platforms, and what remains unknown?",
       "acceptance_criteria": [
         "Evidence is pinned to exact source revisions",
@@ -24,9 +20,10 @@
         "Open PR and exact head are recorded"
       ],
       "evidence": [
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/280"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/280",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7f51c4357306f0c6278617dd8eac6b3648ddcf4a"
       ],
-      "next_action": "Human review and merge decision; do not duplicate the matrix.",
+      "next_action": "RE-002 matrix is merged. Select the next unresolved PC spline call-path question from live issue #279; do not recreate the matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/280",
       "head_sha": "a0116b2c033e37735f08be0b600c67c3c87c5ffe",
       "updated_at": "2026-11-04"
@@ -35,11 +32,7 @@
       "task_id": "RE001-SYSTEM-MATRIX",
       "title": "Native-target complete-game system matrix and PC reference gap audit",
       "queue": "#226",
-      "platform_scope": [
-        "GameCube",
-        "Wii",
-        "PC-reference"
-      ],
+      "platform_scope": ["GameCube", "Wii", "PC-reference"],
       "status": "in_review",
       "question": "What systems must a complete clean-room native port implement, and what is evidenced versus unknown?",
       "acceptance_criteria": [
@@ -60,9 +53,7 @@
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
       "title": "Activate and validate persistent autonomous task tracking",
       "queue": "#226",
-      "platform_scope": [
-        "automation"
-      ],
+      "platform_scope": ["automation"],
       "status": "queued",
       "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria": [
@@ -74,7 +65,7 @@
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281"
       ],
-      "next_action": "After PR #281 is reviewed and merged, verify its exact-head checks and run the readiness workflow before the first autonomous cycle.",
+      "next_action": "PR #281 is merged. Run Boonta Autonomous Readiness on main, then verify owner gates and execute the first autonomous cycle; keep the writer disabled until readiness passes.",
       "updated_at": "2026-11-04"
     }
   ]
