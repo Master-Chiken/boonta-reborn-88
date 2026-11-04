@@ -88,11 +88,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25"
       ],
-      "next_action": "Human review of #282. Latest PC-only follow-up traces boost charge -> controller BOOSTING eligibility -> UpdateSpeed (4.0 vs1.5 accel response) + ApplyBoost (boostValue grows 1.5/s, decays 5/s, separate thrust term) -> traction. Steam F2 physics-contact callback FUN_0047B520 calls UpdateHeat FUN_004788C0: boost drains engineTemp by heatRate, idle cools by coolRate, lava drains 20/s with tilt-biased engine side; at zero, set engineStatus fire bit 0x08 and clear BOOSTING; ApplyEngineDamage then damages burning sections. SWR source has UpdateHeat body but F2 wrapper 0x0047B520 remains TODO and no ordinary source-level caller was found. PC executable identity and all GC/Wii parity remain unresolved.",
+      "next_action": "Human review of #282. Latest PC-only addition recovers track-trigger activation: surface behavior and specialActiveTrigger feed linked descriptions; Steam range test applies filter masks and oriented segment-corridor/vertical bounds (types 102/104 use a plane-crossing test); runtime Trig is found/created with FIRED one-shot suppression; a SithCog 'trig' event is emitted before the type dispatcher handles destructibles, doors, kill-player, glacier/asteroid hazards, flags, Tusken/earthquake, falling pillars, methane, lava splash and spline teleport. Outstanding uncertainties: SWR enum says flag bit 0x01 enabled but Steam range test skips when set; selector +0x78 and symbolic speed/geometric thresholds; some spawner IDs lack full call path. Steam and SWR are separate PC snapshots; no GC/Wii inference.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "46074896b3daf9fb448e193cc97402dfce518a74",
+      "head_sha": "8a92cb4996689edd8a50a21c2a8cd215c22bab25",
       "updated_at": "2026-11-04"
     },
     {
@@ -187,12 +188,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/edd474ed6a825fcc32e658c8e6a12cbb09bcef2a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d4f7f321b7004e85f75d7d2f9a228695a28a094e",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e54437c27f6a0e5c8cb6b0f5a6b409766ac23a76",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/46074896b3daf9fb448e193cc97402dfce518a74",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8a92cb4996689edd8a50a21c2a8cd215c22bab25"
       ],
-      "next_action": "Human review of #282. Latest PC-only follow-up traces boost charge -> controller BOOSTING eligibility -> UpdateSpeed (4.0 vs1.5 accel response) + ApplyBoost (boostValue grows 1.5/s, decays 5/s, separate thrust term) -> traction. Steam F2 physics-contact callback FUN_0047B520 calls UpdateHeat FUN_004788C0: boost drains engineTemp by heatRate, idle cools by coolRate, lava drains 20/s with tilt-biased engine side; at zero, set engineStatus fire bit 0x08 and clear BOOSTING; ApplyEngineDamage then damages burning sections. SWR source has UpdateHeat body but F2 wrapper 0x0047B520 remains TODO and no ordinary source-level caller was found. PC executable identity and all GC/Wii parity remain unresolved.",
+      "next_action": "Human review of #282. Latest PC-only addition recovers track-trigger activation: surface behavior and specialActiveTrigger feed linked descriptions; Steam range test applies filter masks and oriented segment-corridor/vertical bounds (types 102/104 use a plane-crossing test); runtime Trig is found/created with FIRED one-shot suppression; a SithCog 'trig' event is emitted before the type dispatcher handles destructibles, doors, kill-player, glacier/asteroid hazards, flags, Tusken/earthquake, falling pillars, methane, lava splash and spline teleport. Outstanding uncertainties: SWR enum says flag bit 0x01 enabled but Steam range test skips when set; selector +0x78 and symbolic speed/geometric thresholds; some spawner IDs lack full call path. Steam and SWR are separate PC snapshots; no GC/Wii inference.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "46074896b3daf9fb448e193cc97402dfce518a74"
+      "head_sha": "8a92cb4996689edd8a50a21c2a8cd215c22bab25"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
