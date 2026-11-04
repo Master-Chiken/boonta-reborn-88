@@ -150,11 +150,12 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only sphere sweep trace adds hierarchical broadphase: setup global sphere/motion state and identity transform stack; recursively traverse transformed model nodes; reject node/mesh AABBs outside center±radius; dispatch candidate mesh face data by raw mesh type; run final sphere-response pass. The wall scrape call graph now reaches face-level callbacks, but callback bodies/precise predicate and extra sweep parameters remain unknown. SWR signatures are mapped; no GC/Wii parity or same-build identity.",
+      "next_action": "Human review of PR #282. Latest PC-only follow-up identifies the two face-dispatch callback slots and distinct raw face-data layouts: null auxiliary-data path uses LAB_004437C0; non-null auxiliary-data path uses LAB_00443560. Mesh candidate AABBs are checked before FUN_004439F0; types 5/7 are emitted as n-2 successive triangles. Callback bodies, exact narrowphase math, selectors' meanings and raw mesh-type semantics remain UNKNOWN. Continue only with pinned public source evidence; no GC/Wii parity.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "de1565338fa0d2f9d4aa634b1b35f7cfb599dd67",
+      "head_sha": "8d459beab816033c0a659640c8d6ed5a302b4c99",
       "updated_at": "2026-11-04"
     },
     {
@@ -304,12 +305,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d459beab816033c0a659640c8d6ed5a302b4c99"
       ],
-      "next_action": "Human review of PR #282. Latest Steam-PC trace follows FUN_00444740 through setup, transform-stack traversal, AABB broadphase, mesh-face dispatch and final collision response. The query filters whole node/submesh bounds against the swept sphere AABB before invoking face callbacks. Raw mesh type cases 3/4/5/7 remain unnamed; exact callback narrowphase and sweep parameters remain to trace. PC-only; SWR implementation incomplete; no GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest PC-only follow-up identifies the two face-dispatch callback slots and distinct raw face-data layouts: null auxiliary-data path uses LAB_004437C0; non-null auxiliary-data path uses LAB_00443560. Mesh candidate AABBs are checked before FUN_004439F0; types 5/7 are emitted as n-2 successive triangles. Callback bodies, exact narrowphase math, selectors' meanings and raw mesh-type semantics remain UNKNOWN. Continue only with pinned public source evidence; no GC/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "de1565338fa0d2f9d4aa634b1b35f7cfb599dd67"
+      "head_sha": "8d459beab816033c0a659640c8d6ed5a302b4c99"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
