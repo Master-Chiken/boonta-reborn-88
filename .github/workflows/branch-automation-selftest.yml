@@ -9,6 +9,7 @@ on:
       - ".github/workflows/gemini-invoke.yml"
       - ".github/workflows/gemini-plan-execute.yml"
       - ".github/workflows/branch-automation-selftest.yml"
+      - "tools/check_ai_free_safety.py"
   workflow_dispatch:
 
 permissions:
@@ -71,6 +72,10 @@ jobs:
                   print(f"Python syntax OK: {path} block {index}")
           print(f"Validated {checked} embedded Python block(s).")
           PY
+
+      - name: Run static AI safety checks (no API calls)
+        shell: bash
+        run: python3 tools/check_ai_free_safety.py
 
       - name: Enforce conservative branch budget and lifecycle policy
         shell: bash
