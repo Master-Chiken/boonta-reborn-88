@@ -754,6 +754,31 @@ if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
 
+# Failed autonomous Gemini invocations create one persistent same-day cooldown marker.
+# The next cycle skips another provider call and reaches the already-gated OpenRouter fallback.
+cooldown_check_position = execute.find("id: gemini_cooldown")
+cooldown_guard_position = execute.find("id: free_tier_guard")
+cooldown_model_position = execute.find("name: 'Run Gemini CLI'")
+cooldown_record_position = execute.find("name: Record same-day Gemini cooldown after an autonomous model failure")
+if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_record_position):
+    errors.append("Gemini daily cooldown must be checked before the free-tier guard/model call and recorded after an invocation failure")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_GEMINI_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "GEMINI_COOLDOWN_ACTIVE",
+    "GEMINI_COOLDOWN_DATE",
+    "steps.run_gemini.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in execute:
+        errors.append(f"Gemini daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
+    errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
+
 # Autonomous cycle progress must be backed by a live same-repository PR at the exact head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
     if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
