@@ -343,6 +343,39 @@ A RecompHub catalogue page lists a recently active “Star Wars: Episode I - Rac
 Treat this only as a **lead to identify**, not as a verified project to depend on. Before using it, find its official repository and inspect the source platform, exact original release/version, commit history, license, dependencies and build/acceptance evidence. Do not infer that it targets the Dreamcast binary solely from a third-party catalogue category.
 
 
+## Additional DOL-analysis workbench — REA (static analysis only)
+
+### morluto/rea — useful new DOL-to-Ghidra lane, with strict scope limits
+
+- Repository: [morluto/rea](https://github.com/morluto/rea)
+- Audited repository revision: `d896ab7bd78331efa15e35337c1f8eff45a21623` (2026-11-04).
+- DOL lane introduced at: `cab78de50673c89766dba2b7687b1bbb5045c43a` (2026-10-24); latest DOL guide revision checked at `46c457f74c474b224dd540d6eae6bc23080cd95f` (2026-10-28).
+- License: MIT in the root `LICENSE` at the audited revision.
+- Fit: **Promising supplementary static-analysis workbench for a caller-supplied DOL; not a replacement for dtk, the GameCube Loader, Dolphin, or a full recompiler.**
+
+The project documents an explicitly selected `gamecube-dol` target for importing a 32-bit big-endian GameCube/Wii DOL into Ghidra. Its parser validates the 0x100-byte header, section file/load ranges, section overlap, entry point and BSS gaps before launching Ghidra. It then creates initialized text/data blocks at their load addresses and an uninitialized BSS mapping. It is a static import/decompilation workflow: **it does not execute the DOL**.
+
+The documented CLI starting points are:
+
+```bash
+rea inspect /absolute/path/to/main.dol --target-format gamecube-dol --provider ghidra --json
+rea function /absolute/path/to/main.dol 0x80003130 --target-format gamecube-dol --provider ghidra --json
+```
+
+For GameCube/Wii paired-single instructions, the stock Ghidra `PowerPC:BE:32:default` language is insufficient. REA documents an optional `PowerPC:BE:32:Gekko_Broadway` override supplied by the Apache-2.0 Ghidra GameCube Loader extension. The extension must be installed in the Ghidra installation's admitted extension catalogue; otherwise the DOL lane can still pass stock PowerPC checks while Gekko/Broadway paired-single words decode incorrectly or as undefined.
+
+**Hard boundaries from REA's own guide:**
+- Only the cached MEM1 address window `0x80000000..0x81800000` is admitted. Wii MEM2 and uncached aliases are outside the lane.
+- REL and RPX are not admitted. This does not cover separately loaded modules.
+- DOL support is Ghidra-only; IDA and Hopper are not supported for this target.
+- Disc images (ISO/GCM) are not read by this lane; the caller must first provide an extracted DOL.
+- `r2`/`r13` small-data anchors are not seeded from the DOL header.
+- The DOL fixture verifies parser/import mechanics using source-owned test bytes; it does **not** establish compatibility with Racer or any retail game.
+
+The repository describes REA as an MCP/CLI workbench and supports a caller-installed Ghidra setup. Its README advertises Node.js/npm setup and optional agent configuration. No REA installation, Ghidra execution, original DOL analysis, or Racer compatibility test was performed for this audit.
+
+**Decision:** add REA as an optional local-only front-end for a verified DOL after its exact platform/revision and hash are recorded. Keep `decomp-toolkit` as the first step for disc/FST and DOL/REL inventory, use the maintained Ghidra GameCube Loader plus its Gekko/Broadway language for correct target decoding, and use REA only where its admitted DOL/MEM1 scope fits. Do not route an unverified Wii MEM2 image or a REL through the DOL lane, and do not upload a retail DOL, ROM, disc image, Ghidra database or extracted proprietary content to Boonta CI.
+
 ## Additional GameCube research runtimes and recompiler candidates
 
 ### pureikyubu — strongest newly found dynamic-analysis candidate
