@@ -81,11 +81,12 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d"
       ],
-      "next_action": "Human review of #282. Latest source audit corrects the F0 state-4/5 interpretation: in the pinned PC reconstruction plus the pinned mod-hook cross-check, these are pre-race intro (track fly-by / pod orbit) leading to countdown, not the Results handoff. Visible finish path is state 2 -> Clear(Fini) -> state 6 -> TeardownRace (TODO). Initial Hang/Results handoff remains UNKNOWN; Steam teardown candidate FUN_0045dd80 remains NOT_INVOKED. Keep all details PC-only and do not infer GC/Wii state mapping.",
+      "next_action": "Human review of #282. Independent IDA notes confirm Judge state 4/5 are pre-race camera intro stages, state 2 is end-race stats, state 6 loads/reloads; IDA labels 0x0045DFE0 StartCountdown and 0x0045DD80 LoadFromRace. Steam body at 0x0045DD80 is a teardown candidate with Fini/All! handling but remains NOT_INVOKED in its dependency graph. Hang F4 body at 0x0045A040 is absent from inspected Steam source; actual message-to-POST_RACE_INFO edge remains UNKNOWN. PC-only; no GC/Wii inference.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
+      "head_sha": "d30dfeb52808b1c44c37e222efe091608b34167d",
       "updated_at": "2026-11-04"
     },
     {
@@ -173,12 +174,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d"
       ],
-      "next_action": "Human review of #282. Latest source audit corrects the F0 state-4/5 interpretation: in the pinned PC reconstruction plus the pinned mod-hook cross-check, these are pre-race intro (track fly-by / pod orbit) leading to countdown, not the Results handoff. Visible finish path is state 2 -> Clear(Fini) -> state 6 -> TeardownRace (TODO). Initial Hang/Results handoff remains UNKNOWN; Steam teardown candidate FUN_0045dd80 remains NOT_INVOKED. Keep all details PC-only and do not infer GC/Wii state mapping.",
+      "next_action": "Human review of #282. Independent IDA notes confirm Judge state 4/5 are pre-race camera intro stages, state 2 is end-race stats, state 6 loads/reloads; IDA labels 0x0045DFE0 StartCountdown and 0x0045DD80 LoadFromRace. Steam body at 0x0045DD80 is a teardown candidate with Fini/All! handling but remains NOT_INVOKED in its dependency graph. Hang F4 body at 0x0045A040 is absent from inspected Steam source; actual message-to-POST_RACE_INFO edge remains UNKNOWN. PC-only; no GC/Wii inference.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "490483aa61427ca10677f4e3c1fc68d6e84b1ebe"
+      "head_sha": "d30dfeb52808b1c44c37e222efe091608b34167d"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
