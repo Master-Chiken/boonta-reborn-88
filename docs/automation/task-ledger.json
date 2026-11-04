@@ -129,13 +129,13 @@
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
-      "title": "Avoid repeated autonomous Gemini and OpenRouter Free calls after provider failures",
+      "title": "Avoid repeated autonomous Gemini and OpenRouter Free calls and bound agent context",
       "queue": "#226",
       "platform_scope": [
         "automation"
       ],
       "status": "in_review",
-      "question": "Can each autonomous free provider failure be remembered for the current UTC day so subsequent cycles avoid repeated quota/API calls and automatically retry after the next UTC date?",
+      "question": "Can autonomous free-provider failures be remembered for the current UTC day, while both agents restrict historical issue context to current state and the latest relevant comments to reduce repeated quota/context waste?",
       "acceptance_criteria": [
         "One persistent marker on issue #226 records the UTC date of an autonomous Gemini CLI invocation failure",
         "A matching same-day Gemini marker blocks another Gemini model request before token mint, checkout and model invocation, while the caller may proceed to the independently gated OpenRouter Free fallback",
@@ -144,17 +144,18 @@
         "Only failed provider invocation steps write their respective markers; blocked preflight and same-day skips do not",
         "Each marker is updated in place, is independent from the other provider marker, and expires by date comparison on the next UTC day",
         "Manual non-autonomous Gemini and manual OpenRouter review workflows remain unaffected",
-        "Static AI safety checks validate both provider cooldowns, the OpenRouter workflow YAML is parsed in branch self-test, and the €0/owner gates remain unchanged"
+        "Both autonomous prompts bound issue history to current-state/owner-direction sections and the latest five relevant comments per issue",
+        "Static AI safety checks validate both provider cooldowns and both prompt context bounds; branch self-test parses both reusable workflows"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/92b51e0622c953af69a5f6f30f709c1322d5a04a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/449bf336ef9a7c3e0d56a7ac1df9d0a696be2713",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874632826",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41876645623"
       ],
-      "next_action": "After PR #287 is merged, retarget this combined provider-cooldown PR to main, rerun the exact-head branch self-test plus full AI safety and provenance checks, then review/merge only when all required checks are green.",
+      "next_action": "After PR #287 is merged, retarget this combined provider-cooldown and context-budget PR to main, rerun the exact-head branch self-test plus full AI safety and provenance checks, then review/merge only when all required checks are green.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
-      "head_sha": "92b51e0622c953af69a5f6f30f709c1322d5a04a",
+      "head_sha": "449bf336ef9a7c3e0d56a7ac1df9d0a696be2713",
       "updated_at": "2026-11-04"
     }
   ]
