@@ -505,3 +505,66 @@ The Steam snapshot and SW_RACER_RE are separate PC research artifacts. Their equ
 
 **Target-platform boundary:** all four recovered bodies and the surrounding call order above are Windows-PC evidence only. They establish no GameCube/Wii function address, structure offset, shadow layout, collision flag, physics constant or behavior. For Boonta's native target, the next valid step remains to identify the exact lawful local GameCube/Wii executable/build and trace its own ground-contact/collision path with Gekko/Broadway decoding. Do not port these PC offsets or constants by analogy.
 
+## 2026-11-04 — PC boost-charge, engine fire/damage, repair and reset-helper TODO recovery
+
+This pass follows the same core pod-control cluster after the ground-contact work. The target SW_RACER_RE functions are TODO stubs; the pinned Steam-PC C/assembly exports provide body-level cross-reference evidence. This remains read-only research: no third-party source is copied and no console behavior is inferred.
+
+**Pinned references**
+- SW_RACER_RE source: [66120be334a3fd38c10a259f3528cffbfed8ddc5](https://github.com/tim-tim707/SW_RACER_RE/tree/66120be334a3fd38c10a259f3528cffbfed8ddc5), especially [swrRace.c](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.c), [swrRace.h](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.h), [types.h](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types.h), [types_enums.h](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types_enums.h), and [pinned data-symbol inventory](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/data_symbols.syms).
+- Steam-PC reference: [d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef), including [BoostCharge C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bd20.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_0046bd20.s), [engine-fire damage loop](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046aa30.c), [repair routine C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046ab10.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_0046ab10.s), [reset helper](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046a990.c), [damage accumulator](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00474cd0.c), [explosion handler](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004741d0.c), and [input/control caller](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046bec0.c).
+
+### TODO 1 — swrRace_BoostCharge (0x0046BD20)
+
+**Steam-PC body and assembly recovered.** This is the boost charge/ready-state helper called during local-player control processing. It is not, by itself, the full boost activation or thrust calculation.
+
+- The pod's boostIndicatorStatus (+0x210) has three observed states: 0 idle/not-ready, 1 charging, 2 ready. boostChargeTimer (+0x214) accumulates frame time while state 1 is valid.
+- The gate checks the three named input globals swrRace_ThrottleInput (0x00EC8830), swrRace_ThrustInput (0x00EC884C) and swrRace_BoostInput (0x00EC8850); swrRace_PitchInput is a separate value at 0x00EC883C. Exact threshold values remain symbolic in this pass. In state 0, qualifying throttle/boost plus thrust input starts the charge state and zeros the timer. In state 1, the qualifying inputs must remain valid while the timer advances; crossing the pinned charge-time constant moves the indicator to state 2. Losing the required input before completion resets the charge state.
+- In state 2, the boost-input signal consumes the ready state, plays the boost-ready/activation sound path (SFX 0x72) and returns 1. The caller sets BOOSTING (FLAG0 0x00800000) only when this return is nonzero and its earlier eligibility snapshot CAN_CHARGE_BOOST (FLAG0 0x00200000) was set. Releasing thrust and dropping throttle below the caller's threshold clears BOOSTING.
+- The SW_RACER_RE enum annotates CAN_CHARGE_BOOST as a speed/alive eligibility gate (>0.75 max speed); the complete retail writer for that flag was not independently traced here. BOOST_OVERDRIVE (FLAG0 0x00400000) is only read/cleared in the inspected retail path and is annotated as never set, so it is not described as an active retail mechanic.
+
+This separates the charge UI state machine from the actual boost flag and the downstream boost-thrust/heat update. The latter remains a distinct path in swrRace_UpdateSpeed and should be audited separately before making a complete boost model.
+
+### TODO 2 — swrRace_ApplyEngineDamage (0x0046AA30) and swrRace_TakeDamage (0x00474CD0)
+
+**Steam-PC bodies recovered; the SW_RACER_RE damage accumulator is already reconstructed.**
+
+- Six engine sections are stored in engineHealth[6] (+0x288), engineStatus[6] (+0x2A0), and the per-section worst-damage history engineHealthMin[6] (+0x270). The three lower indices are the left engine group and the upper three are the right group.
+- The Steam damage loop scans the six status words. When the per-section fire bit 0x08 is set, it applies a random, frame-time-scaled damage amount through FUN_00474CD0. The loop also updates a shared damage indicator/feedback path when any engine section is in that state. The exact random/rdata rate constants remain symbolic.
+- The damage accumulator increases engineHealth[engineIndex] by PodHandlingData.damageImmunity * amount, clamps it at 1.0, writes status bit 0x01, updates engineHealthMin when a new worst damage value is reached, and adds the incoming amount to totalDamage (+0x2C4). It is a no-op under the invincibility gate, while respawn-invincible/dead, or after the race is finished. Any accepted damage clears the active BOOSTING flag.
+- The PC mod-hook's independent symbol notes identify status bit 0x08 as the engine-fire state and bit 0x04 as an active-repair state. The main source confirms the bit operations but does not give full retail names for every transient status bit; bit 0x10 is therefore left as an unnamed repair/fire-control state in this dossier.
+
+### TODO 3 — swrRace_Repair (0x0046AB10)
+
+**Steam-PC body and assembly recovered.** This routine is part of the per-frame player-control tail: ApplyEngineDamage runs first, then Repair. AI pods marked FORCE_GROUND also set REPAIRING and invoke the same routine.
+
+- Local analog control sets the repairing request when swrControl_repairButton is held and swrControl_repairHoldTime exceeds the half-second threshold. Digital control types use input-bit 0x80 and a held-time check; the input map identifies the repair hold-time field as hold-time slot 9. The active request is reflected in pod FLAG0 REPAIRING (0x00000400).
+- The routine decrements repairTimer (+0x2BC); while REPAIRING is set it pins that timer to 0.1 seconds so the repair window remains active. It clears transient per-engine repair/cooldown flags each frame, preserves/chooses a damaged engine section, and marks the selected section with status bit 0x04.
+- For a section marked for repair, the routine reduces its damage value over time using the pod's repairRate upgrade statistic and the stored worst-damage baseline. The stat is derived from the pod's Repair upgrade (upgrade category 6) and is clamped to [0,1]. The Steam body also contains randomized fire-state clearing and local-player repair audio/notification paths; exact timer and probability constants remain symbolic.
+- It scans all six sections by left/right group against a damage threshold and runs a warning timer (+0x2C0). When that timer expires under the applicable group/side conditions, it calls FUN_004741D0 with a side selector (1 or 2). This is the connection between prolonged/severe engine damage and the explosion handler; exact trigger thresholds remain symbolic.
+
+### TODO 4 — swrRace_Explode (0x004741D0) and reset helper swrRace_CheckResetInput (0x0046A990)
+
+**Steam-PC bodies recovered.** swrRace_Explode is a separate missing SW_RACER_RE body reached from the repair/damage warning path. It rejects the request when the pod is not a local/force-ground pod, already in an incompatible death/respawn state, or already exploding. For an accepted event it clears relevant boost/control state, sets the EXPLODING flag (FLAG1 0x00004000) and the death/explosion timer (+0x310), chooses left/right engine-side geometry/effects from the side selector, and emits explosion audio/visual effects. The exact random timing/effect values are source constants still left symbolic.
+
+The smaller helper swrRace_CheckResetInput is much narrower than its local name may imply: it tests input bit 0x2000 in the selected player's in-race input bitset and sets the pod RESPawn flag (FLAG0 0x00001000) if present. **Call-site limit:** in the inspected SW_RACER_RE source the calls to this helper are behind the swrRace_DebugFlag & 0x100 and nonzero debug-level guard. The Steam caller also places it inside a debug-enabled branch. Do not claim that this helper alone proves the normal retail reset-button path; that broader input-to-respawn route remains to be traced separately.
+
+### Combined control / engine loop and remaining unknowns
+
+The recovered PC-family call order is:
+
+UpdatePlayerControl → read input / request repair → BoostCharge → damage-side suppression of boost/roll → engine-damage force/steering feedback → debug-gated reset helper → commit REPAIRING flag → ApplyEngineDamage → Repair → boost-start-window / throttle / steer commit.
+
+The local control path sets BOOSTING only when the charge helper returns 1 and the earlier eligibility bit is present. Damage cancels BOOSTING. Repair can lower per-section damage over time, extinguish fire state, and, after its warning timer/side conditions, invoke the explosion handler.
+
+| SW_RACER_RE TODO | Steam-PC reference | Recovered behavior | Remaining UNKNOWN |
+|---|---|---|---|
+| BoostCharge (0x0046BD20) | C + assembly | 0/1/2 indicator state, input-gated charge timer, consume-ready return | Exact rdata time/input thresholds; full writer of the eligibility bit; downstream boost heat/thrust coupling |
+| ApplyEngineDamage (0x0046AA30) | C | Random time-scaled damage on fire-marked engine sections; shared local feedback | Fire-bit writer/origin and exact rates |
+| Repair (0x0046AB10) | C + assembly | Half-second hold request, upgrade-based repair rate, per-section repair state, warning timer → explosion | Exact transient flag meanings, damage thresholds, random fire-clear rates |
+| Explode (0x004741D0) | C | Guarded side-specific explosion state/effects | Exact trigger/visual/audio parameters and native target parity |
+| CheckResetInput (0x0046A990) | C | Input bit 0x2000 sets RESPawn flag | This helper is only observed behind debug gates; normal reset route unresolved |
+
+The Steam export and SW_RACER_RE are separate Windows-PC research artifacts. Matching numeric addresses/call context are strong PC-family cross-reference leads, not proof of identical retail executable/release. No code, symbols, assets, binary, ISO, ROM, BIOS, or analysis database was copied into Boonta. No AGPL source was adapted.
+
+**Target-platform boundary:** none of these values/addresses/flags are assigned to GameCube or Wii. A native implementation still requires an exact lawful local console build identity and a console-specific trace of input, boost, engine damage, repair, reset and explosion state. These PC findings are reference evidence only.
+
