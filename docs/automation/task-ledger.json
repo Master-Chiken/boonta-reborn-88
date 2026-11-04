@@ -217,11 +217,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4"
       ],
-      "next_action": "Recover a stock TrackInfo row for one chosen course (trackID, main splineID, PlanetIdx, planetTrackNumber and FavoritePilot), then corroborate its PC model selector, main spline and camera-spline label. Keep SWR/Steam/console provenance explicit; do not substitute the separate SWITCH MODELID enum for TrackInfo's INGAME_MODELID.",
+      "next_action": "Resolve the source cardinality discrepancy before naming any stock course row: SWR exposes 28 menu slots (four circuits × seven) via g_aTrackIDs[28], but data_symbols.syms and custom_tracks.cpp expose/copy 25 TrackInfo records and save records allow 25 vanilla tracks. Recover version-matched g_aTrackIDs[28], g_aTracksInCircuits[4] and all 25 TrackInfo rows; do not guess the three-slot relationship or substitute SWITCH MODELID.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
+      "head_sha": "f19cc10276202b8c8611bd3582ba32192b13fdd4",
       "updated_at": "2026-11-04"
     },
     {
@@ -438,12 +439,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4"
       ],
       "next_action": "Resolve the cross-snapshot teardown discrepancy: SWR F0 state 6 directly calls TeardownRace after Clear's 0.5s delay, while the Steam-PC dependency graph marks FUN_0045DD80 NOT_INVOKED. Seek the missing/indirect Steam-PC F0 path or independent retail-PC evidence; keep the normal retail caller UNKNOWN until verified.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "a4737db1427684bca89b0a269eb14e5a5ac7a9cf"
+      "head_sha": "f19cc10276202b8c8611bd3582ba32192b13fdd4"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
