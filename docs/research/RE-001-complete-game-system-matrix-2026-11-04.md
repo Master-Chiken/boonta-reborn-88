@@ -2153,7 +2153,7 @@ Steam-PC FUN_00447300(type, count) performs this sequence:
 
 This confirms that the typed names used for Test/Toss/Smok/Trig/Chsr identify entity-manager groups, not asset-file formats. The pool's count and stride are manager metadata; the object records are laid out in the shared arena by the loader.
 
-Steam-PC FUN_00450DB0(type) is a separate per-object cleanup/notification pass: it walks the named group's current objects, dispatches a Free event to each non-excluded object (the object flag check is at +0x06, mask 0x0100), then sets bit 0 in the object's byte at +0x07. The caller does not itself change the manager's active count. The course setup functions call this before recreating selected groups, including Toss, Smok and Trig.
+Steam-PC FUN_00450DB0(type) is a separate per-object cleanup/notification pass: it walks the named group's current objects, dispatches a Free event to each non-excluded object (the object flag check is at +0x06, mask 0x0100), then sets bit 0 in the object's byte at +0x07. The caller does not itself change the manager's active count. The inspected setup functions call this after FUN_00447300 has established the named group and dispatched Load, but before the subsequent course-specific child-reference population. The body proves the event order, not whether each Free callback is reclaiming an old object, resetting a freshly initialized slot, or both; no allocator/deallocation meaning is assigned to the event name alone.
 
 ### Teardown candidate and what it actually resets
 
