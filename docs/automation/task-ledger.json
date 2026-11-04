@@ -144,11 +144,17 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444740.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/de1565338fa0d2f9d4aa634b1b35f7cfb599dd67",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445150.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c"
       ],
-      "next_action": "Human review of PR #282. Latest PC-only addendum identifies FUN_00444740 as the sphere-vs-model sweep used twice by DetectWallScrape: setup sphere query, recursively traverse the model, then resolve contact. This confirms the scrape probes are swept spheres with a tilt-adjusted radius, not point rays. Extra sweep parameters and probe placement remain unresolved; SWR exposes the matching address/signature but not a completed implementation. Steam/SWR build identity and GC/Wii parity remain unproven.",
+      "next_action": "Human review of PR #282. Latest PC-only sphere sweep trace adds hierarchical broadphase: setup global sphere/motion state and identity transform stack; recursively traverse transformed model nodes; reject node/mesh AABBs outside center±radius; dispatch candidate mesh face data by raw mesh type; run final sphere-response pass. The wall scrape call graph now reaches face-level callbacks, but callback bodies/precise predicate and extra sweep parameters remain unknown. SWR signatures are mapped; no GC/Wii parity or same-build identity.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "9856459ee3de441a102d1e29e5bc93cba80c38c9",
+      "head_sha": "de1565338fa0d2f9d4aa634b1b35f7cfb599dd67",
       "updated_at": "2026-11-04"
     },
     {
@@ -292,12 +298,18 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444740.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444200.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004440e0.c",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/de1565338fa0d2f9d4aa634b1b35f7cfb599dd67",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00445150.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443f10.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004439f0.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443c50.c",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443e70.c"
       ],
-      "next_action": "Human review of PR #282. Latest exact head maps FUN_00444740 to the sphere-vs-model collision pipeline called twice by DetectWallScrape: FUN_00444200 setup, FUN_004440E0 recursive model traversal, FUN_00444300 resolution. The two probes use a tilt-adjusted sphere radius; additional sweep parameters and physical probe placement are still unknown. Continue by decoding the sphere sweep state / triangle contact outputs and compare with SWR TODO signatures; no GC/Wii parity.",
+      "next_action": "Human review of PR #282. Latest Steam-PC trace follows FUN_00444740 through setup, transform-stack traversal, AABB broadphase, mesh-face dispatch and final collision response. The query filters whole node/submesh bounds against the swept sphere AABB before invoking face callbacks. Raw mesh type cases 3/4/5/7 remain unnamed; exact callback narrowphase and sweep parameters remain to trace. PC-only; SWR implementation incomplete; no GC/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "9856459ee3de441a102d1e29e5bc93cba80c38c9"
+      "head_sha": "de1565338fa0d2f9d4aa634b1b35f7cfb599dd67"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
