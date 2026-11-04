@@ -54,7 +54,7 @@ openrouter = read(".github/workflows/openrouter-free-review.yml")
 openrouter_fallback = read(".github/workflows/openrouter-plan-execute.yml")
 workflow_dir = ROOT / ".github" / "workflows"
 workflow_files = sorted({*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")})
-allowed_openrouter_workflows = {"openrouter-free-review.yml", "openrouter-plan-execute.yml"}
+allowed_openrouter_workflows = {"openrouter-free-review.yml", "openrouter-plan-execute.yml", "boonta-autonomous-readiness.yml"}
 for path in workflow_files:
     if path.name in allowed_openrouter_workflows:
         continue
