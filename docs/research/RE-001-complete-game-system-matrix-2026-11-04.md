@@ -1453,3 +1453,31 @@ Steam-PC source references at the pinned revision:
 - [`FUN_00444300.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00444300.c)
 
 **Evidence boundary:** static inspection of the pinned Windows-PC export only. The callback bodies, exact primitive semantics, executable identity with the separate SWR reconstruction, runtime behavior and GameCube/Wii parity remain unresolved. No game executable, ROM, disc image or extracted asset was accessed or added to the repository.
+
+
+## Independent IDA name-map cross-check for collision callbacks — 2026-11-04
+
+The separate, pinned IDA snapshot `everalert/swe1r-decomp@8d066b9c12ecb57bd819aaab586fd6bd2dd078a7` provides a useful address/name cross-check for the Steam-PC Ghidra trace:
+
+| Address | Provisional IDA name | IDA function-table size |
+|---|---|---:|
+| `0x00443560` | `Unk_Model_MeshCollisionFaceCallback2Indexed` | `0x256` bytes |
+| `0x004437C0` | `Unk_Model_MeshCollisionFaceCallback2` | `0x222` bytes |
+| `0x00443110` | `Unk_Collision_IsInsideAABB4` | `0x26E` bytes |
+| `0x00443380` | `Unk_Collision_IsInsideAABB3` | `0x1DA` bytes |
+
+The provisional IDA names agree with the calling distinction observed in Steam-PC `FUN_004439F0`: the non-null auxiliary-data path dispatches to `0x00443560` and is labelled `Indexed`; the null-auxiliary-data path dispatches to `0x004437C0) and is labelled without that suffix. This independently strengthens the indexed/non-indexed interpretation of the two data layouts. The `Unk_` prefixes are retained: these are reverse-engineering labels, not official game symbols or verified semantic names.
+
+The IDA name map also lists an earlier callback pair at `0x00442720` (`...CallbackIndexed`) and `0x00442C30` (`...Callback`). They are distinct function entries; this pass does not establish that the sphere query under study calls them, so they must not be conflated with the pair installed by `FUN_00444200`.
+
+The Steam-PC bodies for `FUN_00443110` and `FUN_00443380` test the coordinates of four and three input points respectively against the current query center±radius bounds. The IDA labels describe them as 4-point and 3-point AABB helpers. Their direct caller relationship to either face callback is not established in the accessible source, so they are recorded as adjacent collision helpers, not asserted to be part of the callback body.
+
+IDA references:
+- [`idapro/names.txt`](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt)
+- [`idapro/functions.txt`](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt)
+
+Steam-PC code references:
+- [`FUN_00443110.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443110.c)
+- [`FUN_00443380.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00443380.c)
+
+**Evidence boundary:** the IDA artifact currently consulted supplies names and function-size metadata, not the callback machine-code bodies or semantic validation. The IDA and Steam-PC snapshots remain separately pinned; same-build identity, runtime behavior, exact primitive predicate and GameCube/Wii parity remain unproven.
