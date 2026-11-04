@@ -219,11 +219,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283"
       ],
       "next_action": "Find a version-matched, authorized source/trace for the 28 g_aTrackIDs values, four circuit counts and 25 TrackInfo row values. A second public consumer (annodue collision viewer) corroborates the 25/28 address dimensions but contains only live-memory macros, not table values. Do not infer how the three-slot difference resolves; retain separate PC/SWR/console provenance.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
+      "head_sha": "a87fa7f4d80c67c0a5d3b18247892cc78d615283",
       "updated_at": "2026-11-04"
     },
     {
@@ -442,12 +443,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283"
       ],
       "next_action": "Resolve the cross-snapshot teardown discrepancy: SWR F0 state 6 directly calls TeardownRace after Clear's 0.5s delay, while the Steam-PC dependency graph marks FUN_0045DD80 NOT_INVOKED. Seek the missing/indirect Steam-PC F0 path or independent retail-PC evidence; keep the normal retail caller UNKNOWN until verified.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4"
+      "head_sha": "a87fa7f4d80c67c0a5d3b18247892cc78d615283"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
