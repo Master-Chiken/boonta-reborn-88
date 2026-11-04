@@ -68,11 +68,12 @@
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_cMan.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451ef0.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451ef0.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1fd4f370f2960b1a73d538092a89a6030a8ae48d"
       ],
-      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. New independent IDA notes identify cMan F4 at 0x004543F0 and document Swee payload bool 0=start sweep, 1=true; Steam sender payloads 0 (cancel) and 1 (start) are now semantically supported. The F4 function body was not extracted; callback internals and Hangar/Results handoff remain unresolved. Preserve the PC-only boundary; native GameCube/Wii still needs the exact lawful local DOL.",
+      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The independent IDA note now clarifies Swee payload semantics (0 cancels, 1 starts camera sweep) and identifies cMan F4 callback 0x004543F0; its body itself was not extracted. The Hangar/Results object handoff remains unresolved. Preserve PC-only boundary; native GameCube/Wii still needs exact lawful local DOL analysis.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "3701e446b5a068c7eeae31e5df8b15f871f7d076",
+      "head_sha": "1fd4f370f2960b1a73d538092a89a6030a8ae48d",
       "updated_at": "2026-11-04"
     },
     {
@@ -145,12 +146,13 @@
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_cMan.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451ef0.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451ef0.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1fd4f370f2960b1a73d538092a89a6030a8ae48d"
       ],
-      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. New independent IDA notes identify cMan F4 at 0x004543F0 and document Swee payload bool 0=start sweep, 1=true; Steam sender payloads 0 (cancel) and 1 (start) are now semantically supported. The F4 function body was not extracted; callback internals and Hangar/Results handoff remain unresolved. Preserve the PC-only boundary; native GameCube/Wii still needs the exact lawful local DOL.",
+      "next_action": "Human review and merge decision for #282 after the corrected main-based ledger is integrated. The independent IDA note now clarifies Swee payload semantics (0 cancels, 1 starts camera sweep) and identifies cMan F4 callback 0x004543F0; its body itself was not extracted. The Hangar/Results object handoff remains unresolved. Preserve PC-only boundary; native GameCube/Wii still needs exact lawful local DOL analysis.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "3701e446b5a068c7eeae31e5df8b15f871f7d076"
+      "head_sha": "1fd4f370f2960b1a73d538092a89a6030a8ae48d"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
