@@ -2135,3 +2135,51 @@ The common model/resource request helper is PC FUN_00448780 (loader block 0), al
   https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c
 - SW_RACER_RE types.h, data_symbols.syms, swrObj.h, swrRace.c:
   https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0
+
+
+## 2026-11-04 — scene-pool lifetime: Load, Free, count reset, and teardown limits
+
+This addendum records the lifecycle operations around the course effect/scene pools. It deliberately separates an entity's Free callback from resetting a manager's active count; neither operation alone proves that the backing arena memory is returned to the allocator.
+
+### Manager creation and object callbacks
+
+Steam-PC FUN_00447300(type, count) performs this sequence:
+
+1. FUN_00450CE0(type, count, timestamp) locates the existing manager record and stores its active object count and allocation/base value; it returns stride × count for the subsequent allocation.
+2. FUN_00445B40 reserves/returns the requested arena region.
+3. FUN_00450850(type) initializes each object slot with its group type, index, and initial flags.
+4. FUN_00445B20 advances the arena cursor by the returned size.
+5. FUN_00450C50(type, 'Load') dispatches the manager's Load callback to its objects.
+
+This confirms that the typed names used for Test/Toss/Smok/Trig/Chsr identify entity-manager groups, not asset-file formats. The pool's count and stride are manager metadata; the object records are laid out in the shared arena by the loader.
+
+Steam-PC FUN_00450DB0(type) is a separate per-object cleanup/notification pass: it walks the named group's current objects, dispatches a Free event to each non-excluded object (the object flag check is at +0x06, mask 0x0100), then sets bit 0 in the object's byte at +0x07. The caller does not itself change the manager's active count. The course setup functions call this before recreating selected groups, including Toss, Smok and Trig.
+
+### Teardown candidate and what it actually resets
+
+Steam-PC FUN_0045DD80 is already tracked in the lifecycle dossier as a candidate teardown routine whose normal runtime invocation has not been established. Its body includes these manager operations:
+
+- FUN_00447350('Test')
+- FUN_00447350('Toss')
+- FUN_00447350('Smok')
+- FUN_00447350('Trig')
+- FUN_00447350('Chsr')
+
+FUN_00447350 is only a wrapper around FUN_00450CE0(type, 0, 0). FUN_00450CE0 looks up the manager record and writes its active count to zero and its allocation/base field to zero; it does not dispatch Free, call the arena cursor rewind, or invoke a general heap-free routine in the inspected body.
+
+**Therefore the strongest defensible statement is “sets these typed groups' active counts to zero”**, not “deallocates their objects”, “frees the model assets”, or “releases the whole scene”. The distinct FUN_00450DB0 Free-event pass and the FUN_00447350 count reset must not be conflated. The candidate routine's own caller/normal-path status remains unresolved, so this code does not establish that this cleanup is always run after a race.
+
+### Pinned evidence and open ownership questions
+
+- Steam-PC FUN_00447300: typed group allocation, slot initialization and Load dispatch.
+- Steam-PC FUN_00450CE0: manager count/base update.
+- Steam-PC FUN_00450850: slot type/index/flags initialization.
+- Steam-PC FUN_00450C50 and FUN_00450DB0: event dispatch, including per-object Free callbacks.
+- Steam-PC FUN_00447350: count-zero wrapper.
+- Steam-PC FUN_0045DD80: candidate course/race teardown containing the five count resets above.
+- Steam-PC FUN_00465230 / FUN_00465310: Toss/Smok group creation and their model request loops.
+- Steam-PC FUN_0047BCD0 / FUN_0046A5E0: these helpers only store the supplied group/object-array pointer into globals; they do not establish ownership or deallocation.
+
+Outstanding: determine every normal caller of FUN_0045DD80; identify which Free callbacks release child resources versus merely disable objects; trace scene model-root and spline memory ownership through the complete course exit/reload path; and verify whether arena allocations are reclaimed wholesale elsewhere. Keep these as separate edges in the resource manifest. The static PC evidence does not prove the corresponding native GC/Wii lifecycle.
+
+Pinned source directory (exact Steam-PC revision): https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c
