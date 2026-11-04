@@ -615,3 +615,79 @@ The revised PC-family chain is therefore: BoostCharge ready → controller sets 
 
 This chain is supported in the pinned Windows-PC sources only. The Steam and SW_RACER_RE snapshots do not prove identical executable/release identity. The SWR physics-contact wrapper is still a TODO, and no GameCube/Wii address, flag, constant, update order or behavior is inferred.
 
+## 2026-11-04 — PC track-trigger volumes and runtime activation pipeline
+
+This pass recovers the missing SW_RACER_RE trigger-volume TODO as a connected track-surface → geometry → runtime-object → type-dispatch pipeline. The reference is still a separate Windows-PC snapshot; this is not a port or a claim about console trigger IDs.
+
+**Pinned references**
+- SW_RACER_RE: [revision 66120be334a3fd38c10a259f3528cffbfed8ddc5](https://github.com/tim-tim707/SW_RACER_RE/tree/66120be334a3fd38c10a259f3528cffbfed8ddc5), including [swrRace trigger and surface-tag code](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrRace.c), [trigger type/filter declarations](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types_enums.h), [trigger data layout](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/types.h), and [object callback declarations](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrObj.h).
+- Steam-PC: [revision d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef): [track-surface update FUN_00476ea0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00476ea0.c), [range test FUN_00476ac0 C](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00476ac0.c) / [assembly](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/asm/FUN_00476ac0.s), [runtime Trig lookup/create FUN_0047c7d0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047c7d0.c), [type dispatcher FUN_0047ce60](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c), [pre-trigger script event FUN_0047e830](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047e830.c), and [destructible handler FUN_0047ca90](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ca90.c).
+
+### 1. Surface-tag caller and trigger-list source
+
+The SWR reconstruction's swrRace_UpdateSurfaceTag (numeric address 0x00476EA0) reads the current terrain model's swrModel_Behavior. If that behavior has a linked trigger list, it calls swrRace_ActivateTriggersInRange(pod, behavior->triggers). It also calls the same routine for the separate specialActiveTrigger global when non-null. The Steam-PC FUN_00476ea0 has the corresponding calls to FUN_00476ac0 for the mesh behavior trigger list and the global special trigger.
+
+Thus the trigger system is attached to the current surface/track behavior plus an optional special trigger; it is not simply an unfiltered scan of every volume in the whole level.
+
+### 2. Trigger description layout and geometric test
+
+The SWR swrModel_TriggerDescription layout is:
+- +0x00 center (rdVector3);
+- +0x0C direction/orientation vector (rdVector3);
+- +0x18 size_xy and +0x1C size_z;
+- +0x20 affected model node;
+- +0x24 16-bit trigger type;
+- +0x26 16-bit filter flags;
+- +0x28 linked-list next pointer.
+
+Steam FUN_00476ac0 iterates this linked list. For the general trigger case it uses half of size_xy and half of size_z, forms the oriented horizontal segment defined by center and direction, projects the pod's current XY position onto that segment, clamps the projection to its segment endpoints, then compares squared horizontal distance against the horizontal radius and pod Z against the trigger's vertical half-height. This is a capsule/corridor-like vertical volume around an oriented segment, not an axis-aligned box.
+
+Two trigger types (0x66 / decimal 102 and 0x68 / decimal 104 in the SWR enum) take a distinct crossing test: the routine checks the pod's previous/current positions against the trigger plane, along with the trigger's horizontal parameter and vertical bounds. Do not collapse these two plane-crossing cases into the general proximity test.
+
+### 3. Eligibility masks — one unresolved bit-comment discrepancy
+
+The Steam range test reads the trigger's 16-bit field at +0x26 before doing geometry. The source comments in the SWR enum describe:
+- 0x02 as requiring speed above a threshold (commented as >150);
+- 0x04 / 0x08 / 0x10 as lap-1 / lap-2 / lap-3 exclusions;
+- 0x20 as not triggered by AI.
+
+The Steam body is consistent with the speed and AI filters: a trigger carrying 0x02 is skipped below a symbolic speed threshold, and 0x20 is skipped when the pod lacks the LOCAL flag. For 0x04/0x08/0x10, the Steam routine compares a selector at score/race data offset +0x78 against 0/1/2 before skipping; the SWR enum calls these lap exclusions, but the precise meaning of that selector field was not independently recovered here.
+
+**Contradiction retained:** the SWR enum comment calls bit 0x01 “enabled”, but the Steam implementation sets its local skip boolean when bit 0x01 is set. That means the observed Steam behavior is “bit set → this trigger is not tested” rather than the comment's apparent “bit set → enabled”. Do not implement or rename this bit until the source comment, exact track data and Steam behavior are reconciled. The numeric speed threshold also remains symbolic in the Steam export.
+
+### 4. Runtime Trig allocation and one-shot suppression
+
+After a geometric hit, Steam FUN_00476ac0 calls FUN_0047c7d0 for the trigger description:
+- It searches the Trig manager for a live runtime object already associated with that exact description pointer (+0x4C).
+- If a matching runtime object exists with its FIRED bit (runtime Trig flag 0x02) set, the helper returns null; this prevents an already-consumed one-shot from being handed out again.
+- Otherwise it reuses the matching runtime object, or allocates a new Trig object from the manager pool, stores its type and description pointer, references the affected model node and resolves two node animation slots (8 and 9).
+- The SWR runtime Trig flags separately name ACTIVE (0x01), FIRED (0x02), and FX_SPAWNED (0x04).
+
+This separates the static model trigger description from the runtime trigger object that tracks its activation, animation and one-shot state.
+
+### 5. Script event and type-specific effects
+
+For the surface-range path, FUN_00476ac0 calls FUN_0047ce60(runtimeTrig, pod, 0). With the third argument's bit 0 clear, the dispatcher first calls FUN_0047e830, which sends a SithCog “trig” event for the affected model/trigger to the pod's current game-script context, then clears the runtime timer and switches on the trigger type.
+
+Directly visible Steam branches include:
+- 100 (ice destructible) and 102 (rock destructible): the shared FUN_0047ca90 path handles target removal, hit feedback and explosion presentation.
+- 101 / 307: start an affected-node animation.
+- 103: remove/alter the target tent object.
+- 104: invoke the guarded explosion/death path.
+- 105: collapsing-glacier animation plus camera-shake behavior.
+- 106: dispatch to a falling-asteroid effect helper.
+- 108: initialize the slalom-flag/spawn helper.
+- 203: Tusken-raider hazard/event path.
+- 213 and 306: earthquake / shortcut and camera-shake handling.
+- 312: falling-pillar animation/shake path.
+- 314 and 501: methane-vapor and lava-splash helper paths.
+- 900: teleport-to-spline helper path.
+
+The SWR enum also names balloon/flame/fish/dozer spawner IDs (208, 211, 308, 310) and unknown type 503; this inspected Steam dispatcher body does not establish their full call paths. Keep those specific cases marked unresolved rather than extrapolating from the enum labels.
+
+### Evidence boundary and remaining work
+
+The connected PC-family evidence is now: current terrain behavior / special trigger list → linked trigger description → filter and segment/plane hit test → Trig runtime object lookup/create with FIRED suppression → “trig” script event → type-specific object, animation, hazard, explosion, spawn or teleport helper.
+
+The SWR source has the matching trigger activation function as HANG("TODO"), but its surface-tag caller and static trigger/runtime structures are present. The Steam source provides C and assembly for the range test, plus runtime Trig and dispatcher bodies. The two PC source snapshots remain separate and their exact executable identity is unresolved. Filter bit 0x01, selector +0x78 and symbolic geometric/speed thresholds remain specific open questions. No code was copied, and no native GameCube/Wii trigger IDs, offsets, masks or behavior are inferred.
+
