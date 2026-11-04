@@ -82,11 +82,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f"
       ],
-      "next_action": "Human review of #282. Independent IDA notes confirm Judge state 4/5 are pre-race camera intro stages, state 2 is end-race stats, state 6 loads/reloads; IDA labels 0x0045DFE0 StartCountdown and 0x0045DD80 LoadFromRace. Steam body at 0x0045DD80 is a teardown candidate with Fini/All! handling but remains NOT_INVOKED in its dependency graph. Hang F4 body at 0x0045A040 is absent from inspected Steam source; actual message-to-POST_RACE_INFO edge remains UNKNOWN. PC-only; no GC/Wii inference.",
+      "next_action": "Human review of #282. Latest PC-only evidence: Judge states 4/5 are pre-race camera intro, confirmed independently by IDA; visible finish is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 (POST_RACE_INFO) renderer is FUN_00457620 case 5 -> FUN_00439ce0. Hang F4 at 0x0045A040 is named/extent-known but its body unavailable; IDA notes distinguish finish and quit transitions. Steam teardown FUN_0045DD80 has conditional Fini handling and an All! broadcast only on one branch, but its callgraph says NOT_INVOKED. End-to-end Fini->Hang Results remains UNKNOWN. No GC/Wii mapping.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "d30dfeb52808b1c44c37e222efe091608b34167d",
+      "head_sha": "a2be75902658adde4837c29bdaae7d3b1da58e9f",
       "updated_at": "2026-11-04"
     },
     {
@@ -175,12 +176,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/490483aa61427ca10677f4e3c1fc68d6e84b1ebe",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d30dfeb52808b1c44c37e222efe091608b34167d",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a2be75902658adde4837c29bdaae7d3b1da58e9f"
       ],
-      "next_action": "Human review of #282. Independent IDA notes confirm Judge state 4/5 are pre-race camera intro stages, state 2 is end-race stats, state 6 loads/reloads; IDA labels 0x0045DFE0 StartCountdown and 0x0045DD80 LoadFromRace. Steam body at 0x0045DD80 is a teardown candidate with Fini/All! handling but remains NOT_INVOKED in its dependency graph. Hang F4 body at 0x0045A040 is absent from inspected Steam source; actual message-to-POST_RACE_INFO edge remains UNKNOWN. PC-only; no GC/Wii inference.",
+      "next_action": "Human review of #282. Latest PC-only evidence: Judge states 4/5 are pre-race camera intro, confirmed independently by IDA; visible finish is state 2 -> Clear(Fini) -> state 6 -> teardown. Hang screen 5 (POST_RACE_INFO) renderer is FUN_00457620 case 5 -> FUN_00439ce0. Hang F4 at 0x0045A040 is named/extent-known but its body unavailable; IDA notes distinguish finish and quit transitions. Steam teardown FUN_0045DD80 has conditional Fini handling and an All! broadcast only on one branch, but its callgraph says NOT_INVOKED. End-to-end Fini->Hang Results remains UNKNOWN. No GC/Wii mapping.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "d30dfeb52808b1c44c37e222efe091608b34167d"
+      "head_sha": "a2be75902658adde4837c29bdaae7d3b1da58e9f"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
