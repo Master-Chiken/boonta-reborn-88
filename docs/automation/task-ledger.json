@@ -203,11 +203,15 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/89ea54784a670e2992e365e5f1ed3f90ccb5c288",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf3402ff459061bb0e6915a0d045646397a17e03",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L463-L475",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L414-L440",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705"
       ],
-      "next_action": "Human review of PR #282. Latest engine audit confirms legacy SWR names ENGINE_REPAIR=0x04, ENGINE_ON_FIRE=0x08, ENGINE_LEAN=0x0A (8|2); PC TakeDamage sets raw status bit 0x01; Repair uses temporary 0x10 and 0x04 markers, with 0x10/0x08 interaction in probabilistic fire clear. Despite SWR field name engineHealthMin, PC damage code updates it to the current value whenever current damage exceeds the stored value, so it behaves as a high-water/reference; repair scheduler returns selected engineHealth toward half that reference. Keep bit 0x01 and 0x10 semantically unnamed, no same-build or console claims.",
+      "next_action": "Human review of PR #282. Further repair disambiguation: player+0x98 is PodHandlingData.repairRate (PodHandlingData begins +0x6C, repairRate is field +0x2C); PC recovery formula moves selected engineHealth toward half engineHealthMin at a rate scaled by repairRate*0.5. player+0x2BC is repairTimer; +0x2C0 is SWR-named damageWarningTimer, used to schedule left/right side warning/effect via FUN_004741D0; +0x2C4 totalDamage. Do not conflate the two timers or claim the side event is the per-part healing itself.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "89ea54784a670e2992e365e5f1ed3f90ccb5c288",
+      "head_sha": "cf3402ff459061bb0e6915a0d045646397a17e03",
       "updated_at": "2026-11-04"
     },
     {
@@ -410,12 +414,16 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2336-L2339",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/89ea54784a670e2992e365e5f1ed3f90ccb5c288",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/archive/structures.h#L63-L68",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3266-L3288",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf3402ff459061bb0e6915a0d045646397a17e03",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L463-L475",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h#L414-L440",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L1640-L1705"
       ],
-      "next_action": "Human review of PR #282. Latest engine audit confirms legacy SWR names ENGINE_REPAIR=0x04, ENGINE_ON_FIRE=0x08, ENGINE_LEAN=0x0A (8|2); PC TakeDamage sets raw status bit 0x01; Repair uses temporary 0x10 and 0x04 markers, with 0x10/0x08 interaction in probabilistic fire clear. Despite SWR field name engineHealthMin, PC damage code updates it to the current value whenever current damage exceeds the stored value, so it behaves as a high-water/reference; repair scheduler returns selected engineHealth toward half that reference. Keep bit 0x01 and 0x10 semantically unnamed, no same-build or console claims.",
+      "next_action": "Human review of PR #282. Further repair disambiguation: player+0x98 is PodHandlingData.repairRate (PodHandlingData begins +0x6C, repairRate is field +0x2C); PC recovery formula moves selected engineHealth toward half engineHealthMin at a rate scaled by repairRate*0.5. player+0x2BC is repairTimer; +0x2C0 is SWR-named damageWarningTimer, used to schedule left/right side warning/effect via FUN_004741D0; +0x2C4 totalDamage. Do not conflate the two timers or claim the side event is the per-part healing itself.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "89ea54784a670e2992e365e5f1ed3f90ccb5c288"
+      "head_sha": "cf3402ff459061bb0e6915a0d045646397a17e03"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
