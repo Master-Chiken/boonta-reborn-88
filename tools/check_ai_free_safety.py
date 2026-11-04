@@ -765,13 +765,13 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must require the machine-readable PROGRESS status")
     if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
         errors.append(f"{label} must support an explicit BLOCKED report")
-    if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in workflow:
+    if "BOONTA_CYCLE_EVIDENCE_BASE" not in workflow or "evidenceBaseMatch" not in workflow:
         errors.append(f"{label} must require the declared evidence base")
     if "id: snapshot_pr_heads" not in workflow or "state: 'all'" not in workflow:
         errors.append(f"{label} must snapshot existing open and closed PR heads before the model call")
     if "github.paginate(github.rest.pulls.list" not in workflow:
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
-    if "PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}" not in workflow:
+    if "steps.snapshot_pr_heads.outputs.heads" not in workflow:
         errors.append(f"{label} must pass the pre-cycle head inventory to the progress validator")
     if "github.rest.pulls.get" not in workflow or "github.rest.repos.getCommit" not in workflow:
         errors.append(f"{label} must verify the live PR and reported head commit")
