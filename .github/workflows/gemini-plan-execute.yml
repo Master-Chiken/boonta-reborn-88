@@ -226,15 +226,23 @@ jobs:
             const lines = summary.split(/\r?\n/);
             const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
             const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
-            const valid = status === 'BOONTA_CYCLE_STATUS: PROGRESS'
-              ? valueExists('BOONTA_CYCLE_EVIDENCE')
-              : status === 'BOONTA_CYCLE_STATUS: BLOCKED'
-                ? valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION')
-                : false;
-            if (!valid) {
-              core.setFailed('Autonomous Gemini invocation returned without a valid traceable cycle report. The separately gated OpenRouter Free fallback may run.');
+            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
+              if (!evidence) {
+                core.setFailed('PROGRESS requires a same-repository PR URL and its exact 40-character head SHA.');
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              if (pr.state !== 'open' || pr.merged_at || pr.head.sha !== evidence[2] || (pr.changed_files ?? 0) < 1) {
+                core.setFailed('PROGRESS evidence does not match an open, non-empty PR at the reported exact head SHA.');
+                return;
+              }
+              core.info('Verified progress PR #' + pr.number + ' at exact head ' + pr.head.sha);
+            } else if (validBlocked) {
+              core.info('Autonomous cycle reported a named blocker and next action.');
             } else {
-              core.info('Autonomous cycle report contract satisfied: ' + status);
+              core.setFailed('Autonomous Gemini invocation returned without a valid PROGRESS or BLOCKED report.');
             }
 
       - name: Explain why Gemini was not called
