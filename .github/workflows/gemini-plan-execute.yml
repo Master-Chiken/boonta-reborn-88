@@ -142,8 +142,24 @@ jobs:
           TASK_DESCRIPTION: '${{ inputs.task_description }}'
           AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
 
+      - name: Snapshot open and closed PR heads before autonomous cycle
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true'
+        id: snapshot_pr_heads
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: 'Master-Chiken',
+              repo: 'boonta-reborn-88',
+              state: 'all',
+              per_page: 100
+            });
+            const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
+            core.setOutput('heads', JSON.stringify(baseline));
+            core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
+
       - name: 'Run Gemini CLI'
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && (inputs.autonomous_mode != true || steps.snapshot_pr_heads.outcome == 'success')
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
         env:
@@ -220,6 +236,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
+          PRE_CYCLE_PR_HEADS: '${{ steps.snapshot_pr_heads.outputs.heads }}'
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();
@@ -227,18 +244,23 @@ jobs:
             const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
             const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
             const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
             const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
             if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
-              if (!evidence) {
-                core.setFailed('PROGRESS requires a same-repository PR URL and its exact 40-character head SHA.');
+              if (!evidence || !evidenceBaseMatch) {
+                core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
                 return;
               }
+              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
               const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
-              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || (pr.changed_files ?? 0) < 1) {
-                core.setFailed('PROGRESS evidence does not match an open, non-empty PR at the reported exact head SHA.');
+              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
+              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
+              const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || unchangedAtStart) {
+                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
                 return;
               }
-              core.info('Verified progress PR #' + pr.number + ' at exact head ' + pr.head.sha);
+              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
             } else if (validBlocked) {
               core.info('Autonomous cycle reported a named blocker and next action.');
             } else {
