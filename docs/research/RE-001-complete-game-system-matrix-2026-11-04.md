@@ -691,3 +691,83 @@ The connected PC-family evidence is now: current terrain behavior / special trig
 
 The SWR source has the matching trigger activation function as HANG("TODO"), but its surface-tag caller and static trigger/runtime structures are present. The Steam source provides C and assembly for the range test, plus runtime Trig and dispatcher bodies. The two PC source snapshots remain separate and their exact executable identity is unresolved. Filter bit 0x01, selector +0x78 and symbolic geometric/speed thresholds remain specific open questions. No code was copied, and no native GameCube/Wii trigger IDs, offsets, masks or behavior are inferred.
 
+## 2026-11-04 — PC trigger asset registration, scene construction and planet-specific loading
+
+The previous section recovered how an already-loaded trigger description is tested and activated. This follow-up traces how trigger descriptions are registered, how their runtime Trig pool and scene group are created, and how planet/track-specific trigger models are attached to the loaded track scene. All findings below remain pinned Windows-PC reference evidence.
+
+**Pinned Steam-PC references**
+- [Judge track-scene setup FUN_00465510](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00465510.c)
+- [Trigger-group setup FUN_004651F0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_004651f0.c)
+- [Planet/track trigger-model loader FUN_0047DDC0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ddc0.c)
+- [Recursive trigger-node walker FUN_0047DC40](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047dc40.c)
+- [Static trigger-description initializer FUN_0047D380](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047d380.c)
+- [Scene trigger-node helper FUN_0047D310](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047d310.c)
+- [Static scene-group initializer FUN_0047DD90](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047dd90.c)
+- [Runtime Trig lookup/create FUN_0047C7D0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047c7d0.c)
+- [Type dispatcher FUN_0047CE60](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ce60.c), [multiplayer trigger bridge FUN_0047E7E0](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047e7e0.c), and [SithCog trigger-event sender FUN_0047E830](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047e830.c).
+- Matching SW_RACER_RE TODO declarations are in [swrObj.c](https://github.com/tim-tim707/SW_RACER_RE/blob/66120be334a3fd38c10a259f3528cffbfed8ddc5/src/Swr/swrObj.c) at the corresponding addresses 0x004651F0, 0x0047D310, 0x0047DC40, 0x0047DD90, 0x0047DDC0, 0x0047E7E0 and 0x0047E830.
+
+### 1. The Judge setup creates a bounded Trig pool before loading trigger assets
+
+Steam FUN_00465510 is the track-scene setup path. After building the scene/track-model group structures, it calls FUN_004651F0(param_1). That routine:
+1. allocates a typed Trig manager pool with capacity 0x1E (30 runtime trigger objects);
+2. clears/resets the Trig manager state using FUN_00450DB0('Trig');
+3. calls FUN_0047DDC0(judge->planet, judge->planetTrack, judge->trackModelNode) and stores its returned scene-group pointer.
+
+The call arguments are directly cross-checked against the SWR Judge layout: +0x1AC is planet, +0x1C0 is planet-track index, and +0x30 is the track model node. This is a concrete setup call-site in the Steam snapshot; it is not yet a native-console call-site.
+
+### 2. The static trigger scene group and per-planet model selection
+
+Steam FUN_0047DD90 initializes a static scene/trigger-group structure at DAT_00e25de0, resets the registered-node count, initializes the backing pointer table at DAT_00e259c0, and returns that group descriptor. This is separate from the 30-object runtime Trig manager pool created immediately beforehand.
+
+FUN_0047DDC0(planetId, planetTrack, trackModelNode) clears its working trigger-node registry, stores the planet selector and loads a planet-specific set of model IDs. Exact model IDs visible in this pinned Steam source are:
+
+| Planet selector | Model IDs passed to the loader |
+|---:|---|
+| 0 | 0xFC, 0xFB, 0x134 |
+| 1 | 0xFE, 0xFB, 0xC4, 0xC5 |
+| 2 | 0x9B, 0x132 |
+| 3 | no additional trigger models in this switch branch |
+| 4 | 0x128, 0x127, 0x132, 0x13D, 0x137 |
+| 5 | 0x138, 0x13D |
+| 6 | 0x133 |
+| 7 | 0x135 |
+
+The model IDs are passed to Steam's model loader FUN_00448780 and their resulting scene/model handles are stored in per-slot globals. Some are grouped through FUN_0047BEE0 and registered with the scene node visibility system. When trackModelNode is non-null, each planet branch invokes FUN_0047DC40(trackModelNode) to traverse the loaded track scene and initialize embedded trigger descriptions. These IDs are model/resource selectors in the PC reference, not trigger-type IDs and not GameCube/Wii asset IDs.
+
+### 3. Recursive track-node walk and per-description initialization
+
+Steam FUN_0047DC40 distinguishes a mesh-like node tag (0x3064) from a general grouped node:
+- For tag 0x3064, it enumerates child scene objects. If a child's resolved object has a trigger-description pointer at +0x3C, it calls FUN_0047D380(descriptionList, visibilityContext).
+- For general nodes with flag 0x4000, it recurses through the child pointer array and combines the child visibility masks. When node flag 0x8000 is present, it temporarily sets a global traversal guard (DAT_0050CB50) to avoid re-entering a special visibility branch, then restores the previous value.
+- Under the configured planet/culling mode, the traversal uses FUN_0047DA10 to compute a spatial visibility mask from the node's bounds and applies that mask to the node/children. The exact symbolic thresholds and meaning of every scene flag are not renamed here.
+
+FUN_0047D380 walks each linked trigger description (next pointer at +0x28) and first registers its pointer through FUN_0047E760. That registration helper stores up to 200 description pointers in a global table used by the multiplayer bridge. It then performs trigger-type-specific scene initialization: creates or attaches scene nodes via FUN_0047D310, references model child animation slots, changes node visibility/render state, marks filter bits, and records the special active trigger for types that use that route.
+
+FUN_0047D310(description, visibilityMask, slot) obtains or allocates a per-description scene helper from a bounded registry (50 entries, stride 0x58), records the description pointer and a slot pointer, adds it to the global scene-object list, and applies scene/visibility flags. The numeric slot and renderer flag arguments are preserved as implementation details; their complete semantic names remain unknown.
+
+### 4. Reconciliation of trigger filter bit 0x01 — what the initializer adds
+
+The previous range-test section correctly noted a discrepancy: SWR's enum comment calls trigger-description flag 0x01 "enabled", while Steam FUN_00476AC0 skips a description when this bit is set.
+
+The new initializer trace narrows that conflict:
+- Steam FUN_0047D380 explicitly sets bit 0x01 for type 0xD3 (decimal 211, flame-spawner family) and type 0x136 (decimal 310, dozer-spawner family) after their special scene-node setup.
+- The same initializer sets bit 0x02 for type 100 and some 202/212 variants, and bit 0x20 for type 105/203/312/314/501 families. Those latter bits align with the already-observed speed / not-AI filter families.
+- The types with bit 0x01 set are therefore not simply "enabled in the generic proximity pass". The evidence is consistent with "special scene-initialized / do not use ordinary proximity activation" for these particular types, but the meaning of bit 0x01 across all map data is not fully resolved. Keep the field unnamed until original track-data samples and the special per-frame spawner handlers are reconciled.
+
+This is more specific than the earlier enum-vs-range-test contradiction, but it is not sufficient to rename the bit globally.
+
+### 5. Multiplayer bridge and script-event suppression
+
+Steam FUN_0047E7E0 is a separate indexed activation path: it resolves a trigger description from a global registered-description table using the requested index, obtains/reuses the runtime Trig object via FUN_0047C7D0, and calls FUN_0047CE60(..., 1). The third argument's bit 0 suppresses the dispatcher's normal pre-trigger FUN_0047E830 SithCog message.
+
+The normal range-hit path calls FUN_0047CE60(..., 0), so it first invokes FUN_0047E830. That routine resolves the trigger's script/event index and sends the "trig" event into the relevant game-script context with the racer score/context pointer. Thus the normal geometric route and the indexed multiplayer route converge on the same runtime type dispatcher but have different pre-dispatch script-event behavior.
+
+### Updated trigger lifecycle — static content to runtime activation
+
+The full PC reference chain is now:
+
+Judge track scene setup → allocate/reset 30-object Trig manager → initialize static trigger-scene group → planet-specific model/resource selection → recurse loaded track model nodes → enumerate and type-initialize trigger descriptions → register description pointers / create per-description scene helpers → at runtime, geometric or indexed lookup finds/creates Trig object → optional "trig" script event → type-specific animation, destructible, hazard, spawn, camera, or teleport behavior.
+
+The SWR tree still has the corresponding scene-setup and initialization functions as HANG("TODO"); the Steam C/ASM supplies the comparative PC implementation. The two source snapshots are not proven identical builds. The filter bit 0x01, trigger resource/model IDs and every node/visibility mask remain PC-reference facts only. No code/assets were copied, and no native GameCube/Wii trigger model, ID, data layout, or behavior is inferred.
+
