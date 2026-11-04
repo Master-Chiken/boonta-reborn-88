@@ -170,6 +170,15 @@ jobs:
           You have no shell tool. Use local read/edit tools for inspecting and preparing files, and the GitHub MCP tools for all GitHub operations. Create or continue one branch named with prefix agent/boonta-openrouter/ from the exact current SHA of the correct base branch. Send the complete changed file contents in one push_files operation to that branch, then open/update one reviewable PR with exact task scope, evidence, limitations, provenance and links to #226/#279. You may add concise progress comments to the canonical issues. Do not push to main/dev directly.
 
           The GitHub MCP server intentionally exposes only read, branch creation, file push, PR creation and issue-comment tools. Never try to merge, delete, force-push, alter settings/secrets/variables, or enable auto-merge. Never claim tests ran unless an exact-head Actions result proves it. Inspect exact-head CI after a PR is opened; read only failed-job logs. Do not rerun unchanged green checks or push empty commits.
+          End every report with this machine-readable contract. For traceable progress, use these exact lines:
+          BOONTA_CYCLE_STATUS: PROGRESS
+          BOONTA_CYCLE_EVIDENCE: <GitHub PR/commit URL or repository path plus exact source revision>
+          For a genuine human/external blocker, use:
+          BOONTA_CYCLE_STATUS: BLOCKED
+          BOONTA_CYCLE_BLOCKER: <specific named dependency>
+          BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
+          Never claim PROGRESS for generic status, no-op work, unverified results or unknown PR heads. If neither status is truthful, omit the marker; the workflow fails closed.
+
 
           If there is no safe, meaningful task, do not create an empty branch/PR. Post a concise evidence-based blocker and the single next action to #226. Finish with a short factual report of the work, branch/PR if created, and what remains blocked.
           PROMPT
@@ -178,17 +187,17 @@ jobs:
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
           REPORT="$RUNNER_TEMP/opencode-cycle-report.txt"
-          if grep -q '^BOONTA_CYCLE_STATUS: PROGRESS "$REPORT"; then
-            grep -q '^BOONTA_CYCLE_EVIDENCE: [^[:space:]].* "$REPORT" || {
+          if grep -Fqx 'BOONTA_CYCLE_STATUS: PROGRESS' "$REPORT"; then
+            grep -Eq '^BOONTA_CYCLE_EVIDENCE: .+' "$REPORT" || {
               echo "OpenRouter report claims progress without traceable evidence." >&2
               exit 1
             }
-          elif grep -q '^BOONTA_CYCLE_STATUS: BLOCKED "$REPORT"; then
-            grep -q '^BOONTA_CYCLE_BLOCKER: [^[:space:]].* "$REPORT" || {
+          elif grep -Fqx 'BOONTA_CYCLE_STATUS: BLOCKED' "$REPORT"; then
+            grep -Eq '^BOONTA_CYCLE_BLOCKER: .+' "$REPORT" || {
               echo "OpenRouter blocked report is missing its named blocker." >&2
               exit 1
             }
-            grep -q '^BOONTA_CYCLE_NEXT_ACTION: [^[:space:]].* "$REPORT" || {
+            grep -Eq '^BOONTA_CYCLE_NEXT_ACTION: .+' "$REPORT" || {
               echo "OpenRouter blocked report is missing its next action." >&2
               exit 1
             }
