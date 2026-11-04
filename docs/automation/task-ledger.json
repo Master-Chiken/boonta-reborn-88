@@ -94,11 +94,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ad2df684bb09768ebc44aa5a70ceb3b447c9bf90",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc88108edb26a573a44032b2fede7587914866de"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc88108edb26a573a44032b2fede7587914866de",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c498b4435cf5afd91758907f18db9a7c6aeda0f8"
       ],
-      "next_action": "Human review of #282. Steam-PC model-block LZSS recovery now records the exact signed token arithmetic: high-nibble cases 0-7 copy 2-9 bytes, 8-E skip, F copies one; low source byte is sign-extended. This is static PC behavior only; valid retail token domain and 4 KiB history initialization remain UNKNOWN. The caller has no explicit decoder length parameters, so any clean-room decoder must add strict input/output bounds and verify decoded length. No GameCube/Wii inference.",
+      "next_action": "Human review of #282. Latest Steam-PC cross-reference maps model block mask relocation and post-relocation node/data/animation parsing. SW_RACER_RE's compressed-model mask loop uses stored model_size while Steam uses the decompressed size as its loop bound; classify as a cross-snapshot discrepancy/candidate reconstruction defect until a lawful bounded fixture verifies the expected relationship. No code imported and no GameCube/Wii inference.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "cc88108edb26a573a44032b2fede7587914866de",
+      "head_sha": "c498b4435cf5afd91758907f18db9a7c6aeda0f8",
       "updated_at": "2026-11-04"
     },
     {
@@ -199,12 +200,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5f0bf549e8562ed244143cd1cfff37f0525f6c88",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/1c718ee54970f0ae8d1d37ea12aa0ba8b7b230dc",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ad2df684bb09768ebc44aa5a70ceb3b447c9bf90",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc88108edb26a573a44032b2fede7587914866de"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc88108edb26a573a44032b2fede7587914866de",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c498b4435cf5afd91758907f18db9a7c6aeda0f8"
       ],
-      "next_action": "Human review of #282. Steam-PC model-block LZSS recovery now records the exact signed token arithmetic: high-nibble cases 0-7 copy 2-9 bytes, 8-E skip, F copies one; low source byte is sign-extended. This is static PC behavior only; valid retail token domain and 4 KiB history initialization remain UNKNOWN. The caller has no explicit decoder length parameters, so any clean-room decoder must add strict input/output bounds and verify decoded length. No GameCube/Wii inference.",
+      "next_action": "Human review of #282. Latest Steam-PC cross-reference maps model block mask relocation and post-relocation node/data/animation parsing. SW_RACER_RE's compressed-model mask loop uses stored model_size while Steam uses the decompressed size as its loop bound; classify as a cross-snapshot discrepancy/candidate reconstruction defect until a lawful bounded fixture verifies the expected relationship. No code imported and no GameCube/Wii inference.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "cc88108edb26a573a44032b2fede7587914866de"
+      "head_sha": "c498b4435cf5afd91758907f18db9a7c6aeda0f8"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
