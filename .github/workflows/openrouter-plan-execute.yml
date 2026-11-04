@@ -135,7 +135,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,issue_read,list_issues,search_issues,list_pull_requests,pull_request_read,search_pull_requests,create_branch,create_or_update_file,push_files,create_pull_request,add_issue_comment,list_branches,list_commits,get_commit,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_workflow_job,get_job_logs,search_code"
+                  "GITHUB_TOOLS": "get_file_contents,issue_read,list_issues,search_issues,list_pull_requests,pull_request_read,search_pull_requests,create_branch,create_or_update_file,push_files,create_pull_request,add_issue_comment,list_branches,list_commits,get_commit,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,search_code"
                 },
                 "enabled": true,
                 "timeout": 60000
