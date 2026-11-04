@@ -992,3 +992,83 @@ This adds an explicit dependency chain after decompression:
 **model bytes → mask relocation → texture-ID cache resolution → root/node/data/animation byte-swap → animation registration/timing bookkeeping**.
 
 The exact resource IDs, cache capacity, texture payload format and console-specific equivalent remain outside the evidence established here. No texture or animation asset was extracted or committed.
+
+
+## 2026-11-04 — PC pod update callbacks and the per-frame simulation pipeline
+
+This addendum follows the PC pod object through its recovered event callbacks. It is a **Windows-PC comparative map**, assembled from two separately pinned public code snapshots. It does not establish identical executable builds, runtime behavior, or GameCube/Wii parity.
+
+### Pinned sources and evidence boundary
+
+- SW_RACER_RE source/reconstruction: [revision `258f67aa858ba2e281ce8a6791e49c554b85fae0`](https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0), declared AGPL-3.0; read-only reference.
+- Separate Steam-PC Ghidra export: [revision `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`](https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef). Its executable identity is not proven to match the SW_RACER_RE snapshot.
+- Evidence class: **PC CODE / cross-snapshot address correspondence**. No source code was copied, no binaries or proprietary data were used, and no external project was built or run.
+
+### 1. The object dispatcher exposes four distinct per-frame phases
+
+The SW_RACER_RE event-table reconstruction associates the `Test` object with:
+- F0: `swrObjTest_F0` at `0x0046D170`;
+- F1: `swrObjTest_UpdateControlAndMove` at `0x0047AB40`;
+- F2: `swrObjTest_UpdatePhysicsContact` at `0x0047B520`;
+- F3: `swrObjTest_F3` at `0x00470610`.
+
+The reconstructed dispatch table is recorded in [`swrEvent.h` lines 12–24](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.h#L12-L24). The four corresponding SWR function bodies are still `HANG("TODO")` stubs in [`swrObj.c` around lines 2355–2479](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L2355-L2479). The dispatch table itself is inside a disabled reconstruction block; treat it as a recovered callback map, not as a compiled definition in this source snapshot.
+
+The Steam-PC export contains bodies at the same four numeric addresses. This is a useful cross-reference, but the matching addresses do **not** prove that both projects describe the same executable build.
+
+### 2. F0 — control selection and target preparation
+
+Steam-PC [`FUN_0046D170.c` lines 103–120](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0046d170.c#L103-L120) calls `FUN_0046CF00` after updating several per-pod flags and state fields.
+
+The SWR snapshot identifies address `0x0046CF00` as `swrRace_CalcTargetTurnRate` ([`swrRace.c` lines 3215 onward](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3215-L3270)). That routine dispatches among local-human input, remote-player state and AI autopilot. For active racers it also updates catch-up/speed multipliers, applies repair/proximity behavior where appropriate, and clamps the target turn rate to pod statistics. The local control reader maps steering, pitch, throttle, brake, boost, slide, repair and taunt actions; engine damage can add steering pull and force feedback ([`swrRace_UpdatePlayerControl`, lines 2783 onward](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L2783-L2935)).
+
+The remaining F0 helper calls at `0x0046D040` and `0x0046D100` are not assigned stronger semantics here. This is a control/flag preamble map, not a complete F0 reconstruction.
+
+### 3. F1 — orientation, steering and translation
+
+Steam-PC [`FUN_0047AB40.c` line 114](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047ab40.c#L114) calls `FUN_00478D80` after preparing the current/previous transform, turn integration and orientation-dependent vectors. SWR labels `0x00478D80` as `swrRace_IntegrateMotion`.
+
+The SWR helper call chain is now readable:
+- `swrRace_UpdateSpeed` (`0x004783E0)): advances the throttle accumulator, maps it through pod acceleration/max-speed statistics, then applies air-brake and surface speed effects ([source](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4242-L4331)).
+- `swrRace_ApplyBoost` (`0x004787F0)): charges boost while enabled, decays stored boost when released, returns a bounded boost-thrust term and cancels boost under air-brake ([source](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4594-L4625)).
+- `swrRace_ApplyTraction` (`0x00478A70)): blends the velocity direction against the desired movement direction using pod grip, surface grip and slide state ([source](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4378-L4496)).
+- `swrRace_IntegrateMotion` (`0x00478D80)): combines speed/boost/traction with opponent-collision and slope velocity, advances the position by the frame delta, then performs up to six swept track-collision correction passes ([source](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4499-L4590)).
+
+This gives a concrete **helper pipeline** for the movement portion of the PC reference. It does not recover the entire F1 callback or establish equivalent GameCube/Wii physics.
+
+### 4. F2 — contact, heat, orientation and surface state
+
+Steam-PC [`FUN_0047B520.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0047b520.c) exposes a different stage:
+- line 37: `FUN_0047B0C0`, the SWR-named `swrRace_ResolvePodCollision`;
+- lines 39 and 43: `FUN_00479E10` or `FUN_0047A200`, mapped by SWR to ground-contact or wall-contact handling;
+- line 105: `FUN_004788C0`, the heat/engine-damage update;
+- lines 117 and 120: `FUN_00477C30` or `FUN_0047A610`, mapped to orientation integration or spline-orientation update;
+- line 122: `FUN_00476EA0`, mapped to surface-tag refresh.
+
+The heat routine [`swrRace_UpdateHeat`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L4333-L4377) distinguishes lava drain, boost heat loss and idle cooling. When the stored heat bottoms out, it chooses an engine part, marks damage and clears the boosting flag. The F2 caller also performs later damage/surface/orientation work; its full dependency order needs more caller-level reconstruction before a port is specified.
+
+### 5. F3 — model and presentation maintenance
+
+Steam-PC [`FUN_00470610.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00470610.c) calls the SWR-mapped model/effects helpers:
+- `0x0046D4C0`: reset model-node flags;
+- `0x00470AE0`: pod engine animation;
+- `0x004709A0`: reflection-node update;
+- `0x00470A40`: engine-sound update.
+
+This is evidence of a dedicated model/presentation phase after movement and contact handling. It is not a complete renderer or asset pipeline.
+
+### 6. Updated architecture implication and unresolved edges
+
+The PC evidence now supports a useful high-level separation:
+
+`F0 control/target selection → F1 movement integration → F2 contact/heat/orientation/surface → F3 model/effects/audio maintenance`
+
+This is a **PC reference ordering only**. Remaining gaps:
+- SWR's public F0/F1/F2/F3 bodies remain TODO stubs; Steam supplies the comparative bodies, not proof of the SWR executable identity.
+- F0's two remaining helper calls and several F2/F3 side effects still need semantic classification.
+- Exact callback scheduling order, re-entry behavior, frame-delta semantics and runtime effects have not been observed in the original PC game here.
+- None of these PC functions or field layouts is evidence of GameCube/Wii internals. Native target porting remains blocked on target-specific evidence and the separate clean-room design.
+
+**Next highest-value research question:** identify the Steam-PC caller/dispatcher that schedules the four `Test` callbacks and establish whether F0→F1→F2→F3 is the observed per-frame order, then trace the F2 contact/ground/wall branch conditions and the inputs consumed by each. Keep unknown helper names and target-platform behavior explicitly unresolved.
+
+No implementation code was added, no third-party code was copied, and no game-derived asset, ROM, DOL/REL, disc image, BIOS, IDB or proprietary executable was read or committed.
