@@ -215,11 +215,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/86114d10b250cd4a1ec19d49f73992fb96d96509",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd"
       ],
       "next_action": "Build a bounded, source-pinned course-resource dependency manifest for one PC reference course (selectors, block/resource IDs, loader type, consumers and ownership); then identify which links need native GC/Wii evidence. Keep the work research-only and reuse the existing RE-001 matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "c1cbbb5ecad707c8796aa972694c6156e7b3727a",
+      "head_sha": "9b5efa54164f7f45490afdffdab67f916f3b1afd",
       "updated_at": "2026-11-04"
     },
     {
@@ -434,12 +435,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/e64ecb177778091956237668bf7cd0c43da4ddb8",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/86114d10b250cd4a1ec19d49f73992fb96d96509",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/888c0f20b9cb3a53d80f26df9e24de72409bde44",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c1cbbb5ecad707c8796aa972694c6156e7b3727a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9b5efa54164f7f45490afdffdab67f916f3b1afd"
       ],
-      "next_action": "Keep the race-completion chain separate from course bootstrap: review the exact Judge Fini → teardown candidate → cMan/Hang/Results receivers, and retain UNKNOWN for the unproven normal runtime edge. Reuse #282 evidence; do not duplicate the dossier or infer console parity.",
+      "next_action": "Resolve the cross-snapshot teardown discrepancy: SWR F0 state 6 directly calls TeardownRace after Clear's 0.5s delay, while the Steam-PC dependency graph marks FUN_0045DD80 NOT_INVOKED. Seek the missing/indirect Steam-PC F0 path or independent retail-PC evidence; keep the normal retail caller UNKNOWN until verified.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "c1cbbb5ecad707c8796aa972694c6156e7b3727a"
+      "head_sha": "9b5efa54164f7f45490afdffdab67f916f3b1afd"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
