@@ -126,6 +126,32 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
       "head_sha": "cb7fe5bd08e5821f442169ceb103f7f86c29f92f",
       "updated_at": "2026-11-04"
+    },
+    {
+      "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
+      "title": "Skip repeated Gemini attempts after an autonomous invocation failure",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "in_review",
+      "question": "Can a failed autonomous Gemini model invocation be remembered for the current UTC day so later scheduled cycles skip repeated provider calls and proceed to the separately gated OpenRouter Free fallback?",
+      "acceptance_criteria": [
+        "One persistent marker on issue #226 records the UTC date of an autonomous Gemini CLI invocation failure",
+        "A matching same-day marker blocks another autonomous Gemini model request before token mint, checkout and model invocation",
+        "The cooldown applies only to autonomous mode; the manual writer path remains unaffected",
+        "A cooldown blocks Gemini through the existing fail-closed path so the caller can invoke independently gated OpenRouter Free",
+        "The marker is updated in place, expires by date comparison on the next UTC day, and changes no secrets, settings, billing or provider selection"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7b9d197e9f595f5397c46cc33e39647013e33cf8",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41874179657"
+      ],
+      "next_action": "After PR #287 is merged, retarget this stacked PR to main, rerun full exact-head safety and provenance checks, inspect independent review, and only then consider merging.",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/289",
+      "head_sha": "7b9d197e9f595f5397c46cc33e39647013e33cf8",
+      "updated_at": "2026-11-04"
     }
   ]
 }
