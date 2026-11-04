@@ -237,7 +237,7 @@ The checked Steam source search found `FUN_004542e0` but did not find same-addre
 - [Steam teardown candidate `FUN_0045dd80`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c)
 - [Steam dependency graph and NOT_INVOKED annotations](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd#L42-L54)
 
-**Conclusion:** the manager pool, F4 routing contract, and one camera-manager F3 body are better understood. The key missing edge is still the cMan F4 reaction to `Swee` and how/when the race manager causes the Hangar/Results object state to change. Keep that gap explicit; this remains Windows-PC evidence only and does not establish native GameCube/Wii behavior.
+**Conclusion:** the manager pool, F4 routing contract, one camera-manager F3 body, and the Boolean meaning of `Swee` are now supported. The F4 callback's full body is still not reconstructed, and the way/when the race manager causes the Hangar/Results object state to change remains unresolved. Keep those narrower gaps explicit; this remains Windows-PC evidence only and does not establish native GameCube/Wii behavior.
 
 
 ## 2026-11-04 — Independent IDA confirmation of cMan F4 and Swee semantics
