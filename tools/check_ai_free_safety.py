@@ -60,7 +60,7 @@ for path in workflow_files:
         continue
     content = path.read_text(encoding="utf-8").lower()
     if "openrouter_api_key" in content or "openrouter.ai" in content:
-        errors.append(f"OpenRouter references are forbidden outside the allowlisted reviewer: {path.name}")
+        errors.append(f"OpenRouter references are forbidden outside the allowlisted workflows: {path.name}")
 
 trigger_block = openrouter.split("permissions:", 1)[0].lower()
 if "workflow_dispatch:" not in trigger_block:
@@ -170,7 +170,7 @@ else:
 
 # The autonomous OpenRouter writer is a reusable fallback only. It must not
 # declare its own schedule or user-controlled entry point.
-fallback_trigger = openrouter_fallback.split("permissions:", 1)[0]
+fallback_trigger = openrouter_fallback.split("jobs:", 1)[0]
 fallback_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", fallback_trigger)
 if fallback_events != ["workflow_call"]:
     errors.append(f"OpenRouter fallback must be reusable-only; found {fallback_events!r}")
