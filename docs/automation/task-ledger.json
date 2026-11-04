@@ -174,11 +174,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d2c289f359ea7b080bfe90be5261cb858ed039e",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1921-L2345",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a25e52b66783c99f03bce271a16bc7c70af0f632",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3758-L4866",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549"
       ],
-      "next_action": "Human review of PR #282. New SWR cross-check confirms the mode-1 ray callback pair (0x00442720 indexed / 0x00442C30 sequential), ray-triangle test, mesh face enumerator and ray-tree traversal bodies at the matching address family. SWR maps raw types 3/4/5/7 to triangle/quad/strip primitives, but treat this as cross-snapshot interpretation only. Mode-3 Callback2/setup/resolve/sphere bodies remain absent from inspected SWR swrModel.c (header declarations only) and the inspected Steam decompilation. Keep Steam/SWR/IDA snapshots separate; no same-build or GC/Wii parity. Read-only research; no AGPL source reuse.",
+      "next_action": "Human review of PR #282. Collision source map now distinguishes implemented SWR ray/ground functions from HANG gaps: UpdateWallContact is declaration-only; DetectWallScrape, ApplyWallCollision and CollideBlockMove are HANG stubs; mode-3 sphere setup/callback/resolve API bodies are not in inspected swrModel.c. Steam-PC FUN_0047B520 -> FUN_0047A200 -> (FUN_00477940 -> two FUN_00444740 probes; then FUN_00479920) or FUN_0044ABC0 establishes the corresponding call path. Keep ground/ray, sphere/wall, and blockmove/response as separate contracts. Mode3 callback/result math still highest-value reverse-engineering gap. No code reuse or GC/Wii parity.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8d2c289f359ea7b080bfe90be5261cb858ed039e",
+      "head_sha": "a25e52b66783c99f03bce271a16bc7c70af0f632",
       "updated_at": "2026-11-04"
     },
     {
@@ -352,12 +355,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/8d2c289f359ea7b080bfe90be5261cb858ed039e",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.c#L1921-L2345",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L97-L121",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrModel.h#L314-L345",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a25e52b66783c99f03bce271a16bc7c70af0f632",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c#L3758-L4866",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h#L539-L549"
       ],
-      "next_action": "Human review of PR #282. New SWR cross-check confirms the mode-1 ray callback pair (0x00442720 indexed / 0x00442C30 sequential), ray-triangle test, mesh face enumerator and ray-tree traversal bodies at the matching address family. SWR maps raw types 3/4/5/7 to triangle/quad/strip primitives, but treat this as cross-snapshot interpretation only. Mode-3 Callback2/setup/resolve/sphere bodies remain absent from inspected SWR swrModel.c (header declarations only) and the inspected Steam decompilation. Keep Steam/SWR/IDA snapshots separate; no same-build or GC/Wii parity. Read-only research; no AGPL source reuse.",
+      "next_action": "Human review of PR #282. Collision source map now distinguishes implemented SWR ray/ground functions from HANG gaps: UpdateWallContact is declaration-only; DetectWallScrape, ApplyWallCollision and CollideBlockMove are HANG stubs; mode-3 sphere setup/callback/resolve API bodies are not in inspected swrModel.c. Steam-PC FUN_0047B520 -> FUN_0047A200 -> (FUN_00477940 -> two FUN_00444740 probes; then FUN_00479920) or FUN_0044ABC0 establishes the corresponding call path. Keep ground/ray, sphere/wall, and blockmove/response as separate contracts. Mode3 callback/result math still highest-value reverse-engineering gap. No code reuse or GC/Wii parity.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "8d2c289f359ea7b080bfe90be5261cb858ed039e"
+      "head_sha": "a25e52b66783c99f03bce271a16bc7c70af0f632"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
