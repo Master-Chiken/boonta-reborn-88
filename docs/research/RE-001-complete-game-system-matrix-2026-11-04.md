@@ -2416,3 +2416,40 @@ The course's spline is not merely decorative. It supplies (a) a normalized route
 - SWR \`swrSpline.h\`, \`swrSpline.c\`, \`swrRace.h\`, \`swrRace.c\`, \`types.h\`: https://github.com/tim-tim707/SW_RACER_RE/tree/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr
 
 No game code/assets were copied and no gameplay implementation or runtime test was performed.
+
+
+## Judge teardown xref hole: missing F0 export confirmed — 2026-11-05
+
+This follow-up narrows the teardown discrepancy without treating two independently pinned PC/SWR snapshots as the same executable.
+
+### SWR reconstruction: direct scheduler edge is present
+
+The SWR event table registers the `Jdge` manager with `swrObjJdge_F0` as F0, no F1, `swrObjJdge_F2` as F2, `swrObjJdge_F3` as F3, and `swrObjJdge_F4` as F4. The named F0 callback is mapped to `0x0045E200`.
+
+Within that SWR F0 state machine, state 6 is the teardown state. `swrObjJdge_Clear` guards against duplicate clears, sets the judge timer to 0.5 seconds, stores the event, changes the low state nibble to 6, and frees the `Test`, `Toss`, `Smok`, `Trig` and `Chsr` event objects. Subsequent F0 calls subtract frame delta from the timer; when it becomes negative, the code stops the multiplayer network tick, optionally invokes multiplayer UI callbacks, then directly calls `swrObjJdge_TeardownRace(jdge, jdge->event)`.
+
+This is direct evidence for the SWR reconstruction path only. The SWR body for `swrObjJdge_TeardownRace` is itself a `HANG("TODO")` stub, so its native implementation is not recovered in that source.
+
+### PC export gap: the callback entry exists, its C body is absent
+
+The separate Steam-PC Ghidra export contains the teardown-like function at `0x0045DD80` as `FUN_0045dd80`. Its body clears the score-table pod pointers and frees the same five event pools; it then branches into post-race/result or menu handling. The source-derived dependency graph nevertheless marks `NOT_INVOKED --> FUN_0045dd80`.
+
+A separate pinned IDA metadata snapshot has a concrete function entry at `0x0045E200`, named provisionally `EntityJdgeCallback0x14_45E200`, with size `0x74C` bytes. The next listed function begins at `0x0045E970`. This address/extent matches the SWR F0 entry address and its apparent function span, but the IDA snapshot supplies names and function-table metadata here, not the callback body or an xref proving a call to `0x0045DD80`.
+
+The gap is also visible in the Steam-PC published C export: `docs/functions.txt` has no `0x0045E200` entry, and `src/_text17.c` proceeds from the functions around `0x0045DFE0` / `0x0045E1A0` to `0x0045E970`, omitting the callback range. Consequently, the graph edge `NOT_INVOKED --> FUN_0045dd80` cannot be treated as proof that the executable has no caller: the most likely manager callback entry is absent from the C export used to build that graph.
+
+### Cross-snapshot naming caveat and conclusion
+
+The separate IDA names file labels `0x0045DD80` provisionally as `Unk_Jdge_LoadFromRace__45DD80`, while the SWR source labels the same address `swrObjJdge_TeardownRace`. These labels are not equivalent evidence; the IDA prefix is explicitly unknown/provisional, and the address-matched Steam-PC body does perform broad race teardown plus result/menu transitions. Keep the address/function mapping and the differing names visible rather than silently reconciling them.
+
+**Updated conclusion:** the SWR reconstruction proves a direct F0 state-6 → teardown call in that source tree. The Steam-PC IDA metadata proves a Judge callback function entry exists at `0x0045E200`, while the public Steam-PC C export omits its body. Therefore the `NOT_INVOKED` call-graph result is an export-coverage limitation, not proof of absence. Whether the Steam-PC callback calls `0x0045DD80` directly or indirectly remains **UNKNOWN** until its body/xrefs or an independent retail-PC runtime trace is available.
+
+Pinned references:
+- SWR Judge event registration: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrEvent.h
+- SWR Judge F0, Clear and teardown declarations: https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c and https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.h
+- Steam-PC teardown-like body: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0045dd80.c
+- Steam-PC export coverage: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text17.c and https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/functions.txt
+- Steam-PC source-derived graph: https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/docs/textures.mmd
+- Independent IDA metadata: https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/names.txt and https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt
+
+Evidence boundaries: these are separate snapshots; same-build identity is unproven. No GameCube/Wii parity or retail runtime test is claimed. No gameplay implementation, executable, ROM, disc image, model, texture, animation or extracted asset was added.
