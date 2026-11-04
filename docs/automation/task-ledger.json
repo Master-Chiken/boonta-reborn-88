@@ -79,11 +79,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058"
       ],
-      "next_action": "Human review of #282. New bounded source trace confirms the Steam-PC generic event manager routes Judge Swee(false) through cMan F4 callback slot +0x24 across active members of the six-instance cMan pool; IDA names the callback EntityCManCallback0x24_4543F0. Its callback body, normal F4-to-Hangar activation, and initial Results screen-5 writer remain UNKNOWN. Keep PC-only boundaries.",
+      "next_action": "Human review of #282. The latest PC-only dossier now traces Swee(false) through the cMan F4 dispatch slot and confirms the callback body is absent from the inspected Steam decompilation snapshot; IDA gives only name/extent/event notes. F4-to-Hangar activation and initial Results screen-5 writer remain UNKNOWN. Do not infer GC/Wii behavior.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "bae7b753df627531f0cceb76c74021441c5fce94",
+      "head_sha": "b815559c1fab1913733f41aedef0c43e69048058",
       "updated_at": "2026-11-04"
     },
     {
@@ -169,12 +170,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/bbebf353279ac6297b3aa1e665c448b82dc8e18f",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043d4e0.c",
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_0043e330.c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/bae7b753df627531f0cceb76c74021441c5fce94",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b815559c1fab1913733f41aedef0c43e69048058"
       ],
-      "next_action": "Human review of #282. New bounded source trace confirms the Steam-PC generic event manager routes Judge Swee(false) through cMan F4 callback slot +0x24 across active members of the six-instance cMan pool; IDA names the callback EntityCManCallback0x24_4543F0. Its callback body, normal F4-to-Hangar activation, and initial Results screen-5 writer remain UNKNOWN. Keep PC-only boundaries.",
+      "next_action": "Human review of #282. The latest PC-only dossier now traces Swee(false) through the cMan F4 dispatch slot and confirms the callback body is absent from the inspected Steam decompilation snapshot; IDA gives only name/extent/event notes. F4-to-Hangar activation and initial Results screen-5 writer remain UNKNOWN. Do not infer GC/Wii behavior.",
       "updated_at": "2026-11-04",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "bae7b753df627531f0cceb76c74021441c5fce94"
+      "head_sha": "b815559c1fab1913733f41aedef0c43e69048058"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
