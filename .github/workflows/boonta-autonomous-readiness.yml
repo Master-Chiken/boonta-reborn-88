@@ -57,6 +57,30 @@ jobs:
             echo "This verifies configuration presence only. It does not independently verify Google billing status or the project's Free tier."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Report optional OpenRouter Free fallback readiness (no API request)
+        shell: bash
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}
+        run: |
+          set -euo pipefail
+          if [[ "${OPENROUTER_FREE_TIER_CONFIRMED:-}" == "true" && -n "${OPENROUTER_API_KEY:-}" ]]; then
+            {
+              echo "## OpenRouter Free fallback: configured"
+              echo
+              echo "- Owner attestation is exactly true and API-key secret is present (value not inspected or printed)."
+              echo "- This check does not verify account billing status, key validity, model availability or quota."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## OpenRouter Free fallback: not configured"
+              echo
+              echo "- Optional fallback remains safely disabled until OPENROUTER_API_KEY is present and OPENROUTER_FREE_TIER_CONFIRMED=true."
+              echo "- Gemini remains the only active autonomous model path."
+              echo "- No OpenRouter API request was made."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Mint a scoped GitHub App installation token
         id: app_token
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # ratchet:actions/create-github-app-token@v2
