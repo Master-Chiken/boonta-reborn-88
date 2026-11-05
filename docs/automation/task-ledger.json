@@ -605,11 +605,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0"
       ],
-      "next_action": "PR #285 is being refreshed against the latest main while preserving the new cycle-fresh and free-provider cooldown checks. The readiness workflow remains GET-only, does not call a model, and reports the autonomous gate without changing it. Run exact-head AI safety/live-ledger, YAML/self-test, provenance and trusted-path checks; after merge, finalize the ledger with the exact merged PR head and merge evidence.",
+      "next_action": "Refresh PR #285 from current main without force-push, preserving only the readiness preflight, setup-guide and static-checker changes. Re-run exact-head AI safety/live-ledger, 10 regression tests, provenance and trusted-path checks. Restore to in_review at the refreshed exact head or completed with merged evidence; keep the writer gate unchanged.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
       "head_sha": "14758946b5be63e0eccdb7818807179276f2f4b0",
       "updated_at": "2026-11-05",
-      "blocker": "PR #285 is awaiting current-main integration and exact-head CI; its ledger row is temporarily blocked to avoid self-referential head reconciliation during validation."
+      "blocker": "PR #285 remains on a 3-task pre-bootstrap ledger and is 41 commits behind main; its exact-head live audit fails on stale #282 SHA. Reapply its read-only readiness changes on current main before validation."
     }
   ]
 }
