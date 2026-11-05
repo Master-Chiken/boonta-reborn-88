@@ -1,6 +1,11 @@
 name: Boonta Autonomous Readiness
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/boonta-autonomous-readiness.yml
   workflow_dispatch:
   workflow_call:
     outputs:
