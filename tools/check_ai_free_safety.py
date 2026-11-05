@@ -310,7 +310,7 @@ else:
     for required in (
         "needs: [readiness, autonomous-cycle]",
         "needs.readiness.result == 'success'",
-        "needs.readiness.outputs.writer_enabled == 'true'",
+        "needs.readiness.outputs.writer_state == 'enabled'",
         "needs.autonomous-cycle.result == 'failure'",
         "uses: ./.github/workflows/openrouter-plan-execute.yml",
         "autonomous_mode: true",
@@ -660,10 +660,14 @@ if readiness_events != ["workflow_dispatch", "workflow_call"]:
         "Autonomous readiness must support owner-only manual dispatch and reusable workflow calls; "
         f"found {readiness_events!r}"
     )
-if "value: ${{ jobs.readiness.outputs.writer_enabled }}" not in readiness:
+if "value: ${{ jobs.readiness.outputs.writer_state }}" not in readiness:
     errors.append("Reusable readiness must expose the writer-enabled state to its caller")
-if "writer_enabled: ${{ steps.owner_gates.outputs.writer_enabled }}" not in readiness:
+if "writer_state: ${{ steps.owner_gates.outputs.writer_state }}" not in readiness:
     errors.append("Reusable readiness must derive its writer-enabled output from the owner-gate check")
+if "WRITER_STATE: ${{ steps.owner_gates.outputs.writer_state }}" not in readiness:
+    errors.append("Readiness must explicitly pass the owner-gate output to later steps")
+if 'echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"' not in readiness:
+    errors.append("Readiness must export a non-boolean writer_state for reusable callers")
 if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
     errors.append("Autonomous readiness must be owner-only and pinned to protected main")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
@@ -743,7 +747,7 @@ if "uses: ./.github/workflows/boonta-autonomous-readiness.yml" not in autonomous
     errors.append("Autonomous loop must call the reusable read-only readiness workflow")
 if "needs: readiness" not in autonomous or "needs.readiness.result == 'success'" not in autonomous:
     errors.append("Gemini must run only after successful read-only readiness")
-if "needs.readiness.outputs.writer_enabled == 'true'" not in autonomous:
+if "needs.readiness.outputs.writer_state == 'enabled'" not in autonomous:
     errors.append("Gemini must not run when the owner has left the autonomous writer disabled")
 readiness_job = autonomous.split("  readiness:", 1)[1].split("  autonomous-cycle:", 1)[0]
 readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", readiness_job))
