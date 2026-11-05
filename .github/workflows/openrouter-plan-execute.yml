@@ -108,9 +108,32 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Verify OpenRouter Free key authentication without inference
+        id: openrouter_auth_check
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        shell: bash
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          set +x
+          response="$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${OPENROUTER_API_KEY}" \
+            -H "Accept: application/json" \
+            https://openrouter.ai/api/v1/key)"
+          jq -e '.data.is_free_tier == true' <<< "$response" >/dev/null
+          unset response
+          {
+            echo "## OpenRouter key authentication: passed"
+            echo
+            echo "- OpenRouter accepted the bearer key and reports is_free_tier=true."
+            echo "- This was a GET-only authentication check; no model inference or credit-consuming request was made."
+            echo "- The key value and account details were not printed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Mint scoped GitHub App token
         id: mint_identity_token
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # ratchet:actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.APP_ID }}
@@ -121,7 +144,7 @@ jobs:
           permission-actions: read
 
       - name: Checkout the protected default branch
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
           ref: main
@@ -129,7 +152,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pinned OpenCode CLI
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -137,7 +160,7 @@ jobs:
           opencode --version
 
       - name: Snapshot open and closed PR heads before OpenRouter cycle
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
         id: snapshot_pr_heads
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         with:
@@ -153,7 +176,7 @@ jobs:
             core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
 
       - name: Run OpenCode through the OpenRouter Free route
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.snapshot_pr_heads.outcome == 'success'
         id: run_opencode
         shell: bash
         env:
@@ -162,6 +185,11 @@ jobs:
         run: |
           set -euo pipefail
           set +x
+
+          # OpenCode 1.19.5 reads provider credentials from OPENCODE_AUTH_CONTENT.
+          # Supply the existing secret as the explicit OpenRouter API auth record.
+          export OPENCODE_AUTH_CONTENT
+          OPENCODE_AUTH_CONTENT="$(jq -cn --arg key "$OPENROUTER_API_KEY" '{openrouter: {type: "api", key: $key}}')"
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
@@ -284,7 +312,7 @@ jobs:
 
       - name: Validate OpenRouter autonomous cycle report
         id: validate_report
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt

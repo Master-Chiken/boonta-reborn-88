@@ -292,9 +292,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42097566397",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/310",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/2f0f0a67b4ad5c2cb4aa64155a59a27d31a6bd7c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a938b707e9f5fecee350afd9e033291f727cb224"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a938b707e9f5fecee350afd9e033291f727cb224",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42091325471",
+        "https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/auth/index.ts",
+        "https://github.com/anomalyco/opencode/blob/v1.19.5/packages/opencode/src/provider/provider.ts",
+        "https://openrouter.ai/docs/api/api-reference/api-keys/get-current-key",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/ed5509c0dcb7e17c662b8e564dcf1afb8a6d1cca",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/070714427b99ae1e11cc73b4d461ebf19dd5045f"
       ],
-      "next_action": "PR #309's Groq secret alias mapping is merged at 7f7aa18804006fc66716ee879b59f74e4c5a5249. PR #310 adds a narrowly scoped Readiness push trigger on main, limited to changes to its own workflow file; the static AI safety guard now explicitly enforces that exact branch/path scope while retaining owner-only workflow_dispatch and workflow_call. Once PR #310 is merged by the repository owner, verify the automatically created Readiness run at the merge SHA and check that it reports Groq Free tertiary fallback configured. This remains a presence/attestation check only; it does not validate provider key validity, billing tier, quotas or call Groq. Then inspect a later scheduled autonomous cycle for real provider invocation and OpenRouter authentication recovery. Preserve €0, no paid fallback, no secret/permission/billing mutation, no auto-merge, and do not claim providers live until a real post-change invocation succeeds.",
+      "next_action": "The previous OpenRouter autonomous run #42091325471 had OPENROUTER_API_KEY in the OpenCode process environment but failed with 'Missing Authentication header'. Pinned OpenCode v1.19.5 source confirms Auth.all supports OPENCODE_AUTH_CONTENT as an explicit JSON auth store override. The current PR branch adds a GET-only OpenRouter /api/v1/key preflight that requires the key to be accepted and is_free_tier=true before minting the GitHub App token or invoking a model, then seeds OPENCODE_AUTH_CONTENT with a safely jq-escaped {openrouter:{type:'api',key:...}} record for OpenCode. Static tests enforce this ordering and the no-inference preflight. Await exact-head CI and owner merge; after merge, wait for the next scheduled cycle and verify the bearer preflight and actual OpenCode runtime before claiming OpenRouter is live. No paid fallback, no secret mutation, no auto-merge.",
       "updated_at": "2026-11-05"
     },
     {

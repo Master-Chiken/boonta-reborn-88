@@ -198,6 +198,13 @@ for required in (
     'GITHUB_TOOLS',
     'opencode run --model openrouter/openrouter/free --auto',
     'npm install --global opencode-ai@1.19.5',
+    'name: Verify OpenRouter Free key authentication without inference',
+    'https://openrouter.ai/api/v1/key',
+    'Authorization: Bearer ${OPENROUTER_API_KEY}',
+    "jq -e '.data.is_free_tier == true'",
+    'OPENCODE_AUTH_CONTENT',
+    'export OPENCODE_AUTH_CONTENT',
+    "openrouter: {type: \"api\", key: $key}",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter fallback is missing required free-only/safety setting {required!r}")
@@ -206,31 +213,35 @@ if 'OPENROUTER_FREE_TIER_CONFIRMED:-}" != "true"' not in openrouter_fallback:
 if 'GEMINI_AUTONOMOUS_ENABLED:-}" != "true"' not in openrouter_fallback:
     errors.append("OpenRouter fallback must inherit the master autonomous owner gate")
 fallback_guard = openrouter_fallback.find("id: free_tier_guard")
+fallback_auth = openrouter_fallback.find("name: Verify OpenRouter Free key authentication without inference")
 fallback_mint = openrouter_fallback.find("name: Mint scoped GitHub App token")
 fallback_checkout = openrouter_fallback.find("name: Checkout the protected default branch")
 fallback_install = openrouter_fallback.find("name: Install pinned OpenCode CLI")
 fallback_model = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
-if not (0 <= fallback_guard < fallback_mint < fallback_checkout < fallback_install < fallback_model):
-    errors.append("OpenRouter fallback must pass all owner/free gates before token mint, checkout, installation and model call")
+if not (0 <= fallback_guard < fallback_auth < fallback_mint < fallback_checkout < fallback_install < fallback_model):
+    errors.append("OpenRouter fallback must verify Free bearer authentication before token mint, checkout, installation and model call")
 for guarded_step in (
-    "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Verify OpenRouter Free key authentication without inference\n        id: openrouter_auth_check\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'",
+    "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'",
+    "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'",
+    "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'",
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
 # OpenRouter Free fallback receives its own autonomous daily failure cooldown.
 or_cooldown_position = openrouter_fallback.find("id: openrouter_cooldown")
 or_guard_position = openrouter_fallback.find("id: free_tier_guard")
+or_auth_position = openrouter_fallback.find("id: openrouter_auth_check")
 or_mint_position = openrouter_fallback.find("name: Mint scoped GitHub App token")
 or_checkout_position = openrouter_fallback.find("name: Checkout the protected default branch")
 or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+or_snapshot_position = openrouter_fallback.find("id: snapshot_pr_heads")
 or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
 or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after an invocation failure")
 or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
-if not (0 <= or_cooldown_position < or_guard_position < or_mint_position < or_checkout_position < or_install_position < or_run_position < or_record_position < or_validate_position):
-    errors.append("OpenRouter daily cooldown must run before its gate/model call and record invocation failures before report validation")
+if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_run_position < or_record_position < or_validate_position):
+    errors.append("OpenRouter daily cooldown and free bearer-auth check must run before token mint/model invocation; invocation failures must be recorded before report validation")
 for required in (
     "github.paginate(github.rest.issues.listComments",
     "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
