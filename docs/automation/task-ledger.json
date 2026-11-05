@@ -286,9 +286,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/297",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0f0b501f37eb592abb1cfdfda950b7b2ddeed01e",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42094717015",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42095175176"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42095175176",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/309",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7f7aa18804006fc66716ee879b59f74e4c5a5249",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42097566397",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/310",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/2f0f0a67b4ad5c2cb4aa64155a59a27d31a6bd7c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a938b707e9f5fecee350afd9e033291f727cb224"
       ],
-      "next_action": "Provider-chain hardening is merged in PR #297 (merge commit 0f0b501f37eb592abb1cfdfda950b7b2ddeed01e), and post-merge ledger reconciliation #308 is merged (merge commit b0ab1f3fda2902448537f89ff72dbe88d3927b0d). Readiness run #42095175176 passed overall but its logs showed the GROQ_API_KEY process environment empty because the owner's repository secret is named TA_CLE_GROQ. This PR maps secrets.TA_CLE_GROQ to the GROQ_API_KEY environment variable in both the Readiness and Groq execution workflows, updates setup documentation and the task ledger, and keeps the same fixed Groq Free model and safety gates. After merge, re-run Readiness; it must report Groq configured (secret present only, no value printed). A real Groq provider call is still pending and may occur only on the normal autonomous fallback after Gemini and OpenRouter fail/are safely skipped. The prior OpenRouter Missing Authentication header failure predates the new guard and still needs fresh-cycle diagnosis. Do not mark complete until a provider invocation and exact-head report are evidenced. Preserve €0, no paid fallback, no secret/permission/billing mutation, and no auto-merge.",
+      "next_action": "PR #309's Groq secret alias mapping is merged at 7f7aa18804006fc66716ee879b59f74e4c5a5249. PR #310 adds a narrowly scoped Readiness push trigger on main, limited to changes to its own workflow file; the static AI safety guard now explicitly enforces that exact branch/path scope while retaining owner-only workflow_dispatch and workflow_call. Once PR #310 is merged by the repository owner, verify the automatically created Readiness run at the merge SHA and check that it reports Groq Free tertiary fallback configured. This remains a presence/attestation check only; it does not validate provider key validity, billing tier, quotas or call Groq. Then inspect a later scheduled autonomous cycle for real provider invocation and OpenRouter authentication recovery. Preserve €0, no paid fallback, no secret/permission/billing mutation, no auto-merge, and do not claim providers live until a real post-change invocation succeeds.",
       "updated_at": "2026-11-05"
     },
     {

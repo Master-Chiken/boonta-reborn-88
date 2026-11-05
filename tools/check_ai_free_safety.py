@@ -655,10 +655,15 @@ if "RE-002 is active only as read-only comparative evidence" not in read("docs/P
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
 readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", readiness_trigger)
-if readiness_events != ["workflow_dispatch", "workflow_call"]:
+if readiness_events != ["push", "workflow_dispatch", "workflow_call"]:
     errors.append(
-        "Autonomous readiness must support owner-only manual dispatch and reusable workflow calls; "
+        "Autonomous readiness must support a narrowly scoped main push, owner-only manual dispatch and reusable workflow calls; "
         f"found {readiness_events!r}"
+    )
+push_trigger = readiness_trigger.split("  push:", 1)[1].split("  workflow_dispatch:", 1)[0] if "  push:" in readiness_trigger else ""
+if "    branches:\n      - main\n" not in push_trigger or "    paths:\n      - .github/workflows/boonta-autonomous-readiness.yml\n" not in push_trigger:
+    errors.append(
+        "Autonomous readiness push trigger must be restricted to main and changes to its own workflow file"
     )
 if "value: ${{ jobs.readiness.outputs.writer_state }}" not in readiness:
     errors.append("Reusable readiness must expose the writer-enabled state to its caller")
