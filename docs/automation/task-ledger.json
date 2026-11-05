@@ -245,9 +245,19 @@
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41894698584",
-        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122"
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7079a2f16aad0014f61828f3e7ddf21a041a014b",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0f2c7d1803df76f51a692972044f7a63420b036a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c09ed2c629ad505910a5c61856cb95e4e184f529",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/296",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0fddad8451ff1c8412a8d71d267883cd1f54b869",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0b080cef716395683d82052586d427fb74276723",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41981002217"
       ],
-      "next_action": "The cycle-fresh report contract (#287), provider daily cooldowns/context limits (#291), and repeatable read-only readiness preflight (#285) are merged. Remaining activation is owner-gated: run Actions → Boonta Autonomous Readiness on main and inspect its result; it checks secret/variable presence and GitHub App read access without exposing values or invoking a model. The owner must separately verify the actual Gemini Free tier and absence of linked Cloud Billing (readiness cannot inspect billing or prove API-key validity), and verify the GitHub App credentials/permissions. The connector cannot dispatch a new workflow_dispatch or read secret/settings values here. Do not set or change owner secrets/variables. Once the owner confirms the gates and enables GEMINI_AUTONOMOUS_ENABLED, run Boonta Autonomous Loop on main and verify a real exact-head PROGRESS PR or a specific BLOCKED report. Do not count a green workflow or generic status as progress.",
+      "next_action": "The cycle-fresh report contract (#287), provider daily cooldowns/context limits (#291), and repeatable read-only readiness preflight (#285, with YAML coverage in #296) are merged. Latest main safety check #41981002217 passes: 9 tasks, active=1, completed=4, in_review=4; 10 regression tests and live reconciliation of 8 PR records pass. Remaining activation is owner-gated: run Actions → Boonta Autonomous Readiness on main and inspect its result; it checks secret/variable presence and GitHub App read access without exposing values or invoking a model. The owner must separately verify the actual Gemini Free tier and absence of linked Cloud Billing (readiness cannot inspect billing or prove API-key validity), and verify the GitHub App credentials/permissions. The connector cannot dispatch a new workflow_dispatch or read secret/settings values here. Do not set or change owner secrets/variables. Once the owner confirms the gates and enables GEMINI_AUTONOMOUS_ENABLED, run Boonta Autonomous Loop on main and verify a real exact-head PROGRESS PR or a specific BLOCKED report. Do not count a green workflow or generic status as progress.",
       "updated_at": "2026-11-05"
     },
     {
