@@ -220,6 +220,69 @@ for guarded_step in (
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
+# OpenRouter Free fallback receives its own autonomous daily failure cooldown.
+or_cooldown_position = openrouter_fallback.find("id: openrouter_cooldown")
+or_guard_position = openrouter_fallback.find("id: free_tier_guard")
+or_mint_position = openrouter_fallback.find("name: Mint scoped GitHub App token")
+or_checkout_position = openrouter_fallback.find("name: Checkout the protected default branch")
+or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
+or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
+or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after an invocation failure")
+or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
+if not (0 <= or_cooldown_position < or_guard_position < or_mint_position < or_checkout_position < or_install_position < or_run_position < or_record_position < or_validate_position):
+    errors.append("OpenRouter daily cooldown must run before its gate/model call and record invocation failures before report validation")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "OPENROUTER_COOLDOWN_ACTIVE",
+    "OPENROUTER_COOLDOWN_DATE",
+    "steps.run_opencode.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "id: run_opencode" not in openrouter_fallback:
+    errors.append("OpenRouter invocation must expose a stable step ID for failure-only cooldown recording")
+
+# A same-day Gemini cooldown must fail the reusable Gemini job deliberately so
+# Boonta Autonomous Loop invokes its separately gated OpenRouter Free fallback.
+gemini_cooldown_position = execute.find("id: gemini_cooldown")
+gemini_guard_position = execute.find("id: free_tier_guard")
+gemini_run_position = execute.find("id: 'run_gemini'")
+gemini_fail_position = execute.find("name: Fail autonomous cycle when Gemini preflight blocks the model call")
+if not (0 <= gemini_cooldown_position < gemini_guard_position < gemini_run_position < gemini_fail_position):
+    errors.append("Gemini cooldown must be checked before its guard/model call and route a blocked autonomous cycle into fallback")
+for required in (
+    "GEMINI_COOLDOWN_ACTIVE",
+    "GEMINI_COOLDOWN_DATE",
+    "steps.gemini_cooldown.outputs.active != 'true'",
+    "steps.free_tier_guard.outputs.allowed != 'true'",
+    "core.setFailed(",
+    "needs.autonomous-cycle.result == 'failure'",
+    "uses: ./.github/workflows/openrouter-plan-execute.yml",
+):
+    if required not in execute and required not in autonomous:
+        errors.append(f"Gemini cooldown/fallback handoff is missing required behavior {required!r}")
+
+# Keep the OpenRouter report validator to one unambiguous successful invocation guard.
+if openrouter_fallback.count("steps.run_opencode.outcome == 'success'") != 1:
+    errors.append("OpenRouter report validation must check the successful invocation outcome exactly once")
+
+# Public issue comments cannot spoof provider cooldowns; only bot-authored markers are trusted.
+for label, workflow, marker in (
+    ("Gemini", execute, "<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:"),
+    ("OpenRouter", openrouter_fallback, "<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:"),
+):
+    trusted_lookup = f"comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('{marker}')"
+    if workflow.count(trusted_lookup) != 2:
+        errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
+if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
+    errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
+
 tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
 if not tools_match:
     errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
@@ -752,6 +815,84 @@ if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
     errors.append("Autonomous workflow must keep the explicitly reviewed Gemini 3.5 Flash-Lite model")
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
+
+# Scheduled autonomous runs must not stream verbose model output into public Actions logs.
+expected_gemini_debug = "gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'"
+if expected_gemini_debug not in execute:
+    errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
+
+
+# Failed autonomous Gemini invocations create one persistent same-day cooldown marker.
+cooldown_check_position = execute.find("id: gemini_cooldown")
+cooldown_guard_position = execute.find("id: free_tier_guard")
+cooldown_model_position = execute.find("name: 'Run Gemini CLI'")
+cooldown_record_position = execute.find("name: Record same-day Gemini cooldown after an autonomous model failure")
+if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_record_position):
+    errors.append("Gemini daily cooldown must be checked before the free-tier guard/model call and recorded after an invocation failure")
+for required in (
+    "github.paginate(github.rest.issues.listComments",
+    "BOONTA_GEMINI_FAILURE_COOLDOWN:",
+    "new Date().toISOString().slice(0, 10)",
+    "GEMINI_COOLDOWN_ACTIVE",
+    "GEMINI_COOLDOWN_DATE",
+    "steps.gemini_cooldown.outputs.active != 'true'",
+    "if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'",
+    "github.rest.issues.updateComment",
+    "github.rest.issues.createComment",
+    "continue-on-error: true",
+    "until the next UTC day",
+):
+    if required not in execute:
+        errors.append(f"Gemini daily cooldown is missing required failover/persistence behavior: {required!r}")
+if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
+    errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
+
+# Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
+for required in (
+    "only the current-state/owner-direction sections at the top of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279",
+    "latest five relevant comments per issue",
+    "Search older comments only when the selected task needs specific historical evidence",
+    "do not ingest or reproduce full historical appendices/comments",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+
+# Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
+for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
+    if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
+        errors.append(f"{label} must require the machine-readable PROGRESS status")
+    if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
+        errors.append(f"{label} must support an explicit BLOCKED report")
+    if "BOONTA_CYCLE_EVIDENCE_BASE" not in workflow or "evidenceBaseMatch" not in workflow:
+        errors.append(f"{label} must require the declared evidence base")
+    if "id: snapshot_pr_heads" not in workflow or "state: 'all'" not in workflow:
+        errors.append(f"{label} must snapshot existing open and closed PR heads before the model call")
+    if "github.paginate(github.rest.pulls.list" not in workflow:
+        errors.append(f"{label} must capture the complete pre-cycle PR inventory")
+    if "steps.snapshot_pr_heads.outputs.heads" not in workflow:
+        errors.append(f"{label} must pass the pre-cycle head inventory to the progress validator")
+    if "github.rest.pulls.get" not in workflow or "github.rest.repos.getCommit" not in workflow:
+        errors.append(f"{label} must verify the live PR and reported head commit")
+    if "pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88'" not in workflow:
+        errors.append(f"{label} must reject progress PRs whose head comes from a fork")
+    if "pr.head.sha !== evidence[2]" not in workflow or "headCommit.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
+        errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
+    if "const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2]" not in workflow:
+        errors.append(f"{label} must reject an unchanged PR that existed at cycle start")
+    if "pr.base.ref !== evidenceBaseMatch[1]" not in workflow:
+        errors.append(f"{label} must check the PR's actual base against its reported main/dev target")
+    if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
+        errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
+if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
+    errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
+if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
+    errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
+if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
+    errors.append("OpenRouter fallback must persist its final report for contract validation")
+if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
+    errors.append("OpenRouter fallback must validate the report it just produced")
+if "exact-40-character-head-SHA" not in autonomous_prompt:
+    errors.append("Gemini autonomous prompt must show the exact PR-head evidence format")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
