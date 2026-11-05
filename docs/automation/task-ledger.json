@@ -461,7 +461,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "completed",
       "question": "Do autonomous progress reports correspond to a real open, non-empty same-repository PR at its exact live head?",
       "acceptance_criteria": [
         "Gemini and OpenRouter require PROGRESS evidence or a named BLOCKED report",
@@ -479,13 +479,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b345e802c3b618d49c3fd696bded166ca802b95c",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/6f69cf9c44317ae1df9a2150c9aa7e52fe0948ef",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/09182ee0622f328a0fc1c6b999820f007026fa7f",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/5e86a97934580297fa2731eb0d7a952aeed5e924"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/5e86a97934580297fa2731eb0d7a952aeed5e924",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/649f869c00e92eae12b3fb93fc11c61e6ab465fc",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7079a2f16aad0014f61828f3e7ddf21a041a014b"
       ],
-      "next_action": "Temporarily blocked for safe base refresh. The owner-approved sequence is to merge current main into this PR branch without force-push, rerun exact-head CI, then merge only after all required checks pass. Restore the task to in_review/current exact head or completed/merged evidence in the final ledger sync.",
+      "next_action": "Merged in PR #287 at head 649f869c00e92eae12b3fb93fc11c61e6ab465fc (merge commit 7079a2f16aad0014f61828f3e7ddf21a041a014b). The Gemini and OpenRouter autonomous report contract is now on main. Exact-head CI passed, including 10 regression tests and live reconciliation.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
-      "head_sha": "5e86a97934580297fa2731eb0d7a952aeed5e924",
-      "updated_at": "2026-11-05",
-      "blocker": "PR #287's stored GitHub merge ref still checks out the pre-#288 base; its live-ledger audit therefore reads a stale 3-task ledger until the branch is merged with current main."
+      "head_sha": "649f869c00e92eae12b3fb93fc11c61e6ab465fc",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
@@ -519,11 +520,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41977904733"
       ],
-      "next_action": "Temporarily blocked for safe base refresh. The owner-approved sequence is to merge current main into this PR branch without force-push, rerun exact-head CI, then merge only after all required checks pass. Restore the task to in_review/current exact head or completed/merged evidence in the final ledger sync.",
+      "next_action": "PR #291 is now retargeted to main and is being refreshed with the current main ledger and merged #287 evidence. Run branch self-test, AI safety/live-ledger, source-import provenance and trusted-path checks on the refreshed exact head; only then mark ready for review and merge.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
       "head_sha": "a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
       "updated_at": "2026-11-05",
-      "blocker": "PR #291 is stacked on PR #287 and inherits the same pre-#288 ledger; it must be refreshed against the current main after #287 is integrated."
+      "blocker": "Full exact-head validation on the refreshed main-based branch is pending."
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
