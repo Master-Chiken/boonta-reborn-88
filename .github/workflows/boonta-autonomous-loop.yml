@@ -46,22 +46,11 @@ jobs:
         Read the newest owner direction in dashboard #156 and native queue #226,
         plus queue #279, current repository instructions, PRs, branches and CI.
         #226 owns native GameCube/Wii research and implementation; #279 is strictly
-        read-only PC/N64/Dreamcast comparative documentation. The owner update
-        dated 2026-11-05 supersedes the older 80/20 research-first balance:
-        immediately finish/review the existing complete-game system matrix PR #282
-        as one bounded research gate (no duplicate matrix/report, no auto-merge).
-        If that matrix is already sufficiently complete, do not wait for its merge:
-        proceed to one bounded clean-room gameplay implementation task. The first
-        implementation milestone is a deterministic, testable rival-racing AI
-        subsystem, reusing existing rival state/helpers, track sampling, collision
-        and overtake logic. Replace sine-only lane wandering incrementally with
-        state-driven trajectory, speed, passing and avoidance decisions, plus
-        focused host C tests and native GameCube build validation. After the matrix
-        gate, target at least 60% implementation/integration effort; use research
-        only to resolve concrete design questions. Continue existing non-overlapping
-        branches/PRs, open a reviewable PR and record exact-SHA evidence; never merge.
-        Keep €0, free-tier-only routing, clean-room provenance and serialized
-        single-writer restrictions mandatory.
+        read-only PC/N64/Dreamcast comparative documentation. The owner-approved 2026-11-05 matrix gate is complete: PR #282 is a sufficient planning inventory; do not recreate or expand it.
+        First, continue the canonical ledger's single active task AUTOMATION-LEDGER-ACTIVATION until a post-merge provider cycle produces a valid cycle-fresh PR or a precise verified blocker and the ledger is reconciled. Do not create a second active task or start a competing writer.
+        When that task is legitimately cleared, review/reuse existing route-runtime PR #274 at exact head f8c9488fa8bfe1f6434309c7b84c075304a43c54 on dev. It is the only route-graph runtime candidate; do not create another route graph or bypass its required human review. Its current runtime is one closed Bezier oval; branch history/split-rejoin decisions are not yet connected to gameplay. Exact-head build, host pause/resume tests, Dolphin process smoke, optional renderer diagnostic and Wii64 checks passed in runs #41703965812 and #41703965867.
+        After route-runtime review/integration, make the first new gameplay slice a deterministic, testable rival AI. Reuse gameplay_state.h, existing rival/collision/overtake helpers, route sampling, generated mesh/track pipelines, tests and build/diagnostic workflow. Use existing PC AI/catch-up and pod-control/speed/traction research as behavioral contracts; keep pace/rank targets distinct from vehicle motion, use route progress/look-ahead, and test track bounds, passing, avoidance and collisions. Replace sine-only lane wandering incrementally; do not rewrite main.c wholesale.
+        Keep platform boundaries: PC findings are static PC evidence, N64/Dreamcast separate comparisons, GameCube/Wii clean-room homebrew targets; no original retail GameCube/Wii Racer binary exists. Do not copy AGPL SW_RACER_RE code or proprietary/unclear assets. Keep Step 102 on HOLD. Defer career/profile/upgrades #307 until a coherent playable race slice (player + rivals, laps, standings, finish/results and restart) exists. After the matrix and active-task gate, target at least 60% implementation/integration/testing, with research only for concrete unknowns. Keep €0, free-tier-only routing, clean-room provenance and serialized single-writer restrictions mandatory.
       additional_context: >-
         This is the scheduled Boonta Autonomous Loop. The owner explicitly approved
         autonomous task selection and branch/PR work. #226 is the native GameCube/Wii
