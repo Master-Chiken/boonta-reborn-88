@@ -746,7 +746,7 @@ if "needs: readiness" not in autonomous or "needs.readiness.result == 'success'"
 if "needs.readiness.outputs.writer_enabled == 'true'" not in autonomous:
     errors.append("Gemini must not run when the owner has left the autonomous writer disabled")
 readiness_job = autonomous.split("  readiness:", 1)[1].split("  autonomous-cycle:", 1)[0]
-readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$", readiness_job))
+readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", readiness_job))
 if readiness_job_permissions != {"contents": "read", "issues": "read", "pull-requests": "read"}:
     errors.append(f"Autonomous loop readiness caller must be read-only; found {readiness_job_permissions!r}")
 
