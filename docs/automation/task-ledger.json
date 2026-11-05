@@ -607,7 +607,7 @@
       "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
       "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "ab661783d8c7e090761b89bdfe6ed66d15cd1429"
+      "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
