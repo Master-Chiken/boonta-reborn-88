@@ -201,7 +201,7 @@ jobs:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
           gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
-          gemini_model: 'gemini-3.5-flash-lite'
+          gemini_model: 'gemini-3.8-flash'
           upload_artifacts: 'false'
           workflow_name: 'gemini-plan-execute'
           # Assistant workflows can be triggered by comments on either Issues or PRs.
@@ -211,7 +211,7 @@ jobs:
           settings: |-
             {
               "model": {
-                "maxSessionTurns": 25
+                "maxSessionTurns": 10
               },
               "telemetry": {
                 "enabled": true,
@@ -232,21 +232,17 @@ jobs:
                   "includeTools": [
                     "add_issue_comment",
                     "issue_read",
-                    "list_issues",
                     "search_issues",
                     "create_pull_request",
                     "pull_request_read",
-                    "list_pull_requests",
                     "search_pull_requests",
+                    "list_branches",
                     "create_branch",
-                    "create_or_update_file",
                     "get_commit",
                     "get_file_contents",
-                    "list_commits",
                     "list_workflow_runs",
                     "list_workflow_jobs",
                     "get_workflow_run",
-                    "get_workflow_job",
                     "get_job_logs",
                     "push_files",
                     "search_code"
@@ -257,7 +253,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
+                "core": ["read_file", "glob", "grep_search", "list_directory"]
               }
             }
           prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
@@ -315,6 +311,8 @@ jobs:
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           PRE_CYCLE_PR_HEADS: '${{ steps.snapshot_pr_heads.outputs.heads }}'
+          GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'
+          GITHUB_APP_TOKEN_OUTCOME: '${{ steps.mint_identity_token.outcome }}'
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();
@@ -340,7 +338,26 @@ jobs:
               }
               core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
             } else if (validBlocked) {
-              core.info('Autonomous cycle reported a named blocker and next action.');
+              const blocker = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')).slice('BOONTA_CYCLE_BLOCKER: '.length);
+              const nextAction = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')).slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
+              const blockerText = blocker + ' ' + nextAction;
+              const contradictions = [];
+              if (process.env.GEMINI_PREFLIGHT_ALLOWED === 'true') {
+                if (/\b(?:enable|enabling|turn on|set)\b.{0,80}\bGEMINI_AUTONOMOUS_ENABLED\b/i.test(blockerText) || /\bGEMINI_AUTONOMOUS_ENABLED\b.{0,80}\b(?:missing|disabled|false|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims the autonomous writer gate needs enabling or is disabled although the exact-true preflight passed');
+                }
+                if (/\bGEMINI_FREE_TIER_CONFIRMED\b.{0,80}\b(?:missing|false|unset|not set|must be true)\b/i.test(blockerText) || /\bGEMINI_API_KEY\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims the Free-tier attestation or Gemini API key is absent although the preflight passed');
+                }
+                if (process.env.GITHUB_APP_TOKEN_OUTCOME === 'success' && /\b(?:APP_ID|APP_PRIVATE_KEY)\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims GitHub App credentials are absent although the installation token was minted');
+                }
+              }
+              if (contradictions.length > 0) {
+                core.setFailed('BLOCKED report contradicts successful Gemini preflight: ' + contradictions.join('; '));
+                return;
+              }
+              core.info('Autonomous cycle reported a named blocker consistent with the successful preflight.');
             } else {
               core.setFailed('Autonomous Gemini invocation returned without a valid PROGRESS or BLOCKED report.');
             }

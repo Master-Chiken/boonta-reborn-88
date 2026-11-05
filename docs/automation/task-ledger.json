@@ -220,11 +220,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c"
       ],
-      "next_action": "Find a version-matched, authorized source/trace for the 28 g_aTrackIDs values, four circuit counts and 25 TrackInfo row values. A second public consumer (annodue collision viewer) corroborates the 25/28 address dimensions but contains only live-memory macros, not table values. Do not infer how the three-slot difference resolves; retain separate PC/SWR/console provenance.",
+      "next_action": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 1bdfa937eff6caef311d8de871c64144de60135c documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the Judge-Fini-to-Hang-Results call edge UNKNOWN until the exact 0x0045E200/0x0045DD80/0x0045A040 call chain and Hang state write are proven within one executable/analysis database. No PC-to-GameCube/Wii parity is inferred.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a",
+      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
       "updated_at": "2026-11-05"
     },
     {
@@ -240,15 +242,44 @@
         "Ledger validator and regression tests pass in CI",
         "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
         "One active task maximum is enforced",
-        "A post-merge cycle records exact PR state and continues the next unanswered research question"
+        "A post-merge cycle records exact PR state and continues the next unanswered research question",
+        "Autonomous Gemini repository writes are constrained to the available GitHub MCP push_files tool; unavailable local editing tools are explicitly prohibited",
+        "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41894698584",
-        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122"
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7079a2f16aad0014f61828f3e7ddf21a041a014b",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0f2c7d1803df76f51a692972044f7a63420b036a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c09ed2c629ad505910a5c61856cb95e4e184f529",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/296",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0fddad8451ff1c8412a8d71d267883cd1f54b869",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0b080cef716395683d82052586d427fb74276723",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41981002217",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41987896718",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/300",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/45ecbe68d7ba56412f2994602ff39d22117a4e5a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/ec122c511ef984bec4fc155bd6ba2c5167426d3e",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691259",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691261",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691334",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013686385",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42014039965",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/306",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/63d03bbaf8c12fb8dd677c5de0f53584e19ae652",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/303",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc15f76eeab585904b0bbe64fcc88f1baf0084cf",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/304",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cbb93a240129e2a54c2fbc12d1b69b3a9d15112e",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42070497654",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6665082932"
       ],
-      "next_action": "Latest live scheduled run #41894698584 completed, but the Gemini report was generic/stale and cited no newly opened PR; no development progress is confirmed. This demonstrates why PR #287's exact PROGRESS/BLOCKED report contract is needed. After #287 is human-reviewed/merged, inspect the next scheduled cycle and require either a live same-repository non-empty PR at its exact head SHA or a named blocker plus one concrete next action. Do not count a green workflow or generic summary as progress.",
-      "updated_at": "2026-11-04"
+      "next_action": "Automation integration checkpoint — 2026-11-05: PR #306 merged at exact reviewed head 869f86c6c0dd73292e4541c919e7a4521c485e99 (squash 63d03bbaf8c12fb8dd677c5de0f53584e19ae652); PR #303 merged at exact head 08b2c3fb6c22847bd131dcc3ecba3e369af85724 (squash cc15f76eeab585904b0bbe64fcc88f1baf0084cf); PR #304 merged at exact head bc8f60e3f60d4dc3188ab3fe1e52c4c0d1318863 (squash cbb93a240129e2a54c2fbc12d1b69b3a9d15112e). The three required main PR checks passed for each merge; post-#304 main safety run #42070497654 passed. Current main at this checkpoint is cbb93a240129e2a54c2fbc12d1b69b3a9d15112e. No scheduled Boonta Autonomous Loop run on a post-merge main SHA had appeared as of 2026-11-05 19:02 Europe/Paris. The next scheduled slot is 18:17 UTC / 19:17 Paris on 2026-11-05; Gemini's same-UTC-day failure cooldown is active and OPENROUTER_FREE_TIER_CONFIRMED remains unset, so that slot may safely skip both providers without producing work. Next eligible scheduled opportunity after the Gemini cooldown date changes is 00:17 UTC / 01:17 Paris on 2026-11-06. Verify its actual run, inspect job logs and provider execution, then reconcile any exact-head progress PR or explicit blocker. Do not mark this task complete on readiness-only success or a skipped model call. Do not change provider attestation, secrets, billing, permissions, branch protection, bypass rules or auto-merge. After this active task is legitimately closed, prioritize continuity/resumability and the existing full-race Dolphin diagnostic generalization under the approved plan. Keep the career/profile task #307 queued until the first playable GameCube/Wii vertical slice has been accepted.",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
@@ -447,12 +478,16 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/de492c535871587dbf40bdf9b9e11318a520cd64",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/fb290295ccfec3dc357380fb6fa5082ba3efe122",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7653bf2d4653965685671ea80bc429d6d651ff2a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7653bf2d4653965685671ea80bc429d6d651ff2a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c",
+        "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/trackloading.txt",
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457410.c"
       ],
-      "next_action": "Steam-PC FUN_0045D0B0 is recovered: it sets the Judge timer to 0.5s, stores the event at +0x128, enters state 6 and dispatches Free to Test/Toss/Smok/Trig/Chsr via the +0x24 entity handlers. IDA notes identify 0x0045E200 as the Judge +0x14 callback; the public PC C export omits its body. The state-6→0x0045DD80 call edge remains UNKNOWN. Next obtain lawful body/xrefs or independent retail-PC runtime evidence; do not infer same-build identity or GC/Wii parity.",
+      "next_action": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call chain. Exact caller/xref evidence around 0x0045E200, 0x0045DD80, 0x0045A040 and the Hang state-5 write remains required; keep the edge UNKNOWN. Do not infer GameCube/Wii parity.",
       "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a"
+      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -550,12 +585,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
         "https://github.com/morluto/rea/tree/d896ab7bd78331efa15e35337c1f8eff45a21623",
         "https://github.com/morluto/rea/blob/46c457f74c474b224dd540d6eae6bc23080cd95f/docs/ghidra-dol.md",
-        "https://github.com/encounter/decomp-toolkit"
+        "https://github.com/encounter/decomp-toolkit",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/489a117c380af4c837e1c98132998894b238bd06"
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
-      "updated_at": "2026-11-04"
+      "head_sha": "03ad8006ce05c335cbcaf01b420e74033bec68c4",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -579,12 +615,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef",
         "https://github.com/everalert/swe1r-decomp/tree/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6ee273b5071d8f7560e7b447124194d762f2dab1"
       ],
       "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
-      "updated_at": "2026-11-04",
+      "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
+      "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
@@ -603,15 +640,14 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/9d87f894d81da6f1f5edc4a66da24ccca7847717",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c09ed2c629ad505910a5c61856cb95e4e184f529",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722651",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722766",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722905",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980720684"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980720684",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722905"
       ],
-      "next_action": "Merged in PR #285 at exact head 9d87f894d81da6f1f5edc4a66da24ccca7847717 (merge commit c09ed2c629ad505910a5c61856cb95e4e184f529). The owner-only readiness preflight now reports whether the writer gate is enabled without changing it, remains GET-only and never calls Gemini. Static policy, YAML/self-test, ledger (10 regression tests), live reconciliation, source-import and trusted-path checks all passed. Owner-only configuration and billing attestations remain external activation gates.",
+      "next_action": "Merged in PR #285 at exact head 9d87f894d81da6f1f5edc4a66da24ccca7847717 (merge commit c09ed2c629ad505910a5c61856cb95e4e184f529). Exact-head AI safety/live-ledger, 10 ledger regression tests, workflow YAML/Python, trusted-path and held-assets checks all passed. The readiness workflow itself remains a manual workflow_dispatch; no execution or provider/account status is inferred from these static checks.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
       "head_sha": "9d87f894d81da6f1f5edc4a66da24ccca7847717",
       "updated_at": "2026-11-05"

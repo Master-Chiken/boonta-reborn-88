@@ -308,7 +308,9 @@ if fallback_call_position < 0:
 else:
     fallback_call = autonomous[fallback_call_position:]
     for required in (
-        "needs: autonomous-cycle",
+        "needs: [readiness, autonomous-cycle]",
+        "needs.readiness.result == 'success'",
+        "needs.readiness.outputs.writer_state == 'enabled'",
         "needs.autonomous-cycle.result == 'failure'",
         "uses: ./.github/workflows/openrouter-plan-execute.yml",
         "autonomous_mode: true",
@@ -357,7 +359,7 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
     ):
         errors.append(f"{label} must fail closed before token mint, checkout, prompt preparation, and Gemini model call")
-    if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
+    if "gemini_model: 'gemini-3.8-flash'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
         errors.append(f"{label} must keep workflow artifact upload disabled")
@@ -653,11 +655,19 @@ if "RE-002 is active only as read-only comparative evidence" not in read("docs/P
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
 readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", readiness_trigger)
-if readiness_events != ["workflow_dispatch"]:
+if readiness_events != ["workflow_dispatch", "workflow_call"]:
     errors.append(
-        "Autonomous readiness must be manually dispatched only; "
+        "Autonomous readiness must support owner-only manual dispatch and reusable workflow calls; "
         f"found {readiness_events!r}"
     )
+if "value: ${{ jobs.readiness.outputs.writer_state }}" not in readiness:
+    errors.append("Reusable readiness must expose the writer-enabled state to its caller")
+if "writer_state: ${{ steps.owner_gates.outputs.writer_state }}" not in readiness:
+    errors.append("Reusable readiness must derive its writer-enabled output from the owner-gate check")
+if "WRITER_STATE: ${{ steps.owner_gates.outputs.writer_state }}" not in readiness:
+    errors.append("Readiness must explicitly pass the owner-gate output to later steps")
+if 'echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"' not in readiness:
+    errors.append("Readiness must export a non-boolean writer_state for reusable callers")
 if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
     errors.append("Autonomous readiness must be owner-only and pinned to protected main")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
@@ -723,10 +733,26 @@ if autonomous_events != ["schedule", "workflow_dispatch"]:
         "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
         f"found {autonomous_events!r}"
     )
-if "if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
     errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
+
+readiness_job_position = autonomous.find("  readiness:")
+cycle_job_position = autonomous.find("  autonomous-cycle:")
+fallback_job_position = autonomous.find("  openrouter-fallback:")
+if not (0 <= readiness_job_position < cycle_job_position < fallback_job_position):
+    errors.append("Autonomous loop must run read-only readiness before Gemini and OpenRouter")
+if "uses: ./.github/workflows/boonta-autonomous-readiness.yml" not in autonomous:
+    errors.append("Autonomous loop must call the reusable read-only readiness workflow")
+if "needs: readiness" not in autonomous or "needs.readiness.result == 'success'" not in autonomous:
+    errors.append("Gemini must run only after successful read-only readiness")
+if "needs.readiness.outputs.writer_state == 'enabled'" not in autonomous:
+    errors.append("Gemini must not run when the owner has left the autonomous writer disabled")
+readiness_job = autonomous.split("  readiness:", 1)[1].split("  autonomous-cycle:", 1)[0]
+readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", readiness_job))
+if readiness_job_permissions != {"contents": "read", "issues": "read", "pull-requests": "read"}:
+    errors.append(f"Autonomous loop readiness caller must be read-only; found {readiness_job_permissions!r}")
 
 caller_permission_block = autonomous.split("permissions:", 1)[1].split("concurrency:", 1)[0]
 caller_permissions = dict(
@@ -743,7 +769,7 @@ if caller_permissions != expected_caller_permissions:
         f"found {caller_permissions!r}"
     )
 
-autonomous_job = autonomous.split("jobs:", 1)[1]
+autonomous_job = autonomous.split("  autonomous-cycle:", 1)[1].split("  openrouter-fallback:", 1)[0]
 job_permissions_match = re.search(
     r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
     autonomous_job,
@@ -795,6 +821,25 @@ else:
     for required_tool in ("create_branch", "create_pull_request", "push_files", "get_job_logs"):
         if required_tool not in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist is missing required bounded capability {required_tool!r}")
+    for required_tool in ("search_pull_requests", "list_branches"):
+        if required_tool not in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist is missing supported inventory tool {required_tool!r}")
+    for unsupported_tool in ("list_pull_requests", "create_or_update_file", "get_workflow_job"):
+        if unsupported_tool in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist contains unsupported or redundant tool {unsupported_tool!r}")
+
+# The autonomous agent's file-editing surface must match the actual workflow allow-list.
+editing_contract_requirements = (
+    "## Repository editing contract (mandatory)",
+    "Use only the GitHub MCP `push_files` tool for all repository file writes",
+    "Never call `replace`, `write_file`, `edit_file`, `apply_patch`",
+    "If `push_files` is not available or a write fails, stop modifying files",
+    "do not create a self-referential `in_review` record",
+    "after merge, finalize from `main` with the actual merged PR head SHA",
+)
+missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
+if missing_editing_contract:
+    errors.append(f"Autonomous prompt is missing its supported repository-editing/ledger contract: {missing_editing_contract!r}")
 
 # The action must stop at the model/API boundary when the owner gates fail.
 guard_position = execute.find("id: free_tier_guard")
@@ -811,12 +856,20 @@ for guarded_step in (
 ):
     if guarded_step not in execute:
         errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
-if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
-    errors.append("Autonomous workflow must keep the explicitly reviewed Gemini 3.5 Flash-Lite model")
+if "gemini_model: 'gemini-3.8-flash'" not in execute:
+    errors.append("Autonomous workflow must use the explicitly reviewed Free-tier Gemini 3.8 Flash model")
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
+for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
+    if '"maxSessionTurns": 10' not in content:
+        errors.append(f"{label} must cap Gemini sessions at 10 turns to bound Free-tier token use")
+    if "run_shell_command" in content:
+        errors.append(f"{label} must not expose the restricted shell tool to Gemini")
+    if '"list_pull_requests"' in content:
+        errors.append(f"{label} must not request the unavailable list_pull_requests MCP tool")
+
 expected_gemini_debug = "gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'"
 if expected_gemini_debug not in execute:
     errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
@@ -856,6 +909,14 @@ for required in (
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+for required in (
+    "Facts established before this prompt can run",
+    "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
+    "Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset",
+    "do **not** prove that the Google project truly has no linked Cloud Billing account",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
 
 # Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
@@ -893,6 +954,21 @@ if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter
     errors.append("OpenRouter fallback must validate the report it just produced")
 if "exact-40-character-head-SHA" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must show the exact PR-head evidence format")
+
+# A BLOCKED report must not contradict facts already proven by the successful
+# free-tier/owner preflight and GitHub App token creation in the same run.
+for required in (
+    "GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'",
+    "GITHUB_APP_TOKEN_OUTCOME: '${{ steps.mint_identity_token.outcome }}'",
+    "process.env.GEMINI_PREFLIGHT_ALLOWED === 'true'",
+    "BLOCKED report contradicts successful Gemini preflight",
+    "GITHUB_APP_TOKEN_OUTCOME === 'success'",
+    "GEMINI_AUTONOMOUS_ENABLED",
+    "GEMINI_FREE_TIER_CONFIRMED",
+    "GEMINI_API_KEY",
+):
+    if required not in execute:
+        errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
