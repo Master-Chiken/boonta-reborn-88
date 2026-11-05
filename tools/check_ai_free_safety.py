@@ -729,7 +729,7 @@ if autonomous_events != ["schedule", "workflow_dispatch"]:
         "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
         f"found {autonomous_events!r}"
     )
-if "if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
     errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
