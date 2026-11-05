@@ -481,10 +481,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/09182ee0622f328a0fc1c6b999820f007026fa7f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5e86a97934580297fa2731eb0d7a952aeed5e924"
       ],
-      "next_action": "Implementation is ready in PR #287 and is waiting only for human review/merge. This row is temporarily blocked so the in-PR live-ledger audit does not compare the PR against its own self-referential head SHA. After merge, update this task to completed with the exact merged PR head and merge evidence.",
+      "next_action": "Temporarily blocked for safe base refresh. The owner-approved sequence is to merge current main into this PR branch without force-push, rerun exact-head CI, then merge only after all required checks pass. Restore the task to in_review/current exact head or completed/merged evidence in the final ledger sync.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
       "head_sha": "5e86a97934580297fa2731eb0d7a952aeed5e924",
-      "updated_at": "2026-11-05"
+      "updated_at": "2026-11-05",
+      "blocker": "PR #287's stored GitHub merge ref still checks out the pre-#288 base; its live-ledger audit therefore reads a stale 3-task ledger until the branch is merged with current main."
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
@@ -493,7 +494,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "in_review",
+      "status": "blocked",
       "question": "Can autonomous provider failures be cooled down independently for the current UTC day, while both agents use bounded current-state context and retain the cycle-fresh evidence contract?",
       "acceptance_criteria": [
         "One persistent marker on issue #226 records an autonomous Gemini CLI invocation failure for the current UTC date",
@@ -518,10 +519,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41977904733"
       ],
-      "next_action": "PR #291 now includes the Gemini-to-OpenRouter cooldown handoff regression guard and OpenRouter report-validator cleanup. Its exact-head branch self-test passes on a278ab19b68e1937c0c7fd4ddc636fd28d483a79 (run #41977904733). After PR #287 is human-reviewed/merged, retarget #291 to main and rerun exact-head AI safety/live-ledger, provenance and trusted-path checks. Obtain human review before merge. PR #289 remains the superseded stacked predecessor; preserve its branch/history until #291 is fully validated. No merge or secret/attestation changes.",
+      "next_action": "Temporarily blocked for safe base refresh. The owner-approved sequence is to merge current main into this PR branch without force-push, rerun exact-head CI, then merge only after all required checks pass. Restore the task to in_review/current exact head or completed/merged evidence in the final ledger sync.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
       "head_sha": "a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
-      "updated_at": "2026-11-05"
+      "updated_at": "2026-11-05",
+      "blocker": "PR #291 is stacked on PR #287 and inherits the same pre-#288 ledger; it must be refreshed against the current main after #287 is integrated."
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
