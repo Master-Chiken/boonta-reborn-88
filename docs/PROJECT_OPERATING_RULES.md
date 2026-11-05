@@ -36,7 +36,7 @@ For each system: discover existing Boonta code and PRs; identify the relevant RE
 1. **Study:** inspect the exact source, binary, format or observed runtime behavior needed to answer one question.
 2. **Map:** compare findings against the actual candidate Step 102 files and the current GameCube prototype. Mark absent/unavailable inputs explicitly; never pretend a mapping was checked if the archive is unavailable.
 3. **Specify:** write the behavior independently, state what is fact vs inference, and choose a measurable acceptance test.
-4. **Implement only when justified:** spend part of the 20% engineering allocation on the smallest implementation that follows the evidence. A finding does not automatically require a code change.
+4. **Implement when justified by the evidence:** build the smallest useful testable slice that follows the behavior contract. Once the current gates clear, gameplay implementation/integration/testing is the majority effort; a finding does not automatically require a code change.
 5. **Validate:** run exact-head host tests and the native DOL/ELF build. Use visible Dolphin/controller checks for gameplay behavior and mark physical GameCube/Wii results separately.
    The maintained GameCube first-render workflow must run both on relevant PRs and on pushes to protected `main` and `dev`, so a gameplay merge receives post-merge validation as well as pre-merge PR validation.
 6. **Record:** link the dossier, commits, tests and unresolved questions to the canonical issue #156.
