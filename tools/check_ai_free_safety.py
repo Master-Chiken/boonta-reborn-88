@@ -248,6 +248,30 @@ for required in (
 if "id: run_opencode" not in openrouter_fallback:
     errors.append("OpenRouter invocation must expose a stable step ID for failure-only cooldown recording")
 
+# A same-day Gemini cooldown must fail the reusable Gemini job deliberately so
+# Boonta Autonomous Loop invokes its separately gated OpenRouter Free fallback.
+gemini_cooldown_position = execute.find("id: gemini_cooldown")
+gemini_guard_position = execute.find("id: free_tier_guard")
+gemini_run_position = execute.find("id: 'run_gemini'")
+gemini_fail_position = execute.find("name: Fail autonomous cycle when Gemini preflight blocks the model call")
+if not (0 <= gemini_cooldown_position < gemini_guard_position < gemini_run_position < gemini_fail_position):
+    errors.append("Gemini cooldown must be checked before its guard/model call and route a blocked autonomous cycle into fallback")
+for required in (
+    "GEMINI_COOLDOWN_ACTIVE",
+    "GEMINI_COOLDOWN_DATE",
+    "steps.gemini_cooldown.outputs.active != 'true'",
+    "steps.free_tier_guard.outputs.allowed != 'true'",
+    "core.setFailed(",
+    "needs.autonomous-cycle.result == 'failure'",
+    "uses: ./.github/workflows/openrouter-plan-execute.yml",
+):
+    if required not in execute and required not in autonomous:
+        errors.append(f"Gemini cooldown/fallback handoff is missing required behavior {required!r}")
+
+# Keep the OpenRouter report validator to one unambiguous successful invocation guard.
+if openrouter_fallback.count("steps.run_opencode.outcome == 'success'") != 1:
+    errors.append("OpenRouter report validation must check the successful invocation outcome exactly once")
+
 # Public issue comments cannot spoof provider cooldowns; only bot-authored markers are trusted.
 for label, workflow, marker in (
     ("Gemini", execute, "<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:"),
