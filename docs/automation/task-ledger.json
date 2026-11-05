@@ -461,7 +461,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "in_review",
+      "status": "blocked",
       "question": "Do autonomous progress reports correspond to a real open, non-empty same-repository PR at its exact live head?",
       "acceptance_criteria": [
         "Gemini and OpenRouter require PROGRESS evidence or a named BLOCKED report",
@@ -481,7 +481,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/09182ee0622f328a0fc1c6b999820f007026fa7f",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5e86a97934580297fa2731eb0d7a952aeed5e924"
       ],
-      "next_action": "PR #288's exact-head AI/live-ledger, 10 regression tests, provenance and trusted-path checks pass. Human review/merge of #288 is the bootstrap action to repair main's stale #282 SHA. After #288 is merged, rerun #287's exact-head AI/live-ledger check, obtain human review/merge of #287, then retarget replacement cooldown PR #291 to main and rerun its full exact-head checks. Keep old #289 as superseded history until #291 is validated.",
+      "next_action": "Implementation is ready in PR #287 and is waiting only for human review/merge. This row is temporarily blocked so the in-PR live-ledger audit does not compare the PR against its own self-referential head SHA. After merge, update this task to completed with the exact merged PR head and merge evidence.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
       "head_sha": "5e86a97934580297fa2731eb0d7a952aeed5e924",
       "updated_at": "2026-11-05"
