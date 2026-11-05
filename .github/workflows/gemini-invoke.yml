@@ -105,7 +105,7 @@ jobs:
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
           gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
           gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
-          gemini_model: 'gemini-3.5-flash-lite'
+          gemini_model: 'gemini-3.8-flash'
           upload_artifacts: 'false'
           workflow_name: 'gemini-invoke'
           # Assistant workflows can be triggered by comments on either Issues or PRs.
@@ -115,7 +115,7 @@ jobs:
           settings: |-
             {
               "model": {
-                "maxSessionTurns": 25
+                "maxSessionTurns": 10
               },
               "telemetry": {
                 "enabled": true,
@@ -136,14 +136,12 @@ jobs:
                   "includeTools": [
                     "add_issue_comment",
                     "issue_read",
-                    "list_issues",
                     "search_issues",
                     "pull_request_read",
-                    "list_pull_requests",
                     "search_pull_requests",
+                    "list_branches",
                     "get_commit",
                     "get_file_contents",
-                    "list_commits",
                     "search_code"
                   ],
                   "env": {
@@ -152,7 +150,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
+                "core": ["read_file", "glob", "grep_search", "list_directory"]
               }
             }
           prompt: '/gemini-invoke ${{ inputs.additional_context }}'
