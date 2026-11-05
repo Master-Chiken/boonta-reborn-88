@@ -43,15 +43,25 @@ jobs:
       issue_number: 226
       task_title: "Boonta Reborn autonomous work cycle"
       task_description: >-
-        Read the live canonical dashboard issue #156, native-target queue #226,
-        and comparative evidence queue #279, plus current repository instructions,
-        open pull requests, branch state and recent CI. #226 owns native
-        GameCube/Wii research and implementation. #279 owns read-only Windows
-        PC/N64/Dreamcast comparative evidence and may change research documentation
-        only. Select or continue exactly one safe, bounded, non-overlapping task
-        from the owner-authorized queues, preserving the 80/20 research-first
-        policy. Continue existing work instead of creating duplicates. Open a
-        reviewable PR and record evidence; never merge it.
+        Read the newest owner direction in dashboard #156 and native queue #226,
+        plus queue #279, current repository instructions, PRs, branches and CI.
+        #226 owns native GameCube/Wii research and implementation; #279 is strictly
+        read-only PC/N64/Dreamcast comparative documentation. The owner update
+        dated 2026-11-05 supersedes the older 80/20 research-first balance:
+        immediately finish/review the existing complete-game system matrix PR #282
+        as one bounded research gate (no duplicate matrix/report, no auto-merge).
+        If that matrix is already sufficiently complete, do not wait for its merge:
+        proceed to one bounded clean-room gameplay implementation task. The first
+        implementation milestone is a deterministic, testable rival-racing AI
+        subsystem, reusing existing rival state/helpers, track sampling, collision
+        and overtake logic. Replace sine-only lane wandering incrementally with
+        state-driven trajectory, speed, passing and avoidance decisions, plus
+        focused host C tests and native GameCube build validation. After the matrix
+        gate, target at least 60% implementation/integration effort; use research
+        only to resolve concrete design questions. Continue existing non-overlapping
+        branches/PRs, open a reviewable PR and record exact-SHA evidence; never merge.
+        Keep €0, free-tier-only routing, clean-room provenance and serialized
+        single-writer restrictions mandatory.
       additional_context: >-
         This is the scheduled Boonta Autonomous Loop. The owner explicitly approved
         autonomous task selection and branch/PR work. #226 is the native GameCube/Wii
