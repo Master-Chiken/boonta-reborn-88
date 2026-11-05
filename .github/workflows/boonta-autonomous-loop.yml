@@ -16,9 +16,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  readiness:
+    name: Run the read-only owner/configuration and GitHub App preflight
+    uses: ./.github/workflows/boonta-autonomous-readiness.yml
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    secrets: inherit
+
   autonomous-cycle:
     name: Select and execute one safe project task
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)
+    needs: readiness
+    if: >-
+      needs.readiness.result == 'success' &&
+      needs.readiness.outputs.writer_enabled == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || github.actor == github.repository_owner)
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
@@ -49,9 +63,11 @@ jobs:
 
   openrouter-fallback:
     name: Free-only fallback when the Gemini cycle fails
-    needs: autonomous-cycle
+    needs: [readiness, autonomous-cycle]
     if: >-
       always() &&
+      needs.readiness.result == 'success' &&
+      needs.readiness.outputs.writer_enabled == 'true' &&
       needs.autonomous-cycle.result == 'failure' &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || github.actor == github.repository_owner)

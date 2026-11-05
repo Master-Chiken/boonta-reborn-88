@@ -308,7 +308,9 @@ if fallback_call_position < 0:
 else:
     fallback_call = autonomous[fallback_call_position:]
     for required in (
-        "needs: autonomous-cycle",
+        "needs: [readiness, autonomous-cycle]",
+        "needs.readiness.result == 'success'",
+        "needs.readiness.outputs.writer_enabled == 'true'",
         "needs.autonomous-cycle.result == 'failure'",
         "uses: ./.github/workflows/openrouter-plan-execute.yml",
         "autonomous_mode: true",
@@ -653,11 +655,15 @@ if "RE-002 is active only as read-only comparative evidence" not in read("docs/P
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
 readiness_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", readiness_trigger)
-if readiness_events != ["workflow_dispatch"]:
+if readiness_events != ["workflow_dispatch", "workflow_call"]:
     errors.append(
-        "Autonomous readiness must be manually dispatched only; "
+        "Autonomous readiness must support owner-only manual dispatch and reusable workflow calls; "
         f"found {readiness_events!r}"
     )
+if "value: ${{ jobs.readiness.outputs.writer_enabled }}" not in readiness:
+    errors.append("Reusable readiness must expose the writer-enabled state to its caller")
+if "writer_enabled: ${{ steps.owner_gates.outputs.writer_enabled }}" not in readiness:
+    errors.append("Reusable readiness must derive its writer-enabled output from the owner-gate check")
 if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
     errors.append("Autonomous readiness must be owner-only and pinned to protected main")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
@@ -723,10 +729,26 @@ if autonomous_events != ["schedule", "workflow_dispatch"]:
         "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
         f"found {autonomous_events!r}"
     )
-if "if: github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
     errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
+
+readiness_job_position = autonomous.find("  readiness:")
+cycle_job_position = autonomous.find("  autonomous-cycle:")
+fallback_job_position = autonomous.find("  openrouter-fallback:")
+if not (0 <= readiness_job_position < cycle_job_position < fallback_job_position):
+    errors.append("Autonomous loop must run read-only readiness before Gemini and OpenRouter")
+if "uses: ./.github/workflows/boonta-autonomous-readiness.yml" not in autonomous:
+    errors.append("Autonomous loop must call the reusable read-only readiness workflow")
+if "needs: readiness" not in autonomous or "needs.readiness.result == 'success'" not in autonomous:
+    errors.append("Gemini must run only after successful read-only readiness")
+if "needs.readiness.outputs.writer_enabled == 'true'" not in autonomous:
+    errors.append("Gemini must not run when the owner has left the autonomous writer disabled")
+readiness_job = autonomous.split("  readiness:", 1)[1].split("  autonomous-cycle:", 1)[0]
+readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", readiness_job))
+if readiness_job_permissions != {"contents": "read", "issues": "read", "pull-requests": "read"}:
+    errors.append(f"Autonomous loop readiness caller must be read-only; found {readiness_job_permissions!r}")
 
 caller_permission_block = autonomous.split("permissions:", 1)[1].split("concurrency:", 1)[0]
 caller_permissions = dict(
@@ -743,7 +765,7 @@ if caller_permissions != expected_caller_permissions:
         f"found {caller_permissions!r}"
     )
 
-autonomous_job = autonomous.split("jobs:", 1)[1]
+autonomous_job = autonomous.split("  autonomous-cycle:", 1)[1].split("  openrouter-fallback:", 1)[0]
 job_permissions_match = re.search(
     r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
     autonomous_job,
@@ -856,6 +878,14 @@ for required in (
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+for required in (
+    "Facts established before this prompt can run",
+    "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
+    "Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset",
+    "do **not** prove that the Google project truly has no linked Cloud Billing account",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
 
 # Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
@@ -893,6 +923,21 @@ if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter
     errors.append("OpenRouter fallback must validate the report it just produced")
 if "exact-40-character-head-SHA" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must show the exact PR-head evidence format")
+
+# A BLOCKED report must not contradict facts already proven by the successful
+# free-tier/owner preflight and GitHub App token creation in the same run.
+for required in (
+    "GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'",
+    "GITHUB_APP_TOKEN_OUTCOME: '${{ steps.mint_identity_token.outcome }}'",
+    "process.env.GEMINI_PREFLIGHT_ALLOWED === 'true'",
+    "BLOCKED report contradicts successful Gemini preflight",
+    "GITHUB_APP_TOKEN_OUTCOME === 'success'",
+    "GEMINI_AUTONOMOUS_ENABLED",
+    "GEMINI_FREE_TIER_CONFIRMED",
+    "GEMINI_API_KEY",
+):
+    if required not in execute:
+        errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
 if errors:
     print("AI free-tier safety checks FAILED:")

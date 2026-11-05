@@ -2,6 +2,11 @@ name: Boonta Autonomous Readiness
 
 on:
   workflow_dispatch:
+  workflow_call:
+    outputs:
+      writer_enabled:
+        description: Whether the owner has enabled the autonomous writer
+        value: ${{ jobs.readiness.outputs.writer_enabled }}
 
 # The workflow's default token is read-only. The installation token below is
 # minted with the exact permissions the autonomous loop will need, but this
@@ -14,11 +19,14 @@ permissions:
 jobs:
   readiness:
     name: Verify autonomous configuration without running Gemini
+    outputs:
+      writer_enabled: ${{ steps.owner_gates.outputs.writer_enabled }}
     if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Check owner gates and secret presence without printing values
+        id: owner_gates
         shell: bash
         env:
           GEMINI_AUTONOMOUS_ENABLED: ${{ vars.GEMINI_AUTONOMOUS_ENABLED }}
@@ -31,9 +39,12 @@ jobs:
           missing=()
           if [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]]; then
             writer_state="enabled"
+            writer_enabled=true
           else
             writer_state="disabled"
+            writer_enabled=false
           fi
+          echo "writer_enabled=${writer_enabled}" >> "$GITHUB_OUTPUT"
           [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
           [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY secret is missing")
           [[ -n "${APP_ID:-}" ]] || missing+=("APP_ID variable is missing")
@@ -54,6 +65,11 @@ jobs:
             echo "## Boonta Autonomous: owner gates and secret presence"
             echo
             echo "- Autonomous writer gate: ${writer_state} (this read-only preflight neither changes the gate nor invokes a model)"
+            if [[ "${writer_enabled}" == "true" ]]; then
+              echo "- The writer is already enabled; no activation toggle is needed."
+            else
+              echo "- The writer remains disabled; the owner may enable it only after all external checks pass."
+            fi
             echo "- Free-tier owner attestation: present and exactly true"
             echo "- Gemini API key: secret present (value not inspected or printed)"
             echo "- GitHub App ID/private key: present (values not printed)"
@@ -142,7 +158,11 @@ jobs:
             echo
             echo "## Owner-only checks still required"
             echo "- Verify in Google AI Studio that this Gemini API project is Free tier and has no linked Cloud Billing account."
-            echo "- After this preflight passes and branch protection is verified, set GEMINI_AUTONOMOUS_ENABLED=true as the final activation step."
+            if [[ "${writer_enabled}" == "true" ]]; then
+              echo "- GEMINI_AUTONOMOUS_ENABLED is already true; this workflow leaves it unchanged."
+            else
+              echo "- After this preflight passes and branch protection is verified, the owner may set GEMINI_AUTONOMOUS_ENABLED=true as the final activation step."
+            fi
             echo "- Verify GitHub rulesets protect main and dev against direct updates, force-push and deletion, and require PR review."
             echo "- Confirm the GitHub App installation is limited to this repository."
             echo

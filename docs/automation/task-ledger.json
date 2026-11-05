@@ -220,11 +220,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a4737db1427684bca89b0a269eb14e5a5ac7a9cf",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/f19cc10276202b8c8611bd3582ba32192b13fdd4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb"
       ],
       "next_action": "Find a version-matched, authorized source/trace for the 28 g_aTrackIDs values, four circuit counts and 25 TrackInfo row values. A second public consumer (annodue collision viewer) corroborates the 25/28 address dimensions but contains only live-memory macros, not table values. Do not infer how the three-slot difference resolves; retain separate PC/SWR/console provenance.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a",
+      "head_sha": "c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
       "updated_at": "2026-11-05"
     },
     {
@@ -255,9 +256,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/296",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0fddad8451ff1c8412a8d71d267883cd1f54b869",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0b080cef716395683d82052586d427fb74276723",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41981002217"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41981002217",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41987896718",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/300"
       ],
-      "next_action": "The cycle-fresh report contract (#287), provider daily cooldowns/context limits (#291), and repeatable read-only readiness preflight (#285, with YAML coverage in #296) are merged. Latest main safety check #41981002217 passes: 9 tasks, active=1, completed=4, in_review=4; 10 regression tests and live reconciliation of 8 PR records pass. Remaining activation is owner-gated: run Actions → Boonta Autonomous Readiness on main and inspect its result; it checks secret/variable presence and GitHub App read access without exposing values or invoking a model. The owner must separately verify the actual Gemini Free tier and absence of linked Cloud Billing (readiness cannot inspect billing or prove API-key validity), and verify the GitHub App credentials/permissions. The connector cannot dispatch a new workflow_dispatch or read secret/settings values here. Do not set or change owner secrets/variables. Once the owner confirms the gates and enables GEMINI_AUTONOMOUS_ENABLED, run Boonta Autonomous Loop on main and verify a real exact-head PROGRESS PR or a specific BLOCKED report. Do not count a green workflow or generic status as progress.",
+      "next_action": "The first post-merge scheduled cycle #41987896718 on main confirmed that Gemini invoked successfully after the exact-true preflight and GitHub App token mint. Its report was accepted as BLOCKED but contradicted the run facts by asking to enable GEMINI_AUTONOMOUS_ENABLED. PR #300 adds a reusable read-only Readiness job before every scheduled/manual writer cycle, exposes writer_enabled, prevents both providers from running on failed readiness or a disabled writer, and rejects contradictory BLOCKED reports. Four research PR heads were also synchronized to live GitHub SHAs after their branches advanced. After PR #300 exact-head safety, regression, provenance and trusted-path checks pass and it is merged, inspect the next scheduled cycle for a successful Readiness job and either a valid exact-head PROGRESS PR or an evidence-based BLOCKED report. Owner-only external confirmations remain: actual zero linked Google Cloud Billing, main/dev protection rules, and GitHub App installation scope. Do not alter secrets, variables, provider settings or billing.",
       "updated_at": "2026-11-05"
     },
     {
@@ -457,12 +460,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/de492c535871587dbf40bdf9b9e11318a520cd64",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/fb290295ccfec3dc357380fb6fa5082ba3efe122",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7653bf2d4653965685671ea80bc429d6d651ff2a"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/7653bf2d4653965685671ea80bc429d6d651ff2a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb"
       ],
       "next_action": "Steam-PC FUN_0045D0B0 is recovered: it sets the Judge timer to 0.5s, stores the event at +0x128, enters state 6 and dispatches Free to Test/Toss/Smok/Trig/Chsr via the +0x24 entity handlers. IDA notes identify 0x0045E200 as the Judge +0x14 callback; the public PC C export omits its body. The state-6→0x0045DD80 call edge remains UNKNOWN. Next obtain lawful body/xrefs or independent retail-PC runtime evidence; do not infer same-build identity or GC/Wii parity.",
       "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a"
+      "head_sha": "c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -560,12 +564,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
         "https://github.com/morluto/rea/tree/d896ab7bd78331efa15e35337c1f8eff45a21623",
         "https://github.com/morluto/rea/blob/46c457f74c474b224dd540d6eae6bc23080cd95f/docs/ghidra-dol.md",
-        "https://github.com/encounter/decomp-toolkit"
+        "https://github.com/encounter/decomp-toolkit",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/489a117c380af4c837e1c98132998894b238bd06"
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
-      "updated_at": "2026-11-04"
+      "head_sha": "489a117c380af4c837e1c98132998894b238bd06",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -589,12 +594,13 @@
         "https://github.com/DeonPoncini/swep1r_decomp/tree/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef",
         "https://github.com/everalert/swe1r-decomp/tree/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6ee273b5071d8f7560e7b447124194d762f2dab1"
       ],
       "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
-      "updated_at": "2026-11-04",
+      "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
+      "head_sha": "6ee273b5071d8f7560e7b447124194d762f2dab1"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
