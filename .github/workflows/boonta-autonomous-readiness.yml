@@ -39,10 +39,8 @@ jobs:
           missing=()
           if [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]]; then
             writer_state="enabled"
-            writer_state=true
           else
             writer_state="disabled"
-            writer_state=false
           fi
           echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"
           [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
@@ -159,7 +157,7 @@ jobs:
             echo
             echo "## Owner-only checks still required"
             echo "- Verify in Google AI Studio that this Gemini API project is Free tier and has no linked Cloud Billing account."
-            if [[ "${writer_state}" == "true" ]]; then
+            if [[ "${WRITER_STATE}" == "enabled" ]]; then
               echo "- GEMINI_AUTONOMOUS_ENABLED is already true; this workflow leaves it unchanged."
             else
               echo "- After this preflight passes and branch protection is verified, the owner may set GEMINI_AUTONOMOUS_ENABLED=true as the final activation step."
