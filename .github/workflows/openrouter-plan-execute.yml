@@ -256,7 +256,7 @@ jobs:
               'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
               '',
               '[Inspect the failed OpenRouter invocation](' + process.env.RUN_URL + ')',
-            ].join('\\n');
+            ].join('\n');
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -283,7 +283,7 @@ jobs:
             }
 
       - name: Validate OpenRouter autonomous cycle report
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
