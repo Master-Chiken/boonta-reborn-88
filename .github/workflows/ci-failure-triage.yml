@@ -20,7 +20,7 @@ permissions:
   actions: read
   contents: read
   issues: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: ci-failure-triage-${{ github.event.workflow_run.id }}
