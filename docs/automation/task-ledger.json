@@ -576,7 +576,7 @@
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "36260d30dd2e9fdf493c729d694beae6cbea5715",
+      "head_sha": "03ad8006ce05c335cbcaf01b420e74033bec68c4",
       "updated_at": "2026-11-05"
     },
     {
