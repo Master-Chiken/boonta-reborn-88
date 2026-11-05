@@ -462,3 +462,177 @@ An independent Steam-PC caller strengthens the function's role:
 The independent IDA name table calls the global at `0x00E23240` `Unk_SplinePointMeshes_E23240`, consistent with the sample → mesh pointer table. Its notes also state that mesh pointers at `Test +0xEC/+0xF0` are read by race-progress and the mesh/collision path.
 
 **Updated confidence:** the lookup purpose and table indexing are `SUPPORTED` by two PC research snapshots plus an independent caller. Exact conversion edge behavior and executable-build equivalence remain `UNKNOWN` until the constants and target binary identity are resolved.
+
+
+## 2026-11-04 — Steam-PC recovery of the three race-spline routines
+
+A targeted review of the frozen Steam-PC Ghidra export found C pseudocode for all three race-specific functions that remain HANG("TODO") in the public SW_RACER_RE reconstruction. This advances the earlier address-only correlation: the bodies can now be described from a second PC snapshot, while the independent IDA project supplies function-size and field/caller corroboration.
+
+**Pinned evidence**
+- SW_RACER_RE: tim-tim707/SW_RACER_RE commit 258f67aa858ba2e281ce8a6791e49c554b85fae0, especially [swrRace.c](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c) and [swrRace.h](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.h).
+- Steam-PC decompilation: DeonPoncini/swep1r_decomp commit d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef, [src/_text23.c](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c#L126-L389): FUN_0047f8e0 at line 126, FUN_0047fbb0 at line 215, FUN_0047fca0 at line 257, and caller FUN_0047ffb0 at line 360.
+- Independent IDA metadata: everalert/swe1r-decomp commit 8d066b9c12ecb57bd819aaab586fd6bd2dd078a7, [functions.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/functions.txt) and [Entity_Test.txt](https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/Entity_Test.txt). Its IDB was not opened or redistributed.
+
+**Build boundary:** the Steam export explicitly targets the Steam release. The exact executable hash/release behind the SW_RACER_RE and IDA snapshots has not been established, and matching numeric addresses do not prove identical code. Treat the following as supported PC behavior hypotheses, not retail-build equivalence and not GameCube/Wii evidence. No source code was copied.
+
+### swrRace_AdvanceSplineCursor — 0x0047F8E0
+
+The Steam pseudocode shows a position-driven cursor reconciler, not a speed-times-delta cursor integrator:
+
+1. It initializes the forward/backward outputs and sub-frame crossing time to zero, then evaluates the current spline cursor into a local frame.
+2. It compares the pod's current position (transform position fields at +0x50..+0x58) and previous position (positionPrev at +0x16C..+0x174) against a plane derived from the evaluated spline frame.
+3. If the pod has crossed the current plane in the forward direction, it advances cursor segmentT in 0.01 increments, reevaluating the frame until the pod is no longer beyond the next plane or the cursor's forward-end flag prevents further stepping. It sets the forward output.
+4. If no forward crossing is reported and the cursor has not reached its backward-start boundary, the reverse path steps segmentT backward in 0.01 increments and sets the backward output. The cursor start/end flags are the traversal guards; this is distinct from the sign of the pod's velocity field.
+5. When forward traversal enters node 0 (the start/finish boundary), it computes the crossing instant by linearly interpolating the previous and current pod positions against the plane. The result is multiplied by the raw frame delta for sub-frame lap timing. If displacement along the plane normal is below 0.01, the crossing time is set to zero.
+
+The IDA inventory independently gives this function an extent of 0x2C7 bytes and a 0x60 stack frame. The public header's contract independently describes node-plane stepping, node-0 crossing interpolation and the same 0.01 movement threshold. Together these sources support the algorithm outline above; they do not identify every endpoint/branch edge case or establish the executable identity.
+
+### swrRace_UpdateSplineBinding — 0x0047FBB0
+
+The Steam pseudocode makes the mesh-to-spline inverse mapping substantially more precise:
+
+- Rebinding is considered only when the current cursor-derived mesh (player + 0xEC) and the current terrainModel (player + 0x140) are both non-null and differ, and race flag bit 0x20000000 is clear.
+- It queries the terrain mesh behavior. If the behavior record exists and bit 0x8 is set, the function returns -1 (rebind blocked). This agrees with the upstream PR #264 evidence that a mesh shared by multiple spline branches is marked spline-ambiguous.
+- Otherwise it returns 1 for the rebind. If the terrain mesh's 16-bit splineSampleIndex at +0x3C is nonzero, it calls swrSpline_CursorSeekToProgress (0x0047E8B0) with that sample index, then calls swrRace_AdvanceSplineCursor to reconcile the reseeded cursor against the pod's current position.
+- It refreshes the cursor-derived track mesh and the associated sample-spacing/projection fields before returning. A zero sample index skips the seek/advance pair but does not undo the rebind result.
+
+This refines the earlier candidate flow: the status is -1 for the ambiguous-mesh rejection, 0 when the rebind gate is not entered, and 1 when a changed, valid terrain mesh is accepted. The exact semantic meaning of race flag bit 0x20000000 remains unlabelled here.
+
+The IDA inventory lists 0x0047FBB0 as 0xED bytes with a 0x10 stack frame. Its notes independently connect this routine to CursorSeekToProgress and describe the +0x10E status as -1/0/1.
+
+### swrRace_ComputeTrackOffset — 0x0047FCA0
+
+The Steam pseudocode evaluates the spline cursor frame, projects the pod onto the local cross-section plane defined by that frame, and subtracts that projected point from the pod's current position:
+
+- The magnitude of this offset is stored at player + 0x124 (the fourth component of the trackOffset vector beginning at +0x118).
+- When the magnitude is greater than 0.1, the xyz components at +0x118..+0x120 are normalized to a unit direction from the projected spline point toward the pod.
+- At or below 0.1, xyz is set to the fallback direction (0, 0, 1); the measured magnitude remains stored at +0x124.
+
+This establishes the data written by the routine and the small-distance fallback. It does not prove how every downstream consumer interprets the vector, whether the projection is the globally nearest point on a curve, or what physical units the source's coordinate system uses.
+
+The IDA inventory lists 0x0047FCA0 as 0x125 bytes with a 0x64 stack frame. Its older field note correctly leaves +0x118 unknown; the Steam body now supports the direction/magnitude write pattern, but the target executable identity remains unresolved.
+
+### Caller sequence and practical consequence
+
+The Steam caller FUN_0047ffb0 confirms the same overall order as the public swrRace_UpdateRaceProgress reconstruction:
+
+AdvanceSplineCursor → cache previous/current track mesh → update sample-spacing and projection slots → clear a cache when the mesh changes → UpdateSplineBinding → ComputeTrackOffset → lap completion and forward/backward movement counters.
+
+The key architectural separation is now clearer: the cursor advances by geometric node-plane crossings based on actual pod position; ground-mesh rebinding can reseed that cursor from the baked mesh-to-sample index; and lateral offset is calculated separately from cursor progress. These are three related but distinct operations.
+
+### Updated evidence assessment
+
+| Finding | Evidence label | Confidence | Remaining limit |
+|---|---|---|---|
+| Cursor advancement uses position-vs-spline-frame plane tests and 0.01 segment steps | CODE (Steam-PC pseudocode) + corroborating public header | SUPPORTED | Exact source-build identity and all branch/end-point cases remain unresolved |
+| Node-0 crossing time is interpolated from previous/current position and scaled by raw frame delta | CODE + public header | SUPPORTED | Exact retail-build identity and unusual zero/near-zero movement behavior need runtime validation |
+| Mesh rebind uses terrain mesh splineSampleIndex and generic progress seek | CODE + upstream PR #264 + IDA caller notes | SUPPORTED | The 0x20000000 gate's meaning and all malformed/null cases remain unknown |
+| Behavior bit 0x8 blocks a mesh-to-spline rebind | CODE + upstream PR #264 | SUPPORTED | Applies to the inspected PC source family only |
+| trackOffset.xyz is a normalized projected-to-pod direction above 0.1, otherwise fallback up; w stores magnitude | CODE (Steam-PC pseudocode) | SUPPORTED | Downstream gameplay semantics and target-build equivalence remain unverified |
+
+**Next bounded investigation:** compare the three Steam function bodies against any lawful local binary/disassembly for the exact SW_RACER_RE target build, if such an artifact is available; otherwise trace every reader of trackOffset, splineRebindResult and the movement flags in the pinned source to establish their downstream consumers. Do not port these PC algorithms into GameCube/Wii without a separate target-specific specification.
+
+
+## 2026-11-04 — Downstream race-progress consumer trace (PC reconstruction)
+
+This pass follows the outputs of `swrRace_AdvanceSplineCursor` and the derived racer fields beyond the three function bodies. It uses only the same pinned public SW_RACER_RE source revision; it does not establish Steam/retail executable identity or GameCube/Wii behavior.
+
+**Pinned source:** [SW_RACER_RE `swrRace.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrRace.c) (blob `c623f7fddb7a9bebb3dbe9919e0f24e49d7842d3`), [`swrObj.c`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c) (blob `f3d0056b624911e7715a4217cead3890a2b3ba84`), and [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h) (blob `1519cd257d5d65e5575cce1ecd9aa0b2fe22686b`).
+
+### Recovered consumers and state transitions
+
+1. **Forward/backward outputs feed lap gating and judge progress state.** In `swrRace_UpdateRaceProgress` (lines 4771–4800), the local `movedForward` and `wentBackward` outputs from `swrRace_AdvanceSplineCursor` are not stored as fields. They are used immediately:
+   - The lap-crossing test is enabled when `movedForward != 0` **or** the mesh-binding result equals 1 (line 4789).
+   - A backward report increments `checkpointCount` and resets `moveTick` to zero (lines 4790–4793).
+   - A forward report clears `checkpointCount`; when the same update did not also report backward movement, `moveTick` increments up to 200 (lines 4794–4798).
+   - The integer binding result is then copied to `splineRebindResult` at +0x10E (line 4799).
+
+2. **The judge reads the backward-progress counter, not the stored binding result.** `swrObjJdge_IsRacerRacing` checks that the racer is not finished and then returns true when `checkpointCount > 4` **or** `speedValue` is below the not-racing speed threshold (lines 1385–1400). A preceding course-specific exception returns false inside planet 1 / track 3's configured rectangle when the stood-on terrain mesh has behavior bit 0x8 (lines 1390–1394). The source therefore supports a link from repeated backward cursor reports to the judge's race-status decision; it does not justify renaming the field to a confirmed “off-track timer.”
+
+3. **`moveTick` gates an idle accumulator, but its downstream effect is not recovered.** `swrRace_LapCompletion` adds frame delta to `idleTick` while `moveTick < 9`, otherwise clears `idleTick` (lines 4709–4712); lap completion also clears it on the open-track completion path and when a finish-line crossing is accepted (lines 4724–4736). No comparison or other read of `idleTick` was found in the pinned public reconstruction's indexed references. Its eventual consumer/effect remains UNKNOWN.
+
+### Unresolved stored fields: do not infer consumers
+
+- **`splineRebindResult` (+0x10E):** the pinned public reconstruction initializes it to zero during racer initialization (`swrObj.c` lines 2393–2409) and writes the current `binding` value at the end of `swrRace_UpdateRaceProgress` (`swrRace.c` line 4799). The searched public source has no other named read. The binding value does affect the immediate lap-crossing gate at line 4789, before it is stored. A separate later consumer of the field itself is **not recovered**.
+- **`trackOffset` (+0x118..+0x124):** the public reconstruction initializes the vector to (0,0,1,1) in `swrObj.c` lines 2402–2405. Its `swrRace_ComputeTrackOffset` definition remains `HANG("TODO")` at `swrRace.c` lines 4762–4766, and no named field read exists in the searched public source. The Steam-PC pseudocode describes the writer, but these findings do not identify a downstream reader. Do not label it as a steering/AI/collision input without a reader/caller chain.
+- **The movement outputs:** the public reconstruction exposes them as local outputs, and its race-progress caller consumes them as listed above. A broader Steam-PC xref inventory for every use outside this caller is not complete.
+
+### Evidence assessment and next question
+
+| Finding | Evidence label | Confidence | Remaining limit |
+|---|---|---|---|
+| Forward movement enables lap crossing and clears `checkpointCount` | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | Exact executable/release identity remains unresolved |
+| Backward movement increments `checkpointCount`, resets `moveTick`, and the judge checks `checkpointCount > 4` | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | Do not infer a frame timer or universal off-track rule |
+| Stored `splineRebindResult` has no named reader in the inspected public source | CODE search + pinned source | UNKNOWN consumer | Steam-wide xrefs and omitted/unimplemented source consumers may exist |
+| `trackOffset` writer and readers are missing from the public reconstruction | CODE (field init and TODO stub) | UNKNOWN consumer | Steam reader inventory and exact target build identity are incomplete |
+| `idleTick` is written/reset based on `moveTick` and lap completion | CODE (pinned SW_RACER_RE) | CONFIRMED-IN-SOURCE | A consequential reader/effect has not been found |
+
+**Next bounded RE-002 task:** follow the judge's F2 race-progress call and F0/status decisions into their actual caller/state transitions, while keeping `checkpointCount`, `splineRebindResult`, and terrain behavior bit 0x8 separate. Then perform a targeted Steam-PC xref search for the racer object fields `+0x10E` and `+0x118..+0x124`; reject apparent offset matches unless the base object is demonstrably the racer structure. If the exact SW_RACER_RE target executable is not available locally, record that executable-level equivalence remains blocked rather than infer from Steam.
+
+
+## 2026-11-04 — Judge F2 / HUD F3 integration of the progress fields
+
+A follow-up through the judge callbacks narrows the effect of the previously recovered counters and separates HUD state from standings/AI ranking.
+
+### F2: race tick and lap timing
+
+At `swrObjJdge_F2` (0x0045EA30), judge state 1 iterates the score array and calls `swrRace_UpdateRaceProgress` for active racers (and also refreshes progress for already-finished entries in the branch shown at lines 938–946). When a lap crossing is reported:
+- the pre-crossing frame slice `crossTime` is added to the current lap and total (lines 986–993);
+- the remainder of the raw frame delta is added to the next/current lap (lines 1027–1039);
+- on the configured final lap, the score is marked finished, the pod's local/boost flags are cleared, its AI flag is enabled and `FLAG1_FINISHED` is set (lines 994–1024).
+After the per-racer pass, standings are recomputed (line 1045). When all local racers have finished, the judge enters state 2 and extrapolates still-unfinished racers' displayed total time from their current progress; in state 2 it continues refreshing each racer's progress (lines 1047–1066).
+
+This is the concrete consumer chain for the sub-frame crossing result: cursor movement -> lap-crossing gate -> `crossTime` split -> lap counters/finish state. The locally stored `splineRebindResult` field is not needed for this chain after the immediate `binding == 1` test in `swrRace_UpdateRaceProgress`.
+
+### F3: checkpoint counter controls the local HUD guide arrow
+
+The public source's `swrObjJdge_UpdatePlayerHUD` calls `swrObjJdge_IsRacerRacing` only during judge state 1. If the helper returns zero, it clears `FLAG0_GUIDE_ARROW` and hides the guide node; otherwise it enables the flag and points the node at a spline position 0.5 ahead of the cursor (lines 1402–1440). Judge F3 calls this HUD function for the local player slots when the state is not 3, 4 or 5 (lines 1719–1748).
+
+Therefore `checkpointCount > 4`—which is increased by backward cursor reports and reset by a forward report—has a directly evidenced consumer: the helper's returned racing/not-racing value, which gates the local HUD spline guide arrow. A second condition in that helper is the low-speed threshold. The planet-1 / track-3 terrain-zone exception (behavior bit 0x8 plus an X/Y rectangle) can force the helper to return zero. The inspected call path does **not** show this helper selecting race placement or directly commanding AI steering.
+
+### Standings and AI tethers use lap progress / finish time
+
+`swrObjJdge_GetRacerProgress` derives its key from `results_P1_Lap`, `lapCompMax` and `lapComp` (lines 413–426). `swrObjJdge_GetRacerRankValue` uses that progress for unfinished racers and `maxRaceTime - total_time` for finished racers (lines 429–435). `swrObjJdge_UpdateStandings` uses those rank values to assign positions and progress gaps, and tags the nearest AI rivals to local players for catch-up tethering (lines 438–473 and onward). This is a separate path from `checkpointCount`, `splineRebindResult` and `trackOffset`.
+
+### Refined evidence conclusions
+
+- **Backward/forward outputs:** confirmed immediate inputs to lap-crossing eligibility and the checkpoint/move counters. The known checkpoint consumer is the HUD guide-arrow gate through `IsRacerRacing`; no direct AI/standings use is demonstrated.
+- **Lap timing:** confirmed F2 receives the crossing result, applies the pre-crossing `crossTime` to the completed lap, and assigns the raw frame remainder to the next lap.
+- **`splineRebindResult` (+0x10E):** still no named reader found after its write. The transient local `binding` value is used immediately to permit the lap-crossing check.
+- **`trackOffset` (+0x118..+0x124):** still no consumer identified. Its public reconstruction writer is a TODO stub; no steering, AI, standings or ground-contact role should be claimed from these sources.
+- **Standing rank / catch-up:** based on lap progress and finish time, with separate leader/local-player/pacer gaps. Do not conflate these values with the lateral trackOffset vector.
+
+**Sources:** [`swrObj.c` race tick](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L912-L1067), [HUD helper](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1385-L1440), [F3 HUD dispatch](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L1719-L1748), and [standings rank path](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.c#L413-L473). All findings remain confined to this pinned PC reconstruction.
+
+## 2026-11-04 — Bounded Steam-PC field-reader search for spline outputs
+
+This follow-up tests whether the stored outputs from the three race-spline routines have identifiable downstream readers in the pinned Steam-PC export. It is deliberately a bounded static search, not a claim that every indirect, aliased, or optimized access has been enumerated.
+
+**Pinned sources**
+- Steam-PC Ghidra export: `DeonPoncini/swep1r_decomp` at `d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef`, especially [`src/_text23.c`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/src/_text23.c#L257-L398), [racer initialization `FUN_00475ad0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00475ad0.c#L120-L145), and [camera-manager snapshot `FUN_00451d60`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00451d60.c#L1-L40) / [restore `FUN_00452aa0`](https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00452aa0.c#L210-L235).
+- Independent public reconstruction: `tim-tim707/SW_RACER_RE` at `258f67aa858ba2e281ce8a6791e49c554b85fae0`, [`types.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/types.h) for the racer field layout and [`swrObj.h`](https://github.com/tim-tim707/SW_RACER_RE/blob/258f67aa858ba2e281ce8a6791e49c554b85fae0/src/Swr/swrObj.h) for named camera-manager routines.
+
+### Search method and deconfliction
+
+The pinned Steam-PC repository was searched for the literal field offsets in both typed and generic forms: `0x10e`, `0x118`, `0x11c`, `0x120`, and `0x124`, including direct float/short access patterns. Results were checked against the candidate function and its apparent base object; identical numeric offsets are not treated as the same field unless the base is demonstrably the racer object.
+
+Two tempting `+0x118..+0x124` matches are not evidence of a racer-field read:
+- Steam `FUN_00451d60` copies a camera object's state slots `+0x118/+0x11c/+0x120/+0x124` into its staged snapshot at `+0x274..+0x280`; the corresponding restore is `FUN_00452aa0`. The pinned SW_RACER_RE header identifies these addresses as `swrObjcMan_CommitStagedCamera` and `swrObjcMan_UpdateChaseCamera`, respectively. The same offsets occur in a different camera-manager record.
+- Steam `FUN_00482f10` writes a float at `param_1 + 0x118`, but the bounded search did not establish that `param_1` is the racer object. It is therefore an untyped candidate, not a confirmed reader or consumer of `trackOffset`.
+
+### Field-by-field result
+
+| Racer field | Confirmed Steam-PC initialization/writer in inspected sources | Bounded search result | Conclusion |
+|---|---|---|---|
+| `splineRebindResult` (+0x10E) | `FUN_00475ad0` initializes it; `FUN_0047ffb0` stores the `FUN_0047fbb0` result as a short at the end of `src/_text23.c` | No direct read of the short at this racer offset was found. Other `0x10e` hits were initialization/writer contexts or unrelated literal/constant uses. | A later field consumer is **UNKNOWN / not recovered**. The transient local `binding` value is still used immediately in the lap-crossing gate before the value is stored; do not confuse that local use with a read of the stored field. |
+| `trackOffset.x/y/z` (+0x118/+0x11C/+0x120) | `FUN_00475ad0` initializes the vector; `FUN_0047fca0` writes the projected direction/fallback | Exact direct float searches returned the writer in `src/_text23.c`; the `+0x118` search also found an untyped write in `FUN_00482f10` and camera-state copies, neither established as a racer-field access. No verified downstream racer read was identified. | Downstream effect remains **UNKNOWN**. Do not label it steering, AI, collision, ground contact, or rendering input yet. |
+| `trackOffset.w` (+0x124) | `FUN_00475ad0` initializes it; `FUN_0047fca0` stores the measured magnitude | The bounded exact float search returned the `FUN_0047fca0` writer; other generic `+0x124` hits belonged to different object layouts. | No verified downstream racer read identified; semantics beyond “stored magnitude” remain **UNKNOWN**. |
+
+The public reconstruction's field declarations and Steam-PC writer are mutually consistent about the racer layout, but numeric offset matches alone are insufficient to upgrade a candidate xref. This search narrows the public evidence; it does **not** prove no reader exists in the Steam executable.
+
+### What would resolve the remaining question
+
+A decisive result needs a complete typed xref/data-flow pass over the exact local Steam-PC executable (or its matching analysis database), including register-relative accesses and aliases, with the racer base pointer followed from its creation/callers. The current public Steam export and the pinned SW_RACER_RE source do not establish that complete chain. If the owner does not have the matching lawful executable and analysis context, keep these readers marked UNKNOWN rather than inventing a gameplay role.
+
+**Platform boundary:** all findings above are Steam-PC source/search evidence only. They establish no Windows retail-build identity, N64, Dreamcast, GameCube, or Wii behavior. No binary, ROM, disc image, BIOS, extracted asset, analysis database, or third-party code was copied or uploaded.
+
