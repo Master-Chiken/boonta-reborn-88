@@ -289,9 +289,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42095175176",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/309",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/7f7aa18804006fc66716ee879b59f74e4c5a5249",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42097566397"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42097566397",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/310",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/2f0f0a67b4ad5c2cb4aa64155a59a27d31a6bd7c"
       ],
-      "next_action": "Provider-chain hardening PR #297 is merged (0f0b501f37eb592abb1cfdfda950b7b2ddeed01e); ledger reconciliation PR #308 is merged (b0ab1f3fda2902448537f89ff72dbe88d3927b0d); secret-alias correction PR #309 is merged (7f7aa18804006fc66716ee879b59f74e4c5a5249). PR #309 maps the existing repository secret TA_CLE_GROQ into the GROQ_API_KEY runtime variable in both Readiness and Groq execution. Its four exact-head checks passed and post-merge AI safety run #42097566397 passed. Remaining: run Boonta Autonomous Readiness using the current main revision to confirm TA_CLE_GROQ is present (presence-only, no provider call), then inspect a fresh autonomous cycle to establish OpenRouter authentication and actual provider-chain behavior. The available GitHub connection cannot dispatch a new workflow_dispatch; an owner click in Actions is required for Readiness. Do not claim Groq or OpenRouter live until a post-change runtime invocation succeeds. Preserve €0, no paid fallback, no secret/permission/billing mutation, and no auto-merge.",
+      "next_action": "PR #309's Groq secret alias mapping is merged at 7f7aa18804006fc66716ee879b59f74e4c5a5249. PR #310 now also adds a narrowly scoped push trigger to Boonta Autonomous Readiness: it runs on main only when the Readiness workflow definition itself changes, in addition to owner workflow_dispatch and workflow_call. Once PR #310 is merged by the repository owner, verify the automatically created Readiness run at the merge SHA and check that it reports Groq Free tertiary fallback configured. This remains a presence/attestation check only; it does not validate provider key validity, billing tier, quotas or call Groq. Then inspect a later scheduled autonomous cycle for real provider invocation and OpenRouter authentication recovery. Preserve €0, no paid fallback, no secret/permission/billing mutation, no auto-merge, and do not claim providers live until a real post-change invocation succeeds.",
       "updated_at": "2026-11-05"
     },
     {
