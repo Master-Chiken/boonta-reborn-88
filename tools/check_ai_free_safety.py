@@ -359,7 +359,7 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
     ):
         errors.append(f"{label} must fail closed before token mint, checkout, prompt preparation, and Gemini model call")
-    if "gemini_model: 'gemini-3.5-flash-lite'" not in content:
+    if "gemini_model: 'gemini-3.8-flash'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
         errors.append(f"{label} must keep workflow artifact upload disabled")
@@ -821,6 +821,25 @@ else:
     for required_tool in ("create_branch", "create_pull_request", "push_files", "get_job_logs"):
         if required_tool not in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist is missing required bounded capability {required_tool!r}")
+    for required_tool in ("search_pull_requests", "list_branches"):
+        if required_tool not in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist is missing supported inventory tool {required_tool!r}")
+    for unsupported_tool in ("list_pull_requests", "create_or_update_file", "get_workflow_job"):
+        if unsupported_tool in mcp_tools:
+            errors.append(f"Autonomous Gemini MCP allowlist contains unsupported or redundant tool {unsupported_tool!r}")
+
+# The autonomous agent's file-editing surface must match the actual workflow allow-list.
+editing_contract_requirements = (
+    "## Repository editing contract (mandatory)",
+    "Use only the GitHub MCP `push_files` tool for all repository file writes",
+    "Never call `replace`, `write_file`, `edit_file`, `apply_patch`",
+    "If `push_files` is not available or a write fails, stop modifying files",
+    "do not create a self-referential `in_review` record",
+    "after merge, finalize from `main` with the actual merged PR head SHA",
+)
+missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
+if missing_editing_contract:
+    errors.append(f"Autonomous prompt is missing its supported repository-editing/ledger contract: {missing_editing_contract!r}")
 
 # The action must stop at the model/API boundary when the owner gates fail.
 guard_position = execute.find("id: free_tier_guard")
@@ -837,12 +856,20 @@ for guarded_step in (
 ):
     if guarded_step not in execute:
         errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
-if "gemini_model: 'gemini-3.5-flash-lite'" not in execute:
-    errors.append("Autonomous workflow must keep the explicitly reviewed Gemini 3.5 Flash-Lite model")
+if "gemini_model: 'gemini-3.8-flash'" not in execute:
+    errors.append("Autonomous workflow must use the explicitly reviewed Free-tier Gemini 3.8 Flash model")
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
+for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
+    if '"maxSessionTurns": 10' not in content:
+        errors.append(f"{label} must cap Gemini sessions at 10 turns to bound Free-tier token use")
+    if "run_shell_command" in content:
+        errors.append(f"{label} must not expose the restricted shell tool to Gemini")
+    if '"list_pull_requests"' in content:
+        errors.append(f"{label} must not request the unavailable list_pull_requests MCP tool")
+
 expected_gemini_debug = "gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'"
 if expected_gemini_debug not in execute:
     errors.append("Autonomous Gemini runs must disable verbose debug streaming; manual runs may opt in")
