@@ -4,6 +4,17 @@ This is the operating agreement for the public Racer repository. The canonical d
 
 ## 1. Work method: reuse-first reverse engineering → implementation
 
+### Core doctrine: reuse first, then build in stages
+
+The guiding principle is **reuse before rebuild**. Existing research, source code, prototypes, tools, fixtures, exporters, tests, CI workflows and open pull requests are project assets. Before creating a new subsystem, inspect what already exists, identify its exact revision and ownership, and decide whether it can be reused, extended or safely adapted. The aim is to save months of duplicated work without importing incompatible code or unverified assumptions.
+
+Apply the sequence **MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST**:
+1. **Make it work:** deliver the smallest end-to-end behavior that meets a stated acceptance test.
+2. **Make it good:** make the implementation understandable, maintainable, testable and integrated with the existing architecture; remove duplication rather than layering another parallel system on top.
+3. **Make it fast:** optimize only after profiling or other measurable evidence identifies a real bottleneck. Do not trade correctness for speculative speed.
+
+**Trust does not replace control.** Before reusing external or internal work, verify its exact revision, license scope, provenance, platform/API compatibility and the specific behavior we need. A README claim, an AI statement, a green badge, an old CI run or success on another platform is not proof that the current Boonta branch works. Validate the exact commit being reviewed; rerun affected checks after changes; distinguish host tests, native builds, emulator process/render checks, interactive gameplay and physical-hardware acceptance. Record uncertainty as unknown, never as fact. Preserve human review and never auto-merge.
+
 The project uses evidence-led reverse engineering to avoid inventing systems that have already been studied. The initial broad discovery phase and complete-game inventory are sufficiently covered by PR #282 and the existing PC/N64/Dreamcast dossiers. The old 80% research / 20% implementation split is **not a permanent gate** and must not keep implementation blocked.
 
 Use completed reverse engineering as a practical engineering input:
