@@ -514,11 +514,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/13ece9ba38dea96bab2209b571d24aed98473f8a",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/081e4719b3329e51bc676e846808ee3a206c8283",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d7da2d7d00b81506780cfc223ad7f3c247379b6b",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b3ece967cd812c9a5b5c921d94f42d4e448d7846"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/b3ece967cd812c9a5b5c921d94f42d4e448d7846",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41977904733"
       ],
-      "next_action": "After PR #287 is human-reviewed/merged, retarget replacement PR #291 to main and rerun exact-head branch self-test, AI safety/live-ledger, source-import provenance and trusted-path checks. Obtain human review before merge. PR #289 remains the superseded stacked predecessor; preserve its branch/history until #291 is fully validated. No merge or secret/attestation changes.",
+      "next_action": "PR #291 now includes the Gemini-to-OpenRouter cooldown handoff regression guard and OpenRouter report-validator cleanup. Its exact-head branch self-test passes on a278ab19b68e1937c0c7fd4ddc636fd28d483a79 (run #41977904733). After PR #287 is human-reviewed/merged, retarget #291 to main and rerun exact-head AI safety/live-ledger, provenance and trusted-path checks. Obtain human review before merge. PR #289 remains the superseded stacked predecessor; preserve its branch/history until #291 is fully validated. No merge or secret/attestation changes.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
-      "head_sha": "b3ece967cd812c9a5b5c921d94f42d4e448d7846",
+      "head_sha": "a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
       "updated_at": "2026-11-05"
     },
     {
