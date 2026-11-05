@@ -56,7 +56,7 @@ jobs:
         id: free_tier_guard
         shell: bash
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           GROQ_FREE_TIER_CONFIRMED: ${{ vars.GROQ_FREE_TIER_CONFIRMED }}
           GEMINI_AUTONOMOUS_ENABLED: ${{ vars.GEMINI_AUTONOMOUS_ENABLED }}
           AUTONOMOUS_MODE: ${{ inputs.autonomous_mode }}
@@ -75,7 +75,7 @@ jobs:
           if [[ "${GROQ_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
             reason="GROQ_FREE_TIER_CONFIRMED must equal true only after the owner verifies the Groq Free account, zero payment methods/credits, and no paid usage."
           elif [[ -z "${GROQ_API_KEY:-}" ]]; then
-            reason="The GROQ_API_KEY repository secret is missing."
+            reason="The TA_CLE_GROQ repository secret is missing; it is mapped to the GROQ_API_KEY environment variable for OpenCode."
           elif [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
             reason="The master GEMINI_AUTONOMOUS_ENABLED owner gate is not exactly true."
           elif [[ "${AUTONOMOUS_MODE:-false}" != "true" || "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
@@ -157,7 +157,7 @@ jobs:
         id: run_opencode
         shell: bash
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
         run: |
           set -euo pipefail
