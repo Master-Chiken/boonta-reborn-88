@@ -224,7 +224,7 @@
       ],
       "next_action": "Find a version-matched, authorized source/trace for the 28 g_aTrackIDs values, four circuit counts and 25 TrackInfo row values. A second public consumer (annodue collision viewer) corroborates the 25/28 address dimensions but contains only live-memory macros, not table values. Do not infer how the three-slot difference resolves; retain separate PC/SWR/console provenance.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a",
+      "head_sha": "c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
       "updated_at": "2026-11-05"
     },
     {
@@ -462,7 +462,7 @@
       "next_action": "Steam-PC FUN_0045D0B0 is recovered: it sets the Judge timer to 0.5s, stores the event at +0x128, enters state 6 and dispatches Free to Test/Toss/Smok/Trig/Chsr via the +0x24 entity handlers. IDA notes identify 0x0045E200 as the Judge +0x14 callback; the public PC C export omits its body. The state-6→0x0045DD80 call edge remains UNKNOWN. Next obtain lawful body/xrefs or independent retail-PC runtime evidence; do not infer same-build identity or GC/Wii parity.",
       "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "7653bf2d4653965685671ea80bc429d6d651ff2a"
+      "head_sha": "c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -564,8 +564,8 @@
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "07b20ccc7d5ac1aaf5dabd7ebc4ac8d2d7f91ebf",
-      "updated_at": "2026-11-04"
+      "head_sha": "489a117c380af4c837e1c98132998894b238bd06",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -592,9 +592,9 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
       ],
       "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
-      "updated_at": "2026-11-04",
+      "updated_at": "2026-11-05",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "c4cd6b2d49fc291be8fdf43932d4db412fc812a5"
+      "head_sha": "6ee273b5071d8f7560e7b447124194d762f2dab1"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
