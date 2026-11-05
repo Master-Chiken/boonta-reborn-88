@@ -291,9 +291,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/7f7aa18804006fc66716ee879b59f74e4c5a5249",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42097566397",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/310",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/2f0f0a67b4ad5c2cb4aa64155a59a27d31a6bd7c"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/2f0f0a67b4ad5c2cb4aa64155a59a27d31a6bd7c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a938b707e9f5fecee350afd9e033291f727cb224"
       ],
-      "next_action": "PR #309's Groq secret alias mapping is merged at 7f7aa18804006fc66716ee879b59f74e4c5a5249. PR #310 now also adds a narrowly scoped push trigger to Boonta Autonomous Readiness: it runs on main only when the Readiness workflow definition itself changes, in addition to owner workflow_dispatch and workflow_call. Once PR #310 is merged by the repository owner, verify the automatically created Readiness run at the merge SHA and check that it reports Groq Free tertiary fallback configured. This remains a presence/attestation check only; it does not validate provider key validity, billing tier, quotas or call Groq. Then inspect a later scheduled autonomous cycle for real provider invocation and OpenRouter authentication recovery. Preserve €0, no paid fallback, no secret/permission/billing mutation, no auto-merge, and do not claim providers live until a real post-change invocation succeeds.",
+      "next_action": "PR #309's Groq secret alias mapping is merged at 7f7aa18804006fc66716ee879b59f74e4c5a5249. PR #310 adds a narrowly scoped Readiness push trigger on main, limited to changes to its own workflow file; the static AI safety guard now explicitly enforces that exact branch/path scope while retaining owner-only workflow_dispatch and workflow_call. Once PR #310 is merged by the repository owner, verify the automatically created Readiness run at the merge SHA and check that it reports Groq Free tertiary fallback configured. This remains a presence/attestation check only; it does not validate provider key validity, billing tier, quotas or call Groq. Then inspect a later scheduled autonomous cycle for real provider invocation and OpenRouter authentication recovery. Preserve €0, no paid fallback, no secret/permission/billing mutation, no auto-merge, and do not claim providers live until a real post-change invocation succeeds.",
       "updated_at": "2026-11-05"
     },
     {
