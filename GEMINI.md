@@ -9,6 +9,15 @@
 - Do not claim native compilation, Dolphin boot, graphics, controls, or gameplay have been validated unless the corresponding run/log/evidence exists.
 - Follow `docs/PROJECT_OPERATING_RULES.md`: one active implementation task and one write-capable agent at a time. The owner has authorized the separately gated Boonta Autonomous Loop to select bounded tasks and open PRs without per-task `continue` prompts. No agent-driven merges, settings changes, force-pushes or branch deletions.
 
+## Reuse-first reverse-engineering map
+- The complete-game matrix is already in PR #282; do not recreate it.
+- Review the existing route-runtime candidate PR #274 before writing another route graph. It targets `dev`; verify its exact head and current review state. Its current runtime supports one closed route; branch-choice history is not yet connected to vehicle gameplay.
+- Use `docs/research/PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md` and `docs/research/PC_POD_CONTROL_SPEED_TRACTION_2026-10-20.md` as concise PC-only behavioral references. Use PR #284 / RE-002 for route-progress and spline-rebind evidence. Use PR #278 for the target toolchain boundary.
+- PC AI research separates pace/rank targets from physical pod movement and uses route-cursor look-ahead/branch policy. Treat these as design contracts to reimplement independently, not code or constants to copy.
+- GameCube/Wii are homebrew delivery targets; no original retail Racer GameCube/Wii binary exists. PC/N64/Dreamcast findings remain platform-labeled. Keep Step 102 and unclear-provenance content on HOLD.
+- Never ingest the full approximately 452 KB `docs/research/RE-001-route-spline-progress.md`; retrieve only bounded excerpts relevant to the selected task. Do not send issue attachments, images, videos or binary artifacts to a model provider.
+- The task ledger allows one active task. The current active item is `AUTOMATION-LEDGER-ACTIVATION`; do not create a second active task. After it clears, review/reuse #274, then implement deterministic rival AI, and defer career/profile/upgrades (#307) until the playable race slice is coherent.
+
 ## Provenance and assets
 - Assume the repository is public. Never commit ROMs, disc images, BIOS files, or complete commercial game payloads.
 - Do not redistribute extracted commercial models, textures, audio or unclear data derived from third-party mods.
