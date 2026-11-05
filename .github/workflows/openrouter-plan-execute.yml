@@ -106,8 +106,25 @@ jobs:
           npm install --global opencode-ai@1.19.5
           opencode --version
 
-      - name: Run OpenCode through the OpenRouter Free route
+      - name: Snapshot open and closed PR heads before OpenRouter cycle
         if: steps.free_tier_guard.outputs.allowed == 'true'
+        id: snapshot_pr_heads
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: 'Master-Chiken',
+              repo: 'boonta-reborn-88',
+              state: 'all',
+              per_page: 100
+            });
+            const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
+            core.setOutput('heads', JSON.stringify(baseline));
+            core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
+
+      - name: Run OpenCode through the OpenRouter Free route
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success'
+        id: run_opencode
         shell: bash
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -170,9 +187,57 @@ jobs:
           You have no shell tool. Use local read/edit tools for inspecting and preparing files, and the GitHub MCP tools for all GitHub operations. Create or continue one branch named with prefix agent/boonta-openrouter/ from the exact current SHA of the correct base branch. Send the complete changed file contents in one push_files operation to that branch, then open/update one reviewable PR with exact task scope, evidence, limitations, provenance and links to #226/#279. You may add concise progress comments to the canonical issues. Do not push to main/dev directly.
 
           The GitHub MCP server intentionally exposes only read, branch creation, file push, PR creation and issue-comment tools. Never try to merge, delete, force-push, alter settings/secrets/variables, or enable auto-merge. Never claim tests ran unless an exact-head Actions result proves it. Inspect exact-head CI after a PR is opened; read only failed-job logs. Do not rerun unchanged green checks or push empty commits.
+          End every report with this machine-readable contract. For traceable progress, use these exact lines:
+          BOONTA_CYCLE_STATUS: PROGRESS
+          BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
+          BOONTA_CYCLE_EVIDENCE_BASE: main|dev
+          For a genuine human/external blocker, use:
+          BOONTA_CYCLE_STATUS: BLOCKED
+          BOONTA_CYCLE_BLOCKER: <specific named dependency>
+          BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
+          Never claim PROGRESS for generic status, no-op work, unverified results or unknown PR heads. If neither status is truthful, omit the marker; the workflow fails closed.
+
 
           If there is no safe, meaningful task, do not create an empty branch/PR. Post a concise evidence-based blocker and the single next action to #226. Finish with a short factual report of the work, branch/PR if created, and what remains blocked.
           PROMPT
           )"
 
-          opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT"
+          opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
+
+
+      - name: Validate OpenRouter autonomous cycle report
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
+          PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const lines = summary.split(/\r?\n/);
+            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
+            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
+            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
+            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
+              if (!evidence || !evidenceBaseMatch) {
+                core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
+                return;
+              }
+              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
+              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
+              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
+              const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || unchangedAtStart) {
+                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
+                return;
+              }
+              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
+            } else if (validBlocked) {
+              core.info('OpenRouter cycle reported a named blocker and next action.');
+            } else {
+              core.setFailed('OpenRouter invocation returned without a valid PROGRESS or BLOCKED report.');
+            }
