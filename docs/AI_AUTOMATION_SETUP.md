@@ -120,3 +120,16 @@ Distinguer systématiquement :
 Références : [instructions des agents](../GEMINI.md), [règles de fonctionnement du projet](PROJECT_OPERATING_RULES.md), [priorité et critères d'acceptation](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
 [Documentation officielle des tarifs et conditions de données de Gemini API](https://ai.google.dev/gemini-api/docs/pricing)
+
+## Troisième secours facultatif — Groq Free
+
+Le workflow [Groq Free autonomous fallback](../.github/workflows/groq-plan-execute.yml) est le troisième et dernier fournisseur de secours de la boucle, après Gemini puis OpenRouter Free. Il est volontairement inactif tant que les deux éléments suivants ne sont pas configurés :
+
+- Secret GitHub Actions `GROQ_API_KEY` : clé créée dans [la console Groq](https://console.groq.com/keys), stockée uniquement dans **Settings → Secrets and variables → Actions → Secrets**.
+- Variable GitHub Actions `GROQ_FREE_TIER_CONFIRMED=true` : à définir uniquement après vérification que le compte reste sur le forfait Free, sans mise à niveau Developer ni moyen de paiement ajouté.
+
+Le workflow utilise exclusivement le modèle fixe `groq/openai/gpt-oss-20b` par le fournisseur Groq intégré à OpenCode. Il possède son propre cooldown UTC, son propre contrôle Free-only, le même périmètre MCP GitHub limité et le même contrat de rapport PR exact. Il ne peut pas basculer vers un modèle payant. En cas de quota atteint ou de fournisseur indisponible, il échoue visiblement et s'arrête.
+
+Le contrôle de readiness vérifie seulement la présence du secret et de la variable, sans lire ni afficher la clé et sans envoyer de requête. Un lancement réel reste nécessaire pour confirmer le fonctionnement. Les quotas Free sont limités et peuvent évoluer ; les limites précises visibles dans la console Groq priment sur toute documentation statique. Ne passe jamais au forfait Developer pour ce projet.
+
+Références techniques : [intégration Groq dans OpenCode](https://opencode.ai/docs/providers), [modèles et limites Groq](https://console.groq.com/docs/rate-limits), [FAQ de facturation Groq](https://console.groq.com/docs/billing-faqs).

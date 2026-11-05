@@ -167,3 +167,27 @@ jobs:
             echo
             echo "This workflow does not call Gemini and does not prove that the Gemini API key is valid."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report optional Groq Free tertiary fallback readiness (no API request)
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_FREE_TIER_CONFIRMED: ${{ vars.GROQ_FREE_TIER_CONFIRMED }}
+        run: |
+          set -euo pipefail
+          if [[ "${GROQ_FREE_TIER_CONFIRMED:-}" == "true" && -n "${GROQ_API_KEY:-}" ]]; then
+            {
+              echo "## Groq Free tertiary fallback: configured"
+              echo
+              echo "- Owner attestation is exactly true and API-key secret is present (value not inspected or printed)."
+              echo "- The workflow is restricted to groq/openai/gpt-oss-20b; no paid model fallback is configured."
+              echo "- This check does not verify billing, account tier, key validity, model availability or quota."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## Groq Free tertiary fallback: not configured"
+              echo
+              echo "- Optional tertiary fallback remains inactive until GROQ_API_KEY is present and GROQ_FREE_TIER_CONFIRMED=true."
+              echo "- No Groq API request was made."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

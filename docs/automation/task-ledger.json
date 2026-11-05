@@ -244,7 +244,10 @@
         "One active task maximum is enforced",
         "A post-merge cycle records exact PR state and continues the next unanswered research question",
         "Autonomous Gemini repository writes are constrained to the available GitHub MCP push_files tool; unavailable local editing tools are explicitly prohibited",
-        "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge"
+        "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge",
+        "OpenRouter fallback fails visibly if its Free-only gate blocks, the actual invocation is skipped, or the report validator does not pass",
+        "Optional Groq tertiary fallback has an independent Free-only attestation, secret gate, fixed model allowlist and UTC cooldown",
+        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -276,9 +279,12 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/304",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/cbb93a240129e2a54c2fbc12d1b69b3a9d15112e",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42070497654",
-        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6665082932"
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6665082932",
+        "https://opencode.ai/docs/providers",
+        "https://console.groq.com/docs/rate-limits",
+        "https://console.groq.com/docs/billing-faqs"
       ],
-      "next_action": "Automation integration checkpoint — 2026-11-05: PR #306 merged at exact reviewed head 869f86c6c0dd73292e4541c919e7a4521c485e99 (squash 63d03bbaf8c12fb8dd677c5de0f53584e19ae652); PR #303 merged at exact head 08b2c3fb6c22847bd131dcc3ecba3e369af85724 (squash cc15f76eeab585904b0bbe64fcc88f1baf0084cf); PR #304 merged at exact head bc8f60e3f60d4dc3188ab3fe1e52c4c0d1318863 (squash cbb93a240129e2a54c2fbc12d1b69b3a9d15112e). The three required main PR checks passed for each merge; post-#304 main safety run #42070497654 passed. Current main at this checkpoint is cbb93a240129e2a54c2fbc12d1b69b3a9d15112e. No scheduled Boonta Autonomous Loop run on a post-merge main SHA had appeared as of 2026-11-05 19:02 Europe/Paris. The next scheduled slot is 18:17 UTC / 19:17 Paris on 2026-11-05; Gemini's same-UTC-day failure cooldown is active and OPENROUTER_FREE_TIER_CONFIRMED remains unset, so that slot may safely skip both providers without producing work. Next eligible scheduled opportunity after the Gemini cooldown date changes is 00:17 UTC / 01:17 Paris on 2026-11-06. Verify its actual run, inspect job logs and provider execution, then reconcile any exact-head progress PR or explicit blocker. Do not mark this task complete on readiness-only success or a skipped model call. Do not change provider attestation, secrets, billing, permissions, branch protection, bypass rules or auto-merge. After this active task is legitimately closed, prioritize continuity/resumability and the existing full-race Dolphin diagnostic generalization under the approved plan. Keep the career/profile task #307 queued until the first playable GameCube/Wii vertical slice has been accepted.",
+      "next_action": "Provider-chain hardening proposal on the existing automation PR: Gemini remains primary; OpenRouter Free is the secondary fallback; Groq Free is an optional, independently gated third fallback using only groq/openai/gpt-oss-20b. The OpenRouter reusable workflow now fails visibly if its Free-only gate blocks, the real OpenCode invocation is skipped/fails, or report validation is skipped/fails; the parent loop then invokes Groq only after Gemini fails and OpenRouter is not successful. Groq requires the owner-created GROQ_API_KEY secret plus GROQ_FREE_TIER_CONFIRMED=true after verifying the account remains on Free with no Developer upgrade/payment method. Readiness checks presence only and never prints secret values or calls a provider. The owner states OPENROUTER_FREE_TIER_CONFIRMED=true has been set, but a post-change scheduled run has not yet proved that GitHub Actions consumed it or that an OpenRouter request succeeded. Next: validate this PR on its exact head; after merge, the owner may add the Groq secret/variable if they want the third fallback enabled, then inspect real scheduled provider runs. Do not mark the task complete until an actual provider invocation and validated report or a specific provider failure is evidenced. Preserve €0, no paid fallback, no secret/permission/billing mutation, and no auto-merge.",
       "updated_at": "2026-11-05"
     },
     {
