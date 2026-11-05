@@ -291,8 +291,16 @@ for label, workflow, marker in (
     trusted_lookup = f"comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('{marker}')"
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
-if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
-    errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
+for required in (
+    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
+    "at most two short comments",
+    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
+    "below roughly 20,000 tokens",
+    "approximately 452 KB docs/research/RE-001-route-spline-progress.md",
+    "never repeat the same oversized request",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
 
 tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
 if not tools_match:
@@ -918,13 +926,15 @@ if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]
 
 # Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
 for required in (
-    "only the current-state/owner-direction sections at the top of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279",
-    "latest five relevant comments per issue",
-    "Search older comments only when the selected task needs specific historical evidence",
-    "do not ingest or reproduce full historical appendices/comments",
+    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
+    "at most two short comments",
+    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
+    "below roughly 20,000 tokens",
+    "approximately 452 KB",
+    "Never repeat the same oversized request",
 ):
     if required not in autonomous_prompt:
-        errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+        errors.append(f"Gemini autonomous prompt must enforce bounded text-only context: {required!r}")
 for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
