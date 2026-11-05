@@ -258,9 +258,16 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/0b080cef716395683d82052586d427fb74276723",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41981002217",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41987896718",
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/300"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/300",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/45ecbe68d7ba56412f2994602ff39d22117a4e5a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/ec122c511ef984bec4fc155bd6ba2c5167426d3e",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691259",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691261",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013691334",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013686385",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42014039965"
       ],
-      "next_action": "The first post-merge scheduled cycle #41987896718 on main confirmed that Gemini invoked successfully after the exact-true preflight and GitHub App token mint. Its report was accepted as BLOCKED but contradicted the run facts by asking to enable GEMINI_AUTONOMOUS_ENABLED. PR #300 adds a reusable read-only Readiness job before every scheduled/manual writer cycle, exposes writer_enabled, prevents both providers from running on failed readiness or a disabled writer, and rejects contradictory BLOCKED reports. Four research PR heads were also synchronized to live GitHub SHAs after their branches advanced. After PR #300 exact-head safety, regression, provenance and trusted-path checks pass and it is merged, inspect the next scheduled cycle for a successful Readiness job and either a valid exact-head PROGRESS PR or an evidence-based BLOCKED report. Owner-only external confirmations remain: actual zero linked Google Cloud Billing, main/dev protection rules, and GitHub App installation scope. Do not alter secrets, variables, provider settings or billing.",
+      "next_action": "PR #300 is merged on main at exact PR head 45ecbe68d7ba56412f2994602ff39d22117a4e5a (merge commit ec122c511ef984bec4fc155bd6ba2c5167426d3e). It now runs the read-only owner/configuration and GitHub App GET preflight before every scheduled/manual writer cycle. Gemini may run only when readiness succeeds and returns writer_enabled=true; OpenRouter fallback is guarded by the same readiness result and writer state. The Gemini validator rejects BLOCKED reports that contradict the successful exact-true preflight, API-key presence or App-token mint. Exact-head checks on #300 passed: AI/free-tier safety + ledger (10 tests; 8 PR refs reconciled), YAML/self-test, held-assets/source provenance, and trusted-path guard; the merged main push AI safety check also passed (#42014039965). The first scheduled cycle after this merge has not yet been observed. At the next scheduled/manual cycle, verify the readiness job itself succeeds and the report is either a live exact-head PROGRESS PR or a specific BLOCKED report based only on facts the preflight cannot establish. Owner-only checks still outstanding: independently confirm the Gemini project has no linked Cloud Billing, verify main/dev ruleset protections and GitHub App installation scope. Do not change secrets, variables, permissions, billing or auto-merge.",
       "updated_at": "2026-11-05"
     },
     {
