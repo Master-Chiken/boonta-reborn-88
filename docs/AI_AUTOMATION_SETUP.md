@@ -125,7 +125,7 @@ Références : [instructions des agents](../GEMINI.md), [règles de fonctionneme
 
 Le workflow [Groq Free autonomous fallback](../.github/workflows/groq-plan-execute.yml) est le troisième et dernier fournisseur de secours de la boucle, après Gemini puis OpenRouter Free. Il est volontairement inactif tant que les deux éléments suivants ne sont pas configurés :
 
-- Secret GitHub Actions `GROQ_API_KEY` : clé créée dans [la console Groq](https://console.groq.com/keys), stockée uniquement dans **Settings → Secrets and variables → Actions → Secrets**.
+- Secret GitHub Actions `TA_CLE_GROQ` (mappé en interne vers la variable d'environnement `GROQ_API_KEY`) : clé créée dans [la console Groq](https://console.groq.com/keys), stockée uniquement dans **Settings → Secrets and variables → Actions → Secrets**.
 - Variable GitHub Actions `GROQ_FREE_TIER_CONFIRMED=true` : à définir uniquement après vérification que le compte reste sur le forfait Free, sans mise à niveau Developer ni moyen de paiement ajouté.
 
 Le workflow utilise exclusivement le modèle fixe `groq/openai/gpt-oss-20b` par le fournisseur Groq intégré à OpenCode. Il possède son propre cooldown UTC, son propre contrôle Free-only, le même périmètre MCP GitHub limité et le même contrat de rapport PR exact. Il ne peut pas basculer vers un modèle payant. En cas de quota atteint ou de fournisseur indisponible, il échoue visiblement et s'arrête.
