@@ -247,8 +247,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41894698584",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6639739122"
       ],
-      "next_action": "Latest live scheduled run #41894698584 completed, but the Gemini report was generic/stale and cited no newly opened PR; no development progress is confirmed. This demonstrates why PR #287's exact PROGRESS/BLOCKED report contract is needed. After #287 is human-reviewed/merged, inspect the next scheduled cycle and require either a live same-repository non-empty PR at its exact head SHA or a named blocker plus one concrete next action. Do not count a green workflow or generic summary as progress.",
-      "updated_at": "2026-11-04"
+      "next_action": "The cycle-fresh report contract (#287), provider daily cooldowns/context limits (#291), and repeatable read-only readiness preflight (#285) are merged. Remaining activation is owner-gated: run Actions → Boonta Autonomous Readiness on main and inspect its result; it checks secret/variable presence and GitHub App read access without exposing values or invoking a model. The owner must separately verify the actual Gemini Free tier and absence of linked Cloud Billing (readiness cannot inspect billing or prove API-key validity), and verify the GitHub App credentials/permissions. The connector cannot dispatch a new workflow_dispatch or read secret/settings values here. Do not set or change owner secrets/variables. Once the owner confirms the gates and enables GEMINI_AUTONOMOUS_ENABLED, run Boonta Autonomous Loop on main and verify a real exact-head PROGRESS PR or a specific BLOCKED report. Do not count a green workflow or generic status as progress.",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
@@ -593,7 +593,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "completed",
       "question": "Can the owner rerun a GET-only readiness check after initial activation without toggling the autonomous writer, while the documentation accurately explains that behavior?",
       "acceptance_criteria": [
         "Readiness reports whether GEMINI_AUTONOMOUS_ENABLED is enabled or disabled without changing it",
@@ -603,13 +603,17 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9d87f894d81da6f1f5edc4a66da24ccca7847717",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c09ed2c629ad505910a5c61856cb95e4e184f529",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722651",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722766",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980720684",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722905"
       ],
-      "next_action": "Refresh PR #285 from current main without force-push, preserving only the readiness preflight, setup-guide and static-checker changes. Re-run exact-head AI safety/live-ledger, 10 regression tests, provenance and trusted-path checks. Restore to in_review at the refreshed exact head or completed with merged evidence; keep the writer gate unchanged.",
+      "next_action": "Merged in PR #285 at exact head 9d87f894d81da6f1f5edc4a66da24ccca7847717 (merge commit c09ed2c629ad505910a5c61856cb95e4e184f529). Exact-head AI safety/live-ledger, 10 ledger regression tests, workflow YAML/Python, trusted-path and held-assets checks all passed. The readiness workflow itself remains a manual workflow_dispatch; no execution or provider/account status is inferred from these static checks.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
-      "head_sha": "14758946b5be63e0eccdb7818807179276f2f4b0",
-      "updated_at": "2026-11-05",
-      "blocker": "PR #285 remains on a 3-task pre-bootstrap ledger and is 41 commits behind main; its exact-head live audit fails on stale #282 SHA. Reapply its read-only readiness changes on current main before validation."
+      "head_sha": "9d87f894d81da6f1f5edc4a66da24ccca7847717",
+      "updated_at": "2026-11-05"
     }
   ]
 }
