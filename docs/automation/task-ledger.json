@@ -495,7 +495,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "completed",
       "question": "Can autonomous provider failures be cooled down independently for the current UTC day, while both agents use bounded current-state context and retain the cycle-fresh evidence contract?",
       "acceptance_criteria": [
         "One persistent marker on issue #226 records an autonomous Gemini CLI invocation failure for the current UTC date",
@@ -518,13 +518,19 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/d7da2d7d00b81506780cfc223ad7f3c247379b6b",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/b3ece967cd812c9a5b5c921d94f42d4e448d7846",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41977904733"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41977904733",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/a14d4546330414335ca30bfcbc815984dc24c480",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0f2c7d1803df76f51a692972044f7a63420b036a",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41979727354",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41979727268",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41979727312",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41979725318",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41979837683"
       ],
-      "next_action": "PR #291 is now retargeted to main and is being refreshed with the current main ledger and merged #287 evidence. Run branch self-test, AI safety/live-ledger, source-import provenance and trusted-path checks on the refreshed exact head; only then mark ready for review and merge.",
+      "next_action": "Merged in PR #291 at exact head a14d4546330414335ca30bfcbc815984dc24c480 (merge commit 0f2c7d1803df76f51a692972044f7a63420b036a). Independent UTC-day Gemini and OpenRouter Free failure cooldowns, bounded issue context, and cycle-fresh report validation are on main. Exact-head CI passed: AI safety, ledger validator, 10 regression tests, live reconciliation, branch self-test, source-import provenance and trusted-path checks.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
-      "head_sha": "a278ab19b68e1937c0c7fd4ddc636fd28d483a79",
-      "updated_at": "2026-11-05",
-      "blocker": "Full exact-head validation on the refreshed main-based branch is pending."
+      "head_sha": "a14d4546330414335ca30bfcbc815984dc24c480",
+      "updated_at": "2026-11-05"
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
