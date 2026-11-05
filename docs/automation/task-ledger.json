@@ -593,7 +593,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "blocked",
+      "status": "completed",
       "question": "Can the owner rerun a GET-only readiness check after initial activation without toggling the autonomous writer, while the documentation accurately explains that behavior?",
       "acceptance_criteria": [
         "Readiness reports whether GEMINI_AUTONOMOUS_ENABLED is enabled or disabled without changing it",
@@ -603,13 +603,18 @@
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14758946b5be63e0eccdb7818807179276f2f4b0",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/9d87f894d81da6f1f5edc4a66da24ccca7847717",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/c09ed2c629ad505910a5c61856cb95e4e184f529",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722651",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722766",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980722905",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41980720684"
       ],
-      "next_action": "Refresh PR #285 from current main without force-push, preserving only the readiness preflight, setup-guide and static-checker changes. Re-run exact-head AI safety/live-ledger, 10 regression tests, provenance and trusted-path checks. Restore to in_review at the refreshed exact head or completed with merged evidence; keep the writer gate unchanged.",
+      "next_action": "Merged in PR #285 at exact head 9d87f894d81da6f1f5edc4a66da24ccca7847717 (merge commit c09ed2c629ad505910a5c61856cb95e4e184f529). The owner-only readiness preflight now reports whether the writer gate is enabled without changing it, remains GET-only and never calls Gemini. Static policy, YAML/self-test, ledger (10 regression tests), live reconciliation, source-import and trusted-path checks all passed. Owner-only configuration and billing attestations remain external activation gates.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
-      "head_sha": "14758946b5be63e0eccdb7818807179276f2f4b0",
-      "updated_at": "2026-11-05",
-      "blocker": "PR #285 remains on a 3-task pre-bootstrap ledger and is 41 commits behind main; its exact-head live audit fails on stale #282 SHA. Reapply its read-only readiness changes on current main before validation."
+      "head_sha": "9d87f894d81da6f1f5edc4a66da24ccca7847717",
+      "updated_at": "2026-11-05"
     }
   ]
 }
