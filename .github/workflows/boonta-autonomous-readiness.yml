@@ -29,7 +29,11 @@ jobs:
         run: |
           set -euo pipefail
           missing=()
-          [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]] || missing+=("Keep GEMINI_AUTONOMOUS_ENABLED false or unset until this readiness check passes")
+          if [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]]; then
+            writer_state="enabled"
+          else
+            writer_state="disabled"
+          fi
           [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
           [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY secret is missing")
           [[ -n "${APP_ID:-}" ]] || missing+=("APP_ID variable is missing")
@@ -49,7 +53,7 @@ jobs:
           {
             echo "## Boonta Autonomous: owner gates and secret presence"
             echo
-            echo "- Autonomous writer gate: still disabled (false/unset); enable it only after this preflight passes"
+            echo "- Autonomous writer gate: ${writer_state} (this read-only preflight neither changes the gate nor invokes a model)"
             echo "- Free-tier owner attestation: present and exactly true"
             echo "- Gemini API key: secret present (value not inspected or printed)"
             echo "- GitHub App ID/private key: present (values not printed)"
