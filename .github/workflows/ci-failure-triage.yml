@@ -20,7 +20,7 @@ permissions:
   actions: read
   contents: read
   issues: write
-  pull-requests: write
+  pull-requests: read
 
 concurrency:
   group: ci-failure-triage-${{ github.event.workflow_run.id }}
@@ -78,7 +78,11 @@ jobs:
                 pr.head.repo?.full_name === expectedRepo &&
                 pr.head.sha === run.head_sha
               ) {
-                // Valid open PR: post the failure on its PR thread.
+                // Keep this reporter least-privileged: PR failures go to the
+                // canonical queue issue because PR-thread comments require
+                // pull-requests: write, which this workflow intentionally lacks.
+                targetIssueNumber = 226;
+                prNumber = null;
               } else {
                 core.info('PR association is closed, ineligible or stale; checking the protected push route when applicable.');
                 prNumber = null;
@@ -156,7 +160,7 @@ jobs:
               '**Failed jobs/steps:**',
               details,
               '',
-              'Next step: open the run logs and inspect the failing step. This report does not infer a root cause or claim tests passed.',
+              'Next step: open the run logs and inspect the failing step. PR failures are reported to the canonical queue issue to preserve least-privilege permissions. This report does not infer a root cause or claim tests passed.',
             ].join('\n');
 
             await github.rest.issues.createComment({
