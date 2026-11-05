@@ -303,7 +303,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5a61bebdc5dd62d9d8596be5692881f12ea388fa",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ed58c7eb4bb200888f210b3ea87a55020855a3d8",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42100105526",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42098726158"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42098726158",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42102589223"
       ],
       "next_action": "PR #311 is merged at 5a61bebdc5dd62d9d8596be5692881f12ea388fa (merge commit ed58c7eb4bb200888f210b3ea87a55020855a3d8). The change adds a GET-only OpenRouter /api/v1/key bearer-auth preflight requiring is_free_tier=true before any model work, and injects the existing OPENROUTER_API_KEY into OpenCode v1.19.5 via its supported OPENCODE_AUTH_CONTENT auth store. Exact-head PR checks passed 4/4; post-merge free-only safety check #42100105526 passed. Readiness #42098726158 also passed after #310 merge, and Groq env mapping is present. Do not mark OpenRouter live until a fresh scheduled autonomous cycle proves the GET key check passes and OpenCode produces a valid, cycle-fresh PR or a named blocked result. The schedule is 17 */6 * * * UTC; next scheduled slot after this merge is 2026-11-06 00:17 UTC. Preserve €0, no paid fallback, no secret mutation, no auto-merge.",
       "updated_at": "2026-11-05"
