@@ -244,7 +244,10 @@
         "One active task maximum is enforced",
         "A post-merge cycle records exact PR state and continues the next unanswered research question",
         "Autonomous Gemini repository writes are constrained to the available GitHub MCP push_files tool; unavailable local editing tools are explicitly prohibited",
-        "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge"
+        "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge",
+        "OpenRouter fallback fails visibly if its Free-only gate blocks, the actual invocation is skipped, or the report validator does not pass",
+        "Optional Groq tertiary fallback has an independent Free-only attestation, secret gate, fixed model allowlist and UTC cooldown",
+        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -270,9 +273,18 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42013686385",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42014039965",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/306",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/63d03bbaf8c12fb8dd677c5de0f53584e19ae652"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/63d03bbaf8c12fb8dd677c5de0f53584e19ae652",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/303",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cc15f76eeab585904b0bbe64fcc88f1baf0084cf",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/304",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cbb93a240129e2a54c2fbc12d1b69b3a9d15112e",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42070497654",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6665082932",
+        "https://opencode.ai/docs/providers",
+        "https://console.groq.com/docs/rate-limits",
+        "https://console.groq.com/docs/billing-faqs"
       ],
-      "next_action": "PR #306 was merged on 2026-11-05 at exact PR head 869f86c6c0dd73292e4541c919e7a4521c485e99; squash merge commit: 63d03bbaf8c12fb8dd677c5de0f53584e19ae652. On that exact head, the three main required status-check contexts passed: Gemini free-only guard, held-assets/provenance guard, and trusted source-path guard. The workflow-YAML/embedded-Python validation also passed. The merged change caps Gemini sessions at 10 turns, removes local shell/edit tools, and limits Gemini repository writes to the supported GitHub MCP push_files tool. The first scheduled writer cycle after #306's merge has not yet been observed. The latest observed scheduled cycle before merge (#42035782351) passed read-only readiness and the GitHub App GET preflight, then correctly skipped Gemini under its same-day cooldown; OpenRouter Free was skipped because OPENROUTER_FREE_TIER_CONFIRMED was empty. No provider executed a work cycle in that run. Next: verify the first post-merge scheduled/manual cycle produces either a live exact-head progress PR or a factual blocker supported by the read-only preflight. Do not mark this umbrella task completed until a real post-merge cycle is observed and the ledger is reconciled from main. Owner-side checks: Gemini Free/no linked Google Cloud Billing still requires confirmation in the Google account; OpenRouter remains optional and disabled until its actual Free-only/no-payment/no-credit status is verified. The GitHub App installation is selected and currently lists only this repository; main and dev rulesets are active and were inspected. Do not change secrets, variables, permissions, provider attestations, billing, branch protections or auto-merge.",
+      "next_action": "Provider-chain hardening proposal on the existing automation PR: Gemini remains primary; OpenRouter Free is the secondary fallback; Groq Free is an optional, independently gated third fallback using only groq/openai/gpt-oss-20b. The OpenRouter reusable workflow now fails visibly if its Free-only gate blocks, the real OpenCode invocation is skipped/fails, or report validation is skipped/fails; the parent loop then invokes Groq only after Gemini fails and OpenRouter is not successful. Groq requires the owner-created GROQ_API_KEY secret plus GROQ_FREE_TIER_CONFIRMED=true after verifying the account remains on Free with no Developer upgrade/payment method. Readiness checks presence only and never prints secret values or calls a provider. The owner states OPENROUTER_FREE_TIER_CONFIRMED=true has been set, but a post-change scheduled run has not yet proved that GitHub Actions consumed it or that an OpenRouter request succeeded. Next: validate this PR on its exact head; after merge, the owner may add the Groq secret/variable if they want the third fallback enabled, then inspect real scheduled provider runs. Do not mark the task complete until an actual provider invocation and validated report or a specific provider failure is evidenced. Preserve €0, no paid fallback, no secret/permission/billing mutation, and no auto-merge.",
       "updated_at": "2026-11-05"
     },
     {

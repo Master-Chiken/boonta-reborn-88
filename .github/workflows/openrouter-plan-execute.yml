@@ -283,6 +283,7 @@ jobs:
             }
 
       - name: Validate OpenRouter autonomous cycle report
+        id: validate_report
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -317,4 +318,28 @@ jobs:
               core.info('OpenRouter cycle reported a named blocker and next action.');
             } else {
               core.setFailed('OpenRouter invocation returned without a valid PROGRESS or BLOCKED report.');
+            }
+
+      - name: Fail visibly if the OpenRouter fallback did not complete
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          GATE_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+          SNAPSHOT_OUTCOME: ${{ steps.snapshot_pr_heads.outcome }}
+          INVOCATION_OUTCOME: ${{ steps.run_opencode.outcome }}
+          REPORT_OUTCOME: ${{ steps.validate_report.outcome }}
+        with:
+          script: |
+            const allowed = process.env.GATE_ALLOWED === 'true';
+            const outcomes = {
+              snapshot: process.env.SNAPSHOT_OUTCOME || 'skipped',
+              invocation: process.env.INVOCATION_OUTCOME || 'skipped',
+              report: process.env.REPORT_OUTCOME || 'skipped',
+            };
+            if (!allowed) {
+              core.setFailed('OpenRouter fallback did not execute: its independent Free-only/owner gate blocked the request. No provider request was sent; the separate Groq Free fallback may now be evaluated.');
+            } else if (outcomes.snapshot !== 'success' || outcomes.invocation !== 'success' || outcomes.report !== 'success') {
+              core.setFailed('OpenRouter fallback did not complete. Required outcomes: PR snapshot, actual OpenCode invocation, and report validation must all be success. Observed: ' + JSON.stringify(outcomes));
+            } else {
+              core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
