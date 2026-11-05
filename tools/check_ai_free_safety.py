@@ -828,6 +828,19 @@ else:
         if unsupported_tool in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist contains unsupported or redundant tool {unsupported_tool!r}")
 
+# The autonomous agent's file-editing surface must match the actual workflow allow-list.
+editing_contract_requirements = (
+    "## Repository editing contract (mandatory)",
+    "Use only the GitHub MCP `push_files` tool for all repository file writes",
+    "Never call `replace`, `write_file`, `edit_file`, `apply_patch`",
+    "If `push_files` is not available or a write fails, stop modifying files",
+    "do not create a self-referential `in_review` record",
+    "after merge, finalize from `main` with the actual merged PR head SHA",
+)
+missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
+if missing_editing_contract:
+    errors.append(f"Autonomous prompt is missing its supported repository-editing/ledger contract: {missing_editing_contract!r}")
+
 # The action must stop at the model/API boundary when the owner gates fail.
 guard_position = execute.find("id: free_tier_guard")
 mint_position = execute.find("name: 'Mint identity token'")
