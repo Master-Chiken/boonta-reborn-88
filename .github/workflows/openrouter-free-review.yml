@@ -113,7 +113,7 @@ jobs:
       - name: Call OpenRouter free route
         id: call
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
@@ -140,7 +140,7 @@ jobs:
           review_file="$RUNNER_TEMP/openrouter-review.md"
 
           if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-            echo "::error::The OPENROUTER_API_KEY repository secret is missing. Do not add credits or payment details."
+            echo "::error::The OPENROUTER_API_KEY_02 (preferred) or legacy OPENROUTER_API_KEY repository secret is missing. Do not add credits or payment details."
             exit 1
           fi
 
