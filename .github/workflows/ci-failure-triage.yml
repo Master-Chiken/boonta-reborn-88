@@ -13,6 +13,7 @@ on:
       - Synthetic BRRES MDL0 probe
       - Dreamcast KallistiOS build
       - Boonta Autonomous Loop
+      - .github/workflows/boonta-autonomous-loop.yml
     types:
       - completed
 
@@ -28,7 +29,10 @@ concurrency:
 
 jobs:
   summarize-failure:
-    if: github.event.workflow_run.conclusion == 'failure'
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' ||
+      github.event.workflow_run.conclusion == 'timed_out' ||
+      github.event.workflow_run.conclusion == 'startup_failure'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -103,7 +107,7 @@ jobs:
                 return;
               }
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
-            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && run.name === 'Boonta Autonomous Loop' && run.head_branch === 'main') {
+            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
               // Do not let a silent autonomous-cycle failure disappear. Report
               // to the active queue only while the failed run is still for the
               // exact current main SHA.
@@ -146,21 +150,32 @@ jobs:
 
             const runUrl = String(run.html_url || '');
             const branch = String(run.head_branch || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180);
-            const details = lines.length ? lines.join('\n') : '- GitHub reported a failure but exposed no failed job/step summary.';
+            const conclusion = String(run.conclusion || 'unknown');
+            const noJobs = !Array.isArray(data.jobs) || data.jobs.length === 0;
+            const details = noJobs && conclusion === 'startup_failure'
+              ? '- GitHub reported startup_failure before creating any job. No workflow step or provider job ran; no provider authentication result can be inferred. Inspect the run page for the platform-level startup diagnostic.'
+              : lines.length
+                ? lines.join('\n')
+                : '- GitHub reported conclusion ' + conclusion + ' but exposed no failed job/step summary.';
+            const nextStep = noJobs
+              ? 'Next step: inspect the run page for a platform-level startup diagnostic. This report does not infer a provider failure or authentication outcome.'
+              : 'Next step: open the logs for failed steps and inspect the actual failure. This report does not infer a root cause or claim tests passed.';
             const body = [
               '## Automated CI failure triage (deterministic)',
               '',
-              'This report uses job/step status metadata only. It did not check out or execute pull-request code and did not call an AI provider.',
+              'This report uses workflow/job metadata only. It did not check out or execute pull-request code and did not call an AI provider.',
               '',
               '**Workflow:** ' + String(run.name || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180),
               '**Branch:** ' + branch,
               '**Target:** ' + (prNumber ? 'PR #' + prNumber : 'canonical issue #' + targetIssueNumber),
+              '**Conclusion:** ' + conclusion,
+              '**Jobs returned:** ' + (Array.isArray(data.jobs) ? data.jobs.length : 0),
               '**Run:** ' + runUrl,
               '',
-              '**Failed jobs/steps:**',
+              '**Job/step diagnosis:**',
               details,
               '',
-              'Next step: open the run logs and inspect the failing step. PR failures are reported to the canonical queue issue to preserve least-privilege permissions. This report does not infer a root cause or claim tests passed.',
+              nextStep,
             ].join('\n');
 
             await github.rest.issues.createComment({
