@@ -236,7 +236,7 @@ jobs:
           - After that gate, route-runtime integration precedes deterministic rival AI. Do not create duplicate route graphs or copy AGPL or ROM-derived code.
 
           READ ONLY WHAT IS NECESSARY
-          - Read docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Do not read the full task ledger or full issue bodies.
+          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Apply the mandatory recovery/reuse gate before any implementation and record its evidence-backed decision. Do not read the full task ledger or full issue bodies.
           - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
           - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens as a hard ceiling; target newly retrieved text below 1,500 tokens total and stop if the task cannot be resolved within that budget.
 
