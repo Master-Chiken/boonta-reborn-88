@@ -140,10 +140,10 @@ jobs:
                 return;
               }
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
-            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
+            } else if (!prNumber && ['push', 'schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
               // Do not let a silent autonomous-cycle failure disappear. Report
-              // to the active queue only while this run is still for the
-              // exact current main SHA.
+              // schedule, owner-authorized push, and owner-dispatch failures
+              // only while this run is still for the exact current main SHA.
               const { data: branchInfo } = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
