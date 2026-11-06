@@ -216,7 +216,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,search_issues,search_pull_requests,pull_request_read,create_branch,create_or_update_file,push_files,create_pull_request,add_issue_comment,list_branches,list_commits,get_commit,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,search_code"
+                  "GITHUB_TOOLS": "get_file_contents,issue_read,search_issues,search_pull_requests,pull_request_read,create_branch,create_or_update_file,push_files,create_pull_request,add_issue_comment,list_branches,list_commits,get_commit,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,search_code"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -241,6 +241,14 @@ jobs:
           You are the €0-only OpenRouter fallback agent for Boonta Reborn 88. Gemini has already failed in this scheduled cycle. You are authorized to complete exactly one bounded task without asking the owner to type "continue".
 
           FIRST read docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Use only this workflow's owner-approved task brief and the compact summary for initial task selection. Do not call issue_read or list_issues for #156, #226 or #279; their full append-only bodies/comments are prohibited context. Search only for one precise unresolved question if essential. Inspect only PRs directly related to the selected task; do not enumerate every branch or PR. #226 is the native GameCube/Wii implementation queue; #279 is read-only PC/N64/Dreamcast comparison. Keep platform evidence separate.
+
+          HISTORICAL CONTEXT RULE (SUPERSEDED, PRESERVED FOR AUDIT):
+          - The former instruction said: "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279." For this autonomous route, do not fetch those full append-only bodies or call issue_read; use the supplied task brief and compact ledger summary instead.
+          - Use at most two short comments only when a precise dependency cannot be established otherwise.
+          - Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content.
+          - The older ceiling was below roughly 20,000 tokens; this workflow now applies the stricter 1,500-token retrieved-text budget.
+          - Never fetch approximately 452 KB docs/research/RE-001-route-spline-progress.md.
+          - Never repeat the same oversized request; stop and report the exact provider error.
 
           Use the compact task summary to identify active, blocked and in-review items. The canonical ledger is the write target only when a specific change is justified; never read its full evidence history. Treat status in the summary as authoritative and reconcile only the selected task against its exact live PR/head SHA. Preserve one active task maximum, keep open PRs in_review, use blocked for named dependencies, and mark completed only after merge plus evidence. Do not duplicate task IDs.\n\n          The owner-approved 2026-11-05 direction supersedes the old permanent 80/20 research-first wording. PR #282 is a sufficient complete-game planning inventory; do not recreate it. Reuse existing reverse-engineering findings as design contracts and research only for concrete unanswered questions. At the current snapshot AUTOMATION-LEDGER-ACTIVATION is blocked pending a valid post-merge provider cycle; do not describe it as active or clear it without evidence. Do not create competing writers.
 
