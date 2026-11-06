@@ -717,7 +717,7 @@ if readiness_events != ["push", "workflow_dispatch", "workflow_call"]:
         f"found {readiness_events!r}"
     )
 push_trigger = readiness_trigger.split("  push:", 1)[1].split("  workflow_dispatch:", 1)[0] if "  push:" in readiness_trigger else ""
-if "    branches:\n      - main" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
+if "    branches:\n      - main\n" not in push_trigger or "    paths:\n      - .github/workflows/boonta-autonomous-readiness.yml\n" not in push_trigger:
     errors.append(
         "Autonomous readiness push trigger must be restricted to main and changes to its own workflow file"
     )
@@ -800,7 +800,7 @@ required_autonomous_push_paths = (
     ".github/workflows/groq-plan-execute.yml",
     "docs/automation/task-ledger.json",
 )
-if "    branches:\\n      - main" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
+if "    branches:\n      - main\n" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
     errors.append("Autonomous main-push trigger must be restricted to main and the reviewed automation/ledger paths")
 if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))" not in autonomous:
     errors.append("Autonomous schedule/manual dispatch/main-push continuation must be owner-only and pinned to protected main")
