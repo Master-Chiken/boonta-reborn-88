@@ -19,6 +19,10 @@
 - Never ingest the full approximately 452 KB `docs/research/RE-001-route-spline-progress.md`; retrieve only bounded excerpts relevant to the selected task. Do not send issue attachments, images, videos or binary artifacts to a model provider.
 - The task ledger allows one active task. The current active item is `AUTOMATION-LEDGER-ACTIVATION`; do not create a second active task. After it clears, review/reuse #274, then implement deterministic rival AI, and defer career/profile/upgrades (#307) until the playable race slice is coherent.
 
+## Mandatory reverse-engineering-first rule
+- Before manually recreating or implementing any game element, asset, format, behavior or subsystem, read and follow [`docs/REVERSE_ENGINEERING_FIRST.md`](docs/REVERSE_ENGINEERING_FIRST.md). This is a hard gate, not a suggestion: inspect existing Boonta code/PRs/tools and the exact relevant reverse-engineering source; try recovery, extraction, decoding, conversion or reuse first; verify platform/version, licence and provenance; and document why rebuilding is necessary if recovery/reuse is impossible, incompatible, unsafe or legally unavailable.
+- Every implementation plan and PR must include the reuse decision and evidence. If a source/archive is unavailable or rights are unclear, record UNKNOWN/HOLD and do not guess, manually copy, or upload it to hosted agents. Research is targeted, not a fixed percentage quota.
+
 ## Provenance and assets
 - Assume the repository is public. Never commit ROMs, disc images, BIOS files, or complete commercial game payloads.
 - Do not redistribute extracted commercial models, textures, audio or unclear data derived from third-party mods.
