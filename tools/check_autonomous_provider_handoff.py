@@ -74,6 +74,32 @@ else:
     if "do not call issue_read" not in openrouter.lower():
         errors.append("OpenRouter prompt must prohibit full issue-body reads even though the allow-list retains the narrowly available issue tool")
 
+# Parse the exact OpenCode 1.19.5 runtime configs and enforce finite agent turns.
+import json
+import re
+
+def load_opencode_config(label: str, content: str) -> dict:
+    match = re.search(
+        r'cat > "\\$RUNNER_TEMP/opencode\\.json" <<\'JSON\'\\n(.*?)\\n\\s*JSON',
+        content,
+        re.DOTALL,
+    )
+    if not match:
+        errors.append(f"{label} fallback must expose a parseable OpenCode JSON config")
+        return {}
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError as exc:
+        errors.append(f"{label} OpenCode JSON config is invalid: {exc}")
+        return {}
+
+groq_config = load_opencode_config("Groq", groq)
+openrouter_config = load_opencode_config("OpenRouter", openrouter)
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
+    errors.append("Groq OpenCode build agent must be limited to exactly 4 agentic steps")
+if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 6:
+    errors.append("OpenRouter OpenCode build agent must be limited to exactly 6 agentic steps")
+
 if errors:
     print("Autonomous provider handoff checks FAILED:")
     for error in errors:
