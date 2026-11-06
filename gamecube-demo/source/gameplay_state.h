@@ -27,6 +27,7 @@ typedef struct {
     int slide_active;
     float rival_z[BOONTA_RIVAL_COUNT];
     float rival_lateral[BOONTA_RIVAL_COUNT];
+    float rival_speed[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
     int paused;
     int race_finished;
@@ -431,6 +432,11 @@ static inline float boonta_rival_initial_z(unsigned int rival_index)
     return -18.0f - (float)rival_index * 16.0f;
 }
 
+static inline float boonta_rival_initial_speed(unsigned int rival_index)
+{
+    return 0.56f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.06f;
+}
+
 
 /*
  * Reset every gameplay value affected by the Y-button restart, including the
@@ -463,6 +469,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
         state->rival_z[i] = boonta_rival_initial_z(i);
         state->rival_lateral[i] = 0.0f;
+        state->rival_speed[i] = boonta_rival_initial_speed(i);
     }
 }
 
