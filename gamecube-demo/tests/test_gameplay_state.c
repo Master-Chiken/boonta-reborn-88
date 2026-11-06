@@ -764,6 +764,7 @@ static void race_state_reset_tests(void) {
  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
   state.rival_z[i] = 8.0f + (float)i;
   state.rival_lateral[i] = -1.0f - (float)i;
+  state.rival_speed[i] = 0.1f;
  }
 
  boonta_race_state_reset(&state);
@@ -789,6 +790,7 @@ static void race_state_reset_tests(void) {
  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
   assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
   assert(nearf(state.rival_lateral[i], 0.0f));
+  assert(nearf(state.rival_speed[i], boonta_rival_initial_speed(i)));
  }
 
  /* Defensive no-op for a missing state pointer. */
