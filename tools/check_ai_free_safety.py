@@ -4,6 +4,7 @@
 This test makes no network calls, uses no API key, and never invokes an AI model.
 """
 from pathlib import Path
+import json
 import re
 import sys
 
@@ -34,6 +35,7 @@ setup = read("docs/AI_AUTOMATION_SETUP.md")
 ci_triage = read(".github/workflows/ci-failure-triage.yml")
 gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
 wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
+groq_fallback = read(".github/workflows/groq-plan-execute.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
@@ -995,6 +997,47 @@ for required in (
 ):
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
+
+# The Groq Free fallback must remain useful under its observed 8k TPM limit.
+# OpenCode supports per-model context/output limits; cap this agent well below TPM.
+groq_config_match = re.search(
+    r'cat > "\$RUNNER_TEMP/opencode\.json" <<\'JSON\'\\n(.*?)\\n\\s*JSON',
+    groq_fallback,
+    re.DOTALL,
+)
+if not groq_config_match:
+    errors.append("Groq fallback must expose a parseable OpenCode JSON config for bounded model limits")
+else:
+    try:
+        groq_config = json.loads(groq_config_match.group(1))
+        groq_model = (
+            groq_config.get("provider", {})
+            .get("groq", {})
+            .get("models", {})
+            .get("openai/gpt-oss-20b", {})
+        )
+        groq_limits = groq_model.get("limit", {})
+        if groq_limits.get("context") != 4096 or groq_limits.get("output") != 768:
+            errors.append(
+                "Groq GPT-OSS 20B must be capped at 4096 context / 768 output tokens"
+            )
+        if groq_config.get("model") != "groq/openai/gpt-oss-20b":
+            errors.append("Groq fallback must keep its fixed free-tier model")
+        if groq_config.get("enabled_providers") != ["groq"]:
+            errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
+    except (json.JSONDecodeError, AttributeError, TypeError) as exc:
+        errors.append(f"Groq OpenCode config is invalid: {exc}")
+for required in (
+    "OpenCode is configured for this run with a 4,096-token context limit and a 768-token output limit",
+    "Do NOT call issue_read for #156, #226 or #279",
+    "Do not list all PRs, enumerate all branches, or retrieve full comment histories",
+    "Keep total retrieved text under 3,000 tokens",
+    "Do not retry an oversized request",
+):
+    if required not in groq_fallback:
+        errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
+if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
+    errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
