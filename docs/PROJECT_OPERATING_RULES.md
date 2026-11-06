@@ -2,19 +2,34 @@
 
 This is the operating agreement for the public Racer repository. The canonical dashboard is [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
-## 1. Work allocation: 80% reverse engineering
+## 1. Work method: reuse-first reverse engineering → implementation
 
-The intended engineering effort is **80% reverse engineering and evidence-led research, 20% implementation, testing, integration, and project management combined**.
+### Core doctrine: reuse first, then build in stages
 
-Measure this in comparable work blocks, not vague intentions: for every ten 45–60 minute blocks, target eight research blocks and at most two combined implementation/testing/management blocks. If a week has less time, keep the same ratio; do not create extra work to meet a quota. Record the block's task ID and result in the active issue. This is an effort target, not a claim that reverse engineering alone makes the game playable.
+The guiding principle is **reuse before rebuild**. Existing research, source code, prototypes, tools, fixtures, exporters, tests, CI workflows and open pull requests are project assets. Before creating a new subsystem, inspect what already exists, identify its exact revision and ownership, and decide whether it can be reused, extended or safely adapted. The aim is to save months of duplicated work without importing incompatible code or unverified assumptions.
 
-Reverse-engineering work includes:
-- investigating the reviewed PC source/decompilation or an authorized local binary/runtime artifact;
-- mapping symbols, functions, structures, formats, state transitions, physics, route/spline systems, and timing assumptions;
-- comparing the PC reference with the candidate Step 102 source and the current clean-room GameCube implementation;
-- creating evidence-linked behavior specifications with confidence levels, platform boundaries, unknowns, and reproducible follow-up tests.
+Apply the sequence **MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST**:
+1. **Make it work:** deliver the smallest end-to-end behavior that meets a stated acceptance test.
+2. **Make it good:** make the implementation understandable, maintainable, testable and integrated with the existing architecture; remove duplication rather than layering another parallel system on top.
+3. **Make it fast:** optimize only after profiling or other measurable evidence identifies a real bottleneck. Do not trade correctness for speculative speed.
 
-Reading generic documentation, changing CI, mass-producing reports, and speculative coding do **not** count as reverse engineering. Install or use a tool such as REA/Ghidra only when a specific question requires binary/runtime evidence and the actual target format is supported. Do not spend a work block configuring a tool before confirming that it can analyze the chosen artifact.
+**Trust does not replace control.** Before reusing external or internal work, verify its exact revision, license scope, provenance, platform/API compatibility and the specific behavior we need. A README claim, an AI statement, a green badge, an old CI run or success on another platform is not proof that the current Boonta branch works. Validate the exact commit being reviewed; rerun affected checks after changes; distinguish host tests, native builds, emulator process/render checks, interactive gameplay and physical-hardware acceptance. Record uncertainty as unknown, never as fact. Preserve human review and never auto-merge.
+
+The project uses evidence-led reverse engineering to avoid inventing systems that have already been studied. The initial broad discovery phase and complete-game inventory are sufficiently covered by PR #282 and the existing PC/N64/Dreamcast dossiers. The old 80% research / 20% implementation split is **not a permanent gate** and must not keep implementation blocked.
+
+Use completed reverse engineering as a practical engineering input:
+- `PC_AI_AND_CATCHUP_REFERENCE_2026-10-20.md` records PC-only AI pace targets, catch-up smoothing, rank/progress separation, route-cursor look-ahead and branch choice.
+- `PC_POD_CONTROL_SPEED_TRACTION_2026-10-20.md` records the PC control → target-turn → speed → traction stages and their relationships.
+- PR #284 and the RE-002 matrix preserve PC race-progress cursor/rebind/offset evidence and consumer mapping.
+- PR #282 is the complete-game system inventory; do not reproduce it.
+- PR #274 is the existing native route-runtime candidate; review/reuse it instead of creating another route graph.
+- PR #278 preserves the audited GameCube/Wii static-analysis toolchain boundaries. It does not establish an original GameCube/Wii Racer binary.
+
+Read only dossier sections that answer the selected implementation question. The large `RE-001-route-spline-progress.md` file is approximately 452 KB; never ingest the whole file when targeted excerpts suffice. Issue attachments, images, videos, downloadable artifacts, binaries, ROMs, disc images and BIOS files are not needed for ordinary gameplay work and must not be sent to model providers.
+
+After the bounded matrix gate and the current one-active-task automation gate are cleared, target **at least 60% of work effort on gameplay implementation, integration and regression testing**. Keep reverse engineering targeted: answer concrete design questions, preserve source/version/license/evidence labels, and never treat PC/N64/Dreamcast findings as GameCube/Wii facts without target evidence. Prefer one compiling vertical slice with host tests and exact-head native build evidence over another broad report.
+
+For each system: discover existing Boonta code and PRs; identify the relevant RE contract; write an independent behavior specification; implement the smallest testable slice; then validate host C tests, native DOL/ELF build and applicable Dolphin diagnostics. Keep human-operated Dolphin and physical hardware acceptance separate.
 
 ## 2. Prevent overload: bounded, non-overlapping queues
 
@@ -32,7 +47,7 @@ Reading generic documentation, changing CI, mass-producing reports, and speculat
 1. **Study:** inspect the exact source, binary, format or observed runtime behavior needed to answer one question.
 2. **Map:** compare findings against the actual candidate Step 102 files and the current GameCube prototype. Mark absent/unavailable inputs explicitly; never pretend a mapping was checked if the archive is unavailable.
 3. **Specify:** write the behavior independently, state what is fact vs inference, and choose a measurable acceptance test.
-4. **Implement only when justified:** spend part of the 20% engineering allocation on the smallest implementation that follows the evidence. A finding does not automatically require a code change.
+4. **Implement when justified by the evidence:** build the smallest useful testable slice that follows the behavior contract. Once the current gates clear, gameplay implementation/integration/testing is the majority effort; a finding does not automatically require a code change.
 5. **Validate:** run exact-head host tests and the native DOL/ELF build. Use visible Dolphin/controller checks for gameplay behavior and mark physical GameCube/Wii results separately.
    The maintained GameCube first-render workflow must run both on relevant PRs and on pushes to protected `main` and `dev`, so a gameplay merge receives post-merge validation as well as pre-merge PR validation.
 6. **Record:** link the dossier, commits, tests and unresolved questions to the canonical issue #156.
@@ -46,17 +61,20 @@ Keep the existing `gamecube-demo/` as a reusable technical foundation: preserve 
 Use this source hierarchy:
 1. **Windows PC** — primary public code/format/behavior reference (`SW_RACER_RE`, the frozen Steam-PC Ghidra reference, and audited PC format tools). Pin executable/repository versions; PC findings are evidence about PC, not automatically about consoles.
 2. **Nintendo 64** — independent console behavior/code cross-check. Preserve the completed RE-001 static work and use it where it answers a specific port question; Not64/Ares observations remain emulator-specific.
+
+   - **Static-recomp reference:** [sp00nznet/racer](https://github.com/sp00nznet/racer) is a high-value N64 behavior/runtime comparison. Its README at `694c5663b3a7c30e2862fc240344f34683f99a9c` reports menu-to-race execution, controls, EEPROM saves, audio and two-player netplay; the overall playable-build milestone remains in progress. Its ROM-generated game code is not tracked and is expressly outside its MIT grant. Use only observable N64 behavior/runtime lessons; never copy generated functions or infer GameCube/Wii parity.
+   - **RE workbench:** [decomp.anything](https://github.com/giveen/decomp.anything) at `b410ac528ded6fa9adb7fad4f000cebbf5f341e6` supports MIPS/N64 and PowerPC/GameCube/Wii workflows (dtk-template, DOL/REL/disc splitting, m2c drafts, CodeWarrior matching and REA analysis). The app is local Linux x86-64/Windows WSL2, not macOS or hosted. Its app is MIT but bundled toolchains have separate licenses. It cannot supply a missing original Racer GameCube/Wii binary; Boonta already has dtk/objdiff CI, so use it only if it resolves a concrete analysis gap.
 3. **Dreamcast** — secondary console comparison when a traceable local artifact or reliable public evidence is available.
 4. **GameCube/Wii** — native delivery targets. There is no identified retail Racer DOL/REL/ISO for these platforms; use the platform toolchain to build and profile our port, not to pretend a matching original GameCube/Wii decompilation exists.
 
 - **Native-target queue:** [issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226), GameCube/Wii-target research and implementation.
 - **Comparative evidence queue:** [issue #279](https://github.com/Master-Chiken/boonta-reborn-88/issues/279), active read-only PC/N64/Dreamcast system/source matrix; no gameplay code or platform-parity claims. The platform-neutral route-graph contract and synthetic host fixtures are complete and were integrated by [PR #271](https://github.com/Master-Chiken/boonta-reborn-88/pull/271) into `dev` at `cdc4f35c7533fdefee428da5eabca324c247f618`. The exact post-merge validation [#41528877645](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41528877645) completed successfully on 2026-11-03: host state/gameplay/route tests, native DOL/ELF build and artifact validation, Dolphin null-backend process smoke, and the optional scripted Software Renderer frame diagnostic all passed. This is automated evidence, not human-operated gameplay or hardware acceptance.
-- **Current next-up task:** review the existing [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) as the single candidate for the native GameCube/Wii route-runtime hookup. Its current head is `faae371403176eb2198cf376ebb97ecd0ea75db5` and its last exact-head host/build/Dolphin/Wii64 checks passed. Review scope is to verify the runtime's use of the route graph/cursor, preserve the existing `boonta-track-v1` compatibility path, check whether branch history actually drives gameplay or remains test-only, and record the remaining collision/surface/finish gaps. Do not create another route-runtime branch or duplicate PR. Do not merge PR #274 automatically. If the review finds a gap, record one precise next test or blocker before changing code.
+- **Next code task after the one active automation-ledger gate clears:** review the existing [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) as the single candidate for the native GameCube/Wii route-runtime hookup. Its latest inspected head is `f8c9488fa8bfe1f6434309c7b84c075304a43c54`; exact-head GameCube build, host pause/resume tests, Dolphin process smoke, optional software-render frame diagnostic and Wii64 tooling checks passed in [#41703965812](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41703965812) and [#41703965867](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/41703965867). It remains open with no review; required human approval is still a merge gate. Review scope is to verify the runtime's use of the route graph/cursor, preserve the existing `boonta-track-v1` compatibility path, check whether branch history actually drives gameplay or remains test-only, and record the remaining collision/surface/finish gaps. Do not create another route-runtime branch or duplicate PR. Do not merge PR #274 automatically. If the review finds a gap, record one precise next test or blocker before changing code.
 - Keep [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) separate as a draft input-backend candidate; physical Wii/Under Control Classic Controller acceptance remains outstanding. RE-002 is active only as read-only comparative evidence. Do not import PC/N64 track data or treat platform-specific observations as GameCube/Wii proof.
 - The N64 finish-to-Results work remains preserved as historical, platform-specific static evidence with an unverified runtime edge. It is not the current blocker for the native GameCube/Wii port. N64 findings do not establish retail GameCube/Wii parity.
 - **RE-001 next steps:** after the existing graph-contract work, select native-target questions one at a time (surface/collision binding, race/lap/finish, then pod physics/handling and AI). RE-002 does not implement these systems; it contributes PC/N64/Dreamcast comparative evidence as separately scoped in #279.
 - **Existing validation gate:** [issue #126 — interactive three-lap Dolphin acceptance](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Keep its manual checks distinct from static research and exact-head CI.
-- **Existing implementation candidates:** retain and review PRs #264/#268 as separate input work; do not allow controller enhancements to displace the 80/20 research queue. Do not merge, close, or retarget them automatically.
+- **Existing implementation candidates:** retain and review PRs #264/#268 as separate input work; do not allow controller enhancements to displace the route-runtime review and playable-race roadmap. Do not merge, close, or retarget them automatically.
 - **Step 102:** its historical 359-file inventory has no top-level license and flags PC-mod-derived centerlines plus assets/data of unclear provenance. The archive itself is not currently available in the active Library for file-by-file inspection. Keep its candidate code/data on HOLD; do not bulk-import or spend time recovering it unless a specific file is needed for the active research question and its provenance can be reviewed.
 
 Tool selection must follow the artifact:

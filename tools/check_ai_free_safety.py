@@ -4,6 +4,7 @@
 This test makes no network calls, uses no API key, and never invokes an AI model.
 """
 from pathlib import Path
+import json
 import re
 import sys
 
@@ -34,6 +35,7 @@ setup = read("docs/AI_AUTOMATION_SETUP.md")
 ci_triage = read(".github/workflows/ci-failure-triage.yml")
 gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
 wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
+groq_fallback = read(".github/workflows/groq-plan-execute.yml")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
@@ -86,8 +88,8 @@ if declared_permissions != expected_permissions:
     errors.append(f"OpenRouter reviewer permissions must be exactly {expected_permissions!r}; found {declared_permissions!r}")
 if 'model: "openrouter/free"' not in openrouter:
     errors.append("OpenRouter reviewer must use the explicit openrouter/free route only")
-if "secrets.openrouter_api_key" not in openrouter.lower():
-    errors.append("OpenRouter reviewer must read its API key from the OPENROUTER_API_KEY secret")
+if "secrets.openrouter_api_key_02" not in openrouter.lower():
+    errors.append("OpenRouter reviewer must prefer the OPENROUTER_API_KEY_02 secret (with legacy fallback)")
 
 # Keep the secret out of the step that downloads and inspects the untrusted PR diff.
 call_step_marker = "      - name: Call OpenRouter free route"
@@ -97,8 +99,8 @@ else:
     preparation_step, model_call_step = openrouter.split(call_step_marker, 1)
     if "secrets.openrouter_api_key" in preparation_step.lower():
         errors.append("OpenRouter API key must not be available while preparing or scanning the PR diff")
-    if "openrouter_api_key: ${{ secrets.openrouter_api_key }}" not in model_call_step.lower():
-        errors.append("OpenRouter API key must be injected only into the dedicated model-call step")
+    if "openrouter_api_key: ${{ secrets.openrouter_api_key_02 || secrets.openrouter_api_key }}" not in model_call_step.lower():
+        errors.append("OPENROUTER_API_KEY_02 must be preferred, with legacy fallback, only in the dedicated model-call step")
 if "limit = 30000" not in openrouter:
     errors.append("OpenRouter reviewer must cap the diff at 30,000 bytes")
 if "if grep -eiq" not in openrouter.lower():
@@ -171,7 +173,7 @@ else:
 # Readiness reports OpenRouter's optional secret/attestation presence without
 # making an API request or exposing either value.
 for required in (
-    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}",
     "OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}",
     "No OpenRouter API request was made.",
     "Gemini remains the only active autonomous model path.",
@@ -193,6 +195,7 @@ for required in (
     'GEMINI_AUTONOMOUS_ENABLED',
     'OPENROUTER_FREE_TIER_CONFIRMED',
     'OPENROUTER_API_KEY',
+    'secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY',
     'No paid model/provider fallback is available',
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
@@ -291,8 +294,16 @@ for label, workflow, marker in (
     trusted_lookup = f"comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('{marker}')"
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
-if "only the current-state/owner-direction sections" not in openrouter_fallback or "latest five relevant comments per issue" not in openrouter_fallback or "never ingest full appendices" not in openrouter_fallback:
-    errors.append("OpenRouter prompt must bound historical issue context to reduce repeated prompt/token overhead")
+for required in (
+    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
+    "at most two short comments",
+    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
+    "below roughly 20,000 tokens",
+    "approximately 452 KB docs/research/RE-001-route-spline-progress.md",
+    "never repeat the same oversized request",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
 
 tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
 if not tools_match:
@@ -918,13 +929,15 @@ if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]
 
 # Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
 for required in (
-    "only the current-state/owner-direction sections at the top of canonical dashboard issue #156, native-target queue #226 and comparative evidence queue #279",
-    "latest five relevant comments per issue",
-    "Search older comments only when the selected task needs specific historical evidence",
-    "do not ingest or reproduce full historical appendices/comments",
+    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
+    "at most two short comments",
+    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
+    "below roughly 20,000 tokens",
+    "approximately 452 KB",
+    "Never repeat the same oversized request",
 ):
     if required not in autonomous_prompt:
-        errors.append(f"Gemini autonomous prompt must bound historical issue context: {required!r}")
+        errors.append(f"Gemini autonomous prompt must enforce bounded text-only context: {required!r}")
 for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
@@ -985,6 +998,47 @@ for required in (
 ):
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
+
+# The Groq Free fallback must remain useful under its observed 8k TPM limit.
+# OpenCode supports per-model context/output limits; cap this agent well below TPM.
+groq_config_match = re.search(
+    r'cat > "\$RUNNER_TEMP/opencode\.json" <<\'JSON\'\n(.*?)\n\s*JSON',
+    groq_fallback,
+    re.DOTALL,
+)
+if not groq_config_match:
+    errors.append("Groq fallback must expose a parseable OpenCode JSON config for bounded model limits")
+else:
+    try:
+        groq_config = json.loads(groq_config_match.group(1))
+        groq_model = (
+            groq_config.get("provider", {})
+            .get("groq", {})
+            .get("models", {})
+            .get("openai/gpt-oss-20b", {})
+        )
+        groq_limits = groq_model.get("limit", {})
+        if groq_limits.get("context") != 4096 or groq_limits.get("output") != 768:
+            errors.append(
+                "Groq GPT-OSS 20B must be capped at 4096 context / 768 output tokens"
+            )
+        if groq_config.get("model") != "groq/openai/gpt-oss-20b":
+            errors.append("Groq fallback must keep its fixed free-tier model")
+        if groq_config.get("enabled_providers") != ["groq"]:
+            errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
+    except (json.JSONDecodeError, AttributeError, TypeError) as exc:
+        errors.append(f"Groq OpenCode config is invalid: {exc}")
+for required in (
+    "OpenCode is configured for this run with a 4,096-token context limit and a 768-token output limit",
+    "Do NOT call issue_read for #156, #226 or #279",
+    "Do not list all PRs, enumerate all branches, or retrieve full comment histories",
+    "Keep total retrieved text under 3,000 tokens",
+    "Do not retry an oversized request",
+):
+    if required not in groq_fallback:
+        errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
+if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
+    errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 if errors:
     print("AI free-tier safety checks FAILED:")

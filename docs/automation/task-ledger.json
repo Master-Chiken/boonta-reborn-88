@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-05",
+  "updated_at": "2026-11-06",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -236,7 +236,7 @@
       "platform_scope": [
         "automation"
       ],
-      "status": "active",
+      "status": "blocked",
       "question": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria": [
         "Ledger validator and regression tests pass in CI",
@@ -303,10 +303,16 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/5a61bebdc5dd62d9d8596be5692881f12ea388fa",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/ed58c7eb4bb200888f210b3ea87a55020855a3d8",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42100105526",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42098726158"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42098726158",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42102589223",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42143627348",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42181232437",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6681627415",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/314",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6682275127"
       ],
-      "next_action": "PR #311 is merged at 5a61bebdc5dd62d9d8596be5692881f12ea388fa (merge commit ed58c7eb4bb200888f210b3ea87a55020855a3d8). The change adds a GET-only OpenRouter /api/v1/key bearer-auth preflight requiring is_free_tier=true before any model work, and injects the existing OPENROUTER_API_KEY into OpenCode v1.19.5 via its supported OPENCODE_AUTH_CONTENT auth store. Exact-head PR checks passed 4/4; post-merge free-only safety check #42100105526 passed. Readiness #42098726158 also passed after #310 merge, and Groq env mapping is present. Do not mark OpenRouter live until a fresh scheduled autonomous cycle proves the GET key check passes and OpenCode produces a valid, cycle-fresh PR or a named blocked result. The schedule is 17 */6 * * * UTC; next scheduled slot after this merge is 2026-11-06 00:17 UTC. Preserve €0, no paid fallback, no secret mutation, no auto-merge.",
-      "updated_at": "2026-11-05"
+      "next_action": "BLOCKED PENDING OWNER REVIEW/INTEGRATION AND LIVE FREE-KEY VERIFICATION. The new repository secret name reported by the owner is OPENROUTER_API_KEY_02. PR #314 at its latest proposed head now prefers secrets.OPENROUTER_API_KEY_02 and retains secrets.OPENROUTER_API_KEY as a compatibility fallback in the autonomous OpenRouter workflow, readiness check, and manual Free review workflow. Exact-head static validation passed on e5e0f242232a4b53a75e1e8c6e20d38987c77713, but this validates the mapping only, not the hidden secret or account tier. PR #314 remains open/unmerged. Owner must manually review and merge PR #314; after merge, run the GET-only /api/v1/key preflight and require is_free_tier=true, with OPENROUTER_FREE_TIER_CONFIRMED=true. Do not reveal, rotate, or modify secret values from automation. Gemini returned HTTP 503 in scheduled runs #42143627348 and #42181232437; Groq's bounded request has not yet been proven by a live Free cycle. Preserve €0, no paid fallback, no cooldown bypass, no auto-merge. After a successful post-merge Free provider cycle or a precise verified blocker, reconcile this task before moving to the existing route-runtime PR #274; do not create a duplicate route graph.",
+      "updated_at": "2026-11-06"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
