@@ -80,7 +80,7 @@ import re
 
 def load_opencode_config(label: str, content: str) -> dict:
     match = re.search(
-        r'cat > "\\$RUNNER_TEMP/opencode\\.json" <<\'JSON\'\\n(.*?)\\n\\s*JSON',
+        r'cat > "\$RUNNER_TEMP/opencode\.json" <<.*JSON\n(.*?)\n\s*JSON',
         content,
         re.DOTALL,
     )
