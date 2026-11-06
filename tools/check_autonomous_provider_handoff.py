@@ -66,13 +66,11 @@ tool_config = openrouter.split('"GITHUB_TOOLS": "', 1)
 if len(tool_config) != 2:
     errors.append("OpenRouter MCP tool allow-list is missing")
 else:
-    exposed = sorted({"list_issues", "list_pull_requests"}.intersection(
+    exposed = sorted({"issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"}.intersection(
         tool_config[1].split('"', 1)[0].split(",")
     ))
     if exposed:
-        errors.append("OpenRouter must not expose broad issue/PR listing tools: " + ", ".join(exposed))
-    if "do not call issue_read" not in openrouter.lower():
-        errors.append("OpenRouter prompt must prohibit full issue-body reads even though the allow-list retains the narrowly available issue tool")
+        errors.append("OpenRouter must not expose broad issue/listing or one-file write tools: " + ", ".join(exposed))
 
 # Parse the exact OpenCode 1.19.5 runtime configs and enforce finite agent turns.
 import json
@@ -100,6 +98,34 @@ if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
     errors.append("Groq OpenCode build agent must be limited to exactly 4 agentic steps")
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 6:
     errors.append("OpenRouter OpenCode build agent must be limited to exactly 6 agentic steps")
+
+# MCP tool descriptions contribute to every model request. Keep each provider's
+# allow-list minimal and forbid broad history/file tools that are not needed.
+openrouter_tools = set(
+    openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
+)
+groq_tools = set(
+    groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
+)
+for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
+    forbidden = {"issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"}
+    exposed = sorted(forbidden.intersection(toolset))
+    if exposed:
+        errors.append(f"{label} MCP allow-list exposes unnecessary broad tools: " + ", ".join(exposed))
+for required_tool in ("get_file_contents", "search_pull_requests", "pull_request_read", "create_branch", "push_files", "create_pull_request", "add_issue_comment", "get_commit"):
+    if required_tool not in groq_tools:
+        errors.append(f"Groq MCP allow-list is missing required tool: {required_tool}")
+if openrouter_tools != {
+    "get_file_contents", "search_issues", "search_pull_requests", "pull_request_read",
+    "create_branch", "push_files", "create_pull_request", "add_issue_comment", "get_commit",
+    "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs", "search_code",
+}:
+    errors.append("OpenRouter MCP allow-list must remain at the reviewed minimal tool set")
+if groq_tools != {
+    "get_file_contents", "search_pull_requests", "pull_request_read", "create_branch",
+    "push_files", "create_pull_request", "add_issue_comment", "get_commit",
+}:
+    errors.append("Groq MCP allow-list must remain at the reviewed minimal tool set")
 
 if errors:
     print("Autonomous provider handoff checks FAILED:")
