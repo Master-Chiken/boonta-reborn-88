@@ -88,8 +88,8 @@ if declared_permissions != expected_permissions:
     errors.append(f"OpenRouter reviewer permissions must be exactly {expected_permissions!r}; found {declared_permissions!r}")
 if 'model: "openrouter/free"' not in openrouter:
     errors.append("OpenRouter reviewer must use the explicit openrouter/free route only")
-if "secrets.openrouter_api_key" not in openrouter.lower():
-    errors.append("OpenRouter reviewer must read its API key from the OPENROUTER_API_KEY secret")
+if "secrets.openrouter_api_key_02" not in openrouter.lower():
+    errors.append("OpenRouter reviewer must prefer the OPENROUTER_API_KEY_02 secret (with legacy fallback)")
 
 # Keep the secret out of the step that downloads and inspects the untrusted PR diff.
 call_step_marker = "      - name: Call OpenRouter free route"
@@ -99,8 +99,8 @@ else:
     preparation_step, model_call_step = openrouter.split(call_step_marker, 1)
     if "secrets.openrouter_api_key" in preparation_step.lower():
         errors.append("OpenRouter API key must not be available while preparing or scanning the PR diff")
-    if "openrouter_api_key: ${{ secrets.openrouter_api_key }}" not in model_call_step.lower():
-        errors.append("OpenRouter API key must be injected only into the dedicated model-call step")
+    if "openrouter_api_key: ${{ secrets.openrouter_api_key_02 || secrets.openrouter_api_key }}" not in model_call_step.lower():
+        errors.append("OPENROUTER_API_KEY_02 must be preferred, with legacy fallback, only in the dedicated model-call step")
 if "limit = 30000" not in openrouter:
     errors.append("OpenRouter reviewer must cap the diff at 30,000 bytes")
 if "if grep -eiq" not in openrouter.lower():
@@ -173,7 +173,7 @@ else:
 # Readiness reports OpenRouter's optional secret/attestation presence without
 # making an API request or exposing either value.
 for required in (
-    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}",
+    "OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}",
     "OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}",
     "No OpenRouter API request was made.",
     "Gemini remains the only active autonomous model path.",
@@ -195,6 +195,7 @@ for required in (
     'GEMINI_AUTONOMOUS_ENABLED',
     'OPENROUTER_FREE_TIER_CONFIRMED',
     'OPENROUTER_API_KEY',
+    'secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY',
     'No paid model/provider fallback is available',
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
