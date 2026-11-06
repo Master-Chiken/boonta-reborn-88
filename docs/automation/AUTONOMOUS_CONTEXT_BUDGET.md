@@ -8,6 +8,7 @@ The dashboard and research queue issues are append-only histories. Their full bo
 
 ## Mandatory retrieval budget
 
+- OpenCode is pinned to v1.19.5. Its primary `build` agent must have a finite `steps` limit in each provider runtime config: 4 steps for Groq and 6 for OpenRouter. This caps repeated agent/tool cycles if an API error is misunderstood or ignored by the model. Keep the outer workflow timeout as a second independent bound.
 - Start with the owner-approved task brief already passed to the workflow and `docs/automation/task-ledger-summary.json`.
 - Do not fetch full issue bodies or call `issue_read` for #156, #226 or #279. Do not read their full comment histories. Use a narrow issue/PR search only when a specific unresolved question requires it.
 - Do not read the full `docs/automation/task-ledger.json`. It is the canonical write target; the compact summary is the read index. Read only the relevant task record when a planned update requires exact fields.
