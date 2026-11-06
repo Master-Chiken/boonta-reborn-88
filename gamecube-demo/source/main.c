@@ -239,7 +239,7 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
  * Estimate horizontal route curvature with two 2 m track chords. This provides
  * a deterministic look-ahead signal for the prototype rivals' speed controller.
  */
-static float track_curvature_at(float travelled)
+static float track_signed_curvature_at(float travelled)
 {
     float before_x = 0.0f, before_z = 0.0f;
     float middle_x = 0.0f, middle_z = 0.0f;
@@ -248,8 +248,13 @@ static float track_curvature_at(float travelled)
     track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
     track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
     track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
-    return boonta_rival_ai_curvature_from_samples(
+    return boonta_rival_ai_signed_curvature_from_samples(
         before_x, before_z, middle_x, middle_z, after_x, after_z);
+}
+
+static float track_curvature_at(float travelled)
+{
+    return fabsf(track_signed_curvature_at(travelled));
 }
 
 static float track_center_x_at(float travelled)
@@ -1313,11 +1318,16 @@ int main(int argc, char **argv)
             /* Decide from one shared snapshot so rival update order cannot bias AI. */
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 const float rival_progress = g_distance + (4.0f - g_rival_z[rival_index]);
-                const float lookahead_curvature = track_curvature_at(rival_progress + 4.0f);
+                const float lookahead_progress = rival_progress + 4.0f;
+                const float lookahead_curvature = track_curvature_at(lookahead_progress);
+                const float signed_lookahead_curvature =
+                    track_signed_curvature_at(lookahead_progress);
+                const float lookahead_half_width = track_half_width_at(lookahead_progress);
                 rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
                     rival_index, g_rival_z[rival_index],
                     g_rival_lateral[rival_index], g_player_lateral,
-                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT);
+                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
+                    signed_lookahead_curvature, lookahead_half_width);
                 rival_target_speed[rival_index] = boonta_rival_ai_target_speed(
                     rival_index, lookahead_curvature);
             }
