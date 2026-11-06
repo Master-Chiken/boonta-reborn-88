@@ -13,6 +13,7 @@ on:
       - Synthetic BRRES MDL0 probe
       - Dreamcast KallistiOS build
       - Boonta Autonomous Loop
+      - .github/workflows/boonta-autonomous-loop.yml
     types:
       - completed
 
@@ -106,7 +107,7 @@ jobs:
                 return;
               }
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
-            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && run.name === 'Boonta Autonomous Loop' && run.head_branch === 'main') {
+            } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
               // Do not let a silent autonomous-cycle failure disappear. Report
               // to the active queue only while the failed run is still for the
               // exact current main SHA.
