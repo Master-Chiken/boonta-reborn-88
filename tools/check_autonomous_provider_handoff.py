@@ -79,16 +79,17 @@ import json
 import re
 
 def load_opencode_config(label: str, content: str) -> dict:
-    match = re.search(
-        r'cat > "\$RUNNER_TEMP/opencode\.json" <<.*JSON\n(.*?)\n\s*JSON',
-        content,
-        re.DOTALL,
-    )
-    if not match:
+    marker = 'cat > "$RUNNER_TEMP/opencode.json" <<\'JSON\'\n'
+    parts = content.split(marker, 1)
+    if len(parts) != 2:
         errors.append(f"{label} fallback must expose a parseable OpenCode JSON config")
         return {}
+    payload, separator, _rest = parts[1].partition("\n          JSON")
+    if not separator:
+        errors.append(f"{label} OpenCode JSON config closing delimiter is missing")
+        return {}
     try:
-        return json.loads(match.group(1))
+        return json.loads(payload)
     except json.JSONDecodeError as exc:
         errors.append(f"{label} OpenCode JSON config is invalid: {exc}")
         return {}
