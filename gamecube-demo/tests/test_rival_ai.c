@@ -19,7 +19,7 @@ static void lane_preference_is_deterministic(void)
 
 static void player_avoidance_only_when_close(void)
 {
-    const float z[3] = {-18.0f, -2.0f, -40.0f};
+    const float z[3] = {-40.0f, -2.0f, -50.0f};
     const float lateral[3] = {0.0f, 0.0f, 0.0f};
     float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 3U);
     assert(target > 0.0f);
