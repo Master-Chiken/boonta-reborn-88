@@ -14,6 +14,7 @@
 
 #include "pause_state.h"
 #include "gameplay_state.h"
+#include "rival_ai.h"
 #include "generated_track.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
@@ -109,6 +110,7 @@ static void initialise_pod_texture(void)
 #define g_slide_active      (g_race_state.slide_active)
 #define g_rival_z           (g_race_state.rival_z)
 #define g_rival_lateral     (g_race_state.rival_lateral)
+#define g_rival_speed       (g_race_state.rival_speed)
 #define g_overtake_count    (g_race_state.overtake_count)
 #define g_paused            (g_race_state.paused)
 #define g_race_finished     (g_race_state.race_finished)
@@ -231,6 +233,28 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         }
         target -= length;
     }
+}
+
+/*
+ * Estimate horizontal route curvature with two 2 m track chords. This provides
+ * a deterministic look-ahead signal for the prototype rivals' speed controller.
+ */
+static float track_signed_curvature_at(float travelled)
+{
+    float before_x = 0.0f, before_z = 0.0f;
+    float middle_x = 0.0f, middle_z = 0.0f;
+    float after_x = 0.0f, after_z = 0.0f;
+    if (!isfinite(travelled)) return 0.0f;
+    track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
+    track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
+    track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
+    return boonta_rival_ai_signed_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z);
+}
+
+static float track_curvature_at(float travelled)
+{
+    return fabsf(track_signed_curvature_at(travelled));
 }
 
 static float track_center_x_at(float travelled)
@@ -1285,12 +1309,40 @@ int main(int argc, char **argv)
 
         /* Staggered scripted opponents approach in camera space and change lanes. */
         if (!g_race_finished) {
+            const float player_speed_snapshot = g_speed;
+            const float player_pitch_snapshot = g_pitch_down;
+            const int player_boost_snapshot = g_boost_active;
+            float rival_target_lateral[BOONTA_RIVAL_COUNT];
+            float rival_target_speed[BOONTA_RIVAL_COUNT];
+
+            /* Decide from one shared snapshot so rival update order cannot bias AI. */
+            for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+                const float rival_progress = g_distance + (4.0f - g_rival_z[rival_index]);
+                const float lookahead_progress = rival_progress + 4.0f;
+                const float lookahead_curvature = track_curvature_at(lookahead_progress);
+                const float signed_lookahead_curvature =
+                    track_signed_curvature_at(lookahead_progress);
+                const float lookahead_half_width = track_half_width_at(lookahead_progress);
+                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
+                    rival_index, g_rival_z[rival_index],
+                    g_rival_lateral[rival_index], g_player_lateral,
+                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
+                    signed_lookahead_curvature, lookahead_half_width);
+                rival_target_speed[rival_index] = boonta_rival_ai_target_speed(
+                    rival_index, lookahead_curvature);
+            }
+
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
-                g_rival_lateral[rival_index] = 1.10f * sinf(
-                    g_distance * 0.022f + 1.2f + (float)rival_index * 1.55f);
-                g_rival_z[rival_index] = boonta_rival_z_after_frame(
-                    g_rival_z[rival_index], g_speed, frame_scale);
+                g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
+                    g_rival_lateral[rival_index],
+                    rival_target_lateral[rival_index], frame_scale);
+                g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
+                    g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
+                g_rival_z[rival_index] = boonta_rival_relative_z_after_frame(
+                    g_rival_z[rival_index], player_speed_snapshot,
+                    player_boost_snapshot, player_pitch_snapshot,
+                    g_rival_speed[rival_index], frame_scale);
                 rival_event = boonta_rival_event(
                     g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
