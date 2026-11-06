@@ -271,8 +271,8 @@ jobs:
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
 
-      - name: Record same-day OpenRouter cooldown after an invocation failure
-        if: always() && steps.run_opencode.outcome == 'failure'
+      - name: Record same-day OpenRouter cooldown after authentication or invocation failure
+        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'))
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -287,7 +287,7 @@ jobs:
               marker,
               '## OpenRouter Free daily failure cooldown',
               '',
-              'The autonomous OpenRouter Free invocation failed on UTC date ' + todayUtc + '.',
+              'The OpenRouter Free authentication or model invocation failed on UTC date ' + todayUtc + '.',
               'Further fallback cycles on this UTC date will skip another OpenRouter request. A fresh attempt is allowed on the next UTC date.',
               'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
               '',
