@@ -11,6 +11,7 @@ on:
       - ".github/workflows/openrouter-plan-execute.yml"
       - ".github/workflows/boonta-autonomous-readiness.yml"
       - ".github/workflows/boonta-autonomous-loop.yml"
+      - ".github/workflows/ci-failure-triage.yml"
       - ".github/commands/gemini-autonomous-loop.toml"
       - ".github/workflows/branch-automation-selftest.yml"
       - "tools/check_ai_free_safety.py"
@@ -47,6 +48,7 @@ jobs:
             .github/workflows/openrouter-plan-execute.yml \
             .github/workflows/boonta-autonomous-readiness.yml \
             .github/workflows/boonta-autonomous-loop.yml \
+            .github/workflows/ci-failure-triage.yml \
             .github/workflows/branch-automation-selftest.yml
 
       - name: Compile embedded Python scripts without executing network operations
