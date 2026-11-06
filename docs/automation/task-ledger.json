@@ -247,7 +247,9 @@
         "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge",
         "OpenRouter fallback fails visibly if its Free-only gate blocks, the actual invocation is skipped, or the report validator does not pass",
         "Optional Groq tertiary fallback has an independent Free-only attestation, secret gate, fixed model allowlist and UTC cooldown",
-        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider"
+        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider",
+        "OpenRouter prompt receives same-run Free-only preflight, GET /api/v1/key authentication and GitHub App token outcomes as authoritative evidence",
+        "OpenRouter BLOCKED report validation rejects claims contradicted by a successful same-run Free-tier authentication or GitHub App token creation"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -325,9 +327,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/fc78894e467b493f55672f2e0a9bd7161c369230",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42239804824",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42239803349",
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/324"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/324",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42276661261"
       ],
-      "next_action": "PR #316 and #320 are merged. In post-merge run #42242728733, Gemini was skipped by its daily cooldown; OpenRouter GET /api/v1/key succeeded and its invocation completed, but report validation failed because no valid PROGRESS/BLOCKED report was returned. Groq then exceeded the observed 8,000-token-per-minute Free limit repeatedly and reached its 120-second timeout. PR #324 adds provider-invocation outcome handoff guards; it is open, not merged. Keep this task blocked until a later post-merge scheduled cycle produces a valid cycle-fresh PR/report or a precise verified blocker. Do not ask for another OpenRouter key change based on the obsolete HTTP 401 note.",
+      "next_action": "The 2026-11-06 scheduled run #42276661261 passed read-only readiness; Gemini was skipped by its existing same-day cooldown; OpenRouter's owner/free-only gate passed, GET /api/v1/key confirmed is_free_tier=true, the OpenCode invocation succeeded, and the report validator accepted a BLOCKED report. That report incorrectly asked the owner to replace OPENROUTER_API_KEY_02, contradicting the successful same-run authentication. PR #324 now needs the same-run preflight facts injected into the OpenRouter prompt and a validator guard against contradictory API-key/Free-tier blockers. Keep this task blocked until exact-head checks pass, human review/merge occurs, and a later post-merge scheduled cycle produces a cycle-fresh PR or a genuinely verified external blocker. Do not request an OpenRouter key replacement based on the obsolete report; no secret was read or changed.",
       "updated_at": "2026-11-06"
     },
     {
