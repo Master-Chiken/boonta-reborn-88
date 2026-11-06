@@ -12,16 +12,16 @@ static void lane_preference_is_deterministic(void)
 {
     const float z[3] = {-18.0f, -34.0f, -50.0f};
     const float lateral[3] = {0.0f, 0.0f, 0.0f};
-    assert(nearf_ai(boonta_rival_ai_target_lateral(0U, -18.0f, 0.0f, 0.0f, z, lateral, 3U), -1.25f));
-    assert(nearf_ai(boonta_rival_ai_target_lateral(1U, -34.0f, 0.0f, 0.0f, z, lateral, 3U), 0.0f));
-    assert(nearf_ai(boonta_rival_ai_target_lateral(2U, -50.0f, 0.0f, 0.0f, z, lateral, 3U), 1.25f));
+    assert(nearf_ai(boonta_rival_ai_target_lateral(0U, -18.0f, 0.0f, 0.0f, z, lateral, 3U, 0.0f, 3.4f), -1.25f));
+    assert(nearf_ai(boonta_rival_ai_target_lateral(1U, -34.0f, 0.0f, 0.0f, z, lateral, 3U, 0.0f, 3.4f), 0.0f));
+    assert(nearf_ai(boonta_rival_ai_target_lateral(2U, -50.0f, 0.0f, 0.0f, z, lateral, 3U, 0.0f, 3.4f), 1.25f));
 }
 
 static void player_avoidance_only_when_close(void)
 {
     const float z[3] = {-40.0f, -2.0f, -50.0f};
     const float lateral[3] = {0.0f, 0.0f, 0.0f};
-    float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 3U);
+    float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 3U, 0.0f, 3.4f);
     assert(target > 0.0f);
     target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 3U);
     assert(nearf_ai(target, 0.0f));
@@ -35,7 +35,7 @@ static void nearby_rival_avoidance(void)
 {
     const float z[3] = {-10.0f, -11.0f, -40.0f};
     const float lateral[3] = {0.1f, 0.0f, 0.0f};
-    const float target = boonta_rival_ai_target_lateral(0U, -10.0f, 0.1f, 0.0f, z, lateral, 3U);
+    const float target = boonta_rival_ai_target_lateral(0U, -10.0f, 0.1f, 0.0f, z, lateral, 3U, 0.0f, 3.4f);
     assert(target > 0.1f);
 }
 
@@ -57,6 +57,32 @@ static void invalid_inputs_recover_safely(void)
     assert(isfinite(target));
     assert(target >= -BOONTA_RIVAL_AI_LATERAL_LIMIT);
     assert(target <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
+}
+
+static void signed_curvature_selects_inside_line(void)
+{
+    const float center_lane = boonta_rival_ai_target_line_lateral(1U, 0.0f, 3.4f);
+    const float right_bend = boonta_rival_ai_target_line_lateral(1U, 0.10f, 3.4f);
+    const float left_bend = boonta_rival_ai_target_line_lateral(1U, -0.10f, 3.4f);
+    const float narrow_right_bend = boonta_rival_ai_target_line_lateral(1U, 0.10f, 2.2f);
+
+    assert(nearf_ai(center_lane, 0.0f));
+    assert(right_bend > center_lane);
+    assert(left_bend < center_lane);
+    assert(fabsf(narrow_right_bend) <= 1.55f);
+    assert(right_bend <= 2.1f);
+    assert(left_bend >= -2.1f);
+}
+
+static void signed_curvature_preserves_turn_direction(void)
+{
+    const float turns_right = boonta_rival_ai_signed_curvature_from_samples(
+        0.0f, 0.0f, 0.0f, 2.0f, 1.0f, 4.0f);
+    const float turns_left = boonta_rival_ai_signed_curvature_from_samples(
+        0.0f, 0.0f, 0.0f, 2.0f, -1.0f, 4.0f);
+    assert(turns_right > 0.0f);
+    assert(turns_left < 0.0f);
+    assert(nearf_ai(fabsf(turns_right), fabsf(turns_left)));
 }
 
 static void curvature_samples_are_measured_and_bounded(void)
@@ -118,6 +144,8 @@ int main(void)
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
     curvature_samples_are_measured_and_bounded();
+    signed_curvature_selects_inside_line();
+    signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
