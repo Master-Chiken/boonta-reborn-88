@@ -36,12 +36,12 @@ instructions = read("GEMINI.md")
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
 # directly through --prompt and keep shell/write tools unavailable to the model.
-prompt_marker = "          prompt: |-\\n"
+prompt_marker = "          prompt: |-\n"
 if prompt_marker not in invoke:
     errors.append("Gemini on-demand workflow must pass a direct multiline read-only prompt")
 else:
     prompt_block = invoke.split(prompt_marker, 1)[1].split(
-        "\\n      - name: Explain why Gemini was not called", 1
+        "\n      - name: Explain why Gemini was not called", 1
     )[0]
     for required in (
         "strictly read-only repository audit agent",
@@ -66,7 +66,7 @@ else:
 if "name: 'Prepare prompt context'" in invoke:
     errors.append("Gemini on-demand workflow must not prepare an unused custom-command context file")
 
-settings_marker = "          settings: |-\\n"
+settings_marker = "          settings: |-\n"
 settings_end_marker = "          # Pass the read-only instructions directly."
 if settings_marker not in invoke or settings_end_marker not in invoke:
     errors.append("Gemini on-demand workflow is missing its explicit read-only tool configuration")
