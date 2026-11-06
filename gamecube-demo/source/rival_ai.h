@@ -60,7 +60,7 @@ static inline float boonta_rival_ai_target_lateral(
             lateral_gap = current_lateral - other_lateral[i];
             if (longitudinal_gap < 3.5f &&
                 fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target += lateral_gap < 0.0f ? -0.75f : 0.75f;
+                target = current_lateral + (lateral_gap < 0.0f ? -0.75f : 0.75f);
             }
         }
     }
