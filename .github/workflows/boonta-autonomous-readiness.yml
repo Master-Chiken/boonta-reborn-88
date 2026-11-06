@@ -83,7 +83,7 @@ jobs:
       - name: Report optional OpenRouter Free fallback readiness (no API request)
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}
         run: |
           set -euo pipefail
@@ -98,7 +98,7 @@ jobs:
             {
               echo "## OpenRouter Free fallback: not configured"
               echo
-              echo "- Optional fallback remains safely disabled until OPENROUTER_API_KEY is present and OPENROUTER_FREE_TIER_CONFIRMED=true."
+              echo "- Optional fallback remains safely disabled until OPENROUTER_API_KEY_02 (preferred) or legacy OPENROUTER_API_KEY is present and OPENROUTER_FREE_TIER_CONFIRMED=true."
               echo "- Gemini remains the only active autonomous model path."
               echo "- No OpenRouter API request was made."
             } >> "$GITHUB_STEP_SUMMARY"
