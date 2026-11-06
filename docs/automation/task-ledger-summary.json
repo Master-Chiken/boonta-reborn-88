@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "source": "docs/automation/task-ledger.json",
+  "updated_at": "2026-11-06",
+  "policy": {
+    "max_active_tasks": 1,
+    "completed_requires_merged_pr": true
+  },
+  "tasks": [
+    {
+      "task_id": "RE001-SYSTEM-MATRIX",
+      "title": "Native-target complete-game system matrix and PC reference gap audit",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii",
+        "PC-reference"
+      ],
+      "status": "in_review",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
+      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
+      "next_action_excerpt": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 1bdfa937eff6caef311d8de871c64144de60135c documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the…"
+    },
+    {
+      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+      "title": "Activate and validate persistent autonomous task tracking",
+      "queue": "#226",
+      "platform_scope": [
+        "automation"
+      ],
+      "status": "blocked",
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "PR #316 and #320 are merged. In post-merge run #42242728733, Gemini was skipped by its daily cooldown; OpenRouter GET /api/v1/key succeeded and its invocation completed, but report validation failed because no valid PROGRESS/BLOCKED report was returned. Groq then exceeded the observed 8,000-token-per-minute Free limit repeatedly and reached its 120-second…"
+    },
+    {
+      "task_id": "RE001-RACE-LIFECYCLE-TRACE",
+      "title": "Trace race completion through post-race phases and Results dispatch (three PC evidence snapshots)",
+      "queue": "#226",
+      "platform_scope": [
+        "PC reference",
+        "GameCube",
+        "Wii"
+      ],
+      "status": "in_review",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
+      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
+      "next_action_excerpt": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call…"
+    },
+    {
+      "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
+      "title": "Audit the reusable native GameCube/Wii reverse-engineering toolchain and DOL-analysis path",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "in_review",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
+      "head_sha": "03ad8006ce05c335cbcaf01b420e74033bec68c4",
+      "next_action_excerpt": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local."
+    },
+    {
+      "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
+      "title": "Recover PC race-spline cursor/rebind/offset routines and trace their consumers",
+      "queue": "#279",
+      "platform_scope": [
+        "Windows PC reference only"
+      ],
+      "status": "in_review",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
+      "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62",
+      "next_action_excerpt": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity."
+    }
+  ]
+}
