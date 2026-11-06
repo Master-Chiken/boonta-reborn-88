@@ -81,7 +81,7 @@ jobs:
       needs.readiness.outputs.writer_state == 'enabled' &&
       needs.autonomous-cycle.result == 'failure' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || github.actor == github.repository_owner)
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
     uses: ./.github/workflows/openrouter-plan-execute.yml
     permissions:
       contents: write
@@ -102,7 +102,7 @@ jobs:
       needs.autonomous-cycle.result == 'failure' &&
       (needs.openrouter-fallback.result == 'failure' || needs.openrouter-fallback.result == 'skipped') &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || github.actor == github.repository_owner)
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
     uses: ./.github/workflows/groq-plan-execute.yml
     permissions:
       contents: write
