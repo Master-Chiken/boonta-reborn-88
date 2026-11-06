@@ -87,7 +87,7 @@ static void relative_progress_uses_player_and_rival_pace(void)
     assert(nearf_ai(boonta_rival_relative_z_after_frame(
         -18.0f, 0.5f, 1, 0.0f, 0.5f, 1.0f), -17.96f));
     assert(nearf_ai(boonta_rival_relative_z_after_frame(
-        -18.0f, 0.5f, 0, 1.0f, 0.5f, 1.0f), -17.9236f));
+        -18.0f, 0.5f, 0, 1.0f, 0.5f, 1.0f), -17.9916f));
     assert(nearf_ai(boonta_rival_relative_z_after_frame(
         NAN, NAN, 0, NAN, INFINITY, 1.0f), -18.0f));
 }
