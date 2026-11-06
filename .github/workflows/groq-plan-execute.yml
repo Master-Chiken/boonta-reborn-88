@@ -231,9 +231,10 @@ jobs:
           - Never infer provider state from an earlier run. Respect this run's explicit gates/cooldowns only; do not call another provider or request a secret change from stale logs.
 
           PROJECT ORDER
-          - Read docs/automation/task-ledger-summary.json for the current task status; do not assume an active task. AUTOMATION-LEDGER-ACTIVATION is currently blocked pending a valid post-merge cycle. Do not begin gameplay work until the activation gate is genuinely cleared.
-          - Reuse the current reverse-engineering-first policy PR and existing route-runtime PR #274 at exact head f8c9488fa8bfe1f6434309c7b84c075304a43c54 on dev. Neither may be merged by an agent.
-          - After that gate, route-runtime integration precedes deterministic rival AI. Do not create duplicate route graphs or copy AGPL or ROM-derived code.
+          - Read docs/automation/task-ledger-summary.json for current status; do not assume an active task. AUTOMATION-LEDGER-ACTIVATION is currently blocked pending a real post-merge provider cycle and a valid cycle-fresh report/PR (or a precise verified blocker).
+          - The newest 2026-11-06 owner direction in #226 supersedes earlier route-runtime-first/gameplay ordering. After the activation gate clears, Phase 1 cross-platform inventory and the reuse/convert/adapt/reimplement decision take priority. Consume #279's read-only PC/N64/Dreamcast evidence rather than duplicating it; do not recreate PR #282.
+          - During Phase 1, add only missing source-verified tool/license/utility rows, map PC/N64 formats against the native GameCube/Wii target, label behavior OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, and evaluate graphics/audio/frame-rate/physics against GX/libogc with one lawful experiment each. Keep commercial ROM/disc/binary/extracted data local.
+          - Do not start new gameplay features or visible-Dolphin three-lap acceptance during Phase 1. After Phase 1, reuse the existing rival-AI chain #317 → #318 → #319 in order, then follow #226's race-progression integration target. PR #274 is not an automatic next step; revisit it only if a concrete route-runtime dependency is demonstrated. Do not create duplicate route graphs or copy AGPL/ROM-derived code.
 
           READ ONLY WHAT IS NECESSARY
           - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Apply the mandatory recovery/reuse gate before any implementation and record its evidence-backed decision. Do not read the full task ledger or full issue bodies.

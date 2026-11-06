@@ -707,6 +707,28 @@ if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERAT
 if "RE-002 is active only as read-only comparative evidence" not in read("docs/PROJECT_OPERATING_RULES.md"):
     errors.append("Operating rules must keep RE-002 limited to read-only comparative evidence")
 
+# Keep all autonomous writer prompts aligned with the newest #226 owner direction.
+phase1_prompts = (
+    ("Gemini", autonomous_prompt),
+    ("OpenRouter", openrouter_fallback),
+    ("Groq", groq_fallback),
+)
+for label, prompt in phase1_prompts:
+    for phrase in (
+        "2026-11-06",
+        "Phase 1",
+        "AUTOMATION-LEDGER-ACTIVATION",
+        "#279",
+        "#317",
+        "#318",
+        "#319",
+        "PR #274 is not an automatic next step",
+    ):
+        if phrase not in prompt:
+            errors.append(f"{label} autonomous prompt is missing current owner-order safeguard: {phrase!r}")
+    if "After Phase 1" not in prompt and "After the Phase 1" not in prompt:
+        errors.append(f"{label} autonomous prompt must defer gameplay work until Phase 1 is complete")
+
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
 readiness_trigger = readiness.split("permissions:", 1)[0]
