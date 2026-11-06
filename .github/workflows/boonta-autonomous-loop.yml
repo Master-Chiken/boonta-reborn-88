@@ -1,6 +1,16 @@
 name: Boonta Autonomous Loop
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/boonta-autonomous-loop.yml
+      - .github/workflows/boonta-autonomous-readiness.yml
+      - .github/workflows/gemini-plan-execute.yml
+      - .github/workflows/openrouter-plan-execute.yml
+      - .github/workflows/groq-plan-execute.yml
+      - docs/automation/task-ledger.json
   schedule:
     # Four bounded opportunities per day; concurrency prevents overlapping writers.
     - cron: '17 */6 * * *'
@@ -32,7 +42,7 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || github.actor == github.repository_owner)
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
@@ -52,7 +62,9 @@ jobs:
         After route-runtime review/integration, make the first new gameplay slice a deterministic, testable rival AI. Reuse gameplay_state.h, existing rival/collision/overtake helpers, route sampling, generated mesh/track pipelines, tests and build/diagnostic workflow. Use existing PC AI/catch-up and pod-control/speed/traction research as behavioral contracts, and consult sp00nznet/racer's N64 static-recomp build as a separate N64 behavior/runtime cross-check (no copying generated ROM-derived code); keep pace/rank targets distinct from vehicle motion, use route progress/look-ahead, and test track bounds, passing, avoidance and collisions. Replace sine-only lane wandering incrementally; do not rewrite main.c wholesale.
         Keep platform boundaries: PC findings are static PC evidence, N64/Dreamcast separate comparisons, GameCube/Wii clean-room homebrew targets; no original retail GameCube/Wii Racer binary exists. Do not copy AGPL SW_RACER_RE code or proprietary/unclear assets. Keep Step 102 on HOLD. Defer career/profile/upgrades #307 until a coherent playable race slice (player + rivals, laps, standings, finish/results and restart) exists. After the matrix and active-task gate, target at least 60% implementation/integration/testing, with research only for concrete unknowns. Keep €0, free-tier-only routing, clean-room provenance and serialized single-writer restrictions mandatory.
       additional_context: >-
-        This is the scheduled Boonta Autonomous Loop. The owner explicitly approved
+        This is the Boonta Autonomous Loop, started by its six-hour schedule,
+        an owner-approved main-branch merge affecting the bounded automation/ledger
+        paths, or an owner manual dispatch. The owner explicitly approved
         autonomous task selection and branch/PR work. #226 is the native GameCube/Wii
         queue; #279 is the comparative PC/N64/Dreamcast evidence queue and stays
         documentation-only. Do not ask for a new "continue" message or per-task
