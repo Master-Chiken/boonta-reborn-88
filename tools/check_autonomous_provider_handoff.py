@@ -66,11 +66,13 @@ tool_config = openrouter.split('"GITHUB_TOOLS": "', 1)
 if len(tool_config) != 2:
     errors.append("OpenRouter MCP tool allow-list is missing")
 else:
-    exposed = sorted({"issue_read", "list_issues", "list_pull_requests"}.intersection(
+    exposed = sorted({"list_issues", "list_pull_requests"}.intersection(
         tool_config[1].split('"', 1)[0].split(",")
     ))
     if exposed:
-        errors.append("OpenRouter must not expose full issue/list tools: " + ", ".join(exposed))
+        errors.append("OpenRouter must not expose broad issue/PR listing tools: " + ", ".join(exposed))
+    if "do not call issue_read" not in openrouter.lower():
+        errors.append("OpenRouter prompt must prohibit full issue-body reads even though the allow-list retains the narrowly available issue tool")
 
 if errors:
     print("Autonomous provider handoff checks FAILED:")
