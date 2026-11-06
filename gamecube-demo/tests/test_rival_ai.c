@@ -19,15 +19,15 @@ static void lane_preference_is_deterministic(void)
 
 static void player_avoidance_only_when_close(void)
 {
-    const float z[1] = {-2.0f};
-    const float lateral[1] = {0.0f};
-    float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 1U);
+    const float z[3] = {-18.0f, -2.0f, -40.0f};
+    const float lateral[3] = {0.0f, 0.0f, 0.0f};
+    float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 3U);
     assert(target > 0.0f);
-    target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 1U);
+    target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 3U);
     assert(nearf_ai(target, 0.0f));
 
     /* A non-finite player position must not be treated as a real center-lane car. */
-    target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, NAN, z, lateral, 1U);
+    target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, NAN, z, lateral, 3U);
     assert(nearf_ai(target, 0.0f));
 }
 
