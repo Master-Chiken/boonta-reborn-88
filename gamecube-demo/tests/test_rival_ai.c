@@ -25,6 +25,10 @@ static void player_avoidance_only_when_close(void)
     assert(target > 0.0f);
     target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 1U);
     assert(nearf_ai(target, 0.0f));
+
+    /* A non-finite player position must not be treated as a real center-lane car. */
+    target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, NAN, z, lateral, 1U);
+    assert(nearf_ai(target, 0.0f));
 }
 
 static void nearby_rival_avoidance(void)
