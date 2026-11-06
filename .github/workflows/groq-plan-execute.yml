@@ -231,7 +231,7 @@ jobs:
           - After that gate, route-runtime integration precedes deterministic rival AI. Do not create duplicate route graphs or copy AGPL or ROM-derived code.
 
           READ ONLY WHAT IS NECESSARY
-          - Read GEMINI.md, docs/automation/task-ledger.json, and only a short relevant excerpt of docs/PROJECT_OPERATING_RULES.md.
+          - Read GEMINI.md, docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/task-ledger.json, and only a short relevant excerpt of docs/PROJECT_OPERATING_RULES.md. Before any implementation, apply the mandatory reverse-engineering-first gate: inspect existing work and exact reference sources, try recovery/extraction/decoding/conversion/reuse first, verify platform/version/licence/provenance, and document why a manual rebuild is necessary. Never duplicate recoverable work or guess.
           - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
           - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens; target below 2,000 and stop if that is not possible.
 
