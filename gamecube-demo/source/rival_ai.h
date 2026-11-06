@@ -31,6 +31,7 @@ static inline float boonta_rival_ai_target_lateral(
 {
     float target;
     unsigned int i;
+    const int player_position_valid = isfinite(player_lateral);
 
     if (!isfinite(rival_z)) rival_z = -18.0f;
     current_lateral = boonta_rival_ai_clamp(
@@ -44,7 +45,7 @@ static inline float boonta_rival_ai_target_lateral(
     target = ((float)(rival_index % 3U) - 1.0f) * 1.25f;
 
     /* Avoid the player only when the two racers are close longitudinally. */
-    if (isfinite(player_lateral) && fabsf(rival_z - 1.0f) < 5.5f &&
+    if (player_position_valid && fabsf(rival_z - 1.0f) < 5.5f &&
         fabsf(current_lateral - player_lateral) < BOONTA_RIVAL_AI_PLAYER_GAP) {
         target = player_lateral <= current_lateral ? 1.45f : -1.45f;
     }
