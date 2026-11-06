@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "The 2026-11-06 scheduled run #42276661261 passed read-only readiness; Gemini was skipped by its existing same-day cooldown; OpenRouter's owner/free-only gate passed, GET /api/v1/key confirmed is_free_tier=true, the OpenCode invocation succeeded, and the report validator accepted a BLOCKED report. That report incorrectly asked the owner to replace…"
+      "next_action_excerpt": "The same-run OpenRouter evidence correction is now present in PR #324: the OpenRouter prompt receives the owner/Free-only gate, GET /api/v1/key authentication outcome and GitHub App token outcome; the report validator rejects API-key/Free-tier or App-credential blockers contradicted by successful same-run checks. Latest branch head…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
