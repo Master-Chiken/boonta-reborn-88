@@ -545,7 +545,7 @@ for required_phrase in (
     "Optimize only a measured hot path",
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
-    "full historical appendices/comments",
+    "Do not retrieve full historical comment streams",
     "compact inventory of all open pull requests",
     "Deep-inspect changed files and exact-head CI only for PRs",
     "Read logs only for failed jobs",
@@ -991,17 +991,16 @@ for required in (
 if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
     errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
 
-# Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
+# Gemini autonomous context policy: compact supplied briefs, no full issue history or binary/media inputs.
 for required in (
-    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
-    "at most two short comments",
-    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
-    "below roughly 20,000 tokens",
-    "approximately 452 KB",
+    "Do not call issue_read or fetch full bodies/comments for #156, #226 or #279",
+    "below 1,500 tokens per cycle",
+    "Never fetch attachments, images, media, artifacts or binary content",
     "Never repeat the same oversized request",
+    "452 KB docs/research/RE-001-route-spline-progress.md",
 ):
     if required not in autonomous_prompt:
-        errors.append(f"Gemini autonomous prompt must enforce bounded text-only context: {required!r}")
+        errors.append(f"Gemini autonomous prompt must enforce the current bounded text-only context: {required!r}")
 for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
