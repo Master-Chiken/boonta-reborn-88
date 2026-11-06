@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "The same-run OpenRouter evidence correction is present in PR #324: the OpenRouter prompt receives the owner/Free-only gate, GET /api/v1/key authentication outcome and GitHub App token outcome; the report validator rejects API-key/Free-tier or App-credential blockers contradicted by successful same-run checks. At the tested code head…"
+      "next_action_excerpt": "PR #324 remains open and unmerged. Its previous exact code head 53fe505983c22e2ebd8478214ce616ac34bcd48 passed all four required exact-head checks: AI free-tier safety (#42299941774), branch automation self-test (#42299941490), Step 102 provenance guard (#42299941827), and trusted source-path guard (#42299977186). Scheduled parent run #42276661261 confirms read-only readiness passed, Gemini was skipped by its same-day failure cooldown, OpenRouter's independent Free-only gate and GET /api/v1/key check passed (is_free_tier=true), and OpenCode invocation completed. Its model report nevertheless requested key replace"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
