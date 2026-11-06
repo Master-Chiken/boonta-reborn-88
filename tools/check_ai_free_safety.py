@@ -434,7 +434,7 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         or content.find("id: free_tier_guard") > content.find("name: 'Mint identity token'")
         or content.find("name: 'Mint identity token'") > content.find("name: 'Checkout Code'")
         or "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" not in content
-        or "name: 'Checkout Code'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
     ):
         errors.append(f"{label} must fail closed before token mint, checkout, and Gemini model call")
     if label == "gemini-invoke.yml":
@@ -446,7 +446,7 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         if (
             content.find("name: 'Checkout Code'") > content.find("name: 'Prepare prompt context'")
             or content.find("name: 'Prepare prompt context'") > content.find("name: 'Run Gemini CLI'")
-            or "name: 'Prepare prompt context'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+            or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
         ):
             errors.append("Gemini plan-execute must fail closed before its prompt preparation and model call")
     if "gemini_model: 'gemini-3.8-flash'" not in content:
@@ -454,7 +454,7 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
     if "upload_artifacts: 'false'" not in content:
         errors.append(f"{label} must keep workflow artifact upload disabled")
 
-if not re.search(r"(?m)^\\s*description\\s*=\\s*[\"']Runs the Gemini CLI in read-only planning mode[\"']", invoke_prompt):
+if not re.search(r"(?m)^\s*description\s*=\s*[\"']Runs the Gemini CLI in read-only planning mode[\"']", invoke_prompt):
     errors.append("Gemini invoke prompt specification must be explicitly read-only")
 if "Do not edit files or call write tools" not in invoke_prompt:
     errors.append("Gemini invoke prompt specification must prohibit file writes")
