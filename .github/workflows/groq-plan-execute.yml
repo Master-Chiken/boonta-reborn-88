@@ -171,6 +171,11 @@ jobs:
             "model": "groq/openai/gpt-oss-20b",
             "small_model": "groq/openai/gpt-oss-20b",
             "enabled_providers": ["groq"],
+            "agent": {
+              "build": {
+                "steps": 4
+              }
+            },
             "provider": {
               "groq": {
                 "models": {
