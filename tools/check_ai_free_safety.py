@@ -601,6 +601,11 @@ for required_guard in (
 ):
     if required_guard not in ci_triage:
         errors.append(f"CI failure triage is missing safe main/dev exact-head guard {required_guard!r}")
+triage_workflow_filters = ci_triage.split("    types:", 1)[0]
+if "- .github/workflows/boonta-autonomous-loop.yml" not in triage_workflow_filters:
+    errors.append("CI failure triage must match the autonomous loop's API-reported workflow path as well as its display name")
+if "run.path === '.github/workflows/boonta-autonomous-loop.yml'" not in ci_triage:
+    errors.append("CI failure triage must route path-named autonomous workflow failures to canonical queue issue #226")
 if "github.event.workflow_run.conclusion == 'startup_failure'" not in ci_triage:
     errors.append("CI failure triage must report startup_failure conclusions, not only job failures")
 for required_triage_detail in (
