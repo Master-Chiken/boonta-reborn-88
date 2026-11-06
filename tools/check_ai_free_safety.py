@@ -1041,6 +1041,22 @@ for required in (
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
+# OpenRouter BLOCKED reports must agree with the successful same-run preflight.
+# Its prompt receives workflow outcomes, and the report validator rejects false
+# API-key/Free-tier blockers after a successful GET /api/v1/key check.
+for required in (
+    "OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}",
+    "OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}",
+    "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
+    "process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true'",
+    "process.env.OPENROUTER_AUTH_OUTCOME === 'success'",
+    "BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence",
+    "SAME-RUN VERIFIED EXECUTION FACTS",
+    "Never ask the owner to replace the key.",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter report consistency guard is missing {required!r}")
+
 # The Groq Free fallback must remain useful under its observed 8k TPM limit.
 # OpenCode supports per-model context/output limits; cap this agent well below TPM.
 groq_config_match = re.search(
