@@ -1074,6 +1074,35 @@ for required in (
 if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
+
+# Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
+reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
+for label, content in (
+    ("AGENTS.md", read("AGENTS.md")),
+    ("GEMINI.md", instructions),
+    ("PROJECT_OPERATING_RULES.md", read("docs/PROJECT_OPERATING_RULES.md")),
+    ("Gemini autonomous prompt", autonomous_prompt),
+    ("OpenRouter autonomous prompt", openrouter_fallback),
+    ("Groq autonomous prompt", groq_fallback),
+):
+    if "docs/REVERSE_ENGINEERING_FIRST.md" not in content and label != "reverse-engineering policy":
+        errors.append(f"{label} must explicitly reference the mandatory reverse-engineering-first policy")
+for required in (
+    "Never manually recreate",
+    "DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST",
+    "licence/provenance",
+    "manual recreation",
+    "Reuse / reverse-engineering decision",
+):
+    if required not in reverse_engineering_policy:
+        errors.append(f"Reverse-engineering-first policy is missing required decision-gate language: {required!r}")
+if "REVERSE_ENGINEERING_FIRST.md" not in autonomous_prompt:
+    errors.append("Gemini autonomous startup must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in openrouter_fallback:
+    errors.append("OpenRouter autonomous prompt must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:
+    errors.append("Groq autonomous prompt must read the reverse-engineering-first policy")
+
 if errors:
     print("AI free-tier safety checks FAILED:")
     for error in errors:
