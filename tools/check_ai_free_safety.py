@@ -241,17 +241,18 @@ or_checkout_position = openrouter_fallback.find("name: Checkout the protected de
 or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
 or_snapshot_position = openrouter_fallback.find("id: snapshot_pr_heads")
 or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
-or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after an invocation failure")
+or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after authentication or invocation failure")
 or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
 if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_run_position < or_record_position < or_validate_position):
-    errors.append("OpenRouter daily cooldown and free bearer-auth check must run before token mint/model invocation; invocation failures must be recorded before report validation")
+    errors.append("OpenRouter daily cooldown and bearer-auth check must run before token mint/model invocation; authentication and invocation failures must be recorded before report validation")
 for required in (
     "github.paginate(github.rest.issues.listComments",
     "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
     "new Date().toISOString().slice(0, 10)",
     "OPENROUTER_COOLDOWN_ACTIVE",
     "OPENROUTER_COOLDOWN_DATE",
-    "steps.run_opencode.outcome == 'failure'",
+    "steps.openrouter_auth_check.outcome == 'failure'",
+    "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
     "continue-on-error: true",
