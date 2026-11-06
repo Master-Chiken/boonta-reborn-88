@@ -21,6 +21,34 @@ static inline float boonta_rival_ai_clamp(float value, float low, float high)
     return value;
 }
 
+static inline float boonta_rival_ai_curvature_from_samples(
+    float before_x, float before_z,
+    float middle_x, float middle_z,
+    float after_x, float after_z)
+{
+    float first_x, first_z, second_x, second_z;
+    float first_length, second_length, cross, dot, angle, curvature;
+
+    if (!isfinite(before_x) || !isfinite(before_z) ||
+        !isfinite(middle_x) || !isfinite(middle_z) ||
+        !isfinite(after_x) || !isfinite(after_z)) return 0.0f;
+
+    first_x = middle_x - before_x;
+    first_z = middle_z - before_z;
+    second_x = after_x - middle_x;
+    second_z = after_z - middle_z;
+    first_length = sqrtf(first_x * first_x + first_z * first_z);
+    second_length = sqrtf(second_x * second_x + second_z * second_z);
+    if (!isfinite(first_length) || !isfinite(second_length) ||
+        first_length <= 0.001f || second_length <= 0.001f) return 0.0f;
+
+    cross = first_x * second_z - first_z * second_x;
+    dot = first_x * second_x + first_z * second_z;
+    angle = fabsf(atan2f(cross, dot));
+    curvature = angle / (0.5f * (first_length + second_length));
+    return boonta_rival_ai_clamp(curvature, 0.0f, 0.18f);
+}
+
 static inline float boonta_rival_ai_target_lateral(
     unsigned int rival_index,
     float rival_z,
