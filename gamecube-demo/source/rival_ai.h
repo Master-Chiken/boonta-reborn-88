@@ -21,7 +21,11 @@ static inline float boonta_rival_ai_clamp(float value, float low, float high)
     return value;
 }
 
-static inline float boonta_rival_ai_curvature_from_samples(
+/*
+ * Signed curvature in the track's X/Z plane. Positive means the route bends
+ * toward +X (the right-hand side of the rendered road); negative means -X.
+ */
+static inline float boonta_rival_ai_signed_curvature_from_samples(
     float before_x, float before_z,
     float middle_x, float middle_z,
     float after_x, float after_z)
@@ -44,9 +48,44 @@ static inline float boonta_rival_ai_curvature_from_samples(
 
     cross = first_x * second_z - first_z * second_x;
     dot = first_x * second_x + first_z * second_z;
-    angle = fabsf(atan2f(cross, dot));
-    curvature = angle / (0.5f * (first_length + second_length));
-    return boonta_rival_ai_clamp(curvature, 0.0f, 0.18f);
+    angle = atan2f(cross, dot);
+    curvature = -angle / (0.5f * (first_length + second_length));
+    return boonta_rival_ai_clamp(curvature, -0.18f, 0.18f);
+}
+
+static inline float boonta_rival_ai_curvature_from_samples(
+    float before_x, float before_z,
+    float middle_x, float middle_z,
+    float after_x, float after_z)
+{
+    return fabsf(boonta_rival_ai_signed_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z));
+}
+
+/*
+ * Stable racing-line bias: each rival keeps its assigned lane but moves a
+ * bounded amount toward the inside of the upcoming bend. Narrow roads reduce
+ * both the bias and the allowed lateral envelope.
+ */
+static inline float boonta_rival_ai_target_line_lateral(
+    unsigned int rival_index, float signed_curvature, float road_half_width)
+{
+    float lane_target;
+    float curvature_ratio;
+    float max_bias;
+    float lateral_limit;
+
+    road_half_width = boonta_rival_ai_clamp(road_half_width, 2.2f, 4.8f);
+    signed_curvature = boonta_rival_ai_clamp(signed_curvature, -0.18f, 0.18f);
+    lane_target = ((float)(rival_index % 3U) - 1.0f) * 1.25f;
+    curvature_ratio = boonta_rival_ai_clamp(signed_curvature / 0.10f, -1.0f, 1.0f);
+    max_bias = boonta_rival_ai_clamp((road_half_width - 2.0f) * 0.35f,
+                                     0.15f, 0.75f);
+    lateral_limit = boonta_rival_ai_clamp(
+        road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    return boonta_rival_ai_clamp(
+        lane_target + curvature_ratio * max_bias,
+        -lateral_limit, lateral_limit);
 }
 
 static inline float boonta_rival_ai_target_lateral(
@@ -56,9 +95,12 @@ static inline float boonta_rival_ai_target_lateral(
     float player_lateral,
     const float *other_z,
     const float *other_lateral,
-    unsigned int rival_count)
+    unsigned int rival_count,
+    float signed_curvature,
+    float road_half_width)
 {
     float target;
+    float lateral_limit;
     unsigned int i;
     const int player_position_valid = isfinite(player_lateral);
 
@@ -70,8 +112,13 @@ static inline float boonta_rival_ai_target_lateral(
         player_lateral, -BOONTA_RIVAL_AI_LATERAL_LIMIT,
         BOONTA_RIVAL_AI_LATERAL_LIMIT);
 
-    /* Stable three-lane preference prevents all opponents choosing one line. */
-    target = ((float)(rival_index % 3U) - 1.0f) * 1.25f;
+    road_half_width = boonta_rival_ai_clamp(road_half_width, 2.2f, 4.8f);
+    lateral_limit = boonta_rival_ai_clamp(
+        road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
+
+    /* Preserve the assigned lane while biasing toward the upcoming inside line. */
+    target = boonta_rival_ai_target_line_lateral(
+        rival_index, signed_curvature, road_half_width);
 
     /* Avoid the player only when the two racers are close longitudinally. */
     if (player_position_valid && fabsf(rival_z - 1.0f) < 5.5f &&
@@ -95,9 +142,7 @@ static inline float boonta_rival_ai_target_lateral(
         }
     }
 
-    return boonta_rival_ai_clamp(
-        target, -BOONTA_RIVAL_AI_LATERAL_LIMIT,
-        BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
 }
 
 static inline float boonta_rival_ai_after_frame(
