@@ -46,7 +46,7 @@ Le workflow [OpenRouter plan execute](../.github/workflows/openrouter-plan-execu
 **Activation explicite nécessaire dans Settings → Secrets and variables → Actions :**
 
 1. Créer une clé dans [OpenRouter API Keys](https://openrouter.ai/keys) avec le compte Free. Ne pas ajouter de carte, de moyen de paiement ni de crédits. Si OpenRouter exige un paiement, ne pas continuer.
-2. Ajouter le secret de dépôt `OPENROUTER_API_KEY`. Ne jamais copier la clé dans le dépôt, une issue, un commentaire ou cette conversation.
+2. Ajouter le secret de dépôt `OPENROUTER_API_KEY_02` (nom préféré). Le workflow accepte aussi l'ancien nom `OPENROUTER_API_KEY`, mais `_02` est prioritaire lorsqu'il est présent. Ne jamais copier la clé dans le dépôt, une issue, un commentaire ou cette conversation.
 3. Ajouter la variable de dépôt `OPENROUTER_FREE_TIER_CONFIRMED=true` seulement après avoir vérifié personnellement que le compte est Free et qu'aucun moyen de paiement/crédit n'est activé. Cette variable est une attestation du propriétaire, pas une vérification automatique du compte.
 4. Conserver `GEMINI_AUTONOMOUS_ENABLED=true` comme interrupteur maître de toute écriture autonome. Sans ce verrou, OpenRouter ne peut pas écrire.
 
@@ -58,9 +58,9 @@ Le workflow [Boonta Autonomous Readiness](../.github/workflows/boonta-autonomous
 
 ## Relecture de PR via OpenRouter Free — à la demande
 
-Le workflow [OpenRouter Free PR review](../.github/workflows/openrouter-free-review.yml) est présent sur `main` depuis la fusion de [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il est manuel, réservé au propriétaire du dépôt, transmet au maximum 30 000 octets du diff après un contrôle de motifs de secrets et utilise uniquement `openrouter/free`. Il peut publier un commentaire mais ne peut écrire du code, pousser, créer une PR ou fusionner. Il apparaît dans Actions, mais il ne doit pas être considéré opérationnel tant que `OPENROUTER_API_KEY` n'est pas configuré et qu'un premier lancement réel n'a pas réussi.
+Le workflow [OpenRouter Free PR review](../.github/workflows/openrouter-free-review.yml) est présent sur `main` depuis la fusion de [PR #251](https://github.com/Master-Chiken/boonta-reborn-88/pull/251). Il est manuel, réservé au propriétaire du dépôt, transmet au maximum 30 000 octets du diff après un contrôle de motifs de secrets et utilise uniquement `openrouter/free`. Il peut publier un commentaire mais ne peut écrire du code, pousser, créer une PR ou fusionner. Il apparaît dans Actions, mais il ne doit pas être considéré opérationnel tant que `OPENROUTER_API_KEY_02` (ou l'ancien `OPENROUTER_API_KEY`) n'est pas configuré et qu'un premier lancement réel n'a pas réussi.
 
-Avant un lancement, examiner la PR cible et exclure tout contenu privé ou incertain. Le diff est transmis à OpenRouter puis au fournisseur du modèle sélectionné ; la détection de secrets est indicative, pas exhaustive. Le routeur est gratuit au tarif affiché, avec des quotas susceptibles de changer. En cas d'indisponibilité, le job échoue sans choisir de modèle payant. La clé doit être stockée uniquement comme secret GitHub `OPENROUTER_API_KEY` et aucun crédit/moyen de paiement ne doit être ajouté.
+Avant un lancement, examiner la PR cible et exclure tout contenu privé ou incertain. Le diff est transmis à OpenRouter puis au fournisseur du modèle sélectionné ; la détection de secrets est indicative, pas exhaustive. Le routeur est gratuit au tarif affiché, avec des quotas susceptibles de changer. En cas d'indisponibilité, le job échoue sans choisir de modèle payant. La clé doit être stockée uniquement comme secret GitHub `OPENROUTER_API_KEY_02` (ou, en compatibilité, `OPENROUTER_API_KEY`) et aucun crédit/moyen de paiement ne doit être ajouté.
 
 ## Registre persistant des tâches autonomes
 
