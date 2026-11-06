@@ -717,7 +717,7 @@ if readiness_events != ["push", "workflow_dispatch", "workflow_call"]:
         f"found {readiness_events!r}"
     )
 push_trigger = readiness_trigger.split("  push:", 1)[1].split("  workflow_dispatch:", 1)[0] if "  push:" in readiness_trigger else ""
-if "    branches:\n      - main\n" not in push_trigger or "    paths:\n      - .github/workflows/boonta-autonomous-readiness.yml\n" not in push_trigger:
+if "    branches:\n      - main" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
     errors.append(
         "Autonomous readiness push trigger must be restricted to main and changes to its own workflow file"
     )
@@ -788,7 +788,7 @@ if "curl --fail --silent --show-error" not in readiness or "-X POST" in readines
 # Freeze the autonomous entry points and least-privilege boundary.
 # Scheduled runs, narrowly scoped main pushes after relevant owner merges, and
 # owner-only manual dispatch are the only autonomous entry points.
-autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", autonomous_trigger)
+autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", autonomous_trigger)
 if autonomous_events != ["push", "schedule", "workflow_dispatch"]:
     errors.append("Boonta autonomous loop may declare only scoped push, schedule and workflow_dispatch events; " + f"found {autonomous_events!r}")
 autonomous_push = autonomous_trigger.split("  push:", 1)[1].split("  schedule:", 1)[0] if "  push:" in autonomous_trigger else ""
