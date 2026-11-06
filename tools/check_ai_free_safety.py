@@ -343,7 +343,7 @@ else:
         if required not in fallback_call:
             errors.append(f"OpenRouter fallback caller is missing {required!r}")
     if "github.ref == 'refs/heads/main'" not in fallback_call or "github.actor == github.repository_owner" not in fallback_call:
-        errors.append("OpenRouter fallback caller must remain pinned to main and owner/schedule/push-gated")
+        errors.append("OpenRouter fallback caller must remain pinned to main and owner/schedule-gated")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -595,7 +595,7 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
-    "['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "['schedule', 'workflow_dispatch'].includes(run.event)",
     "run.name === 'Boonta Autonomous Loop'",
     "run.head_branch === 'main'",
     "targetIssueNumber = 226",
@@ -786,24 +786,16 @@ if "curl --fail --silent --show-error" not in readiness or "-X POST" in readines
     errors.append("Autonomous readiness API probes must remain GET-only")
 
 # Freeze the autonomous entry points and least-privilege boundary.
-# Scheduled runs, narrowly scoped main pushes after relevant owner merges, and
-# owner-only manual dispatch are the only autonomous entry points.
+# A scheduled run is allowed; a manual run is owner-only; no other event may
+# invoke the autonomous writer.
 autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", autonomous_trigger)
-if autonomous_events != ["push", "schedule", "workflow_dispatch"]:
-    errors.append("Boonta autonomous loop may declare only scoped push, schedule and workflow_dispatch events; " + f"found {autonomous_events!r}")
-autonomous_push = autonomous_trigger.split("  push:", 1)[1].split("  schedule:", 1)[0] if "  push:" in autonomous_trigger else ""
-required_autonomous_push_paths = (
-    ".github/workflows/boonta-autonomous-loop.yml",
-    ".github/workflows/boonta-autonomous-readiness.yml",
-    ".github/workflows/gemini-plan-execute.yml",
-    ".github/workflows/openrouter-plan-execute.yml",
-    ".github/workflows/groq-plan-execute.yml",
-    "docs/automation/task-ledger.json",
-)
-if "    branches:\n      - main\n" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
-    errors.append("Autonomous main-push trigger must be restricted to main and the reviewed automation/ledger paths")
-if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))" not in autonomous:
-    errors.append("Autonomous schedule/manual dispatch/main-push continuation must be owner-only and pinned to protected main")
+if autonomous_events != ["schedule", "workflow_dispatch"]:
+    errors.append(
+        "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
+        f"found {autonomous_events!r}"
+    )
+if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
+    errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
 
@@ -1081,6 +1073,35 @@ for required in (
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
 if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
+
+
+# Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
+reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
+for label, content in (
+    ("AGENTS.md", read("AGENTS.md")),
+    ("GEMINI.md", instructions),
+    ("PROJECT_OPERATING_RULES.md", read("docs/PROJECT_OPERATING_RULES.md")),
+    ("Gemini autonomous prompt", autonomous_prompt),
+    ("OpenRouter autonomous prompt", openrouter_fallback),
+    ("Groq autonomous prompt", groq_fallback),
+):
+    if "docs/REVERSE_ENGINEERING_FIRST.md" not in content and label != "reverse-engineering policy":
+        errors.append(f"{label} must explicitly reference the mandatory reverse-engineering-first policy")
+for required in (
+    "Never manually recreate",
+    "DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST",
+    "licence/provenance",
+    "manual recreation",
+    "Reuse / reverse-engineering decision",
+):
+    if required not in reverse_engineering_policy:
+        errors.append(f"Reverse-engineering-first policy is missing required decision-gate language: {required!r}")
+if "REVERSE_ENGINEERING_FIRST.md" not in autonomous_prompt:
+    errors.append("Gemini autonomous startup must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in openrouter_fallback:
+    errors.append("OpenRouter autonomous prompt must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:
+    errors.append("Groq autonomous prompt must read the reverse-engineering-first policy")
 
 if errors:
     print("AI free-tier safety checks FAILED:")
