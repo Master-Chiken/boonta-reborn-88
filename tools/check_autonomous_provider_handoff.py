@@ -47,6 +47,31 @@ if loop.count("needs.autonomous-cycle.outputs.invocation_outcome != 'success'") 
 if "needs.openrouter-fallback.outputs.invocation_outcome != 'success'" not in loop:
     errors.append("Groq fallback must gate on the OpenRouter invocation outcome")
 
+# Ensure every autonomous provider uses the compact context contract. The
+# OpenRouter MCP allow-list must not expose full issue-body/listing tools.
+gemini_prompt = (ROOT / ".github/commands/gemini-autonomous-loop.toml").read_text(encoding="utf-8")
+groq = (ROOT / ".github/workflows/groq-plan-execute.yml").read_text(encoding="utf-8")
+budget = ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
+summary = ROOT / "docs/automation/task-ledger-summary.json"
+for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
+    if "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md" not in content:
+        errors.append(f"{label} prompt must reference the shared context budget")
+    if "docs/automation/task-ledger-summary.json" not in content:
+        errors.append(f"{label} prompt must use the compact task summary")
+    if "1,500 tokens" not in content:
+        errors.append(f"{label} prompt must state the 1,500-token retrieval budget")
+if not budget.is_file() or not summary.is_file():
+    errors.append("The shared context budget and compact task summary must exist")
+tool_config = openrouter.split('"GITHUB_TOOLS": "', 1)
+if len(tool_config) != 2:
+    errors.append("OpenRouter MCP tool allow-list is missing")
+else:
+    exposed = sorted({"issue_read", "list_issues", "list_pull_requests"}.intersection(
+        tool_config[1].split('"', 1)[0].split(",")
+    ))
+    if exposed:
+        errors.append("OpenRouter must not expose full issue/list tools: " + ", ".join(exposed))
+
 if errors:
     print("Autonomous provider handoff checks FAILED:")
     for error in errors:
