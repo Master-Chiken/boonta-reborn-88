@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import re
 import sys
+import textwrap
 
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
@@ -31,6 +32,63 @@ autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
+
+# The on-demand Gemini action installs its own default /gemini-invoke command,
+# whose template uses shell substitutions. Invoke our read-only instructions
+# directly through --prompt and keep shell/write tools unavailable to the model.
+prompt_marker = "          prompt: |-\\n"
+if prompt_marker not in invoke:
+    errors.append("Gemini on-demand workflow must pass a direct multiline read-only prompt")
+else:
+    prompt_block = invoke.split(prompt_marker, 1)[1].split(
+        "\\n      - name: Explain why Gemini was not called", 1
+    )[0]
+    for required in (
+        "strictly read-only repository audit agent",
+        "Do not run shell commands",
+        "Do not edit files",
+        "Budget is exactly €0",
+        "BEGIN_UNTRUSTED_REQUEST",
+        "${{ inputs.additional_context }}",
+        "exact-head",
+    ):
+        if required not in prompt_block:
+            errors.append(f"Gemini on-demand prompt is missing required safety/context text: {required!r}")
+    for forbidden in (
+        "/gemini-invoke",
+        "!{echo $ADDITIONAL_CONTEXT}",
+        "!{echo $TITLE}",
+        "!{echo $DESCRIPTION}",
+    ):
+        if forbidden in prompt_block:
+            errors.append(f"Gemini on-demand prompt must not invoke shell-backed custom-command content: {forbidden!r}")
+
+if "name: 'Prepare prompt context'" in invoke:
+    errors.append("Gemini on-demand workflow must not prepare an unused custom-command context file")
+
+settings_marker = "          settings: |-\\n"
+settings_end_marker = "          # Pass the read-only instructions directly."
+if settings_marker not in invoke or settings_end_marker not in invoke:
+    errors.append("Gemini on-demand workflow is missing its explicit read-only tool configuration")
+else:
+    settings_text = invoke.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+    try:
+        settings = json.loads(textwrap.dedent(settings_text))
+        github_tools = settings.get("mcpServers", {}).get("github", {}).get("includeTools", [])
+        core_tools = settings.get("tools", {}).get("core", [])
+        if "add_issue_comment" in github_tools:
+            errors.append("Read-only Gemini MCP allow-list must not expose add_issue_comment")
+        forbidden_tools = {
+            "create_branch", "push_files", "create_or_update_file",
+            "create_pull_request", "merge_pull_request", "update_pull_request",
+        }
+        if forbidden_tools.intersection(github_tools):
+            errors.append("Read-only Gemini MCP allow-list exposes repository write tools")
+        if core_tools != ["read_file", "glob", "grep_search", "list_directory"]:
+            errors.append(f"Gemini core tools must remain read-only; found {core_tools!r}")
+    except (json.JSONDecodeError, AttributeError, TypeError) as exc:
+        errors.append(f"Gemini on-demand read-only settings are invalid: {exc}")
+
 setup = read("docs/AI_AUTOMATION_SETUP.md")
 ci_triage = read(".github/workflows/ci-failure-triage.yml")
 gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
