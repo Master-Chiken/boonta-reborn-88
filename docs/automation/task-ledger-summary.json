@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #316 and #320 are merged. In post-merge run #42242728733, Gemini was skipped by its daily cooldown; OpenRouter GET /api/v1/key succeeded and its invocation completed, but report validation failed because no valid PROGRESS/BLOCKED report was returned. Groq then exceeded the observed 8,000-token-per-minute Free limit repeatedly and reached its 120-second…"
+      "next_action_excerpt": "The 2026-11-06 scheduled run #42276661261 passed read-only readiness; Gemini was skipped by its existing same-day cooldown; OpenRouter's owner/free-only gate passed, GET /api/v1/key confirmed is_free_tier=true, the OpenCode invocation succeeded, and the report validator accepted a BLOCKED report. That report incorrectly asked the owner to replace…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
