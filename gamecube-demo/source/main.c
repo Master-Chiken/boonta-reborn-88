@@ -244,27 +244,12 @@ static float track_curvature_at(float travelled)
     float before_x = 0.0f, before_z = 0.0f;
     float middle_x = 0.0f, middle_z = 0.0f;
     float after_x = 0.0f, after_z = 0.0f;
-    float first_x, first_z, second_x, second_z;
-    float first_length, second_length, cross, dot, angle, curvature;
-
     if (!isfinite(travelled)) return 0.0f;
     track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
     track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
     track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
-
-    first_x = middle_x - before_x;
-    first_z = middle_z - before_z;
-    second_x = after_x - middle_x;
-    second_z = after_z - middle_z;
-    first_length = sqrtf(first_x * first_x + first_z * first_z);
-    second_length = sqrtf(second_x * second_x + second_z * second_z);
-    if (first_length <= 0.001f || second_length <= 0.001f) return 0.0f;
-
-    cross = first_x * second_z - first_z * second_x;
-    dot = first_x * second_x + first_z * second_z;
-    angle = fabsf(atan2f(cross, dot));
-    curvature = angle / (0.5f * (first_length + second_length));
-    return clampf_local(curvature, 0.0f, 0.18f);
+    return boonta_rival_ai_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z);
 }
 
 static float track_center_x_at(float travelled)
