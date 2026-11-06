@@ -82,8 +82,8 @@ jobs:
             reason="OpenRouter fallback is restricted to autonomous issue #226."
           elif [[ "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" || "${CALLER_REF:-}" != "refs/heads/main" ]]; then
             reason="OpenRouter fallback may only be called by Boonta Autonomous Loop from main."
-          elif [[ "${CALLER_EVENT:-}" != "schedule" && "${CALLER_EVENT:-}" != "workflow_dispatch" ]]; then
-            reason="Unsupported caller event; no model call is allowed."
+          elif [[ "${CALLER_EVENT:-}" != "schedule" && "${CALLER_EVENT:-}" != "workflow_dispatch" && "${CALLER_EVENT:-}" != "push" ]]; then
+            reason="Unsupported caller event; only schedule, owner-dispatched workflow, or owner-authorized main push is allowed."
           elif [[ "${OPENROUTER_COOLDOWN_ACTIVE:-}" == "true" ]]; then
             reason="OpenRouter Free already failed an autonomous invocation on UTC date ${OPENROUTER_COOLDOWN_DATE:-today}; skip repeated requests until the next UTC day. No provider request will be made."
           elif [[ -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ]]; then
