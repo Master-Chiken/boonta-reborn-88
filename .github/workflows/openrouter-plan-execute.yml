@@ -375,7 +375,7 @@ jobs:
               process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true' &&
               process.env.OPENROUTER_AUTH_OUTCOME === 'success';
             if (status === 'BOONTA_CYCLE_STATUS: BLOCKED' && successfulOpenRouterAuth &&
-                /(OPENROUTER_API_KEY|HTTP\\s*401|OpenRouter.{0,60}(missing|invalid|unauthori[sz]ed|authentication failure|Free[- ]tier.{0,30}(missing|invalid|not verified)))/i.test(blockedText)) {
+                /(OPENROUTER_API_KEY|HTTP\s*401|OpenRouter.{0,60}(missing|invalid|unauthori[sz]ed|authentication failure|Free[- ]tier.{0,30}(missing|invalid|not verified)))/i.test(blockedText)) {
               core.setFailed('BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence.');
               return;
             }
