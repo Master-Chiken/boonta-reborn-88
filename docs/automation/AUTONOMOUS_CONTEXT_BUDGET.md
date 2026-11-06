@@ -15,6 +15,10 @@ The dashboard and research queue issues are append-only histories. Their full bo
 - Do not fetch full PR diffs or workflow logs unless the exact PR/job is relevant and failed. Never fetch attachments, images, media, ROMs, disc images, BIOS, binaries or the 452 KB route dossier.
 - Keep newly retrieved repository/issue text below 1,500 tokens per cycle. Keep a provider request small enough to leave room for the prompt and tool schemas. If the provider reports a TPM, context-size, quota or rate-limit error, stop; do not repeat the same request.
 
+## Reverse-engineering before rebuilding
+
+Before implementing or recreating any system, inspect the existing project, prior PRs, research notes, data sources, converters, exporters and tests. First determine whether reverse engineering can recover, explain, extract, decode, convert, reuse or automatically reproduce the required element. Verify the exact platform/version and the source licence/provenance. Rebuild manually only after recording why reuse/recovery is not possible. Never duplicate recoverable work or infer GameCube/Wii behavior from PC-only evidence.
+
 ## Source of truth and safe fallback
 
 The workflow task brief is the owner-approved task direction for that cycle. The compact summary identifies active, blocked and in-review work without duplicating evidence histories. GitHub remains authoritative for live PR state and exact head SHAs; inspect only the specific PR needed to validate the selected task.
