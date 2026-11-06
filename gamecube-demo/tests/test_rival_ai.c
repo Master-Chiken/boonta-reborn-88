@@ -59,6 +59,24 @@ static void invalid_inputs_recover_safely(void)
     assert(target <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
 }
 
+static void curvature_samples_are_measured_and_bounded(void)
+{
+    const float straight = boonta_rival_ai_curvature_from_samples(
+        -2.0f, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f);
+    const float gentle_bend = boonta_rival_ai_curvature_from_samples(
+        -2.0f, 0.0f, 0.0f, 0.0f, 1.93185165f, 0.51763809f);
+    const float sharp_bend = boonta_rival_ai_curvature_from_samples(
+        -2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 2.0f);
+
+    assert(nearf_ai(straight, 0.0f));
+    assert(nearf_ai(gentle_bend, 0.1308997f));
+    assert(nearf_ai(sharp_bend, 0.18f));
+    assert(nearf_ai(boonta_rival_ai_curvature_from_samples(
+        NAN, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f), 0.0f));
+    assert(nearf_ai(boonta_rival_ai_curvature_from_samples(
+        0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f), 0.0f));
+}
+
 static void curvature_reduces_target_speed(void)
 {
     const float straight = boonta_rival_ai_target_speed(1U, 0.0f);
@@ -99,6 +117,7 @@ int main(void)
     nearby_rival_avoidance();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
+    curvature_samples_are_measured_and_bounded();
     curvature_reduces_target_speed();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
