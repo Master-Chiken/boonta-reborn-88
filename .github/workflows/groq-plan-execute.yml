@@ -166,51 +166,51 @@ jobs:
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
-{
-  "$schema": "https://opencode.ai/config.json",
-  "model": "groq/openai/gpt-oss-20b",
-  "small_model": "groq/openai/gpt-oss-20b",
-  "enabled_providers": ["groq"],
-  "provider": {
-    "groq": {
-      "models": {
-        "openai/gpt-oss-20b": {
-          "limit": {
-            "context": 4096,
-            "output": 768
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "model": "groq/openai/gpt-oss-20b",
+            "small_model": "groq/openai/gpt-oss-20b",
+            "enabled_providers": ["groq"],
+            "provider": {
+              "groq": {
+                "models": {
+                  "openai/gpt-oss-20b": {
+                    "limit": {
+                      "context": 4096,
+                      "output": 768
+                    }
+                  }
+                }
+              }
+            },
+            "mcp": {
+              "github": {
+                "type": "local",
+                "command": [
+                  "docker", "run", "-i", "--rm",
+                  "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+                  "-e", "GITHUB_TOOLS",
+                  "ghcr.io/github/github-mcp-server:v0.27.0"
+                ],
+                "environment": {
+                  "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
+                  "GITHUB_TOOLS": "get_file_contents,issue_read,list_pull_requests,pull_request_read,create_branch,create_or_update_file,create_pull_request,add_issue_comment,get_commit"
+                },
+                "enabled": true,
+                "timeout": 60000
+              }
+            },
+            "permission": {
+              "*": "allow",
+              "bash": "deny",
+              "read": {
+                "*.env": "deny",
+                "*.env.*": "deny",
+                "**/*.env": "deny",
+                "**/*.env.*": "deny"
+              }
+            }
           }
-        }
-      }
-    }
-  },
-  "mcp": {
-    "github": {
-      "type": "local",
-      "command": [
-        "docker", "run", "-i", "--rm",
-        "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "-e", "GITHUB_TOOLS",
-        "ghcr.io/github/github-mcp-server:v0.27.0"
-      ],
-      "environment": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-        "GITHUB_TOOLS": "get_file_contents,issue_read,list_pull_requests,pull_request_read,create_branch,create_or_update_file,create_pull_request,add_issue_comment,get_commit"
-      },
-      "enabled": true,
-      "timeout": 60000
-    }
-  },
-  "permission": {
-    "*": "allow",
-    "bash": "deny",
-    "read": {
-      "*.env": "deny",
-      "*.env.*": "deny",
-      "**/*.env": "deny",
-      "**/*.env.*": "deny"
-    }
-  }
-}
           JSON
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
@@ -219,6 +219,7 @@ jobs:
           You are the €0-only Groq fallback agent for Boonta Reborn. Gemini and OpenRouter did not complete this scheduled cycle. Do exactly one small, justified task; never ask the owner to type continue.
 
           HARD LIMITS
+          OpenCode is configured for this run with a 4,096-token context limit and a 768-token output limit. Do not retry an oversized request.
           - Use only the fixed Groq Free model configured by this workflow. Never enable billing, paid routes, another provider, change secrets/settings, or reveal credentials.
           - The previous Groq request exceeded the 8,000-token-per-minute Free limit. Keep context compact. If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately and report BLOCKED. Do not retry it.
           - Preserve clean-room provenance, platform boundaries, one active ledger task, exact-head checks and one write-capable task. Never merge, auto-merge, force-push or write to main/dev directly.
@@ -231,8 +232,8 @@ jobs:
 
           READ ONLY WHAT IS NECESSARY
           - Read GEMINI.md, docs/automation/task-ledger.json, and only a short relevant excerpt of docs/PROJECT_OPERATING_RULES.md.
-          - Do not read full issue histories for #156, #226 or #279. Inspect only a specific PR if required to verify its exact head.
-          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep retrieved text below 2,000 tokens; stop if that is not possible.
+          - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
+          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens; target below 2,000 and stop if that is not possible.
 
           EXECUTION
           - Use the local read tool for checked-out text and only the reduced GitHub MCP tools for exact PR/commit checks and branch/PR writes. Shell execution is denied.
