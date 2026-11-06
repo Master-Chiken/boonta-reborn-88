@@ -613,6 +613,18 @@ for required_triage_detail in (
 ):
     if required_triage_detail not in ci_triage:
         errors.append(f"CI failure triage is missing startup/no-job diagnosis detail {required_triage_detail!r}")
+if "github.event.workflow_run.conclusion == 'startup_failure'" not in ci_triage:
+    errors.append("CI failure triage must report startup_failure conclusions, not only job failures")
+for required_triage_detail in (
+    "const noJobs = !Array.isArray(data.jobs) || data.jobs.length === 0;",
+    "const conclusion = String(run.conclusion || 'unknown');",
+    "No workflow step or provider job ran",
+    "no provider authentication result can be inferred",
+    "'**Conclusion:** ' + conclusion",
+    "'**Jobs returned:** ' + (Array.isArray(data.jobs) ? data.jobs.length : 0)",
+):
+    if required_triage_detail not in ci_triage:
+        errors.append(f"CI failure triage is missing startup/no-job diagnosis detail {required_triage_detail!r}")
 triage_permissions = ci_triage.split("permissions:", 1)[1].split("concurrency:", 1)[0]
 if "contents: write" in triage_permissions or "pull-requests: write" in triage_permissions:
     errors.append("CI failure triage must not have code or pull-request write permission")
