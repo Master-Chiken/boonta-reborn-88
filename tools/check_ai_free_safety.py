@@ -313,11 +313,11 @@ else:
     github_tools = tools_match.group(1).split(",")
     forbidden_github_tools = [
         tool for tool in github_tools
-        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request"))
+        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request", "issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"))
     ]
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    for required_tool in ("create_branch", "push_files", "create_pull_request", "issue_read", "pull_request_read"):
+    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_issues", "search_pull_requests"):
         if required_tool not in github_tools:
             errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
     if "get_workflow_job" in github_tools:
