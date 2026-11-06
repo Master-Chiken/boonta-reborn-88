@@ -56,7 +56,7 @@ jobs:
         id: free_tier_guard
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}
           GEMINI_AUTONOMOUS_ENABLED: ${{ vars.GEMINI_AUTONOMOUS_ENABLED }}
           AUTONOMOUS_MODE: ${{ inputs.autonomous_mode }}
@@ -75,7 +75,7 @@ jobs:
           if [[ "${OPENROUTER_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
             reason="OPENROUTER_FREE_TIER_CONFIRMED must equal true only after the owner verifies the OpenRouter Free account, zero payment methods/credits, and no paid usage."
           elif [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-            reason="The OPENROUTER_API_KEY repository secret is missing."
+            reason="The OPENROUTER_API_KEY_02 (preferred) or legacy OPENROUTER_API_KEY repository secret is missing."
           elif [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
             reason="The master GEMINI_AUTONOMOUS_ENABLED owner gate is not exactly true."
           elif [[ "${AUTONOMOUS_MODE:-false}" != "true" || "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
@@ -113,7 +113,7 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
         run: |
           set -euo pipefail
           set +x
@@ -180,7 +180,7 @@ jobs:
         id: run_opencode
         shell: bash
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
         run: |
           set -euo pipefail
