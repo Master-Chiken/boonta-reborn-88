@@ -1286,15 +1286,21 @@ int main(int argc, char **argv)
 
         /* Staggered scripted opponents approach in camera space and change lanes. */
         if (!g_race_finished) {
+            float rival_target_lateral[BOONTA_RIVAL_COUNT];
+
+            /* Decide from one shared snapshot so rival update order cannot bias AI. */
+            for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
+                    rival_index, g_rival_z[rival_index],
+                    g_rival_lateral[rival_index], g_player_lateral,
+                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT);
+            }
+
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
                 g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
                     g_rival_lateral[rival_index],
-                    boonta_rival_ai_target_lateral(
-                        rival_index, g_rival_z[rival_index],
-                        g_rival_lateral[rival_index], g_player_lateral,
-                        g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT),
-                    frame_scale);
+                    rival_target_lateral[rival_index], frame_scale);
                 g_rival_z[rival_index] = boonta_rival_z_after_frame(
                     g_rival_z[rival_index], g_speed, frame_scale);
                 rival_event = boonta_rival_event(
