@@ -223,17 +223,17 @@ jobs:
           - Use only the fixed Groq Free model configured by this workflow. Never enable billing, paid routes, another provider, change secrets/settings, or reveal credentials.
           - The previous Groq request exceeded the 8,000-token-per-minute Free limit. Keep context compact. If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately and report BLOCKED. Do not retry it.
           - Preserve clean-room provenance, platform boundaries, one active ledger task, exact-head checks and one write-capable task. Never merge, auto-merge, force-push or write to main/dev directly.
-          - Verified provider state for 2026-11-06: Gemini is under its daily failure cooldown; OpenRouter key authentication returned HTTP 401. Do not call OpenRouter again until the owner replaces and verifies the GitHub secret.
+          - Never infer provider state from an earlier run. Respect this run's explicit gates/cooldowns only; do not call another provider or request a secret change from stale logs.
 
           PROJECT ORDER
-          - The sole active ledger task remains AUTOMATION-LEDGER-ACTIVATION. Reconcile it against live state; do not create another active task or begin gameplay work until it is cleared.
-          - PR #314 is the reuse-first/verification-policy candidate for main. PR #274 is the only route-runtime candidate, at inspected head f8c9488fa8bfe1f6434309c7b84c075304a43c54 on dev. Neither may be merged by an agent.
+          - Read docs/automation/task-ledger-summary.json for the current task status; do not assume an active task. AUTOMATION-LEDGER-ACTIVATION is currently blocked pending a valid post-merge cycle. Do not begin gameplay work until the activation gate is genuinely cleared.
+          - Reuse the current reverse-engineering-first policy PR and existing route-runtime PR #274 at exact head f8c9488fa8bfe1f6434309c7b84c075304a43c54 on dev. Neither may be merged by an agent.
           - After that gate, route-runtime integration precedes deterministic rival AI. Do not create duplicate route graphs or copy AGPL or ROM-derived code.
 
           READ ONLY WHAT IS NECESSARY
-          - Read GEMINI.md, docs/automation/task-ledger.json, and only a short relevant excerpt of docs/PROJECT_OPERATING_RULES.md.
+          - Read docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Do not read the full task ledger or full issue bodies.
           - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
-          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens; target below 2,000 and stop if that is not possible.
+          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens as a hard ceiling; target newly retrieved text below 1,500 tokens total and stop if the task cannot be resolved within that budget.
 
           EXECUTION
           - Use the local read tool for checked-out text and only the reduced GitHub MCP tools for exact PR/commit checks and branch/PR writes. Shell execution is denied.
