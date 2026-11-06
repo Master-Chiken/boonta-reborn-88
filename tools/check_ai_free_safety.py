@@ -433,32 +433,33 @@ for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml"
         or "if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
         or content.find("id: free_tier_guard") > content.find("name: 'Mint identity token'")
         or content.find("name: 'Mint identity token'") > content.find("name: 'Checkout Code'")
-        or content.find("name: 'Checkout Code'") > content.find("name: 'Prepare prompt context'")
-        or content.find("name: 'Prepare prompt context'") > content.find("name: 'Run Gemini CLI'")
         or "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" not in content
-        or "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
-        or "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        or "name: 'Checkout Code'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
     ):
-        errors.append(f"{label} must fail closed before token mint, checkout, prompt preparation, and Gemini model call")
+        errors.append(f"{label} must fail closed before token mint, checkout, and Gemini model call")
+    if label == "gemini-invoke.yml":
+        if content.find("name: 'Checkout Code'") > content.find("name: 'Run Gemini CLI'"):
+            errors.append("Gemini invoke must check out source before running the CLI")
+        if "name: 'Prepare prompt context'" in content:
+            errors.append("Gemini invoke must not prepare the obsolete custom-command context file")
+    else:
+        if (
+            content.find("name: 'Checkout Code'") > content.find("name: 'Prepare prompt context'")
+            or content.find("name: 'Prepare prompt context'") > content.find("name: 'Run Gemini CLI'")
+            or "name: 'Prepare prompt context'\\n        if: steps.free_tier_guard.outputs.allowed == 'true'" not in content
+        ):
+            errors.append("Gemini plan-execute must fail closed before its prompt preparation and model call")
     if "gemini_model: 'gemini-3.8-flash'" not in content:
         errors.append(f"{label} must keep the configured model explicit for owner review")
     if "upload_artifacts: 'false'" not in content:
         errors.append(f"{label} must keep workflow artifact upload disabled")
 
-if not re.search(r"(?m)^\s*description\s*=\s*[\"']Runs the Gemini CLI in read-only planning mode[\"']", invoke_prompt):
-    errors.append("Gemini invoke prompt must be explicitly read-only")
+if not re.search(r"(?m)^\\s*description\\s*=\\s*[\"']Runs the Gemini CLI in read-only planning mode[\"']", invoke_prompt):
+    errors.append("Gemini invoke prompt specification must be explicitly read-only")
 if "Do not edit files or call write tools" not in invoke_prompt:
-    errors.append("Gemini invoke prompt must prohibit file writes")
-if "@{.gemini/context.json}" not in invoke_prompt:
-    errors.append("Gemini invoke prompt must inject the dispatcher request context directly")
-if "{{args}}" not in invoke_prompt:
-    errors.append("Gemini invoke prompt must include the triggering request arguments")
-
-if "prompt: '/gemini-invoke ${{ inputs.additional_context }}'" not in invoke:
-    errors.append("Gemini invoke workflow must pass the triggering request into the custom command")
-
-if '--arg context "${ADDITIONAL_CONTEXT}"' not in invoke:
-    errors.append("Gemini invoke workflow must copy the triggering comment into context.json")
+    errors.append("Gemini invoke prompt specification must prohibit file writes")
+if "@{.gemini/context.json}" not in invoke_prompt or "{{args}}" not in invoke_prompt:
+    errors.append("Gemini invoke prompt specification must document its direct request/context placeholders")
 
 for required_phrase in (
     "Always prioritize the exact request in `.gemini/context.json` and the triggering issue/PR comment.",
@@ -466,7 +467,8 @@ for required_phrase in (
     "Before responding, check each requested item and either answer it with concrete evidence and links or explicitly name the blocker.",
 ):
     if required_phrase not in invoke_prompt:
-        errors.append(f"Gemini invoke prompt is missing task-following safeguard: {required_phrase!r}")
+        errors.append(f"Gemini invoke prompt specification is missing task-following safeguard: {required_phrase!r}")
+
 
 # Plan execution may write on a branch, but must not have deletion/fork tools or merge powers.
 for forbidden_tool in ('"delete_file"', '"fork_repository"'):
