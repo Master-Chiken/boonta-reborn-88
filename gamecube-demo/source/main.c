@@ -241,16 +241,16 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
  */
 static float track_curvature_at(float travelled)
 {
-    float before_x = 0.0f, before_y = 0.0f, before_z = 0.0f;
-    float middle_x = 0.0f, middle_y = 0.0f, middle_z = 0.0f;
-    float after_x = 0.0f, after_y = 0.0f, after_z = 0.0f;
+    float before_x = 0.0f, before_z = 0.0f;
+    float middle_x = 0.0f, middle_z = 0.0f;
+    float after_x = 0.0f, after_z = 0.0f;
     float first_x, first_z, second_x, second_z;
     float first_length, second_length, cross, dot, angle, curvature;
 
     if (!isfinite(travelled)) return 0.0f;
-    track_sample_at(travelled - 2.0f, &before_x, &before_y, &before_z, NULL);
-    track_sample_at(travelled, &middle_x, &middle_y, &middle_z, NULL);
-    track_sample_at(travelled + 2.0f, &after_x, &after_y, &after_z, NULL);
+    track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
+    track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
+    track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
 
     first_x = middle_x - before_x;
     first_z = middle_z - before_z;
