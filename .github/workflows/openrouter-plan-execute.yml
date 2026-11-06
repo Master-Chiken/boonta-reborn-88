@@ -188,6 +188,9 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
+          OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+          OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}
+          GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
         run: |
           set -euo pipefail
           set +x
@@ -287,6 +290,14 @@ jobs:
           PROMPT
           )"
 
+          PROMPT="${PROMPT}
+
+          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
+          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+          - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
+          - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
+          These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401, failed Free-tier authentication, or ask the owner to replace the key. Continue the current activation task and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
+
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
 
@@ -344,6 +355,9 @@ jobs:
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
           PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
+          OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+          OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}
+          GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
         with:
           script: |
             const fs = require('fs');
@@ -354,6 +368,23 @@ jobs:
             const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
             const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
             const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            const blockerLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')) || '';
+            const nextActionLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')) || '';
+            const blockedText = blockerLine + ' ' + nextActionLine;
+            const successfulOpenRouterAuth =
+              process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true' &&
+              process.env.OPENROUTER_AUTH_OUTCOME === 'success';
+            if (status === 'BOONTA_CYCLE_STATUS: BLOCKED' && successfulOpenRouterAuth &&
+                /(OPENROUTER_API_KEY|HTTP\\s*401|OpenRouter.{0,60}(missing|invalid|unauthori[sz]ed|authentication failure|Free[- ]tier.{0,30}(missing|invalid|not verified)))/i.test(blockedText)) {
+              core.setFailed('BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence.');
+              return;
+            }
+            if (status === 'BOONTA_CYCLE_STATUS: BLOCKED' &&
+                process.env.GITHUB_APP_TOKEN_OUTCOME === 'success' &&
+                /(APP_PRIVATE_KEY|APP_ID|GitHub App.{0,50}(missing|invalid|unavailable|failed))/i.test(blockedText)) {
+              core.setFailed('BLOCKED report contradicts same-run successful GitHub App token creation.');
+              return;
+            }
             if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
               if (!evidence || !evidenceBaseMatch) {
                 core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
