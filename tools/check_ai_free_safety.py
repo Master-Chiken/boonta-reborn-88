@@ -545,7 +545,7 @@ for required_phrase in (
     "Optimize only a measured hot path",
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
-    "Do not retrieve full historical comment streams",
+    "Do not read all historical comments",
     "compact inventory of all open pull requests",
     "Deep-inspect changed files and exact-head CI only for PRs",
     "Read logs only for failed jobs",
@@ -997,7 +997,7 @@ for required in (
     "below 1,500 tokens per cycle",
     "Never fetch attachments, images, media, artifacts or binary content",
     "Never repeat the same oversized request",
-    "452 KB docs/research/RE-001-route-spline-progress.md",
+    "Never fetch the entire `docs/research/RE-001-route-spline-progress.md` dossier",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must enforce the current bounded text-only context: {required!r}")
