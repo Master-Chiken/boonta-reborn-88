@@ -2,6 +2,10 @@
 
 This is the operating agreement for the public Racer repository. The canonical dashboard is [issue #156](https://github.com/Master-Chiken/boonta-reborn-88/issues/156).
 
+## Mandatory reverse-engineering-first gate
+
+The detailed, binding decision procedure is [`docs/REVERSE_ENGINEERING_FIRST.md`](REVERSE_ENGINEERING_FIRST.md). It applies to every human and AI contributor and every subsystem. Before manual recreation or new implementation, agents MUST inspect existing project work and relevant reverse-engineering sources, establish whether the element can be recovered/extracted/decoded/converted/reused/automatically reproduced, verify platform/version and legal provenance, and document why a rebuild is necessary if reuse is impossible, incompatible, unsafe or legally unavailable. Skipping this gate, duplicating recoverable work, or guessing from another platform is not acceptable. Each task/PR must include the reuse decision and evidence. This is not an 80/20 research quota: investigate only enough to make a sound decision, then implement and test.
+
 ## 1. Work method: reuse-first reverse engineering → implementation
 
 ### Core doctrine: reuse first, then build in stages
