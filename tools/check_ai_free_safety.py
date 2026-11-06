@@ -606,6 +606,22 @@ if "- .github/workflows/boonta-autonomous-loop.yml" not in triage_workflow_filte
     errors.append("CI failure triage must match the autonomous loop's API-reported workflow path as well as its display name")
 if "run.path === '.github/workflows/boonta-autonomous-loop.yml'" not in ci_triage:
     errors.append("CI failure triage must route path-named autonomous workflow failures to canonical queue issue #226")
+provider_workflow_paths = (
+    "- .github/workflows/gemini-plan-execute.yml",
+    "- .github/workflows/openrouter-plan-execute.yml",
+    "- .github/workflows/groq-plan-execute.yml",
+)
+for required_path in provider_workflow_paths:
+    if required_path not in triage_workflow_filters:
+        errors.append(f"CI failure triage must listen for reusable provider workflow path {required_path!r}")
+for required_provider_route in (
+    "const providerWorkflowPaths = new Set([",
+    "const isProviderCycleRun = providerWorkflowPaths.has(run.path) || providerWorkflowNames.has(run.name);",
+    "if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "targetIssueNumber = 226;",
+):
+    if required_provider_route not in ci_triage:
+        errors.append(f"CI failure triage is missing reusable provider failure routing {required_provider_route!r}")
 if "github.event.workflow_run.conclusion == 'startup_failure'" not in ci_triage:
     errors.append("CI failure triage must report startup_failure conclusions, not only job failures")
 for required_triage_detail in (

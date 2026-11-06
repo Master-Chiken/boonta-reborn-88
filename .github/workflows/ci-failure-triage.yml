@@ -14,6 +14,12 @@ on:
       - Dreamcast KallistiOS build
       - Boonta Autonomous Loop
       - .github/workflows/boonta-autonomous-loop.yml
+      - 🧙 Gemini Plan Execution
+      - .github/workflows/gemini-plan-execute.yml
+      - OpenRouter Free autonomous fallback
+      - .github/workflows/openrouter-plan-execute.yml
+      - Groq Free autonomous fallback
+      - .github/workflows/groq-plan-execute.yml
     types:
       - completed
 
@@ -92,10 +98,37 @@ jobs:
                 prNumber = null;
               }
             }
-            if (!prNumber && run.event === 'push' && ['main', 'dev'].includes(run.head_branch)) {
+            const providerWorkflowPaths = new Set([
+              '.github/workflows/gemini-plan-execute.yml',
+              '.github/workflows/openrouter-plan-execute.yml',
+              '.github/workflows/groq-plan-execute.yml',
+            ]);
+            const providerWorkflowNames = new Set([
+              '🧙 Gemini Plan Execution',
+              'OpenRouter Free autonomous fallback',
+              'Groq Free autonomous fallback',
+            ]);
+            const isProviderCycleRun = providerWorkflowPaths.has(run.path) || providerWorkflowNames.has(run.name);
+
+            if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch'].includes(run.event) && ['main', 'dev'].includes(run.head_branch)) {
+              // Provider reusable workflows are children of the serialized
+              // autonomous cycle. Route only exact-current protected-branch
+              // failures to the native queue, including zero-job startup errors.
+              const targetBranch = String(run.head_branch);
+              const { data: branchInfo } = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: targetBranch,
+              });
+              if (branchInfo.commit?.sha !== run.head_sha) {
+                core.info('The protected branch has advanced since this failed provider run; no stale issue report will be posted.');
+                return;
+              }
+              targetIssueNumber = 226;
+            } else if (!prNumber && run.event === 'push' && ['main', 'dev'].includes(run.head_branch)) {
               // Merged gameplay PRs receive a fresh push build on dev. If that
               // post-merge build fails, report to the canonical queue even
-              // though GitHub has already closed the merged PR.
+              // though GitHub has already closed the PR.
               const targetBranch = String(run.head_branch);
               const { data: branchInfo } = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
@@ -109,7 +142,7 @@ jobs:
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
             } else if (!prNumber && ['schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
               // Do not let a silent autonomous-cycle failure disappear. Report
-              // to the active queue only while the failed run is still for the
+              // to the active queue only while this run is still for the
               // exact current main SHA.
               const { data: branchInfo } = await github.rest.repos.getBranch({
                 owner: context.repo.owner,
