@@ -2,6 +2,10 @@ name: OpenRouter Free autonomous fallback
 
 on:
   workflow_call:
+    outputs:
+      invocation_outcome:
+        description: "Outcome of the actual OpenRouter/OpenCode invocation step, independent of report validation."
+        value: ${{ jobs.openrouter-plan-execute.outputs.invocation_outcome }}
     inputs:
       autonomous_mode:
         type: boolean
@@ -17,6 +21,8 @@ concurrency:
 jobs:
   openrouter-plan-execute:
     name: One bounded OpenRouter Free research/engineering cycle
+    outputs:
+      invocation_outcome: ${{ steps.run_opencode.outcome }}
     if: inputs.autonomous_mode == true && inputs.issue_number == 226
     runs-on: ubuntu-latest
     timeout-minutes: 35
