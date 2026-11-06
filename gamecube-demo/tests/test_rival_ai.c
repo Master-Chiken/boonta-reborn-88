@@ -23,11 +23,11 @@ static void player_avoidance_only_when_close(void)
     const float lateral[3] = {0.0f, 0.0f, 0.0f};
     float target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, -0.2f, z, lateral, 3U, 0.0f, 3.4f);
     assert(target > 0.0f);
-    target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 3U);
+    target = boonta_rival_ai_target_lateral(1U, -18.0f, 0.0f, -0.2f, z, lateral, 3U, 0.0f, 3.4f);
     assert(nearf_ai(target, 0.0f));
 
     /* A non-finite player position must not be treated as a real center-lane car. */
-    target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, NAN, z, lateral, 3U);
+    target = boonta_rival_ai_target_lateral(1U, -2.0f, 0.0f, NAN, z, lateral, 3U, 0.0f, 3.4f);
     assert(nearf_ai(target, 0.0f));
 }
 
@@ -53,7 +53,7 @@ static void invalid_inputs_recover_safely(void)
     const float z[1] = {NAN};
     const float lateral[1] = {INFINITY};
     const float target = boonta_rival_ai_target_lateral(
-        0U, NAN, NAN, INFINITY, z, lateral, 1U);
+        0U, NAN, NAN, INFINITY, z, lateral, 1U, 0.0f, 3.4f);
     assert(isfinite(target));
     assert(target >= -BOONTA_RIVAL_AI_LATERAL_LIMIT);
     assert(target <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
