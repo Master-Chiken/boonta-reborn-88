@@ -1001,7 +1001,7 @@ for required in (
 # The Groq Free fallback must remain useful under its observed 8k TPM limit.
 # OpenCode supports per-model context/output limits; cap this agent well below TPM.
 groq_config_match = re.search(
-    r'cat > "\$RUNNER_TEMP/opencode\.json" <<\'JSON\'\\n(.*?)\\n\\s*JSON',
+    r'cat > "\$RUNNER_TEMP/opencode\.json" <<\'JSON\'\n(.*?)\n\s*JSON',
     groq_fallback,
     re.DOTALL,
 )
