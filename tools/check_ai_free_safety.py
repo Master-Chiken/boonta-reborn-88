@@ -343,7 +343,7 @@ else:
         if required not in fallback_call:
             errors.append(f"OpenRouter fallback caller is missing {required!r}")
     if "github.ref == 'refs/heads/main'" not in fallback_call or "github.actor == github.repository_owner" not in fallback_call:
-        errors.append("OpenRouter fallback caller must remain pinned to main and owner/schedule-gated")
+        errors.append("OpenRouter fallback caller must remain pinned to main and owner/schedule/push-gated")
 
 # Only the Gemini API key route is allowed; legacy cloud/billing routes are forbidden.
 legacy_markers = (
@@ -595,7 +595,7 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
-    "['schedule', 'workflow_dispatch'].includes(run.event)",
+    "['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
     "run.name === 'Boonta Autonomous Loop'",
     "run.head_branch === 'main'",
     "targetIssueNumber = 226",
@@ -786,16 +786,24 @@ if "curl --fail --silent --show-error" not in readiness or "-X POST" in readines
     errors.append("Autonomous readiness API probes must remain GET-only")
 
 # Freeze the autonomous entry points and least-privilege boundary.
-# A scheduled run is allowed; a manual run is owner-only; no other event may
-# invoke the autonomous writer.
-autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", autonomous_trigger)
-if autonomous_events != ["schedule", "workflow_dispatch"]:
-    errors.append(
-        "Boonta autonomous loop may declare only schedule and workflow_dispatch events; "
-        f"found {autonomous_events!r}"
-    )
-if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || github.actor == github.repository_owner)" not in autonomous:
-    errors.append("Autonomous schedule/manual dispatch must be owner-only and pinned to protected main")
+# Scheduled runs, narrowly scoped main pushes after relevant owner merges, and
+# owner-only manual dispatch are the only autonomous entry points.
+autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\\s*$", autonomous_trigger)
+if autonomous_events != ["push", "schedule", "workflow_dispatch"]:
+    errors.append("Boonta autonomous loop may declare only scoped push, schedule and workflow_dispatch events; " + f"found {autonomous_events!r}")
+autonomous_push = autonomous_trigger.split("  push:", 1)[1].split("  schedule:", 1)[0] if "  push:" in autonomous_trigger else ""
+required_autonomous_push_paths = (
+    ".github/workflows/boonta-autonomous-loop.yml",
+    ".github/workflows/boonta-autonomous-readiness.yml",
+    ".github/workflows/gemini-plan-execute.yml",
+    ".github/workflows/openrouter-plan-execute.yml",
+    ".github/workflows/groq-plan-execute.yml",
+    "docs/automation/task-ledger.json",
+)
+if "    branches:\\n      - main" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
+    errors.append("Autonomous main-push trigger must be restricted to main and the reviewed automation/ledger paths")
+if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))" not in autonomous:
+    errors.append("Autonomous schedule/manual dispatch/main-push continuation must be owner-only and pinned to protected main")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
 
