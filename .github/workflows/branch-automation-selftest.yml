@@ -9,6 +9,7 @@ on:
       - ".github/workflows/gemini-invoke.yml"
       - ".github/workflows/gemini-plan-execute.yml"
       - ".github/workflows/openrouter-plan-execute.yml"
+      - ".github/workflows/groq-plan-execute.yml"
       - ".github/workflows/boonta-autonomous-readiness.yml"
       - ".github/workflows/boonta-autonomous-loop.yml"
       - ".github/workflows/ci-failure-triage.yml"
@@ -46,6 +47,7 @@ jobs:
             .github/workflows/gemini-invoke.yml \
             .github/workflows/gemini-plan-execute.yml \
             .github/workflows/openrouter-plan-execute.yml \
+            .github/workflows/groq-plan-execute.yml \
             .github/workflows/boonta-autonomous-readiness.yml \
             .github/workflows/boonta-autonomous-loop.yml \
             .github/workflows/ci-failure-triage.yml \
@@ -99,12 +101,17 @@ jobs:
           daily_prompt = Path(".github/commands/gemini-daily-coordinator.toml").read_text(encoding="utf-8")
           gemini_invoke = Path(".github/workflows/gemini-invoke.yml").read_text(encoding="utf-8")
           gemini_execute = Path(".github/workflows/gemini-plan-execute.yml").read_text(encoding="utf-8")
+          groq = Path(".github/workflows/groq-plan-execute.yml").read_text(encoding="utf-8")
           setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
           branch_docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
           selftest = Path(".github/workflows/branch-automation-selftest.yml").read_text(encoding="utf-8")
           yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
           intake_header = intake.split("permissions:", 1)[0]
           checks = {
+              "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,issue_read,list_pull_requests,pull_request_read,create_branch,create_or_update_file,create_pull_request,add_issue_comment,get_commit"' in groq,
+              "Groq invocation has a 120-second hard stop": "timeout --signal=TERM --kill-after=5s 120s" in groq and "invocation_status=${PIPESTATUS[0]}" in groq,
+              "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
+              "Groq prompt explicitly stops on provider quota errors": "If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
               "branch intake defaults to one draft PR": 'default: "1"' in intake_header and "'1'" in intake.split("MAX_PRS:", 1)[1].split("\n", 1)[0],
