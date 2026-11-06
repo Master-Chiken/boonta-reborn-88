@@ -164,7 +164,7 @@ jobs:
               '',
               'This report uses workflow/job metadata only. It did not check out or execute pull-request code and did not call an AI provider.',
               '',
-              '**Workflow:** ' + String(run.name || 'unknown').replace(/[\\r\\n]/g, ' ').slice(0, 180),
+              '**Workflow:** ' + String(run.name || 'unknown').replace(/[\r\n]/g, ' ').slice(0, 180),
               '**Branch:** ' + branch,
               '**Target:** ' + (prNumber ? 'PR #' + prNumber : 'canonical issue #' + targetIssueNumber),
               '**Conclusion:** ' + conclusion,
@@ -175,7 +175,7 @@ jobs:
               details,
               '',
               nextStep,
-            ].join('\\n');
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
