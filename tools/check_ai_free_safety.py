@@ -117,7 +117,7 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         "tools/validate_autonomous_cycle_report.js",
         "EXPECTED_TASK_ID:",
         "EXPECTED_TASK_TARGET_BRANCH:",
-        "checks: read",
+        ("checks: 'read'" if provider == "Gemini" else "checks: read"),
     )
     for required in expected_outputs:
         if required not in workflow:
