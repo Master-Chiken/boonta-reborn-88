@@ -397,9 +397,10 @@ for required in (
     "path: 'docs/automation/task-ledger-summary.json'",
     "ledgerSummary.policy?.max_active_tasks !== 1",
     "activeTasks.length === 1",
-    "activationTask?.status === 'blocked'",
-    "Next scheduled opportunity after",
-    "Gemini is first eligible",
+    "activationTask.status === 'blocked'",
+    "const usableTask = (task) => Boolean(",
+    "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "!taskBlockedActive",
     "core.setOutput('task_ready', String(taskReady))",
 ):
     if required not in loop:

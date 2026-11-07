@@ -87,21 +87,27 @@ jobs:
             }
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
+            const usableTask = (task) => Boolean(
+              task && typeof task.task_id === 'string' && task.task_id.trim() &&
+              typeof task.title === 'string' && task.title.trim() &&
+              typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
+              Array.isArray(task.platform_scope) && task.platform_scope.length > 0
+            );
             let selectedTask = null;
             let taskReason = '';
-            if (activeTasks.length === 1 && !activeTasks[0].pr_url && !activeTasks[0].head_sha) {
+            if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha) {
               selectedTask = activeTasks[0];
-              taskReason = 'one active ledger task with no existing PR or head';
+              taskReason = 'one complete active ledger task with no existing PR or head';
             } else if (
               activeTasks.length === 0 &&
-              activationTask?.status === 'blocked' &&
+              usableTask(activationTask) &&
+              activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
               !activationTask.head_sha &&
-              /Next scheduled opportunity after/.test(activationTask.next_action_excerpt || '') &&
-              /Gemini is first eligible/.test(activationTask.next_action_excerpt || '')
+              !taskBlockedActive
             ) {
               selectedTask = activationTask;
-              taskReason = 'the explicit post-cooldown autonomous activation task is eligible';
+              taskReason = 'the single blocked activation task is eligible; no task-level daily backoff is active';
             } else if (activeTasks.length > 1) {
               taskReason = 'multiple active tasks violate the one-active-task policy';
             } else if (activeTasks.length === 1) {

@@ -139,6 +139,8 @@ else:
         "task_reason:",
         "path: 'docs/automation/task-ledger-summary.json'",
         "ledgerSummary.policy?.max_active_tasks !== 1",
+        "const usableTask = (task) => Boolean(",
+        "!taskBlockedActive",
         "core.setOutput('task_ready', String(taskReady))",
     ):
         if required not in cooldown_job:
