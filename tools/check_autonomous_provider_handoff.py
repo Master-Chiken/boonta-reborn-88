@@ -273,8 +273,8 @@ if regex_start < 0 or regex_end < 0:
 else:
     regex_block = openrouter[regex_start:regex_end]
     regex_fragments = re.findall(r'r"([^"]*)"', regex_block)
-    if len(regex_fragments) != 3:
-        errors.append("OpenRouter watchdog must retain exactly three regex fragments")
+    if len(regex_fragments) != 4:
+        errors.append("OpenRouter watchdog must retain exactly four regex fragments")
     else:
         try:
             watchdog = re.compile("".join(regex_fragments), re.IGNORECASE)
