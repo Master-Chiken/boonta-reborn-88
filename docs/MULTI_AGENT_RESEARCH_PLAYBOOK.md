@@ -68,7 +68,7 @@ Stop condition: if a field or behavior is not supported by evidence, retain it a
 
 - Jules, Gemini, Copilot, CI, and ChatGPT's local context do not automatically share the same files or task state. GitHub-visible evidence can be shared through the issue/dossier; private local bytes cannot.
 - No ROM/disc image, executable dump, BIOS, extracted copyrighted assets, secrets, or uncertain-provenance archive content is to be uploaded to a hosted agent or public CI.
-- Keep all source URLs, revisions, licensing notes, evidence tier, and next check in the [source preservation ledger](SOURCE_PRESERVATION_LEDGER_2026-10-21.md). Add new entries; do not discard old links.
+- Keep all source URLs, revisions, licensing notes, evidence tier, and next check in the [source preservation ledger](research/SOURCE_PRESERVATION_LEDGER_2026-10-21.md). Add new entries; do not discard old links.
 - Existing data terms/quotas remain in force: €0 total budget, Gemini API-key/free-tier only, and stop if the free quota is unavailable.
 
 ## Definition of a good agent handoff
