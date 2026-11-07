@@ -249,7 +249,8 @@
         "Optional Groq tertiary fallback has an independent Free-only attestation, secret gate, fixed model allowlist and UTC cooldown",
         "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider",
         "OpenRouter prompt receives same-run Free-only preflight, GET /api/v1/key authentication and GitHub App token outcomes as authoritative evidence",
-        "OpenRouter BLOCKED report validation rejects claims contradicted by a successful same-run Free-tier authentication or GitHub App token creation"
+        "OpenRouter BLOCKED report validation rejects claims contradicted by a successful same-run Free-tier authentication or GitHub App token creation",
+        "OpenRouter Free daily-quota preflight reads data.free_model_daily_requests.remaining from GET /api/v1/key before any inference/setup; missing, invalid or zero remaining quota fails closed and records the UTC cooldown without a model request."
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -342,9 +343,16 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/326",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/14690fd25a80341a1cacf6bcc89bdb7c59ef98a4",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42355093417",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42375331872"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42375331872",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/330",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/eb954ec438b49203fb94422b2c51b8149d99e135",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42376294778",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42376294743",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42376294836",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42376294685",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42376343477"
       ],
-      "next_action": "PR #324 was merged at 05b4fac74701092c7b9c9dcbd161054eea6754b3 and Gemini invocation fix PR #326 was merged at 14690fd25a80341a1cacf6bcc89bdb7c59ef98a4. The first post-merge autonomous loop run #42354691945 passed readiness, OpenRouter Free-only preflight, GET /api/v1/key authentication with is_free_tier=true, and scoped GitHub App token creation, but the OpenRouter model call was rejected by the explicit free-models-per-day quota; Gemini and Groq were skipped by their same-day cooldowns. A subsequent scheduled run #42375331872 at 2026-11-07 13:05 UTC again passed read-only readiness and correctly skipped all three providers because their same-day cooldown markers were active; no additional provider/API call was made. This confirms cooldown suppression, but does not complete a model cycle: no successful invocation, validated report or cycle-fresh PR exists. Activation remains BLOCKED by the providers' Free-tier quota limits, not authentication. Preserve €0: do not buy credits, rotate keys, alter provider configuration or bypass cooldowns. Next action: allow the UTC daily quota/cooldown reset and use the next normal scheduled Free-only attempt; clear activation only after a successful provider invocation plus valid cycle-fresh report/PR and ledger reconciliation.",
+      "next_action": "PR #330 was merged to main at eb954ec438b49203fb94422b2c51b8149d99e135. It adds a fail-closed GET /api/v1/key preflight for data.free_model_daily_requests.remaining before GitHub App token creation, checkout, OpenCode install, PR-head snapshot and model inference; missing/invalid/zero remaining blocks the request and records the existing UTC cooldown. All four exact-head checks passed (runs 42376294778, 42376294743, 42376294836 and 42376294685). Post-merge run #42376343477 passed readiness and skipped Gemini, OpenRouter and Groq because their same-day cooldowns were active; consequently the new OpenRouter remaining-quota branch has not yet been runtime exercised. A safe cooldown skip is intentionally reported as an unsuccessful autonomous cycle because no provider produced a report or fresh PR. No successful provider invocation, validated report or cycle-fresh PR exists, so activation remains BLOCKED. Preserve the €0 budget; do not purchase credits, rotate keys, bypass cooldowns or manually dispatch around them. Next eligible verification is the normal post-UTC-reset scheduled run (2026-11-08 00:17 UTC / 01:17 Europe/Paris): inspect remaining quota, permit one bounded free-tier invocation only when the gate allows it, and clear activation only after a successful provider invocation, valid report, fresh PR and ledger reconciliation.",
       "updated_at": "2026-11-07",
       "pr_url": null,
       "head_sha": null
