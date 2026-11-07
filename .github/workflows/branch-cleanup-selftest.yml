@@ -71,6 +71,7 @@ jobs:
               "re-001-ares-gdb-smoke-20261021": "3df2aedeccaef904c48637710eedc88699db7acb",
               "safety/openrouter-exact-head-sha": "c52c9b2594b711a76a8f7ccf5e25acce7982c381",
               "test/ares-gdb-smoke-20261021": "fa8cee047ae8e74c30c87cd94977c434bb1c7398",
+              "agent/boonta-chatgpt/activation-ledger-evidence-20261107": "05b4fac74701092c7b9c9dcbd161054eea6754b3",
           }
 
           checks = {
