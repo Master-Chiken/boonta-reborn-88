@@ -304,6 +304,12 @@ jobs:
           PROMPT
           )"
 
+          if (( ${#PROMPT} > 7000 )); then
+            echo "::error::OpenRouter prompt exceeds the 7,000-character safety ceiling; no model request was sent."
+            exit 2
+          fi
+          echo "OpenRouter prompt size: ${#PROMPT} characters."
+
           PROMPT="${PROMPT}
 
           SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
