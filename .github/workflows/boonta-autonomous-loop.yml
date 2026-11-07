@@ -51,6 +51,7 @@ jobs:
       gemini_active: ${{ steps.check.outputs.gemini_active }}
       openrouter_active: ${{ steps.check.outputs.openrouter_active }}
       groq_active: ${{ steps.check.outputs.groq_active }}
+      task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}
     steps:
       - name: Read the three persistent UTC cooldown markers
         id: check
@@ -72,6 +73,12 @@ jobs:
             };
             const results = {};
             const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');
+            const taskMarker = /<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9a-f]{16}) -->/;
+            const taskMarkerComment = botComments.find((comment) => taskMarker.test(comment.body || ''));
+            const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
+            const taskBlockedActive = taskBlockedDate === todayUtc;
+            core.setOutput('task_blocked_active', String(taskBlockedActive));
+            core.info('single-task daily backoff=' + taskBlockedActive + (taskBlockedDate ? ', recorded UTC date=' + taskBlockedDate : ', no active marker'));
             for (const [provider, marker] of Object.entries(definitions)) {
               const markerComment = botComments.find((comment) => marker.test(comment.body || ''));
               const failedOn = markerComment?.body?.match(marker)?.[1] || '';
@@ -88,6 +95,7 @@ jobs:
                 ['Gemini', results.gemini],
                 ['OpenRouter Free', results.openrouter],
                 ['Groq Free', results.groq],
+                ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
               ])
               .addRaw('This is a read-only check of issue #226 comments. Provider workflows retain their own independent cooldown guards.')
               .write();
@@ -98,6 +106,7 @@ jobs:
     if: >-
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.gemini_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       github.ref == 'refs/heads/main' &&
@@ -110,6 +119,7 @@ jobs:
     with:
       autonomous_mode: true
       issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
       task_title: "Boonta Reborn autonomous work cycle"
       task_description: >-
         Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
@@ -127,6 +137,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       needs.autonomous-cycle.result == 'skipped' &&
@@ -142,6 +153,7 @@ jobs:
     with:
       autonomous_mode: true
       issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
     secrets: inherit
 
   groq-fallback:
@@ -151,6 +163,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       needs.autonomous-cycle.result == 'skipped' &&
@@ -168,6 +181,7 @@ jobs:
     with:
       autonomous_mode: true
       issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
     secrets: inherit
 
   cycle-summary:
@@ -185,6 +199,8 @@ jobs:
           READINESS_RESULT: ${{ needs.readiness.result }}
           WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
           COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}
+          TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
+          EVENT_NAME: ${{ github.event_name }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
           OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
           GROQ_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.groq_active }}
@@ -192,18 +208,21 @@ jobs:
           GEMINI_INVOCATION: ${{ needs.autonomous-cycle.outputs.invocation_outcome }}
           GEMINI_REPORT: ${{ needs.autonomous-cycle.outputs.report_outcome }}
           GEMINI_CYCLE_STATUS: ${{ needs.autonomous-cycle.outputs.cycle_status }}
+          GEMINI_TASK_QUEUE_STATE: ${{ needs.autonomous-cycle.outputs.task_queue_state_outcome }}
           OPENROUTER_RESULT: ${{ needs.openrouter-fallback.result }}
           OPENROUTER_INVOCATION: ${{ needs.openrouter-fallback.outputs.invocation_outcome }}
           OPENROUTER_REPORT: ${{ needs.openrouter-fallback.outputs.report_outcome }}
           OPENROUTER_CYCLE_STATUS: ${{ needs.openrouter-fallback.outputs.cycle_status }}
+          OPENROUTER_TASK_QUEUE_STATE: ${{ needs.openrouter-fallback.outputs.task_queue_state_outcome }}
           GROQ_RESULT: ${{ needs.groq-fallback.result }}
           GROQ_INVOCATION: ${{ needs.groq-fallback.outputs.invocation_outcome }}
           GROQ_REPORT: ${{ needs.groq-fallback.outputs.report_outcome }}
           GROQ_CYCLE_STATUS: ${{ needs.groq-fallback.outputs.cycle_status }}
+          GROQ_TASK_QUEUE_STATE: ${{ needs.groq-fallback.outputs.task_queue_state_outcome }}
         run: |
           set -euo pipefail
           provider_row() {
-            local provider="$1" job_result="$2" invocation="$3" report="$4" cycle_status="$5" cooldown="$6"
+            local provider="$1" job_result="$2" invocation="$3" report="$4" cycle_status="$5" cooldown="$6" task_state="$7"
             local call="no" detail
             case "$invocation" in
               success)
@@ -237,7 +256,14 @@ jobs:
                 detail="Provider invocation outcome is unavailable; inspect the workflow logs."
                 ;;
             esac
-            printf '| %s | %s | %s | %s | %s | %s |\n' "$provider" "$job_result" "$cooldown" "$call" "${report:-not checked}" "$detail"
+            if [[ "$task_state" == "failure" ]]; then
+              detail="${detail} Task-backoff persistence/clearing failed; the scheduled pause is not confirmed."
+            elif [[ "$task_state" == "success" && "$cycle_status" == "blocked" ]]; then
+              detail="${detail} Same-day task backoff was persisted."
+            elif [[ "$task_state" == "success" && "$cycle_status" == "progress" ]]; then
+              detail="${detail} Any previous same-day task backoff was cleared."
+            fi
+            printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$provider" "$job_result" "$cooldown" "$call" "${report:-not checked}" "${task_state:-not written}" "$detail"
           }
           {
             echo "## Boonta autonomous cycle — provider outcome"
@@ -246,12 +272,15 @@ jobs:
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
             echo
-            echo "| Provider | Job result | Cooldown active | Model call | Report check | Interpretation |"
+            echo "| Provider | Job result | Cooldown active | Model call | Report check | Task queue state | Interpretation |"
             echo "|---|---|---|---|---|---|"
-            provider_row "Gemini" "${GEMINI_RESULT:-unknown}" "${GEMINI_INVOCATION:-skipped}" "${GEMINI_REPORT:-skipped}" "${GEMINI_CYCLE_STATUS:-unknown}" "${GEMINI_COOLDOWN_ACTIVE:-unknown}"
-            provider_row "OpenRouter Free" "${OPENROUTER_RESULT:-unknown}" "${OPENROUTER_INVOCATION:-skipped}" "${OPENROUTER_REPORT:-skipped}" "${OPENROUTER_CYCLE_STATUS:-unknown}" "${OPENROUTER_COOLDOWN_ACTIVE:-unknown}"
-            provider_row "Groq Free" "${GROQ_RESULT:-unknown}" "${GROQ_INVOCATION:-skipped}" "${GROQ_REPORT:-skipped}" "${GROQ_CYCLE_STATUS:-unknown}" "${GROQ_COOLDOWN_ACTIVE:-unknown}"
+            provider_row "Gemini" "${GEMINI_RESULT:-unknown}" "${GEMINI_INVOCATION:-skipped}" "${GEMINI_REPORT:-skipped}" "${GEMINI_CYCLE_STATUS:-unknown}" "${GEMINI_COOLDOWN_ACTIVE:-unknown}" "${GEMINI_TASK_QUEUE_STATE:-skipped}"
+            provider_row "OpenRouter Free" "${OPENROUTER_RESULT:-unknown}" "${OPENROUTER_INVOCATION:-skipped}" "${OPENROUTER_REPORT:-skipped}" "${OPENROUTER_CYCLE_STATUS:-unknown}" "${OPENROUTER_COOLDOWN_ACTIVE:-unknown}" "${OPENROUTER_TASK_QUEUE_STATE:-skipped}"
+            provider_row "Groq Free" "${GROQ_RESULT:-unknown}" "${GROQ_INVOCATION:-skipped}" "${GROQ_REPORT:-skipped}" "${GROQ_CYCLE_STATUS:-unknown}" "${GROQ_COOLDOWN_ACTIVE:-unknown}" "${GROQ_TASK_QUEUE_STATE:-skipped}"
             echo
+            if [[ "${TASK_BLOCKED_ACTIVE:-false}" == "true" && "${EVENT_NAME:-}" == "schedule" ]]; then
+              echo "**A validated BLOCKED report already exists for the single active task on this UTC day. Scheduled provider calls were skipped; an owner-authorized manual dispatch or qualifying main push may re-evaluate it.**"
+            fi
             if [[ "${GEMINI_COOLDOWN_ACTIVE:-false}" == "true" && "${OPENROUTER_COOLDOWN_ACTIVE:-false}" == "true" && "${GROQ_COOLDOWN_ACTIVE:-false}" == "true" ]]; then
               echo "**All three same-day UTC cooldowns are active. No provider workflows were launched and no project progress is claimed.**"
             elif [[ "${GEMINI_INVOCATION:-skipped}" != "success" && "${OPENROUTER_INVOCATION:-skipped}" != "success" && "${GROQ_INVOCATION:-skipped}" != "success" ]]; then

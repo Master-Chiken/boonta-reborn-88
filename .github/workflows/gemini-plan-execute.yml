@@ -12,6 +12,9 @@ on:
       cycle_status:
         description: "Validated Gemini cycle status: progress or blocked."
         value: ${{ jobs.plan-execute.outputs.cycle_status }}
+      task_queue_state_outcome:
+        description: "Outcome of persisting or clearing the single-task daily backoff marker."
+        value: ${{ jobs.plan-execute.outputs.task_queue_state_outcome }}
     inputs:
       additional_context:
         type: 'string'
@@ -34,6 +37,11 @@ on:
         description: 'Run the separately gated owner-authorized autonomous loop'
         required: false
         default: false
+      task_blocked_active:
+        type: 'boolean'
+        description: 'Whether global preflight found a valid same-day blocked-task marker'
+        required: false
+        default: false
 
 concurrency:
   group: boonta-single-writer
@@ -49,6 +57,7 @@ jobs:
       invocation_outcome: ${{ steps.run_gemini.outcome }}
       report_outcome: ${{ steps.validate_report.outcome }}
       cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
+      task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
     timeout-minutes: 30
     runs-on: 'ubuntu-latest'
     permissions:
@@ -303,6 +312,8 @@ jobs:
             } else if (validBlocked) {
               const blocker = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')).slice('BOONTA_CYCLE_BLOCKER: '.length);
               const nextAction = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')).slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
+              const blockedFingerprint = require('crypto').createHash('sha256').update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
+              core.setOutput('blocked_fingerprint', blockedFingerprint);
               const blockerText = blocker + ' ' + nextAction;
               const contradictions = [];
               if (process.env.GEMINI_PREFLIGHT_ALLOWED === 'true') {
@@ -321,11 +332,85 @@ jobs:
                 return;
               }
               core.setOutput('cycle_status', 'blocked');
-              core.info('Autonomous cycle reported a named blocker consistent with the successful preflight.');
+              core.info('Autonomous cycle reported a named blocker consistent with the successful preflight. Fingerprint: ' + blockedFingerprint);
             } else {
               core.setFailed('Autonomous Gemini invocation returned without a valid PROGRESS or BLOCKED report.');
             }
 
+      - name: Sync the single-task daily backoff marker
+        id: sync_task_queue_state
+        if: steps.validate_report.outcome == 'success' && (steps.validate_report.outputs.cycle_status == 'blocked' || inputs.task_blocked_active == true)
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          CYCLE_STATUS: ${{ steps.validate_report.outputs.cycle_status }}
+          BLOCKED_FINGERPRINT: ${{ steps.validate_report.outputs.blocked_fingerprint }}
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const cycleStatus = process.env.CYCLE_STATUS || '';
+            const isBlocked = cycleStatus === 'blocked';
+            const fingerprint = process.env.BLOCKED_FINGERPRINT || '';
+            if (isBlocked && !/^[0-9a-f]{16}$/.test(fingerprint)) {
+              core.setFailed('A valid BLOCKED report must include its deterministic task fingerprint before persistence.');
+              return;
+            }
+            if (!isBlocked && cycleStatus !== 'progress') {
+              core.info('No validated task state to persist.');
+              return;
+            }
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = isBlocked
+              ? '<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ' + todayUtc + ' ' + fingerprint + ' -->'
+              : '<!-- BOONTA_TASK_BLOCKED_COOLDOWN_CLEARED: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              isBlocked ? '## Single active task — daily backoff' : '## Single active task — backoff cleared',
+              '',
+              isBlocked
+                ? 'A valid BLOCKED report was verified for the single active task on UTC date ' + todayUtc + '.'
+                : 'A cycle-fresh PROGRESS report passed exact-head validation on UTC date ' + todayUtc + '.',
+              isBlocked
+                ? 'Fingerprint: ' + fingerprint + '. Scheduled provider calls are paused for the remainder of this UTC day to avoid repeating the same blocked task.'
+                : 'The previous same-day task backoff is cleared. The next eligible scheduled cycle may select work again.',
+              'A valid BLOCKED report is not a provider failure; this task backoff does not record a provider cooldown.',
+              'An owner-authorized manual dispatch or qualifying main push may re-evaluate the task before the next UTC day.',
+              '',
+              '[Inspect the validated cycle](' + process.env.RUN_URL + ')',
+            ].join('\\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) =>
+              comment.user?.login === 'github-actions[bot]' &&
+              (comment.body || '').includes('<!-- BOONTA_TASK_BLOCKED_COOLDOWN')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(isBlocked
+                ? 'Updated the single persistent same-day task backoff marker.'
+                : 'Cleared the single persistent same-day task backoff marker.');
+            } else if (isBlocked) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the single persistent same-day task backoff marker.');
+            } else {
+              core.info('No previous task backoff marker needed clearing.');
+            }
       - name: Record same-day Gemini cooldown after an autonomous model failure
         if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')
         continue-on-error: true

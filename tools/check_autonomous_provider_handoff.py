@@ -103,6 +103,57 @@ for label, workflow, step_name in cooldown_readers:
     if "per_page: 100" not in call:
         errors.append(f"{label} cooldown read must retain bounded page sizing")
 
+# A validated BLOCKED result is a task-level daily backoff, not a provider failure.
+task_backoff_contracts = (
+    ("Gemini", gemini, "Validate autonomous cycle report contract", "Sync the single-task daily backoff marker", "Record same-day Gemini cooldown after an autonomous model failure"),
+    ("OpenRouter", openrouter, "Validate OpenRouter autonomous cycle report", "Sync the single-task daily backoff marker", "Record same-day OpenRouter cooldown after quota, authentication or invocation failure"),
+    ("Groq", groq, "Validate Groq autonomous cycle report", "Sync the single-task daily backoff marker", "Record same-day Groq cooldown after an invocation failure"),
+)
+for label, workflow, validator_title, sync_title, failure_title in task_backoff_contracts:
+    validator_position = workflow.find("name: " + validator_title)
+    sync_position = workflow.find("name: " + sync_title)
+    failure_position = workflow.find("name: " + failure_title)
+    if not (0 <= validator_position < sync_position < failure_position):
+        errors.append(f"{label} task backoff must follow report validation and precede provider failure cooldown")
+    validator_block = workflow[validator_position:sync_position] if validator_position >= 0 and sync_position > validator_position else ""
+    for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')"):
+        if required not in validator_block:
+            errors.append(f"{label} BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
+    sync_block = workflow[sync_position:failure_position] if sync_position >= 0 and failure_position > sync_position else ""
+    for required in (
+        "steps.validate_report.outcome == 'success'",
+        "steps.validate_report.outputs.cycle_status == 'blocked'",
+        "inputs.task_blocked_active == true",
+        "BOONTA_TASK_BLOCKED_COOLDOWN:",
+        "BOONTA_TASK_BLOCKED_COOLDOWN_CLEARED:",
+        "steps.validate_report.outputs.blocked_fingerprint",
+        "github.rest.issues.updateComment",
+        "github.rest.issues.createComment",
+    ):
+        if required not in sync_block:
+            errors.append(f"{label} task backoff sync is missing {required!r}")
+    failure_block = workflow[failure_position:] if failure_position >= 0 else ""
+    failure_condition = failure_block.split("continue-on-error:", 1)[0]
+    if "cycle_status == 'blocked'" in failure_condition:
+        errors.append(f"{label} valid BLOCKED report must not trigger a provider failure cooldown")
+    if "task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}" not in workflow:
+        errors.append(f"{label} workflow must expose task-backoff persistence outcome")
+
+for required in (
+    "task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}",
+    "BOONTA_TASK_BLOCKED_COOLDOWN:",
+    "needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule'",
+    "TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}",
+    "A validated BLOCKED report already exists for the single active task on this UTC day",
+    "GEMINI_TASK_QUEUE_STATE",
+    "OPENROUTER_TASK_QUEUE_STATE",
+    "GROQ_TASK_QUEUE_STATE",
+):
+    if required not in loop:
+        errors.append(f"Autonomous loop task backoff is missing {required!r}")
+if loop.count("needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule'") != 3:
+    errors.append("All three provider routes must pause scheduled calls while task backoff is active")
+
 # Report-format/semantic failures also consume an inference request. Record the
 # daily cooldown after validation, but only for an actual invocation or report
 # failure; a valid BLOCKED report is not a provider failure.
