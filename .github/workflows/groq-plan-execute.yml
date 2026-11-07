@@ -302,8 +302,11 @@ jobs:
               "--auto", "--dir", workspace, prompt,
           ]
           terminal_quota_error = re.compile(
-              r"(tokens per minute\s*\(TPM\)|free-models-per-day|"
-              r"resource[_ ]exhausted|rate limit exceeded)",
+              r"(tokens per minute\s*\(TPM\)|free-models-per-day|free-models-per-minute|"
+              r"resource[_ ]exhausted|rate[_ ]limit exceeded|too many requests|"
+              r"HTTP\s*429|status(?:\s*code)?\s*[:=]?\s*429|error code\s*[:=]?\s*429|"
+              r"HTTP\s*401|status(?:\s*code)?\s*[:=]?\s*401|error code\s*[:=]?\s*401|"
+              r"missing authentication header|unauthorized|invalid api key|authentication failed)",
               re.IGNORECASE,
           )
           process = subprocess.Popen(
@@ -349,7 +352,7 @@ jobs:
                   report.flush()
                   if terminal_quota_error.search(line):
                       print(
-                          "Groq TPM/Free-quota refusal detected; terminating OpenCode "
+                          "Groq provider quota/auth refusal detected; terminating OpenCode "
                           "immediately after the first refusal. Daily cooldown will be recorded.",
                           flush=True,
                       )
