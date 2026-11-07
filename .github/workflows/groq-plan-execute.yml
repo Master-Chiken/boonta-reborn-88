@@ -187,7 +187,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 4
+                "steps": 3
               }
             },
             "provider": {
@@ -195,8 +195,8 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "limit": {
-                      "context": 4096,
-                      "output": 768
+                      "context": 3072,
+                      "output": 512
                     }
                   }
                 }
@@ -235,62 +235,56 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          You are the €0-only Groq fallback agent for Boonta Reborn. Gemini and OpenRouter did not complete this scheduled cycle. Do exactly one small, justified task; never ask the owner to type continue.
+          You are the €0-only Groq Free fallback agent for Boonta Reborn. This workflow may invoke you only on a later eligible cycle after Gemini and OpenRouter cooldowns are already active. Complete at most one bounded task.
 
-          HARD LIMITS
-          OpenCode is configured for this run with a 4,096-token context limit and a 768-token output limit. Do not retry an oversized request.
-          - Use only the fixed Groq Free model configured by this workflow. Never enable billing, paid routes, another provider, change secrets/settings, or reveal credentials.
-          - The previous Groq request exceeded the 8,000-token-per-minute Free limit. Keep context compact. If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately and report BLOCKED. Do not retry it.
-          - Preserve clean-room provenance, platform boundaries, one active ledger task, exact-head checks and one write-capable task. Never merge, auto-merge, force-push or write to main/dev directly.
-          - Never infer provider state from an earlier run. Respect this run's explicit gates/cooldowns only; do not call another provider or request a secret change from stale logs.
+          LIMITS
+          - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
+          - Never use paid routes, billing, other providers, change secrets/settings, or reveal credentials.
+          - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
+          - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
 
-          PROJECT ORDER
-          - Read docs/automation/task-ledger-summary.json for current status; do not assume an active task. AUTOMATION-LEDGER-ACTIVATION is currently blocked pending a real post-merge provider cycle and a valid cycle-fresh report/PR (or a precise verified blocker).
-          - The newest 2026-11-06 owner direction in #226 supersedes earlier route-runtime-first/gameplay ordering. After the activation gate clears, Phase 1 cross-platform inventory and the reuse/convert/adapt/reimplement decision take priority. Consume #279's read-only PC/N64/Dreamcast evidence rather than duplicating it; do not recreate PR #282.
-          - During Phase 1, add only missing source-verified tool/license/utility rows, map PC/N64 formats against the native GameCube/Wii target, label behavior OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, and evaluate graphics/audio/frame-rate/physics against GX/libogc with one lawful experiment each. Keep commercial ROM/disc/binary/extracted data local.
-          - Do not start new gameplay features or visible-Dolphin three-lap acceptance during Phase 1. After Phase 1, reuse the existing rival-AI chain #317 → #318 → #319 in order, then follow #226's race-progression integration target. PR #274 is not an automatic next step; revisit it only if a concrete route-runtime dependency is demonstrated. Do not create duplicate route graphs or copy AGPL/ROM-derived code.
-
-          READ ONLY WHAT IS NECESSARY
-          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Apply the mandatory recovery/reuse gate before any implementation and record its evidence-backed decision. Do not read the full task ledger or full issue bodies.
-          - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
-          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens as a hard ceiling; target newly retrieved text below 1,500 tokens total and stop if the task cannot be resolved within that budget.
-
-          The pinned GitHub MCP server exposes only these exact tool names in this workflow:
-          - `github_get_file_contents`
-          - `github_pull_request_read`
-          - `github_create_branch`
-          - `github_push_files`
-          - `github_create_pull_request`
-          - `github_add_issue_comment`
-          The compact task summary contains PR numbers/URLs; use `github_pull_request_read` for exact PR state/head checks. Broad PR search and `github_get_commit` are deliberately omitted to reduce tool-schema TPM overhead. `github_get_pull_request` does not exist. Do not invent tool names or retry unavailable tools.
+          CONTEXT AND TASK
+          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json once.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier. Keep newly retrieved text below 1,500 tokens.
+          - The ledger marks AUTOMATION-LEDGER-ACTIVATION blocked, not active. Do not create a competing task/writer. After a real provider invocation, validated report and cycle-fresh PR, the gate can be reconciled.
+          - After activation, follow #226 Phase 1: add only missing source-verified tool/license evidence, consume #279's read-only PC/N64 comparisons, label facts OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, evaluate GX/libogc porting gaps and record a reuse/convert/adapt/reimplement decision. PR #282 is complete; do not duplicate it.
+          - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Keep commercial ROM/disc/binary/extracted data local. No gameplay feature work during Phase 1. Later reuse #317 → #318 → #319; revisit #274 only for a demonstrated dependency.
 
           EXECUTION
-          - Use the local read tool for checked-out text and only the reduced GitHub MCP tools for exact PR/commit checks and branch/PR writes. Shell execution is denied.
-          - If one small automation fix is justified, create one branch from the exact current SHA of the correct base, update only necessary files, and open one reviewable PR. Do not claim tests ran without exact-head Actions evidence.
-          - If blocked only by an external owner action, post one concise comment to #226 and report the exact blocker and next action.
+          - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
+          - Only these GitHub tools are exposed: github_get_file_contents, github_pull_request_read, github_create_branch, github_push_files, github_create_pull_request and github_add_issue_comment. Do not invent tools or call broad search/list operations.
+          - No shell is available. Use one branch from the exact current SHA (main for research/docs, dev for gameplay), one logical push_files operation and one reviewable PR. Never write to main/dev, merge, auto-merge, force-push, delete branches or weaken checks.
+          - Verify the exact PR head and its CI evidence. Do not claim tests ran without exact-head results. If blocked, post one concise evidence-based comment to #226 with one next action.
+          - Limit the task to three tool/action steps. Do not reread files or repeat a failed tool.
 
-          REPORT CONTRACT
-          For verified new work, end with:
+          REPORT
+          For verified progress, end with:
           BOONTA_CYCLE_STATUS: PROGRESS
           BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
           BOONTA_CYCLE_EVIDENCE_BASE: main|dev
-          Otherwise end with:
+          For a genuine blocker, end with:
           BOONTA_CYCLE_STATUS: BLOCKED
-          BOONTA_CYCLE_BLOCKER: <specific verified dependency>
+          BOONTA_CYCLE_BLOCKER: <specific named dependency>
           BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
-          Never report PROGRESS for a no-op or unverified result.
+          Never report PROGRESS for no-op work, unchanged PRs, unverified results or unknown heads.
           PROMPT
           )"
 
-          # Hard stop prevents repeated Free-tier TPM/context failures from consuming the whole job.
+          # Refuse accidental prompt growth before any provider request.
+          if (( ${#PROMPT} > 7000 )); then
+            echo "::error::Groq prompt exceeds the 7,000-character safety ceiling; no model request was sent."
+            exit 2
+          fi
+          echo "Groq prompt size: ${#PROMPT} characters."
+          # Hard stop limits repeated provider retries if a Free-tier TPM/context error is returned.
           set +e
-          timeout --signal=TERM --kill-after=5s 120s \
+          timeout --signal=TERM --kill-after=5s 90s \
             opencode run --model groq/openai/gpt-oss-20b --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" \
             2>&1 | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
           invocation_status=${PIPESTATUS[0]}
           set -e
           if [[ "$invocation_status" -eq 124 || "$invocation_status" -eq 137 ]]; then
-            echo "Groq invocation reached its 120-second hard limit; this cycle will stop and enter the daily cooldown."
+            echo "Groq invocation reached its 90-second hard limit; this cycle will stop and enter the daily cooldown."
           fi
           exit "$invocation_status"
 
