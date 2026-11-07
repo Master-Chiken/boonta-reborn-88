@@ -79,6 +79,23 @@ for needle in groq_gates:
 if "needs.openrouter-fallback.result == 'failure'" in groq_job:
     errors.append("Groq must not launch after an OpenRouter failure in the same run")
 
+# Report-format/semantic failures also consume an inference request. Record the
+# daily cooldown after validation, but only for an actual invocation or report
+# failure; a valid BLOCKED report is not a provider failure.
+cooldown_contracts = (
+    ("Gemini", gemini, "Validate autonomous cycle report contract", "Record same-day Gemini cooldown after an autonomous model failure"),
+    ("OpenRouter", openrouter, "Validate OpenRouter autonomous cycle report", "Record same-day OpenRouter cooldown after quota, authentication or invocation failure"),
+    ("Groq", groq, "Validate Groq autonomous cycle report", "Record same-day Groq cooldown after an invocation failure"),
+)
+for label, workflow, validation_title, cooldown_title in cooldown_contracts:
+    validation_position = workflow.find("name: " + validation_title)
+    cooldown_position = workflow.find("name: " + cooldown_title)
+    if not (0 <= validation_position < cooldown_position):
+        errors.append(f"{label} cooldown must be recorded after report validation")
+    cooldown_block = workflow[cooldown_position:] if cooldown_position >= 0 else ""
+    if "steps.validate_report.outcome == 'failure'" not in cooldown_block:
+        errors.append(f"{label} cooldown must be recorded when its report validator fails after inference")
+
 if "One model provider invocation at most per Boonta Autonomous Loop run" not in budget:
     errors.append("Shared context budget must enforce at most one model provider invocation per workflow run")
 if "At most one provider invocation is allowed per workflow run" not in loop:
