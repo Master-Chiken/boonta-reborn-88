@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #324 was merged to main by squash on 2026-11-07 at exact tested head 927826da2bfd96609f188e44d0d0ed635fd5b077 (merge commit 05b4fac74701092c7b9c9dcbd161054eea6754b3). Exact-head AI free-tier safety/provider-handoff/ledger reconciliation run #42354594105, branch YAML/embedded-Python self-test #42354594103, and held-assets/provenance guard #42354594133…"
+      "next_action_excerpt": "PR #324 was merged at 05b4fac74701092c7b9c9dcbd161054eea6754b3 and Gemini invocation fix PR #326 was merged at 14690fd25a80341a1cacf6bcc89bdb7c59ef98a4. The first post-merge autonomous loop run #42354691945 passed readiness, OpenRouter Free-only preflight, GET /api/v1/key authentication with is_free_tier=true, and scoped GitHub App token creation, but the…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",

@@ -336,10 +336,18 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/05b4fac74701092c7b9c9dcbd161054eea6754b3",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594105",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594103",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594133"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594133",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354691945",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6704425687",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/326",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/14690fd25a80341a1cacf6bcc89bdb7c59ef98a4",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42355093417",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42375331872"
       ],
-      "next_action": "PR #324 was merged to main by squash on 2026-11-07 at exact tested head 927826da2bfd96609f188e44d0d0ed635fd5b077 (merge commit 05b4fac74701092c7b9c9dcbd161054eea6754b3). Exact-head AI free-tier safety/provider-handoff/ledger reconciliation run #42354594105, branch YAML/embedded-Python self-test #42354594103, and held-assets/provenance guard #42354594133 all passed. The merge installs bounded provider handoff, finite model turns, reduced MCP tool surfaces, compact 1,500-token context policy, same-run OpenRouter preflight consistency checks and the mandatory reverse-engineering-first gate. Activation remains BLOCKED until the first post-merge autonomous loop run is observed and establishes readiness success plus a real provider invocation with a valid cycle-fresh report/PR, or a precise verified blocker. Do not infer activation from static CI, do not read/change secrets, and do not request key rotation unless a new authentication check fails.",
-      "updated_at": "2026-11-07"
+      "next_action": "PR #324 was merged at 05b4fac74701092c7b9c9dcbd161054eea6754b3 and Gemini invocation fix PR #326 was merged at 14690fd25a80341a1cacf6bcc89bdb7c59ef98a4. The first post-merge autonomous loop run #42354691945 passed readiness, OpenRouter Free-only preflight, GET /api/v1/key authentication with is_free_tier=true, and scoped GitHub App token creation, but the OpenRouter model call was rejected by the explicit free-models-per-day quota; Gemini and Groq were skipped by their same-day cooldowns. A subsequent scheduled run #42375331872 at 2026-11-07 13:05 UTC again passed read-only readiness and correctly skipped all three providers because their same-day cooldown markers were active; no additional provider/API call was made. This confirms cooldown suppression, but does not complete a model cycle: no successful invocation, validated report or cycle-fresh PR exists. Activation remains BLOCKED by the providers' Free-tier quota limits, not authentication. Preserve €0: do not buy credits, rotate keys, alter provider configuration or bypass cooldowns. Next action: allow the UTC daily quota/cooldown reset and use the next normal scheduled Free-only attempt; clear activation only after a successful provider invocation plus valid cycle-fresh report/PR and ledger reconciliation.",
+      "updated_at": "2026-11-07",
+      "pr_url": null,
+      "head_sha": null
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
