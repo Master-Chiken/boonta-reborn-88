@@ -32,6 +32,7 @@ autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
+report_helper = read("tools/validate_autonomous_cycle_report.js")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
@@ -110,8 +111,10 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
-        "core.setOutput('cycle_status', 'progress')",
-        "core.setOutput('cycle_status', 'blocked')",
+        "tools/validate_autonomous_cycle_report.js",
+        "EXPECTED_TASK_ID:",
+        "EXPECTED_TASK_TARGET_BRANCH:",
+        "checks: read",
     )
     for required in expected_outputs:
         if required not in workflow:
@@ -125,7 +128,7 @@ else:
     cooldown_job = autonomous.split("  provider-cooldowns:", 1)[1].split("  autonomous-cycle:", 1)[0]
     for required in (
         "needs: readiness",
-        "permissions:\n      contents: read\n      issues: read",
+        "permissions:\n      contents: read\n      issues: write",
         "github.rest.issues.listComments",
         "BOONTA_GEMINI_FAILURE_COOLDOWN:",
         "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
@@ -137,9 +140,16 @@ else:
         "task_ready:",
         "task_id:",
         "task_reason:",
+        "task_target_branch:",
+        "provider_candidate:",
+        "reservation_acquired:",
         "path: 'docs/automation/task-ledger-summary.json'",
         "ledgerSummary.policy?.max_active_tasks !== 1",
         "const usableTask = (task) => Boolean(",
+        "['main', 'dev'].includes(task.target_branch)",
+        "reservationMarker",
+        "leaseSince",
+        "reservationAcquired",
         "!taskBlockedActive",
         "core.setOutput('task_ready', String(taskReady))",
     ):
@@ -149,6 +159,8 @@ if "needs: [readiness, provider-cooldowns]" not in autonomous:
     errors.append("Gemini job must depend on the global provider cooldown preflight")
 if autonomous.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require one eligible ledger task before invocation")
+if autonomous.count("needs.provider-cooldowns.outputs.reservation_acquired == 'true'") != 3:
+    errors.append("All three provider routes must require an acquired task reservation")
 if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
     errors.append("Gemini job must not start while its UTC cooldown is active")
 if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonomous:
@@ -157,7 +169,7 @@ if "needs.provider-cooldowns.outputs.groq_active != 'true'" not in autonomous:
     errors.append("Groq fallback must not start while its UTC cooldown is active")
 if "needs.autonomous-cycle.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.gemini_active == 'true'" not in autonomous:
     errors.append("OpenRouter must run only on a later cycle where Gemini was skipped by an already-active global cooldown")
-if "needs.openrouter-fallback.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.openrouter_active == 'true'" not in autonomous:
+if "needs.openrouter-fallback.result == 'skipped'" not in autonomous or "(needs.readiness.outputs.openrouter_ready != 'true' || needs.provider-cooldowns.outputs.openrouter_active == 'true')" not in autonomous:
     errors.append("Groq must run only on a later cycle where OpenRouter was skipped by an already-active global cooldown")
 if "needs.autonomous-cycle.result == 'failure'" in autonomous or "needs.openrouter-fallback.result == 'failure'" in autonomous:
     errors.append("A failed provider must not trigger another provider invocation in the same workflow run")
@@ -170,7 +182,9 @@ else:
     for required in (
         "needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback, groq-fallback]",
         "if: always()",
-        "permissions: {}",
+        "permissions:\n      issues: write",
+        "Release the exact task reservation",
+        "RESERVATION_FINGERPRINT:",
         "COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}",
         "GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}",
         "OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}",
@@ -187,6 +201,20 @@ else:
     ):
         if required not in summary_job:
             errors.append(f"Autonomous final provider summary is missing {required!r}")
+
+for required in (
+    "BOONTA_CYCLE_TASK_ID",
+    "pr.base.ref !== expectedBase",
+    "pr.head.sha !== exactHead",
+    "github.rest.checks.listForRef",
+    "const REQUIRED_CHECKS",
+    "maxPolls = 32",
+    "BOONTA_TASK_ID: ' + expectedTaskId",
+):
+    if required not in report_helper:
+        errors.append(f"Shared task-bound progress validator is missing {required!r}")
+if "node tools/test_autonomous_cycle_report.js" not in read(".github/workflows/branch-automation-selftest.yml"):
+    errors.append("Branch automation self-test must execute the exact-head report validator test")
 
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
