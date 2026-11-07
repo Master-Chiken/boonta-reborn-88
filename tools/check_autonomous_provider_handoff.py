@@ -243,6 +243,9 @@ if "this reserve is not a guarantee of cycle completion" not in budget:
 # the remainder of its 180-second window in internal retries.
 for required in (
     "terminal_provider_error = re.compile(",
+    "HTTP\\s*429",
+    "tokens per minute\\s*\\(TPM\\)",
+    "HTTP\\s*401",
     "free-models-per-day",
     "rate[_ ]limit exceeded",
     "tokens per minute",
