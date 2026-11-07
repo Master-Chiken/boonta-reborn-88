@@ -90,8 +90,21 @@ jobs:
               throw new Error('Canonical compact task ledger is missing or not a base64 file.');
             }
             const ledgerSummary = JSON.parse(Buffer.from(ledgerFile.content, 'base64').toString('utf8'));
-            if (ledgerSummary.policy?.max_active_tasks !== 1 || !Array.isArray(ledgerSummary.tasks)) {
+            if (
+              ledgerSummary.schema_version !== 1 ||
+              ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
+              !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
+              ledgerSummary.policy?.max_active_tasks !== 1 ||
+              !Array.isArray(ledgerSummary.tasks)
+            ) {
               throw new Error('Canonical compact task ledger schema or one-active-task policy is invalid.');
+            }
+            const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
+            if (
+              taskIds.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
+              new Set(taskIds).size !== taskIds.length
+            ) {
+              throw new Error('Canonical compact task ledger contains missing or duplicate task IDs.');
             }
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');

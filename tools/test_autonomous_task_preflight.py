@@ -62,6 +62,9 @@ def task(task_id: str, status: str, *, complete: bool = True) -> dict:
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
+represented_active = task("AUTOMATION-TEST-REPRESENTED", "active")
+represented_active["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/999"
+represented_active["head_sha"] = "0123456789abcdef0123456789abcdef01234567"
 cases = [
     {
         "name": "activation opens after UTC reset",
@@ -132,6 +135,28 @@ cases = [
         "expected_blocked": False,
         "expected_provider_cooldowns": {"gemini": False, "openrouter": False, "groq": False},
     },
+    {
+        "name": "task with an existing PR or head is not re-selected",
+        "tasks": [represented_active],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "reason_contains": "PR/head",
+    },
+    {
+        "name": "duplicate task IDs fail closed",
+        "tasks": [activation, activation],
+        "marker_day_offset": None,
+        "expected_error": "duplicate task IDs",
+    },
+    {
+        "name": "unsupported summary schema fails closed",
+        "tasks": [valid_active],
+        "marker_day_offset": None,
+        "schema_version": 2,
+        "expected_error": "schema or one-active-task policy",
+    },
 ]
 
 node_program = f"""
@@ -168,6 +193,9 @@ async function runCase(testCase) {{
     }});
   }}
   const ledger = {{
+    schema_version: testCase.schema_version === undefined ? 1 : testCase.schema_version,
+    source: "docs/automation/task-ledger.json",
+    updated_at: todayUtc,
     policy: {{ max_active_tasks: 1 }},
     tasks: testCase.tasks
   }};
@@ -206,13 +234,27 @@ async function runCase(testCase) {{
     }}
   }};
   const context = {{ repo: {{ owner: "Master-Chiken", repo: "boonta-reborn-88" }} }};
-  await new AsyncFunction("github", "context", "core", script)(github, context, core);
-  return outputs;
+  let error = "";
+  try {{
+    await new AsyncFunction("github", "context", "core", script)(github, context, core);
+  }} catch (caught) {{
+    error = String(caught.message || caught);
+  }}
+  return {{ outputs, error }};
 }}
 
 (async () => {{
   for (const testCase of cases) {{
-    const outputs = await runCase(testCase);
+    const result = await runCase(testCase);
+    if (testCase.expected_error) {{
+      if (!result.error.includes(testCase.expected_error)) {{
+        throw new Error(testCase.name + ": expected error containing " + testCase.expected_error + ", got " + result.error);
+      }}
+      process.stdout.write("PASS: " + testCase.name + "\\n");
+      continue;
+    }}
+    if (result.error) throw new Error(testCase.name + ": unexpected preflight error: " + result.error);
+    const outputs = result.outputs;
     if (outputs.task_ready !== String(testCase.expected_ready)) {{
       throw new Error(testCase.name + ": expected task_ready=" + testCase.expected_ready + ", got " + outputs.task_ready);
     }}
