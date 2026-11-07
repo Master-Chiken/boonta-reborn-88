@@ -126,7 +126,7 @@ jobs:
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
               "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"' in groq,
               "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
-              "Groq quota refusal terminates the process group on first TPM error": "tokens per minute\\\\s*\\\\(TPM\\\\)" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
+              "Groq quota refusal terminates the process group on first TPM error": "tokens per minute\\s*\\(TPM\\)" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
               "Groq prompt explicitly stops on provider quota errors": "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
