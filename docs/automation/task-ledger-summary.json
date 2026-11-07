@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #324 was merged at 05b4fac74701092c7b9c9dcbd161054eea6754b3 and the follow-up read-only Gemini prompt fix PR #326 was merged at 14690fd25a80341a1cacf6bcc89bdb7c59ef98a4. The first post-#324 autonomous loop run #42354691945 passed read-only readiness, OpenRouter owner/Free-only preflight, GET /api/v1/key authentication with is_free_tier=true, and scoped…"
+      "next_action_excerpt": "PR #324 was merged at 05b4fac74701092c7b9c9dcbd161054eea6754b3 and Gemini invocation fix PR #326 was merged at 14690fd25a80341a1cacf6bcc89bdb7c59ef98a4. The first post-merge autonomous loop run #42354691945 passed readiness, OpenRouter Free-only preflight, GET /api/v1/key authentication with is_free_tier=true, and scoped GitHub App token creation, but the…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
