@@ -1,0 +1,128 @@
+#include "input_backend.h"
+
+#include <string.h>
+
+#ifdef BOONTA_WII
+#include <wiiuse/wpad.h>
+
+/*
+ * The host-testable logical masks mirror libogc's Classic masks. Fail the
+ * native Wii build if the SDK definitions ever diverge from those copies.
+ */
+#if BOONTA_CLASSIC_BUTTON_UP != WPAD_CLASSIC_BUTTON_UP || \
+    BOONTA_CLASSIC_BUTTON_LEFT != WPAD_CLASSIC_BUTTON_LEFT || \
+    BOONTA_CLASSIC_BUTTON_ZR != WPAD_CLASSIC_BUTTON_ZR || \
+    BOONTA_CLASSIC_BUTTON_X != WPAD_CLASSIC_BUTTON_X || \
+    BOONTA_CLASSIC_BUTTON_A != WPAD_CLASSIC_BUTTON_A || \
+    BOONTA_CLASSIC_BUTTON_Y != WPAD_CLASSIC_BUTTON_Y || \
+    BOONTA_CLASSIC_BUTTON_B != WPAD_CLASSIC_BUTTON_B || \
+    BOONTA_CLASSIC_BUTTON_ZL != WPAD_CLASSIC_BUTTON_ZL || \
+    BOONTA_CLASSIC_BUTTON_FULL_R != WPAD_CLASSIC_BUTTON_FULL_R || \
+    BOONTA_CLASSIC_BUTTON_PLUS != WPAD_CLASSIC_BUTTON_PLUS || \
+    BOONTA_CLASSIC_BUTTON_FULL_L != WPAD_CLASSIC_BUTTON_FULL_L || \
+    BOONTA_CLASSIC_BUTTON_DOWN != WPAD_CLASSIC_BUTTON_DOWN || \
+    BOONTA_CLASSIC_BUTTON_RIGHT != WPAD_CLASSIC_BUTTON_RIGHT
+#error "Boonta Classic button masks must match the selected libogc SDK"
+#endif
+
+static int g_wpad_classic_format_ready;
+#else
+#include <ogc/pad.h>
+#endif
+
+void boonta_input_init(void)
+{
+#ifdef BOONTA_WII
+    g_wpad_classic_format_ready = 0;
+    (void)WPAD_Init();
+#else
+    (void)PAD_Init();
+#endif
+}
+
+void boonta_input_poll(BoontaInputFrame *frame)
+{
+    if (frame == 0) return;
+    memset(frame, 0, sizeof(*frame));
+
+#ifdef BOONTA_WII
+    {
+        u32 expansion_type = WPAD_EXP_NONE;
+        WPADData *data;
+        BoontaClassicInputSample sample;
+
+        (void)WPAD_ScanPads();
+
+        /* Never interpret a Wii Remote/Nunchuk/other expansion as Classic. */
+        {
+            const int probe_succeeded =
+                WPAD_Probe(WPAD_CHAN_0, &expansion_type) == WPAD_ERR_NONE;
+            const int is_classic = probe_succeeded &&
+                expansion_type == WPAD_EXP_CLASSIC;
+
+            if (!probe_succeeded) {
+                frame->status = BOONTA_INPUT_STATUS_WII_NO_CONTROLLER;
+                g_wpad_classic_format_ready = 0;
+                return;
+            }
+            if (!is_classic) {
+                /* A later connection or newly attached Classic pad needs setup. */
+                frame->status = BOONTA_INPUT_STATUS_WII_NO_CLASSIC;
+                g_wpad_classic_format_ready = 0;
+                return;
+            }
+
+            if (boonta_classic_format_should_configure(
+                    probe_succeeded, is_classic, g_wpad_classic_format_ready)) {
+                /*
+                 * WPAD_SetDataFormat silently has no effect for an unassigned
+                 * channel. Probe first, then configure once per Classic
+                 * connection. Let the next scan deliver the requested report.
+                 */
+                if (WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR) !=
+                    WPAD_ERR_NONE) {
+                    frame->status = BOONTA_INPUT_STATUS_WII_SETUP_FAILED;
+                    return;
+                }
+                g_wpad_classic_format_ready = 1;
+                frame->status = BOONTA_INPUT_STATUS_WII_CONFIGURING;
+                return;
+            }
+        }
+
+        data = WPAD_Data(WPAD_CHAN_0);
+        if (data == 0 ||
+            (data->data_present & WPAD_DATA_EXPANSION) == 0U ||
+            data->exp.type != WPAD_EXP_CLASSIC) {
+            frame->status = BOONTA_INPUT_STATUS_WII_WAITING_FOR_DATA;
+            return;
+        }
+
+        sample.classic_connected = 1;
+        sample.buttons_down = WPAD_ButtonsDown(WPAD_CHAN_0);
+        sample.buttons_held = WPAD_ButtonsHeld(WPAD_CHAN_0);
+        sample.stick_x = boonta_classic_axis_to_signed(
+            data->exp.classic.ljs.pos.x,
+            data->exp.classic.ljs.min.x,
+            data->exp.classic.ljs.center.x,
+            data->exp.classic.ljs.max.x);
+        sample.stick_y = boonta_classic_axis_to_signed(
+            data->exp.classic.ljs.pos.y,
+            data->exp.classic.ljs.min.y,
+            data->exp.classic.ljs.center.y,
+            data->exp.classic.ljs.max.y);
+        sample.left_shoulder = data->exp.classic.l_shoulder;
+        sample.right_shoulder = data->exp.classic.r_shoulder;
+        *frame = boonta_classic_input_translate(&sample);
+    }
+#else
+    PAD_ScanPads();
+    frame->buttons_down = (uint32_t)PAD_ButtonsDown(0);
+    frame->buttons_held = (uint32_t)PAD_ButtonsHeld(0);
+    frame->stick_x = (int8_t)PAD_StickX(0);
+    frame->stick_y = (int8_t)PAD_StickY(0);
+    frame->trigger_l = (uint8_t)PAD_TriggerL(0);
+    frame->trigger_r = (uint8_t)PAD_TriggerR(0);
+    frame->status = BOONTA_INPUT_STATUS_GAMECUBE_READY;
+#endif
+}

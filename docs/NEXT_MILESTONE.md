@@ -1,6 +1,6 @@
 # Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-11-03
+Last updated: 2026-11-07
 
 ## Owner priority update
 
@@ -100,3 +100,29 @@ Continue this work before the manual acceptance session:
 Step 102 source archive remains on **import hold**.  
 See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
 Do not merge unclear-provenance code or any commercial assets.
+
+
+## Native Wii Classic Controller acceptance (separate from GameCube)
+
+The native Wii backend is carried by [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269), rebuilt on current `main` after the D-pad pitch prerequisite in [PR #264](https://github.com/Master-Chiken/boonta-reborn-88/pull/264) was integrated. The active branch is `feat/native-wii-classic-input-main-20261102`. PR #268 is the superseded stacked predecessor and is closed unmerged.
+
+**Automated exact-head evidence for PR #269 (head `03a66d0c02e6cb39c51460ad75ad9a3a40aecc9c`):**
+
+- Host input/gameplay tests — PASS.
+- Native GameCube DOL/ELF build and artifact validation — PASS.
+- Native Wii DOL/ELF build and artifact validation — PASS.
+- Dolphin null-backend process smoke — PASS.
+- Optional Software Renderer diagnostic — PASS; this is a scripted GameCube-pad diagnostic, not a Wii Classic Controller test.
+- AI safety and source-import provenance checks — PASS.
+
+**Manual hardware acceptance remains NOT TESTED and mandatory before merging PR #269:**
+
+1. Load the Wii DOL on a real Wii with the Under Control controller connected through Wii Remote channel 0.
+2. Confirm the runtime detects `WPAD_EXP_CLASSIC`; Wii Remote-only and non-Classic expansions must remain neutral.
+3. Test left-stick steering/pitch, D-pad steering/pitch, A/B throttle/brake, X+A boost, ZL/ZR and analog L/R shoulders for slide, Plus pause/restart, and Y reset.
+4. Disconnect and reconnect the controller; verify neutral input while disconnected and recovery only after Classic detection and report setup.
+5. Record the Wii model, controller identification, exact tested build SHA, results, and video or notes.
+
+The button masks and Classic expansion identifiers are cross-checked against the current upstream libogc `wpad.h`; its implementation also exposes the Classic shoulder values as normalized raw values divided by `0x1F`. This source check is not a substitute for a physical test.
+
+Do not mark physical compatibility as passed from cross-compilation or Dolphin. The original N64 game running in Not64 is a separate input path and is not covered by this Boonta backend.

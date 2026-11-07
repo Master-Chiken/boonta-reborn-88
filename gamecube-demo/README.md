@@ -97,3 +97,33 @@ Keep validation claims separate:
 
 Do not report the scripted capture as proof that the game is fully playable. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
 
+
+
+## Native Wii Classic Controller backend
+
+The Wii target is built separately with `make -f Makefile.wii`; it uses libogc's `WPAD` interface and does not add Wii-only symbols to the GameCube build. At runtime, channel 0 is accepted only when `WPAD_Probe` reports `WPAD_EXP_CLASSIC` and the current sample contains Classic expansion data. A disconnected controller or a different expansion is treated as neutral input.
+
+The Classic mapping is: left stick for steering and pitch; A/B for throttle/brake; X+A for boost; Y for reset; Plus for pause/restart; D-pad left/right for steering and up/down for pitch; ZL/ZR and the analog L/R shoulders for slide. The existing GameCube build retains its `PAD` backend.
+
+Host tests cover button translation, analog-stick pass-through, analog shoulder scaling, digital trigger clicks, and neutral behavior for a missing or non-Classic expansion. The Wii artifact still needs a physical test on the owner's Wii with the Under Control Classic Controller; a successful cross-build does not prove that this individual unit is recognized.
+
+
+### Wii Classic Controller runtime details
+
+The Wii backend calls `WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR)` only after `WPAD_Probe` confirms that channel 0 is connected with a Classic expansion. libogc ignores a channel data-format request when no controller is assigned, so setup is deferred until that probe succeeds and is repeated after disconnect or a non-Classic expansion. The input loop then verifies `WPAD_DATA_EXPANSION` before reading the Classic payload. The left stick is converted from its calibrated raw minimum/centre/maximum values into the signed gameplay range; the analog shoulder values are scaled to 0–255 and the digital ZL/ZR clicks are retained.
+
+| Classic control | Racer action |
+|---|---|
+| Left stick left/right | Steering |
+| Left stick up/down | Pitch |
+| D-pad left/right | Steering |
+| D-pad up/down | Pitch |
+| A / B | Accelerate / brake |
+| Hold X + A | Boost |
+| L / R analog shoulders or ZL / ZR clicks | Slide |
+| Plus | Pause / resume; restart after finish |
+| Y | Reset at any time |
+
+There is no separate repair action in the current gameplay slice. Home, Minus and the right stick are currently unused. The mapping is for this native Boonta Wii build only; it does not configure Not64 or the original N64 game.
+
+The current CI run verifies the GameCube and Wii native builds, host translation tests and bounded Dolphin diagnostics. It does not test the Under Control unit or prove a manually completed three-lap race.
