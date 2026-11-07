@@ -1262,11 +1262,13 @@ for required in (
     "This model is limited to 3,072 context tokens and 512 output tokens",
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
     "Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 1,500 tokens",
+    "Keep newly retrieved text below 800 tokens",
     "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
+if 'if (( ${#PROMPT} > 5000 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 5,000-character prompt ceiling before inference")
 if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
