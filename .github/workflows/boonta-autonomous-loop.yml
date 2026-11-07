@@ -47,27 +47,49 @@ jobs:
     timeout-minutes: 2
     permissions:
       contents: read
-      issues: read
+      issues: write
     outputs:
       task_ready: ${{ steps.check.outputs.task_ready }}
       task_id: ${{ steps.check.outputs.task_id }}
+      task_target_branch: ${{ steps.check.outputs.task_target_branch }}
       task_reason: ${{ steps.check.outputs.task_reason }}
       gemini_active: ${{ steps.check.outputs.gemini_active }}
       openrouter_active: ${{ steps.check.outputs.openrouter_active }}
       groq_active: ${{ steps.check.outputs.groq_active }}
       task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}
+      provider_candidate: ${{ steps.check.outputs.provider_candidate }}
+      reservation_acquired: ${{ steps.check.outputs.reservation_acquired }}
+      reservation_comment_id: ${{ steps.check.outputs.reservation_comment_id }}
+      reservation_task_id: ${{ steps.check.outputs.reservation_task_id }}
+      reservation_fingerprint: ${{ steps.check.outputs.reservation_fingerprint }}
+      reservation_provider: ${{ steps.check.outputs.reservation_provider }}
+      reservation_expires_at: ${{ steps.check.outputs.reservation_expires_at }}
+      reservation_reason: ${{ steps.check.outputs.reservation_reason }}
     steps:
       - name: Read the three persistent UTC cooldown markers
         id: check
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
+          OPENROUTER_READY: ${{ needs.readiness.outputs.openrouter_ready }}
+          GROQ_READY: ${{ needs.readiness.outputs.groq_ready }}
         with:
           script: |
-            const todayUtc = new Date().toISOString().slice(0, 10);
+            const now = new Date();
+            const todayUtc = now.toISOString().slice(0, 10);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: 226,
               since: todayUtc + 'T00:00:00Z',
+              per_page: 100,
+            });
+            const leaseSince = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const leaseComments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 226,
+              since: leaseSince,
               per_page: 100,
             });
 
@@ -112,7 +134,8 @@ jobs:
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
-              Array.isArray(task.platform_scope) && task.platform_scope.length > 0
+              Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
+              ['main', 'dev'].includes(task.target_branch)
             );
             let selectedTask = null;
             let taskReason = '';
@@ -141,6 +164,7 @@ jobs:
             const taskReady = Boolean(selectedTask);
             core.setOutput('task_ready', String(taskReady));
             core.setOutput('task_id', selectedTask?.task_id || '');
+            core.setOutput('task_target_branch', selectedTask?.target_branch || '');
             core.setOutput('task_reason', taskReason);
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
@@ -161,6 +185,148 @@ jobs:
               core.setOutput(provider + '_failed_on', failedOn);
               core.info(provider + ': cooldown=' + active + (failedOn ? ', recorded UTC date=' + failedOn : ', no marker'));
             }
+            // Decide the provider once, before any provider workflow is eligible.
+            const writerEnabled = process.env.WRITER_STATE === 'enabled';
+            const scheduledBackoff = taskBlockedActive && context.eventName === 'schedule';
+            let providerCandidate = '';
+            if (taskReady && writerEnabled && !scheduledBackoff) {
+              if (results.gemini === 'clear') {
+                providerCandidate = 'gemini';
+              } else if (process.env.OPENROUTER_READY === 'true' && results.openrouter === 'clear') {
+                providerCandidate = 'openrouter';
+              } else if (
+                results.gemini === 'ACTIVE' &&
+                process.env.OPENROUTER_READY === 'true' &&
+                results.openrouter === 'ACTIVE' &&
+                process.env.GROQ_READY === 'true' &&
+                results.groq === 'clear'
+              ) {
+                providerCandidate = 'groq';
+              }
+            }
+            core.setOutput('provider_candidate', providerCandidate);
+
+            // The top-level workflow concurrency group serializes acquisitions.
+            // A persistent, expiring issue comment protects against stale/cancelled runs.
+            const crypto = require('crypto');
+            const taskFingerprint = selectedTask
+              ? crypto.createHash('sha256').update(selectedTask.task_id, 'utf8').digest('hex').slice(0, 16)
+              : '';
+            const reservationMarker = /<!-- BOONTA_TASK_RESERVATION: ([A-Za-z0-9+/=]+) -->/;
+            const releasedMarker = /<!-- BOONTA_TASK_RESERVATION_RELEASED: ([A-Za-z0-9+/=]+) -->/;
+            const recentBotReservations = leaseComments
+              .filter((comment) => comment.user?.login === 'github-actions[bot]')
+              .map((comment) => {
+                const body = comment.body || '';
+                const match = body.match(reservationMarker) || body.match(releasedMarker);
+                if (!match) return null;
+                try {
+                  const payload = JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'));
+                  return { comment, payload, malformed: false };
+                } catch (error) {
+                  return { comment, payload: null, malformed: true };
+                }
+              })
+              .filter(Boolean);
+            const malformedReservation = recentBotReservations.find((item) => item.malformed);
+            const activeLeases = recentBotReservations.filter(({ payload }) =>
+              payload && payload.schema_version === 1 &&
+              !payload.released_at &&
+              Number.isFinite(Date.parse(payload.expires_at || '')) &&
+              Date.parse(payload.expires_at) > now.getTime()
+            );
+            const myRunId = String(context.runId);
+            const myRunAttempt = Number(context.runAttempt || 1);
+            const foreignLease = activeLeases.find(({ payload }) =>
+              String(payload.run_id) !== myRunId ||
+              Number(payload.run_attempt) !== myRunAttempt ||
+              payload.task_id !== selectedTask?.task_id ||
+              payload.fingerprint !== taskFingerprint
+            );
+            let reservationAcquired = false;
+            let reservationCommentId = '';
+            let reservationReason = '';
+            let reservationExpiresAt = '';
+            let reusableComment = null;
+
+            if (!taskReady) {
+              reservationReason = 'no eligible ledger task; no lease created';
+            } else if (!providerCandidate) {
+              reservationReason = 'no configured, cooldown-eligible provider is available for this task';
+            } else if (malformedReservation) {
+              reservationReason = 'a recent bot-owned reservation marker is malformed; fail closed for manual reconciliation';
+            } else if (foreignLease) {
+              reservationReason = 'task lease is held by run ' + foreignLease.payload.run_id +
+                ' attempt ' + foreignLease.payload.run_attempt + ' until ' + foreignLease.payload.expires_at;
+            } else {
+              const sameRunLeases = activeLeases.filter(({ payload }) =>
+                String(payload.run_id) === myRunId &&
+                Number(payload.run_attempt) === myRunAttempt
+              );
+              if (sameRunLeases.length > 1) {
+                reservationReason = 'multiple active leases already reference this run; refusing ambiguous ownership';
+              } else {
+                const sameRunLease = sameRunLeases[0];
+                reusableComment = sameRunLease?.comment || recentBotReservations
+                  .sort((a, b) => Date.parse(b.comment.updated_at || b.comment.created_at || '') -
+                                  Date.parse(a.comment.updated_at || a.comment.created_at || ''))[0]?.comment || null;
+                const leaseIssuedAt = new Date().toISOString();
+                const leaseExpiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+                const claim = {
+                  schema_version: 1,
+                  run_id: myRunId,
+                  run_attempt: myRunAttempt,
+                  task_id: selectedTask.task_id,
+                  fingerprint: taskFingerprint,
+                  provider: providerCandidate,
+                  issued_at: leaseIssuedAt,
+                  expires_at: leaseExpiresAt
+                };
+                const encodedClaim = Buffer.from(JSON.stringify(claim), 'utf8').toString('base64');
+                const body = [
+                  '<!-- BOONTA_TASK_RESERVATION: ' + encodedClaim + ' -->',
+                  '## Boonta autonomous task reservation',
+                  '',
+                  '- Task: ' + selectedTask.task_id,
+                  '- Provider slot: ' + providerCandidate,
+                  '- Workflow run: ' + myRunId + ' (attempt ' + myRunAttempt + ')',
+                  '- Fingerprint: ' + taskFingerprint,
+                  '- Expires (UTC): ' + leaseExpiresAt,
+                  '',
+                  'This lease is automatically released by the cycle summary or expires after 60 minutes.'
+                ].join('\n');
+                let response;
+                if (reusableComment?.id) {
+                  response = await github.rest.issues.updateComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    comment_id: reusableComment.id,
+                    body
+                  });
+                } else {
+                  response = await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: 226,
+                    body
+                  });
+                }
+                reservationCommentId = String(response.data.id);
+                reservationExpiresAt = leaseExpiresAt;
+                reservationAcquired = true;
+                reservationReason = 'task lease acquired for the exact workflow run and provider';
+                core.setOutput('reservation_comment_id', reservationCommentId);
+                core.setOutput('reservation_task_id', selectedTask.task_id);
+                core.setOutput('reservation_fingerprint', taskFingerprint);
+                core.setOutput('reservation_provider', providerCandidate);
+                core.setOutput('reservation_expires_at', leaseExpiresAt);
+              }
+            }
+            core.setOutput('reservation_acquired', String(reservationAcquired));
+            core.setOutput('reservation_reason', reservationReason);
+            core.info('Reservation acquired=' + reservationAcquired + '; provider=' +
+              (providerCandidate || 'none') + '; reason=' + reservationReason);
+
             await core.summary
               .addHeading('Provider cooldown and task-eligibility preflight')
               .addTable([
@@ -170,8 +336,10 @@ jobs:
                 ['Groq Free', results.groq],
                 ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
+                ['Provider candidate', providerCandidate || 'none'],
+                ['Task reservation', reservationAcquired ? 'ACQUIRED until ' + reservationExpiresAt : 'NOT ACQUIRED'],
               ])
-              .addRaw('Read-only checks: issue #226 cooldown comments and the compact main-branch task ledger. No provider starts unless exactly one eligible task is confirmed.')
+              .addRaw('The canonical task ledger and UTC provider cooldowns are checked first. A bot-owned issue #226 lease is acquired only for one eligible task and provider; foreign active leases, malformed lease data and missing provider eligibility fail closed. Leases expire after 60 minutes.')
               .write();
 
   autonomous-cycle:
@@ -181,6 +349,8 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
       needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      needs.provider-cooldowns.outputs.reservation_acquired == 'true' &&
+      needs.provider-cooldowns.outputs.provider_candidate == 'gemini' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.gemini_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -195,8 +365,11 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
-      task_title: "Boonta Reborn autonomous work cycle"
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_title: "Boonta Reborn autonomous work cycle — ${{ needs.provider-cooldowns.outputs.task_id }}"
       task_description: >-
+        Reserved task ID: ${{ needs.provider-cooldowns.outputs.task_id }}. Required PR target branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}. Add the exact standalone PR-body line BOONTA_TASK_ID: <task ID> and report BOONTA_CYCLE_TASK_ID: <task ID>.
         Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
         Keep AUTOMATION-LEDGER-ACTIVATION as the only unresolved activation task until a real provider invocation produces a validated report plus a cycle-fresh PR, or a precise verified blocker. Never start a competing writer.
         Once activation is demonstrated, follow the latest #226 Phase 1: add only missing, source-verified tool/license/utility evidence; consume #279's PC/N64 comparisons rather than duplicating them; map target behavior as OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN; evaluate GX/libogc graphics, audio and frame-rate/physics gaps; finish a concise reuse/convert/adapt/reimplement decision. PR #282 is the completed broad inventory. Keep commercial ROM/disc/binary/extracted data local.
@@ -213,6 +386,8 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
       needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      needs.provider-cooldowns.outputs.reservation_acquired == 'true' &&
+      needs.provider-cooldowns.outputs.provider_candidate == 'openrouter' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -230,6 +405,8 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
     secrets: inherit
 
   groq-fallback:
@@ -240,6 +417,8 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
       needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      needs.provider-cooldowns.outputs.reservation_acquired == 'true' &&
+      needs.provider-cooldowns.outputs.provider_candidate == 'groq' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -259,6 +438,8 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
     secrets: inherit
 
   cycle-summary:
@@ -267,7 +448,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    permissions: {}
+    permissions:
+      issues: write
     steps:
       - name: Publish the exact outcome of each provider stage
         shell: bash
@@ -280,6 +462,14 @@ jobs:
           TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
           TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
           TASK_REASON: ${{ needs.provider-cooldowns.outputs.task_reason }}
+          TASK_TARGET_BRANCH: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+          RESERVATION_ACQUIRED: ${{ needs.provider-cooldowns.outputs.reservation_acquired }}
+          RESERVATION_COMMENT_ID: ${{ needs.provider-cooldowns.outputs.reservation_comment_id }}
+          RESERVATION_TASK_ID: ${{ needs.provider-cooldowns.outputs.reservation_task_id }}
+          RESERVATION_FINGERPRINT: ${{ needs.provider-cooldowns.outputs.reservation_fingerprint }}
+          RESERVATION_PROVIDER: ${{ needs.provider-cooldowns.outputs.reservation_provider }}
+          RESERVATION_EXPIRES_AT: ${{ needs.provider-cooldowns.outputs.reservation_expires_at }}
+          RESERVATION_REASON: ${{ needs.provider-cooldowns.outputs.reservation_reason }}
           EVENT_NAME: ${{ github.event_name }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
           OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
@@ -351,7 +541,11 @@ jobs:
             echo "- Readiness: **${READINESS_RESULT:-unknown}**"
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
-            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none})"
+            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none}; target ${TASK_TARGET_BRANCH:-unknown})"
+            echo "- Task reservation: **${RESERVATION_ACQUIRED:-false}** (${RESERVATION_REASON:-not acquired})"
+            if [[ "${RESERVATION_ACQUIRED:-false}" == "true" ]]; then
+              echo "- Reserved provider: **${RESERVATION_PROVIDER:-unknown}**; expires **${RESERVATION_EXPIRES_AT:-unknown} UTC**"
+            fi
             if [[ "${TASK_READY:-false}" != "true" ]]; then
               echo "- Provider calls skipped before inference: ${TASK_REASON:-canonical queue eligibility was not confirmed}."
             fi
@@ -379,3 +573,54 @@ jobs:
             echo
             echo "[Open the full workflow run](${RUN_URL})"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Release the exact task reservation (or let its TTL recover on failure)
+        if: always() && needs.provider-cooldowns.outputs.reservation_acquired == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          RESERVATION_COMMENT_ID: ${{ needs.provider-cooldowns.outputs.reservation_comment_id }}
+          RESERVATION_TASK_ID: ${{ needs.provider-cooldowns.outputs.reservation_task_id }}
+          RESERVATION_FINGERPRINT: ${{ needs.provider-cooldowns.outputs.reservation_fingerprint }}
+        with:
+          script: |
+            const commentId = Number(process.env.RESERVATION_COMMENT_ID || 0);
+            if (!Number.isSafeInteger(commentId) || commentId < 1) {
+              throw new Error('Reservation comment ID is missing; TTL expiry remains the recovery path.');
+            }
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+            const marker = /<!-- BOONTA_TASK_RESERVATION: ([A-Za-z0-9+/=]+) -->/;
+            const match = (comment.body || '').match(marker);
+            if (!match) throw new Error('Reservation marker is absent; refusing to release an unrelated comment.');
+            const claim = JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'));
+            if (
+              String(claim.run_id) !== String(context.runId) ||
+              Number(claim.run_attempt) !== Number(context.runAttempt || 1) ||
+              claim.task_id !== process.env.RESERVATION_TASK_ID ||
+              claim.fingerprint !== process.env.RESERVATION_FINGERPRINT
+            ) {
+              throw new Error('Reservation ownership mismatch; refusing to release another run/task lease.');
+            }
+            const released = {
+              ...claim,
+              released_at: new Date().toISOString(),
+              release_reason: 'cycle-summary completed'
+            };
+            const encoded = Buffer.from(JSON.stringify(released), 'utf8').toString('base64');
+            const body = (comment.body || '').replace(
+              match[0],
+              '<!-- BOONTA_TASK_RESERVATION_RELEASED: ' + encoded + ' -->'
+            );
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId,
+              body
+            });
+            await core.summary
+              .addHeading('Autonomous task reservation released')
+              .addRaw('Released the exact lease for task ' + claim.task_id + ' and run ' + claim.run_id + '.')
+              .write();
