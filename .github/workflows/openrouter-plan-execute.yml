@@ -268,7 +268,7 @@ jobs:
 
           During Phase 1 do not begin new gameplay features or visible-Dolphin three-lap acceptance. After Phase 1 is complete, review/reuse the existing rival-AI chain #317 → #318 → #319 in order; do not recreate it. PR #274 is not an automatic next step; revisit it only if a concrete route-runtime dependency is demonstrated. Then follow #226's race-progression/integration target.
 
-                    The pinned GitHub MCP server exposes only these exact tool names in this workflow:
+          The pinned GitHub MCP server exposes only these exact tool names in this workflow:
           - `github_get_file_contents`
           - `github_search_issues`
           - `github_search_pull_requests`
