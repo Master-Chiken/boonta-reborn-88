@@ -16,6 +16,9 @@ on:
       - ".github/commands/gemini-autonomous-loop.toml"
       - ".github/workflows/branch-automation-selftest.yml"
       - "tools/check_ai_free_safety.py"
+      - "GEMINI.md"
+      - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
+      - "tools/check_autonomous_provider_handoff.py"
   workflow_dispatch:
 
 permissions:
@@ -114,16 +117,18 @@ jobs:
               "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),
               "OpenRouter checks UTC free-model quota before minting or inference": "free_model_daily_requests.remaining" in openrouter and "outputs.quota_available == 'true'" in openrouter and "model inference is blocked before any provider request" in openrouter,
               "OpenRouter zero daily quota activates the same-day cooldown": "outputs.quota_available == 'false'" in openrouter and "BOONTA_OPENROUTER_FAILURE_COOLDOWN" in openrouter,
-              "Autonomous loop runs every six hours without chat input": "cron: '17 */6 * * *'" in autonomous_loop and "Do not ask for a new \"continue\" message" in autonomous_loop,
+              "Autonomous loop runs every six hours without chat input": "cron: '17 */6 * * *'" in autonomous_loop and "without asking for another continue message" in autonomous_loop,
               "Owner merge of relevant main automation/ledger changes starts a continuation cycle": "  push:\n    branches:\n      - main\n    paths:" in autonomous_loop and all(path in autonomous_loop for path in (".github/workflows/boonta-autonomous-loop.yml", ".github/workflows/boonta-autonomous-readiness.yml", ".github/workflows/gemini-plan-execute.yml", ".github/workflows/openrouter-plan-execute.yml", ".github/workflows/groq-plan-execute.yml", "docs/automation/task-ledger.json")),
               "Push and manual continuation remain owner-only": "github.actor == github.repository_owner" in autonomous_loop and "github.event_name == 'push'" in autonomous_loop,
               "OpenRouter and Groq Free fallbacks permit the bounded main-push event": '"${CALLER_EVENT:-}" != "push"' in openrouter and '"${CALLER_EVENT:-}" != "push"' in groq,
               "Autonomous loop serializes all writers": "group: boonta-autonomous-loop" in autonomous_loop and "cancel-in-progress: false" in autonomous_loop,
+              "Provider fallback advances only on a later cycle after pre-existing cooldown": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.openrouter-fallback.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.autonomous-cycle.result == 'failure'" not in autonomous_loop and "needs.openrouter-fallback.result == 'failure'" not in autonomous_loop,
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
               "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"' in groq,
-              "Groq invocation has a 120-second hard stop": "timeout --signal=TERM --kill-after=5s 120s" in groq and "invocation_status=${PIPESTATUS[0]}" in groq,
+              "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
+              "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
-              "Groq prompt explicitly stops on provider quota errors": "If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
+              "Groq prompt explicitly stops on provider quota errors": "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
               "branch intake defaults to one draft PR": 'default: "1"' in intake_header and "'1'" in intake.split("MAX_PRS:", 1)[1].split("\n", 1)[0],
