@@ -224,10 +224,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c"
       ],
-      "next_action": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 1bdfa937eff6caef311d8de871c64144de60135c documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the Judge-Fini-to-Hang-Results call edge UNKNOWN until the exact 0x0045E200/0x0045DD80/0x0045A040 call chain and Hang state write are proven within one executable/analysis database. No PC-to-GameCube/Wii parity is inferred.",
+      "next_action": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 4dff19dd751765a9a3d89c0f569e6969a398e280 documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the Judge-Fini-to-Hang-Results call edge UNKNOWN until the exact 0x0045E200/0x0045DD80/0x0045A040 call chain and Hang state write are proven within one executable/analysis database. No PC-to-GameCube/Wii parity is inferred.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
-      "updated_at": "2026-11-05"
+      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
+      "updated_at": "2026-11-07"
     },
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
@@ -568,9 +568,9 @@
         "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457410.c"
       ],
       "next_action": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call chain. Exact caller/xref evidence around 0x0045E200, 0x0045DD80, 0x0045A040 and the Hang state-5 write remains required; keep the edge UNKNOWN. Do not infer GameCube/Wii parity.",
-      "updated_at": "2026-11-05",
+      "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c"
+      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280"
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -673,8 +673,8 @@
       ],
       "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "03ad8006ce05c335cbcaf01b420e74033bec68c4",
-      "updated_at": "2026-11-05"
+      "head_sha": "e214d06414d4bdc62c6671b591ec7e9764775bb4",
+      "updated_at": "2026-11-07"
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -702,9 +702,9 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/6ee273b5071d8f7560e7b447124194d762f2dab1"
       ],
       "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
-      "updated_at": "2026-11-05",
+      "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62"
+      "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59"
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
