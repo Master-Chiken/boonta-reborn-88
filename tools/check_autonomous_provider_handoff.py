@@ -15,6 +15,7 @@ FILES = {
     "gemini_prompt": ROOT / ".github/commands/gemini-autonomous-loop.toml",
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
+    "report_helper": ROOT / "tools/validate_autonomous_cycle_report.js",
 }
 
 
@@ -31,6 +32,7 @@ groq = read("groq")
 loop = read("loop")
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
+report_helper = read("report_helper")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
@@ -69,7 +71,7 @@ groq_gates = (
     "needs.autonomous-cycle.result == 'skipped'",
     "needs.provider-cooldowns.outputs.gemini_active == 'true'",
     "needs.openrouter-fallback.result == 'skipped'",
-    "needs.provider-cooldowns.outputs.openrouter_active == 'true'",
+    "(needs.readiness.outputs.openrouter_ready != 'true' || needs.provider-cooldowns.outputs.openrouter_active == 'true')",
     "needs.provider-cooldowns.outputs.groq_active != 'true'",
     "needs.openrouter-fallback.outputs.invocation_outcome != 'success'",
 )
@@ -116,9 +118,20 @@ for label, workflow, validator_title, sync_title, failure_title in task_backoff_
     if not (0 <= validator_position < sync_position < failure_position):
         errors.append(f"{label} task backoff must follow report validation and precede provider failure cooldown")
     validator_block = workflow[validator_position:sync_position] if validator_position >= 0 and sync_position > validator_position else ""
-    for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')"):
+    for required in (
+        "tools/validate_autonomous_cycle_report.js",
+        "EXPECTED_TASK_ID:",
+        "EXPECTED_TASK_TARGET_BRANCH:",
+    ):
         if required not in validator_block:
-            errors.append(f"{label} BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
+            errors.append(f"{label} must call the shared task-bound report validator: {required!r}")
+for required in (
+    "core.setOutput('blocked_fingerprint'",
+    "core.setOutput('cycle_status', 'blocked')",
+    "require('crypto')",
+):
+    if required not in report_helper:
+        errors.append(f"Shared report validator is missing BLOCKED fingerprint behavior: {required!r}")
     sync_block = workflow[sync_position:failure_position] if sync_position >= 0 and failure_position > sync_position else ""
     for required in (
         "steps.validate_report.outcome == 'success'",
@@ -393,7 +406,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
-    "permissions:\n      contents: read\n      issues: read",
+    "permissions:\n      contents: read\n      issues: write",
     "path: 'docs/automation/task-ledger-summary.json'",
     "ledgerSummary.schema_version !== 1",
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
@@ -403,8 +416,19 @@ for required in (
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",
     "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "['main', 'dev'].includes(task.target_branch)",
     "!taskBlockedActive",
     "core.setOutput('task_ready', String(taskReady))",
+    "reservationMarker",
+    "leaseSince",
+    "Date.now() + 60 * 60 * 1000",
+    "core.setOutput('reservation_acquired', String(reservationAcquired))",
+    "needs.provider-cooldowns.outputs.reservation_acquired == 'true'",
+    "needs.provider-cooldowns.outputs.provider_candidate == 'gemini'",
+    "needs.provider-cooldowns.outputs.provider_candidate == 'openrouter'",
+    "needs.provider-cooldowns.outputs.provider_candidate == 'groq'",
+    "Release the exact task reservation",
+    "RESERVATION_FINGERPRINT",
 ):
     if required not in loop:
         errors.append(f"Task eligibility preflight is missing {required!r}")
@@ -435,19 +459,36 @@ else:
         if required not in preflight_script:
             errors.append(f"Task-blocked preflight derivation is missing {required!r}")
 
-# Cycle-fresh reports may cite only PRs created or advanced after the snapshot.
+# Provider snapshots remain open-only; the shared helper enforces exact task,
+# same-repository PR identity, freshness, target branch and required exact-head CI.
 for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
     for required in (
         "state: 'open'",
         "core.setOutput('snapshot_at', snapshotAt)",
         "PRE_CYCLE_PR_SNAPSHOT_AT",
-        "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt",
-        "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]",
+        "EXPECTED_TASK_ID:",
+        "EXPECTED_TASK_TARGET_BRANCH:",
+        "tools/validate_autonomous_cycle_report.js",
+        "checks: read",
+        "evidence_pr_number: ${{ steps.validate_report.outputs.evidence_pr_number }}",
     ):
         if required not in workflow:
-            errors.append(f"{label} cycle-fresh PR gate is missing {required!r}")
+            errors.append(f"{label} task-bound report validation is missing {required!r}")
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
+
+for required in (
+    "BOONTA_CYCLE_TASK_ID",
+    "BOONTA_TASK_ID: ' + expectedTaskId",
+    "pr.base.ref !== expectedBase",
+    "pr.head.sha !== exactHead",
+    "github.rest.checks.listForRef",
+    "const REQUIRED_CHECKS",
+    "status === 'completed' && check.conclusion === 'success'",
+    "maxPolls = 32",
+):
+    if required not in report_helper:
+        errors.append(f"Shared task/PR/exact-head CI acceptance is missing {required!r}")
 
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 settings_marker = "          settings: |-\n"
