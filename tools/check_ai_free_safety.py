@@ -1261,7 +1261,7 @@ for required in (
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
     "Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier",
     "Keep newly retrieved text below 1,500 tokens",
-    "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
+    "If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
