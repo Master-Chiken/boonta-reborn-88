@@ -469,7 +469,7 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
         "EXPECTED_TASK_ID:",
         "EXPECTED_TASK_TARGET_BRANCH:",
         "tools/validate_autonomous_cycle_report.js",
-        "checks: read",
+        ("checks: 'read'" if label == "Gemini" else "checks: read"),
         "evidence_pr_number: ${{ steps.validate_report.outputs.evidence_pr_number }}",
     ):
         if required not in workflow:
