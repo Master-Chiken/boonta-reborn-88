@@ -252,7 +252,7 @@ jobs:
 
           EXECUTION
           - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
-          - Only these GitHub tools are exposed: github_get_file_contents, github_pull_request_read, github_create_branch, github_push_files, github_create_pull_request and github_add_issue_comment. Do not invent tools or call broad search/list operations.
+          - Only these GitHub tools are exposed: github_get_file_contents, github_pull_request_read, github_create_branch, github_push_files, github_create_pull_request and github_add_issue_comment. Do not invent tools or call broad search/list operations. The alias github_get_pull_request does not exist; use github_pull_request_read.
           - No shell is available. Use one branch from the exact current SHA (main for research/docs, dev for gameplay), one logical push_files operation and one reviewable PR. Never write to main/dev, merge, auto-merge, force-push, delete branches or weaken checks.
           - Verify the exact PR head and its CI evidence. Do not claim tests ran without exact-head results. If blocked, post one concise evidence-based comment to #226 with one next action.
           - Limit the task to three tool/action steps. Do not reread files or repeat a failed tool.
