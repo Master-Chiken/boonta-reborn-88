@@ -17,7 +17,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #333 was merged to main at 928a282daae0dd557861e15471826ea4025bf428. It adds one read-only preflight on issue #226 for the three current UTC provider cooldown markers before launching any provider workflow; Gemini, OpenRouter and Groq retain their independent in-workflow cooldown/quota/Free-only gates. The three exact-head checks passed: workflow…"
+      "next_action_excerpt": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180…"
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
