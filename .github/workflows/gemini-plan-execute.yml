@@ -225,12 +225,10 @@ jobs:
           settings: |-
             {
               "model": {
-                "maxSessionTurns": 10
+                "maxSessionTurns": 5
               },
               "telemetry": {
-                "enabled": true,
-                "target": "local",
-                "outfile": ".gemini/telemetry.log"
+                "enabled": false
               },
               "mcpServers": {
                 "github": {
@@ -245,21 +243,11 @@ jobs:
                   ],
                   "includeTools": [
                     "add_issue_comment",
-                    "issue_read",
-                    "search_issues",
                     "create_pull_request",
                     "pull_request_read",
-                    "search_pull_requests",
-                    "list_branches",
                     "create_branch",
-                    "get_commit",
                     "get_file_contents",
-                    "list_workflow_runs",
-                    "list_workflow_jobs",
-                    "get_workflow_run",
-                    "get_job_logs",
-                    "push_files",
-                    "search_code"
+                    "push_files"
                   ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
