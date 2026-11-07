@@ -112,20 +112,18 @@ for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
     exposed = sorted(forbidden.intersection(toolset))
     if exposed:
         errors.append(f"{label} MCP allow-list exposes unnecessary broad tools: " + ", ".join(exposed))
-for required_tool in ("get_file_contents", "search_pull_requests", "pull_request_read", "create_branch", "push_files", "create_pull_request", "add_issue_comment", "get_commit"):
-    if required_tool not in groq_tools:
-        errors.append(f"Groq MCP allow-list is missing required tool: {required_tool}")
+required_groq_tools = {
+    "get_file_contents", "pull_request_read", "create_branch",
+    "push_files", "create_pull_request", "add_issue_comment",
+}
+if groq_tools != required_groq_tools:
+    errors.append("Groq MCP allow-list must remain the reviewed six-tool minimal set")
 if openrouter_tools != {
     "get_file_contents", "search_issues", "search_pull_requests", "pull_request_read",
     "create_branch", "push_files", "create_pull_request", "add_issue_comment", "get_commit",
     "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs", "search_code",
 }:
     errors.append("OpenRouter MCP allow-list must remain at the reviewed minimal tool set")
-if groq_tools != {
-    "get_file_contents", "search_pull_requests", "pull_request_read", "create_branch",
-    "push_files", "create_pull_request", "add_issue_comment", "get_commit",
-}:
-    errors.append("Groq MCP allow-list must remain at the reviewed minimal tool set")
 
 # Provider prompts must call the actual pinned MCP tool names, not guessed aliases.
 for label, prompt in (
