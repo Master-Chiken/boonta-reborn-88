@@ -95,6 +95,45 @@ gamecube_build = read(".github/workflows/gamecube-demo-build.yml")
 wii64_tests = read(".github/workflows/wii64-tool-tests.yml")
 groq_fallback = read(".github/workflows/groq-plan-execute.yml")
 
+# Every provider invocation and report validator must be visible to the parent
+# workflow so the final summary never confuses a cooldown skip with progress.
+provider_outputs = (
+    ("Gemini", execute, "plan-execute", "run_gemini"),
+    ("OpenRouter", read(".github/workflows/openrouter-plan-execute.yml"), "openrouter-plan-execute", "run_opencode"),
+    ("Groq", groq_fallback, "groq-plan-execute", "run_opencode"),
+)
+for provider, workflow, job_name, invocation_step in provider_outputs:
+    for required in (
+        "report_outcome:",
+        "cycle_status:",
+        f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
+        f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
+        "core.setOutput('cycle_status', 'progress')",
+        "core.setOutput('cycle_status', 'blocked')",
+    ):
+        if required not in workflow:
+            errors.append(f"{provider} workflow must expose validated invocation/report status: {required!r}")
+
+summary_marker = "  cycle-summary:"
+if summary_marker not in autonomous:
+    errors.append("Autonomous loop must always publish a final provider-outcome summary")
+else:
+    summary_job = autonomous.split(summary_marker, 1)[1]
+    for required in (
+        "needs: [readiness, autonomous-cycle, openrouter-fallback, groq-fallback]",
+        "if: always()",
+        "permissions: {}",
+        "GEMINI_INVOCATION: ${{ needs.autonomous-cycle.outputs.invocation_outcome }}",
+        "GEMINI_REPORT: ${{ needs.autonomous-cycle.outputs.report_outcome }}",
+        "OPENROUTER_INVOCATION: ${{ needs.openrouter-fallback.outputs.invocation_outcome }}",
+        "GROQ_INVOCATION: ${{ needs.groq-fallback.outputs.invocation_outcome }}",
+        "No provider completed a model invocation. No autonomous project progress is confirmed by this run.",
+        "a valid BLOCKED report is not progress",
+        "Budget remains €0.",
+    ):
+        if required not in summary_job:
+            errors.append(f"Autonomous final provider summary is missing {required!r}")
+
 # The approval/write path must be closed unless the owner deliberately enables it.
 if "needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED != 'true'" not in dispatch:
     errors.append("Missing locked/write-disabled approval gate in gemini-dispatch.yml")
