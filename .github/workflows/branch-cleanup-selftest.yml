@@ -94,7 +94,7 @@ jobs:
               "concurrent retirements are serialized": "cancel-in-progress: false" in workflow and "concurrency:" in workflow,
               "new candidate SHA is pinned exactly": cases.get("agent/boonta-chatgpt/activation-ledger-evidence-20261107") == "05b4fac74701092c7b9c9dcbd161054eea6754b3",
               "all rival-AI branch heads are pinned exactly": cases.get("feat/deterministic-rival-ai-20261106") == "216e4a8bdef8941dadc7a604a24021ad54f09db8" and cases.get("feat/rival-curvature-pace-20261106") == "b3d215df243a11d3e0022ecf562ab2ba1de96da9" and cases.get("feat/rival-track-line-20261106") == "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
-              "new candidate retirement requires archive or main ancestry": "refs/remotes/origin/main" in workflow and "Branch tip is neither in the protected archive nor already integrated into main." in workflow,
+              "new candidate retirement requires pinned archive or main ancestry": "refs/remotes/origin/main" in workflow and "Branch tip is not reachable from a verified archive or main." in workflow and "ARCHIVE_CHECKPOINT" in workflow,
               "never deletes via an unguarded REST DELETE": "gh api --method DELETE" not in workflow,
           }
 
