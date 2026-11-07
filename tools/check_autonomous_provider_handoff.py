@@ -217,6 +217,25 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     if config.get("agent", {}).get("build", {}).get("steps") != 3:
         errors.append(f"{label} must be limited to three OpenCode build steps")
 
+# OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
+openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
+reserve_match = re.search(r"(?m)^\s*MIN_REQUESTS_PER_CYCLE=(\d+)\s*$", openrouter)
+if not reserve_match:
+    errors.append("OpenRouter must declare a daily request reserve before model inference")
+elif int(reserve_match.group(1)) != openrouter_steps:
+    errors.append(
+        f"OpenRouter daily request reserve ({reserve_match.group(1)}) must match its "
+        f"configured maximum build steps ({openrouter_steps})"
+    )
+for required in (
+    "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
+    "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "QUOTA_REQUIRED: ${{ steps.openrouter_auth_check.outputs.quota_required }}",
+    "below the ' + quotaRequired + '-request reserve",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
+
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
