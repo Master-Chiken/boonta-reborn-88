@@ -743,9 +743,10 @@
         "Scanner reports exact CompWolf record offsets, first four decoded bytes as a type tag, decoded-size sum, compressed-stream bytes and full ROM spans",
         "Scanner validates header lengths and stream terminators and surfaces undefined initial-history reads without silently inventing dictionary bytes",
         "Synthetic tests cover literals, overlapping back-references, initial-window dependencies, malformed lengths, truncation and z64/v64/n64 byte orders",
-        "Owner's local independent Python decoder reproduces 92 valid records, zero decode-length failures, tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded-size sum 11,975,612, compressed-stream sum 5,869,155 and header-inclusive span 5,870,259 bytes; the exact repository Perl scanner is also run once locally to verify its rejected-candidate and undefined-initial-history diagnostics before T1 is marked complete",
+        "Owner's independent local Python decoder reproduces 92 valid records, zero decode-length failures, tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded-size sum 11,975,612, compressed-stream sum 5,869,155 and header-inclusive span 5,870,259 bytes; the exact repository Perl scanner was also run locally and reported 92 validated, 0 rejected and 0 undefined initial-history reads on 2026-11-07",
         "No ROM, extracted asset or decoded payload is committed, uploaded to CI or sent to hosted model providers",
-        "T2 remains gated until T1 local metrics reconcile and a lawful format/conversion path for one Pupp record is established"
+        "T2 candidate check: owner-local sorted Pupp index 10 reports 68,284 decoded bytes, matching the public catalogue size associated with N64 model ID 0087 (Anakin); treat this as a candidate only until full structural parse confirms identity",
+        "Test the pinned MIT swe1r-assets parser against the owner-local decoded Pupp candidate; record parse/runtime type and aggregate structural counts only. Audit N64 compatibility and transitive dependency licenses before any integration or GX conversion"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
@@ -758,11 +759,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710698528",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6710686927",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334#issuecomment-6710745718",
-        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710746026"
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710746026",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710785487",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710785909"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action": "Exact local reproduction of tools/n64_comp_inventory.pl from PR #334 completed on 2026-11-07: perl -c syntax OK; 92 validated CompWolf records; 0 rejected candidates; 0 undefined initial-history reads; decoded-size sum 11,975,612 bytes; compressed stream bytes including terminators 5,869,155; ROM span including 92 × 12-byte headers 5,870,259; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent local Python decoding agrees. T1 acceptance evidence is complete, but retain status in_review because the PR is still open and the repository policy requires a merged PR for completed. T2 targeting refinement: the owner tested sorted Pupp indices 8 and 9 (53,436 and 66,976 bytes); because the sorted helper starts at the smallest size, index 10 is the 68,284-byte inventory candidate corresponding to the public Anakin ID 0087 catalogue size. Next local check is python3 ~/racer-work/inspect_block.py Pupp 10 and verify the exact decoded size before identity assignment. Then test the pinned MIT swe1r-assets parser locally against that owner-held decoded model; do not assume N64 compatibility, publish/commit ROM-derived data, or begin GX conversion until parse structure and dependency/provenance audit pass.",
+      "next_action": "T1 exact local acceptance evidence is complete: exact PR #334 Perl scanner run reports 92 validated / 0 rejected / 0 undefined initial-history reads; decoded size 11,975,612 bytes; stream 5,869,155 bytes; header-inclusive span 5,870,259 bytes; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent Python decoder agrees. Keep task status in_review until PR #334 is merged. T2 candidate: owner ran inspect_block.py Pupp 10 and confirmed 68,284 decoded bytes, matching the public catalogue size for N64 model ID 0087 (Anakin); identity remains tentative pending a full parser result. Next, run an owner-local probe using pinned MIT swe1r-assets revision 922ef535f6598a1330ff93d6b07258956f990b34: deserialize the decoded Pupp bytes directly as big-endian Model and return only parse status, runtime type and aggregate counts (nodes, animations, meshes, vertices, triangles, material/texture references). The MIT library README documents PC out_modelblock.bin inputs, not N64 raw blocks, so compatibility must be tested rather than assumed. Do not rely on its currently incomplete Compress() method, do not re-compress or round-trip, do not publish any ROM-derived payloads/offsets/assets, and audit transitive dependency licenses before considering integration. To build the local probe safely, first inspect the owner's inspect_block.py implementation to identify the decoder return value; do not guess or require a new asset export.",
       "updated_at": "2026-11-07"
     }
   ]
