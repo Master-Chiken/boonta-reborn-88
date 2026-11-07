@@ -112,6 +112,26 @@ cases = [
         "expected_blocked": False,
         "reason_contains": "incomplete",
     },
+    {
+        "name": "three same-day provider cooldowns are detected",
+        "tasks": [valid_active],
+        "marker_day_offset": None,
+        "provider_marker_offsets": {"gemini": 0, "openrouter": 0, "groq": 0},
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-TEST-ACTIVE",
+        "expected_blocked": False,
+        "expected_provider_cooldowns": {"gemini": True, "openrouter": True, "groq": True},
+    },
+    {
+        "name": "previous-day provider cooldowns expire after UTC reset",
+        "tasks": [valid_active],
+        "marker_day_offset": None,
+        "provider_marker_offsets": {"gemini": -1, "openrouter": -1, "groq": -1},
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-TEST-ACTIVE",
+        "expected_blocked": False,
+        "expected_provider_cooldowns": {"gemini": False, "openrouter": False, "groq": False},
+    },
 ]
 
 node_program = f"""
@@ -130,6 +150,21 @@ async function runCase(testCase) {{
     comments.push({{
       user: {{ login: "github-actions[bot]" }},
       body: "<!-- BOONTA_TASK_BLOCKED_COOLDOWN: " + markerDate + " abcdef0123456789 -->"
+    }});
+  }}
+  const providerPrefixes = {{
+    gemini: "BOONTA_GEMINI_FAILURE_COOLDOWN: ",
+    openrouter: "BOONTA_OPENROUTER_FAILURE_COOLDOWN: ",
+    groq: "BOONTA_GROQ_FAILURE_COOLDOWN: "
+  }};
+  for (const [provider, dayOffset] of Object.entries(testCase.provider_marker_offsets || {{}})) {{
+    const prefix = providerPrefixes[provider];
+    if (!prefix) throw new Error("unknown provider fixture: " + provider);
+    const markerDate = new Date(Date.now() + dayOffset * 86400000)
+      .toISOString().slice(0, 10);
+    comments.push({{
+      user: {{ login: "github-actions[bot]" }},
+      body: "<!-- " + prefix + markerDate + " -->"
     }});
   }}
   const ledger = {{
@@ -189,6 +224,11 @@ async function runCase(testCase) {{
     }}
     if (testCase.reason_contains && !String(outputs.task_reason).includes(testCase.reason_contains)) {{
       throw new Error(testCase.name + ": reason did not contain " + testCase.reason_contains);
+    }}
+    for (const [provider, expected] of Object.entries(testCase.expected_provider_cooldowns || {{}})) {{
+      if (outputs[provider + "_active"] !== String(expected)) {{
+        throw new Error(testCase.name + ": expected " + provider + "_active=" + expected + ", got " + outputs[provider + "_active"]);
+      }}
     }}
     process.stdout.write("PASS: " + testCase.name + "\\n");
   }}
