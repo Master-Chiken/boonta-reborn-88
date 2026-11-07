@@ -265,53 +265,6 @@ jobs:
             }
           prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
 
-      - name: Record same-day Gemini cooldown after an autonomous model failure
-        if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'
-        continue-on-error: true
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
-        env:
-          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-        with:
-          script: |
-            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
-            const todayUtc = new Date().toISOString().slice(0, 10);
-            const marker = '<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
-            const body = [
-              marker,
-              '## Gemini daily failure cooldown',
-              '',
-              'The autonomous Gemini CLI invocation failed on UTC date ' + todayUtc + '.',
-              'Further autonomous cycles on this UTC date will skip another Gemini request and proceed to the separately gated OpenRouter Free fallback.',
-              'Gemini is eligible for a fresh attempt on the next UTC date. This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
-              '',
-              '[Inspect the failed Gemini invocation](' + process.env.RUN_URL + ')',
-            ].join('\\n');
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              per_page: 100,
-            });
-            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:'));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-              core.info('Updated the single persistent Gemini cooldown marker on issue #' + issueNumber + '.');
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body,
-              });
-              core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
-            }
-
       - name: Validate autonomous cycle report contract
         id: validate_report
         if: inputs.autonomous_mode == true && steps.run_gemini.outcome == 'success'
@@ -372,6 +325,52 @@ jobs:
               core.setFailed('Autonomous Gemini invocation returned without a valid PROGRESS or BLOCKED report.');
             }
 
+      - name: Record same-day Gemini cooldown after an autonomous model failure
+        if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              '## Gemini daily failure cooldown',
+              '',
+              'The autonomous Gemini CLI invocation or cycle-report validation failed on UTC date ' + todayUtc + '.',
+              'Further autonomous cycles on this UTC date will skip another Gemini request and proceed to the separately gated OpenRouter Free fallback.',
+              'Gemini is eligible for a fresh attempt on the next UTC date. This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed Gemini invocation](' + process.env.RUN_URL + ')',
+            ].join('\\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent Gemini cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
+            }
       - name: Explain why Gemini was not called
         if: steps.free_tier_guard.outputs.allowed != 'true' && steps.gemini_cooldown.outputs.active != 'true'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
