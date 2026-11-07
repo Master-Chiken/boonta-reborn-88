@@ -217,6 +217,81 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     if config.get("agent", {}).get("build", {}).get("steps") != 3:
         errors.append(f"{label} must be limited to three OpenCode build steps")
 
+# OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
+openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
+reserve_match = re.search(r"(?m)^\s*MIN_REQUESTS_PER_CYCLE=(\d+)\s*$", openrouter)
+if not reserve_match:
+    errors.append("OpenRouter must declare a daily request reserve before model inference")
+elif int(reserve_match.group(1)) != openrouter_steps:
+    errors.append(
+        f"OpenRouter daily request reserve ({reserve_match.group(1)}) must match its "
+        f"configured maximum build steps ({openrouter_steps})"
+    )
+for required in (
+    "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
+    "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "QUOTA_REQUIRED: ${{ steps.openrouter_auth_check.outputs.quota_required }}",
+    "below the ' + quotaRequired + '-request reserve",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
+
+if "this reserve is not a guarantee of cycle completion" not in budget:
+    errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
+if "process-group watchdog stops OpenCode on the first explicit" not in budget:
+    errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
+
+# OpenRouter must stop on the first terminal provider refusal, not consume
+# the remainder of its 180-second window in internal retries.
+for required in (
+    "terminal_provider_error = re.compile(",
+    "HTTP\\s*429",
+    "tokens per minute\\s*\\(TPM\\)",
+    "HTTP\\s*401",
+    "free-models-per-day",
+    "rate[_ ]limit exceeded",
+    "tokens per minute",
+    "request too large for model",
+    "missing authentication header",
+    "terminal_provider_error.search(line)",
+    "start_new_session=True",
+    "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s"',
+    "daily cooldown will be recorded",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter first-refusal watchdog is missing required behavior: {required!r}")
+
+
+# Exercise the exact regex fragments embedded in the workflow against provider
+# refusal examples and ordinary output so the guard cannot silently become inert.
+regex_start = openrouter.find("terminal_provider_error = re.compile(")
+regex_end = openrouter.find("re.IGNORECASE,", regex_start)
+if regex_start < 0 or regex_end < 0:
+    errors.append("OpenRouter watchdog regex must be extractable for behavior tests")
+else:
+    regex_block = openrouter[regex_start:regex_end]
+    regex_fragments = re.findall(r'r"([^"]*)"', regex_block)
+    if len(regex_fragments) != 4:
+        errors.append("OpenRouter watchdog must retain exactly four regex fragments")
+    else:
+        try:
+            watchdog = re.compile("".join(regex_fragments), re.IGNORECASE)
+            for sample in (
+                "Rate limit exceeded: free-models-per-day",
+                "Request too large for model openrouter/free on tokens per minute (TPM)",
+                "HTTP 429 Too Many Requests",
+                "HTTP 401 Unauthorized",
+                "Missing Authentication header",
+            ):
+                if not watchdog.search(sample):
+                    errors.append(f"OpenRouter watchdog regex failed to detect a provider refusal: {sample!r}")
+            if watchdog.search("The Boonta racing line is wider at the next turn."):
+                errors.append("OpenRouter watchdog regex must not match ordinary game-development output")
+        except re.error as exc:
+            errors.append(f"OpenRouter watchdog regex must compile: {exc}")
+
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
@@ -274,7 +349,15 @@ for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
     "free-models-per-day",
+    "free-models-per-minute",
+    "HTTP\\s*429",
+    "HTTP\\s*401",
+    "too many requests",
+    "missing authentication header",
+    "invalid api key",
     "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    "signal.signal(signal.SIGINT, handle_shutdown)",
     "sys.exit(75)",
     "report.flush()",
 ):
@@ -284,7 +367,7 @@ for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
-    (openrouter, "timeout --signal=TERM --kill-after=5s 180s", "OpenRouter must enforce the 180-second invocation timeout"),
+    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "Never enable billing, paid routes", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),
@@ -307,6 +390,84 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     if "Do not reopen, replay or recreate that chain" not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
+
+# A provider request is permitted only when the compact ledger yields one eligible task.
+for required in (
+    "permissions:\n      contents: read\n      issues: read",
+    "path: 'docs/automation/task-ledger-summary.json'",
+    "ledgerSummary.schema_version !== 1",
+    "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
+    "ledgerSummary.policy?.max_active_tasks !== 1",
+    "new Set(taskIds).size !== taskIds.length",
+    "activeTasks.length === 1",
+    "activationTask.status === 'blocked'",
+    "const usableTask = (task) => Boolean(",
+    "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "!taskBlockedActive",
+    "core.setOutput('task_ready', String(taskReady))",
+):
+    if required not in loop:
+        errors.append(f"Task eligibility preflight is missing {required!r}")
+if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
+    errors.append("All three provider routes must require the same eligible-task preflight")
+
+# The blocked-task marker is referenced during selection. It must be computed
+# from today's bot comments before that first reference, not later in the script.
+preflight_start = loop.find("      - name: Read the three persistent UTC cooldown markers")
+preflight_script_start = loop.find("          script: |", preflight_start)
+preflight_script_end = loop.find("\n  autonomous-cycle:", preflight_script_start)
+if preflight_start < 0 or preflight_script_start < 0 or preflight_script_end < 0:
+    errors.append("Task eligibility preflight script could not be isolated for ordering checks")
+else:
+    preflight_script = loop[preflight_script_start:preflight_script_end]
+    declaration = preflight_script.find("const taskBlockedActive =")
+    first_use = preflight_script.find("!taskBlockedActive")
+    marker_date = preflight_script.find("const taskBlockedDate =")
+    if not (0 <= marker_date < declaration < first_use):
+        errors.append("Same-day task-blocked marker must be derived before the first task eligibility reference")
+    if preflight_script.count("const taskBlockedActive =") != 1:
+        errors.append("Task-blocked state must be initialized exactly once in the global preflight")
+    for required in (
+        "const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';",
+        "const taskBlockedActive = taskBlockedDate === todayUtc;",
+        "const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');",
+    ):
+        if required not in preflight_script:
+            errors.append(f"Task-blocked preflight derivation is missing {required!r}")
+
+# Cycle-fresh reports may cite only PRs created or advanced after the snapshot.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "state: 'open'",
+        "core.setOutput('snapshot_at', snapshotAt)",
+        "PRE_CYCLE_PR_SNAPSHOT_AT",
+        "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt",
+        "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} cycle-fresh PR gate is missing {required!r}")
+    if "state: 'all'" in workflow:
+        errors.append(f"{label} must not paginate closed-PR history before inference")
+
+# Gemini Free-tier TPM protection: one model attempt and three session turns.
+settings_marker = "          settings: |-\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in gemini or settings_end_marker not in gemini:
+    errors.append("Gemini explicit bounded settings block is missing")
+else:
+    try:
+        settings_text = gemini.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+        settings = json.loads(settings_text)
+        if settings.get("general", {}).get("maxAttempts") != 1:
+            errors.append("Gemini must use one model attempt per invocation")
+        if settings.get("model", {}).get("maxSessionTurns") != 3:
+            errors.append("Gemini must use a three-turn session ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Gemini bounded settings JSON is invalid: {exc}")
+if "exactly 1 attempt per invocation" not in budget or "maximum 3 session turns" not in budget:
+    errors.append("Shared context budget must document Gemini's one-attempt/three-turn cap")
+if "task-eligibility preflight" not in budget or "one eligible task" not in budget:
+    errors.append("Shared context budget must document the pre-inference task gate")
 
 if errors:
     print("Autonomous provider handoff checks FAILED:")

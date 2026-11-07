@@ -125,7 +125,7 @@ else:
     cooldown_job = autonomous.split("  provider-cooldowns:", 1)[1].split("  autonomous-cycle:", 1)[0]
     for required in (
         "needs: readiness",
-        "permissions:\n      issues: read",
+        "permissions:\n      contents: read\n      issues: read",
         "github.rest.issues.listComments",
         "BOONTA_GEMINI_FAILURE_COOLDOWN:",
         "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
@@ -134,11 +134,21 @@ else:
         "gemini_active:",
         "openrouter_active:",
         "groq_active:",
+        "task_ready:",
+        "task_id:",
+        "task_reason:",
+        "path: 'docs/automation/task-ledger-summary.json'",
+        "ledgerSummary.policy?.max_active_tasks !== 1",
+        "const usableTask = (task) => Boolean(",
+        "!taskBlockedActive",
+        "core.setOutput('task_ready', String(taskReady))",
     ):
         if required not in cooldown_job:
             errors.append(f"Read-only provider cooldown preflight is missing {required!r}")
 if "needs: [readiness, provider-cooldowns]" not in autonomous:
     errors.append("Gemini job must depend on the global provider cooldown preflight")
+if autonomous.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
+    errors.append("All three provider routes must require one eligible ledger task before invocation")
 if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
     errors.append("Gemini job must not start while its UTC cooldown is active")
 if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonomous:
@@ -340,13 +350,18 @@ for required in (
     'No paid model/provider fallback is available',
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
-    'opencode run --model openrouter/openrouter/free --auto',
+    '"opencode", "run", "--model", "openrouter/openrouter/free",',
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s",',
     'npm install --global opencode-ai@1.19.5',
     'name: Verify OpenRouter Free key authentication without inference',
     'https://openrouter.ai/api/v1/key',
     'Authorization: Bearer ${OPENROUTER_API_KEY}',
     "jq -e '.data.is_free_tier == true'",
     "jq -er '.data.free_model_daily_requests.remaining | numbers'",
+    "MIN_REQUESTS_PER_CYCLE=3",
+    "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
+    "Minimum reserve for one bounded OpenCode cycle",
     "quota_available=true",
     "quota_available=false",
     'OPENCODE_AUTH_CONTENT',
@@ -372,7 +387,7 @@ for guarded_step in (
     "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
-    "name: Snapshot open and closed PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
+    "name: Snapshot open PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Validate OpenRouter autonomous cycle report\n        id: validate_report\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
 ):
@@ -399,6 +414,7 @@ for required in (
     "OPENROUTER_COOLDOWN_DATE",
     "steps.openrouter_auth_check.outcome == 'failure'",
     "steps.openrouter_auth_check.outputs.quota_available == 'false'",
+    "below the ' + quotaRequired + '-request reserve",
     "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
     "steps.validate_report.outcome == 'failure'",
     "github.rest.issues.updateComment",
@@ -1102,9 +1118,30 @@ if "gemini_model: 'gemini-3.8-flash'" not in execute:
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
+# Pin the tested Gemini CLI release and cap automatic model/network retries.
+if "gemini_cli_version: '0.67.0'" not in execute:
+    errors.append("Autonomous Gemini CLI must remain pinned to the version verified with retry controls")
+settings_marker = "          settings: |-\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in execute or settings_end_marker not in execute:
+    errors.append("Autonomous Gemini workflow is missing its explicit CLI settings block")
+else:
+    settings_text = execute.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+    try:
+        gemini_settings = json.loads(textwrap.dedent(settings_text))
+        general_settings = gemini_settings.get("general", {})
+        if general_settings.get("maxAttempts") != 1:
+            errors.append("Gemini CLI must make only one model attempt so terminal 503/TPM failures are not repeated")
+        if general_settings.get("retryFetchErrors") is not False:
+            errors.append("Gemini CLI must disable automatic retries for failed fetch requests")
+        if gemini_settings.get("model", {}).get("maxSessionTurns") != 3:
+            errors.append("Gemini CLI must retain the three-turn TPM safety ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Autonomous Gemini CLI settings must be valid JSON: {exc}")
+
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
-if '"maxSessionTurns": 5' not in execute:
-    errors.append("Autonomous Gemini writer must cap its session at five turns to bound Free-tier token use")
+if '"maxSessionTurns": 3' not in execute:
+    errors.append("Autonomous Gemini writer must cap its session at three turns to bound Free-tier token use")
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
     if "run_shell_command" in content:
         errors.append(f"{label} must not expose the restricted shell tool to Gemini")
@@ -1162,15 +1199,17 @@ for required in (
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
 
 # Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
-for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
+for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback), ("Groq fallback", groq_fallback)):
     if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
         errors.append(f"{label} must require the machine-readable PROGRESS status")
     if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
         errors.append(f"{label} must support an explicit BLOCKED report")
     if "BOONTA_CYCLE_EVIDENCE_BASE" not in workflow or "evidenceBaseMatch" not in workflow:
         errors.append(f"{label} must require the declared evidence base")
-    if "id: snapshot_pr_heads" not in workflow or "state: 'all'" not in workflow:
-        errors.append(f"{label} must snapshot existing open and closed PR heads before the model call")
+    if "id: snapshot_pr_heads" not in workflow or "state: 'open'" not in workflow:
+        errors.append(f"{label} must snapshot only currently open PR heads before the model call")
+    if "PRE_CYCLE_PR_SNAPSHOT_AT" not in workflow or "outputs.snapshot_at" not in workflow:
+        errors.append(f"{label} must pass a timestamped pre-cycle PR snapshot to its validator")
     if "github.paginate(github.rest.pulls.list" not in workflow:
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
     if "steps.snapshot_pr_heads.outputs.heads" not in workflow:
@@ -1181,8 +1220,8 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must reject progress PRs whose head comes from a fork")
     if "pr.head.sha !== evidence[2]" not in workflow or "headCommit.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
         errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
-    if "const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2]" not in workflow:
-        errors.append(f"{label} must reject an unchanged PR that existed at cycle start")
+    if "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt" not in workflow or "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]" not in workflow:
+        errors.append(f"{label} must require a PR created after the snapshot or an existing open PR advanced during the cycle")
     if "pr.base.ref !== evidenceBaseMatch[1]" not in workflow:
         errors.append(f"{label} must check the PR's actual base against its reported main/dev target")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
@@ -1191,8 +1230,13 @@ if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDE
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
 if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
     errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
-if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
-    errors.append("OpenRouter fallback must persist its final report for contract validation")
+for required in (
+    '"$RUNNER_TEMP/opencode-cycle-report.txt"',
+    'with open(report_path, "w", encoding="utf-8") as report:',
+    'report.flush()',
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter fallback must persist its final report for contract validation: {required!r}")
 if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
     errors.append("OpenRouter fallback must validate the report it just produced")
 if "exact-40-character-head-SHA" not in autonomous_prompt:

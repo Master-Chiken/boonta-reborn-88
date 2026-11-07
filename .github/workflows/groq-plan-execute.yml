@@ -159,7 +159,7 @@ jobs:
           npm install --global opencode-ai@1.19.5
           opencode --version
 
-      - name: Snapshot open and closed PR heads before Groq cycle
+      - name: Snapshot open PR heads before Groq cycle
         if: steps.free_tier_guard.outputs.allowed == 'true'
         id: snapshot_pr_heads
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
@@ -168,12 +168,14 @@ jobs:
             const pulls = await github.paginate(github.rest.pulls.list, {
               owner: 'Master-Chiken',
               repo: 'boonta-reborn-88',
-              state: 'all',
+              state: 'open',
               per_page: 100
             });
+            const snapshotAt = new Date().toISOString();
             const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
             core.setOutput('heads', JSON.stringify(baseline));
-            core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
+            core.setOutput('snapshot_at', snapshotAt);
+            core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
 
       - name: Run OpenCode through the Groq Free route
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success'
@@ -302,8 +304,11 @@ jobs:
               "--auto", "--dir", workspace, prompt,
           ]
           terminal_quota_error = re.compile(
-              r"(tokens per minute\s*\(TPM\)|free-models-per-day|"
-              r"resource[_ ]exhausted|rate limit exceeded)",
+              r"(tokens per minute\s*\(TPM\)|free-models-per-day|free-models-per-minute|"
+              r"resource[_ ]exhausted|rate[_ ]limit exceeded|too many requests|"
+              r"HTTP\s*429|status(?:\s*code)?\s*[:=]?\s*429|error code\s*[:=]?\s*429|"
+              r"HTTP\s*401|status(?:\s*code)?\s*[:=]?\s*401|error code\s*[:=]?\s*401|"
+              r"missing authentication header|unauthorized|invalid api key|authentication failed)",
               re.IGNORECASE,
           )
           process = subprocess.Popen(
@@ -331,6 +336,15 @@ jobs:
                       pass
                   process.wait()
 
+          def handle_shutdown(signum, _frame):
+              stop_process_group()
+              raise SystemExit(128 + signum)
+
+          # Match OpenRouter: runner cancellation must not orphan the timeout,
+          # OpenCode process, or any descendant in the provider process group.
+          signal.signal(signal.SIGTERM, handle_shutdown)
+          signal.signal(signal.SIGINT, handle_shutdown)
+
           with open(report_path, "w", encoding="utf-8") as report:
               assert process.stdout is not None
               for line in process.stdout:
@@ -340,7 +354,7 @@ jobs:
                   report.flush()
                   if terminal_quota_error.search(line):
                       print(
-                          "Groq TPM/Free-quota refusal detected; terminating OpenCode "
+                          "Groq provider quota/auth refusal detected; terminating OpenCode "
                           "immediately after the first refusal. Daily cooldown will be recorded.",
                           flush=True,
                       )
@@ -364,6 +378,7 @@ jobs:
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
           PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
+          PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
         with:
           script: |
             const fs = require('fs');
@@ -380,11 +395,17 @@ jobs:
                 return;
               }
               const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
+              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
+              if (!Number.isFinite(snapshotAt)) {
+                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
+                return;
+              }
               const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
               const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
               const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
-              const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2];
-              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || unchangedAtStart) {
+              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
+              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
                 core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
                 return;
               }
