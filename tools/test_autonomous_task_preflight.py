@@ -176,6 +176,27 @@ cases = [
         "reason_contains": "task lease is held by run"
     },
     {
+        "name": "same workflow run retry reclaims its prior attempt lease",
+        "tasks": [valid_active],
+        "marker_day_offset": None,
+        "run_id": 1200,
+        "run_attempt": 2,
+        "lease_payload": {
+            "run_id": "1200",
+            "run_attempt": 1,
+            "task_id": "AUTOMATION-TEST-ACTIVE",
+            "fingerprint": "computed-at-runtime",
+            "expires_at": "2099-01-01T00:00:00.000Z",
+            "comment_id": 321
+        },
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-TEST-ACTIVE",
+        "expected_blocked": False,
+        "expected_candidate": "gemini",
+        "expected_reserved": True,
+        "expected_write": "update"
+    },
+    {
         "name": "an expired lease is reused instead of adding a comment",
         "tasks": [valid_active],
         "marker_day_offset": None,
@@ -311,13 +332,13 @@ async function runCase(testCase) {{
     policy: {{ max_active_tasks: 1 }},
     tasks: testCase.tasks
   }};
-  const expectedLeaseSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expectedLeaseSince = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const writes = [];
   const github = {{
     paginate: async (_endpoint, options) => {{
       if (options.issue_number !== 226) throw new Error("unexpected issue number");
       if (options.since === todayUtc + "T00:00:00Z") return comments;
-      if (options.since === expectedLeaseSince) return leaseComments;
+      if (Math.abs(Date.parse(options.since) - expectedLeaseSince) < 5000) return leaseComments;
       throw new Error("unexpected issue-comment since filter: " + options.since);
     }},
     rest: {{
