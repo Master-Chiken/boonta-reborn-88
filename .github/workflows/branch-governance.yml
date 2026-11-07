@@ -145,7 +145,7 @@ jobs:
         run: |
           set -euo pipefail
           title="Branch governance: branch budget"
-          existing="$(gh issue list --repo "$GH_REPO" --state open --search "$title" --json number,title --jq '.[0].number // empty')"
+          existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\" in:title" --json number,title --jq '.[0].number // empty')"
           {
             echo "## Branch budget alert"
             echo
@@ -180,7 +180,7 @@ jobs:
         run: |
           set -euo pipefail
           title="Branch governance: branch budget"
-          existing="$(gh issue list --repo "$GH_REPO" --state open --search "$title" --json number,title --jq '.[0].number // empty')"
+          existing="$(gh issue list --repo "$GH_REPO" --state open --search "\"$title\" in:title" --json number,title --jq '.[0].number // empty')"
           if [ -n "$existing" ]; then
             gh issue close "$existing" --repo "$GH_REPO" --comment "The latest branch audit is back below the 10-branch warning threshold. Closing this alert; the next audit will reopen it if the budget is exceeded again."
           else
