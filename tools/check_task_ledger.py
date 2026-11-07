@@ -68,6 +68,9 @@ def validate_ledger(data: Any) -> list[str]:
             errors.append(f"{prefix}.status must be one of {sorted(STATUSES)}")
         if status == "active":
             active += 1
+        if status == "active" or task_id == "AUTOMATION-LEDGER-ACTIVATION":
+            if task.get("target_branch") not in {"main", "dev"}:
+                errors.append(f"{prefix}.target_branch must be main or dev for an executable task")
         for field in ("question", "next_action"):
             if not isinstance(task.get(field), str) or not task[field].strip():
                 errors.append(f"{prefix}.{field} is required")

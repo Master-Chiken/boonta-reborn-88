@@ -44,3 +44,13 @@ Before implementation, inspect existing Boonta source, generated outputs, export
 The owner-approved workflow brief and compact task summary identify the bounded task. GitHub is authoritative for live PR state, exact head SHAs and CI evidence. If the task cannot proceed safely within this budget, stop with a specific BLOCKED report and one concrete next action; do not create empty branches/PRs or invent work.
 
 All clean-room, licensing, €0, single-writer, exact-head and human-review rules remain in force.
+
+
+## Task reservation and evidence acceptance
+
+- The global preflight reserves the selected task on issue #226 for the current workflow run and attempt. The lease includes the exact task ID, deterministic task fingerprint, provider choice and UTC expiry.
+- The lease expires after 60 minutes, longer than the 35-minute provider workflow hard limit. The always-running cycle summary releases the lease only when the comment still belongs to the exact run/attempt/fingerprint; cancellation or runner loss is recovered by expiry.
+- A foreign, unexpired lease blocks every provider before inference. Expired/released leases are reused in one bot-owned comment rather than creating one lock comment per scheduled cycle.
+- Every autonomous report identifies the exact reserved task ID. A PROGRESS report must cite a new or advanced same-repository PR, whose body includes the exact BOONTA_TASK_ID marker, whose base equals the task ledger's explicit target_branch, and whose current head matches the cited 40-character SHA.
+- PROGRESS is not accepted until the exact PR-head CI checks for that base have completed successfully. For main, require the three repository-wide protection checks. For dev, require the host pause/state tests, native GameCube build and Dolphin headless smoke. Pending checks are polled for a bounded eight minutes; failures or timeouts fail closed. Software-renderer diagnostics remain non-blocking and are not hardware/gameplay acceptance.
+- Executable ledger tasks must declare target_branch: main or target_branch: dev; the task preflight passes that exact destination into the selected provider. An unassigned or ambiguous destination fails closed.
