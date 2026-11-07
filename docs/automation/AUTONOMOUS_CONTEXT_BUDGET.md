@@ -14,9 +14,9 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 - Start with the owner-approved workflow brief and `docs/automation/task-ledger-summary.json`. Read the required project/provenance policies once; then read only files directly needed for the selected task.
 - Keep newly retrieved repository/issue text below **1,500 tokens per cycle**. Keep full issue bodies and comment histories for #156, #226 and #279 out of provider context. Do not enumerate all PRs/branches or fetch attachments, images, media, binaries, ROMs, disc images, BIOS, or the approximately 452 KB route dossier.
 - Do not fetch the full `docs/automation/task-ledger.json` for task selection. Use the compact summary; read a narrow task record only when a justified ledger update is required.
-- Gemini: maximum 5 session turns and only six GitHub MCP tools: add_issue_comment, create_pull_request, pull_request_read, create_branch, get_file_contents and push_files.
-- OpenRouter Free: OpenCode v1.19.5, maximum 3 build steps and the same six GitHub MCP tools. The invocation has a 180-second hard timeout.
-- Groq Free: OpenCode v1.19.5, maximum 3 build steps, 3,072 context tokens, 512 output tokens, the same six GitHub MCP tools, a 7,000-character prompt ceiling and a 90-second hard timeout.
+- Gemini: maximum 5 session turns and 11 GitHub MCP tools: add_issue_comment, create_pull_request, pull_request_read, create_branch, get_file_contents, push_files, search_pull_requests, list_workflow_runs, list_workflow_jobs, get_workflow_run and get_job_logs. Actions tools are restricted to the exact PR-head CI and failed-job diagnostics.
+- OpenRouter Free: OpenCode v1.19.5, maximum 3 build steps and the same 11 GitHub MCP tools. Actions tools are restricted to the exact PR-head CI and failed-job diagnostics. The invocation has a 180-second hard timeout.
+- Groq Free: OpenCode v1.19.5, maximum 3 build steps, 3,072 context tokens, 512 output tokens and the reviewed six GitHub MCP writer tools only, a 7,000-character prompt ceiling and a 90-second hard timeout.
 - Shell is denied to the OpenCode agents. Repository writes use one branch, one logical push_files operation and one reviewable PR. Never merge, auto-merge, force-push or write to protected branches.
 - Do not reread the same file, call broad search/list operations or retry unavailable tools. Keep tasks small enough for the per-provider turn/step budget.
 
