@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #330 was merged to main at eb954ec438b49203fb94422b2c51b8149d99e135. It adds a fail-closed GET /api/v1/key preflight for data.free_model_daily_requests.remaining before GitHub App token creation, checkout, OpenCode install, PR-head snapshot and model inference; missing/invalid/zero remaining blocks the request and records the existing UTC cooldown. All four exact-head checks passed (runs 42376294778, 42376294743, 42376294836 and 42376294685). Post-merge run #42376343477 passed readiness and skipped Gemini, OpenRouter and Groq because their same-day cooldowns were active; consequently the ne"
+      "next_action_excerpt": "PR #330 was merged to main at eb954ec438b49203fb94422b2c51b8149d99e135. It adds a fail-closed GET /api/v1/key preflight for data.free_model_daily_requests.remaining before GitHub App token creation, checkout, OpenCode install, PR-head snapshot and model inference; missing/invalid/zero remaining blocks the request and records the existing UTC cooldown. All…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
