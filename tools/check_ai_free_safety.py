@@ -156,7 +156,7 @@ if summary_marker not in autonomous:
 else:
     summary_job = autonomous.split(summary_marker, 1)[1]
     for required in (
-        "needs: [readiness, autonomous-cycle, openrouter-fallback, groq-fallback]",
+        "needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback, groq-fallback]",
         "if: always()",
         "permissions: {}",
         "COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}",
