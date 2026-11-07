@@ -1110,7 +1110,7 @@ if "upload_artifacts: 'false'" not in execute:
 # Pin the tested Gemini CLI release and cap automatic model/network retries.
 if "gemini_cli_version: '0.67.0'" not in execute:
     errors.append("Autonomous Gemini CLI must remain pinned to the version verified with retry controls")
-settings_marker = "          settings: |-\\n"
+settings_marker = "          settings: |-\n"
 settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
 if settings_marker not in execute or settings_end_marker not in execute:
     errors.append("Autonomous Gemini workflow is missing its explicit CLI settings block")
