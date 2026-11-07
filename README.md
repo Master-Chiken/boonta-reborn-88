@@ -107,6 +107,15 @@ make
 
 The expected outputs are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`.
 
+To build the native Wii variant with the same devkitPro installation, run:
+
+```sh
+make -f Makefile.wii clean
+make -f Makefile.wii
+```
+
+The expected outputs are `boonta_wii_demo.dol` and `boonta_wii_demo.elf`. The Wii build uses the native WPAD backend and requires a Wii Remote with a Classic Controller expansion for the Classic input path. Automated builds and input-translation tests do not establish physical controller compatibility; that remains unverified until tested on real Wii hardware.
+
 You can run many host-side checks without a GameCube or Wii toolchain. From the repository root:
 
 ```sh
