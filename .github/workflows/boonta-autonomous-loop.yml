@@ -118,3 +118,87 @@ jobs:
       autonomous_mode: true
       issue_number: 226
     secrets: inherit
+
+  cycle-summary:
+    name: Explain provider calls and validated results
+    needs: [readiness, autonomous-cycle, openrouter-fallback, groq-fallback]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Publish the exact outcome of each provider stage
+        shell: bash
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          READINESS_RESULT: ${{ needs.readiness.result }}
+          WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
+          GEMINI_RESULT: ${{ needs.autonomous-cycle.result }}
+          GEMINI_INVOCATION: ${{ needs.autonomous-cycle.outputs.invocation_outcome }}
+          GEMINI_REPORT: ${{ needs.autonomous-cycle.outputs.report_outcome }}
+          GEMINI_CYCLE_STATUS: ${{ needs.autonomous-cycle.outputs.cycle_status }}
+          OPENROUTER_RESULT: ${{ needs.openrouter-fallback.result }}
+          OPENROUTER_INVOCATION: ${{ needs.openrouter-fallback.outputs.invocation_outcome }}
+          OPENROUTER_REPORT: ${{ needs.openrouter-fallback.outputs.report_outcome }}
+          OPENROUTER_CYCLE_STATUS: ${{ needs.openrouter-fallback.outputs.cycle_status }}
+          GROQ_RESULT: ${{ needs.groq-fallback.result }}
+          GROQ_INVOCATION: ${{ needs.groq-fallback.outputs.invocation_outcome }}
+          GROQ_REPORT: ${{ needs.groq-fallback.outputs.report_outcome }}
+          GROQ_CYCLE_STATUS: ${{ needs.groq-fallback.outputs.cycle_status }}
+        run: |
+          set -euo pipefail
+          provider_row() {
+            local provider="$1" job_result="$2" invocation="$3" report="$4" cycle_status="$5"
+            local call="no" detail
+            case "$invocation" in
+              success)
+                call="yes"
+                if [[ "$report" == "success" && "$cycle_status" == "progress" ]]; then
+                  detail="Model called; fresh-PR progress report validated."
+                elif [[ "$report" == "success" && "$cycle_status" == "blocked" ]]; then
+                  detail="Model called; a named BLOCKED report passed validation. No progress is claimed."
+                elif [[ "$report" == "failure" ]]; then
+                  detail="Model called, but report validation failed. Inspect this provider job."
+                else
+                  detail="Model call completed, but report validation/status is not confirmed."
+                fi
+                ;;
+              failure)
+                call="attempted/failed"
+                detail="Provider invocation failed. The daily cooldown should prevent repeated calls."
+                ;;
+              skipped)
+                case "$job_result" in
+                  failure) detail="No model call. A cooldown, quota, owner, or free-tier gate stopped this provider; inspect its job summary for the exact reason." ;;
+                  skipped) detail="Provider job was not eligible or an upstream/readiness condition prevented launch." ;;
+                  *) detail="No model invocation was recorded." ;;
+                esac
+                ;;
+              *)
+                detail="Provider invocation outcome is unavailable; inspect the workflow logs."
+                ;;
+            esac
+            printf '| %s | %s | %s | %s | %s |\n' "$provider" "$job_result" "$call" "${report:-not checked}" "$detail"
+          }
+          {
+            echo "## Boonta autonomous cycle — provider outcome"
+            echo
+            echo "- Readiness: **${READINESS_RESULT:-unknown}**"
+            echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
+            echo
+            echo "| Provider | Job result | Model call | Report check | Interpretation |"
+            echo "|---|---|---|---|---|"
+            provider_row "Gemini" "${GEMINI_RESULT:-unknown}" "${GEMINI_INVOCATION:-skipped}" "${GEMINI_REPORT:-skipped}" "${GEMINI_CYCLE_STATUS:-unknown}"
+            provider_row "OpenRouter Free" "${OPENROUTER_RESULT:-unknown}" "${OPENROUTER_INVOCATION:-skipped}" "${OPENROUTER_REPORT:-skipped}" "${OPENROUTER_CYCLE_STATUS:-unknown}"
+            provider_row "Groq Free" "${GROQ_RESULT:-unknown}" "${GROQ_INVOCATION:-skipped}" "${GROQ_REPORT:-skipped}" "${GROQ_CYCLE_STATUS:-unknown}"
+            echo
+            if [[ "${GEMINI_INVOCATION:-skipped}" != "success" && "${OPENROUTER_INVOCATION:-skipped}" != "success" && "${GROQ_INVOCATION:-skipped}" != "success" ]]; then
+              echo "**No provider completed a model invocation. No autonomous project progress is confirmed by this run.**"
+            else
+              echo "At least one provider invocation completed. Check its report validation and progress status above; a valid BLOCKED report is not progress."
+            fi
+            echo
+            echo "This summary does not change provider job conclusions or the canonical activation gate. Budget remains €0."
+            echo
+            echo "[Open the full workflow run](${RUN_URL})"
+          } >> "$GITHUB_STEP_SUMMARY"
