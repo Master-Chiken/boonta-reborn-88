@@ -331,10 +331,84 @@ jobs:
           fi
           echo "OpenRouter final prompt size: ${#PROMPT} characters."
 
-          # Bound retries/time spent if the Free route rate-limits or returns an oversized request.
-          timeout --signal=TERM --kill-after=5s 180s \
-            opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" \
-            2>&1 | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
+          # Stop OpenCode on the first explicit provider throttle/quota/auth refusal.
+          # This prevents internal retries from multiplying a known terminal failure.
+          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$GITHUB_WORKSPACE" <<'PY'
+          import os
+          import re
+          import signal
+          import subprocess
+          import sys
+
+          prompt, report_path, workspace = sys.argv[1:]
+          command = [
+              "timeout", "--signal=TERM", "--kill-after=5s", "180s",
+              "opencode", "run", "--model", "openrouter/openrouter/free",
+              "--auto", "--dir", workspace, prompt,
+          ]
+          terminal_provider_error = re.compile(
+              r"(free-models-per-day|free-models-per-minute|rate[_ ]limit exceeded|"
+              r"too many requests|HTTP\\s*429|status(?:\\s*code)?\\s*[:=]?\\s*429|"
+              r"tokens per minute\\s*\\(TPM\\)|request too large for model|"
+              r"missing authentication header|HTTP\\s*401|status(?:\\s*code)?\\s*[:=]?\\s*401)",
+              re.IGNORECASE,
+          )
+          process = subprocess.Popen(
+              command,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              text=True,
+              encoding="utf-8",
+              errors="replace",
+              bufsize=1,
+              start_new_session=True,
+          )
+
+          def stop_process_group():
+              try:
+                  os.killpg(process.pid, signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
+              try:
+                  process.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  try:
+                      os.killpg(process.pid, signal.SIGKILL)
+                  except ProcessLookupError:
+                      pass
+                  process.wait()
+
+          def handle_shutdown(signum, _frame):
+              stop_process_group()
+              raise SystemExit(128 + signum)
+
+          signal.signal(signal.SIGTERM, handle_shutdown)
+          signal.signal(signal.SIGINT, handle_shutdown)
+
+          with open(report_path, "w", encoding="utf-8") as report:
+              assert process.stdout is not None
+              for line in process.stdout:
+                  sys.stdout.write(line)
+                  sys.stdout.flush()
+                  report.write(line)
+                  report.flush()
+                  if terminal_provider_error.search(line):
+                      print(
+                          "OpenRouter throttle/quota/auth refusal detected; terminating "
+                          "OpenCode immediately after the first refusal. Daily cooldown will be recorded.",
+                          flush=True,
+                      )
+                      stop_process_group()
+                      sys.exit(75)
+
+          invocation_status = process.wait()
+          if invocation_status in (124, 137):
+              print(
+                  "OpenRouter invocation reached its 180-second hard limit; daily cooldown will be recorded.",
+                  flush=True,
+              )
+          sys.exit(invocation_status)
+          PY
 
 
       - name: Validate OpenRouter autonomous cycle report
