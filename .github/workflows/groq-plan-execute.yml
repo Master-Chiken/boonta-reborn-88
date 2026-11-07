@@ -302,7 +302,7 @@ jobs:
               "--auto", "--dir", workspace, prompt,
           ]
           terminal_quota_error = re.compile(
-              r"(tokens per minute\\s*\\(TPM\\)|free-models-per-day|"
+              r"(tokens per minute\s*\(TPM\)|free-models-per-day|"
               r"resource[_ ]exhausted|rate limit exceeded)",
               re.IGNORECASE,
           )
