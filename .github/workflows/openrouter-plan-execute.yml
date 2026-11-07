@@ -6,6 +6,12 @@ on:
       invocation_outcome:
         description: "Outcome of the actual OpenRouter/OpenCode invocation step, independent of report validation."
         value: ${{ jobs.openrouter-plan-execute.outputs.invocation_outcome }}
+      report_outcome:
+        description: "Outcome of the OpenRouter autonomous report validator."
+        value: ${{ jobs.openrouter-plan-execute.outputs.report_outcome }}
+      cycle_status:
+        description: "Validated OpenRouter cycle status: progress or blocked."
+        value: ${{ jobs.openrouter-plan-execute.outputs.cycle_status }}
     inputs:
       autonomous_mode:
         type: boolean
@@ -23,6 +29,8 @@ jobs:
     name: One bounded OpenRouter Free research/engineering cycle
     outputs:
       invocation_outcome: ${{ steps.run_opencode.outcome }}
+      report_outcome: ${{ steps.validate_report.outcome }}
+      cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
     if: inputs.autonomous_mode == true && inputs.issue_number == 226
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -440,8 +448,10 @@ jobs:
                 core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
                 return;
               }
+              core.setOutput('cycle_status', 'progress');
               core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
             } else if (validBlocked) {
+              core.setOutput('cycle_status', 'blocked');
               core.info('OpenRouter cycle reported a named blocker and next action.');
             } else {
               core.setFailed('OpenRouter invocation returned without a valid PROGRESS or BLOCKED report.');
