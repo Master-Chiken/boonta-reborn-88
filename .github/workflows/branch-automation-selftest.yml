@@ -19,6 +19,7 @@ on:
       - "GEMINI.md"
       - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
       - "tools/check_autonomous_provider_handoff.py"
+      - "tools/test_autonomous_task_preflight.py"
       - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
@@ -95,6 +96,10 @@ jobs:
       - name: Validate autonomous provider handoff contract (offline)
         shell: bash
         run: python3 tools/check_autonomous_provider_handoff.py
+
+      - name: Execute global task preflight with mocked GitHub data (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_task_preflight.py
 
       - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash

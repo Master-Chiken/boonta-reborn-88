@@ -118,6 +118,8 @@ jobs:
               taskReason = 'the single blocked activation task is eligible; no task-level daily backoff is active';
             } else if (activeTasks.length > 1) {
               taskReason = 'multiple active tasks violate the one-active-task policy';
+            } else if (activeTasks.length === 1 && !usableTask(activeTasks[0])) {
+              taskReason = 'the sole active task is incomplete; repair its ledger fields before another model invocation';
             } else if (activeTasks.length === 1) {
               taskReason = 'the active task already has a PR/head; reconcile it before another model invocation';
             } else {
