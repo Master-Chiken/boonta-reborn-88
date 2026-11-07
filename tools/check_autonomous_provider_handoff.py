@@ -263,6 +263,35 @@ for required in (
     if required not in openrouter:
         errors.append(f"OpenRouter first-refusal watchdog is missing required behavior: {required!r}")
 
+
+# Exercise the exact regex fragments embedded in the workflow against provider
+# refusal examples and ordinary output so the guard cannot silently become inert.
+regex_start = openrouter.find("terminal_provider_error = re.compile(")
+regex_end = openrouter.find("re.IGNORECASE,", regex_start)
+if regex_start < 0 or regex_end < 0:
+    errors.append("OpenRouter watchdog regex must be extractable for behavior tests")
+else:
+    regex_block = openrouter[regex_start:regex_end]
+    regex_fragments = re.findall(r'r"([^"]*)"', regex_block)
+    if len(regex_fragments) != 3:
+        errors.append("OpenRouter watchdog must retain exactly three regex fragments")
+    else:
+        try:
+            watchdog = re.compile("".join(regex_fragments), re.IGNORECASE)
+            for sample in (
+                "Rate limit exceeded: free-models-per-day",
+                "Request too large for model openrouter/free on tokens per minute (TPM)",
+                "HTTP 429 Too Many Requests",
+                "HTTP 401 Unauthorized",
+                "Missing Authentication header",
+            ):
+                if not watchdog.search(sample):
+                    errors.append(f"OpenRouter watchdog regex failed to detect a provider refusal: {sample!r}")
+            if watchdog.search("The Boonta racing line is wider at the next turn."):
+                errors.append("OpenRouter watchdog regex must not match ordinary game-development output")
+        except re.error as exc:
+            errors.append(f"OpenRouter watchdog regex must compile: {exc}")
+
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
