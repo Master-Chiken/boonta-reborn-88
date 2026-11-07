@@ -21,6 +21,8 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 - Do not reread the same file, call broad search/list operations or retry unavailable tools. Keep tasks small enough for the per-provider turn/step budget.
 
 ## Failure handling
+- Cooldown preflight reads only issue #226 comments updated since 00:00 UTC on the current day (`since`), then verifies the embedded UTC date. Keep this bounded query in the global preflight and every provider-specific cooldown guard; the failure-recording step may still locate/update the persistent marker.
+
 
 - **503 / temporary unavailability:** the current provider invocation fails closed; its cooldown prevents another request in the same UTC day. A later scheduled cycle may try the next Free-only provider.
 - **429 / TPM, context-size or request-too-large:** stop immediately, do not repeat the same request, and reduce the prompt/retrieved context/tool surface before the next attempt.

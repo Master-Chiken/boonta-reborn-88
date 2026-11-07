@@ -53,6 +53,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
+              since: todayUtc + 'T00:00:00Z',
               per_page: 100,
             });
             const markerComment = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:'));

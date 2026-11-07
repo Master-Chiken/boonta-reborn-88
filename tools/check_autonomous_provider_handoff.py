@@ -79,6 +79,30 @@ for needle in groq_gates:
 if "needs.openrouter-fallback.result == 'failure'" in groq_job:
     errors.append("Groq must not launch after an OpenRouter failure in the same run")
 
+# The cooldown read path must use GitHub's updated-since filter so every
+# six-hour run does not paginate the full append-only #226 comment history.
+cooldown_readers = (
+    ("global preflight", loop, "Read the three persistent UTC cooldown markers"),
+    ("Gemini", gemini, "Check same-day Gemini failure cooldown"),
+    ("OpenRouter", openrouter, "Check same-day OpenRouter failure cooldown"),
+    ("Groq", groq, "Check same-day Groq failure cooldown"),
+)
+for label, workflow, step_name in cooldown_readers:
+    step_position = workflow.find("name: " + step_name)
+    call_position = workflow.find(
+        "const comments = await github.paginate(github.rest.issues.listComments, {",
+        step_position,
+    )
+    call_end = workflow.find("});", call_position) if call_position >= 0 else -1
+    if step_position < 0 or call_position < 0 or call_end < 0:
+        errors.append(f"{label} cooldown read must contain a bounded issue-comment query")
+        continue
+    call = workflow[call_position:call_end]
+    if "since: todayUtc + 'T00:00:00Z'" not in call:
+        errors.append(f"{label} cooldown read must filter comments updated since UTC day start")
+    if "per_page: 100" not in call:
+        errors.append(f"{label} cooldown read must retain bounded page sizing")
+
 # Report-format/semantic failures also consume an inference request. Record the
 # daily cooldown after validation, but only for an actual invocation or report
 # failure; a valid BLOCKED report is not a provider failure.
