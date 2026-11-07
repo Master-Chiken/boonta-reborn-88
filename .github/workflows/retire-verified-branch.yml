@@ -27,6 +27,8 @@ on:
           - feat/rival-curvature-pace-20261106
           - feat/rival-track-line-20261106
           - docs/reverse-engineering-first-20261106
+          - agent/boonta-auto/gemini-daily-cooldown-20261104
+          - agent/boonta-auto/openrouter-daily-cooldown-20261104
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -112,6 +114,8 @@ jobs:
             "feat/rival-curvature-pace-20261106") PINNED_SHA="b3d215df243a11d3e0022ecf562ab2ba1de96da9" ;;
             "feat/rival-track-line-20261106") PINNED_SHA="1a5e5ed69c9b7f1453322f4deb7de8adcb167642" ;;
             "docs/reverse-engineering-first-20261106") PINNED_SHA="38bd467e3da5d81ecb30de20d71df67850a53e51" ;;
+            "agent/boonta-auto/gemini-daily-cooldown-20261104") PINNED_SHA="dad92c6b84ad01aecfcf9358422b75d8ea445b5a" ;;
+            "agent/boonta-auto/openrouter-daily-cooldown-20261104") PINNED_SHA="287222f23f8e4c7207f3d2b6029e67bf6bff95c7" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -157,7 +161,7 @@ jobs:
           fi
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
-          ARCHIVE_CHECKPOINT="7548d95ca295731cd3c92e36e2a3777ba4399a78"
+          ARCHIVE_CHECKPOINT="1c863bf93ab680ef07fe7dfacc8748934341acab"
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
@@ -202,7 +206,7 @@ jobs:
           fi
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
-          ARCHIVE_CHECKPOINT="7548d95ca295731cd3c92e36e2a3777ba4399a78"
+          ARCHIVE_CHECKPOINT="1c863bf93ab680ef07fe7dfacc8748934341acab"
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
