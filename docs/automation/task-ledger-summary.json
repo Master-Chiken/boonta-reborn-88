@@ -83,7 +83,7 @@
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action_excerpt": "T1 exact local acceptance evidence is complete: exact PR #334 Perl scanner run reports 92 validated / 0 rejected / 0 undefined initial-history reads; decoded size 11,975,612 bytes; stream 5,869,155 bytes; header-inclusive span 5,870,259 bytes; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent Python decoder agrees. Keep task status in_review until PR…"
+      "next_action_excerpt": "T1 local acceptance is complete: owner ran exact PR #334 scanner from a clean clone; Perl syntax OK, 20/20 synthetic tests pass, and exact local ROM scan reports 92 validated / 0 rejected / 0 undefined initial-history reads; decoded total 11,975,612 bytes; stream 5,869,155 bytes; header-inclusive span 5,870,259 bytes; tags Pupp 27 / Trak 19 / Part 44 /…"
     }
   ]
 }
