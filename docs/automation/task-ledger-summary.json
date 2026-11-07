@@ -71,6 +71,19 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
       "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62",
       "next_action_excerpt": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity."
+    },
+    {
+      "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
+      "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
+      "queue": "#226",
+      "platform_scope": [
+        "Nintendo 64",
+        "GameCube"
+      ],
+      "status": "blocked",
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes,…"
     }
   ]
 }
