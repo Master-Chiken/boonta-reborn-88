@@ -240,7 +240,7 @@ jobs:
           LIMITS
           - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
           - Never enable billing, paid routes, other providers, change secrets/settings, or reveal credentials.
-          - If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
+          - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
           - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
 
           CONTEXT AND TASK
