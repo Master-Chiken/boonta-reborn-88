@@ -875,9 +875,9 @@ for label, prompt in phase1_prompts:
         "Phase 1",
         "AUTOMATION-LEDGER-ACTIVATION",
         "#279",
-        "#317",
-        "#318",
-        "#319",
+        "PR #327",
+        "69deb6778f9383887118803428e7014686865a83",
+        "Do not reopen, replay or recreate that chain",
         "PR #274 is not an automatic next step",
     ):
         if phrase not in prompt:
