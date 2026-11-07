@@ -125,7 +125,7 @@ else:
     cooldown_job = autonomous.split("  provider-cooldowns:", 1)[1].split("  autonomous-cycle:", 1)[0]
     for required in (
         "needs: readiness",
-        "permissions:\n      issues: read",
+        "permissions:\n      contents: read\n      issues: read",
         "github.rest.issues.listComments",
         "BOONTA_GEMINI_FAILURE_COOLDOWN:",
         "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
@@ -134,11 +134,19 @@ else:
         "gemini_active:",
         "openrouter_active:",
         "groq_active:",
+        "task_ready:",
+        "task_id:",
+        "task_reason:",
+        "path: 'docs/automation/task-ledger-summary.json'",
+        "ledgerSummary.policy?.max_active_tasks !== 1",
+        "core.setOutput('task_ready', String(taskReady))",
     ):
         if required not in cooldown_job:
             errors.append(f"Read-only provider cooldown preflight is missing {required!r}")
 if "needs: [readiness, provider-cooldowns]" not in autonomous:
     errors.append("Gemini job must depend on the global provider cooldown preflight")
+if autonomous.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
+    errors.append("All three provider routes must require one eligible ledger task before invocation")
 if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
     errors.append("Gemini job must not start while its UTC cooldown is active")
 if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonomous:
