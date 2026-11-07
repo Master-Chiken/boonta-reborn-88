@@ -272,7 +272,7 @@ if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
     errors.append("Groq must remain capped at 3072 context / 512 output tokens")
 for required in (
     "start_new_session=True",
-    "tokens per minute\\\\s*\\\\(TPM\\\\)",
+    "tokens per minute\\s*\\(TPM\\)",
     "free-models-per-day",
     "os.killpg(process.pid, signal.SIGTERM)",
     "sys.exit(75)",
