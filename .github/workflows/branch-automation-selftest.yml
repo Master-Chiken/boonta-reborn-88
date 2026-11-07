@@ -118,7 +118,7 @@ jobs:
               "OpenRouter and Groq Free fallbacks permit the bounded main-push event": '"${CALLER_EVENT:-}" != "push"' in openrouter and '"${CALLER_EVENT:-}" != "push"' in groq,
               "Autonomous loop serializes all writers": "group: boonta-autonomous-loop" in autonomous_loop and "cancel-in-progress: false" in autonomous_loop,
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
-              "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment,get_commit"' in groq,
+              "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"' in groq,
               "Groq invocation has a 120-second hard stop": "timeout --signal=TERM --kill-after=5s 120s" in groq and "invocation_status=${PIPESTATUS[0]}" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
               "Groq prompt explicitly stops on provider quota errors": "If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
