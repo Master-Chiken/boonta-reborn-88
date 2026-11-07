@@ -398,7 +398,7 @@ async function runCase(testCase) {{
   }};
   let error = "";
   try {{
-    await new AsyncFunction("github", "context", "core", "process", script)(github, context, core, process);
+    await new AsyncFunction("github", "context", "core", "process", "require", script)(github, context, core, process, require);
   }} catch (caught) {{
     error = String(caught.message || caught);
   }}
