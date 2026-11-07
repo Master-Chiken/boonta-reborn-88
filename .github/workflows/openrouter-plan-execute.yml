@@ -324,58 +324,6 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
 
-      - name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure
-        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || steps.openrouter_auth_check.outputs.quota_available == 'false' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'))
-        continue-on-error: true
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
-        env:
-          ISSUE_NUMBER: '${{ inputs.issue_number }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          QUOTA_AVAILABLE: ${{ steps.openrouter_auth_check.outputs.quota_available }}
-        with:
-          script: |
-            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
-            const todayUtc = new Date().toISOString().slice(0, 10);
-            const marker = '<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
-            const quotaAvailable = process.env.QUOTA_AVAILABLE || 'unknown';
-            const reason = quotaAvailable === 'false'
-              ? 'The OpenRouter /api/v1/key preflight reported zero Free-model requests remaining for the current UTC day.'
-              : 'The OpenRouter Free authentication or model invocation failed.';
-            const body = [
-              marker,
-              '## OpenRouter Free daily failure cooldown',
-              '',
-              reason + ' Recorded on UTC date ' + todayUtc + '.',
-              'Further fallback cycles on this UTC date will skip another OpenRouter request. A fresh attempt is allowed on the next UTC date.',
-              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
-              '',
-              '[Inspect the failed OpenRouter invocation](' + process.env.RUN_URL + ')',
-            ].join('\n');
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              per_page: 100,
-            });
-            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:'));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-              core.info('Updated the single persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body,
-              });
-              core.info('Created the persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
-            }
-
       - name: Validate OpenRouter autonomous cycle report
         id: validate_report
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
@@ -436,6 +384,57 @@ jobs:
               core.setFailed('OpenRouter invocation returned without a valid PROGRESS or BLOCKED report.');
             }
 
+      - name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure
+        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || steps.openrouter_auth_check.outputs.quota_available == 'false' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          QUOTA_AVAILABLE: ${{ steps.openrouter_auth_check.outputs.quota_available }}
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const quotaAvailable = process.env.QUOTA_AVAILABLE || 'unknown';
+            const reason = quotaAvailable === 'false'
+              ? 'The OpenRouter /api/v1/key preflight reported zero Free-model requests remaining for the current UTC day.'
+              : 'The OpenRouter Free authentication, model invocation or cycle-report validation failed.';
+            const body = [
+              marker,
+              '## OpenRouter Free daily failure cooldown',
+              '',
+              reason + ' Recorded on UTC date ' + todayUtc + '.',
+              'Further fallback cycles on this UTC date will skip another OpenRouter request. A fresh attempt is allowed on the next UTC date.',
+              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed OpenRouter invocation](' + process.env.RUN_URL + ')',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent OpenRouter cooldown marker on issue #' + issueNumber + '.');
+            }
       - name: Fail visibly if the OpenRouter fallback did not complete
         if: always()
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
