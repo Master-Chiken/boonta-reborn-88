@@ -138,6 +138,10 @@ The original game (Star Wars Episode 1 Racer) is a property of the LucasArts Ent
 
 Boonta Reborn 88 is an unofficial fan project and is not affiliated with or endorsed by the original rights holders.
 
+## Separate PC reverse-engineering reference
+
+The repository includes a source-only snapshot of the PC research project in [`research/pc/SW_RACER_RE/`](research/pc/SW_RACER_RE/). That subtree retains its own **AGPL-3.0** license and is not part of the MIT-licensed GameCube/Wii core or its native build. Its original-game media, binary track/model/texture blocks, trainer archives, raw symbol database and third-party vendored dependencies were deliberately excluded. See the snapshot README and [reuse inventory](REUSE.md) before using any of that code.
+
 ## About
 
 Research and homebrew development for an enhanced Star Wars: Episode I – Racer (1999) experience on Nintendo GameCube and Wii, with HD visuals, bonus features, and console-specific builds.

@@ -1,0 +1,227 @@
+#pragma once
+
+#include <string>
+
+#include "node_utils.h"
+#include "gltf_utils.h"
+
+extern "C" {
+#include <swr.h>
+#include <Swr/swrModel.h>
+}
+
+// Texture magnification-filter policy for world/mesh textures (std3D_DrawRenderList_delta).
+// FAITHFUL honors the game's own per-material STD3D_RS_TEX_MAGFILTER_LINEAR bit (point where the
+// original N64/PC asked for it, linear elsewhere). POINT/LINEAR override every material globally:
+// POINT is the crispest look and avoids the interpolated-alpha fringe on low-res cutout textures;
+// LINEAR reproduces the previous always-bilinear behavior (useful as an A/B baseline).
+enum TexMagFilterMode {
+    TEX_MAG_FAITHFUL = 0,
+    TEX_MAG_POINT = 1,
+    TEX_MAG_LINEAR = 2,
+};
+
+typedef struct ImGuiState {
+    bool draw_test_scene;
+    bool draw_meshes;
+    bool draw_renderList;
+    bool debug_lambertian_cubemap;
+    bool debug_ggx_cubemap;
+    bool debug_ggxLut;
+    // Show dynamic replacements
+    bool show_replacementTries;
+    std::string replacementTries;
+    bool debug_env_cubemap;
+    bool HD_replacement;
+    bool show_original_and_replacements;
+
+    bool collect_textures_skip_pod_textures;
+    std::set<TEXID> collected_textures;
+
+    int msaa_samples = 1;
+    int anisotropy = 8;
+    int tex_mag_filter = TEX_MAG_FAITHFUL;// world-texture magnification policy (see TexMagFilterMode)
+    float alpha_cutoff = 0.5f;// alpha-test threshold for cutout materials (fences/foliage); higher =
+                              // crisper edge, less see-through fringe. Ignored when alpha-to-coverage
+                              // is active (MSAA on), where multisample coverage antialiases instead.
+    int target_fps = 0;// frame-rate cap for the GL present path; 0 = unlimited
+    bool enable_fog = true;
+    bool enable_gamepad_nav = true;
+    bool cache_meshes = true;// cache per-mesh GL geometry; static meshes upload once, not every frame
+    bool cull_meshes = true;// skip GL state/upload/draw for meshes whose AABB is outside the frustum
+    // World units a pod shadow is depth-tested nearer the camera (see debug_render_node).
+    float pod_shadow_depth_bias = 2.0f;
+    bool stream_dynamic_meshes = true;// upload animated meshes via a persistent-mapped ring buffer
+    bool hd_scene_captures = false;// stamp the live scene into the HD pod reflection cubemap every
+                                   // frame (costly: doubles every mesh draw with FBO churn)
+    bool hd_font = true;// swap the game's built-in fonts for HD replacements (live toggle via journal)
+    bool vsync = true;// glfwSwapInterval(1); toggle off to separate vsync judder from render-time variance
+    bool ai_full_lod = true;// force every racer (incl. AI) onto the full pod model (no LOD pop-in)
+    bool show_fps_overlay = false;// pinned top-right FPS readout + frame-time graph
+    bool show_fps_graph = false;// graph beneath the FPS overlay number (opt-in)
+    bool show_pod_names = true;// draw the overhead racer labels (MP player names / SP place numbers)
+    bool show_collision = false;// draw the track collision mesh as a debug overlay
+    bool show_triggers = false;// draw track trigger volumes + racer position markers
+    bool show_hitbox = false;// draw each pod's collision hitbox (track-skin sphere + pod-pod disc)
+    bool collision_wireframe = false;// collision overlay as wireframe only (otherwise translucent fill + wire)
+    float collision_opacity = 0.35f;// fill alpha for the collision overlay [0..1]
+    bool enable_rumble = true;
+    float rumble_intensity = 1.0f;
+    bool enable_weather = true;// draw rain/snow weather particles + rain splashes (off = none)
+    bool mp_disable_collision = true;// in multiplayer, skip pod-to-pod collision for the local
+                                   // player so they pass through other racers (track collision kept)
+    bool fast_restart = true;// speedrunner hotkey (Enter): restart a race instantly, no loading
+    // screen (single-player). The pause-menu Restart stays on the full reload.
+    bool mp_allow_upgrades = false;// master gate: in multiplayer, layer the player-chosen upgrades
+                                   // below onto the local pod (vanilla MP races everyone on raw base
+                                   // stats, and MP has no pilot-profile step to source upgrades from)
+    int mp_upgrade_levels[7] = {0, 0, 0, 0, 0, 0, 0};// per-category upgrade level 0(stock)..5(max), in
+                                   // order: traction, turning, acceleration, top speed, air brake,
+                                   // cooling, repair (applied at full part condition)
+
+    // Cheats read by the mid-tick delta hooks (game_deltas/swrRace_delta.cpp). The plain
+    // state-poke cheats (god/fast/fly/...) live as file-statics in imgui_utils.cpp; these three
+    // must be here because they act inside the physics tick, before the overlay runs. All are
+    // gated by cheats_enabled (the master arm switch), which also gates the file-static ones.
+    bool cheats_enabled = false;       // master: arm the Cheats panel (nothing cheats while off)
+    bool cheat_tilt_any_speed = false; // let the pod bank below the stock 200-speed tilt gate
+    bool cheat_boost_any_speed = false;// force boost eligibility regardless of speed (>50% top)
+    bool cheat_no_boost_charge = false;// skip the ~1s boost charge hold; boost fires immediately
+    // Cutscene toggles (the "Game" settings panel). Each field drives a *_delta hook (game_deltas/)
+    // that suppresses (skip_*) or restores (restore_*) its sequence. The panel shows them as
+    // "enabled" checkboxes (checked == the scene plays), so the skip_* flags read inverted there.
+    // Scenes default to playing (vanilla); the restore_* features default on (console-faithful).
+    // Persisted to SW_RACER_RE.ini [settings].
+    bool skip_intro_fmv = false;        // "Logo/Intro Cinematics": startup Smush movies (Goldie/TextCrawl/IntroScene)
+    bool skip_cantina_intro = false;    // "Cantina Intro": holo-planet camera intro into vehicle select (state 18)
+    bool skip_taunt = false;            // "Hangar Taunt Scene": pre-race opponent taunt (state 15, tournament)
+    bool skip_prerace_cinematic = false;// "Pre-Rendered Cinematic": planet/track Smush at race load
+    bool skip_prerace_camera = false;   // "Binder Ignition Sequence": the camera orbit around the pod as it ignites
+    bool skip_results = false;          // "Pod Unlock Scene": beat a track's favorite pilot -> its pod (state 17)
+    bool skip_circuit_winner = false;   // "Circuit Winner Scene": podium after completing a circuit (state 16)
+    bool skip_credits = false;          // "End-Game Credits": end-credits scroll
+
+    // "In-Game Track Intro": restore the dormant pre-race cinematic camera that sweeps along the
+    // track (per-track '...came' spline) before the pod orbit. Default on (console-faithful).
+    bool restore_prerace_track_sweep = true;
+
+    // "Fade to Black": restore the fade-to-black on screen transitions. A signed-char comparison in
+    // swrSprite_DrawSprites skips the opaque half of every fade on PC (char is signed on the PC
+    // compiler, unsigned on console), so the mod draws the overlay itself. Default on (faithful).
+    bool restore_screen_fades = true;
+
+    // "Cinematic Letterbox": slide black cinematic bars in over the pre-race binder-ignition camera
+    // (judge states 4/5) and the winner's victory lap, and back out as the camera settles behind the
+    // pod (or when the intro is skipped). Non-vanilla flourish, default on. Persisted.
+    bool cinematic_letterbox = true;
+
+    bool enable_picking_texture_when_hovering = false;
+    bool pick_through_transparent_objects = true;
+    std::optional<TEXID> picked_texture_id;
+
+    // N64 pseudo-reflection texgen (issue #206): master enable for regenerating sphere-map UVs on
+    // reflective materials. debug_texgen_on_picked forces it onto the hovered texture.
+    bool reflection_texgen = true;
+    bool debug_texgen_on_picked = false;
+    // Scales the texgen UVs about the texture centre (1.0 = plain normal->UV). Persisted.
+    float reflection_texgen_scale = 2.0f;
+    // Rotates the texgen UVs about the texture centre, in DEGREES. Persisted.
+    float reflection_texgen_rotation = 0.0f;
+    // Pans the texgen UVs (added to the generated UV). Persisted.
+    float reflection_texgen_offset[2] = {0.5f, 0.5f};
+
+    // #206 discovery readout: material signature of the last mesh drawn with the hovered texture.
+    // Captured in the swrViewport_Render_Hook pick read-back.
+    struct PickedMeshMaterial {
+        bool valid = false;
+        bool is_reflective = false;// texture_is_reflective() result for this mesh
+        bool has_normals = false;  // vertices_have_normals (texgen requires it)
+        bool texgen_applied = false;// texgenMode actually set to 1 for this mesh
+        uint32_t type = 0;
+        uint32_t mat_unk1 = 0;
+        uint32_t mat_unk2 = 0;
+        uint32_t mat_unk5 = 0;
+        uint32_t mat_unk8 = 0;
+        uint32_t render_mode_1 = 0;
+        uint32_t render_mode_2 = 0;
+        uint32_t cc_cycle1 = 0;
+        uint32_t ac_cycle1 = 0;
+        uint32_t cc_cycle2 = 0;
+        uint32_t ac_cycle2 = 0;
+        // texture record (swrModel_MaterialTexture)
+        uint32_t tex_unk0 = 0;
+        uint32_t tex_type = 0;// TextureType
+        uint32_t tex_unk6 = 0;
+        uint32_t tex_unk7 = 0;
+        uint32_t tex_spec0_flags = 0;
+    } picked_mesh_material;
+
+    // Resolution-independent 2D UI: menus and the in-race HUD lay out against the real framebuffer
+    // and anchor to its true edges instead of stretching a 640x480 box. ON by default -- widescreen
+    // is the common case, and the vanilla stretch is the surprising look on a modern display. When
+    // false, every 2D consumer reproduces vanilla behavior and the shared transform is inert.
+    bool ui_resolution_independent = true;
+    // User UI-scale slider; multiplies ui_layout_scale(). 1.0 == no change.
+    float ui_scale = 1.0f;
+    // Camera FOV multiplier (1.0 == game default; >1 widens the view / zooms out). Aspect ratio is
+    // handled in the projection (Hor+: the 4:3 vertical fov is held constant across ratios). Persisted.
+    float fov_scale = 1.0f;
+
+    // Far-plane clip. The PC release draws to the fog horizon with no hard far clip (rdCamera_New
+    // passes bFarClip = 0), so the GL scene projection defaults to an infinite far plane. The console
+    // versions honored a hard far clip (short draw distance / geometry pop-in); console_far_clip
+    // reproduces that by clipping at the game's own per-viewport far_clipping (the camera-man's
+    // draw distance, already scaled by the VIDEO_DRAWDISTANCE config) times console_far_scale.
+    // scale 1.0 == the game's full draw distance; lower == shorter / more aggressive console pop-in.
+    // The near plane stays at the game's zNear. Persisted.
+    bool console_far_clip = false;
+    float console_far_scale = 1.0f;
+
+    // Audio volumes the vanilla engine never persisted, kept mod-side (SW_RACER_RE.ini [settings]).
+    // master_volume drives the A3D device output gain (scales every swrSound channel); the engine
+    // forces that gain to 1.0 at the tail of swrSound_Startup on every boot, so we re-apply this.
+    // cutscene_volume scales the Smush cinematic audio, which runs on its own DirectSound path and
+    // otherwise ignores every audio setting (the startup movies play at hardcoded full volume).
+    float master_volume = 1.0f;  // 0..1, applied via swrSound_SetOutputGain
+    float cutscene_volume = 0.7f;// 0..1, multiplied by master_volume for Smush cinematics
+
+    // Cursor source (driven each frame by update_os_cursor + swrSprite_DisplayCursor_delta).
+    // false (default): show the OS pointer, auto-hidden after a few idle seconds so a parked pointer
+    // does not linger on screen mid-race. true: hide the OS pointer and draw the game's own software
+    // cursor sprite (id 249) instead. Persisted to SW_RACER_RE.ini.
+    bool cursor_use_game_sprite = false;
+} ImGuiState;
+
+extern "C" {
+extern char show_imgui;
+extern bool imgui_initialized;
+extern ImGuiState imgui_state;
+}
+
+const RdMaterial *material_from_texture_id(TEXID id);
+GLuint gl_texture_from_texture_id(TEXID id);
+
+// Strips the swrText render codes ("~~", "~c", "~f5", ...) out of one of the game's name
+// strings so it reads cleanly in a plain ImGui widget. Shared with the AI racer inspector.
+std::string strip_text_codes(const char *s);
+
+void imgui_Update();
+void imgui_render_node(swrModel_Node *node);
+
+// Floating hook.log viewer; *p_open gates visibility (cleared by the window's [x]).
+void imgui_draw_log_window(bool *p_open);
+
+// Reads the persisted HD-font toggle from the ini into imgui_state.hd_font and
+// returns it. Consulted at font-load time, which runs before read_settings_ini().
+bool read_hd_font_setting();
+
+// "Instant respawn" cheat state. The respawn wait is the death-camera state machine, so it's
+// enforced from swrObjcMan_UpdateDeathCamera_delta (renderer_hook.cpp) rather than apply_cheats().
+bool cheat_instant_respawn_enabled();
+
+// The cutscene toggles above are per-client, but the pre/post-race sequences are
+// session-synchronized: a client that skips locally advances its own race state machine while the
+// rest are still playing the scene. Forced off for everyone in multiplayer so all clients run the
+// identical sequence; the stored settings are untouched and apply again in single player.
+bool cutscene_skip_effective(bool user_setting);   // skip_*    -> forced ON  in multiplayer
+bool cutscene_restore_effective(bool user_setting);// restore_* -> forced OFF in multiplayer

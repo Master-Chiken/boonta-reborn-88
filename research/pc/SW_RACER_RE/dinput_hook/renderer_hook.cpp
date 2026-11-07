@@ -1,0 +1,3081 @@
+//
+// Created by tly on 10.03.2024.
+//
+#include "renderer_hook.h"
+#include "collision_viewer.h"
+#include "hook_helper.h"
+#include "crash_logger.h"
+#include "node_utils.h"
+#include "imgui_utils.h"
+#include "renderer_utils.h"
+#include "shaders_utils.h"// compileProgram (cinematic letterbox bars)
+#include "replacements.h"
+#include "patch.h"
+#include "stb_image.h"
+#include "texture_replacement.h"
+#include "camera/camera.h"
+#include "camera/player_camera.h"
+#include "ai_tuning.h"
+#include "audio_mix.h"
+#include "cinematic_audio.h"
+
+extern "C" {
+#include "./game_deltas/DirectX_delta.h"
+#include "./game_deltas/main_delta.h"
+#include "./game_deltas/rdMaterial_delta.h"
+#include "./game_deltas/rdMatrix_delta.h"
+#include "./game_deltas/std3D_delta.h"
+#include "./game_deltas/stdControl_delta.h"
+#include "./game_deltas/stdDisplay_delta.h"
+#include "./game_deltas/swrDisplay_delta.h"
+#include "./game_deltas/Window_delta.h"
+// CUSTOM TRACKS
+#include "./game_deltas/tracks_delta.h"
+}
+
+#include "./game_deltas/stdConsole_delta.h"
+#include "./game_deltas/swrSprite_delta.h"
+#include "./game_deltas/swrControl_delta.h"
+#include "./game_deltas/swrModel_delta.h"
+#include "./game_deltas/swrSpline_delta.h"
+#include "virtual_block.h"
+#include "./game_deltas/swrAssetBuffer_delta.h"
+#include "./game_deltas/swrObjJdge_delta.h"
+#include "./game_deltas/swrGamepadNav_delta.h"
+#include "./game_deltas/swrMultiplayer_delta.h"
+#include "./game_deltas/swrUI_delta.h"
+#include "./game_deltas/swrPlayerHUD_delta.h"
+#include "./game_deltas/swrWeather_delta.h"
+#include "./game_deltas/swrObjHang_delta.h"
+#include "./game_deltas/sithRender_delta.h"
+#include "./game_deltas/swrRace_delta.h"
+#include "./game_deltas/swrControl_delta.h"
+#include "./game_deltas/swrMain_delta.h"
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+#include "n64_shader.h"
+#include "types.h"
+#include <chrono>
+#include <cmath>
+#include <condition_variable>
+#include <cstring>
+#include <format>
+#include <functional>
+#include <future>
+#include <globals.h>
+#include <imgui.h>
+#include <imgui_stdlib.h>
+#include <macros.h>
+#include <mutex>
+#include <optional>
+#include <set>
+#include <thread>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
+
+
+extern "C" {
+#include <main.h>
+#include <Main/swrMain.h>
+#include <Main/swrControl.h>
+#include <Swr/swrAssetBuffer.h>
+#include <Engine/sithRender.h>
+#include <Platform/std3D.h>
+#include <Platform/stdControl.h>
+#include <Primitives/rdMatrix.h>
+#include <Raster/rdCache.h>
+#include <Swr/swrDisplay.h>
+#include <Swr/swrModel.h>
+#include <Swr/swrObj.h>
+#include <Swr/swrRace.h>
+#include <Swr/swrRender.h>
+#include <Swr/swrSound.h>
+#include <Swr/swrSpline.h>
+#include <Swr/swrSprite.h>
+#include <Swr/swrWeather.h>
+#include <Swr/swrText.h>
+#include <Swr/swrUI.h>
+#include <Swr/swrViewport.h>
+#include <Swr/swrViewport.h>
+#include <Swr/swrEvent.h>
+#include <Dss/sithMulti.h>
+#include <Dss/sithMessage.h>
+#include <Swr/swrMultiplayer.h>
+#include <Win95/stdComm.h>
+#include <Win95/stdConsole.h>
+#include <Win95/stdDisplay.h>
+#include <Win95/DirectX.h>
+#include <Win95/Window.h>
+#include <swr.h>
+#include <hook.h>
+}
+
+extern "C" FILE *hook_log;
+extern bool imgui_initialized;
+extern ImGuiState imgui_state;
+extern const char *modelid_cstr[];
+extern uint8_t replacedTries[323];// 323 MODELIDs
+extern std::map<MODELID, uint8_t> additionnalReplacedTries;
+extern "C" TrackInfo g_aNewTrackInfos[MAX_NB_TRACKS];
+
+static bool environment_setuped = false;
+static bool skybox_initialized = false;
+static EnvInfos envInfos;
+
+int faceIndex = 0;
+
+bool environment_models_drawn = false;
+
+// Per-mesh geometry cache (perf): a static mesh is parsed, CPU-transformed and uploaded once, then
+// just bound + drawn while its model matrix is unchanged, instead of redoing all of that every
+// frame. Meshes whose matrix changes (pods, animated parts) rebuild as before, so nothing
+// regresses. Flushed on track unload via swrModel_ClearLoadedModels_delta so reused mesh pointers
+// can't return stale geometry and the GL objects don't leak. Profiling (renderer_perf): the
+// per-frame glBufferData re-upload was ~52% of the per-draw CPU cost.
+struct CachedMeshGeometry {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    int vertex_count = 0;
+    rdMatrix44 model_matrix{};
+};
+static std::unordered_map<const swrModel_Mesh *, CachedMeshGeometry> g_mesh_geometry_cache;
+// Model matrix of each mesh's most recent parse, used by parse_display_list_commands for the N64
+// shared-vertex (soft-skinning) case. File-scope so the cache flush can clear it alongside the
+// geometry cache.
+static std::unordered_map<const swrModel_Mesh *, rdMatrix44> cached_model_matrix;
+
+// Meshes drawn this frame while the texture picker is active, indexed by the 1-based id written to
+// the pick pixel. Many meshes share one texture, so keying the id on the mesh is what lets the
+// read-back resolve the exact mesh under the cursor. Rebuilt each frame.
+static std::vector<const swrModel_Mesh *> g_pick_meshes;
+static const swrModel_Mesh *g_picked_mesh = nullptr;
+
+// GL handle of chrome01, resolved once per frame so the per-mesh reflective test is a handle
+// compare rather than a texture-buffer walk. 0 when chrome01 isn't loaded on the current track.
+static GLuint g_reflective_texture_handle = 0;
+// GL state shadows for the mesh path: consecutive meshes very often share the render mode, combiner
+// shader, texture and most uniform values, so redundant GL calls are skipped by comparing against
+// what this path last set. Only trustworthy while no other code touches the same GL state --
+// invalidated at scene-traversal start and whenever a glTF replacement draw runs mid-traversal
+// (it binds its own programs/textures). The per-shader uniform shadow lives in ColorCombineShader
+// instead: uniform state is per-program and nothing else writes those programs, so it stays valid
+// across frames and needs no invalidation here.
+static bool g_mesh_gl_state_valid = false;
+static uint32_t g_last_render_mode = 0;
+static GLuint g_last_program = 0;
+static GLuint g_last_texture = 0;
+static GLuint g_last_vao = 0;
+static int g_last_cull_key = -1;// -1 unknown, 0 disabled, else the GLenum cull face
+struct TexParamShadow {
+    GLint mag_filter = -1;
+    GLint wrap_s = -1;
+    GLint wrap_t = -1;
+};
+static std::unordered_map<GLuint, TexParamShadow> g_tex_param_shadow;
+
+void invalidate_mesh_gl_state_cache() {
+    g_mesh_gl_state_valid = false;
+    g_last_program = 0;
+    g_last_texture = 0;
+    g_last_vao = 0;
+    g_last_cull_key = -1;
+    g_tex_param_shadow.clear();
+}
+
+static void bind_mesh_vao(GLuint vao) {
+    if (vao != g_last_vao) {
+        glBindVertexArray(vao);
+        g_last_vao = vao;
+    }
+}
+
+// Compare-and-set helpers keeping the shadow == GL-state invariant.
+static bool shadow_setf(float *shadow, const float *v, int n) {
+    if (memcmp(shadow, v, n * sizeof(float)) == 0)
+        return false;
+    memcpy(shadow, v, n * sizeof(float));
+    return true;
+}
+static bool shadow_seti(int &shadow, int v) {
+    if (shadow == v)
+        return false;
+    shadow = v;
+    return true;
+}
+
+GLuint GL_CreateDefaultWhiteTexture() {
+    GLuint gl_tex = 0;
+    glGenTextures(1, &gl_tex);
+
+    glBindTexture(GL_TEXTURE_2D, gl_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    const uint32_t white = 0xFF'FF'FF'FF;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return gl_tex;
+}
+
+void glDrawAABBLines(const rdVector3 &aabb_min, const rdVector3 &aabb_max) {
+    glColor3f(1, 1, 1);
+    glLineWidth(1.0);
+    glPushMatrix();
+    glTranslatef(aabb_min.x, aabb_min.y, aabb_min.z);
+    glScalef(aabb_max.x - aabb_min.x, aabb_max.y - aabb_min.y, aabb_max.x - aabb_min.y);
+    glBegin(GL_LINES);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            int pos0[3]{j / 2, j % 2, 0};
+            std::swap(pos0[i], pos0[2]);
+            glVertex3iv(&pos0[0]);
+
+            int pos1[3]{j / 2, j % 2, 1};
+            std::swap(pos1[i], pos1[2]);
+            glVertex3iv(&pos1[0]);
+        }
+    }
+    glEnd();
+    glPopMatrix();
+}
+
+struct Vertex {
+    rdVector3 pos;
+    uint16_t tu, tv;
+    union {
+        struct {
+            rdVector4 color;
+        };
+        struct {
+            rdVector3 normal;
+            float alpha;
+        };
+    };
+};
+
+// Streaming ring for animated-mesh vertex uploads. An animated mesh (pod parts, cables) re-streams
+// its vertices every frame; uploading each through its own glBindBuffer+glBufferData costs ~2us of
+// driver time apiece (~2.7 ms/frame on a 16-racer grid). Instead, rebuilt meshes memcpy into a
+// persistently mapped buffer and draw from a vertex offset -- zero GL calls per upload. The buffer
+// is split into NUM_REGIONS regions used round-robin, one per presented frame; a fence at present
+// guards each region so the CPU never overwrites vertices a still-in-flight frame reads. With
+// regions sized well above the worst measured frame, the wait never fires in practice. A region
+// overflow (or missing GL 4.4 buffer storage) falls back to the per-mesh glBufferData path.
+struct StreamRing {
+    static constexpr int NUM_REGIONS = 4;
+    static constexpr size_t REGION_VERTICES = 400'000;// 12.8 MB per region at 32 B/vertex
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    struct Vertex *mapped = nullptr;
+    int region = 0;
+    size_t cursor = 0;// vertex offset within the current region
+    GLsync region_fences[NUM_REGIONS] = {};
+    bool unavailable = false;
+};
+static StreamRing g_stream_ring;
+
+static bool stream_ring_available() {
+    StreamRing &ring = g_stream_ring;
+    if (ring.unavailable)
+        return false;
+    if (ring.vao != 0)
+        return true;
+    if (!glBufferStorage || !glFenceSync || !glClientWaitSync) {
+        ring.unavailable = true;
+        return false;
+    }
+    glGenVertexArrays(1, &ring.vao);
+    glGenBuffers(1, &ring.vbo);
+    glBindVertexArray(ring.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, ring.vbo);
+    const GLsizeiptr bytes =
+        GLsizeiptr(StreamRing::NUM_REGIONS * StreamRing::REGION_VERTICES * sizeof(Vertex));
+    const GLbitfield map_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+    glBufferStorage(GL_ARRAY_BUFFER, bytes, nullptr, map_flags);
+    ring.mapped = (Vertex *) glMapBufferRange(GL_ARRAY_BUFFER, 0, bytes, map_flags);
+    if (!ring.mapped) {
+        glDeleteVertexArrays(1, &ring.vao);
+        glDeleteBuffers(1, &ring.vbo);
+        ring.vao = 0;
+        ring.vbo = 0;
+        ring.unavailable = true;
+        return false;
+    }
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          reinterpret_cast<void *>(offsetof(Vertex, pos)));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          reinterpret_cast<void *>(offsetof(Vertex, color)));
+    glVertexAttribPointer(2, 2, GL_SHORT, GL_FALSE, sizeof(Vertex),
+                          reinterpret_cast<void *>(offsetof(Vertex, tu)));
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          reinterpret_cast<void *>(offsetof(Vertex, normal)));
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    g_last_vao = 0;// this ran mid-traversal; keep the VAO shadow honest
+    return true;
+}
+
+// Copies the vertices into the current region and returns their base vertex index in the ring
+// buffer, or -1 when the region is full (the caller falls back to a dedicated upload).
+static int stream_ring_write(const std::vector<Vertex> &vertices) {
+    StreamRing &ring = g_stream_ring;
+    if (ring.cursor + vertices.size() > StreamRing::REGION_VERTICES)
+        return -1;
+    const size_t base = ring.region * StreamRing::REGION_VERTICES + ring.cursor;
+    memcpy(ring.mapped + base, vertices.data(), vertices.size() * sizeof(Vertex));
+    ring.cursor += vertices.size();
+    return (int) base;
+}
+
+// Called once per presented frame: fence the region just written, rotate to the next one, and make
+// sure the GPU is done reading it (it was fenced NUM_REGIONS-1 frames ago, so this never blocks in
+// practice).
+static void stream_ring_end_frame() {
+    StreamRing &ring = g_stream_ring;
+    if (ring.vao == 0)
+        return;
+    if (ring.region_fences[ring.region])
+        glDeleteSync(ring.region_fences[ring.region]);
+    ring.region_fences[ring.region] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    ring.region = (ring.region + 1) % StreamRing::NUM_REGIONS;
+    ring.cursor = 0;
+    if (GLsync fence = ring.region_fences[ring.region]) {
+        glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000);
+        glDeleteSync(fence);
+        ring.region_fences[ring.region] = nullptr;
+    }
+}
+
+// Pod cable curve (see swrRace_delta.cpp): bend amplitude for the cable mesh currently being
+// rendered, or -1 when the current mesh is not a curved cable. Set by debug_render_node when it
+// descends into a curved cable node and consumed by parse_display_list_commands below.
+static float g_active_cable_amplitude = -1.0f;
+
+// Reflective materials (issue #206). The PC port stripped the G_TEXTURE_GEN bit and left no
+// reliable per-mesh material trace -- reflective meshes span several combiner/render-mode configs,
+// some byte-identical to ordinary lit panels. The one thing they all share is sampling chrome01
+// (TEXID 35), so that is the marker.
+// CAVEAT: possibly not every chrome01 material was texgen'd on N64; if the effect leaks onto a
+// non-reflective chrome01 surface, add a secondary filter here.
+static bool texture_is_reflective(GLuint texture_handle) {
+    return texture_handle != 0 && texture_handle == g_reflective_texture_handle;
+}
+// True while debug_render_node is inside the static track subtree (node 3). Read by set_render_mode
+// (n64_shader.cpp) to force only translucent TRACK surfaces (lakes, swamps) to write depth while
+// weather is active -- so weather occludes against them -- while leaving translucent entity FX (pod
+// binders, engine glow) untouched.
+bool g_weather_terrain_depth = false;
+
+bool g_pod_shadow_depth = false;
+
+// partNodes[0x3d..0x40] of every live racer, rebuilt per traversal alongside pod_node_owners.
+static std::vector<const swrModel_Node *> g_pod_shadow_nodes;
+
+static void rebuild_pod_shadow_nodes() {
+    g_pod_shadow_nodes.clear();
+    for (int i = 0; i < 20; i++) {
+        const swrRace *entity = swrScores[i].obj_test_ptr;
+        if (entity == nullptr || entity->score_ptr != &swrScores[i] || entity->partNodes == nullptr)
+            continue;
+        for (int part = 0x3d; part <= 0x40; part++) {
+            if (entity->partNodes[part] != nullptr)
+                g_pod_shadow_nodes.push_back(entity->partNodes[part]);
+        }
+    }
+}
+
+// The PC release queues translucent faces (rdCache_AddAlphaProcFace) and draws them after every
+// opaque face (rdCache_FlushAlpha 0x0048dd80). Inline, an opaque mesh drawn later covers a blend
+// that writes no depth even from behind it (the cockpit over the binder when looking back).
+struct DeferredTranslucentMesh {
+    const swrModel_Mesh *mesh;
+    int light_index;
+    int num_enabled_lights;
+    bool mirrored;
+    rdMatrix44 proj_matrix;
+    rdMatrix44 view_matrix;
+    rdMatrix44 model_matrix;
+    MODELID model_id;
+    bool weather_terrain_depth;
+    float view_distance;
+};
+static std::vector<DeferredTranslucentMesh> g_deferred_translucent;
+static bool g_defer_translucent = false;// only during the main scene traversal
+
+static bool is_pod_shadow_node(const swrModel_Node *node) {
+    return std::find(g_pod_shadow_nodes.begin(), g_pod_shadow_nodes.end(), node) !=
+           g_pod_shadow_nodes.end();
+}
+
+// FUN_00481c30 eases the per-ring parameter before the sine lookup (consts 0x4ae028..0x4ae058).
+static float cable_ease_ring_param(float u) {
+    if (u > 0.1f && u < 0.4f)
+        return (u - 0.25f) * 0.75f + 0.25f;
+    if (u > 0.6f && u < 0.99f)
+        return (u - 0.75f) * 0.75f + 0.75f;
+    return u;
+}
+
+// Build the cable mesh the game itself shows: FUN_00481c30 (0x481c30) rebuilds the cable into a
+// 9-ring x 3-vert triangular tube from the templates at 0x4c7c30 (positions) / 0x4c7c78 (baked
+// vertex colors: apex gray, base black), eased + bent along its length. The OpenGL replacement
+// renders the original (thinner, flat-colored) authored mesh instead, so the curved cable looks
+// thin/unshaded - this regenerates the game's version into mesh-local space, transformed by the
+// node's stretched-quad matrix. amplitude A = (1-(dist/50)^2)*bend (see swrRace_delta.cpp).
+static void generate_cable_tube(const rdMatrix44 &model_matrix, std::vector<Vertex> &triangles,
+                                float amplitude) {
+    triangles.clear();
+
+    // Triangular cross-section (x,z) and baked per-vertex colors from the templates.
+    const float cs_x[3] = {0.0f, 20.0f, -20.0f};
+    const float cs_z[3] = {0.0f, -20.0f, -20.0f};
+    const rdVector4 cs_color[3] = {
+        {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f},
+        {0.0f, 0.0f, 0.0f, 1.0f},
+        {0.0f, 0.0f, 0.0f, 1.0f},
+    };
+
+    Vertex ring[9][3];
+    for (int r = 0; r <= 8; r++) {
+        const float s = cable_ease_ring_param(r * (1.0f / 8.0f));
+        const float y = truncf(-100.0f * s);
+        const float z_bend = (r >= 1 && r <= 7)
+                                 ? truncf(-100.0f * amplitude * sinf(s * 6.28318530717958647692f))
+                                 : 0.0f;
+        for (int c = 0; c < 3; c++) {
+            Vertex &v = ring[r][c];
+            v = Vertex{};
+            v.pos = {cs_x[c], y, cs_z[c] + z_bend};
+            rdMatrix_Transform3(&v.pos, &v.pos, &model_matrix);
+            v.tu = 0;
+            v.tv = 0;
+            v.color = cs_color[c];
+        }
+    }
+
+    // 8 segments x 3 prism edges x 2 triangles. End caps are omitted (they sit inside the
+    // cockpit/engine). Rendered double-sided by the caller so winding doesn't matter.
+    for (int r = 0; r < 8; r++) {
+        for (int c = 0; c < 3; c++) {
+            const int c1 = (c + 1) % 3;
+            triangles.push_back(ring[r][c]);
+            triangles.push_back(ring[r][c1]);
+            triangles.push_back(ring[r + 1][c1]);
+            triangles.push_back(ring[r][c]);
+            triangles.push_back(ring[r + 1][c1]);
+            triangles.push_back(ring[r + 1][c]);
+        }
+    }
+}
+
+void parse_display_list_commands(const rdMatrix44 &model_matrix, const swrModel_Mesh *mesh,
+                                 std::vector<Vertex> &triangles) {
+    triangles.clear();
+
+    cached_model_matrix[mesh] = model_matrix;
+
+    bool vertices_have_normals = mesh->mesh_material->type & 0x11;
+
+    // Pod cable curve: render the game's rebuilt curved tube (baked-shaded triangular prism)
+    // instead of the original thin, flat-colored authored mesh.
+    if (g_active_cable_amplitude >= 0.0f) {
+        generate_cable_tube(model_matrix, triangles, g_active_cable_amplitude);
+        return;
+    }
+
+    auto load_vertex = [&](const rdMatrix44 &model_matrix, Vtx *ptr) {
+        // TODO
+        rdMatrix44 normal_matrix = model_matrix;
+
+        Vtx v = *ptr;
+        v.v.x = SWAP16(v.v.x);
+        v.v.y = SWAP16(v.v.y);
+        v.v.z = SWAP16(v.v.z);
+        v.v.u = SWAP16(v.v.u);
+        v.v.v = SWAP16(v.v.v);
+
+        Vertex vf{};
+        vf.pos.x = v.v.x;
+        vf.pos.y = v.v.y;
+        vf.pos.z = v.v.z;
+
+        // pretransform position
+        rdMatrix_Transform3(&vf.pos, &vf.pos, &model_matrix);
+
+        vf.tu = v.v.u;
+        vf.tv = v.v.v;
+
+        if (vertices_have_normals) {
+            vf.normal.x = v.n.nx / 128.0;
+            vf.normal.y = v.n.ny / 128.0;
+            vf.normal.z = v.n.nz / 128.0;
+            vf.alpha = v.n.a / 255.0;
+
+            // pretransform normal
+            rdMatrix_Multiply3(&vf.normal, &vf.normal, &normal_matrix);
+        } else {
+            vf.color.x = v.v.r / 255.0;
+            vf.color.y = v.v.g / 255.0;
+            vf.color.z = v.v.b / 255.0;
+            vf.color.w = v.v.a / 255.0;
+        }
+        return vf;
+    };
+
+    // the max number of vertices on the N64 is actually 32.
+    // this value is set to 256 to support custom tracks built with
+    // https://github.com/louriccia/blender-swe1r/
+    // this should not have any consequences other than supporting more than 32 vertices.
+    Vertex vertices[256];
+
+    const Gfx *command = swrModel_MeshGetDisplayList(mesh);
+    while (command->type != 0xdf) {
+        switch (command->type) {
+            case 0x1: {
+                uint8_t n = (SWAP16(command->gSPVertex.n_packed) >> 4) & 0xFF;
+                uint8_t v0 = command->gSPVertex.v0_plus_n - n;
+                // blender-swe1r stores a vertex load as (n=0, v0_plus_n=count), unlike the
+                // retail game's (n=count, v0=base). Normalize only that alternate encoding.
+                if (n == 0 && v0 != mesh->vertex_base_offset) {
+                    n = v0;
+                    v0 = mesh->vertex_base_offset;
+                }
+                if (v0 != mesh->vertex_base_offset)
+                    std::abort();
+
+                if (v0 + n > std::size(vertices))
+                    std::abort();
+
+                if (v0 != 0) {
+                    const rdMatrix44 &prev_matrix =
+                        cached_model_matrix.at(mesh->referenced_node->children.meshes[0]);
+                    for (int i = 0; i < v0; i++)
+                        vertices[i] =
+                            load_vertex(prev_matrix, command->gSPVertex.vertex_offset - v0 + i);
+                }
+
+                for (int i = 0; i < n; i++) {
+                    vertices[v0 + i] =
+                        load_vertex(model_matrix, command->gSPVertex.vertex_offset + i);
+                }
+                break;
+            }
+            case 0x3:
+                break;
+            case 0x5:
+                triangles.push_back(vertices[command->gSP1Triangle.index0 / 2]);
+                triangles.push_back(vertices[command->gSP1Triangle.index1 / 2]);
+                triangles.push_back(vertices[command->gSP1Triangle.index2 / 2]);
+                break;
+            case 0x6:
+                triangles.push_back(vertices[command->gSP1Triangle.index0 / 2]);
+                triangles.push_back(vertices[command->gSP1Triangle.index1 / 2]);
+                triangles.push_back(vertices[command->gSP1Triangle.index2 / 2]);
+
+                triangles.push_back(vertices[command->gSP2Triangles.index3 / 2]);
+                triangles.push_back(vertices[command->gSP2Triangles.index4 / 2]);
+                triangles.push_back(vertices[command->gSP2Triangles.index5 / 2]);
+                break;
+            default:
+                std::abort();
+        }
+        command++;
+    }
+}
+
+// True if a local-space AABB (min xyz, max xyz) lies completely outside the clip volume of mvp
+// (row-vector convention, clip = v * mvp). Tests all 8 corners against each homogeneous clip
+// half-space; only culls when every corner is outside the SAME plane, which is conservative and
+// safe pre-divide (the clip-space image of the box is the convex hull of the corner images).
+bool aabb_outside_frustum(const float aabb[6], const rdMatrix44 &mvp) {
+    // An inverted AABB was never authored; don't trust it to bound anything.
+    if (aabb[0] > aabb[3] || aabb[1] > aabb[4] || aabb[2] > aabb[5])
+        return false;
+    unsigned outside_all = 0x3F;
+    for (int i = 0; i < 8 && outside_all != 0; i++) {
+        const float x = (i & 1) ? aabb[3] : aabb[0];
+        const float y = (i & 2) ? aabb[4] : aabb[1];
+        const float z = (i & 4) ? aabb[5] : aabb[2];
+        const float cx = x * mvp.vA.x + y * mvp.vB.x + z * mvp.vC.x + mvp.vD.x;
+        const float cy = x * mvp.vA.y + y * mvp.vB.y + z * mvp.vC.y + mvp.vD.y;
+        const float cz = x * mvp.vA.z + y * mvp.vB.z + z * mvp.vC.z + mvp.vD.z;
+        const float cw = x * mvp.vA.w + y * mvp.vB.w + z * mvp.vC.w + mvp.vD.w;
+        unsigned outside = 0;
+        if (cx < -cw)
+            outside |= 0x1;
+        if (cx > cw)
+            outside |= 0x2;
+        if (cy < -cw)
+            outside |= 0x4;
+        if (cy > cw)
+            outside |= 0x8;
+        if (cz < -cw)
+            outside |= 0x10;
+        if (cz > cw)
+            outside |= 0x20;
+        outside_all &= outside;
+    }
+    return outside_all != 0;
+}
+
+// Handles already unscrambled by deswizzle_lod_texture. Cleared per-handle when the underlying
+// texture is freed (deswizzle_forget_texture, called from std3D_ClearTexture_delta) so a GL name
+// reused for a fresh texture after a track reload is unscrambled again rather than skipped.
+static std::unordered_set<GLuint> g_deswizzled_lod_textures;
+
+void deswizzle_forget_texture(GLuint handle) {
+    g_deswizzled_lod_textures.erase(handle);
+}
+
+// A handful of LOD/mip textures (e.g. the Oovo IV tunnel walls f_mip_build02, the Ord Ibanna plates
+// and scaffolds) survived the N64->PC port still in the N64's swizzled TMEM layout: within the
+// original tile, every odd row has its adjacent 8-texel blocks swapped. Nothing in the PC pipeline
+// undoes this, so they upload as a scrambled checkerboard.
+//
+// The wrinkle: the game's texture converter bakes a texture's mirrored-UV wrapping into the upload,
+// duplicating the tile into a 2x-wide and/or 2x-tall image (mirror X then mirror Y). The swizzle
+// lives only in the original tile, so we deswizzle just that tile (top-left ow x oh) and then rebuild
+// the mirror copies from the corrected tile, in the converter's order. Doing the swap on the whole
+// mirrored upload instead re-scrambles the mirrored halves (the Y mirror flips row parity).
+//
+// Done once per GL texture; ow/oh and the mirror flags come from the model's texture spec.
+static void deswizzle_lod_texture(GLuint handle, int ow, int oh, bool mirror_x, bool mirror_y) {
+    if (handle == 0 || g_deswizzled_lod_textures.contains(handle))
+        return;
+
+    glBindTexture(GL_TEXTURE_2D, handle);
+    GLint gw = 0, gh = 0;
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &gw);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &gh);
+    // The block swap pairs 8-texel blocks along the tile width, so that width must be a whole number
+    // of block pairs and fit the upload. Mark anything else done so we don't retry it every frame.
+    if (gw <= 0 || gh <= 0 || ow <= 0 || oh <= 0 || (ow % 16) != 0 || ow > gw || oh > gh) {
+        g_deswizzled_lod_textures.insert(handle);
+        return;
+    }
+
+    std::vector<uint32_t> buf(size_t(gw) * gh);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+
+    // 1) Deswizzle the original tile: on odd rows, swap adjacent 8-texel blocks.
+    std::vector<uint32_t> row(ow);
+    for (int y = 1; y < oh; y += 2) {
+        uint32_t *r = &buf[size_t(y) * gw];
+        std::copy(r, r + ow, row.begin());
+        for (int x = 0; x < ow; x++)
+            r[x + ((x / 8) % 2 == 0 ? 8 : -8)] = row[x];
+    }
+    // 2) Rebuild the baked mirror copies from the corrected tile (X into the right half, then Y into
+    //    the bottom half -- the same order the converter used).
+    if (mirror_x)
+        for (int y = 0; y < oh; y++)
+            for (int x = ow; x < 2 * ow && x < gw; x++)
+                buf[size_t(y) * gw + x] = buf[size_t(y) * gw + (2 * ow - 1 - x)];
+    if (mirror_y)
+        for (int y = oh; y < 2 * oh && y < gh; y++)
+            for (int x = 0; x < gw; x++)
+                buf[size_t(y) * gw + x] = buf[size_t(2 * oh - 1 - y) * gw + x];
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, gw, gh, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    g_deswizzled_lod_textures.insert(handle);
+}
+
+// Run the display-list parse a drawn mesh would have run, without drawing, so the N64 shared-vertex
+// staging a later skinned mesh consumes stays identical to the drawn path.
+static void parse_mesh_without_drawing(const swrModel_Mesh *mesh, const rdMatrix44 &model_matrix) {
+    bool would_parse = true;
+    if (imgui_state.cache_meshes) {
+        const auto it = g_mesh_geometry_cache.find(mesh);
+        would_parse = it == g_mesh_geometry_cache.end() || it->second.vao == 0 ||
+                      memcmp(&it->second.model_matrix, &model_matrix, sizeof(rdMatrix44)) != 0;
+    }
+    if (would_parse) {
+        static std::vector<Vertex> parse_only_scratch;
+        parse_display_list_commands(model_matrix, mesh, parse_only_scratch);
+    }
+}
+
+void debug_render_mesh(const swrModel_Mesh *mesh, int light_index, int num_enabled_lights,
+                       bool mirrored, const rdMatrix44 &proj_matrix, const rdMatrix44 &view_matrix,
+                       const rdMatrix44 &model_matrix, MODELID model_id) {
+
+    if (!imgui_state.draw_meshes)
+        return;
+
+    const auto &aabb = mesh->aabb;
+    // glDrawAABBLines({ aabb[0], aabb[1], aabb[2] }, { aabb[3], aabb[4], aabb[5] });
+
+    if (!mesh->vertices)
+        return;
+
+#ifndef NDEBUG
+    for (MaterialMember &member: node_material_members) {
+        const uint32_t value = member.getter(*mesh->mesh_material);
+        member.count[value]++;
+    }
+
+    for (const MaterialMember &member: node_material_members) {
+        const uint32_t value = member.getter(*mesh->mesh_material);
+        if (member.banned.contains(value))
+            return;
+    }
+#endif
+
+    const uint32_t &type = mesh->mesh_material->type;
+    if (imgui_state.HD_replacement) {
+        // The first non-environment model ends the env-to-cubemap stamping for this frame (the
+        // scene graph draws the environment first). This flip was accidentally nested inside the
+        // show_replacementTries debug gate, so with HD on EVERY mesh paid the cubemap redraw (two
+        // FBO binds + attachment + viewport switches each, ~13 us/mesh): a race frame spent ~11 ms
+        // stamping the whole track into the env cubemap every frame. hd_scene_captures opts back
+        // into whole-scene stamping (live track reflections on the pod, at that cost) until the
+        // captures can be precalculated per track instead.
+        if (!imgui_state.hd_scene_captures && environment_models_drawn == false &&
+            !isEnvModel(model_id)) {
+            if (imgui_state.show_replacementTries) {
+                imgui_state.replacementTries += std::string("=== ENV DONE ===\n");
+            }
+            environment_models_drawn = true;
+        }
+
+        // replacements
+        if (try_replace(model_id, proj_matrix, view_matrix, model_matrix, envInfos, mirrored,
+                        type) &&
+            !imgui_state.show_original_and_replacements) {
+            return;
+        }
+    }
+
+    // Only depth-tested blends without depth writes move. Undepth-tested blends (sky) rely on tree
+    // order, skinned meshes and bent cables on state at their tree position, and a pod shadow
+    // sorted after a non-depth-writing pod blend lands on top of it (Anakin's pod).
+    if (g_defer_translucent && !g_pod_shadow_depth && mesh->vertex_base_offset == 0 &&
+        g_active_cable_amplitude < 0.0f && !isEnvModel(model_id)) {
+        const swrModel_Material *material = mesh->mesh_material->material;
+        const uint32_t mode = material->render_mode_1 | material->render_mode_2;
+        const RenderMode &rm = (const RenderMode &) mode;
+        if (!rm.z_update && rm.z_compare &&
+            render_mode_is_alpha_blend(mode)) {
+            parse_mesh_without_drawing(mesh, model_matrix);
+            const float cx = (mesh->aabb[0] + mesh->aabb[3]) * 0.5f;
+            const float cy = (mesh->aabb[1] + mesh->aabb[4]) * 0.5f;
+            const float cz = (mesh->aabb[2] + mesh->aabb[5]) * 0.5f;
+            rdMatrix44 mv;
+            rdMatrix_Multiply44(&mv, &model_matrix, &view_matrix);
+            const float view_z = cx * mv.vA.z + cy * mv.vB.z + cz * mv.vC.z + mv.vD.z;
+            g_deferred_translucent.push_back(
+                {mesh, light_index, num_enabled_lights, mirrored, proj_matrix, view_matrix,
+                 model_matrix, model_id, g_weather_terrain_depth, -view_z});
+            return;
+        }
+    }
+
+    // Frustum culling: skip the GL work (state setup + upload + draw) for a mesh whose AABB is
+    // entirely off-screen -- with ai_full_lod every AI pod is ~90 meshes drawn at full detail even
+    // when far behind the camera. Two meshes can't use their own AABB and are never culled: a
+    // skinned mesh (vertex_base_offset != 0) renders vertices staged by earlier meshes' parses,
+    // possibly under a different matrix, and a bent cable regenerates its tube geometry outside the
+    // authored box. A culled mesh still parses whenever the drawn path would have, so the N64
+    // shared-vertex staging a later skinned mesh consumes stays identical to the uncalled path.
+    if (imgui_state.cull_meshes && mesh->vertex_base_offset == 0 &&
+        g_active_cable_amplitude < 0.0f) {
+        rdMatrix44 mvp;
+        rdMatrix_Multiply44(&mvp, &model_matrix, &view_matrix);
+        rdMatrix_Multiply44(&mvp, &mvp, &proj_matrix);
+        if (aabb_outside_frustum(mesh->aabb, mvp)) {
+            parse_mesh_without_drawing(mesh, model_matrix);
+            return;
+        }
+    }
+
+    const bool vertices_have_normals = mesh->mesh_material->type & 0x11;
+
+    const swrModel_Material *n64_material = mesh->mesh_material->material;
+
+    const uint32_t render_mode = n64_material->render_mode_1 | n64_material->render_mode_2;
+    // Same mode word => set_render_mode would re-issue identical depth/blend/coverage state (and
+    // recompute the same g_cutout_alpha_to_coverage), so skip it.
+    if (!g_mesh_gl_state_valid || render_mode != g_last_render_mode) {
+        set_render_mode(render_mode);
+        g_last_render_mode = render_mode;
+        g_mesh_gl_state_valid = true;
+    }
+
+    const CombineMode color_cycle1(n64_material->color_combine_mode_cycle1, false);
+    const CombineMode alpha_cycle1(n64_material->alpha_combine_mode_cycle1, true);
+    const CombineMode color_cycle2(n64_material->color_combine_mode_cycle2, false);
+    const CombineMode alpha_cycle2(n64_material->alpha_combine_mode_cycle2, true);
+
+    float uv_scale_x = 1.0;
+    float uv_scale_y = 1.0;
+    float uv_offset_x = 0;
+    float uv_offset_y = 0;
+    GLuint current_texture_handle = 0;
+    GLint wrap_s = -1;// -1 = material has no spec; leave the texture object's wrap untouched
+    GLint wrap_t = -1;
+    if (mesh->mesh_material->material_texture &&
+        mesh->mesh_material->material_texture->loaded_material) {
+        const swrModel_MaterialTexture *tex = mesh->mesh_material->material_texture;
+        tSystemTexture *sys_tex = tex->loaded_material->aTextures;
+        current_texture_handle = GLuint(sys_tex->pD3DSrcTexture);
+        glBindTexture(GL_TEXTURE_2D, current_texture_handle);
+
+        // A texture carrying a mip pyramid (more than one tile spec) is stored in the N64's swizzled
+        // TMEM layout in the PC release and uploads scrambled. That mip chain is the LOD marker: it
+        // holds for both the LOD_FRACTION-combiner surfaces (e.g. Oovo tunnels) and the _mipcut_
+        // alpha-cutout ones whose colour combiner never references LOD_FRACTION. Unscramble it the
+        // first time it is bound (skip user replacements, which are already correct).
+        if (tex->specs[1] && !is_replacement_texture_handle(current_texture_handle)) {
+            // Mirror flags share the spec bits the UV scale uses (0x10000000 = mirror X, 0x01000000
+            // = mirror Y); tex->width/height are the original tile dims before the mirror bake.
+            const uint32_t flags = tex->specs[0] ? tex->specs[0]->flags : 0;
+            deswizzle_lod_texture(current_texture_handle, tex->width, tex->height,
+                                  flags & 0x10'00'00'00, flags & 0x01'00'00'00);
+        }
+
+        // Magnification filter (see TexMagFilterMode). Unlike the 2D/UI std3D path, the world-mesh
+        // path has no per-material point/linear bit to honor (swrModel_Material keeps only the
+        // render-mode low words, not the N64 othermode texture-filter field), so FAITHFUL/LINEAR
+        // both use the original PC/N64 default of bilinear; POINT forces crisp GL_NEAREST, which
+        // removes the blurry alpha fringe on low-res cutout textures. Set every draw because the
+        // mag filter is texture-object state the UI path may have flipped on a shared texture.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                        imgui_state.tex_mag_filter == TEX_MAG_POINT ? GL_NEAREST : GL_LINEAR);
+
+        if (tex->specs[0]) {
+            uv_scale_x = tex->specs[0]->flags & 0x10'00'00'00 ? 2.0 : 1.0;
+            uv_scale_y = tex->specs[0]->flags & 0x01'00'00'00 ? 2.0 : 1.0;
+            if (tex->specs[0]->flags & 0x20'00'00'00) {
+                uv_offset_x -= 1;
+                wrap_s = GL_CLAMP_TO_EDGE;
+            } else {
+                wrap_s = GL_REPEAT;
+            }
+            if (tex->specs[0]->flags & 0x02'00'00'00) {
+                uv_offset_y -= 1;
+                wrap_t = GL_CLAMP_TO_EDGE;
+            } else {
+                wrap_t = GL_REPEAT;
+            }
+        }
+        uv_offset_x += 1 - (float) mesh->mesh_material->texture_offset[0] / (float) tex->res[0];
+        uv_offset_y += 1 - (float) mesh->mesh_material->texture_offset[1] / (float) tex->res[1];
+    } else {
+        // some meshes don't render correctly without a default white texture.
+        // they use the "TEXEL0" or "TEXEL1" color combiner input.
+        static GLuint default_gl_tex = GL_CreateDefaultWhiteTexture();
+        current_texture_handle = default_gl_tex;
+    }
+
+    if (current_texture_handle != g_last_texture) {
+        if (g_last_texture == 0) {
+            // First mesh since invalidation: another path may have left a different unit active.
+            glActiveTexture(GL_TEXTURE0);
+        }
+        glBindTexture(GL_TEXTURE_2D, current_texture_handle);
+        g_last_texture = current_texture_handle;
+    }
+
+    // Magnification filter (see TexMagFilterMode). Unlike the 2D/UI std3D path, the world-mesh
+    // path has no per-material point/linear bit to honor (swrModel_Material keeps only the
+    // render-mode low words, not the N64 othermode texture-filter field), so FAITHFUL/LINEAR
+    // both use the original PC/N64 default of bilinear; POINT forces crisp GL_NEAREST, which
+    // removes the blurry alpha fringe on low-res cutout textures. Filter and wrap are
+    // texture-object state the UI path may have flipped on a shared texture between traversals,
+    // so they're shadowed per handle and the shadow is cleared on invalidation.
+    TexParamShadow &tex_params = g_tex_param_shadow[current_texture_handle];
+    const GLint mag_filter =
+        imgui_state.tex_mag_filter == TEX_MAG_POINT ? GL_NEAREST : GL_LINEAR;
+    if (tex_params.mag_filter != mag_filter) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
+        tex_params.mag_filter = mag_filter;
+    }
+    if (wrap_s != -1 && tex_params.wrap_s != wrap_s) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s);
+        tex_params.wrap_s = wrap_s;
+    }
+    if (wrap_t != -1 && tex_params.wrap_t != wrap_t) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);
+        tex_params.wrap_t = wrap_t;
+    }
+    int cull_key;// 0 = double sided, else the GLenum face to cull
+    if (type & 0x8) {
+        cull_key = mirrored ? GL_FRONT : GL_BACK;
+    } else if (type & 0x40) {
+        // mirrored geometry.
+        cull_key = mirrored ? GL_BACK : GL_FRONT;
+    } else {
+        // double sided geometry.
+        cull_key = 0;
+    }
+    if (g_active_cable_amplitude >= 0.0f) {
+        // The generated cable tube isn't guaranteed CCW-wound, so render it double-sided.
+        cull_key = 0;
+    }
+    if (cull_key != g_last_cull_key) {
+        if (cull_key == 0) {
+            glDisable(GL_CULL_FACE);
+        } else {
+            glEnable(GL_CULL_FACE);
+            glCullFace(cull_key);
+        }
+        g_last_cull_key = cull_key;
+    }
+
+    ColorCombineShader &shader = get_or_compile_color_combine_shader(
+        imgui_state, {color_cycle1, alpha_cycle1, color_cycle2, alpha_cycle2});
+    if (shader.handle != g_last_program) {
+        glUseProgram(shader.handle);
+        g_last_program = shader.handle;
+    }
+
+    // Uniforms upload only when their value differs from the per-shader shadow (see
+    // N64UniformShadow). A freshly linked program has every uniform zeroed (GL guarantee), matching
+    // the zero-initialized shadow, so the invariant holds from the start; the identity model matrix
+    // is the one non-zero initial upload and has its own flag.
+    N64UniformShadow &sh = shader.shadow;
+    if (shadow_setf(sh.proj, &proj_matrix.vA.x, 16))
+        glUniformMatrix4fv(shader.proj_matrix_pos, 1, GL_FALSE, &proj_matrix.vA.x);
+    if (shadow_setf(sh.view, &view_matrix.vA.x, 16))
+        glUniformMatrix4fv(shader.view_matrix_pos, 1, GL_FALSE, &view_matrix.vA.x);
+
+    if (!sh.model_matrix_set) {
+        // Vertices are CPU-transformed to world space, so the model matrix stays identity.
+        rdMatrix44 identity_mat;
+        rdMatrix_SetIdentity44(&identity_mat);
+        glUniformMatrix4fv(shader.model_matrix_pos, 1, GL_FALSE, &identity_mat.vA.x);
+        sh.model_matrix_set = true;
+    }
+    const float uv_offset[2] = {uv_offset_x, uv_offset_y};
+    if (shadow_setf(sh.uv_offset, uv_offset, 2))
+        glUniform2f(shader.uv_offset_pos, uv_offset_x, uv_offset_y);
+    const float uv_scale[2] = {uv_scale_x, uv_scale_y};
+    if (shadow_setf(sh.uv_scale, uv_scale, 2))
+        glUniform2f(shader.uv_scale_pos, uv_scale_x, uv_scale_y);
+
+    const auto &[r, g, b, a] = n64_material->primitive_color;
+    const float primitive_color[4] = {r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f};
+    if (shadow_setf(sh.primitive_color, primitive_color, 4))
+        glUniform4f(shader.primitive_color_pos, primitive_color[0], primitive_color[1],
+                    primitive_color[2], primitive_color[3]);
+
+    // Regenerate sphere-map UVs for reflective materials (issue #206). Needs vertex normals.
+    bool texgen = imgui_state.reflection_texgen && vertices_have_normals &&
+                  texture_is_reflective(current_texture_handle);
+    if (imgui_state.debug_texgen_on_picked && vertices_have_normals && mesh == g_picked_mesh) {
+        texgen = true;
+    }
+    glUniform1i(shader.texgen_mode_pos, texgen ? 1 : 0);
+    // The tuning uniforms are only read when texgenMode != 0, so skip those uploads otherwise.
+    if (texgen) {
+        glUniform1f(shader.texgen_scale_pos, imgui_state.reflection_texgen_scale);
+        glUniform1f(shader.texgen_rotation_pos,
+                    imgui_state.reflection_texgen_rotation * 3.14159265f / 180.0f);
+        glUniform2f(shader.texgen_offset_pos, imgui_state.reflection_texgen_offset[0],
+                    imgui_state.reflection_texgen_offset[1]);
+    }
+    // Cull cutout pixels on alpha. alpha_compare is the explicit N64 alpha test; cvg_x_alpha marks
+    // the coverage-from-alpha cutout materials (fences, foliage) the RDP resolved as antialiased
+    // hard cutouts (issue #193 + alpha-fringe followup). alpha_cvg_sel is deliberately NOT included:
+    // it selects coverage as the output alpha on ordinary opaque AA geometry (it's set on normal lit
+    // panels), so it is not a cutout signal. Opaque materials set neither and are never tested. A
+    // ~0.5 cutoff ignores the interpolated fringe; when alpha-to-coverage is active (set by
+    // set_render_mode) drop to ~0 so multisample coverage, not a hard cut, antialiases the edge.
+    const RenderMode &rm = (const RenderMode &) render_mode;
+    if (shadow_seti(sh.alpha_compare_mode, rm.alpha_compare))
+        glUniform1i(shader.alpha_compare_mode_pos, rm.alpha_compare);
+    if (shadow_seti(sh.alpha_is_coverage, rm.cvg_x_alpha ? 1 : 0))
+        glUniform1i(shader.alpha_is_coverage_pos, rm.cvg_x_alpha ? 1 : 0);
+    const float alpha_cutoff = g_cutout_alpha_to_coverage ? 0.01f : imgui_state.alpha_cutoff;
+    if (shadow_setf(&sh.alpha_cutoff, &alpha_cutoff, 1))
+        glUniform1f(shader.alpha_cutoff_pos, alpha_cutoff);
+    if (shadow_seti(sh.alpha_to_coverage, g_cutout_alpha_to_coverage ? 1 : 0))
+        glUniform1i(shader.alpha_to_coverage_pos, g_cutout_alpha_to_coverage ? 1 : 0);
+
+    if (shadow_seti(sh.enable_gouraud, vertices_have_normals ? 1 : 0))
+        glUniform1i(shader.enable_gouraud_shading_pos, vertices_have_normals);
+    if (shadow_setf(sh.ambient_color, &lightAmbientColor[light_index].x, 3))
+        glUniform3fv(shader.ambient_color_pos, 1, &lightAmbientColor[light_index].x);
+    if (shadow_setf(sh.light_color, &lightColor1[light_index].x, 3))
+        glUniform3fv(shader.light_color_pos, 1, &lightColor1[light_index].x);
+    if (shadow_setf(sh.light_dir, &lightDirection1[light_index].x, 3))
+        glUniform3fv(shader.light_dir_pos, 1, &lightDirection1[light_index].x);
+    // Second bank light (num_enabled_lights == 2): transient per-pod illumination, e.g. wall-scrape
+    // sparks. swrObjcMan_UpdateLighting flickers lightColor2/lightDirection2 while flags0 & 0x30000000.
+    if (shadow_seti(sh.num_lights, num_enabled_lights))
+        glUniform1i(shader.num_lights_pos, num_enabled_lights);
+    if (shadow_setf(sh.light_color2, &lightColor2[light_index].x, 3))
+        glUniform3fv(shader.light_color2_pos, 1, &lightColor2[light_index].x);
+    if (shadow_setf(sh.light_dir2, &lightDirection2[light_index].x, 3))
+        glUniform3fv(shader.light_dir2_pos, 1, &lightDirection2[light_index].x);
+
+    const bool fog_enabled = imgui_state.enable_fog && (GameSettingFlags & 0x40) == 0;
+    if (shadow_seti(sh.fog_enabled, fog_enabled ? 1 : 0))
+        glUniform1i(shader.fog_enabled_pos, fog_enabled);
+    if (fog_enabled) {
+        if (shadow_setf(&sh.fog_start, &fogStart, 1))
+            glUniform1f(shader.fog_start_pos, fogStart);
+        if (shadow_setf(&sh.fog_end, &fogEnd, 1))
+            glUniform1f(shader.fog_end_pos, fogEnd);
+
+        const rdVector4 fog_color = {
+            fogColorInt16[0] / 255.0f,
+            fogColorInt16[1] / 255.0f,
+            fogColorInt16[2] / 255.0f,
+            fogColorInt16[3] / 255.0f,
+        };
+        if (shadow_setf(sh.fog_color, &fog_color.x, 4))
+            glUniform4fv(shader.fog_color_pos, 1, &fog_color.x);
+    }
+
+    if (imgui_state.enable_picking_texture_when_hovering) {
+        // 1-based index into this frame's pick list.
+        uint32_t pick_id = (uint32_t) g_pick_meshes.size() + 1;
+        g_pick_meshes.push_back(mesh);
+        if (!imgui_state.pick_through_transparent_objects) {
+            // when rendering with alpha blending, the alpha channel is 0 when setting the color to
+            // unpackUnorm4x8(...) because the id is a small number. by setting the high bits of the
+            // pick id to 255, meshes rendered with alpha blending can also be picked because their
+            // alpha value will be 1.0.
+            pick_id |= 0xFF'00'00'00;
+        }
+
+        glUniform1ui(shader.model_id_pos, pick_id);
+        const ImVec2 mouse_pos = ImGui::GetMousePos();
+        glUniform2i(shader.mouse_position_pos, mouse_pos.x,
+                    ImGui::GetIO().DisplaySize.y - 1 - mouse_pos.y);
+    }
+
+    struct VertexSpec {
+        GLuint vao;
+        GLuint buffer;
+    };
+    static VertexSpec spec = [] {
+        VertexSpec spec{};
+        glGenVertexArrays(1, &spec.vao);
+        glGenBuffers(1, &spec.buffer);
+
+        glBindVertexArray(spec.vao);
+
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+        glEnableVertexAttribArray(3);
+
+        glBindBuffer(GL_ARRAY_BUFFER, spec.buffer);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<void *>(offsetof(Vertex, pos)));
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<void *>(offsetof(Vertex, color)));
+        glVertexAttribPointer(2, 2, GL_SHORT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<void *>(offsetof(Vertex, tu)));
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              reinterpret_cast<void *>(offsetof(Vertex, normal)));
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        return spec;
+    }();
+
+    static std::vector<Vertex> triangles;
+    int mesh_vertex_count;
+    GLint mesh_first_vertex = 0;
+
+    // Geometry cache. Cable meshes are excluded: they regenerate their tube every frame from
+    // g_active_cable_amplitude (which animates even when the node matrix is static), so caching
+    // would freeze the sway.
+    const bool cacheable = imgui_state.cache_meshes && g_active_cable_amplitude < 0.0f;
+    const bool can_stream = imgui_state.stream_dynamic_meshes && stream_ring_available();
+    if (cacheable) {
+        CachedMeshGeometry &cached = g_mesh_geometry_cache[mesh];
+        const bool needs_rebuild =
+            cached.vao == 0 || memcmp(&cached.model_matrix, &model_matrix, sizeof(rdMatrix44)) != 0;
+        if (!needs_rebuild) {
+            bind_mesh_vao(cached.vao);
+            mesh_vertex_count = cached.vertex_count;
+        } else {
+            parse_display_list_commands(model_matrix, mesh, triangles);
+            // A mesh that rebuilds despite having a buffer is animated (its matrix changed) and
+            // will rebuild again next frame -- stream it through the ring instead of re-uploading
+            // its dedicated buffer. The cache entry keeps its old matrix+content, which stays
+            // internally consistent (the buffer holds vertices transformed by exactly that matrix).
+            const int stream_base =
+                (cached.vao != 0 && can_stream) ? stream_ring_write(triangles) : -1;
+            if (stream_base >= 0) {
+                bind_mesh_vao(g_stream_ring.vao);
+                mesh_first_vertex = stream_base;
+                mesh_vertex_count = (int) triangles.size();
+            } else {
+                if (cached.vao == 0) {
+                    glGenVertexArrays(1, &cached.vao);
+                    glGenBuffers(1, &cached.vbo);
+                    bind_mesh_vao(cached.vao);
+                    glBindBuffer(GL_ARRAY_BUFFER, cached.vbo);
+                    glEnableVertexAttribArray(0);
+                    glEnableVertexAttribArray(1);
+                    glEnableVertexAttribArray(2);
+                    glEnableVertexAttribArray(3);
+                    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                          reinterpret_cast<void *>(offsetof(Vertex, pos)));
+                    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                          reinterpret_cast<void *>(offsetof(Vertex, color)));
+                    glVertexAttribPointer(2, 2, GL_SHORT, GL_FALSE, sizeof(Vertex),
+                                          reinterpret_cast<void *>(offsetof(Vertex, tu)));
+                    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                                          reinterpret_cast<void *>(offsetof(Vertex, normal)));
+                } else {
+                    bind_mesh_vao(cached.vao);
+                    glBindBuffer(GL_ARRAY_BUFFER, cached.vbo);
+                }
+                // DYNAMIC_DRAW: a cached mesh whose matrix changes re-uploads here, so STATIC_DRAW
+                // would be a misleading hint and can stall.
+                glBufferData(GL_ARRAY_BUFFER, triangles.size() * sizeof(Vertex), triangles.data(),
+                             GL_DYNAMIC_DRAW);
+                cached.vertex_count = (int) triangles.size();
+                cached.model_matrix = model_matrix;
+            }
+            mesh_vertex_count = (int) triangles.size();
+        }
+    } else {
+        parse_display_list_commands(model_matrix, mesh, triangles);
+        const int stream_base = can_stream ? stream_ring_write(triangles) : -1;
+        if (stream_base >= 0) {
+            bind_mesh_vao(g_stream_ring.vao);
+            mesh_first_vertex = stream_base;
+        } else {
+            bind_mesh_vao(spec.vao);
+            glBindBuffer(GL_ARRAY_BUFFER, spec.buffer);
+            glBufferData(GL_ARRAY_BUFFER, triangles.size() * sizeof(Vertex), triangles.data(),
+                         GL_DYNAMIC_DRAW);
+        }
+        mesh_vertex_count = (int) triangles.size();
+    }
+    glDrawArrays(GL_TRIANGLES, mesh_first_vertex, mesh_vertex_count);
+
+    if (imgui_state.HD_replacement && !environment_models_drawn &&
+        envInfos.skybox.depthTexture != 0) {
+        GLint old_viewport[4];
+        glGetIntegerv(GL_VIEWPORT, old_viewport);
+        glViewport(0, 0, 2048, 2048);
+        // Env camera FBO
+        glBindFramebuffer(GL_FRAMEBUFFER, envInfos.ibl_framebuffer);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
+                               envInfos.skybox.depthTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+                               envInfos.skybox.GLCubeTexture, 0);
+
+        const swrViewport &vp = swrViewport_array[1];
+
+        // setup Camera position
+        rdMatrix44 envViewMat{};
+        rdVector3 envCameraPosition = {
+            vp.model_matrix.vD.x,
+            vp.model_matrix.vD.y,
+            vp.model_matrix.vD.z,
+        };
+        rdVector3 targets[] = {
+            {-1, 0, 0},// NEGATIVE X
+            {1, 0, 0}, // POSITIVE X
+            {0, -1, 0},// NEGATIVE Y
+            {0, 1, 0}, // POSITIVE Y
+            {0, 0, -1},// NEGATIVE Z
+            {0, 0, 1}, // POSITIVE Z
+        };
+
+        rdVector3 envCameraUp[] = {
+            {0, -1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}, {0, -1, 0},
+        };
+
+        renderer_lookAtForward(&envViewMat, &envCameraPosition, &targets[faceIndex],
+                               &envCameraUp[faceIndex]);
+        renderer_inverse4(&envViewMat, &envViewMat);
+        glUniformMatrix4fv(shader.view_matrix_pos, 1, GL_FALSE, &envViewMat.vA.x);
+        // Keep the uniform shadow matching what the program now holds, so the next mesh re-uploads
+        // the main pass' matrices instead of skipping them as unchanged.
+        memcpy(shader.shadow.view, &envViewMat.vA.x, sizeof(shader.shadow.view));
+
+        float f = 1000.0;
+        float n = 0.001;
+        const float t = 1.0f / tan(0.5 * 90 / 180.0 * 3.14159);
+        float a = 1.0;
+        const rdMatrix44 proj_mat{
+            {t, 0, 0, 0},
+            {0, t / a, 0, 0},
+            {0, 0, -(f + n) / (f - n), -1},
+            {0, 0, -2 * f * n / (f - n), 1},
+        };
+        glUniformMatrix4fv(shader.proj_matrix_pos, 1, GL_FALSE, &proj_mat.vA.x);
+        memcpy(shader.shadow.proj, &proj_mat.vA.x, sizeof(shader.shadow.proj));
+
+        // Reuses the VAO bound above (cached, ring or scratch); range must match that geometry.
+        glDrawArrays(GL_TRIANGLES, mesh_first_vertex, mesh_vertex_count);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+        glViewport(old_viewport[0], old_viewport[1], old_viewport[2], old_viewport[3]);
+    }
+    // No per-mesh unbind: consecutive meshes reuse the bound program (see the GL state shadows);
+    // the traversal end in swrViewport_Render_Hook unbinds program and VAO once.
+}
+
+void debug_render_node(const swrViewport &current_vp, const swrModel_Node *node, int light_index,
+                       int num_enabled_lights, bool mirrored, const rdMatrix44 &proj_mat,
+                       const rdMatrix44 &view_mat, rdMatrix44 model_mat) {
+    if (!node)
+        return;
+
+    const bool exact_match_fail =
+        (current_vp.node_flags1_exact_match_for_rendering & node->flags_1) !=
+        current_vp.node_flags1_exact_match_for_rendering;
+    const bool any_match_fail =
+        (current_vp.node_flags1_any_match_for_rendering & node->flags_1) == 0;
+    swrRace *root_owner = pod_root_owner(node);
+    const bool local_pod_root =
+        root_owner != nullptr && (root_owner->flags0 & swrObjTest_FLAG0_LOCAL) != 0;
+    if (local_pod_root && playercam_HideOwnPod())
+        return;
+    const bool unhide_local_pod =
+        local_pod_root && playercam_ShowPodInFirstPerson() &&
+        (root_owner->flags0 & (swrObjTest_FLAG0_POD_HIDDEN | swrObjTest_FLAG0_DEAD)) ==
+            swrObjTest_FLAG0_POD_HIDDEN;
+    if ((exact_match_fail || any_match_fail) && !unhide_local_pod) {
+        // The scene's per-node visibility flags hide this node. We honor that, with one exception:
+        // a racer's pod that its OWN camera hides. swrRace_PoddAnimateEngines clears the pod root's
+        // visible bit whenever the pod is in a hide-from-own-view camera mode (first-person / bumper
+        // cam, flagged POD_HIDDEN). The stock game re-shows that pod in the OTHER viewport inside
+        // swrViewport_Render -- but this renderer replaces swrViewport_Render and skips that re-show,
+        // and the stock re-show only ever covered split-screen LOCAL players anyway. So a pod hidden
+        // by its own camera stays invisible in every view: a remote player who switches to bumper
+        // cam vanishes for everyone else, and AI racers on the post-race autopilot cam (which cycles
+        // through a bumper mode) disappear once ai_full_lod gives them a full pod model. If this is
+        // the hidden pod root of a NON-local racer, draw it anyway.
+        if (!is_foreign_hidden_pod_root(node))
+            return;
+    }
+
+#ifndef NDEBUG
+    for (NodeMember &member: node_members) {
+        const uint32_t value = member.getter(*node);
+        member.count[value]++;
+    }
+
+    for (const NodeMember &member: node_members) {
+        const uint32_t value = member.getter(*node);
+        if (member.banned.contains(value))
+            return;
+    }
+#endif
+
+    if (node->type == NODE_TRANSFORMED || node->type == NODE_TRANSFORMED_WITH_PIVOT ||
+        node->type == NODE_TRANSFORMED_COMPUTED)
+        apply_node_transform(model_mat, node, (rdVector3 *) &current_vp.model_matrix.vD);
+
+    if (node->flags_5 & 0x4) {
+        light_index = node->light_index + 1;
+        num_enabled_lights = numEnabledLights[node->light_index];
+    }
+
+    // Replacements
+    const std::optional<MODELID> node_model_id = find_model_id_for_node(node);
+    // inspection hangar is pln_tatooine_part and not a pod ID
+    if (node->type == NODE_BASIC && node_model_id.has_value() &&
+        (isPodModel(node_model_id.value()) || node_model_id.value() == MODELID_pln_tatooine_part)) {
+        // Resolve the pod node to its owning racer. Non-null only for full-pod racers in a race (the
+        // local player and, with ai_full_lod on, every AI) - draw from THAT entity's own transforms
+        // instead of stamping the single global currentPlayer_Test. This is the fix for the "pile of
+        // pods riding the player". Null in the hangar / for part-LOD AI -> legacy node-path draw.
+        swrRace *pod_owner = find_entity_for_node(node);
+        const bool replaced =
+            pod_owner != nullptr
+                ? try_replace_pod_entity(node_model_id.value(), pod_owner, proj_mat, view_mat,
+                                         envInfos, false)
+                : try_replace_pod(node_model_id.value(), proj_mat, view_mat, model_mat, envInfos,
+                                  false);
+        if (replaced && !imgui_state.show_original_and_replacements) {
+            return;
+        }
+    }
+
+    // AI pods are node_selector
+    if (node->type == NODE_SELECTOR && node_model_id.has_value() &&
+        isAIPodModel(node_model_id.value())) {
+        if (try_replace_AIPod(node_model_id.value(), proj_mat, view_mat, model_mat, envInfos,
+                              false) &&
+            !imgui_state.show_original_and_replacements) {
+            return;
+        }
+    }
+
+    // Track replacements
+    // In race, node 3 is the track, as a NODE_BASIC
+    if (node->type == NODE_BASIC && node_model_id.has_value() &&
+        (uint32_t) root_node == (uint32_t) &someRootNode && isTrackModel(node_model_id.value())) {
+        if (try_replace_track(node_model_id.value(), proj_mat, view_mat, envInfos, false) &&
+            !imgui_state.show_original_and_replacements) {
+            return;
+        }
+    }
+    // Env replacement: Hangar, Cantina, Shop and Scrapyard
+    if ((node->type == NODE_TRANSFORMED_WITH_PIVOT) && node_model_id.has_value() &&
+        (uint32_t) root_node == (uint32_t) &someUnkRootNode && isEnvModel(node_model_id.value())) {
+        if (try_replace_env(node_model_id.value(), proj_mat, view_mat, envInfos, false) &&
+            !imgui_state.show_original_and_replacements) {
+            return;
+        }
+    }
+
+    if (node->flags_5 & 0x1) {
+        mirrored = !mirrored;
+    }
+
+    // Pod cable curve: if this is a curved cable node (nodeArray[10]/[11]), activate the bend so
+    // the cable mesh in its subtree is curved in load_vertex; descendants inherit it. Restored
+    // below so sibling/parent geometry is unaffected.
+    const float prev_cable_amplitude = g_active_cable_amplitude;
+    const float node_cable_amplitude = swrRace_GetCableBendAmplitude(node);
+    if (node_cable_amplitude >= 0.0f)
+        g_active_cable_amplitude = node_cable_amplitude;
+
+    // Entering the static track subtree (node 3): from here down, translucent surfaces are terrain
+    // (lakes, swamps) that weather should occlude against -> let set_render_mode force them to write
+    // depth (weather only). Descendants inherit it; restored on exit so sibling pod/entity FX aren't
+    // affected. See g_weather_terrain_depth.
+    const bool prev_terrain_depth = g_weather_terrain_depth;
+    if (imgui_state.enable_weather && node->type == NODE_BASIC && node_model_id.has_value() &&
+        (uint32_t) root_node == (uint32_t) &someRootNode && isTrackModel(node_model_id.value()))
+        g_weather_terrain_depth = true;
+
+    // set_render_mode reads the flag, so the mode-word dedup can't span the scope boundary.
+    const bool prev_shadow_depth = g_pod_shadow_depth;
+    // swrRace_UpdateHoverPads lays each shadow flat at ONE ground point, so slopes bury part of it.
+    // Depth-test it pod_shadow_depth_bias units nearer: adding projC * bias to projD shifts depth
+    // only, not screen position or fog.
+    rdMatrix44 shadow_proj_mat;
+    const rdMatrix44 *subtree_proj_mat = &proj_mat;
+    if (!g_pod_shadow_depth && is_pod_shadow_node(node)) {
+        g_pod_shadow_depth = true;
+        invalidate_mesh_gl_state_cache();
+        shadow_proj_mat = proj_mat;
+        shadow_proj_mat.vD.z += shadow_proj_mat.vC.z * imgui_state.pod_shadow_depth_bias;
+        subtree_proj_mat = &shadow_proj_mat;
+    }
+
+    if (node->type == NODE_MESH_GROUP) {
+        PushDebugGroup(std::format("render mesh group"));
+        for (int i = 0; i < node->num_children; i++) {
+            const std::optional<MODELID> model_id = find_model_id_for_node(node->children.nodes[i]);
+            if (model_id.has_value()) {
+                PushDebugGroup(std::format("render mesh {}", modelid_cstr[model_id.value()]));
+                debug_render_mesh(node->children.meshes[i], light_index, num_enabled_lights,
+                                  mirrored, *subtree_proj_mat, view_mat, model_mat,
+                                  model_id.value());
+                PopDebugGroup();
+            }
+        }
+        PopDebugGroup();
+    } else if (node->type == NODE_LOD_SELECTOR) {
+        const swrModel_NodeLODSelector *lods = (const swrModel_NodeLODSelector *) node;
+        // find correct lod node
+        int i = 1;
+        for (; i < 8; i++) {
+            if (lods->lod_distances[i] == -1 || lods->lod_distances[i] >= 10)
+                break;
+        }
+        if (i - 1 < node->num_children)
+            debug_render_node(current_vp, node->children.nodes[i - 1], light_index,
+                              num_enabled_lights, mirrored, *subtree_proj_mat, view_mat, model_mat);
+    } else if (node->type == NODE_SELECTOR) {
+        const swrModel_NodeSelector *selector = (const swrModel_NodeSelector *) node;
+        int child = selector->selected_child_node;
+        switch (child) {
+            case -2:
+                // dont render any child node
+                break;
+            case -1:
+                // render all child nodes
+                for (int i = 0; i < node->num_children; i++)
+                    debug_render_node(current_vp, node->children.nodes[i], light_index,
+                                      num_enabled_lights, mirrored, *subtree_proj_mat, view_mat,
+                                      model_mat);
+                break;
+            default:
+                if (child >= 0 && child < node->num_children)
+                    debug_render_node(current_vp, node->children.nodes[child], light_index,
+                                      num_enabled_lights, mirrored, *subtree_proj_mat, view_mat,
+                                      model_mat);
+
+                break;
+        }
+    } else {
+        for (int i = 0; i < node->num_children; i++)
+            debug_render_node(current_vp, node->children.nodes[i], light_index, num_enabled_lights,
+                              mirrored, *subtree_proj_mat, view_mat, model_mat);
+    }
+
+    g_active_cable_amplitude = prev_cable_amplitude;
+    g_weather_terrain_depth = prev_terrain_depth;
+    if (g_pod_shadow_depth != prev_shadow_depth) {
+        g_pod_shadow_depth = prev_shadow_depth;
+        invalidate_mesh_gl_state_cache();
+    }
+}
+
+static void flush_deferred_translucent() {
+    std::stable_sort(g_deferred_translucent.begin(), g_deferred_translucent.end(),
+                     [](const DeferredTranslucentMesh &a, const DeferredTranslucentMesh &b) {
+                         return a.view_distance > b.view_distance;
+                     });
+    const bool prev_terrain_depth = g_weather_terrain_depth;
+    for (const DeferredTranslucentMesh &d: g_deferred_translucent) {
+        // set_render_mode reads the flag, so re-issue its state when it changes.
+        if (d.weather_terrain_depth != g_weather_terrain_depth) {
+            g_weather_terrain_depth = d.weather_terrain_depth;
+            invalidate_mesh_gl_state_cache();
+        }
+        debug_render_mesh(d.mesh, d.light_index, d.num_enabled_lights, d.mirrored, d.proj_matrix,
+                          d.view_matrix, d.model_matrix, d.model_id);
+    }
+    g_weather_terrain_depth = prev_terrain_depth;
+    invalidate_mesh_gl_state_cache();
+    g_deferred_translucent.clear();
+}
+
+#ifndef NDEBUG
+void debug_render_sprites() {
+    fprintf(hook_log, "debug_render_sprites\n");
+    fflush(hook_log);
+
+    glUseProgram(0);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glOrtho(0, 640, 0, 480, -100, 100);
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glColor4f(1, 1, 1, 1);
+
+    for (int i = 0; i < swrSprite_SpriteCount; i++) {
+        const swrSprite &sprite = swrSprite_array[i];
+        for (int k = 0; k < 32; k++) {
+            num_sprites_with_flag[k] += (sprite.flags & (1 << k)) != 0;
+        }
+
+        if (!sprite.texture)
+            continue;
+
+        if (sprite.flags & banned_sprite_flags)
+            continue;
+
+        if (!(sprite.flags & 0x20))
+            continue;
+
+        float scale = 2;
+        if (sprite.flags & 0x10000)
+            scale = 1;
+
+        float sprite_x = sprite.x;
+        float sprite_y = sprite.y;
+        float total_width = sprite.width * sprite.texture->header.width;
+        float total_height = sprite.height * sprite.texture->header.height;
+        if (sprite.flags & 0x1000) {
+            sprite_x -= total_width / 2.0f;
+            sprite_y -= total_height / 2.0f;
+        }
+
+        int x_offset = 0;
+        int y_offset = 0;
+        for (int p = 0; p < sprite.texture->header.page_count; p++) {
+            const swrSpriteTexturePage &page = sprite.texture->header.page_table[p];
+            const RdMaterial *material = (const RdMaterial *) page.offset;
+
+            float x = sprite.width * x_offset;
+            float y = sprite.height * y_offset;
+            float width = sprite.width * page.width;
+            float height = sprite.height * page.height;
+
+            const GLuint tex = GLuint(material->aTextures->pD3DSrcTexture);
+            fprintf(hook_log, "debug_render_sprites: glEnable(GL_TEXTURE) is deprecated\n");
+            fflush(hook_log);
+            glEnable(GL_TEXTURE);
+            glBindTexture(GL_TEXTURE_2D, tex);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            float uv_scale_x = float(page.width) / material->aTextures->ddsd.dwWidth;
+            float uv_scale_y = float(page.height) / material->aTextures->ddsd.dwHeight;
+            rdVector2 uvs[]{{0, uv_scale_y}, {uv_scale_x, uv_scale_y}, {0, 0}, {uv_scale_x, 0}};
+            if (sprite.flags & 0x4) {
+                x = total_width - x;
+                width *= -1;
+            }
+            if (sprite.flags & 0x8) {
+                y = total_height - y;
+                height *= -1;
+            }
+
+            x += sprite_x;
+            y += sprite_y;
+
+            x *= scale;
+            y *= scale;
+            width *= scale;
+            height *= scale;
+
+            glColor4ubv(&sprite.r);
+            glBegin(GL_TRIANGLE_STRIP);
+            glTexCoord2fv(&uvs[0].x);
+            glVertex2f(x, y);
+            glTexCoord2fv(&uvs[1].x);
+            glVertex2f(x + width, y);
+            glTexCoord2fv(&uvs[2].x);
+            glVertex2f(x, y + height);
+            glTexCoord2fv(&uvs[3].x);
+            glVertex2f(x + width, y + height);
+            glEnd();
+
+            x_offset += page.width;
+            if (x_offset >= sprite.texture->header.width - 1) {
+                x_offset = 0;
+                y_offset += page.height;
+            }
+        }
+    }
+}
+#endif
+
+GLuint default_framebuffer = 0;
+GLuint framebuffer_color_tex = 0;
+GLuint framebuffer_depth_tex = 0;
+int current_msaa_samples = 0;
+int current_fb_width = 0;
+int current_fb_height = 0;
+
+void swrViewport_Render_Hook(int x) {
+    begin_texture_replacement();
+
+    // Reset the per-frame mesh-pick list before this frame's meshes are drawn.
+    g_pick_meshes.clear();
+    // Resolve the chrome01 reflection-texture handle once per frame (see texture_is_reflective).
+    g_reflective_texture_handle = gl_texture_from_texture_id(TEXID_chrome01_rgb);
+
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    const int width = viewport[2];
+    const int height = viewport[3];
+
+    if (imgui_state.msaa_samples != current_msaa_samples || width != current_fb_width ||
+        height != current_fb_height) {
+        int max_msaa_samples = 1;
+        glGetIntegerv(GL_MAX_SAMPLES, &max_msaa_samples);
+        if (imgui_state.msaa_samples > max_msaa_samples) {
+            imgui_state.msaa_samples = max_msaa_samples;
+        }
+        current_msaa_samples = imgui_state.msaa_samples;
+        current_fb_width = width;
+        current_fb_height = height;
+
+        // cleanup old msaa framebuffer
+        glDeleteFramebuffers(1, &default_framebuffer);
+        glDeleteTextures(1, &framebuffer_color_tex);
+        glDeleteTextures(1, &framebuffer_depth_tex);
+
+        // create a new framebuffer
+        glGenFramebuffers(1, &default_framebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+
+        glGenTextures(1, &framebuffer_depth_tex);
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, framebuffer_depth_tex);
+        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, current_msaa_samples,
+                                GL_DEPTH_COMPONENT32, width, height, true);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, framebuffer_depth_tex, 0);
+
+        glGenTextures(1, &framebuffer_color_tex);
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, framebuffer_color_tex);
+        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, current_msaa_samples, GL_RGBA8, width,
+                                height, true);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, framebuffer_color_tex, 0);
+
+        const GLenum draw_buffer = GL_COLOR_ATTACHMENT0;
+        glDrawBuffers(1, &draw_buffer);
+    }
+
+    if (default_framebuffer != 0) {
+        glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+#if !defined(NDEBUG)
+    if (imgui_state.draw_test_scene) {
+        draw_test_scene();
+        return;
+    }
+#endif
+
+    uint32_t temp_renderState = std3D_renderState;
+    std3D_SetRenderState_delta(Std3DRenderState(0));
+
+    const swrViewport &vp = swrViewport_array[x];
+    root_node = vp.model_root_node;
+
+    const int default_light_index = 0;
+    const int default_num_enabled_lights = 1;
+
+    int w = swrDisplay_screenWidth;
+    int h = swrDisplay_screenHeight;
+
+    const bool fog_enabled = (GameSettingFlags & 0x40) == 0;
+    if (fog_enabled)
+        rdFace_ConfigureFogStartEnd(fogStartInt16, fogEndInt16);
+
+    const bool mirrored = (GameSettingFlags & 0x4000) != 0;
+
+    const rdClipFrustum *frustum = rdCamera_pCurCamera->pClipFrustum;
+    const float n = frustum->zNear * playercam_NearClipScale();
+    const float t = 1.0f / tan(0.5 * rdCamera_pCurCamera->fov / 180.0 * 3.14159);
+    // The game's fov is the HORIZONTAL fov, calibrated for 4:3. Hold the 4:3 VERTICAL fov constant
+    // across aspect ratios (Hor+) so widescreen reveals more horizontally instead of cropping the
+    // top and bottom, then apply the user FOV multiplier (>1 = wider / zoom out). At 4:3 this is
+    // identical to the original (xscale=t). w/h>0 guards the 0x0 framebuffer reported while minimized.
+    const float design_aspect = 4.0f / 3.0f;
+    const float fov_scale = imgui_state.fov_scale > 0.0f ? imgui_state.fov_scale : 1.0f;
+    const float yscale = (h > 0) ? (float) (t * design_aspect / fov_scale) : t;
+    const float xscale = (w > 0) ? (float) (yscale * (float) h / (float) w) : t;
+    // Perspective projection (view space is right-handed, forward = -z; see n64_shader.vert where
+    // passZ = -posView.z). Row 3 is (0,0,-1,0) so clip.w = -z and a real near plane at zNear cleanly
+    // near-clips (the old matrix used vD.w = 1 -> clip.w = 1 - z, which rendered geometry up to ~1
+    // unit BEHIND the camera and tore triangles straddling the camera plane -- the pod engines
+    // vanishing during the opening orbit / backward cam).
+    //
+    // Far plane: the PC release disables the far clip (rdCamera_New passes bFarClip = 0), so we
+    // default to an infinite far plane (projC/projD below): clip.z = -z - 2n, NDC z = 1 + 2n/z,
+    // which never far-clips and draws to the fog horizon. The "Console far clip" toggle instead uses
+    // a finite far plane to reproduce the console versions' hard far clip (short draw distance /
+    // pop-in). It clips at the game's OWN per-viewport far_clipping -- the camera-man's draw distance
+    // (swrViewport_SetCameraParameters, already scaled by the VIDEO_DRAWDISTANCE config) -- times a
+    // user scale.
+    //
+    // Near and far deliberately come from different sources: n stays on the rdCamera frustum because
+    // that is the value the vanilla clipper actually near-clips at (rdCache_SendFaceListToHardware
+    // sets rdCache_currentZNear = frustum->zNear), and it is effectively constant. The live draw
+    // distance is only tracked on the viewport; the static rdCamera frustum zFar (15 at init) is
+    // never updated to it, so far must be read from vp, not the frustum.
+    float projC = -1.0f;      // vC.z (infinite far)
+    float projD = -2.0f * n;  // vD.z
+    if (imgui_state.console_far_clip) {
+        const float far_dist = vp.far_clipping * imgui_state.console_far_scale;
+        if (far_dist > n) {// guard against an unset/degenerate viewport far clip (menus etc.)
+            projC = -(far_dist + n) / (far_dist - n);
+            projD = -2.0f * far_dist * n / (far_dist - n);
+        }
+    }
+    const rdMatrix44 proj_mat{
+        {mirrored ? -xscale : xscale, 0, 0, 0},
+        {0, yscale, 0, 0},
+        {0, 0, projC, -1},
+        {0, 0, projD, 0},
+    };
+
+    rdMatrix44 view_mat;
+    rdMatrix_Copy44_34(&view_mat, &rdCamera_pCurCamera->view_matrix);
+
+    rdMatrix44 rotation{
+        {1, 0, 0, 0},
+        {0, 0, -1, 0},
+        {0, 1, 0, 0},
+        {0, 0, 0, 1},
+    };
+
+    rdMatrix44 view_mat_corrected;
+    rdMatrix_Multiply44(&view_mat_corrected, &view_mat, &rotation);
+
+    rdMatrix44 model_mat;
+    rdMatrix_SetIdentity44(&model_mat);
+
+    // skybox and ibl
+    if (imgui_state.HD_replacement && !skybox_initialized) {
+        PushDebugGroup("Setuping skybox");
+        setupSkybox(envInfos.skybox);
+        skybox_initialized = true;
+        PopDebugGroup();
+    }
+
+    if (imgui_state.HD_replacement && !environment_setuped && envInfos.skybox.depthTexture != 0) {
+
+        PushDebugGroup("Setuping IBL");
+
+        // render env to cubemap
+        setupIBL(envInfos, envInfos.skybox.GLCubeTexture, faceIndex);
+        faceIndex += 1;
+
+        if (faceIndex > 5)
+            faceIndex = 0;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, envInfos.ibl_framebuffer);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
+                               envInfos.skybox.depthTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                               GL_TEXTURE_CUBE_MAP_POSITIVE_X + faceIndex,
+                               envInfos.skybox.GLCubeTexture, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glBindFramebuffer(GL_FRAMEBUFFER, default_framebuffer);
+        // environment_setuped = true;
+
+        PopDebugGroup();
+    }
+
+    PushDebugGroup("Scene graph traversal");
+    environment_models_drawn = false;
+    stbi_set_flip_vertically_on_load(false);
+
+#ifndef NDEBUG
+    for (MaterialMember &member: node_material_members) {
+        member.count.clear();
+    }
+#endif
+    // Phase 0 (HD_REPLACEMENT_ROADMAP): refresh the pod-node -> racer-entity map from the live roster
+    // before traversal, so the replacement path can draw each pod from its owning racer's transforms.
+    // In race only (currentPlayer_Test is the in-race signal); harmless to rebuild per viewport.
+    // Outside a race (hangar/menu) clear it, so stale ranges from the last race can't mis-resolve a
+    // hangar pod node to a dangling entity.
+    if (currentPlayer_Test != nullptr) {
+        rebuild_pod_node_owners();
+        rebuild_pod_shadow_nodes();
+    } else {
+        pod_node_owners.clear();
+        g_pod_shadow_nodes.clear();
+    }
+
+    // The skybox/IBL setup above (and anything since the last traversal) used its own GL state.
+    invalidate_mesh_gl_state_cache();
+
+    g_deferred_translucent.clear();
+    g_defer_translucent = true;
+    debug_render_node(vp, root_node, default_light_index, default_num_enabled_lights, mirrored,
+                      proj_mat, view_mat_corrected, model_mat);
+    g_defer_translucent = false;
+    flush_deferred_translucent();
+    PopDebugGroup();
+
+    debugEnvInfos(envInfos, proj_mat, view_mat);
+
+    glDisable(GL_CULL_FACE);
+    // set_render_mode may have left alpha-to-coverage enabled for the last cutout mesh; clear it so
+    // it can't bleed into the 2D/UI pass, imgui, or the next frame (they never touch this state).
+    glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+    g_cutout_alpha_to_coverage = false;
+    std3D_pD3DTex = 0;
+    // Meshes no longer unbind after themselves (the GL state shadows skip redundant rebinds), so
+    // unbind once here and drop the shadows for whatever runs next.
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glUseProgram(0);
+    invalidate_mesh_gl_state_cache();
+    std3D_SetRenderState_delta(Std3DRenderState(temp_renderState));
+
+    // Drawn into the scene framebuffer (with its depth) before the blit, so geometry in front
+    // occludes it. In-race only (someRootNode).
+    if ((imgui_state.show_collision || imgui_state.show_triggers || imgui_state.show_hitbox) &&
+        root_node == &someRootNode)
+        render_collision_overlay(vp, root_node, proj_mat, view_mat_corrected);
+
+    if (default_framebuffer != 0) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, default_framebuffer);
+        glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                          GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // Weather particles: now that the 3D scene (incl. its depth) is in the default framebuffer, run
+    // our particle sim + draw here so it composites over the scene, depth-tests against it, and our
+    // GL state changes can't corrupt the scene render. TickAndDraw self-gates on whether the game
+    // asked for weather this frame (it no-ops otherwise), so this is safe to call every viewport.
+    swrWeather_TickAndDraw(&proj_mat, &view_mat_corrected);
+
+    if (imgui_state.enable_picking_texture_when_hovering) {
+        // read hovered pixel -> 1-based index into this frame's pick list -> the exact mesh
+        const auto mouse_pos = ImGui::GetMousePos();
+        uint32_t picked_id;
+        glReadPixels(mouse_pos.x, ImGui::GetIO().DisplaySize.y - 1 - mouse_pos.y, 1, 1, GL_RGBA,
+                     GL_UNSIGNED_BYTE, &picked_id);
+        // remove alpha channel (is used for masking in alpha blended models)
+        picked_id &= 0x00'FF'FF'FF;
+
+        g_picked_mesh = nullptr;
+        imgui_state.picked_texture_id.reset();
+        imgui_state.picked_mesh_material.valid = false;
+        if (picked_id >= 1 && picked_id <= g_pick_meshes.size()) {
+            const swrModel_Mesh *m = g_pick_meshes[picked_id - 1];
+            g_picked_mesh = m;
+
+            const uint32_t mtype = m->mesh_material->type;
+            const swrModel_Material *mat = m->mesh_material->material;
+            const swrModel_MaterialTexture *mtex = m->mesh_material->material_texture;
+            const bool has_normals = (mtype & 0x11) != 0;
+
+            // resolve the mesh's texture handle (reflective marker + thumbnail/# readout)
+            GLuint handle = 0;
+            if (mtex && mtex->loaded_material) {
+                handle = (GLuint) mtex->loaded_material->aTextures->pD3DSrcTexture;
+            }
+            const bool reflective = texture_is_reflective(handle);
+
+            imgui_state.picked_mesh_material = {
+                .valid = true,
+                .is_reflective = reflective,
+                .has_normals = has_normals,
+                // matches the draw-time gate: auto (master + reflective) OR forced on the picked
+                // mesh (this readback mesh IS g_picked_mesh).
+                .texgen_applied = has_normals && ((imgui_state.reflection_texgen && reflective) ||
+                                                  imgui_state.debug_texgen_on_picked),
+                .type = mtype,
+                .mat_unk1 = mat->unk1,
+                .mat_unk2 = mat->unk2,
+                .mat_unk5 = mat->unk5,
+                .mat_unk8 = mat->unk8,
+                .render_mode_1 = mat->render_mode_1,
+                .render_mode_2 = mat->render_mode_2,
+                .cc_cycle1 = mat->color_combine_mode_cycle1,
+                .ac_cycle1 = mat->alpha_combine_mode_cycle1,
+                .cc_cycle2 = mat->color_combine_mode_cycle2,
+                .ac_cycle2 = mat->alpha_combine_mode_cycle2,
+            };
+            if (mtex) {
+                imgui_state.picked_mesh_material.tex_unk0 = mtex->unk0;
+                imgui_state.picked_mesh_material.tex_type = mtex->type;
+                imgui_state.picked_mesh_material.tex_unk6 = mtex->unk6;
+                imgui_state.picked_mesh_material.tex_unk7 = mtex->unk7;
+                imgui_state.picked_mesh_material.tex_spec0_flags =
+                    mtex->specs[0] ? mtex->specs[0]->flags : 0;
+            }
+            for (int i = 0; handle && i < texture_count; i++) {
+                if (gl_texture_from_texture_id((TEXID) i) == handle) {
+                    imgui_state.picked_texture_id = (TEXID) i;
+                    break;
+                }
+            }
+        }
+    }
+
+    end_texture_replacement();
+}
+
+// swrViewport_Render_Hook (above) renders the 3D scene with a Hor+ projection: it holds the 4:3
+// vertical FOV constant across aspect ratios and applies the user FOV slider (imgui_state.fov_scale).
+// The 2D overlays drawn on top -- lens flares, light streaks, weather, and the HUD distance/name
+// labels -- are placed by the game's swrViewport_ProjectToScreen (rdMatrix44_model_MVP), which does
+// not match the Hor+ scene projection, so they drift off their 3D anchors, worsening toward the view
+// edges. Re-scale the projection about the view centre to realign. The correction is
+// PER-AXIS: Y differs from the scene only by the fov multiplier (ky = 1/fov_scale) since Hor+ holds
+// the 4:3 vertical FOV; X also carries the aspect widen, but the game's horizontal projection runs a
+// touch wider than the pure model, so only HUD_OVERLAY_X_GAIN of the modeled X correction applies:
+//     kx = (1 + ((4/3)*(screenHeight/screenWidth) - 1) * HUD_OVERLAY_X_GAIN) / fov_scale
+//     ky = 1 / fov_scale
+// Both == 1 at 4:3 / fov_scale 1.0 (no-op, vanilla). design_aspect (4/3) and fov_scale MUST stay
+// identical to swrViewport_Render_Hook's projection above. RENDERER_REPLACEMENT-scoped: only
+// registered in init_renderer_hooks, which is ON-only.
+typedef void(swrViewport_ProjectToScreen_t)(void *viewport, rdVector4 *worldPos, float *outScreenX,
+                                            float *outScreenY, float *outZ, float *outDepth,
+                                            int pointIsCameraRelative);
+
+// Fraction of the modeled horizontal aspect correction to apply. The pure (4/3)*(h/w) Hor+-vs-game
+// ratio slightly over-corrects X (the game's horizontal projection is a touch wider than the model);
+// empirically ~0.88 lands the overlays on their 3D anchors. Measured at 16:9; applied to the
+// deviation from 1.0 so it stays a no-op at 4:3.
+static const float HUD_OVERLAY_X_GAIN = 0.88f;
+
+// swrViewport_ProjectToScreen leaves this in its outputs for a point it rejects.
+static const float PROJECT_OFFSCREEN_SENTINEL = -1000.0f;
+
+// In half-viewports from the centre: 3 = one viewport past each edge.
+static const float OFFSCREEN_PROJECT_REACH = 3.0f;
+
+static bool g_offscreen_project_active = false;
+
+extern "C" void renderer_SetOffscreenProjection(int active) {
+    g_offscreen_project_active = active != 0;
+}
+
+void swrViewport_ProjectToScreen_delta(void *viewport, rdVector4 *worldPos, float *outScreenX,
+                                       float *outScreenY, float *outZ, float *outDepth,
+                                       int pointIsCameraRelative) {
+    const int w = swrDisplay_screenWidth;
+    const int h = swrDisplay_screenHeight;
+    float kx = 1.0f, ky = 1.0f;
+    if (w > 0 && h > 0) {
+        const float design_aspect = 4.0f / 3.0f;
+        const float fov_scale = imgui_state.fov_scale > 0.0f ? imgui_state.fov_scale : 1.0f;
+        // Per-axis re-scale about the viewport centre. Y differs from the Hor+ scene only by the
+        // fov multiplier (Hor+ holds the 4:3 vertical FOV, so no aspect term). X also carries the
+        // aspect widen, but the game's horizontal projection runs slightly wider than the pure
+        // (4/3)*(h/w) model, so only HUD_OVERLAY_X_GAIN of the modeled horizontal correction is
+        // applied (empirical, measured at 16:9). Written on the deviation from 1.0 so the aspect term
+        // still vanishes at 4:3 (kx == 1) -- keeping 4:3 / fov_scale 1.0 a bit-for-bit no-op.
+        const float aspect_x = design_aspect * ((float) h / (float) w);// == 1.0 at 4:3
+        kx = (1.0f + (aspect_x - 1.0f) * HUD_OVERLAY_X_GAIN) / fov_scale;
+        ky = 1.0f / fov_scale;
+    }
+    // The original rejects points >8px off its viewport rect, popping suns/streaks whose sprite still
+    // overlaps the screen. For those, squeeze the projection so the rect test passes, then expand back.
+    // Other overlays keep the cut: swrPlayerHUD_SampleOcclusion reads depth at their raw pixel.
+    const float squeeze = g_offscreen_project_active ? 1.0f / OFFSCREEN_PROJECT_REACH : 1.0f;
+    if (squeeze == 1.0f && fabsf(kx - 1.0f) < 1e-4f && fabsf(ky - 1.0f) < 1e-4f) {
+        hook_call_original((swrViewport_ProjectToScreen_t *) swrViewport_ProjectToScreen_ADDR,
+                           viewport, worldPos, outScreenX, outScreenY, outZ, outDepth,
+                           pointIsCameraRelative);
+        return;
+    }
+
+    // Scale in clip space, not the output pixels, so the original's viewport-rect test sees the
+    // corrected position (post-scaling with kx < 1 dropped everything in the widescreen side strips).
+    const float sx = kx * squeeze, sy = ky * squeeze;
+    const rdMatrix44 saved = rdMatrix44_model_MVP;
+    rdMatrix44_model_MVP.vA.x *= sx;
+    rdMatrix44_model_MVP.vB.x *= sx;
+    rdMatrix44_model_MVP.vC.x *= sx;
+    rdMatrix44_model_MVP.vD.x *= sx;
+    rdMatrix44_model_MVP.vA.y *= sy;
+    rdMatrix44_model_MVP.vB.y *= sy;
+    rdMatrix44_model_MVP.vC.y *= sy;
+    rdMatrix44_model_MVP.vD.y *= sy;
+    hook_call_original((swrViewport_ProjectToScreen_t *) swrViewport_ProjectToScreen_ADDR, viewport,
+                       worldPos, outScreenX, outScreenY, outZ, outDepth, pointIsCameraRelative);
+    rdMatrix44_model_MVP = saved;
+
+    if (squeeze != 1.0f && *outScreenX != PROJECT_OFFSCREEN_SENTINEL) {
+        // The original maps ndc 0 to viewport_scaled_{x,y}2 / 4 (x4 fixed point).
+        const swrViewport *vp = (const swrViewport *) viewport;
+        const float cx = (float) (vp->viewport_scaled_x2 / 4);
+        const float cy = (float) (vp->viewport_scaled_y2 / 4);
+        *outScreenX = cx + (*outScreenX - cx) / squeeze;
+        *outScreenY = cy + (*outScreenY - cy) / squeeze;
+    }
+}
+
+// The original counts off-screen pixels of a sun's 8x8 depth block as blocked, hiding a sun whose
+// centre is past an edge. Sample at the nearest on-screen point instead.
+typedef void(__cdecl *swrPlayerHUD_SampleOcclusion_t)(void);
+static void __cdecl swrPlayerHUD_SampleOcclusion_delta(void) {
+    int saved_x[2], saved_y[2];
+    const int w = swrDisplay_screenWidth, h = swrDisplay_screenHeight;
+    for (int i = 0; i < 2; i++) {
+        saved_x[i] = sun_occlusionSampleX[i];
+        saved_y[i] = sun_occlusionSampleY[i];
+        if (sunSpriteIds[i] < 0 || saved_x[i] == (int) PROJECT_OFFSCREEN_SENTINEL || w <= 32 ||
+            h <= 32)
+            continue;
+        // The original's block spans [p-4, p+3] and counts pixels < 8 or >= size-12 as off-screen.
+        sun_occlusionSampleX[i] = std::clamp(saved_x[i], 12, w - 16);
+        sun_occlusionSampleY[i] = std::clamp(saved_y[i], 12, h - 16);
+    }
+    hook_call_original((swrPlayerHUD_SampleOcclusion_t) swrPlayerHUD_SampleOcclusion_ADDR);
+    for (int i = 0; i < 2; i++) {
+        sun_occlusionSampleX[i] = saved_x[i];
+        sun_occlusionSampleY[i] = saved_y[i];
+    }
+}
+
+// UpdateLightStreakSprites (0x0042c800). Faithful except: the anchor may sit up to a viewport
+// off-screen (vanilla requires 0 < x < w, 0 < y < h), and the occlusion sample pixel (read by
+// swrPlayerHUD_SampleOcclusion without bounds checks) is clamped onto the screen.
+typedef void(__cdecl *swrSprite_SetVisible_t)(short, int);
+typedef void(__cdecl *swrSprite_SetPosF_t)(short, short, short);
+typedef void(__cdecl *swrSprite_SetRotation_t)(short, float);
+typedef void(__cdecl *swrSprite_SetDim_t)(short, float, float);
+typedef void(__cdecl *swrSprite_SetColor_t)(short, uint8_t, uint8_t, uint8_t, uint8_t);
+typedef int(__cdecl *GetPauseState_t)(void);
+
+// @0x004ac5ec..0x004ac5f4
+static const float LIGHT_STREAK_NO_DEPTH = -1000.0f;// light_streak_depth_values: not sampled
+static const float LIGHT_STREAK_NEAR_DEPTH = 0.1f;
+static const float LIGHT_STREAK_FAR_SIZE = 1000.0f;
+static const float LIGHT_STREAK_SIZE_SCALE = 100.0f;
+static const float LIGHT_STREAK_MAX_SIZE = 2.0f;
+static const uint8_t LIGHT_STREAK_ALPHA = 255;
+static const uint8_t LIGHT_STREAK_PAUSED_ALPHA = 128;
+
+extern "C" void UpdateLightStreakSprites_offscreen(swrViewport *vp) {
+    const auto set_visible = (swrSprite_SetVisible_t) swrSprite_SetVisible_ADDR;
+    const auto set_pos = (swrSprite_SetPosF_t) swrSprite_SetPosF_ADDR;
+    const auto set_rotation = (swrSprite_SetRotation_t) swrSprite_SetRotation_ADDR;
+    const auto set_dim = (swrSprite_SetDim_t) swrSprite_SetDim_ADDR;
+    const auto set_color = (swrSprite_SetColor_t) swrSprite_SetColor_ADDR;
+
+    const int num_slots = (int) std::size(lightStreakSpriteIDs1);
+    for (int slot = 0; slot < num_slots; slot++) {
+        set_visible((short) lightStreakSpriteIDs1[slot], 0);
+        set_visible((short) lightStreakSpriteIDs2[slot], 0);
+    }
+
+    const int w = swrDisplay_screenWidth, h = swrDisplay_screenHeight;
+    int slot = 0;
+    for (int i = 0; i < (int) std::size(light_streak_valid); i++) {
+        light_streak_pixel_pos_x[i] = (int) PROJECT_OFFSCREEN_SENTINEL;
+        light_streak_pixel_pos_y[i] = (int) PROJECT_OFFSCREEN_SENTINEL;
+        if (!light_streak_valid[i] ||
+            !(rdVector_Dist3(&light_streak_positions[i], &rdVector_model_translation) <
+              swrPlayerHUD_lightStreakParam))
+            continue;
+
+        const uint8_t alpha = ((GetPauseState_t) GetPauseState_ADDR)() == 0
+                                  ? LIGHT_STREAK_ALPHA
+                                  : LIGHT_STREAK_PAUSED_ALPHA;
+        float x, y, z, depth;
+        g_offscreen_project_active = true;
+        swrViewport_ProjectToScreen_delta(vp, (rdVector4 *) &light_streak_positions[i], &x, &y, &z,
+                                          &depth, 0);
+        g_offscreen_project_active = false;
+        if (x == PROJECT_OFFSCREEN_SENTINEL || w <= 0 || h <= 0)
+            continue;
+
+        float size = LIGHT_STREAK_FAR_SIZE;
+        if (depth > LIGHT_STREAK_NEAR_DEPTH)
+            size = LIGHT_STREAK_SIZE_SCALE / depth;
+        if (size > LIGHT_STREAK_MAX_SIZE)
+            size = LIGHT_STREAK_MAX_SIZE;
+
+        light_streak_pixel_pos_x[i] = std::clamp((int) x, 0, w - 1);
+        light_streak_pixel_pos_y[i] = std::clamp((int) y, 0, h - 1);
+        const float sampled = light_streak_depth_values[i];
+        if (sampled == LIGHT_STREAK_NO_DEPTH || !(z < 0.0f || z < sampled) || slot >= num_slots)
+            continue;
+
+        const float angle = (lightStreak_rotationPivotX - x) * lightStreak_rotationScale;
+        const short id1 = (short) lightStreakSpriteIDs1[slot];
+        if (id1 != -1) {
+            set_visible(id1, 1);
+            set_pos(id1, (short) (int) x, (short) (int) y);
+            set_rotation(id1, angle);
+            set_dim(id1, 1.0f, 1.0f);
+            set_color(id1, 0xff, 0xff, 0xff, alpha);
+        }
+        const short id2 = (short) lightStreakSpriteIDs2[slot];
+        if (id2 != -1) {
+            set_visible(id2, 1);
+            set_pos(id2, (short) (int) x, (short) (int) y);
+            set_rotation(id2, angle);
+            set_dim(id2, size, size);
+            set_color(id2, 0xff, 0xff, 0xff, alpha);
+        }
+        slot++;
+    }
+}
+
+static WNDPROC WndProcOrig;
+
+LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+LRESULT CALLBACK WndProc(HWND wnd, UINT code, WPARAM wparam, LPARAM lparam) {
+    if (ImGui_ImplWin32_WndProcHandler(wnd, code, wparam, lparam))
+        return 1;
+
+    // While the freecam owns input, swallow keyboard messages so front-end/hangar menus and text
+    // fields don't scroll/confirm on the keys the camera uses (the game buffers keystrokes via the
+    // WndProc queue, so blocking swrUI_HandleKeyEvent alone isn't enough -- ENTER still confirmed).
+    // The freecam reads keys via GetAsyncKeyState, independent of the window message queue, so its
+    // own controls are unaffected. Cutscene skip is safe: the freecam is force-exited before any
+    // cinematic, so this never runs during an FMV.
+    if (freecam_IsActive()) {
+        switch (code) {
+            case WM_KEYDOWN:
+            case WM_KEYUP:
+            case WM_CHAR:
+            case WM_SYSKEYDOWN:
+            case WM_SYSKEYUP:
+            case WM_SYSCHAR:
+                return 0;
+        }
+    }
+
+    return WndProcOrig(wnd, code, wparam, lparam);
+}
+
+// Some toolchains' synchapi.h predates the high-resolution timer flag.
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+
+// Caps the present rate to target_fps (0 = unlimited). Sleeps the bulk of the
+// frame on a high-resolution waitable timer (Win10 1803+), then busy-waits a
+// short tail for sub-millisecond precision. The timer falls back to a coarse
+// sleep on older systems.
+static void limit_framerate(int target_fps) {
+    using clock = std::chrono::steady_clock;
+    static clock::time_point next_frame = clock::now();
+
+    if (target_fps <= 0) {
+        next_frame = clock::now();
+        return;
+    }
+
+    const auto period = std::chrono::duration_cast<clock::duration>(
+        std::chrono::duration<double>(1.0 / target_fps));
+    next_frame += period;
+
+    const clock::time_point now = clock::now();
+    if (next_frame <= now) {
+        // Already running at or below the cap: don't accumulate debt.
+        next_frame = now;
+        return;
+    }
+
+    // Resolved at runtime: CreateWaitableTimerExW is absent from the toolchain's
+    // headers and missing on pre-Win8 systems, where this stays null and we fall
+    // back to a coarse sleep.
+    static HANDLE timer = []() -> HANDLE {
+        using create_timer_ex_t = HANDLE(WINAPI *)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD);
+        auto create_timer_ex = reinterpret_cast<create_timer_ex_t>(
+            GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "CreateWaitableTimerExW"));
+        return create_timer_ex ? create_timer_ex(nullptr, nullptr,
+                                                 CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+                                                 TIMER_ALL_ACCESS)
+                               : nullptr;
+    }();
+
+    const auto spin_margin = std::chrono::microseconds(500);
+    const auto wait = next_frame - now;
+    if (wait > spin_margin) {
+        const auto coarse = wait - spin_margin;
+        if (timer) {
+            LARGE_INTEGER due;
+            // Relative due time in negative 100ns units.
+            due.QuadPart = -static_cast<LONGLONG>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(coarse).count() / 100);
+            if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE)) {
+                WaitForSingleObject(timer, INFINITE);
+            }
+        } else {
+            std::this_thread::sleep_for(coarse);
+        }
+    }
+    while (clock::now() < next_frame) {
+        std::this_thread::yield();
+    }
+}
+
+extern "C" int stdDisplay_Update_Hook() {
+    if (swrDisplay_SkipNextFrameUpdate == 1) {
+        swrDisplay_SkipNextFrameUpdate = 0;
+        return 0;
+    }
+
+
+    // Runtime vsync toggle (default on, matching the glfwSwapInterval(1) set at GL open). Applied
+    // here so it can be flipped from the imgui graphics settings while profiling.
+    static bool applied_vsync = true;
+    if (imgui_state.vsync != applied_vsync) {
+        glfwSwapInterval(imgui_state.vsync ? 1 : 0);
+        applied_vsync = imgui_state.vsync;
+    }
+
+    // Before imgui_Update, so the debug overlay stays out of the shot.
+    sithRender_CapturePendingScreenshot();
+
+    begin_texture_replacement();
+    imgui_Update();// Added
+    end_texture_replacement();
+
+#if ENABLE_GAMEPAD_NAV
+    // Latch the controller's D-pad / START / BACK state for the gamepad-nav hooks.
+    swrGamepadNav_Poll();
+#endif
+
+#if ENABLE_XINPUT_RUMBLE
+    // Translate the game's force-feedback effects into XInput gamepad vibration.
+    swrControl_RumbleUpdate();
+#endif
+
+    std::memset(replacedTries, 0, std::size(replacedTries));
+    for (auto &[key, value]: additionnalReplacedTries) {
+        value = 0;
+    }
+    glFinish();
+
+    stream_ring_end_frame();// fence the ring region just written before this frame is presented
+    glfwSwapBuffers(glfwGetCurrentContext());
+
+    crash_logger_heartbeat();// tell the hang watchdog a frame completed
+
+    limit_framerate(imgui_state.target_fps);
+
+    return 0;
+}
+
+void noop() {}
+
+// Flush the per-mesh geometry cache when loaded models are cleared (track change) so reused mesh
+// pointers can't return stale geometry and the cached GL objects don't leak.
+extern "C" void swrModel_ClearLoadedModels_delta(void) {
+    for (auto &[mesh, cached]: g_mesh_geometry_cache) {
+        if (cached.vbo)
+            glDeleteBuffers(1, &cached.vbo);
+        if (cached.vao)
+            glDeleteVertexArrays(1, &cached.vao);
+    }
+    g_mesh_geometry_cache.clear();
+    cached_model_matrix.clear();
+    hook_call_original(swrModel_ClearLoadedModels);
+}
+
+// Smush cinematic auto-skip + fade suppression + cutscene audio volume. The game plays every
+// pre-rendered movie through Window_PlayCinematic: the three startup movies (Goldie/TextCrawl/
+// IntroScene, from swrMain2_GuiAdvance) and the planet/track cinematic (from swrObjHang_LoadScreen).
+// The per-frame Smush callback can't tell them apart, but here we have the filename. Skip the whole
+// clip when the matching "Game" toggle is on; otherwise flag g_in_cinematic so the ImGui fade overlay
+// doesn't paint over the movie, drive the Smush volume off the mod's master*cutscene knob (issue
+// #221: vanilla plays the startup movies at hardcoded full and ignores the audio settings -- clear the
+// intro flag so the original takes the music-scaled branch, load sound_music_volume with the 0..255
+// level it scales down to 0..127, then restore both), and play it. (Lives here rather than the C
+// Window_delta.c because it needs the C++ hook_call_original.)
+extern "C" {
+int g_in_cinematic = 0;
+}
+extern "C" int cutscene_should_skip_startup_movies(void);
+extern "C" int cutscene_should_skip_prerace_cinematic(void);
+extern "C" int g_cutscene_skip_edge;// swrControl_delta.cpp: fresh accept/cancel skip press
+
+extern "C" int Window_PlayCinematic_delta(char **znmFile) {
+    // A cinematic is starting: drop the freecam so its input suppression can't eat the FMV skip
+    // (Window_SmushPlayCallback reads swrControl_accept/cancelPressedEdge, which the freecam zeroes).
+    freecam_ForceOff();
+
+    // The parameter is declared char** to match the game signature, but every caller passes a
+    // char* to the filename string (e.g. "Goldie.znm") cast to char**, and the original uses it
+    // directly as the %s filename. So znmFile IS the string pointer -- read it as char*, don't deref.
+    const char *name = (const char *) znmFile;
+    if (name == nullptr)
+        name = "";
+    const bool is_startup = std::strstr(name, "Goldie") || std::strstr(name, "TextCrawl") ||
+                            std::strstr(name, "IntroScene");
+    int result = 1;// nonzero == handled
+    if (!(is_startup ? cutscene_should_skip_startup_movies()
+                     : cutscene_should_skip_prerace_cinematic())) {
+        // Scale the Smush cinematic volume by the mod's master*cutscene knob. The helper also
+        // preserves the game's -s/no-sound switch and clamps the effective volume.
+        const int saved_intro = swrMain_introMoviesPending;
+        const short saved_music_vol = sound_music_volume;
+        const float effective = cinematic_effective_volume(
+            Main_sound, imgui_state.master_volume, imgui_state.cutscene_volume);
+        swrMain_introMoviesPending = 0;
+        sound_music_volume = (short) (effective * 255.0f);
+
+        g_in_cinematic = 1;
+        result = hook_call_original(Window_PlayCinematic, znmFile);
+        g_in_cinematic = 0;
+
+        swrMain_introMoviesPending = saved_intro;
+        sound_music_volume = saved_music_vol;
+    }
+    // Consume the skip press. Window_PlayCinematic runs its own per-frame loop (ProcessInputs +
+    // the Smush callback), so a press used to skip the movie leaves g_cutscene_skip_edge set. The
+    // race then spins up inside the same LoadScreen, and swrObjJdge_F0 would read that stale edge
+    // and skip the pre-race track sweep too (and one tap could skip several chained startup movies).
+    g_cutscene_skip_edge = 0;
+    return result;
+}
+
+// swrSound_Startup ends with an unconditional swrSound_SetOutputGain(1.0), so the A3D device output
+// gain (the one knob scaling every channel) is reset to full on every boot -- and on every sound /
+// hi-res toggle, which re-runs Startup. The engine never persisted a master volume, so re-apply the
+// mod-side master_volume here, after the original has finished bringing sound up.
+extern "C" int swrSound_Startup_delta(void) {
+    int result = hook_call_original(swrSound_Startup);
+    if (Main_sound != 0)
+        swrSound_SetOutputGain(imgui_state.master_volume);
+    return result;
+}
+
+// Instant-respawn cheat. The respawn wait after a death is the death-camera state machine in
+// swrObjcMan_UpdateDeathCamera: it drains cman->animTimer_ms through animStage 0 -> 2 -> 3, and
+// only at stage 3 does it clear FLAG0_DEAD, grant respawn invincibility and restore camera control
+// (~3s total). Forcing the timer hugely negative before each original call advances one stage per
+// frame, so the whole sequence completes in a couple frames. Only collapse it for a local pod's
+// death cam; AI death cams (and everything else) run untouched.
+typedef void(__cdecl *swrObjcMan_UpdateDeathCamera_t)(swrObjcMan *);
+static void swrObjcMan_UpdateDeathCamera_delta(swrObjcMan *cman) {
+    if (cheat_instant_respawn_enabled() && cman->unkf4_objTest != nullptr &&
+        (cman->unkf4_objTest->flags0 & swrObjTest_FLAG0_LOCAL))
+        cman->animTimer_ms = -1.0e9f;
+    hook_call_original((swrObjcMan_UpdateDeathCamera_t) swrObjcMan_UpdateDeathCamera_ADDR, cman);
+}
+
+// --- cinematic letterbox draw -----------------------------------------------------------------
+// The bar geometry + state machine live in swrObjJdge_UpdateLetterbox (swrObjJdge_delta.cpp); this is
+// just the GL draw, injected at the HUD text flush (DrawTextEntries) so the bars sit OVER the 3D
+// scene / HUD sprites but UNDER the lap/total-time text. The GLFW context is core 4.5 (no fixed-
+// function), so the bars are two triangles per bar in NDC through a tiny inline solid-black shader.
+// Self-contained (no asset-file shaders): compiled once, minimal GL state saved/restored.
+static void draw_letterbox_bars(float frac) {
+    if (frac <= 0.0f)
+        return;
+
+    static bool init = false;
+    static GLuint program = 0, vao = 0, vbo = 0;
+    if (!init) {
+        init = true;
+        static const char *vs =
+            "#version 330 core\nlayout(location=0) in vec2 p;\nvoid main(){gl_Position=vec4(p,0.0,1.0);}\n";
+        static const char *fs =
+            "#version 330 core\nout vec4 c;\nvoid main(){c=vec4(0.0,0.0,0.0,1.0);}\n";
+        std::optional<GLuint> prog = compileProgram(1, &vs, 1, &fs);
+        if (!prog.has_value())
+            return;
+        program = prog.value();
+        glGenVertexArrays(1, &vao);
+        glGenBuffers(1, &vbo);
+        glBindVertexArray(vao);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, 24 * sizeof(float), nullptr, GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *) 0);
+        glEnableVertexAttribArray(0);
+        glBindVertexArray(0);
+    }
+    if (program == 0)
+        return;
+
+    // Each bar covers 12% of the screen height; NDC height 2.0 -> 0.24 * frac per bar.
+    const float bh = 0.24f * frac;
+    const float top0 = 1.0f - bh, bot1 = -1.0f + bh;
+    const float verts[24] = {
+        -1.0f, top0,  1.0f, top0,  1.0f, 1.0f,  -1.0f, top0,  1.0f, 1.0f,  -1.0f, 1.0f, // top bar
+        -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, bot1,  -1.0f, -1.0f, 1.0f, bot1,  -1.0f, bot1, // bottom bar
+    };
+
+    // Save the little state we touch so the following HUD-text draw is unaffected.
+    GLint prev_program = 0, prev_vao = 0, prev_vbo = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prev_program);
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &prev_vao);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &prev_vbo);
+    const GLboolean depth_on = glIsEnabled(GL_DEPTH_TEST);
+    const GLboolean blend_on = glIsEnabled(GL_BLEND);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glUseProgram(program);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(verts), verts);
+    glDrawArrays(GL_TRIANGLES, 0, 12);
+
+    glBindBuffer(GL_ARRAY_BUFFER, prev_vbo);
+    glBindVertexArray(prev_vao);
+    glUseProgram(prev_program);
+    if (depth_on)
+        glEnable(GL_DEPTH_TEST);
+    if (blend_on)
+        glEnable(GL_BLEND);
+}
+
+// swrPlayerHUD_RenderAllViewports draws sprite pass 2 (HUD), text, then pass 3 (sun, flares,
+// weather, light streaks) on top. DrawTextEntries_delta reorders to pass 3, [flush, bars], pass 2,
+// text. Sprites queue in rdCache until end of frame, hence the flush before the bars.
+typedef void(__cdecl *swrSprite_DrawSprites_t)(int);
+static bool g_sprite_pass2_deferred = false;
+static bool g_sprite_pass3_drawn = false;
+
+static void __cdecl swrSprite_DrawSprites_delta(int pass) {
+    if (pass == 2) {
+        g_sprite_pass2_deferred = true;
+        return;
+    }
+    if (pass == 3 && g_sprite_pass3_drawn) {
+        g_sprite_pass3_drawn = false;
+        return;
+    }
+    hook_call_original((swrSprite_DrawSprites_t) swrSprite_DrawSprites_ADDR, pass);
+}
+
+static void draw_deferred_sprite_pass2(void) {
+    if (!g_sprite_pass2_deferred)
+        return;
+    g_sprite_pass2_deferred = false;
+    hook_call_original((swrSprite_DrawSprites_t) swrSprite_DrawSprites_ADDR, 2);
+}
+
+// swrSprite_Draw clamps the quad to spriteViewportMin/Max but takes the UV span from the clamped
+// size, so edge sprites crop from the wrong side. GL clips on its own: widen a full-screen viewport.
+typedef void(__cdecl *swrSprite_Draw_t)(int *, swrSpriteTexture *, RdMaterial **, float, float, float,
+                                        float, int, int, int, int, int, int, int, short, float, float,
+                                        int);
+static void __cdecl swrSprite_Draw_delta(int *arg0, swrSpriteTexture *tex, RdMaterial **page,
+                                         float x0, float y0, float x1, float y1, int p8, int p9,
+                                         int p10, int p11, int p12, int p13, int p14, short p15,
+                                         float p16, float p17, int flags) {
+    const int min_x = spriteViewportMinX, max_x = spriteViewportMaxX;
+    const int min_y = spriteViewportMinY, max_y = spriteViewportMaxY;
+    const bool full_screen = min_x == 0 && min_y == 0 && max_x == swrDisplay_screenWidth - 1 &&
+                             max_y == swrDisplay_screenHeight - 1;
+    if (full_screen) {
+        spriteViewportMinX = -swrDisplay_screenWidth;
+        spriteViewportMaxX = swrDisplay_screenWidth * 2;
+        spriteViewportMinY = -swrDisplay_screenHeight;
+        spriteViewportMaxY = swrDisplay_screenHeight * 2;
+    }
+    hook_call_original((swrSprite_Draw_t) swrSprite_Draw_ADDR, arg0, tex, page, x0, y0, x1, y1, p8,
+                       p9, p10, p11, p12, p13, p14, p15, p16, p17, flags);
+    if (full_screen) {
+        spriteViewportMinX = min_x;
+        spriteViewportMaxX = max_x;
+        spriteViewportMinY = min_y;
+        spriteViewportMaxY = max_y;
+    }
+}
+
+// Hooked on DrawTextEntries (the once-per-frame HUD text flush in swrPlayerHUD_RenderAllViewports,
+// run at full-screen viewport 0). Advance the letterbox one frame with a real-time dt and draw the
+// bars, THEN let the original draw the text on top -- so the lap/total-time readouts stay readable
+// over the bars during the victory lap.
+extern "C" void DrawTextEntries_delta(void) {
+    // Freecam hides the HUD while flying; it can't take this hook itself because the letterbox
+    // bars below ride on it too (one hook_replace key, last write wins).
+    if (freecam_HudHidden()) {
+        draw_deferred_sprite_pass2();
+        return;
+    }
+
+    static LARGE_INTEGER freq = {};
+    static LARGE_INTEGER prev = {};
+    if (freq.QuadPart == 0)
+        QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    float dt = (prev.QuadPart != 0 && freq.QuadPart != 0)
+                   ? (float) ((double) (now.QuadPart - prev.QuadPart) / (double) freq.QuadPart)
+                   : 0.0f;
+    prev = now;
+    if (dt < 0.0f)
+        dt = 0.0f;
+    if (dt > 0.05f)
+        dt = 0.05f;// clamp so a load hitch slides smoothly instead of snapping
+
+    hook_call_original((swrSprite_DrawSprites_t) swrSprite_DrawSprites_ADDR, 3);
+    g_sprite_pass3_drawn = true;
+    const float frac = swrObjJdge_UpdateLetterbox(dt);
+    if (frac > 0.0f) {
+        rdCache_Flush();
+        draw_letterbox_bars(frac);
+    }
+    draw_deferred_sprite_pass2();
+    hook_call_original(DrawTextEntries);
+}
+
+extern "C" void init_renderer_hooks() {
+
+    // ========================================
+    // Hooks required for renderer replacement
+    // ========================================
+
+    // Debounce the accept/cancel rising edges so one held press = one transition. A screen load
+    // resets the game's per-device down-trackers, which makes a held Enter/Escape re-fire and skip
+    // the next screen/cutscene too; the delta re-gates both edges on the physical button state.
+    // swrControl_ProcessInputs is reverse-hooked (registered in hook_generated) -> replace it.
+    hook_replace(swrControl_ProcessInputs, swrControl_ProcessInputs_delta);
+
+    // Audio fix (issue #221): re-apply the persisted master volume after swrSound_Startup (it forces
+    // the A3D output gain to 1.0). Reverse-hooked (registered in hook_generated) -> replace only.
+    // (Window_PlayCinematic, which also carries the cutscene audio scaling, is registered below with
+    // the Smush skip hook.)
+    hook_replace(swrSound_Startup, swrSound_Startup_delta);
+
+    // F12 screenshot (issue #289). Reverse-hooked (registered in hook_generated) -> replace it.
+    hook_replace(sithRender_MakeScreenShot, sithRender_MakeScreenShot_delta);
+
+    // Free-camera spike (Phase 1): render-only takeover of the scene camera at the
+    // rdCamera_Update seam. Toggle in-race with F9; WASD + Space/Ctrl to move, arrows or RMB-drag to
+    // look, Shift/Alt for fast/slow.
+    freecam_RegisterHooks();
+    playercam_RegisterHooks();
+    ai_tuning_RegisterHooks();
+    audio_mix_RegisterHooks();
+
+    // issue #165: the DirectDraw video-surface path in Window_PlayCinematic (0x004252a0) is dead under
+    // the GL renderer (frames go through renderer_drawSmushFrame), and stock only takes it while the
+    // backbuffer is < 640x480 -- i.e. at boot, where the call faults inside Smush.dll on AMD + dgVoodoo.
+    // NOP the two "too small -> CreateSurface" branches (JC 0x004252e5) so control always falls through
+    // to swrDisplay_directlyBlitVideoToScreen = 1, the path the in-game cutscenes already take.
+    static const uint8_t nop2[2] = {0x90, 0x90};
+    WriteMemory("smush_no_directdraw", (void *) 0x004252cd, nop2, sizeof(nop2));
+    WriteMemory("smush_no_directdraw", (void *) 0x004252db, nop2, sizeof(nop2));
+
+#if ENABLE_GAMEPAD_NAV
+    // Feed the gamepad's D-pad / START / BACK into the game's menu + in-race input.
+    hook_function("swrUI_ProcessMouse", (uint32_t) swrUI_ProcessMouse_ADDR,
+                  (uint8_t *) swrUI_ProcessMouse_delta);
+    hook_function("swrUI_UpdatePlayerMenuInput", (uint32_t) swrUI_UpdatePlayerMenuInput_ADDR,
+                  (uint8_t *) swrUI_UpdatePlayerMenuInput_delta);
+    hook_function("updateInRaceInputBitsets", (uint32_t) updateInRaceInputBitsets_ADDR,
+                  (uint8_t *) updateInRaceInputBitsets_delta);
+    hook_function("swrObjHang_UpdateTauntScene", (uint32_t) swrObjHang_UpdateTauntScene_ADDR,
+                  (uint8_t *) swrObjHang_UpdateTauntScene_delta);
+#endif
+
+#if ENABLE_XINPUT_RUMBLE
+    // Capture wall-scrape sparks mid-frame for the gamepad rumble bridge, before the
+    // game's own scrape handler consumes the flags.
+    hook_function("swrRace_UpdateScrapeSparks", (uint32_t) swrRace_UpdateScrapeSparks_ADDR,
+                  (uint8_t *) swrRace_UpdateScrapeSparks_delta);
+    // swrRace_TriggerHandler is already detoured by swrObjJdge_delta and two detours on one
+    // address collide, so the earthquake read is a plain call from inside that handler.
+#endif
+    // Cutscene auto-skip toggles ("Game" settings panel). The intro-FMV skip rides the existing
+    // Window_SmushPlayCallback hook (below); these cover the hangar camera intros and the end credits.
+    // Pod Unlock Scene: stop the results flow from ever entering that scene (rather than skipping it
+    // at the scene handler, which flashes) while still doing the pilot unlock. swrRace_ResultsMenu is
+    // reverse-hooked (no direct callers) -> safe to replace, unlike swrObjHang_SetMenuState.
+    hook_function("swrRace_ResultsMenu", (uint32_t) swrRace_ResultsMenu,
+                  (uint8_t *) swrRace_ResultsMenu_ADDR);
+    hook_replace(swrRace_ResultsMenu, swrRace_ResultsMenu_delta);
+    hook_function("swrObjHang_UpdatePlanetSelectIntro",
+                  (uint32_t) swrObjHang_UpdatePlanetSelectIntro_ADDR,
+                  (uint8_t *) swrObjHang_UpdatePlanetSelectIntro_delta);
+    hook_function("swrObjHang_UpdateVehicleSelectIntro",
+                  (uint32_t) swrObjHang_UpdateVehicleSelectIntro_ADDR,
+                  (uint8_t *) swrObjHang_UpdateVehicleSelectIntro_delta);
+    hook_function("swrObjJdge_ScrollCredits", (uint32_t) swrObjJdge_ScrollCredits_ADDR,
+                  (uint8_t *) swrObjJdge_ScrollCredits_delta);
+    // Smush cinematic skip + fade suppression (Window_PlayCinematic is reverse-hooked -> replace).
+    hook_function("Window_PlayCinematic", (uint32_t) Window_PlayCinematic,
+                  (uint8_t *) Window_PlayCinematic_ADDR);
+    hook_replace(Window_PlayCinematic, Window_PlayCinematic_delta);
+
+    // main
+    hook_function("WinMain", (uint32_t) WinMain_ADDR, (uint8_t *) WinMain_delta);
+
+    // "Instant respawn" cheat: collapse the death-camera respawn wait (see the delta above).
+    hook_function("swrObjcMan_UpdateDeathCamera", (uint32_t) swrObjcMan_UpdateDeathCamera_ADDR,
+                  (uint8_t *) swrObjcMan_UpdateDeathCamera_delta);
+
+    // rdMaterial
+    hook_function("rdMaterial_InvertTextureAlphaR4G4B4A4 nooped",
+                  (uint32_t) rdMaterial_InvertTextureAlphaR4G4B4A4_ADDR, (uint8_t *) noop);
+    hook_function("rdMaterial_InvertTextureColorR4G4B4A4 nooped",
+                  (uint32_t) rdMaterial_InvertTextureColorR4G4B4A4_ADDR, (uint8_t *) noop);
+    hook_function("rdMaterial_RemoveTextureAlphaR5G5B5A1 nooped",
+                  (uint32_t) rdMaterial_RemoveTextureAlphaR5G5B5A1_ADDR, (uint8_t *) noop);
+    hook_function("rdMaterial_RemoveTextureAlphaR4G4B4A4 nooped",
+                  (uint32_t) rdMaterial_RemoveTextureAlphaR4G4B4A4_ADDR, (uint8_t *) noop);
+    hook_function("rdMaterial_SaturateTextureR4G4B4A4",
+                  (uint32_t) rdMaterial_SaturateTextureR4G4B4A4_ADDR,
+                  (uint8_t *) rdMaterial_SaturateTextureR4G4B4A4_delta);
+
+    // rdMatrix
+    hook_function("rdMatrix_Multiply44", (uint32_t) rdMatrix_Multiply44_ADDR,
+                  (uint8_t *) rdMatrix_Multiply44_delta);
+    hook_function("rdMatrix_Multiply44Acc", (uint32_t) rdMatrix_Multiply44Acc_ADDR,
+                  (uint8_t *) rdMatrix_Multiply44Acc_delta);
+    hook_function("rdMatrix_Multiply3", (uint32_t) rdMatrix_Multiply3_ADDR,
+                  (uint8_t *) rdMatrix_Multiply3_delta);
+    hook_function("rdMatrix_Transform3", (uint32_t) rdMatrix_Transform3_ADDR,
+                  (uint8_t *) rdMatrix_Transform3_delta);
+    hook_function("rdMatrix_Multiply4", (uint32_t) rdMatrix_Multiply4_ADDR,
+                  (uint8_t *) rdMatrix_Multiply4_delta);
+    hook_function("rdMatrix_ScaleBasis44", (uint32_t) rdMatrix_ScaleBasis44_ADDR,
+                  (uint8_t *) rdMatrix_ScaleBasis44_delta);
+
+    hook_function("rdMatrix_TransformPoint44", (uint32_t) rdMatrix_TransformPoint44_ADDR,
+                  (uint8_t *) rdMatrix_TransformPoint44_delta);
+
+    hook_function("rdMatrix_Multiply34", (uint32_t) rdMatrix_Multiply34_ADDR,
+                  (uint8_t *) rdMatrix_Multiply34_delta);
+    hook_function("rdMatrix_PreMultiply34", (uint32_t) rdMatrix_PreMultiply34_ADDR,
+                  (uint8_t *) rdMatrix_PreMultiply34_delta);
+    hook_function("rdMatrix_PostMultiply34", (uint32_t) rdMatrix_PostMultiply34_ADDR,
+                  (uint8_t *) rdMatrix_PostMultiply34_delta);
+    hook_function("rdMatrix_TransformVector34", (uint32_t) rdMatrix_TransformVector34_ADDR,
+                  (uint8_t *) rdMatrix_TransformVector34_delta);
+    hook_function("rdMatrix_TransformPoint34", (uint32_t) rdMatrix_TransformPoint34_ADDR,
+                  (uint8_t *) rdMatrix_TransformPoint34_delta);
+
+    // std3D
+    hook_function("std3D_Startup", (uint32_t) 0x00489dc0, (uint8_t *) std3D_Startup_delta);
+    hook_function("std3D_Open", (uint32_t) 0x00489ec0, (uint8_t *) std3D_Open_delta);
+    hook_function("std3D_StartScene", (uint32_t) 0x0048a300, (uint8_t *) std3D_StartScene_delta);
+    hook_function("std3D_EndScene", (uint32_t) 0x0048a330, (uint8_t *) std3D_EndScene_delta);
+    hook_function("std3D_DrawRenderList", (uint32_t) 0x0048a350,
+                  (uint8_t *) std3D_DrawRenderList_delta);
+    hook_function("std3D_SetRenderState", (uint32_t) 0x0048a450,
+                  (uint8_t *) std3D_SetRenderState_delta);
+    hook_function("std3D_AllocSystemTexture", (uint32_t) 0x0048a5e0,
+                  (uint8_t *) std3D_AllocSystemTexture_delta);
+    hook_function("std3D_ClearTexture", (uint32_t) 0x0048aa40,
+                  (uint8_t *) std3D_ClearTexture_delta);
+    hook_function("std3D_AddToTextureCache", (uint32_t) 0x0048aa80,
+                  (uint8_t *) std3D_AddToTextureCache_delta);
+    hook_function("std3D_ClearCacheList", (uint32_t) 0x0048ac50,
+                  (uint8_t *) std3D_ClearCacheList_delta);
+    hook_function("std3D_SetTexFilterMode", (uint32_t) 0x0048b1b0,
+                  (uint8_t *) std3D_SetTexFilterMode_delta);
+    hook_function("std3D_SetProjection", (uint32_t) 0x0048b260,
+                  (uint8_t *) std3D_SetProjection_delta);
+    hook_function("std3D_AddTextureToCacheList", (uint32_t) 0x0048ba20,
+                  (uint8_t *) std3D_AddTextureToCacheList_delta);
+    hook_function("std3D_RemoveTextureFromCacheList", (uint32_t) 0x0048ba90,
+                  (uint8_t *) std3D_RemoveTextureFromCacheList_delta);
+    hook_function("std3D_PurgeTextureCache", (uint32_t) 0x0048bb50,
+                  (uint8_t *) std3D_PurgeTextureCache_delta);
+
+    // stdControl: enumerate only game device classes so a non-game HID device
+    // (e.g. some USB headsets) can't crash DirectInput startup on launch.
+    hook_function("stdControl_Startup", (uint32_t) 0x00485360,
+                  (uint8_t *) stdControl_Startup_delta);
+#if ENABLE_GLFW_INPUT_HANDLING
+    hook_function("stdControl_ReadControls", (uint32_t) 0x00485630,
+                  (uint8_t *) stdControl_ReadControls_delta);
+    hook_function("stdControl_SetActivation", (uint32_t) 0x00485a30,
+                  (uint8_t *) stdControl_SetActivation_delta);
+#endif
+
+    // swrDisplay
+    hook_function("swrDisplay_SetWindowSize", (uint32_t) 0x004238a0,
+                  (uint8_t *) swrDisplay_SetWindowSize_delta);
+
+    // DirectDraw
+    hook_function("DirectDraw_InitProgressBar", (uint32_t) 0x00408510,
+                  (uint8_t *) DirectDraw_InitProgressBar_delta);
+    hook_function("DirectDraw_Shutdown", (uint32_t) 0x00408620,
+                  (uint8_t *) DirectDraw_Shutdown_delta);
+    hook_function("swrUI_UpdateProgressBar", (uint32_t) swrUI_UpdateProgressBar_ADDR,
+                  (uint8_t *) swrUI_UpdateProgressBar_delta);
+    hook_function("DirectDraw_LockZBuffer", (uint32_t) 0x00431C40,
+                  (uint8_t *) DirectDraw_LockZBuffer_delta);
+    hook_function("DirectDraw_UnlockZBuffer", (uint32_t) 0x00431cd0,
+                  (uint8_t *) DirectDraw_UnlockZBuffer_delta);
+    hook_function("Direct3d_SetFogMode", (uint32_t) 0x0048a140,
+                  (uint8_t *) Direct3d_SetFogMode_delta);
+    hook_function("Direct3d_IsLensflareCompatible", (uint32_t) 0x0048a1a0,
+                  (uint8_t *) Direct3d_IsLensflareCompatible_delta);
+    hook_function("Direct3d_ConfigFog", (uint32_t) 0x0048b340,
+                  (uint8_t *) Direct3d_ConfigFog_delta);
+
+    // stdConsole
+    hook_function("stdConsole_GetCursorPos", (uint32_t) 0x004082e0,
+                  (uint8_t *) stdConsole_GetCursorPos_delta);
+    hook_function("stdConsole_SetCursorPos", (uint32_t) 0x00408360,
+                  (uint8_t *) stdConsole_SetCursorPos_delta);
+    // Keep the game's software cursor sprite (id 249) hidden so only the OS/GLFW pointer shows; the
+    // vanilla side-effect that re-hides it misses the post-race results screen -> double cursor (#192).
+    hook_function("swrSprite_DisplayCursor", (uint32_t) swrSprite_DisplayCursor_ADDR,
+                  (uint8_t *) swrSprite_DisplayCursor_delta);
+
+    // 2D UI sprite art replacement: after a sprite's paged texture loads, if a replacement image
+    // exists (assets/replacement_sprites/<id>.{png,jpg,jpeg}) it is collapsed onto a single full-size
+    // page. The sprite counterpart to the model texture_buffer_replacement path; no-op otherwise.
+    hook_function("swrSprite_LoadTexture", (uint32_t) swrSprite_LoadTexture_ADDR,
+                  (uint8_t *) swrSprite_LoadTexture_delta);
+
+    // 2D UI resolution-independent transform (gated by imgui_state.ui_resolution_independent).
+    // Pairs the swrSprite_array/menu-frame scale + the text recip with the cursor remap below.
+    hook_function("swrSprite_GetUIScale", (uint32_t) swrSprite_GetUIScale_ADDR,
+                  (uint8_t *) swrSprite_GetUIScale_delta);
+    // Projected-element seams: re-derive the design coordinate for sprites/text that
+    // swrViewport_ProjectToScreen places by framebuffer pixel (lens flares, light streaks, world
+    // sprites, weather, distance/name HUD text) so they track their true pixel under the uniform
+    // sprite scale instead of squishing to the letterboxed UI width.
+    hook_function("swrSprite_SetPosF", (uint32_t) swrSprite_SetPosF_ADDR,
+                  (uint8_t *) swrSprite_SetPosF_delta);
+    // swrText_CreateTextEntry2 is the projected-TEXT seam (distance/name HUD labels) and also a
+    // reimplemented function. It is registered below via hook_replace (next to its MP-name wrapper),
+    // which both installs the detour and does the res-independent px->design reprojection -- so it is
+    // not registered here, to avoid a double install.
+    // Per-entry text clip rect: un-stretch the X edges so clipped menu text (e.g. the profile list)
+    // stays inside its now-uniform clip box instead of falling left of it.
+    hook_function("swrText_SetEntryClipRect", (uint32_t) swrText_SetEntryClipRect_ADDR,
+                  (uint8_t *) swrText_SetEntryClipRect_delta);
+    // UI centering: shift every menu/HUD sprite + text string right by the centering offset so the
+    // uniform-width UI box is pillarboxed in the window. The game's own SetPos/CreateTextEntry1
+    // callers hit these EXE hooks; the projected seams call the DLL copies, so world elements stay
+    // put. The cursor remap subtracts the same offset to keep hit-tests aligned.
+    hook_function("swrSprite_SetPos", (uint32_t) swrSprite_SetPos_ADDR,
+                  (uint8_t *) swrSprite_SetPos_delta);
+    // Full-screen menu/hangar backdrops stretch to fill the window instead of pillarboxing: the TGA
+    // loader tags their texture ids, SetDim sizes them to the framebuffer, and SetPos pins them to the
+    // origin. Only the recognized backdrop files are affected; passthrough when res-independence is off.
+    hook_function("swrSprite_GetTextureFromTGA", (uint32_t) swrSprite_GetTextureFromTGA_ADDR,
+                  (uint8_t *) swrSprite_GetTextureFromTGA_delta);
+    hook_function("swrSprite_SetDim", (uint32_t) swrSprite_SetDim_ADDR,
+                  (uint8_t *) swrSprite_SetDim_delta);
+    // Sub-pixel position for projected sprites: draws SetPosF-placed sprites (sun, lens flares, light
+    // streaks) at a subdivided scale so their int16 design-grid position stops stairstepping at high
+    // resolution. Pairs with swrSprite_SetPosF_delta's finer-grid store; all other sprites unchanged.
+    hook_function("swrSprite_Draw2", (uint32_t) swrSprite_Draw2_ADDR,
+                  (uint8_t *) swrSprite_Draw2_delta);
+    hook_function("swrText_CreateTextEntry1", (uint32_t) swrText_CreateTextEntry1_ADDR,
+                  (uint8_t *) swrText_CreateTextEntry1_delta);
+    // Sibling text-entry wrappers that bypass CreateTextEntry1 (they call swrText_CreateEntry
+    // directly): the hangar titles "SELECT VEHICLE" / "MAIN MENU" draw through CreateColorlessEntry1,
+    // so they need their own centering hooks or they sit left of the pillarboxed UI.
+    hook_function("swrText_CreateColorlessEntry1", (uint32_t) swrText_CreateColorlessEntry1_ADDR,
+                  (uint8_t *) swrText_CreateColorlessEntry1_delta);
+    hook_function("swrText_CreateColorlessFormattedEntry1",
+                  (uint32_t) swrText_CreateColorlessFormattedEntry1_ADDR,
+                  (uint8_t *) swrText_CreateColorlessFormattedEntry1_delta);
+    // The in-race pause menu draws its option text through swrText_CreateEntry2 (the entries2
+    // buffer), which bypasses the CreateTextEntry1 chokepoint, so it needs its own centering hook.
+    hook_function("swrText_CreateEntry2", (uint32_t) swrText_CreateEntry2_ADDR,
+                  (uint8_t *) swrText_CreateEntry2_delta);
+    // Flags menu-vs-HUD content so the centering offset uses the widget scale (640) for front-end
+    // UI and the HUD/game scale (320) for direct callers. swrUI_RenderElementSprites scopes element-
+    // tree SPRITES; swrUI_DrawText/Aligned scope menu TEXT.
+    hook_function("swrUI_RenderElementSprites", (uint32_t) swrUI_RenderElementSprites_ADDR,
+                  (uint8_t *) swrUI_RenderElementSprites_delta);
+    hook_function("swrUI_DrawText", (uint32_t) swrUI_DrawText_ADDR,
+                  (uint8_t *) swrUI_DrawText_delta);
+    hook_function("swrUI_DrawTextAligned", (uint32_t) swrUI_DrawTextAligned_ADDR,
+                  (uint8_t *) swrUI_DrawTextAligned_delta);
+
+    // Edge-anchor the standard Back/Cancel/Quit, OK and Settings buttons to the real screen edges on
+    // wide screens. AddNavButton/AddOkButton/NewButton tag and move the buttons; the SetPos hook keeps
+    // them at the edge across relayout and RenderElementSprites advances the shift each frame so they
+    // track a window resize. The whole element moves, so sprite + label + hit-test follow. Passthrough
+    // when res-independence is off.
+    hook_function("swrUI_AddNavButton", (uint32_t) swrUI_AddNavButton_ADDR,
+                  (uint8_t *) swrUI_AddNavButton_delta);
+    hook_function("swrUI_AddOkButton", (uint32_t) swrUI_AddOkButton_ADDR,
+                  (uint8_t *) swrUI_AddOkButton_delta);
+    hook_function("swrUI_NewButton", (uint32_t) swrUI_NewButton_ADDR,
+                  (uint8_t *) swrUI_NewButton_delta);
+    hook_function("swrUI_SetPos", (uint32_t) swrUI_SetPos_ADDR, (uint8_t *) swrUI_SetPos_delta);
+
+    // stdDisplay
+    hook_function("stdDisplay_Startup", (uint32_t) 0x00487d20,
+                  (uint8_t *) stdDisplay_Startup_delta);
+    hook_function("stdDisplay_Open", (uint32_t) 0x00487e00, (uint8_t *) stdDisplay_Open_delta);
+    hook_function("stdDisplay_Close", (uint32_t) 0x00487e80, (uint8_t *) stdDisplay_Close_delta);
+    hook_function("stdDisplay_SetMode", (uint32_t) 0x00487f00,
+                  (uint8_t *) stdDisplay_SetMode_delta);
+    hook_function("stdDisplay_Refresh", (uint32_t) 0x00488100,
+                  (uint8_t *) stdDisplay_Refresh_delta);
+    hook_function("stdDisplay_VBufferNew", (uint32_t) 0x004881c0,
+                  (uint8_t *) stdDisplay_VBufferNew_delta);
+    hook_function("stdDisplay_VBufferFill", (uint32_t) 0x00488410,
+                  (uint8_t *) stdDisplay_VBufferFill_delta);
+    hook_function("stdDisplay_SetWindowMode", (uint32_t) 0x00489270,
+                  (uint8_t *) stdDisplay_SetWindowMode_delta);
+    hook_function("stdDisplay_SetFullscreenMode", (uint32_t) 0x00489790,
+                  (uint8_t *) stdDisplay_SetFullscreenMode_delta);
+
+    hook_function("stdDisplay_Update", (uint32_t) 0x00489ab0, (uint8_t *) stdDisplay_Update_Hook);
+
+    hook_function("stdDisplay_FillMainSurface", (uint32_t) 0x00489bc0,
+                  (uint8_t *) stdDisplay_FillMainSurface_delta);
+    hook_function("stdDisplay_ColorFillSurface", (uint32_t) 0x00489bd0,
+                  (uint8_t *) stdDisplay_ColorFillSurface_delta);
+
+    // swrViewport
+    hook_function("swrViewport_Render", (uint32_t) swrViewport_Render, (uint8_t *) 0x00483A90);
+    hook_replace(swrViewport_Render, swrViewport_Render_Hook);
+    // Re-align projected overlays (flares/weather/HUD labels) with the Hor+ scene projection above.
+    hook_function("swrViewport_ProjectToScreen", (uint32_t) swrViewport_ProjectToScreen_ADDR,
+                  (uint8_t *) swrViewport_ProjectToScreen_delta);
+
+    // swrText
+    hook_function("swrText_InitFonts", (uint32_t) swrText_InitFonts_ADDR,
+                  (uint8_t *) swrText_InitFonts_delta);
+    mod_hd_font = register_mod(&swrText_HdFontMod);
+
+    // swrModel
+    hook_function("swrModel_LoadFromId", (uint32_t) swrModel_LoadFromId, (uint8_t *) 0x00448780);
+    hook_replace(swrModel_LoadFromId, swrModel_LoadFromId_delta);
+
+    hook_function("swrModel_InitializeTextureBuffer", (uint32_t) swrModel_InitializeTextureBuffer,
+                  (uint8_t *) 0x00447420);
+    hook_replace(swrModel_InitializeTextureBuffer, swrModel_InitializeTextureBuffer_delta);
+
+    // Window
+    hook_function("Window_SetActivated", (uint32_t) Window_SetActivated_ADDR,
+                  (uint8_t *) Window_SetActivated_delta);
+    hook_function("Window_Resize", (uint32_t) Window_Resize_ADDR, (uint8_t *) Window_Resize_delta);
+    hook_function("Window_SmushPlayCallback", (uint32_t) Window_SmushPlayCallback_ADDR,
+                  (uint8_t *) Window_SmushPlayCallback_delta);
+    hook_function("Window_Main", (uint32_t) Window_Main_ADDR, (uint8_t *) Window_Main_delta);
+    hook_function("Window_CreateMainWindow", (uint32_t) Window_CreateMainWindow_ADDR,
+                  (uint8_t *) Window_CreateMainWindow_delta);
+
+    // ========================================
+    // Hooks required for custom tracks
+    // ========================================
+
+    // fileOpen
+    // fileRead
+    // fileClose
+
+    hook_function("swrUI_Front_HandleCircuits", (uint32_t) swrUI_Front_HandleCircuits_ADDR,
+                  (uint8_t *) HandleCircuits_delta);
+    hook_function("isTrackPlayable", (uint32_t) isTrackPlayable_ADDR,
+                  (uint8_t *) isTrackPlayable_delta);
+    hook_function("VerifySelectedTrack", (uint32_t) VerifySelectedTrack_ADDR,
+                  (uint8_t *) VerifySelectedTrack_delta);
+
+    hook_function("swrUI_Front_GetTrackNameFromId", (uint32_t) swrUI_Front_GetTrackNameFromId_ADDR,
+                  (uint8_t *) swrUI_GetTrackNameFromId_delta);
+
+    hook_function("swrObjHang_InitTrackSprites", (uint32_t) swrObjHang_InitTrackSprites_ADDR,
+                  (uint8_t *) swrObjHang_InitTrackSprites_delta);
+    hook_function("swrObjJdge_InitTrack", (uint32_t) swrObjJdge_InitTrack,
+                  (uint8_t *) swrObjJdge_InitTrack_ADDR);
+    hook_replace(swrObjJdge_InitTrack, swrObjJdge_InitTrack_delta);
+
+    // Fast restart (speedrunner hotkey): capture each pod's swrRace_Init arguments at spawn time so
+    // the in-place restart (service_fast_restart) can replay them on the resident pods with no
+    // teardown/reload. swrRace_Init is not reimplemented, so hook by address.
+    hook_function("swrRace_Init", (uint32_t) swrRace_Init_ADDR, (uint8_t *) swrRace_Init_capture);
+    // NOTE: swrObjJdge_F0 is hooked once, below, via the reverse-hook form (hook_function by symbol +
+    // hook_replace). That single delta carries BOTH the fast-restart pre-race skip and the cutscene
+    // handling. A second address-keyed hook_function here (as fast-restart originally added) double-
+    // detours the same game address, so swrObjJdge_F0_delta's hook_call_original chains back into the
+    // delta -> infinite recursion / stack overflow once swrObjJdge_F0 is reimplemented. Do not re-add.
+#if !ENABLE_GLFW_INPUT_HANDLING
+    // Fast restart boost fix: with the game reading the real DirectInput keyboard, wrap the input
+    // read to zero the held restart-Enter after a restart (see swrObjJdge_delta.cpp). Not needed
+    // when GLFW feeds input (the callback consumes Enter directly).
+    hook_function("stdControl_ReadControls", (uint32_t) stdControl_ReadControls_ADDR,
+                  (uint8_t *) stdControl_ReadControls_boostfix_delta);
+#endif
+    // Fast restart: snapshot every fired trigger (armed description + any node it hides) at the one
+    // dispatcher so a restart can re-arm all triggers and re-show hidden objects. Hooked by address.
+    hook_function("swrRace_TriggerHandler", (uint32_t) swrRace_TriggerHandler_ADDR,
+                  (uint8_t *) swrRace_TriggerHandler_delta);
+    // Record which trigger FX-animation indices actually play, so a restart resets only valid
+    // (current-track) FX lists -- swrObjTrig_AnimationArray is populated per-planet and unused
+    // indices hold stale/freed lists. Hooked by address.
+    hook_function("swrObjTrig_EnableFXAnimation", (uint32_t) swrObjTrig_EnableFXAnimation_ADDR,
+                  (uint8_t *) swrObjTrig_EnableFXAnimation_delta);
+
+    // Flush the per-mesh geometry cache when loaded models are cleared (track change).
+    hook_function("swrModel_ClearLoadedModels", (uint32_t) swrModel_ClearLoadedModels,
+                  (uint8_t *) swrModel_ClearLoadedModels_ADDR);
+    hook_replace(swrModel_ClearLoadedModels, swrModel_ClearLoadedModels_delta);
+
+    // Multiplayer netcode stability: async DirectPlay sends (no game-thread stall under packet
+    // loss) + a per-pump incoming-packet cap. See swrMultiplayer_delta.cpp.
+    hook_function("sithMulti_HandleIncomingPacket", (uint32_t) sithMulti_HandleIncomingPacket,
+                  (uint8_t *) sithMulti_HandleIncomingPacket_ADDR);
+    hook_replace(sithMulti_HandleIncomingPacket, sithMulti_HandleIncomingPacket_delta);
+    hook_function("stdComm_Send", (uint32_t) stdComm_Send, (uint8_t *) stdComm_Send_ADDR);
+    hook_replace(stdComm_Send, stdComm_Send_delta);
+
+    // Player-leave crash fixes (see swrMultiplayer_delta.cpp). Hooked by address: the originals
+    // are unimplemented stubs in src.
+    hook_function("swrObjTrig_CreateAndActivateTriggerFromMultiplayerEvent",
+                  (uint32_t) swrObjTrig_CreateAndActivateTriggerFromMultiplayerEvent_ADDR,
+                  (uint8_t *) swrObjTrig_CreateAndActivateTriggerFromMultiplayerEvent_delta);
+    // Trigger-index desync fix, note (5) in swrMultiplayer_delta.cpp. Hooked by address.
+    hook_function("swrObjTrig_LoadAndInitializeTriggerModels",
+                  (uint32_t) swrObjTrig_LoadAndInitializeTriggerModels_ADDR,
+                  (uint8_t *) swrObjTrig_LoadAndInitializeTriggerModels_delta);
+    // Vanilla UI-navigation NULL deref reachable from the MP lobby teardown (see swrUI_delta.cpp).
+    hook_function("swrUI_IsFocusable", (uint32_t) swrUI_IsFocusable_ADDR,
+                  (uint8_t *) swrUI_IsFocusable_delta);
+    hook_function("stdComm_UpdatePlayers", (uint32_t) stdComm_UpdatePlayers_ADDR,
+                  (uint8_t *) stdComm_UpdatePlayers_delta);
+    hook_function("stdComm_GetSessionSettings", (uint32_t) stdComm_GetSessionSettings_ADDR,
+                  (uint8_t *) stdComm_GetSessionSettings_delta);
+
+    // Middle-player-leave fixes, notes (3) and (4) in swrMultiplayer_delta.cpp. Hooked by address.
+    hook_function("swrMultiplayer_JoinGame", (uint32_t) swrMultiplayer_JoinGame_ADDR,
+                  (uint8_t *) swrMultiplayer_JoinGame_delta);
+    hook_function("swrMultiplayer_SetLocalPlayer", (uint32_t) swrMultiplayer_SetLocalPlayer_ADDR,
+                  (uint8_t *) swrMultiplayer_SetLocalPlayer_delta);
+    hook_function("sithMulti_ProcessPlayerLost", (uint32_t) sithMulti_ProcessPlayerLost_ADDR,
+                  (uint8_t *) sithMulti_ProcessPlayerLost_delta);
+    hook_function("swrMultiplayer_PopulateRacerList",
+                  (uint32_t) swrMultiplayer_PopulateRacerList_ADDR,
+                  (uint8_t *) swrMultiplayer_PopulateRacerList_delta);
+    hook_function("swrMultiplayer_GetActivePlayerCount",
+                  (uint32_t) swrMultiplayer_GetActivePlayerCount_ADDR,
+                  (uint8_t *) swrMultiplayer_GetActivePlayerCount_delta);
+
+    // Wire-slot bounds hardening on the remaining per-slot handlers (see swrMultiplayer_delta.cpp).
+    // Hooked by address; the handlers are declaration-only, reached via the callback table.
+    hook_function("swrMultiplayer_ApplyEvent", (uint32_t) swrMultiplayer_ApplyEvent_ADDR,
+                  (uint8_t *) swrMultiplayer_ApplyEvent_delta);
+    hook_function("swrMultiplayer_ApplyPlayerName", (uint32_t) swrMultiplayer_ApplyPlayerName_ADDR,
+                  (uint8_t *) swrMultiplayer_ApplyPlayerName_delta);
+    hook_function("swrMultiplayer_ApplyRacerPick", (uint32_t) swrMultiplayer_ApplyRacerPick_ADDR,
+                  (uint8_t *) swrMultiplayer_ApplyRacerPick_delta);
+
+    // Multiplayer fix: restore racer-selection input after a race (both host and clients).
+    hook_function("swrObjHang_F0", (uint32_t) swrObjHang_F0, (uint8_t *) swrObjHang_F0_ADDR);
+    hook_replace(swrObjHang_F0, swrObjHang_F0_delta);
+
+    // Multiplayer pod upgrades: the MP roster builder copies raw base stats (no upgrades) unlike the
+    // single-player path. When the "allow pod upgrades" toggle is on, layer the local player's active
+    // profile upgrades onto its pod after the build. Hooked by address (not reimplemented).
+    hook_function("swrObjHang_BuildRosterMultiplayer",
+                  (uint32_t) swrObjHang_BuildRosterMultiplayer_ADDR,
+                  (uint8_t *) swrObjHang_BuildRosterMultiplayer_delta);
+
+    // Multiplayer: draw player names above pods instead of the position number. The wrapper on
+    // swrPlayerHUD_RenderDistanceText (hooked by address; not reimplemented) reuses the game's own
+    // projection/occlusion/fade and only redirects the text it draws -- via swrText_CreateTextEntry2
+    // -- to the racer's name. Single-player is untouched (redirect only when multiplayer_enabled).
+    hook_function("swrPlayerHUD_RenderDistanceText", (uint32_t) swrPlayerHUD_RenderDistanceText_ADDR,
+                  (uint8_t *) swrPlayerHUD_RenderDistanceText_delta);
+    // swrText_CreateTextEntry2 is reimplemented (already registered in hook_generated.c), so a plain
+    // hook_replace overrides it -- same as the other reimplemented-function deltas above.
+    hook_replace(swrText_CreateTextEntry2, swrText_CreateTextEntry2_delta);
+    // Clear the "~F" half-scale flag after the text batch so the minimap text the half-size player
+    // labels would otherwise leave shrunk renders at full size.
+    hook_function("swrText_RenderEntries1", (uint32_t) swrText_RenderEntries1_ADDR,
+                  (uint8_t *) swrText_RenderEntries1_delta);
+
+    // Record each pod's cable-curve state per frame so the GL walk can bend the cables
+    // (the game's cable deformer only touches the rd3d mesh the replacement doesn't use).
+    hook_function("swrRace_PoddAnimateVariousThings",
+                  (uint32_t) swrRace_PoddAnimateVariousThings,
+                  (uint8_t *) swrRace_PoddAnimateVariousThings_ADDR);
+    hook_replace(swrRace_PoddAnimateVariousThings, swrRace_PoddAnimateVariousThings_delta);
+
+    // Display-pod animator (hangar inspect / selection menu / cutscenes) - register its cables too.
+    hook_function("swrRace_AnimateDisplayPod", (uint32_t) swrRace_AnimateDisplayPod_ADDR,
+                  (uint8_t *) swrRace_AnimateDisplayPod_delta);
+
+    hook_function("swrMain_RunFrame", (uint32_t) swrMain_RunFrame_ADDR,
+                  (uint8_t *) swrMain_RunFrame_delta);
+
+    // Multiplayer "disable pod collision": when the local player turns it on, skip pod-to-pod
+    // collision resolution for their pod so they pass through other racers. Hooked by address (not
+    // reimplemented); the original is called back through swrRace_ResolvePodCollision_ADDR.
+    hook_function("swrRace_ResolvePodCollision", (uint32_t) swrRace_ResolvePodCollision_ADDR,
+                  (uint8_t *) swrRace_ResolvePodCollision_delta);
+
+    // ai_full_lod dust/splash contention fix: every full-LOD AI pod now spawns the ground dust
+    // trail + splash sound, draining the fixed 16-slot Toss pool and hammering the shared splash
+    // voice so the player's trail/sound restarts. Reserve pool headroom + silence the sound for
+    // non-local pods. Both originals are dormant (reverse-hooked); hooked by address.
+    hook_function("swrRace_SpawnGroundDustKick",
+                  (uint32_t) swrRace_SpawnGroundDustKick_ADDR,
+                  (uint8_t *) swrRace_SpawnGroundDustKick_delta);
+    hook_function("playASound", (uint32_t) playASound_ADDR, (uint8_t *) playASound_delta);
+    // Enlarge the dust-kick Toss pool so full-LOD AI dust doesn't starve the player's trail.
+    hook_function("swrObjToss_AddDustKickModelsToScene",
+                  (uint32_t) swrObjToss_AddDustKickModelsToScene_ADDR,
+                  (uint8_t *) swrObjToss_AddDustKickModelsToScene_delta);
+    // Widen far-AI ground contact so distant AI kick up dust (clamps lodDistance for visible AI).
+    hook_function("swrObjTest_F0", (uint32_t) swrObjTest_F0_ADDR, (uint8_t *) swrObjTest_F0_delta);
+    // "Boost at any speed" / "No boost charge timer" cheats (must set flags0 before the original
+    // snapshots it and calls swrRace_BoostCharge).
+    hook_function("swrRace_UpdatePlayerControl", (uint32_t) swrRace_UpdatePlayerControl_ADDR,
+                  (uint8_t *) swrRace_UpdatePlayerControl_delta);
+    // "Tilt at any speed" cheat: bypass swrRace_Tilt's low-speed bank gate for the local pod.
+    hook_function("swrRace_Tilt", (uint32_t) swrRace_Tilt_ADDR, (uint8_t *) swrRace_Tilt_delta);
+
+    // 100-lap support: de-index swrObjJdge_F2's fixed 5-slot per-lap split-time array so lap
+    // counts above 5 no longer corrupt the score struct (the real hardcoded 5-lap limit). The
+    // hangar menu cap was also raised to 100 in tracks_delta.c.
+    swrObjJdge_PatchLapTimeOverflow();
+
+    // Must land before swrScene_Startup, which allocates the asset buffer once and keeps it for
+    // the process.
+    swrAssetBuffer_PatchSize();
+
+    // Weather: the game's 80-particle, fixed-box, sprite-based system (whose motion-blur streak draw
+    // was stubbed out) is replaced with our own particle simulation drawn in the GL layer --
+    // swrWeather_RenderParticles_delta runs the tick + draw instead of the original. Enable/Disable
+    // flip the per-region spawner (Disable fades out gracefully at a SNW->NSNW edge).
+    hook_function("swrWeather_Enable", (uint32_t) swrWeather_Enable_ADDR,
+                  (uint8_t *) swrWeather_Enable_delta);
+    hook_function("swrWeather_Disable", (uint32_t) swrWeather_Disable_ADDR,
+                  (uint8_t *) swrWeather_Disable_delta);
+    hook_function("swrWeather_RenderParticles", (uint32_t) swrWeather_RenderParticles_ADDR,
+                  (uint8_t *) swrWeather_RenderParticles_delta);
+    // ResetParticles is the game's race-context reset (race start before re-enable, race end); forcing
+    // weather off there bounds it to the active race so it can't bleed into the 3D menus afterward.
+    hook_function("swrWeather_ResetParticles", (uint32_t) swrWeather_ResetParticles_ADDR,
+                  (uint8_t *) swrWeather_ResetParticles_delta);
+
+    // 5+ laps in multiplayer: the MP lobby's host lap stepper was the only thing still capping the
+    // count at 5 (the race itself shares the crash-safe single-player path above). Give it free-play
+    // parity -- fine +/-1 to 5, then jump-by-5, wrapping at 1/125. Hooked by address (the handler is
+    // not reimplemented), so the delta calls the original back through swrUI_Menu_MpRaceSetup_ADDR.
+    hook_function("swrUI_Menu_MpRaceSetup", (uint32_t) swrUI_Menu_MpRaceSetup_ADDR,
+                  (uint8_t *) swrUI_Menu_MpRaceSetup_delta);
+
+    // 1hr+ race-time support: raise the 50:00 race-time clamp so the timer can show past one hour,
+    // and replace the time formatters with hour-aware versions (H:MM:SS.frac).
+    swrObjJdge_PatchRaceTimeCap();
+    hook_function("swrText_CreateTimeEntry", (uint32_t) swrText_CreateTimeEntry,
+                  (uint8_t *) swrText_CreateTimeEntry_ADDR);
+    hook_replace(swrText_CreateTimeEntry, swrText_CreateTimeEntry_delta);
+    hook_function("swrText_CreateTimeEntryPrecise", (uint32_t) swrText_CreateTimeEntryPrecise,
+                  (uint8_t *) swrText_CreateTimeEntryPrecise_ADDR);
+    hook_replace(swrText_CreateTimeEntryPrecise, swrText_CreateTimeEntryPrecise_delta);
+
+    // 100-lap support: wrap swrObjJdge_F2 to reconstruct per-lap times (best/worst/average) and
+    // replace the on-track per-lap results list with a summary that fits any lap count.
+    hook_function("swrObjJdge_F2", (uint32_t) swrObjJdge_F2, (uint8_t *) swrObjJdge_F2_ADDR);
+    hook_replace(swrObjJdge_F2, swrObjJdge_F2_delta);
+    // Manual in-race HUD-mode cycle (debug-overlay button) alongside the Caps Lock key, so the
+    // minimap/speedometer layout can be changed over remote desktop where Caps Lock can't emulate.
+    hook_function("swrObjJdge_CycleHudMode", (uint32_t) swrObjJdge_CycleHudMode_ADDR,
+                  (uint8_t *) swrObjJdge_CycleHudMode_delta);
+    // Scope the per-racer position-marker draw so the sprite/text sinks can remap the markers by
+    // HUD mode (right strip in mode 0, full-width ring in mode 1) instead of plain centering.
+    hook_function("swrObjJdge_DrawRaceHUD", (uint32_t) swrObjJdge_DrawRaceHUD_ADDR,
+                  (uint8_t *) swrObjJdge_DrawRaceHUD_delta);
+    // Scope the per-player HUD draw so the id-based HUD edge-anchoring fires only in-race, not on
+    // other screens (e.g. race settings) that reuse the same low sprite ids / text columns.
+    hook_function("swrObjJdge_UpdatePlayerHUD", (uint32_t) swrObjJdge_UpdatePlayerHUD_ADDR,
+                  (uint8_t *) swrObjJdge_UpdatePlayerHUD_delta);
+
+    // Cinematic letterbox ("Game" panel): draw black bars over the pre-race binder cinematic + the
+    // victory lap, injected at the HUD text flush so the lap/total-time text renders on top.
+    hook_function("DrawTextEntries", (uint32_t) DrawTextEntries, (uint8_t *) DrawTextEntries_ADDR);
+    hook_replace(DrawTextEntries, DrawTextEntries_delta);
+    hook_function("swrSprite_DrawSprites", (uint32_t) swrSprite_DrawSprites_ADDR,
+                  (uint8_t *) swrSprite_DrawSprites_delta);
+    hook_function("swrSprite_Draw", (uint32_t) swrSprite_Draw_ADDR, (uint8_t *) swrSprite_Draw_delta);
+    hook_function("swrPlayerHUD_SampleOcclusion", (uint32_t) swrPlayerHUD_SampleOcclusion_ADDR,
+                  (uint8_t *) swrPlayerHUD_SampleOcclusion_delta);
+
+    // Cutscene auto-skip ("Game" panel): skip the pre-race camera sweep by raising the accept edge
+    // in the race manager's intro states (the game's own skip path). See swrObjJdge_delta.cpp.
+    hook_function("swrObjJdge_F0", (uint32_t) swrObjJdge_F0, (uint8_t *) swrObjJdge_F0_ADDR);
+    hook_replace(swrObjJdge_F0, swrObjJdge_F0_delta);
+    hook_function("swrRace_InRaceEndStatistics", (uint32_t) swrRace_InRaceEndStatistics,
+                  (uint8_t *) swrRace_InRaceEndStatistics_ADDR);
+    hook_replace(swrRace_InRaceEndStatistics, swrRace_InRaceEndStatistics_delta);
+
+    // 1hr+ race-time support follow-up: re-assign finishing positions finished-first so a finished
+    // racer always places above a still-racing one even past the old 50:00 ceiling (the vanilla
+    // 10000-total_time rank key goes negative once a race passes ~2h46m). See swrObjJdge_delta.cpp.
+    hook_function("swrObjJdge_UpdateStandings", (uint32_t) swrObjJdge_UpdateStandings_ADDR,
+                  (uint8_t *) swrObjJdge_UpdateStandings_delta);
+
+    hook_function("swrRace_CourseSelectionMenu", (uint32_t) swrRace_CourseSelectionMenu_ADDR,
+                  (uint8_t *) swrRace_CourseSelectionMenu_delta);
+    hook_function("swrRace_CourseInfoMenu", (uint32_t) swrRace_CourseInfoMenu_ADDR,
+                  (uint8_t *) swrRace_CourseInfoMenu_delta);
+    hook_function("swrRace_MainMenu", (uint32_t) swrRace_MainMenu_ADDR,
+                  (uint8_t *) swrRace_MainMenu_delta);
+    hook_function("DrawTracks", (uint32_t) DrawTracks_ADDR, (uint8_t *) DrawTracks_delta);
+
+    // swrModel_LoadFromId is already hooked for model replacement
+    hook_function("swrSpline_LoadSplineById", (uint32_t) swrSpline_LoadSplineById,
+                  (uint8_t *) swrSpline_LoadSplineById_ADDR);
+    hook_replace(swrSpline_LoadSplineById, swrSpline_LoadSplineById_delta);
+
+    // Route packed-block reads through the view layer; with no overrides it is pass-through.
+    virtual_block_RegisterHooks();
+
+    hook_function("swrSpline_EvaluateToMatrix", (uint32_t) swrSpline_EvaluateToMatrix,
+                  (uint8_t *) swrSpline_EvaluateToMatrix_ADDR);
+    hook_replace(swrSpline_EvaluateToMatrix, swrSpline_EvaluateToMatrix_delta);
+
+    // Reverse-hooked (registered in hook_generated) -> replace only.
+    hook_replace(swrSpline_CursorSeekToProgress, swrSpline_CursorSeekToProgress_delta);
+
+    fprintf(hook_log, "Done\n");
+    fflush(hook_log);
+}
