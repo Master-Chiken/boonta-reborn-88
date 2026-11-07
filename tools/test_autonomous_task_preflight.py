@@ -155,7 +155,7 @@ cases = [
         "name": "malformed lowercase task ID fails closed",
         "tasks": [task("automation-invalid-id", "active")],
         "marker_day_offset": None,
-        "expected_error": "invalid, invalid or duplicate task IDs",
+        "expected_error": "missing, invalid or duplicate task IDs",
     },
     {
         "name": "unsupported summary schema fails closed",

@@ -112,15 +112,19 @@ async function run(name, options = {}) {
 
   await run('task mismatch', { reportTaskId: 'AUTOMATION-OTHER', expectFailure: 'task ID' });
   await run('duplicate status fields', {
-    summary: report() + '\\nBOONTA_CYCLE_STATUS: BLOCKED',
+    summary: report() + '\nBOONTA_CYCLE_STATUS: BLOCKED',
     expectFailure: 'exactly one valid'
   });
   await run('duplicate PR evidence fields', {
-    summary: report() + '\\n' + report().split('\\n').find((line) => line.startsWith('BOONTA_CYCLE_EVIDENCE:')),
+    summary: report() + '\n' + report().split('\n').find((line) => line.startsWith('BOONTA_CYCLE_EVIDENCE:')),
     expectFailure: 'exact same-repository PR/head'
   });
   await run('declared base differs from reservation', { reportBase: 'dev', expectedBase: 'main', expectFailure: 'reserved target branch' });
   await run('PR body missing task marker', { pr: { ...makeGithub().pr, body: 'Some PR body' }, expectFailure: 'tied to the reserved task' });
+  await run('duplicate PR task markers', {
+    pr: { ...makeGithub().pr, body: 'BOONTA_TASK_ID: ' + taskId + '\nBOONTA_TASK_ID: ' + taskId },
+    expectFailure: 'tied to the reserved task'
+  });
   await run('PR closed', { pr: { ...makeGithub().pr, state: 'closed' }, expectFailure: 'non-draft' });
   await run('head SHA mismatch', { commitSha: 'b'.repeat(40), expectFailure: 'non-draft' });
   await run('old unchanged PR', {
