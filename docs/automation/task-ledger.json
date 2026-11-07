@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-06",
+  "updated_at": "2026-11-07",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -332,10 +332,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941774",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941490",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941827",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299977186"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299977186",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/05b4fac74701092c7b9c9dcbd161054eea6754b3",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594105",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594103",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42354594133"
       ],
-      "next_action": "PR #324 remains open and unmerged. Its previous exact code head 53fe505983c22e2ebd8478214ce616ac34bcd48 passed all four required exact-head checks: AI free-tier safety (#42299941774), branch automation self-test (#42299941490), Step 102 provenance guard (#42299941827), and trusted source-path guard (#42299977186). Scheduled parent run #42276661261 confirms read-only readiness passed, Gemini was skipped by its same-day failure cooldown, OpenRouter's independent Free-only gate and GET /api/v1/key check passed (is_free_tier=true), and OpenCode invocation completed. Its model report nevertheless requested key replacement, contradicting that same-run evidence; PR #324 passes those facts into the prompt and rejects contradictory BLOCKED claims. The current PR head should be checked for exact-head CI immediately before integration. Next: human review/merge of #324, then inspect a post-merge scheduled cycle for readiness, actual provider invocation, and either a valid cycle-fresh PR or a genuinely verified blocker; reconcile the ledger from main. Do not read/change secrets or request key replacement unless a new GET check actually fails.",
-      "updated_at": "2026-11-06"
+      "next_action": "PR #324 was merged to main by squash on 2026-11-07 at exact tested head 927826da2bfd96609f188e44d0d0ed635fd5b077 (merge commit 05b4fac74701092c7b9c9dcbd161054eea6754b3). Exact-head AI free-tier safety/provider-handoff/ledger reconciliation run #42354594105, branch YAML/embedded-Python self-test #42354594103, and held-assets/provenance guard #42354594133 all passed. The merge installs bounded provider handoff, finite model turns, reduced MCP tool surfaces, compact 1,500-token context policy, same-run OpenRouter preflight consistency checks and the mandatory reverse-engineering-first gate. Activation remains BLOCKED until the first post-merge autonomous loop run is observed and establishes readiness success plus a real provider invocation with a valid cycle-fresh report/PR, or a precise verified blocker. Do not infer activation from static CI, do not read/change secrets, and do not request key rotation unless a new authentication check fails.",
+      "updated_at": "2026-11-07"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
