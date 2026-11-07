@@ -247,7 +247,12 @@ jobs:
                     "pull_request_read",
                     "create_branch",
                     "get_file_contents",
-                    "push_files"
+                    "push_files",
+                    "search_pull_requests",
+                    "list_workflow_runs",
+                    "list_workflow_jobs",
+                    "get_workflow_run",
+                    "get_job_logs"
                   ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
