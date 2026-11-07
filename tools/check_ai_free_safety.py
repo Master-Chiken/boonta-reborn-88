@@ -1107,6 +1107,27 @@ if "gemini_model: 'gemini-3.8-flash'" not in execute:
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
+# Pin the tested Gemini CLI release and cap automatic model/network retries.
+if "gemini_cli_version: '0.67.0'" not in execute:
+    errors.append("Autonomous Gemini CLI must remain pinned to the version verified with retry controls")
+settings_marker = "          settings: |-\\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in execute or settings_end_marker not in execute:
+    errors.append("Autonomous Gemini workflow is missing its explicit CLI settings block")
+else:
+    settings_text = execute.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+    try:
+        gemini_settings = json.loads(textwrap.dedent(settings_text))
+        general_settings = gemini_settings.get("general", {})
+        if general_settings.get("maxAttempts") != 2:
+            errors.append("Gemini CLI must allow at most two model attempts per request")
+        if general_settings.get("retryFetchErrors") is not False:
+            errors.append("Gemini CLI must disable automatic retries for failed fetch requests")
+        if gemini_settings.get("model", {}).get("maxSessionTurns") != 5:
+            errors.append("Gemini CLI must retain the reviewed five-turn session ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Autonomous Gemini CLI settings must be valid JSON: {exc}")
+
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
 if '"maxSessionTurns": 5' not in execute:
     errors.append("Autonomous Gemini writer must cap its session at five turns to bound Free-tier token use")
