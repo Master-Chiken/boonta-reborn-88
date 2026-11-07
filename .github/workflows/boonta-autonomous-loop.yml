@@ -111,30 +111,16 @@ jobs:
       issue_number: 226
       task_title: "Boonta Reborn autonomous work cycle"
       task_description: >-
-        Use the owner-approved task brief in this workflow plus docs/automation/task-ledger-summary.json.
-        Do not read full append-only bodies/comments for #156, #226 or #279; search only for a precise
-        unresolved detail required by the selected task, and inspect only related PRs/CI.
-        #226 owns native GameCube/Wii target compatibility and implementation decisions; #279 is the read-only PC/N64/Dreamcast comparative evidence queue. Consume and cite #279's source/format/code maps instead of duplicating PC/N64 source audits in #226. PR #282 is the completed broad system inventory; do not recreate or expand it.
-        The canonical ledger currently marks AUTOMATION-LEDGER-ACTIVATION as blocked, not active. Keep the activation gate unresolved until a post-merge provider cycle produces a valid cycle-fresh PR/report or a precise verified blocker. Do not create a second active task or competing writer.
-        After the activation gate is cleared, execute the newest bounded Phase 1 direction in #226: cross-platform reverse-engineering inventory and a concrete reuse/convert/adapt/reimplement decision. Defer visible-Dolphin three-lap acceptance and new gameplay feature work during this phase.
-        PR #282 is already the broad system inventory; do not recreate or expand it. Add only missing, source-verified rows for SW_RACER_RE (PC), swe1r-tools/data extractors, N64Recomp and the N64 static-recomp project, community mod formats/assets, and Wii64/emulator observations. For each, record exact repository/revision, platform/version, license scope and exclusions, bundled-tool licenses, utility, evidence type (code/tool/data/behavior), GameCube compatibility, redistribution status and unknowns.
-        Consume and link the bounded PC-vs-N64 data-format map and code/behavior evidence from #279. Do not duplicate those read-only comparative audits in #226. Map each relevant finding to actual GameCube/Wii target constraints and the current clean-room GX/libogc asset pipeline; identify what is compatible, what requires conversion, and what remains UNKNOWN. If #279 lacks a necessary PC/N64 source fact, record the gap and keep its investigation in #279 rather than launching a parallel writer. Keep any lawful owner-held ROM/disc/binary/extracted inputs local; never upload them to issues, CI, model providers or hosted services. Publish only independently written notes, synthetic fixtures and public-source citations.
-        Label every target-compatibility claim OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN. Evaluate graphics, audio and frame-rate/physics as suspected porting challenges against evidence; include existing GX/libogc foundations, missing interfaces, candidate tools and one minimal validation experiment per area.
-        Finish with a one-page decision comparing an N64-informed specification route, PC reverse-engineering-led clean-room implementation, and a hybrid. State what can be reused as tools, used only as behavioral evidence, converted only after rights review, or must be independently implemented for GameCube/Wii. Research stops when the decision is adequately supported; estimates remain estimates.
-        Maintain €0/free-tier-only routing, clean-room provenance, serialized single-writer and the existing activation gate. Do not change secrets, billing, permissions, branch protection, licensing or merge policy. Never copy AGPL SW_RACER_RE code, generated ROM-derived code, unclear mod code or proprietary assets. No auto-merge, force-push, branch deletion or binary uploads.
+        Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
+        Keep AUTOMATION-LEDGER-ACTIVATION as the only unresolved activation task until a real provider invocation produces a validated report plus a cycle-fresh PR, or a precise verified blocker. Never start a competing writer.
+        Once activation is demonstrated, follow the latest #226 Phase 1: add only missing, source-verified tool/license/utility evidence; consume #279's PC/N64 comparisons rather than duplicating them; map target behavior as OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN; evaluate GX/libogc graphics, audio and frame-rate/physics gaps; finish a concise reuse/convert/adapt/reimplement decision. PR #282 is the completed broad inventory. Keep commercial ROM/disc/binary/extracted data local.
+        Do not start new gameplay features or visible-Dolphin acceptance during Phase 1. Afterward, reuse #317 → #318 → #319 in order; revisit #274 only for a demonstrated dependency. Preserve the clean-room boundary, €0/free-tier-only rule, one-writer constraint, exact-head checks and human review. Documentation targets main; gameplay targets dev. Never change secrets, billing, permissions, branch protection or merge policy. Never auto-merge, force-push, delete branches or upload proprietary binaries.
       additional_context: >-
-        This is the Boonta Autonomous Loop, started by its six-hour schedule,
-        an owner-approved main-branch merge affecting the bounded automation/ledger
-        paths, or an owner manual dispatch. The owner explicitly approved
-        autonomous task selection and branch/PR work. #226 is the native GameCube/Wii
-        queue; #279 is the comparative PC/N64/Dreamcast evidence queue and stays
-        documentation-only. Do not ask for a new "continue" message or per-task
-        approval. The €0 budget, free-tier gate, provenance restrictions, one-writer
-        rule, exact-head validation, and no-merge policy remain mandatory.
+        Owner-authorized scheduled or manual main-branch loop. Select one bounded task from the current compact queue without asking for another continue message. Use only one provider invocation in this workflow run; a fallback may run only on a later eligible scheduled cycle after the earlier provider's cooldown is active. Keep all existing €0, provenance, exact-head and no-merge safeguards.
     secrets: inherit
 
   openrouter-fallback:
-    name: Free-only fallback when the Gemini cycle fails or is cooldown-skipped
+    name: Next-cycle OpenRouter Free fallback after Gemini cooldown
     needs: [readiness, provider-cooldowns, autonomous-cycle]
     if: >-
       always() &&
@@ -142,8 +128,8 @@ jobs:
       needs.provider-cooldowns.result == 'success' &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
-      (needs.autonomous-cycle.result == 'failure' ||
-       (needs.autonomous-cycle.result == 'skipped' && needs.provider-cooldowns.outputs.gemini_active == 'true')) &&
+      needs.autonomous-cycle.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.gemini_active == 'true' &&
       needs.autonomous-cycle.outputs.invocation_outcome != 'success' &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
@@ -158,7 +144,7 @@ jobs:
     secrets: inherit
 
   groq-fallback:
-    name: Third Free-only fallback when OpenRouter fails or is cooldown-skipped
+    name: Next-cycle Groq Free fallback after Gemini and OpenRouter cooldowns
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
@@ -166,11 +152,10 @@ jobs:
       needs.provider-cooldowns.result == 'success' &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
-      (needs.autonomous-cycle.result == 'failure' ||
-       (needs.autonomous-cycle.result == 'skipped' && needs.provider-cooldowns.outputs.gemini_active == 'true')) &&
-      needs.autonomous-cycle.outputs.invocation_outcome != 'success' &&
-      (needs.openrouter-fallback.result == 'failure' ||
-       (needs.openrouter-fallback.result == 'skipped' && needs.provider-cooldowns.outputs.openrouter_active == 'true')) &&
+      needs.autonomous-cycle.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+      needs.openrouter-fallback.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
       needs.openrouter-fallback.outputs.invocation_outcome != 'success' &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
@@ -273,6 +258,8 @@ jobs:
             else
               echo "At least one provider invocation completed. Check its report validation and progress status above; a valid BLOCKED report is not progress."
             fi
+            echo
+            echo "At most one provider invocation is allowed per workflow run. A failed provider is not followed by another model call in the same run; the next scheduled cycle may advance to the next Free-only provider after cooldown." 
             echo
             echo "This summary does not change provider job conclusions or the canonical activation gate. Budget remains €0."
             echo
