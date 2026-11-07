@@ -128,18 +128,35 @@ jobs:
             -H "Accept: application/json" \
             https://openrouter.ai/api/v1/key)"
           jq -e '.data.is_free_tier == true' <<< "$response" >/dev/null
-          unset response
+          quota_remaining="$(jq -er '.data.free_model_daily_requests.remaining | numbers' <<< "$response")"
+          if [[ ! "$quota_remaining" =~ ^[0-9]+$ ]]; then
+            echo "OpenRouter returned an invalid free_model_daily_requests.remaining value; refusing model inference." >&2
+            exit 1
+          fi
+          echo "quota_remaining=$quota_remaining" >> "$GITHUB_OUTPUT"
+          if (( quota_remaining > 0 )); then
+            echo "quota_available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "quota_available=false" >> "$GITHUB_OUTPUT"
+          fi
           {
             echo "## OpenRouter key authentication: passed"
             echo
             echo "- OpenRouter accepted the bearer key and reports is_free_tier=true."
-            echo "- This was a GET-only authentication check; no model inference or credit-consuming request was made."
-            echo "- The key value and account details were not printed."
+            echo "- Free-model requests remaining in the current UTC day: $quota_remaining."
+            if (( quota_remaining > 0 )); then
+              echo "- A positive Free-only daily balance is available; the guarded model step may proceed."
+            else
+              echo "- The Free-only daily quota is exhausted; model inference is blocked before any provider request."
+              echo "- The counter is daily and UTC-based; no credits or paid fallback will be used."
+            fi
+            echo "- This was a GET-only check; the key value and account details were not printed."
           } >> "$GITHUB_STEP_SUMMARY"
+          unset response quota_remaining
 
       - name: Mint scoped GitHub App token
         id: mint_identity_token
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # ratchet:actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.APP_ID }}
@@ -150,7 +167,7 @@ jobs:
           permission-actions: read
 
       - name: Checkout the protected default branch
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
           ref: main
@@ -158,7 +175,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pinned OpenCode CLI
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -166,7 +183,7 @@ jobs:
           opencode --version
 
       - name: Snapshot open and closed PR heads before OpenRouter cycle
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         id: snapshot_pr_heads
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         with:
@@ -182,7 +199,7 @@ jobs:
             core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
 
       - name: Run OpenCode through the OpenRouter Free route
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.snapshot_pr_heads.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success'
         id: run_opencode
         shell: bash
         env:
@@ -320,23 +337,28 @@ jobs:
           opencode run --model openrouter/openrouter/free --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
 
 
-      - name: Record same-day OpenRouter cooldown after authentication or invocation failure
-        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'))
+      - name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure
+        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || steps.openrouter_auth_check.outputs.quota_available == 'false' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'))
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           ISSUE_NUMBER: '${{ inputs.issue_number }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          QUOTA_AVAILABLE: ${{ steps.openrouter_auth_check.outputs.quota_available }}
         with:
           script: |
             const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
             const todayUtc = new Date().toISOString().slice(0, 10);
             const marker = '<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const quotaAvailable = process.env.QUOTA_AVAILABLE || 'unknown';
+            const reason = quotaAvailable === 'false'
+              ? 'The OpenRouter /api/v1/key preflight reported zero Free-model requests remaining for the current UTC day.'
+              : 'The OpenRouter Free authentication or model invocation failed.';
             const body = [
               marker,
               '## OpenRouter Free daily failure cooldown',
               '',
-              'The OpenRouter Free authentication or model invocation failed on UTC date ' + todayUtc + '.',
+              reason + ' Recorded on UTC date ' + todayUtc + '.',
               'Further fallback cycles on this UTC date will skip another OpenRouter request. A fresh attempt is allowed on the next UTC date.',
               'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
               '',
@@ -369,7 +391,7 @@ jobs:
 
       - name: Validate OpenRouter autonomous cycle report
         id: validate_report
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
@@ -433,9 +455,12 @@ jobs:
           SNAPSHOT_OUTCOME: ${{ steps.snapshot_pr_heads.outcome }}
           INVOCATION_OUTCOME: ${{ steps.run_opencode.outcome }}
           REPORT_OUTCOME: ${{ steps.validate_report.outcome }}
+          QUOTA_AVAILABLE: ${{ steps.openrouter_auth_check.outputs.quota_available }}
+          QUOTA_REMAINING: ${{ steps.openrouter_auth_check.outputs.quota_remaining }}
         with:
           script: |
             const allowed = process.env.GATE_ALLOWED === 'true';
+            const quotaAvailable = process.env.QUOTA_AVAILABLE || 'unknown';
             const outcomes = {
               snapshot: process.env.SNAPSHOT_OUTCOME || 'skipped',
               invocation: process.env.INVOCATION_OUTCOME || 'skipped',
@@ -443,8 +468,11 @@ jobs:
             };
             if (!allowed) {
               core.setFailed('OpenRouter fallback did not execute: its independent Free-only/owner gate blocked the request. No provider request was sent; the separate Groq Free fallback may now be evaluated.');
+            } else if (quotaAvailable === 'false') {
+              const quotaRemaining = process.env.QUOTA_REMAINING || '0';
+              core.setFailed('OpenRouter Free daily model quota is exhausted according to GET /api/v1/key (remaining: ' + quotaRemaining + '). No inference request was sent; the daily cooldown was recorded. Retry after the UTC reset; no credits or paid route are permitted.');
             } else if (outcomes.snapshot !== 'success' || outcomes.invocation !== 'success' || outcomes.report !== 'success') {
-              core.setFailed('OpenRouter fallback did not complete. Required outcomes: PR snapshot, actual OpenCode invocation, and report validation must all be success. Observed: ' + JSON.stringify(outcomes));
+              core.setFailed('OpenRouter fallback did not complete. Required outcomes: quota preflight, PR snapshot, actual OpenCode invocation, and report validation must all be success. Observed: ' + JSON.stringify(outcomes));
             } else {
               core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
