@@ -117,6 +117,39 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must expose validated invocation/report status: {required!r}")
 
+# A single read-only cooldown preflight avoids starting three provider runners
+# when all providers are already suppressed for the current UTC day.
+if "  provider-cooldowns:" not in autonomous:
+    errors.append("Autonomous loop must precheck all provider cooldown markers before launching model workflows")
+else:
+    cooldown_job = autonomous.split("  provider-cooldowns:", 1)[1].split("  autonomous-cycle:", 1)[0]
+    for required in (
+        "needs: readiness",
+        "permissions:\n      issues: read",
+        "github.rest.issues.listComments",
+        "BOONTA_GEMINI_FAILURE_COOLDOWN:",
+        "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
+        "BOONTA_GROQ_FAILURE_COOLDOWN:",
+        "new Date().toISOString().slice(0, 10)",
+        "gemini_active:",
+        "openrouter_active:",
+        "groq_active:",
+    ):
+        if required not in cooldown_job:
+            errors.append(f"Read-only provider cooldown preflight is missing {required!r}")
+if "needs: [readiness, provider-cooldowns]" not in autonomous:
+    errors.append("Gemini job must depend on the global provider cooldown preflight")
+if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
+    errors.append("Gemini job must not start while its UTC cooldown is active")
+if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonomous:
+    errors.append("OpenRouter fallback must not start while its UTC cooldown is active")
+if "needs.provider-cooldowns.outputs.groq_active != 'true'" not in autonomous:
+    errors.append("Groq fallback must not start while its UTC cooldown is active")
+if "(needs.autonomous-cycle.result == 'skipped' && needs.provider-cooldowns.outputs.gemini_active == 'true')" not in autonomous:
+    errors.append("OpenRouter/Groq fallbacks must continue when Gemini is safely pre-skipped by the global cooldown check")
+if "(needs.openrouter-fallback.result == 'skipped' && needs.provider-cooldowns.outputs.openrouter_active == 'true')" not in autonomous:
+    errors.append("Groq fallback must continue when OpenRouter is safely pre-skipped by the global cooldown check")
+
 summary_marker = "  cycle-summary:"
 if summary_marker not in autonomous:
     errors.append("Autonomous loop must always publish a final provider-outcome summary")
@@ -126,6 +159,10 @@ else:
         "needs: [readiness, autonomous-cycle, openrouter-fallback, groq-fallback]",
         "if: always()",
         "permissions: {}",
+        "COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}",
+        "GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}",
+        "OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}",
+        "GROQ_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.groq_active }}",
         "GEMINI_INVOCATION: ${{ needs.autonomous-cycle.outputs.invocation_outcome }}",
         "GEMINI_REPORT: ${{ needs.autonomous-cycle.outputs.report_outcome }}",
         "OPENROUTER_INVOCATION: ${{ needs.openrouter-fallback.outputs.invocation_outcome }}",
@@ -133,6 +170,8 @@ else:
         "No provider completed a model invocation. No autonomous project progress is confirmed by this run.",
         "a valid BLOCKED report is not progress",
         "Budget remains €0.",
+        "Skipped before launching the provider workflow: its same-day UTC cooldown is active.",
+        "All three same-day UTC cooldowns are active. No provider workflows were launched and no project progress is claimed.",
     ):
         if required not in summary_job:
             errors.append(f"Autonomous final provider summary is missing {required!r}")
