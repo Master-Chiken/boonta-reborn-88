@@ -83,7 +83,7 @@
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action_excerpt": "Owner's independent local Python decoder run on 2026-11-07 reproduced all 92 CompWolf records with zero length failures, tags Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded total 11,975,612 bytes, compressed-stream total 5,869,155 bytes, and header-inclusive span 5,870,259 bytes (92 × 12-byte headers explain the difference). Keep T1 in review until the…"
+      "next_action_excerpt": "The exact PR #334 Perl scanner was run locally on 2026-11-07: 92 validated / 0 rejected / 0 undefined initial-history reads; decoded total 11,975,612 bytes; compressed stream 5,869,155 bytes; header-inclusive span 5,870,259 bytes; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent Python decoding agrees. Keep status in_review until PR #334 is merged. T2 candidate is sorted Pupp index 10 (68,284 bytes); verify with the owner's local helper, then test the pinned MIT parser without assuming N64 compatibility."
     }
   ]
 }
