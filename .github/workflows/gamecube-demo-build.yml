@@ -6,6 +6,7 @@ on:
     branches: [main, dev]
     paths:
       - "gamecube-demo/Makefile"
+      - "gamecube-demo/Makefile.wii"
       - "gamecube-demo/source/**"
       - "gamecube-demo/tests/**"
       - "gamecube-demo/include/**"
@@ -16,6 +17,7 @@ on:
   pull_request:
     paths:
       - "gamecube-demo/Makefile"
+      - "gamecube-demo/Makefile.wii"
       - "gamecube-demo/source/**"
       - "gamecube-demo/tests/**"
       - "gamecube-demo/include/**"
@@ -72,6 +74,11 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
+      - name: Compile and run platform input translation tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_input_backend.c -lm -o /tmp/test_input_backend
+          /tmp/test_input_backend
+
       - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
@@ -92,7 +99,9 @@ jobs:
         run: |
           test -n "${DEVKITPPC:-}"
           test -f "$DEVKITPPC/gamecube_rules"
+          test -f "$DEVKITPPC/wii_rules"
           test -s gamecube-demo/Makefile
+          test -s gamecube-demo/Makefile.wii
           test -s gamecube-demo/source/main.c
 
       - name: Build GameCube DOL and ELF
@@ -112,6 +121,22 @@ jobs:
           test -s boonta_gc_demo.dol
           test -s boonta_gc_demo.elf
 
+      - name: Build native Wii DOL and ELF
+        shell: bash
+        run: |
+          cd gamecube-demo
+          make -f Makefile.wii clean
+          set -o pipefail
+          make -f Makefile.wii 2>&1 | tee build-wii.log
+          if grep -nE 'warning:' build-wii.log; then
+            echo "::error::The native Wii build emitted compiler warnings."
+            exit 1
+          fi
+          python3 tools/pad_dol.py boonta_wii_demo.dol
+          test -s boonta_wii_demo.dol
+          test -s boonta_wii_demo.elf
+          python3 tools/validate_artifacts.py boonta_wii_demo.dol boonta_wii_demo.elf
+
       - name: Validate native artifact structure
         run: python3 gamecube-demo/tools/validate_artifacts.py gamecube-demo/boonta_gc_demo.dol gamecube-demo/boonta_gc_demo.elf
 
@@ -124,6 +149,9 @@ jobs:
             gamecube-demo/boonta_gc_demo.dol
             gamecube-demo/boonta_gc_demo.elf
             gamecube-demo/build.log
+            gamecube-demo/boonta_wii_demo.dol
+            gamecube-demo/boonta_wii_demo.elf
+            gamecube-demo/build-wii.log
           if-no-files-found: warn
           retention-days: 7
 
