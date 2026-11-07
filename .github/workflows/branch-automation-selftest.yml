@@ -20,6 +20,8 @@ on:
       - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
       - "tools/check_autonomous_provider_handoff.py"
       - "tools/test_autonomous_task_preflight.py"
+      - "tools/validate_autonomous_cycle_report.js"
+      - "tools/test_autonomous_cycle_report.js"
       - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
@@ -100,6 +102,10 @@ jobs:
       - name: Execute global task preflight with mocked GitHub data (offline)
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
+
+      - name: Validate task-bound PR and exact-head CI report contract (offline)
+        shell: bash
+        run: node tools/test_autonomous_cycle_report.js
 
       - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash
