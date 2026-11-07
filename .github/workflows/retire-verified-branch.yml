@@ -22,6 +22,7 @@ on:
           - re-001-ares-gdb-smoke-20261021
           - safety/openrouter-exact-head-sha
           - test/ares-gdb-smoke-20261021
+          - agent/boonta-chatgpt/activation-ledger-evidence-20261107
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -102,6 +103,7 @@ jobs:
             "re-001-ares-gdb-smoke-20261021") PINNED_SHA="3df2aedeccaef904c48637710eedc88699db7acb" ;;
             "safety/openrouter-exact-head-sha") PINNED_SHA="c52c9b2594b711a76a8f7ccf5e25acce7982c381" ;;
             "test/ares-gdb-smoke-20261021") PINNED_SHA="fa8cee047ae8e74c30c87cd94977c434bb1c7398" ;;
+            "agent/boonta-chatgpt/activation-ledger-evidence-20261107") PINNED_SHA="05b4fac74701092c7b9c9dcbd161054eea6754b3" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -146,8 +148,13 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
-          git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019; then
+            git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main || {
+              echo "::error::Branch tip is neither in the protected archive nor already integrated into main."
+              exit 1
+            }
+          fi
 
       - name: Recheck exact ref and atomically retire one branch
         shell: bash
@@ -175,8 +182,13 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019"
-          git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019; then
+            git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main || {
+              echo "::error::Branch tip is neither in the protected archive nor already integrated into main."
+              exit 1
+            }
+          fi
 
           # Compare-and-swap lease prevents deleting a branch that moved after
           # verification. Only the exact pre-reviewed ref may be deleted.
@@ -189,4 +201,4 @@ jobs:
 
           remaining="$(gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq '[add[]] | length')"
           echo "Successfully retired $BRANCH_NAME at $EXPECTED_SHA. Remaining branch refs: $remaining"
-          echo "Expected final inventory after the 14 reviewed retirements: 5 refs."
+          echo "Remaining refs are reported from the live GitHub inventory; the permanent and open-PR refs are never removed."
