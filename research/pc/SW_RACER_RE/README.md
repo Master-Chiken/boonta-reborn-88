@@ -15,7 +15,7 @@ The upstream project is a reverse-engineering and modding project for the **Wind
 
 ## What was imported
 
-A curated set of **337 text/source files** from the pinned fork revision: first-party C/C++ source and headers, project build/configuration files, analysis scripts, tests and research documentation. The upstream README is retained as [`UPSTREAM_README.md`](UPSTREAM_README.md). The source paths are preserved below this folder.
+A curated set of **337 text/source files** from the pinned fork revision: first-party C/C++ source and headers, project build/configuration files, analysis scripts, tests and research documentation. The upstream README is retained as [`UPSTREAM_README.md`](UPSTREAM_README.md), and its original root `.gitignore` is preserved as [`UPSTREAM.gitignore`](UPSTREAM.gitignore). The active `.gitignore` in this snapshot is a stricter local data-exclusion guard. The source paths are preserved below this folder.
 
 This is a research snapshot, not a claim that the PC mod builds from this directory. Some upstream dependencies and data inputs are deliberately absent.
 
