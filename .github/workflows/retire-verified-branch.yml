@@ -26,6 +26,7 @@ on:
           - feat/deterministic-rival-ai-20261106
           - feat/rival-curvature-pace-20261106
           - feat/rival-track-line-20261106
+          - docs/reverse-engineering-first-20261106
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -110,6 +111,7 @@ jobs:
             "feat/deterministic-rival-ai-20261106") PINNED_SHA="216e4a8bdef8941dadc7a604a24021ad54f09db8" ;;
             "feat/rival-curvature-pace-20261106") PINNED_SHA="b3d215df243a11d3e0022ecf562ab2ba1de96da9" ;;
             "feat/rival-track-line-20261106") PINNED_SHA="1a5e5ed69c9b7f1453322f4deb7de8adcb167642" ;;
+            "docs/reverse-engineering-first-20261106") PINNED_SHA="38bd467e3da5d81ecb30de20d71df67850a53e51" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -155,7 +157,7 @@ jobs:
           fi
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
-          ARCHIVE_CHECKPOINT="c98ce001b47923c52bb334205b8fd1bf29222e82"
+          ARCHIVE_CHECKPOINT="7548d95ca295731cd3c92e36e2a3777ba4399a78"
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
@@ -200,7 +202,7 @@ jobs:
           fi
 
           ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
-          ARCHIVE_CHECKPOINT="c98ce001b47923c52bb334205b8fd1bf29222e82"
+          ARCHIVE_CHECKPOINT="7548d95ca295731cd3c92e36e2a3777ba4399a78"
           archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
           [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
             echo "::error::The pinned rival-AI history archive moved or is missing."
