@@ -350,6 +350,8 @@ for required in (
     "tokens per minute\\s*\\(TPM\\)",
     "free-models-per-day",
     "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    "signal.signal(signal.SIGINT, handle_shutdown)",
     "sys.exit(75)",
     "report.flush()",
 ):
