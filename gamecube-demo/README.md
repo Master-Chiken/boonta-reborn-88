@@ -22,6 +22,24 @@ The player's hull is an original source-authored indexed mesh. The project valid
 
 The procedural course, rival craft, controls, dynamic exhaust and HUD remain separate from this asset. Successful rendering in Dolphin is evidence for this one original mesh/texture path, not proof of full game-asset compatibility or manual-controller acceptance.
 
+## Runtime track source
+
+The current demo oval is authored as the clean-room `boonta-route-graph-v1` source in `gamecube-demo/data/original-test-oval-route-graph.json`. Its separate `original-test-oval-surface-widths.json` map supplies road widths independently of route topology.
+
+The graph has eight nodes and eight cubic Bezier edges. The native runtime now evaluates those Bezier edges directly through `source/route_graph_sampling.h`, using the generated `source/generated_route_graph.h`; it no longer uses the older Catmull–Rom track sampler as its live geometry path. The offline exporter samples the same clean-room graph into a dense legacy `boonta-track-v1` fixture for format/compatibility regression tests, but the renderer's active centerline is the direct runtime Bezier representation.
+
+At first use, the C sampler builds a 128-interval distance lookup for each edge and caches the start distance of every edge. Per-frame samples use binary search over the eight edges (at most three comparisons) and each edge's 128 intervals (at most seven comparisons), instead of scanning the arrays linearly. Road widths remain separate surface samples and are interpolated independently. The lookup's scaled distance coordinates use the generated `BOONTA_RUNTIME_ROUTE_LENGTH` period so route wrapping and lap counting share the same lap coordinate.
+
+The native sampler also exposes `boonta_route_graph_sampler_sample_edge_at`: callers can select one edge and sample it by local arc distance without wrapping into the next edge. It shares the cached distance lookup with the closed-loop sampler and clamps to the selected edge endpoints. `boonta_route_graph_sampler_sample_relative_to_cursor` samples look-ahead/look-behind coordinates from a copy of the active cursor, so rendering cannot mutate race history; at the initial start line it wraps a small negative look-behind across the closed-loop seam.
+
+When a branched catalogue is compiled, the HUD lap-progress bar reads the active cursor edge's authored normalized progress span. It does not use the oval's fixed physical length, because different branch choices may produce different lap distances. The unbranched oval keeps its existing scalar-distance HUD calculation.
+
+The separate `source/route_cursor.h` adds a distance-based topology cursor with bounded edge history, explicit choices at splits, reverse/forward replay, replaceable future decisions and distinct open-route/closed-loop terminal behavior. The generated native header carries node indices, edge endpoints, progress spans and start/closed-loop metadata. The GameCube runtime initializes this cursor alongside the race distance and advances it by the same physical distance delta as the vehicle; reset/restart reinitializes both states together. **The current single-loop oval uses the direct scalar-distance sampler for renderer queries**, avoiding two full cursor/history copies and cursor movement for each road, wall, camera and vehicle sample. The cursor is still maintained for route/lap state, and branched route catalogues use cursor-relative sampling so their selected path history drives look-ahead/look-behind. Host tests traverse the generated oval with the cursor, compare cursor-relative geometry/width against the direct whole-loop sampler across the finish seam, and verify that look-ahead/look-behind sampling does not mutate the live history. A source-contract test protects the fast path and the branched cursor adapter.
+
+The dense native C regression measures the current runtime Bezier curve at **184.563965 m** against the generated lap coordinate **184.563477 m** (**0.00026% difference**). Tests compare direct edge samples at every one of the 128 lookup boundaries and every interval midpoint on all eight edges, as well as authored-node joins, legacy bake samples, negative and multi-lap wrap, seam continuity, and non-finite inputs. The separate older Catmull–Rom compatibility test still reports its own 0.01692% difference against the legacy track-v1 lap period; that is not the current runtime curve measurement.
+
+The runtime currently supports one unbranched closed oval. The neutral route-graph format and host-side cursor can represent branch metadata, but runtime branch selection/history, split/rejoin traversal, and B-spline playback are not connected to vehicle movement, collision or lap state. Branched graphs remain data/tooling capability, not a claim of playable runtime support.
+
 ## Controls
 
 - Control Stick left/right (or D-pad): steer.

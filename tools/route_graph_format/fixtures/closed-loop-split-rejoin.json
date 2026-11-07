@@ -1,0 +1,82 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "closed-loop-split-rejoin",
+  "name": "Closed loop with unequal left and right branches",
+  "source": {
+    "platform": "synthetic",
+    "release": "route-graph-fixtures-v1",
+    "revision": "2026-11-03"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": true,
+  "start_node_id": "start",
+  "nodes": [
+    {"id": "start", "position": [0, 0, 0], "up": [0, 1, 0]},
+    {"id": "split", "position": [0, 0, 12], "up": [0, 1, 0]},
+    {"id": "join", "position": [0, 0, 24], "up": [0, 1, 0]},
+    {"id": "right-apex", "position": [-8, 0.3, 18], "up": [0, 1, 0]}
+  ],
+  "edges": [
+    {
+      "id": "approach",
+      "from": "start",
+      "to": "split",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [0, 0, 4],
+        "control2": [0, 0, 8]
+      },
+      "progress": {"start": 0, "end": 0.25}
+    },
+    {
+      "id": "left-path",
+      "from": "split",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [5, 0, 12],
+        "control2": [0, 0, 20]
+      },
+      "progress": {"start": 0.25, "end": 0.75}
+    },
+    {
+      "id": "right-path-a",
+      "from": "split",
+      "to": "right-apex",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [-4, 0, 12],
+        "control2": [-8, 0.3, 14]
+      },
+      "progress": {"start": 0.25, "end": 0.5}
+    },
+    {
+      "id": "right-path-b",
+      "from": "right-apex",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [-8, 0.3, 22],
+        "control2": [0, 0, 20]
+      },
+      "progress": {"start": 0.5, "end": 0.75}
+    },
+    {
+      "id": "return",
+      "from": "join",
+      "to": "start",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [-6, 0, 24],
+        "control2": [-6, 0, 0]
+      },
+      "progress": {"start": 0.75, "end": 1}
+    }
+  ]
+}

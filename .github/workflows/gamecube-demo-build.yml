@@ -12,6 +12,8 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/route_graph_format/**"
+      - "tests/test_route_graph_format.py"
       - ".github/workflows/gamecube-demo-build.yml"
   pull_request:
     paths:
@@ -22,6 +24,8 @@ on:
       - "gamecube-demo/data/**"
       - "gamecube-demo/tools/**"
       - "tools/mesh_format/**"
+      - "tools/route_graph_format/**"
+      - "tests/test_route_graph_format.py"
       - ".github/workflows/gamecube-demo-build.yml"
   workflow_dispatch:
     inputs:
@@ -77,11 +81,29 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_pause_state.c -o /tmp/test_pause_state
           /tmp/test_pause_state
 
+      - name: Compile and run production track-sampling tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_track_sampling.c -lm -o /tmp/test_track_sampling
+          /tmp/test_track_sampling
+
+      - name: Compile and run native route-graph sampler tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_graph_sampling.c -lm -o /tmp/test_route_graph_sampling
+          /tmp/test_route_graph_sampling
+
+      - name: Compile and run native route cursor tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_cursor.c -lm -o /tmp/test_route_cursor
+          /tmp/test_route_cursor
+
       - name: Test GameCube host build and validation utilities
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_*.py' -v
 
       - name: Validate clean-room track format and checked-in runtime header
         run: python3 -m unittest discover -s tests -p 'test_track_format.py' -v
+
+      - name: Test neutral route graph format and synthetic cursor invariants
+        run: python3 -m unittest discover -s tests -p 'test_route_graph_format.py' -v
 
   build-gamecube-demo:
     timeout-minutes: 15
@@ -280,9 +302,9 @@ jobs:
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         env:
-          # Run the longer finish check automatically only for this spline-integration PR.
+          # Run the three-lap finish and post-finish Start-restart checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017' || github.head_ref == 'recovery/all-branch-heads-20261102')) }}
           RUN_FINISH_RESTART_DIAGNOSTIC: ${{ github.event_name == 'pull_request' && github.head_ref == 'jules-13405833958059564976-aeac2b04' }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
@@ -358,7 +380,10 @@ jobs:
           EOF
           done
           capture_timeout=160
-          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=660; fi
+          if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
+          # Finish-label branches perform a separate 12,000-frame label capture
+          # before the finish/reset movie, so they need a longer overall window.
+          if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then capture_timeout=1450; fi
           if [[ "${RUN_FINISH_RESTART_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
@@ -560,18 +585,27 @@ jobs:
               fi
               echo "D-pad/stick steering passed; Y-reset produced a clean HUD; Start paused visibly, and a second Start resumed throttle-driven movement."
               if [[ "${RUN_FULL_RACE_DIAGNOSTIC:-false}" == "true" ]]; then
-                echo "Starting optional full-race DTM; this may take around two to four minutes."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
-                mkdir -p "$RACE_USER/Config"
-                chmod 700 "$RACE_USER"
-                printf "%s\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
-                capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
-                echo "Opt-in full-race diagnostic found the centered finish checkerboard after the scripted movie."
                 if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then
+                  # Finish-label work needs a dedicated finish screenshot so the
+                  # orange text detector runs on the actual finish frame.
+                  echo "Capturing a dedicated finish-label frame for this branch."
+                  python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$RACE_DTM" --frames 12000 --game-id ID-boo --steering none --scenario full-race
+                  mkdir -p "$RACE_USER/Config"
+                  chmod 700 "$RACE_USER"
+                  printf "%s\\n" "[Display]" "RenderToMain = True" > "$RACE_USER/Config/Dolphin.ini"
+                  capture_frame "$RACE_DTM" "$RACE_LOG" "$RACE_CAPTURE" "$RACE_USER" 480
+                  python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
-                  echo "The finish-label branch passed the orange FINISH text pixel check on the captured race-completion frame."
+                  echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
+                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Start-only restart."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-restart-check
+                mkdir -p "$FINISH_RESTART_USER/Config"
+                chmod 700 "$FINISH_RESTART_USER"
+                printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
+                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER"
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
+                echo "Post-finish Start restarted the race into a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
@@ -596,9 +630,10 @@ jobs:
           [[ ! -f "$RESET_LOG" ]] || cat "$RESET_LOG"
           [[ ! -f "$PAUSE_LOG" ]] || cat "$PAUSE_LOG"
           [[ ! -f "$RESUME_LOG" ]] || cat "$RESUME_LOG"
+          [[ ! -f "$FINISH_RESTART_LOG" ]] || cat "$FINISH_RESTART_LOG"
           echo "Dolphin user files created during boot attempt:"
-          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" -maxdepth 4 -type f -print || true
-          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs"; do
+          find "$BASELINE_USER" "$STEERED_USER" "$LEFT_USER" "$STICK_USER" "$LEFT_STICK_USER" "$RESET_USER" "$PAUSE_USER" "$RESUME_USER" "$RACE_USER" "$FINISH_RESTART_USER" -maxdepth 4 -type f -print || true
+          for log_dir in "$BASELINE_USER/Logs" "$STEERED_USER/Logs" "$LEFT_USER/Logs" "$STICK_USER/Logs" "$LEFT_STICK_USER/Logs" "$RESET_USER/Logs" "$PAUSE_USER/Logs" "$RESUME_USER/Logs" "$RACE_USER/Logs" "$FINISH_RESTART_USER/Logs"; do
             [[ -d "$log_dir" ]] || continue
             for log_file in "$log_dir"/*; do
               [[ -f "$log_file" ]] || continue
@@ -630,6 +665,11 @@ jobs:
             dolphin-reset-state.dtm
             dolphin-pause-state.dtm
             dolphin-resume-state.dtm
+            dolphin-finish-restart.dtm
+            dolphin-finish-restart.png
+            dolphin-finish-restart.log
+            dolphin-finish-detector.log
+            dolphin-finish-restart-detector.log
             dolphin-neutral-baseline.png
             dolphin-render.log
             dolphin-left-render.log
@@ -657,5 +697,6 @@ jobs:
             dolphin-left-stick-steered-user/Logs/**
             dolphin-reset-user/Logs/**
             dolphin-full-race-user/Logs/**
+            dolphin-finish-restart-user/Logs/**
           if-no-files-found: warn
           retention-days: 7

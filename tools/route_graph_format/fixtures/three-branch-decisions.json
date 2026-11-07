@@ -1,0 +1,242 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "three-decision-history",
+  "name": "Three branch choices with deterministic reverse history",
+  "source": {
+    "platform": "synthetic",
+    "release": "route-graph-fixtures-v1",
+    "revision": "2026-11-02"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": false,
+  "start_node_id": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "decision-1",
+      "position": [
+        0,
+        0,
+        10
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "decision-2",
+      "position": [
+        0,
+        0,
+        20
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "decision-3",
+      "position": [
+        0,
+        0,
+        30
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "finish",
+      "position": [
+        0,
+        0,
+        40
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "approach",
+      "from": "start",
+      "to": "decision-1",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          3.333333333333333
+        ],
+        "control2": [
+          0,
+          0,
+          6.666666666666666
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.1
+      }
+    },
+    {
+      "id": "d1-left",
+      "from": "decision-1",
+      "to": "decision-2",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          5,
+          0,
+          13.333333333333334
+        ],
+        "control2": [
+          5,
+          0,
+          16.666666666666664
+        ]
+      },
+      "progress": {
+        "start": 0.1,
+        "end": 0.4
+      }
+    },
+    {
+      "id": "d1-right",
+      "from": "decision-1",
+      "to": "decision-2",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -5,
+          0,
+          13.333333333333334
+        ],
+        "control2": [
+          -5,
+          0,
+          16.666666666666664
+        ]
+      },
+      "progress": {
+        "start": 0.1,
+        "end": 0.4
+      }
+    },
+    {
+      "id": "d2-left",
+      "from": "decision-2",
+      "to": "decision-3",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          23.333333333333336
+        ],
+        "control2": [
+          0,
+          0,
+          26.666666666666668
+        ]
+      },
+      "progress": {
+        "start": 0.4,
+        "end": 0.7
+      }
+    },
+    {
+      "id": "d2-right",
+      "from": "decision-2",
+      "to": "decision-3",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          5,
+          0,
+          23.333333333333336
+        ],
+        "control2": [
+          5,
+          0,
+          26.666666666666668
+        ]
+      },
+      "progress": {
+        "start": 0.4,
+        "end": 0.7
+      }
+    },
+    {
+      "id": "d3-left",
+      "from": "decision-3",
+      "to": "finish",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          33.333333333333336
+        ],
+        "control2": [
+          0,
+          0,
+          36.666666666666664
+        ]
+      },
+      "progress": {
+        "start": 0.7,
+        "end": 1
+      }
+    },
+    {
+      "id": "d3-right",
+      "from": "decision-3",
+      "to": "finish",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          -4,
+          0,
+          33.333333333333336
+        ],
+        "control2": [
+          -4,
+          0,
+          36.666666666666664
+        ]
+      },
+      "progress": {
+        "start": 0.7,
+        "end": 1
+      }
+    }
+  ]
+}
