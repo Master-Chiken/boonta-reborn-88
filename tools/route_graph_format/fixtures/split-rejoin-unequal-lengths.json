@@ -1,0 +1,278 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "split-rejoin-demo",
+  "name": "Unequal physical branch lengths with shared normalized progress",
+  "source": {
+    "platform": "synthetic",
+    "release": "route-graph-fixtures-v1",
+    "revision": "2026-11-02"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": false,
+  "start_node_id": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "split",
+      "position": [
+        0,
+        0,
+        10
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "left-mid",
+      "position": [
+        0,
+        0,
+        15
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "right-a",
+      "position": [
+        10,
+        0,
+        10
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "right-b",
+      "position": [
+        10,
+        0,
+        20
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "join",
+      "position": [
+        0,
+        0,
+        20
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "finish",
+      "position": [
+        0,
+        0,
+        30
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "approach",
+      "from": "start",
+      "to": "split",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          3.333333333333333
+        ],
+        "control2": [
+          0,
+          0,
+          6.666666666666666
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.2
+      }
+    },
+    {
+      "id": "left-1",
+      "from": "split",
+      "to": "left-mid",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          11.666666666666668
+        ],
+        "control2": [
+          0,
+          0,
+          13.333333333333334
+        ]
+      },
+      "progress": {
+        "start": 0.2,
+        "end": 0.5
+      },
+      "surface_binding": [
+        {
+          "t": 0,
+          "surface_id": "road-left-approach"
+        },
+        {
+          "t": 1,
+          "surface_id": "road-left-apex"
+        }
+      ]
+    },
+    {
+      "id": "left-2",
+      "from": "left-mid",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          16.666666666666668
+        ],
+        "control2": [
+          0,
+          0,
+          18.333333333333332
+        ]
+      },
+      "progress": {
+        "start": 0.5,
+        "end": 0.8
+      }
+    },
+    {
+      "id": "right-1",
+      "from": "split",
+      "to": "right-a",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          3.333333333333333,
+          0,
+          10
+        ],
+        "control2": [
+          6.666666666666666,
+          0,
+          10
+        ]
+      },
+      "progress": {
+        "start": 0.2,
+        "end": 0.4
+      }
+    },
+    {
+      "id": "right-2",
+      "from": "right-a",
+      "to": "right-b",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          10,
+          0,
+          13.333333333333334
+        ],
+        "control2": [
+          10,
+          0,
+          16.666666666666664
+        ]
+      },
+      "progress": {
+        "start": 0.4,
+        "end": 0.6
+      }
+    },
+    {
+      "id": "right-3",
+      "from": "right-b",
+      "to": "join",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          6.666666666666668,
+          0,
+          20
+        ],
+        "control2": [
+          3.333333333333334,
+          0,
+          20
+        ]
+      },
+      "progress": {
+        "start": 0.6,
+        "end": 0.8
+      }
+    },
+    {
+      "id": "exit",
+      "from": "join",
+      "to": "finish",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          0,
+          0,
+          23.333333333333336
+        ],
+        "control2": [
+          0,
+          0,
+          26.666666666666668
+        ]
+      },
+      "progress": {
+        "start": 0.8,
+        "end": 1
+      }
+    }
+  ]
+}

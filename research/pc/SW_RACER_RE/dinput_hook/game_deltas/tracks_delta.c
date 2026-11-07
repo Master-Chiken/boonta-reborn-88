@@ -1,0 +1,1569 @@
+#include "tracks_delta.h"
+
+// Defined by the C++ manifest-track registry.
+extern void track_registry_ApplyForCurrentTrack(void);
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "types.h"
+#include "types_enums.h"
+#include "globals.h"
+#include "FUN.h"
+#include "macros.h"
+
+#include "General/stdMath.h"
+#include "General/utils.h"
+#include "Platform/stdControl.h"
+#include "Primitives/rdMatrix.h"
+#include "Primitives/rdVector.h"
+#include "Swr/swrMultiplayer.h"
+#include "Swr/swrObj.h"
+#include "Swr/swrSprite.h"
+#include "Swr/swrText.h"
+#include "Swr/swrUI.h"
+
+extern FILE *hook_log;
+
+TrackInfo g_aNewTrackInfos[MAX_NB_TRACKS] = {0};
+char g_aCustomTrackNames[MAX_NB_TRACKS][32] = {0};
+uint16_t trackCount = DEFAULT_NB_TRACKS;
+
+static uint16_t GetCircuitCount(bool includeCustomTracks) {
+    assert(trackCount > 0);
+    if (!includeCustomTracks) {
+        return DEFAULT_NB_CIRCUIT_PER_TRACK;
+    }
+    const uint16_t NumCustomTracks = trackCount - DEFAULT_NB_TRACKS;
+    return DEFAULT_NB_CIRCUIT_PER_TRACK +
+           (NumCustomTracks + DEFAULT_NB_CIRCUIT - 1) / DEFAULT_NB_CIRCUIT;
+}
+
+static uint16_t GetTrackCount(int circuitId) {
+    if (circuitId < 4) {
+        return g_aTracksInCircuits[circuitId];
+    }
+    if (circuitId >= GetCircuitCount(true)) {
+        return 0;
+    }
+
+    const uint16_t customCircuitId = circuitId - DEFAULT_NB_CIRCUIT_PER_TRACK;
+    const uint16_t NumCustomTracks = trackCount - DEFAULT_NB_TRACKS;
+    uint16_t numTracks = NumCustomTracks - (customCircuitId * DEFAULT_NB_CIRCUIT);
+    if (numTracks > DEFAULT_NB_CIRCUIT) {
+        numTracks = DEFAULT_NB_CIRCUIT;
+    }
+    return numTracks;
+}
+
+static TrackInfo GetTrackInfo(uint16_t TrackID) {
+    if (TrackID >= trackCount) {
+        fprintf(hook_log, "GetTrackInfo: trackId %d is greater than the trackCount %d\n", TrackID,
+                trackCount);
+        fflush(hook_log);
+        assert(false);
+        return (TrackInfo){};
+    }
+    return g_aNewTrackInfos[TrackID];
+}
+
+static uint16_t GetImgStartBackground(uint16_t TrackID) {
+    if (TrackID < DEFAULT_NB_TRACKS) {
+        return 99 + TrackID;
+    }
+    TrackID -= DEFAULT_NB_TRACKS;
+
+    // Slots 256 - 399 seem to be free...
+    // 144 slots / 2 = 72 possible custom tracks
+    assert(TrackID < MAX_CUSTOM_TRACKS);
+    return 256 + TrackID;
+}
+
+static uint16_t GetImgStartBorder(uint16_t TrackID) {
+    if (TrackID < DEFAULT_NB_TRACKS) {
+        return 99 + DEFAULT_NB_TRACKS + TrackID;
+    }
+    TrackID -= DEFAULT_NB_TRACKS;
+
+    // Slots 256 - 399 seem to be free...
+    // 144 slots / 2 = 72 possible custom tracks max, but Ben1138 only uses 70. ?
+    assert(TrackID < MAX_CUSTOM_TRACKS);
+    return 256 + MAX_CUSTOM_TRACKS + TrackID;
+}
+
+// 0x004368a0
+void swrRace_MainMenu_delta(swrObjHang *hang) {
+    bool bVar1;
+    float fVar2;
+    char cVar3;
+    int32_t uVar4;
+    int iVar5;
+    int iVar6;
+    char cVar7;
+    HangRoom iVar8;
+    float fVar9;
+    char *pcVar10;
+    char local_71;
+    rdVector3 local_6c;
+    char entryText[sizeof(swrTextEntries1Text[0])];
+    rdMatrix44 local_40;
+
+    const char *pTrackName = swrUI_GetTrackNameFromId_delta(hang->track_index);
+    // Custom track names are unbounded; the retail 32-byte buffer overflowed on long ones.
+    snprintf(entryText, sizeof(entryText), "~f5~s~c%s", pTrackName);
+    swrText_CreateTextEntry1(160, 40, 255, 255, 255, 255, entryText);
+
+    iVar8 = -1;
+    DAT_0050c480 = 0;
+    if (swrObjHang_menuJustEntered != 0) {
+        swrObjHang_menuJustEntered = 0;
+        if (hang->menuScreenPrev == swrObjHang_STATE_SELECT_TRACK) {
+            hang->mainMenuSelection = 0;
+        }
+
+        rdVector_Sub3(&local_6c, (rdVector3 *) &swrObjHang_cameraMatrix.vD, (rdVector3*) &swrObjHang_holoCameraMatrix.vD);
+        fVar9 = rdVector_Len3(&local_6c);
+        DAT_0050c11c = (float) fVar9;
+        rdVector_Normalize3Acc(&local_6c);
+        fVar9 = stdMath_ArcTan2(-local_6c.x, local_6c.y);
+        gamma_unk = fVar9;
+        fVar9 = stdMath_ArcSin(local_6c.z);
+        alpha_unk = fVar9;
+
+        if (gamma_unk < 0.0) {
+            gamma_unk += 360.0;
+        }
+        if (gamma_unk > 360.0) {
+            gamma_unk -= 360.0;
+        }
+        if (alpha_unk < -90.0) {
+            alpha_unk += 180.0;
+        }
+        if (alpha_unk > 90.0) {
+            alpha_unk -= 180.0;
+        }
+
+        cVar7 = 1;
+        DAT_0050c308[0] = 0;
+        DAT_0050c308[1] = 0xff;
+        DAT_0050c308[2] = 0xff;
+        DAT_0050c308[3] = 0xff;
+        DAT_0050c308[4] = 0xff;
+        DAT_0050c308[5] = 0xff;
+        DAT_0050c308[6] = 0xff;
+        DAT_0050c308[7] = 0xff;
+        DAT_0050c308[8] = 0xff;
+        DAT_0050c308[9] = 0xff;
+        DAT_0050c308[10] = 0xff;
+        DAT_0050c308[11] = 0xff;
+
+        if (hang->num_local_players == 1) {
+            DAT_0050c308[0] = 0;
+            DAT_0050c308[1] = 1;
+            DAT_0050c308[2] = 0xff;
+            DAT_0050c308[3] = 0xff;
+            cVar7 = 2;
+        }
+
+        cVar3 = cVar7;
+        if (hang->isTournamentMode) {
+            DAT_0050c308[cVar7] = 2;
+            DAT_0050c308[(char) (cVar7 + 1)] = 3;
+            cVar3 = cVar7 + 3;
+            DAT_0050c308[(char) (cVar7 + 2)] = 4;
+            if (swrRace_nbPitDroids < 4) {
+                iVar6 = (int) cVar3;
+                cVar3 = cVar7 + 4;
+                DAT_0050c308[iVar6] = 5;
+            }
+        }
+
+        DAT_0050c524 = cVar3 + 1;
+        DAT_0050c308[cVar3] = 6;
+    }
+
+    swrText_CreateColorlessEntry1(160, 25, swrText_Translate(g_pTxtMainMenu));
+
+    uint16_t PosY = 80;
+    for (uint8_t i = 0; i < DAT_0050c524; i++) {
+        const char *pMenuEntry = NULL;
+        switch (DAT_0050c308[i]) {
+            case 0: {
+                pMenuEntry = swrText_Translate(g_pTxtStartRace);
+                break;
+            }
+            case 1: {
+                pMenuEntry = swrText_Translate(g_pTxtInspectVehicle);
+                break;
+            }
+            case 2: {
+                pMenuEntry = swrText_Translate(g_pTxtVehicleUpgrades);
+                break;
+            }
+            case 3: {
+                pMenuEntry = swrText_Translate(g_pTxtBuyParts);
+                break;
+            }
+            case 4: {
+                pMenuEntry = swrText_Translate(g_pTxtJunkyard);
+                break;
+            }
+            case 5: {
+                pMenuEntry = swrText_Translate(g_pTxtBuyPitDroids);
+                break;
+            }
+            case 6: {
+                pMenuEntry = swrText_Translate(g_pTxtChangeVehicle);
+                break;
+            }
+            case 7: {
+                pMenuEntry = swrText_Translate(g_pTxtOptions);
+                break;
+            }
+        }
+
+        snprintf(entryText, sizeof(entryText), "%s", pMenuEntry);
+        // swrUI_Front_TextMenu already offsets each entry by (rowIndex * lineHeight) from the
+        // PosY base, so PosY must stay fixed here. Advancing it too applied the offset
+        // twice and double-spaced the menu (every option dropped 20px instead of 10).
+        swrUI_Front_TextMenu(hang, 60, PosY, 10, hang->mainMenuSelection, i, entryText);
+    }
+
+    for (uint8_t i = 0; i < hang->num_local_players; i++) {
+        if ((swrUI_localPlayersInputPressedBitset[i] & 0x8000) != 0) {
+            cVar7 = hang->mainMenuSelection + 1;
+            hang->mainMenuSelection = cVar7;
+            if ((DAT_0050c524 - 1) < cVar7) {
+                hang->mainMenuSelection = 0;
+            }
+            FUN_00440550(0x58);
+        }
+        if ((swrUI_localPlayersInputPressedBitset[i] & 0x4000) != 0) {
+            cVar7 = hang->mainMenuSelection + -1;
+            hang->mainMenuSelection = cVar7;
+            if (cVar7 < 0) {
+                hang->mainMenuSelection = DAT_0050c524 + -1;
+            }
+            FUN_00440550(88);
+        }
+        if (stdControl_ReadKey(56, 0) != 0 || stdControl_ReadKey(184, 0) != 0 ||
+            stdControl_ReadKey(42, 0) != 0 || stdControl_ReadKey(54, 0) != 0) {
+            fVar2 = DAT_0050c11c;
+            bVar1 = false;
+            swrObjHang_cameraMoveMode = 0;
+            if (DAT_00e98ea0[i] > 0.1f || DAT_00e98ea0[i] < -0.1) {
+                bVar1 = true;
+                gamma_unk = gamma_unk - DAT_00e98ea0[i] * swrRace_fdeltaTimeSecs * 105.0;
+            }
+            if (swrControl_aPlayerAxisY[i] > 0.1 || swrControl_aPlayerAxisY[i] < -0.1) {
+                alpha_unk = alpha_unk - swrControl_aPlayerAxisY[i] * swrRace_fdeltaTimeSecs * -67.5;
+                if (alpha_unk > 45.0) {
+                    alpha_unk = 45.0;
+                }
+                if (alpha_unk < -45.0) {
+                    alpha_unk = -45.0;
+                }
+                bVar1 = true;
+            }
+            if (bVar1) {
+                rdMatrix_SetRotation44(&local_40, gamma_unk, alpha_unk, 0);
+                rdVector_Scale3Add3((rdVector3*) &swrObjHang_holoCameraMatrix.vD, (rdVector3 *) &swrObjHang_cameraMatrix.vD,
+                                    -DAT_0050c11c, (rdVector3 *) &local_40.vB);
+                if (DAT_0050c11c != fVar2) {
+                    fVar9 = rdVector_Dist3((rdVector3 *) &swrObjHang_cameraMatrix.vD,
+                                           (rdVector3*) &swrObjHang_holoCameraMatrix.vD);
+                    DAT_0050c11c = (float) fVar9;
+                }
+                rdMatrix_Copy44(&swrObjHang_cameraMatrixStart, &swrObjHang_cameraMatrix);
+            }
+        }
+        if (swrControl_cancelPressedEdge != 0) {
+            FUN_00440550(77);
+            iVar8 = 3;
+            swrObjHang_state2 = swrObjHang_STATE_SELECT_TRACK;
+        }
+        if (swrControl_menuAcceptPressedEdge != 0) {
+            FUN_00440550(84);
+
+            // Start Race
+            if (hang->mainMenuSelection == 0) {
+                iVar8 = -1;
+                FUN_0040a120(0);
+                FUN_00409d70(0xffffffff);
+                FUN_00409d70(0);
+
+                TrackInfo Info = GetTrackInfo((uint16_t) hang->track_index);
+                FUN_00427d90(Info.PlanetIdx, Info.planetTrackNumber);
+
+                if (!swrMultiplayer_IsMultiplayerEnabled() || swrMultiplayer_IsHost() != 0) {
+                    if (hang->isTournamentMode && swrRace_UnlockDataBase[0] != Info.FavoritePilot &&
+                        DAT_00ec8854 != 0.0f && DAT_0050c458 == 0) {
+                        swrObjHang_state2 = 15;
+                    }
+
+                    swrObjHang_fadeState = 0xffffffff;
+                    iVar8 = FUN_004409d0(swrRace_aProfiles[0].name, DAT_004c0948);
+                    if ((iVar8 != 0) && ((swrUI_localPlayersInputDownBitset[0] & 4) != 0)) {
+                        FUN_00440c10(hang);
+                    }
+
+                    FUN_0041e660();
+                    return;
+                }
+            } else {
+                switch (DAT_0050c308[hang->mainMenuSelection]) {
+                    case 1: {
+                        swrObjHang_state2 = swrObjHang_STATE_LOOK_AT_VEHICLE;
+                        iVar8 = Hangar;
+                        hang->activeMenu = 0;
+                        FUN_0045a3e0();
+                        break;
+                    }
+                    case 2: {
+                        swrObjHang_state2 = swrObjHang_STATE_LOOK_AT_VEHICLE;
+                        iVar8 = Hangar;
+                        hang->activeMenu = 1;
+                        FUN_0045a3e0();
+                        break;
+                    }
+                    case 3: {
+                        swrObjHang_state2 = swrObjHang_STATE_WATTO;
+                        iVar8 = Shop;
+                        hang->activeMenu = 0;
+                        break;
+                    }
+                    case 4: {
+                        iVar8 = Junkyard;
+                        swrObjHang_state2 = swrObjHang_STATE_JUNKYARD;
+                        break;
+                    }
+                    case 5: {
+                        swrObjHang_state2 = swrObjHang_STATE_WATTO;
+                        iVar8 = Shop;
+                        hang->activeMenu = 1;
+                        break;
+                    }
+                    case 6: {
+                        swrObjHang_state2 = swrObjHang_STATE_SELECT_VEHICLE;
+                        hang->current_player_for_vehicle_selection = i;
+                        iVar8 = Cantina;
+                        DAT_0050c480 = 1;
+                        break;
+                    }
+                    case 7: {
+                        hang->activeMenu = 1;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    if (iVar8 != -1) {
+        if (hang->room == iVar8) {
+            swrObjHang_SetMenuState(hang, swrObjHang_state2);
+            return;
+        }
+        swrObjHang_fadeState = 0xffffffff;
+    }
+}
+
+// 0x0043b0b0
+void HandleCircuits_delta(swrObjHang *hang) {
+
+    int circuitId = hang->circuitIdx;
+
+    int selectionId = 0;
+    g_CircuitIdxMax = 3;
+    swrRace_MenuMaxSelection = 0;
+    if (hang->isTournamentMode == '\0') {
+        if (g_aBeatTracksGlobal[3] == '\0') {
+            g_CircuitIdxMax = 2;
+        }
+        // DELTA
+        // Custom tracks occupy the pages past the four vanilla circuits, in free play only --
+        // the mode swrObjHang_InitTrackSprites_delta allocates their sprites for, and whose
+        // circuitId < DEFAULT_NB_CIRCUIT_PER_TRACK assert bars tournament. Without raising the
+        // limit here the pages exist but page-right stops at Invitational.
+        if (trackCount > DEFAULT_NB_TRACKS) {
+            g_CircuitIdxMax = GetCircuitCount(true) - 1;
+        }
+        // DELTA if (cond) { body } else { original_game }
+        if (circuitId >= DEFAULT_NB_CIRCUIT_PER_TRACK) {
+            swrRace_MenuMaxSelection = GetTrackCount(circuitId);
+        } else {
+            // END DELTA
+            for (uint8_t i = 0; i < g_aTracksInCircuits[circuitId]; i++) {
+                if ((g_aBeatTracksGlobal[circuitId] & (1 << i)) != 0) {
+                    swrRace_MenuMaxSelection += 1;
+                }
+            }
+        }
+    } else {
+        if (swrRace_UnlockDataBase[4] == '\0') {
+            g_CircuitIdxMax = 2;
+        }
+        // DELTA
+        // circuitIdx lives on the hangar state, so returning from a free-play custom page into
+        // tournament can leave it past this mode's last circuit and index g_aTracksInCircuits
+        // (4 entries) out of bounds below.
+        if (circuitId > g_CircuitIdxMax) {
+            circuitId = g_CircuitIdxMax;
+            hang->circuitIdx = (char) circuitId;
+        }
+        // END DELTA
+        for (uint8_t i = 0; i < g_aTracksInCircuits[circuitId]; i++) {
+            if ((swrRace_UnlockDataBase[circuitId + 1] & (char) (1 << ((char) i))) != 0) {
+                swrRace_MenuMaxSelection += 1;
+            }
+        }
+    }
+    if (multiplayer_enabled && (circuitId < '\x03')) {
+        swrRace_MenuMaxSelection = g_aTracksInCircuits[circuitId];
+    }
+    if (swrRace_MenuSelectedItem >= swrRace_MenuMaxSelection) {
+        swrRace_MenuSelectedItem = swrRace_MenuMaxSelection - 1;
+    }
+    // DELTA
+    if (swrRace_MenuMaxSelection > 0 && swrRace_MenuSelectedItem < 0) {
+        swrRace_MenuSelectedItem = 0;
+    }
+    //END DELTA
+    swrUI_menuScrolled = (uint32_t) (circuitId > 0);
+    g_bCircuitIdxInRange = (int) (circuitId < g_CircuitIdxMax);
+    return;
+}
+
+static void DrawTextBox(uint16_t PosX, uint16_t PosY, uint8_t R, uint8_t G, uint8_t B, uint8_t A,
+                        const char *pFormatting, const char *pText, uint16_t LineLengthMax,
+                        uint16_t LinesMax, uint16_t LineSpacing) {
+
+    // Since 'swrText_CreateTextEntry1' expects a null terminated string
+    // I have to make a copy for each line, unfortunately...
+    const uint16_t LINES_MAX = 64;
+    const uint16_t LINE_LENGTH_MAX = 128;
+
+    const uint16_t FormattingLen = (uint16_t) strnlen(pFormatting, LINE_LENGTH_MAX);
+
+    if (LinesMax > LINES_MAX) {
+        LinesMax = LINES_MAX;
+    }
+    if (LineLengthMax > LINE_LENGTH_MAX - FormattingLen - 1) {
+        LineLengthMax = LINE_LENGTH_MAX - FormattingLen - 1;
+    }
+
+    char Lines[LINES_MAX][LINE_LENGTH_MAX];
+
+    uint16_t LineCount = 0;
+    const char *pLastSpace = pText;
+    const char *pLastNewLine = pText;
+    for (; LineCount < LinesMax; pText++) {
+        if (*pText == ' ') {
+            pLastSpace = pText + 1;
+        }
+
+        uint16_t LineLen = pText - pLastNewLine;
+        if (LineLen >= LineLengthMax) {
+            LineLen = LineLengthMax;
+        }
+
+        if (*pText == 0) {
+            strncpy(Lines[LineCount], pFormatting, FormattingLen);
+            strncpy(Lines[LineCount] + FormattingLen, pLastNewLine, LineLen);
+            Lines[LineCount++][FormattingLen + LineLen] = 0;
+            break;
+        }
+
+        if (*pText == '\n' || (LineLen >= LineLengthMax && pLastSpace != pLastNewLine)) {
+            strncpy(Lines[LineCount], pFormatting, FormattingLen);
+            strncpy(Lines[LineCount] + FormattingLen, pLastNewLine, LineLen);
+            Lines[LineCount++][FormattingLen + LineLen] = 0;
+
+            for (; *pText == ' '; pText++)
+                ;
+            pLastSpace = pText;
+            pLastNewLine = pText;
+        }
+    }
+
+    for (uint16_t i = 0; i < LineCount; i++) {
+        swrText_CreateTextEntry1(PosX, PosY + (LineSpacing * i), R, G, B, A, Lines[i]);
+    }
+}
+
+// FUN_004360e0
+// Get's called at just once place: swrRace_CourseSelectionMenu_delta()
+void DrawTracks_delta(swrObjHang *hang, uint8_t circuitIdx) {
+    const uint8_t numTracks = GetTrackCount(circuitIdx);
+    if (numTracks == 0) {
+        return;
+    }
+
+    bool is_custom_circuit = false;
+    if (circuitIdx < 4) {
+        // Manually resetting visibility of custom tracks.
+        // For the stock tracks, this happens somewhere else...
+        for (uint16_t imgIdx = 256; imgIdx < 400; imgIdx++) {
+            swrSprite_SetVisible(imgIdx, false);
+        }
+    } else {
+        is_custom_circuit = true;
+    }
+
+    uint16_t Beat = 0;
+    uint8_t R, G, B, A;
+    for (uint8_t TrackIdx = 0; TrackIdx < numTracks; TrackIdx++) {
+        if (!is_custom_circuit && hang->isTournamentMode) {
+            const uint8_t Bits = TrackIdx * 2;
+            Beat = (g_aBeatTrackPlace[circuitIdx] >> Bits) & 3;
+        }
+
+        // Draw Background
+        const uint16_t TotalTrackIdx = circuitIdx * 7 + TrackIdx;
+        uint16_t imgIdx = GetImgStartBackground(TotalTrackIdx);
+        const int TrackMenuSlot =
+            (TrackIdx - (swrRace_MenuSelectedItem >= 6 ? swrRace_MenuSelectedItem - 6 : 0));
+        const int16_t TrackPosX = TrackMenuSlot * 35;
+        swrSprite_SetVisible(imgIdx, true);
+        swrSprite_SetPos(imgIdx, TrackPosX + 55, 94);
+        swrSprite_SetDim(imgIdx, 0.6667f, 0.6667f);
+
+        A = 255;
+        if (circuitIdx != hang->circuitIdx) {
+            // Circuit transition animation
+            A = (uint8_t) (swrRace_Transition * DAT_004ac7a4);
+        }
+        if (TrackMenuSlot < 0)
+            A = A / (-TrackMenuSlot * 3);
+        if (TrackMenuSlot > 6)
+            A = A / ((TrackMenuSlot - 6) * 3);
+
+        switch (circuitIdx) {
+            // Amateur
+            case 0: {
+                B = 255;
+                G = 255;
+                R = 50;
+                break;
+            }
+
+            // Semi-Pro
+            case 1: {
+                B = 62;
+                G = 255;
+                R = 68;
+                break;
+            }
+
+            // Galactic
+            case 2: {
+                B = 17;
+                G = 190;
+                R = 163;
+                break;
+            }
+
+            // Invitational
+            case 3: {
+                B = 32;
+                G = 89;
+                R = 157;
+                break;
+            }
+
+            // Custom Tracks
+            default: {
+                B = TRACK_COLOR_B;
+                G = TRACK_COLOR_G;
+                R = TRACK_COLOR_R;
+                break;
+            }
+        }
+
+        const bool bIsPlayable = is_custom_circuit || isTrackPlayable(hang, circuitIdx, TrackIdx);
+        if (!bIsPlayable) {
+            B = 128;
+            G = 128;
+            R = 128;
+        } else if (Beat != 0) {
+            B = 255;
+            G = 255;
+            R = 255;
+        }
+        swrSprite_SetColor(imgIdx, R, G, B, A);
+
+        char TxtTrackNum[16];
+        sprintf(TxtTrackNum, "~f2~s%d", TrackIdx + 1);
+        if (is_custom_circuit || !hang->isTournamentMode || isTrackUnlocked(circuitIdx, TrackIdx)) {
+            // Draw Track Number
+            swrText_CreateTextEntry1(TrackPosX + 60 - (TrackIdx + 1 >= 10 ? 5 : 0), 109, R, G, B, A,
+                                     TxtTrackNum);
+
+            // Draw "Race" string
+            char *pTxtRace = swrText_Translate(g_pTxtRace);
+            swrText_CreateTextEntry1(TrackPosX + 67, 111, R, G, B, A, pTxtRace);
+        }
+
+        if (!is_custom_circuit && hang->isTournamentMode && Beat == 0 &&
+            !isTrackUnlocked(circuitIdx, TrackIdx)) {
+            // Draw 4th place Text
+            char *pTxt4th = swrText_Translate(g_pTxt4th);
+            swrText_CreateTextEntry1(TrackPosX + 58, 111, R, G, B, A, pTxt4th);
+        }
+
+        // Draw Border
+        imgIdx = GetImgStartBorder(TotalTrackIdx);
+        swrSprite_SetVisible(imgIdx, true);
+        swrSprite_SetPos(imgIdx, TrackPosX + 53, 92);
+        swrSprite_SetDim(imgIdx, 0.6667f, 0.6667f);
+        swrSprite_SetColor(imgIdx, 163, 190, 17, A);
+        if (!bIsPlayable) {
+            swrSprite_SetColor(imgIdx, 128, 128, 128, A);
+        }
+
+        // Draw current selection
+        if (circuitIdx == hang->circuitIdx &&
+            VerifySelectedTrack_delta(hang, swrRace_MenuSelectedItem) == TrackIdx) {
+            swrSprite_SetVisible(imgIdx, false);
+            swrSprite_SetVisible(98, true);
+            swrSprite_SetPos(98, TrackPosX + 50, 89);
+            swrSprite_SetDim(98, 0.6667f, 0.6667f);
+            swrSprite_SetColor(98, 50, 255, 255, 255);
+        }
+    }
+}
+
+// 0x0043b240
+void swrRace_CourseSelectionMenu_delta(void) {
+    char *pcVar2;
+    float uVar6;
+    char buffer[256];
+
+    swrObjHang *hang = g_objHang2;// == g_pMenuState
+    const TrackInfo Track = GetTrackInfo(hang->track_index);
+    if (swrObjHang_menuJustEntered != 0) {
+        swrObjHang_menuJustEntered = 0;
+        FUN_0045bee0(hang, 0x25, 0xffffffff, 0);
+        DAT_0050c54c = 0;
+
+        if (hang->menuScreenPrev == swrObjHang_STATE_SELECT_PLANET) {
+            swrRace_Transition = 1.0;
+        }
+        if ((hang->menuScreenPrev == swrObjHang_STATE_SELECT_VEHICLE) ||
+            (hang->menuScreenPrev == swrObjHang_STATE_SPLASH)) {
+            hang->circuitIdx = 0;
+        }
+
+        HandleCircuits_delta(hang);
+        if ((hang->menuScreenPrev == swrObjHang_STATE_SELECT_VEHICLE) ||
+            (hang->menuScreenPrev == swrObjHang_STATE_SPLASH)) {
+            swrRace_MenuSelectedItem = 0;
+            if (hang->isTournamentMode) {
+                if (!isTrackUnlocked(hang->circuitIdx, swrRace_MenuMaxSelection - 1)) {
+                    swrRace_MenuSelectedItem = swrRace_MenuMaxSelection - 1;
+                }
+            }
+        } else {
+            FUN_0043b1d0(hang);
+        }
+
+        swrObjHang_InitTrackSprites_delta(hang, true);
+        DAT_0050c134 = Track.PlanetIdx;
+        DAT_0050c17c = hang->circuitIdx;
+    }
+
+    if (DAT_0050c54c == 0) {
+        if (DAT_00e295d4 == swrRace_MenuSelectedItem) {
+            uVar6 = 3.3f;
+            DAT_0050c134 = Track.PlanetIdx;
+            DAT_0050c17c = hang->circuitIdx;
+            goto LAB_0043b357;
+        }
+    } else {
+        uVar6 = -3.3f;
+    LAB_0043b357:
+        FUN_00469b90(uVar6);
+    }
+
+    if (swrRace_Transition > 0.0f && hang->track_index >= 0) {
+        DrawHoloPlanet(hang, (int) DAT_0050c134, swrRace_Transition * 0.5f);
+    }
+    if (DAT_0050c54c != 0) {
+        return;
+    }
+
+    const int32_t SelectedTrackIdx = VerifySelectedTrack_delta(hang, swrRace_MenuSelectedItem);
+    if (SelectedTrackIdx >= 0) {
+        if (hang->circuitIdx < 4) {
+            hang->track_index =
+                g_aTrackIDs[hang->circuitIdx * DEFAULT_NB_CIRCUIT + SelectedTrackIdx];
+        } else {
+            hang->track_index = hang->circuitIdx * DEFAULT_NB_CIRCUIT + SelectedTrackIdx;
+        }
+
+        // Draw "Planet not loaded!!!" warning
+        if ((Track.trackID == -1) || (Track.splineID == -1)) {
+            const char *pText = swrText_Translate(g_pTxtPlanetNotLoaded);
+            sprintf(buffer, pText);
+
+            // The following I decompiled by hand, Ghidra returned just trash
+            int32_t a = swrUtils_Rand();
+            float b = (float) a * DAT_004ac86c * DAT_004ac93c;
+            int32_t B = (int32_t) b;
+
+            a = swrUtils_Rand();
+            b = (float) a * DAT_004ac86c * DAT_004ac93c;
+            int32_t G = (int32_t) b;
+
+            a = swrUtils_Rand();
+            b = (float) a * DAT_004ac86c * DAT_004ac93c;
+            int32_t R = (int32_t) b;
+
+            swrText_CreateTextEntry1(160, 205, R, G, B, 255, buffer);
+        }
+
+        const char *pTrackName = swrUI_GetTrackNameFromId_delta(hang->track_index);
+        sprintf(buffer, "~c~s%s", pTrackName);
+        swrText_CreateTextEntry1(160, 54, 0, 255, 0, 255, buffer);
+        pcVar2 = buffer;
+        FUN_0042de10(pcVar2, 0);
+        FUN_0042de10(buffer, 0);
+    } else {
+        hang->track_index = -1;
+    }
+
+    swrUI_Front_MenuAxisHorizontal(NULL, 55);
+
+    uint8_t R, G, B;
+    char *pTxtCircuit = NULL;
+    switch (hang->circuitIdx) {
+        case 0: {
+            pTxtCircuit = swrText_Translate(g_pTxtCircuitAmateur);
+            B = 255;
+            G = 255;
+            R = 50;
+            break;
+        }
+        case 1: {
+            pTxtCircuit = swrText_Translate(g_pTxtCircuitSemiPro);
+            B = 62;
+            G = 255;
+            R = 68;
+            break;
+        }
+        case 2: {
+            pTxtCircuit = swrText_Translate(g_pTxtCircuitGalactic);
+            B = 17;
+            G = 190;
+            R = 163;
+            break;
+        }
+        case 3: {
+            pTxtCircuit = swrText_Translate(g_pTxtCircuitInvitational);
+            B = 32;
+            G = 89;
+            R = 157;
+            break;
+        }
+        default: {
+            if (hang->track_index < DEFAULT_NB_TRACKS) {
+                fprintf(
+                    hook_log,
+                    "track index is %d, but should be greater than the default number of tracks",
+                    hang->track_index);
+                assert(false);
+            }
+
+            char BufferPage[128];
+            sprintf(BufferPage, "~c~sCustom Tracks Page %u/%u", hang->circuitIdx - 3,
+                    GetCircuitCount(true) - 4);
+            pTxtCircuit = swrText_Translate(BufferPage);
+            B = TRACK_COLOR_B;
+            G = TRACK_COLOR_G;
+            R = TRACK_COLOR_R;
+
+            const char *pDescription = "Brief description of the track";
+            DrawTextBox(55, 150, 50, 255, 255, 255, "~f4~s", pDescription, 17, 7, 8);
+            break;
+        }
+    }
+    swrText_CreateTextEntry1(160, 34, R, G, B, 255, pTxtCircuit);
+
+    char *pTextMode = NULL;
+    if (!hang->isTournamentMode) {
+        if (hang->timeAttackMode != 0) {
+            pTextMode = swrText_Translate(g_pTxtTimeAttack);
+            goto LAB_0043b5c4;
+        }
+        if (hang->num_local_players == 2) {
+            pTextMode = swrText_Translate(g_pTxt2Player);
+            goto LAB_0043b5c4;
+        }
+        pTextMode = g_pTxtFreePlay;
+    } else {
+        pTextMode = g_pTxtTournament;
+    }
+    pTextMode = swrText_Translate(pTextMode);
+
+LAB_0043b5c4:
+    sprintf(buffer, pTextMode);
+    swrText_CreateTextEntry1(160, 24, 50, 255, 255, 255, buffer);
+
+    DrawTracks_delta(hang, DAT_0050c17c);
+    if (hang->track_index >= 0) {
+        // TODO: Custom Planets?
+        if (Track.PlanetIdx < 8) {
+            // Draw planet preview image
+            const uint16_t ImgIdx = Track.PlanetIdx + 69;
+            swrSprite_SetVisible(ImgIdx, true);
+            swrSprite_SetPos(ImgIdx, 160, 150);
+            swrSprite_SetDim(ImgIdx, 1.0f, 1.0f);
+            swrSprite_SetColor(ImgIdx, 255, 255, 255, 255);
+
+            // Tatooine_textbuffer is in fact an array of strings
+            char *pPlanetName = Tatooine_textbuffer[Track.PlanetIdx];
+            swrText_CreateTextEntry1(224, 143, 0, 255, 0, 255, pPlanetName);
+        }
+    }
+
+    FUN_0043fe90(0x2d, 0x54, 0x1e);
+    if (DAT_0050c54c == 0) {
+        FUN_00469c30(0, 1.0f, 1);
+        uint32_t puVar2 = *swrUI_localPlayersInputPressedBitset;
+        if (swrMultiplayer_menuOverlayActive == 0) {
+            if (swrControl_menuAcceptPressedEdge != 0 &&
+                (swrMultiplayer_IsMultiplayerEnabled() == 0 || swrMultiplayer_IsHost() != 0) &&
+                hang->track_index >= 0) {
+                if (multiplayer_enabled != 0) {
+                    FUN_004118b0();
+                    return;
+                }
+                if (swrObjHang_menuAcceptLock != 0) {
+                    return;
+                }
+
+                FUN_00440550(0x54);
+                swrObjHang_InitTrackSprites_delta(hang, false);
+                swrObjHang_SetMenuState(hang, swrObjHang_STATE_SELECT_TRACK);
+                DAT_0050c54c = 1;
+                return;
+            }
+            if ((swrControl_cancelPressedEdge != 0) && (swrObjHang_menuAcceptLock == 0)) {
+                if (multiplayer_enabled) {
+                    FUN_004118b0();
+                    return;
+                }
+
+                FUN_00440550(0x4d);
+                if (swrMultiplayer_IsMultiplayerEnabled() && swrMultiplayer_IsHost() != 0) {
+                    return;
+                }
+                swrObjHang_InitTrackSprites_delta(hang, false);
+                swrObjHang_SetMenuState(hang, swrObjHang_STATE_SELECT_VEHICLE);
+                return;
+            }
+        }
+        uint8_t circuitIdx = hang->circuitIdx;
+        if (DAT_0050c17c == circuitIdx) {
+            // Move down
+            if ((puVar2 & 0x8000) != 0) {
+                if (circuitIdx < g_CircuitIdxMax) {
+                    hang->circuitIdx++;
+                    DAT_00e295d4 = -1;
+                    FUN_00440550(0x58);
+                    HandleCircuits_delta(hang);
+                } else {
+                    FUN_00440550(0x4b);
+                }
+            }
+
+            // Move up
+            if ((puVar2 & 0x4000) != 0) {
+                if (hang->circuitIdx < 1) {
+                    FUN_00440550(0x4b);
+                } else {
+                    hang->circuitIdx--;
+                    DAT_00e295d4 = -1;
+                    FUN_00440550(88);
+                    HandleCircuits_delta(hang);
+                }
+            }
+        }
+
+        if (hang->track_index >= 0) {
+            multiplayer_track_select = (int) hang->track_index;
+            if (!swrMultiplayer_IsMultiplayerEnabled() || swrMultiplayer_IsHost() != 0) {
+                g_LoadTrackModel = Track.trackID;
+                FUN_0041e5a0();
+            }
+        }
+    }
+}
+
+// 0x0043b880
+void swrRace_CourseInfoMenu_delta(swrObjHang *hang) {
+    // The preview loads a stock model, so remove any previous manifest track view first.
+    track_registry_ApplyForCurrentTrack();
+    int8_t iVar3;
+    char cVar4;
+    int iVar6;
+    int8_t uVar13;
+    int32_t uVar18;
+    char local_40[64];
+
+    if (nb_AI_racers == 0) {
+        nb_AI_racers = 12;
+    }
+    if (swrObjHang_splitscreenRacerCount == 0) {
+        swrObjHang_splitscreenRacerCount = 2;
+    }
+
+    iVar3 = swrObjHang_courseInfoItemCount;
+    if (swrObjHang_menuJustEntered != 0) {
+        swrObjHang_menuJustEntered = 0;
+        FUN_0045bee0(hang, 0x25, -1, 0);
+        swrObjHang_courseInfoSelectedRow = 0;
+        swrObjHang_courseInfoLeaving = 0;
+
+        if (hang->menuScreenPrev == swrObjHang_STATE_SELECT_PLANET) {
+            swrRace_Transition = 1.0;
+        }
+
+        HandleCircuits_delta(hang);
+        if (hang->menuScreenPrev != swrObjHang_STATE_SELECT_PLANET) {
+            FUN_0043b1d0(hang);
+        }
+
+        swrObjHang_courseInfoItemKinds[0] = 0xff;
+        swrObjHang_courseInfoItemKinds[1] = 0xff;
+        swrObjHang_courseInfoItemKinds[2] = 0xff;
+        swrObjHang_courseInfoItemKinds[3] = 0xff;
+        swrObjHang_courseInfoItemKinds[4] = 0xff;
+        swrObjHang_courseInfoItemKinds[5] = 0xff;
+        swrObjHang_courseInfoItemKinds[6] = 0xff;
+        swrObjHang_courseInfoItemKinds[7] = 0xff;
+        swrObjHang_courseInfoItemKinds[8] = 0xff;
+        swrObjHang_courseInfoItemKinds[9] = 0xff;
+        swrObjHang_courseInfoItemKinds[10] = 0xff;
+        swrObjHang_courseInfoItemKinds[11] = 0xff;
+        swrObjHang_courseInfoItemCount = 0;
+
+        if (swrUI_Front_BeatEverything1stPlace(hang)) {
+            iVar6 = swrObjHang_courseInfoItemCount;
+            swrObjHang_courseInfoItemCount = swrObjHang_courseInfoItemCount + 1;
+            swrObjHang_courseInfoItemKinds[iVar6] = 0;
+        }
+        if (!hang->isTournamentMode) {
+            iVar3 = swrObjHang_courseInfoItemCount + 1;
+            swrObjHang_courseInfoItemKinds[swrObjHang_courseInfoItemCount] = 2;
+            if (hang->timeAttackMode != 0) {
+                goto LAB_0043b9b4;
+            }
+            swrObjHang_courseInfoItemCount = swrObjHang_courseInfoItemCount + 2;
+            swrObjHang_courseInfoItemKinds[iVar3] = 3;
+            swrObjHang_courseInfoItemKinds[swrObjHang_courseInfoItemCount] = 4;
+        } else {
+            int32_t NumUnlockedTracks = VerifySelectedTrack_delta(hang, swrRace_MenuSelectedItem);
+            iVar6 = isTrackUnlocked(hang->circuitIdx, NumUnlockedTracks);
+            iVar3 = swrObjHang_courseInfoItemCount;
+            if (iVar6 == 0) {
+                goto LAB_0043b9b4;
+            }
+            swrObjHang_courseInfoItemKinds[swrObjHang_courseInfoItemCount] = 1;
+        }
+        iVar3 = swrObjHang_courseInfoItemCount + 1;
+    }
+
+LAB_0043b9b4:
+
+    swrObjHang_courseInfoItemCount = iVar3;
+    const int32_t NumUnlockedTracks = VerifySelectedTrack_delta(hang, swrRace_MenuSelectedItem);
+    const uint8_t ReqPlaceToProcceed =
+        GetRequiredPlaceToProceed(hang->circuitIdx, NumUnlockedTracks);
+
+    // PosY is the fixed base row; swrUI_Front_TextMenu offsets each entry by (i * lineHeight),
+    // so PosY must NOT be advanced per row -- doing so applied the offset twice and
+    // double-spaced the race options. Multi-line entries still add explicit PosY+N offsets.
+    int32_t PosY = 160;
+    if (swrObjHang_courseInfoLeaving == 0 && swrObjHang_courseInfoItemCount > 0) {
+        for (int8_t i = 0; i < swrObjHang_courseInfoItemCount; i++) {
+            if (swrObjHang_courseInfoItemKinds[i] > 6) {
+                assert(false);
+                continue;
+            }
+
+            char *pText = NULL;
+            switch (swrObjHang_courseInfoItemKinds[i]) {
+                case 0: {
+                    pText = swrText_Translate(g_pTxtMirror);
+                    swrUI_Front_TextMenu(hang, 30, PosY, 10, swrObjHang_courseInfoSelectedRow, i, pText);
+                    if (hang->bMirror != 0) {
+                        pText = swrText_Translate(g_pTxtOn);
+                        uVar13 = (int8_t) swrObjHang_courseInfoSelectedRow;
+                        goto LAB_0043be29;
+                    }
+                    pText = swrText_Translate(g_pTxtOff);
+                    goto LAB_0043be20;
+                }
+
+                // Tournament track winnings
+                case 1: {
+                    if (hang->WinningsID == 1) {
+                        pText = swrText_Translate(g_pTxtFair);
+                    } else if (hang->WinningsID == 2) {
+                        pText = swrText_Translate(g_pTxtSkilled);
+                    } else// == 3
+                    {
+                        assert(hang->WinningsID == 3);
+                        pText = swrText_Translate(g_pTxtWinnerTakesAll);
+                    }
+
+                    swrUI_Front_TextMenu(hang, 30, PosY, 10, swrObjHang_courseInfoSelectedRow, i,
+                                         swrText_Translate(g_pTxtWinnings));
+                    swrUI_Front_TextMenu(hang, 85, PosY, 10, swrObjHang_courseInfoSelectedRow, i, pText);
+
+                    swrUI_Front_TextMenu(hang, 45, PosY + 10, 10, swrObjHang_courseInfoSelectedRow, i,
+                                         swrText_Translate(g_pTxt1st));
+                    swrUI_Front_TextMenu(hang, 45, PosY + 20, 10, swrObjHang_courseInfoSelectedRow, i,
+                                         swrText_Translate(g_pTxt2nd));
+                    swrUI_Front_TextMenu(hang, 45, PosY + 30, 10, swrObjHang_courseInfoSelectedRow, i,
+                                         swrText_Translate(g_pTxt3rd));
+                    if (ReqPlaceToProcceed == 4) {
+                        swrUI_Front_TextMenu(hang, 45, PosY + 40, 10, swrObjHang_courseInfoSelectedRow, i,
+                                             swrText_Translate(g_pTxt4th));
+                    }
+
+                    uint16_t PosYIt = PosY + 10;
+                    for (int8_t j = 0; j < ReqPlaceToProcceed; j++) {
+                        float fTruguts = 1.0 + hang->circuitIdx * 0.5;
+                        fTruguts *= hang->winnings.truguts[hang->WinningsID - 1][j];
+                        pText = swrText_Translate("~f0~r~s%d");
+                        sprintf(local_40, pText, (int) fTruguts);
+                        swrUI_Front_TextMenu(hang, 105, PosYIt, 10, swrObjHang_courseInfoSelectedRow, i, local_40);
+                        PosYIt = PosYIt + 10;
+                    }
+
+                    continue;
+                }
+                case 2: {
+                    pText = swrText_Translate("~f0~s%d");
+                    sprintf(local_40, pText, hang->numLaps);
+                    pText = g_pTxtLaps;
+                    break;
+                }
+                case 3: {
+                    pText = swrText_Translate("~f0~s%d");
+                    sprintf(local_40, pText, nb_AI_racers);
+                    if (hang->num_local_players > 1) {
+                        pText = swrText_Translate("~f0~s%d");
+                        sprintf(local_40, pText, swrObjHang_splitscreenRacerCount);
+                    }
+                    pText = g_pTxtRacers;
+                    goto LAB_0043bd30;
+                }
+                case 4: {
+                    if (hang->AISpeed == 1) {
+                        pText = swrText_Translate(g_pTxtSlow);
+                    } else if (hang->AISpeed == 2) {
+                        pText = swrText_Translate(g_pTxtAverage);
+                    } else {
+                        pText = swrText_Translate(g_pTxtFast);
+                    }
+                    sprintf(local_40, pText);
+                    pText = g_pTxtAISpeed;
+
+                LAB_0043bd30:
+                    pText = swrText_Translate(pText);
+                    swrUI_Front_TextMenu(hang, 30, PosY, 10, swrObjHang_courseInfoSelectedRow, i, pText);
+                    pText = local_40;
+                    uVar13 = swrObjHang_courseInfoSelectedRow;
+                    goto LAB_0043be29;
+                }
+                case 5: {
+                    pText = swrText_Translate(g_pTxtDemoMode);
+                    swrUI_Front_TextMenu(hang, 30, PosY, 10, swrObjHang_courseInfoSelectedRow, i, pText);
+                    if (hang->demo_mode != 0) {
+                        pText = swrText_Translate(g_pTxtOn);
+                        goto LAB_0043be20;
+                    }
+                    pText = swrText_Translate(g_pTxtOff);
+                    uVar13 = swrObjHang_courseInfoSelectedRow;
+                    goto LAB_0043be29;
+                }
+                case 6: {
+                    if (hang->unk68_type < 0) {
+                        pText = swrText_Translate(g_pTxtOff2);
+                        sprintf(local_40, pText);
+                    } else {
+                        pText = swrText_Translate("~s%d");
+                        sprintf(local_40, pText, hang->unk68_type + 1);
+                    }
+                    pText = g_pTxtCutscene;
+                }
+            }
+            pText = swrText_Translate(pText);
+            swrUI_Front_TextMenu(hang, 30, PosY, 10, (char) swrObjHang_courseInfoSelectedRow, i, pText);
+            pText = local_40;
+
+        LAB_0043be20:
+            uVar13 = swrObjHang_courseInfoSelectedRow;
+
+        LAB_0043be29:
+            swrUI_Front_TextMenu(hang, 85, PosY, 10, uVar13, i, pText);
+        }
+    }
+
+    if (swrObjHang_courseInfoLeaving == 0) {
+        uVar18 = 0x40533333;
+    } else {
+        uVar18 = 0xc0533333;
+    }
+
+    FUN_00469b90(uVar18);
+
+    TrackInfo trackInfo = GetTrackInfo(hang->track_index);
+    if (swrRace_Transition > 0.0) {
+        DrawHoloPlanet(hang, trackInfo.PlanetIdx, swrRace_Transition * 0.5);
+    }
+
+    if (swrObjHang_courseInfoLeaving == 0 && swrObjHang_courseInfoLeaving == 0) {
+        if (hang->track_index < DEFAULT_NB_TRACKS) {
+            DrawTrackPreview(hang, hang->track_index, 0.5);
+        }
+
+        // Track Name
+        char *pTrackName = swrUI_GetTrackNameFromId_delta(hang->track_index);
+        pTrackName = swrText_Translate(pTrackName);
+        sprintf(local_40, "~c~s%s", pTrackName);
+        swrText_CreateTextEntry1(160, 37, 0, 0xff, 0, 0xff, local_40);
+        FUN_0042de10(local_40, 0);
+        FUN_0042de10(local_40, 0);
+        swrUI_Front_MenuAxisHorizontal(NULL, 38);
+
+        if (hang->track_index < DEFAULT_NB_TRACKS) {
+            swrUI_Front_DrawRecord(hang, 100, 55, 255.0, 0);
+            swrUI_Front_DrawRecord(hang, 220, 55, 255.0, 3);
+
+            // Record 3 Laps
+            iVar6 = hang->bMirror + hang->track_index * 2;
+            if (hang->track_index < DEFAULT_NB_TRACKS && swrRace_saveData.record3LapTimes[iVar6] < 3599.0f) {
+
+                uint8_t PilotIdx = swrRace_saveData.record3LapPilots[iVar6];
+                char *pNameFirst = swrText_Translate(swrRacer_PodData[PilotIdx].name);
+                char *pNameLast = swrText_Translate(swrRacer_PodData[PilotIdx].lastname);
+
+                sprintf(local_40, "~f4~c~s%s %s", pNameFirst, pNameLast);
+                swrText_CreateTextEntry1(100, 78, 163, 190, 17, 255, local_40);
+                swrSprite_SetVisible(23 + PilotIdx, true);
+                swrSprite_SetPos(23 + PilotIdx, 84, 85);
+                swrSprite_SetDim(23 + PilotIdx, 0.5, 0.5);
+                swrSprite_SetColor(23 + PilotIdx, 255, 255, 255, 255);
+            }
+
+            // Record Best Lap
+            iVar6 = hang->bMirror + hang->track_index * 2;
+            if (hang->track_index < DEFAULT_NB_TRACKS && swrRace_saveData.recordLapTimes[iVar6] < 3599.0f) {
+                uint8_t PilotIdx = swrRace_saveData.recordLapPilots[iVar6];
+                char *pNameFirst = swrText_Translate(swrRacer_PodData[PilotIdx].name);
+                char *pNameLast = swrText_Translate(swrRacer_PodData[PilotIdx].lastname);
+                sprintf(local_40, "~f4~c~s%s %s", pNameFirst, pNameLast);
+
+                swrText_CreateTextEntry1(220, 78, 163, 190, 17, 255, local_40);
+                swrSprite_SetVisible(46 + PilotIdx, true);
+                swrSprite_SetPos(46 + PilotIdx, 204, 85);
+                swrSprite_SetDim(46 + PilotIdx, 0.5, 0.5);
+                swrSprite_SetColor(46 + PilotIdx, 255, 255, 255, 255);
+            }
+        } else {
+
+            swrText_CreateTextEntry1(160, 75, 50, 255, 255, 255, "~f5~s~cRecords not available");
+            swrText_CreateTextEntry1(160, 90, 50, 255, 255, 255, "~f5~s~cfor custom tracks");
+        }
+
+        // Track Favorite
+        uint8_t FavPilotIdx = trackInfo.FavoritePilot;
+        char *pNameFirst = swrText_Translate(swrRacer_PodData[FavPilotIdx].name);
+        char *pNameLast = swrText_Translate(swrRacer_PodData[FavPilotIdx].lastname);
+
+        swrText_CreateTextEntry1(240, 130, 50, 255, 255, 255,
+                                 swrText_Translate(g_pTxtTrackFavorite));
+        sprintf(local_40, "~f4~c~s%s %s", pNameFirst, pNameLast);
+        swrText_CreateTextEntry1(240, 137, 163, 190, 17, 255, local_40);
+        // The favorite portrait uses the "+0" pilot-face sprite group (slots [0,23)), whose low
+        // indices are shared with other front-end sprites that overwrite the slot's texture -- most
+        // visibly slot 0, so the favorite comes up blank whenever the favorite pilot is Anakin
+        // (index 0). The same pilot's face also lives in the "+23"/"+46" record-portrait groups,
+        // which only ever get their position/visibility/color changed (never their texture), so
+        // restore the favorite slot's face from its intact "+23" sibling before drawing it.
+        swrSprite_NewSprite(FavPilotIdx, swrSprite_array[FavPilotIdx + 23].texture);
+        swrSprite_SetVisible(FavPilotIdx, true);
+        swrSprite_SetPos(FavPilotIdx, 208, 145);
+        swrSprite_SetDim(FavPilotIdx, 1.0, 1.0);
+        swrSprite_SetColor(FavPilotIdx, 255, 255, 255, 255);
+
+        // "Must place xxx or better to progress"
+        if (hang->isTournamentMode) {
+            iVar6 = VerifySelectedTrack_delta(hang, swrRace_MenuSelectedItem);
+            iVar6 = isTrackUnlocked(hang->circuitIdx, iVar6);
+            if (iVar6 != 0) {
+                char *pMinPlace = ReqPlaceToProcceed == 3 ? g_pTxtMinPlace3rd : g_pTxtMinPlace4th;
+                pMinPlace = swrText_Translate(pMinPlace);
+                swrText_CreateTextEntry1(160, 115, 163, 190, 17, 255, pMinPlace);
+            }
+        }
+
+        if (swrObjHang_courseInfoLeaving == 0 && swrRace_Transition >= 1.0) {
+            if (swrMultiplayer_menuOverlayActive == 0) {
+                if (swrControl_menuAcceptPressedEdge != 0 && swrObjHang_menuAcceptLock == 0) {
+                    FUN_00440550(84);
+                    if (!hang->isTournamentMode) {
+                        if (hang->timeAttackMode == 0) {
+                            if (hang->num_local_players < 2) {
+                                if (hang->demo_mode == 0 || nb_AI_racers != 2) {
+                                    hang->num_players = nb_AI_racers;
+                                } else {
+                                    hang->num_players = 1;
+                                }
+                            } else {
+                                hang->num_players = swrObjHang_splitscreenRacerCount;
+                            }
+                        } else {
+                            hang->num_players = 1;
+                        }
+                    } else {
+                        hang->num_players = 12;
+                    }
+                    swrObjHang_InitTrackSprites_delta(hang, false);
+                    FUN_0045bee0(hang, 0x24, 3, 0);
+                    swrObjHang_courseInfoLeaving = 1;
+                    return;
+                }
+                if (swrControl_cancelPressedEdge != 0 && swrObjHang_menuAcceptLock == 0) {
+
+                    FUN_00440550(36);
+                    swrObjHang_InitTrackSprites_delta(hang, false);
+                    swrObjHang_SetMenuState(hang, swrObjHang_STATE_SELECT_PLANET);
+                    return;
+                }
+            }
+            if (swrObjHang_courseInfoItemCount > 1) {
+                if ((swrUI_localPlayersInputPressedBitset[0] & 0x4000) != 0) {
+                    swrObjHang_courseInfoSelectedRow--;
+                    FUN_00440550(88);
+                }
+                if ((swrUI_localPlayersInputPressedBitset[0] & 0x8000) != 0) {
+                    swrObjHang_courseInfoSelectedRow++;
+                    FUN_00440550(88);
+                }
+                if (swrObjHang_courseInfoSelectedRow < 0) {
+                    swrObjHang_courseInfoSelectedRow = swrObjHang_courseInfoItemCount - 1;
+                }
+                if ((swrObjHang_courseInfoItemCount - 1) < swrObjHang_courseInfoSelectedRow) {
+                    swrObjHang_courseInfoSelectedRow = 0;
+                }
+            }
+            if (swrObjHang_courseInfoItemCount > 0) {
+                if ((swrUI_localPlayersInputPressedBitset[0] & 0x20000) != 0) {
+                    switch (swrObjHang_courseInfoItemKinds[swrObjHang_courseInfoSelectedRow]) {
+                        case 0: {
+                            hang->bMirror = hang->bMirror == 0;
+                            break;
+                        }
+                        case 1: {
+                            hang->WinningsID++;
+                            break;
+                        }
+                        case 2: {
+                            // High-lap mod: coarse stepping so big lap counts stay reachable. Fine
+                            // control (1-5) is preserved for standard races; +5 beyond that. Cap is
+                            // 125 because numLaps is a signed char (>127 would overflow); the race
+                            // engine itself (int judge->num_laps) handles far more. Compute the next
+                            // value in an int and wrap to 1 explicitly: 125 + 5 would overflow the
+                            // char to negative before the >125 guard below could catch it, leaving
+                            // forward-wrap stuck (the <1 guard would bounce it back to 125).
+                            int nextLaps = (int) hang->numLaps + (hang->numLaps < 5 ? 1 : 5);
+                            hang->numLaps = (char) (nextLaps > 125 ? 1 : nextLaps);
+                            break;
+                        }
+                        case 3: {
+                            if (hang->num_local_players < 2) {
+                                if (nb_AI_racers == 1) {
+                                    nb_AI_racers = 2;
+                                } else if (nb_AI_racers < 20) {
+                                    nb_AI_racers += 2;
+                                }
+                            } else {
+                                cVar4 = swrObjHang_splitscreenRacerCount + 2;
+                                swrObjHang_splitscreenRacerCount = cVar4;
+                                if (cVar4 == 8) {
+                                    swrObjHang_splitscreenRacerCount = 2;
+                                }
+                            }
+                            break;
+                        }
+                        case 4: {
+                            hang->AISpeed++;
+                            break;
+                        }
+                        case 5: {
+                            hang->demo_mode = hang->demo_mode == 0;
+                            break;
+                        }
+                        case 6: {
+                            hang->unk68_type++;
+                        }
+                    }
+                    FUN_00440550(88);
+                }
+                if ((swrUI_localPlayersInputPressedBitset[0] & 0x10000) != 0) {
+
+                    switch (swrObjHang_courseInfoItemKinds[swrObjHang_courseInfoSelectedRow]) {
+                        case 0: {
+                            hang->bMirror = hang->bMirror == 0;
+                            break;
+                        }
+                        case 1: {
+                            hang->WinningsID--;
+                            break;
+                        }
+                        case 2: {
+                            hang->numLaps -= hang->numLaps <= 5 ? 1 : 5;
+                            break;
+                        }
+                        case 3: {
+                            if (hang->num_local_players < 2) {
+                                if (nb_AI_racers == 2) {
+                                    nb_AI_racers = 1;
+                                } else if (nb_AI_racers > 2) {
+                                    nb_AI_racers -= 2;
+                                }
+                            } else {
+                                cVar4 = swrObjHang_splitscreenRacerCount - 2;
+                                swrObjHang_splitscreenRacerCount = cVar4;
+                                if (cVar4 == 0) {
+                                    swrObjHang_splitscreenRacerCount = 6;
+                                }
+                            }
+                            break;
+                        }
+                        case 4: {
+                            hang->AISpeed--;
+                            break;
+                        }
+                        case 5: {
+                            hang->demo_mode = hang->demo_mode == 0;
+                            break;
+                        }
+                        case 6: {
+                            hang->unk68_type--;
+                            break;
+                        }
+                    }
+                    FUN_00440550(88);
+                }
+            }
+
+            if (hang->numLaps < 1) {
+                hang->numLaps = 125;
+            }
+            if (hang->numLaps > 125) {
+                hang->numLaps = 1;
+            }
+            if (hang->AISpeed < 1) {
+                hang->AISpeed = 3;
+            }
+            if (hang->AISpeed > 3) {
+                hang->AISpeed = 1;
+            }
+            if (hang->WinningsID < 1) {
+                hang->WinningsID = 3;
+            }
+            if (hang->WinningsID > 3) {
+                hang->WinningsID = 1;
+            }
+            if (hang->unk68_type < -1) {
+                hang->unk68_type = 20;
+            }
+            if (hang->unk68_type > 20) {
+                hang->unk68_type = -1;
+            }
+
+            if (swrMultiplayer_IsMultiplayerEnabled() || swrMultiplayer_IsHost() != 0) {
+                g_LoadTrackModel = trackInfo.trackID;
+                FUN_0041e5a0();
+            }
+        }
+    }
+}
+
+// 0x00440620
+char *swrUI_GetTrackNameFromId_delta(int trackId) {
+
+    if (trackId >= trackCount) {
+        fprintf(hook_log, "trackId %d is bigger than the number of tracks %d\n", trackId,
+                trackCount);
+        fflush(hook_log);
+        assert(false);
+        return "Invalid Track!";
+    }
+
+    switch (trackId) {
+        case 0:
+            return swrText_Translate(g_pTxtTrackID_00);
+        case 1:
+            return swrText_Translate(g_pTxtTrackID_01);
+        case 2:
+            return swrText_Translate(g_pTxtTrackID_02);
+        case 3:
+            return swrText_Translate(g_pTxtTrackID_03);
+        case 4:
+            return swrText_Translate(g_pTxtTrackID_04);
+        case 5:
+            return swrText_Translate(g_pTxtTrackID_05);
+        case 6:
+            return swrText_Translate(g_pTxtTrackID_06);
+        case 7:
+            return swrText_Translate(g_pTxtTrackID_07);
+        case 8:
+            return swrText_Translate(g_pTxtTrackID_08);
+        case 9:
+            return swrText_Translate(g_pTxtTrackID_09);
+        case 10:
+            return swrText_Translate(g_pTxtTrackID_10);
+        case 11:
+            return swrText_Translate(g_pTxtTrackID_11);
+        case 12:
+            return swrText_Translate(g_pTxtTrackID_12);
+        case 13:
+            return swrText_Translate(g_pTxtTrackID_13);
+        case 14:
+            return swrText_Translate(g_pTxtTrackID_14);
+        case 15:
+            return swrText_Translate(g_pTxtTrackID_15);
+        case 16:
+            return swrText_Translate(g_pTxtTrackID_16);
+        case 17:
+            return swrText_Translate(g_pTxtTrackID_17);
+        case 18:
+            return swrText_Translate(g_pTxtTrackID_18);
+        case 19:
+            return swrText_Translate(g_pTxtTrackID_19);
+        case 20:
+            return swrText_Translate(g_pTxtTrackID_20);
+        case 21:
+            return swrText_Translate(g_pTxtTrackID_21);
+        case 22:
+            return swrText_Translate(g_pTxtTrackID_22);
+        case 23:
+            return swrText_Translate(g_pTxtTrackID_23);
+        case 24:
+            return swrText_Translate(g_pTxtTrackID_24);
+    }
+
+    // DELTA
+    return g_aCustomTrackNames[trackId - DEFAULT_NB_TRACKS];
+}
+
+// 0x00440aa0
+bool isTrackPlayable_delta(swrObjHang *hang, char circuitIdx, char trackIdx) {
+    // DELTA custom circuits
+    if (circuitIdx >= 4)
+        return true;
+
+    uint8_t tracksBitMask = swrRace_UnlockDataBase[circuitIdx + 1];
+    if ((multiplayer_enabled != 0) && (circuitIdx < '\x03')) {
+        return true;
+    }
+    if (!hang->isTournamentMode) {
+        tracksBitMask = g_aBeatTracksGlobal[circuitIdx];
+    }
+    return ((uint8_t) (1 << (trackIdx)) & tracksBitMask) != 0;
+}
+
+// 0x00440af0
+int VerifySelectedTrack_delta(swrObjHang *hang, int selectedTrackIdx) {
+    bool bIsPlayable;
+    uint8_t trackCount = 0;
+    // DELTA
+    const uint8_t numTracks = GetTrackCount(hang->circuitIdx);
+    if (numTracks == 0) {
+        fprintf(hook_log, "Error: Number of tracks for circuit %d is zero !\n", hang->circuitIdx);
+        fflush(hook_log);
+        return -1;
+    }
+    while ((bIsPlayable = isTrackPlayable_delta(hang, hang->circuitIdx, trackCount),
+            !bIsPlayable || (trackCount != selectedTrackIdx))) {
+
+        trackCount++;
+        if (trackCount >= numTracks) {
+            fprintf(
+                hook_log,
+                "Error: Track count %d exceeds the number of tracks %d, with selected track %d\n",
+                trackCount, numTracks, selectedTrackIdx);
+            fflush(hook_log);
+            return -1;
+        }
+    }
+    return trackCount;
+}
+
+// 0x004584a0
+void swrObjHang_InitTrackSprites_delta(swrObjHang *hang, int initTracks) {
+    // Taking sprite slots [130, 162[
+    for (uint16_t imgId = 130; imgId < 162; imgId++) {
+        swrSprite_NewSprite(imgId, hang->sprite_whitesquare_rgb);
+    }
+
+    // DELTA
+    // Reset custom track images
+    for (uint16_t imgId = 256; imgId < 400; imgId++) {
+        swrSprite_NewSprite(imgId, NULL);
+    }
+
+    if (initTracks) {
+        const int32_t NumCircuits = GetCircuitCount(!hang->isTournamentMode);
+
+        for (int32_t circuitId = 0; circuitId < NumCircuits; circuitId++) {
+            for (int32_t trackId = 0; trackId < DEFAULT_NB_CIRCUIT; trackId++) {
+                const uint16_t totalTrackId = circuitId * DEFAULT_NB_CIRCUIT + trackId;
+
+                // Init track background
+                const uint16_t imgIdxBack = GetImgStartBackground(totalTrackId);
+                swrSprite_NewSprite(imgIdxBack, hang->award_wdw_blue_rgb);
+                swrSprite_SetFlag(imgIdxBack, 0x8000);
+
+                // Init track border
+                const uint16_t imgIdxBorder = GetImgStartBorder(totalTrackId);
+                swrSprite_NewSprite(imgIdxBorder, hang->award_wdw_select_blue_rgb);
+                swrSprite_SetFlag(imgIdxBorder, 0x8000);
+
+                if (hang->isTournamentMode) {
+                    assert(circuitId < DEFAULT_NB_CIRCUIT_PER_TRACK);
+                    const uint8_t Bits = trackId * 2;
+                    const uint16_t Beat = (g_aBeatTrackPlace[circuitId] >> Bits) & 3;
+
+                    switch (Beat) {
+                        // 3rd place
+                        case 1: {
+                            swrSprite_NewSprite(imgIdxBack, hang->award_third_rgb);
+                            break;
+                        }
+
+                        // 2nd place
+                        case 2: {
+                            swrSprite_NewSprite(imgIdxBack, hang->award_second_rgb);
+                            break;
+                        }
+
+                        // 1st place
+                        case 3: {
+                            swrSprite_NewSprite(imgIdxBack, hang->award_first_rgb);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

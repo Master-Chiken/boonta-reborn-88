@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/tools/route_graph_format/schema.json",
+  "title": "Boonta neutral route graph v1",
+  "description": "Clean-room logical route graph. Not a binary parser or a claim of original-platform layout parity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format", "schema_version", "route_id", "name", "source", "units",
+    "closed_loop", "start_node_id", "nodes", "edges"
+  ],
+  "properties": {
+    "format": { "const": "boonta-route-graph-v1" },
+    "schema_version": { "const": 1 },
+    "route_id": { "$ref": "#/$defs/id" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": ".*\\S.*" },
+    "source": { "$ref": "#/$defs/source" },
+    "units": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["distance", "lateral_axis", "up_axis", "forward_axis"],
+      "properties": {
+        "distance": { "const": "metres" },
+        "lateral_axis": { "const": "x" },
+        "up_axis": { "const": "y" },
+        "forward_axis": { "const": "z" }
+      }
+    },
+    "closed_loop": { "type": "boolean" },
+    "start_node_id": { "$ref": "#/$defs/id" },
+    "nodes": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8192,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16384,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "metadata": { "type": "object" }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+    },
+    "finiteNumber": {
+      "type": "number",
+      "minimum": -1000000,
+      "maximum": 1000000
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" },
+        { "$ref": "#/$defs/finiteNumber" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform"],
+      "properties": {
+        "platform": {
+          "enum": ["synthetic", "windows-pc", "n64", "dreamcast", "gamecube", "wii", "unknown"]
+        },
+        "release": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": ".*\\S.*" },
+        "revision": { "type": "string", "minLength": 1, "maxLength": 120, "pattern": ".*\\S.*" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "position"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "position": { "$ref": "#/$defs/vec3" },
+        "up": { "$ref": "#/$defs/vec3" },
+        "metadata": { "type": "object" }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "number", "minimum": 0, "maximum": 1 },
+        "end": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "surfaceSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t", "surface_id"],
+      "properties": {
+        "t": { "type": "number", "minimum": 0, "maximum": 1 },
+        "surface_id": { "$ref": "#/$defs/id" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "curve", "progress"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "from": { "$ref": "#/$defs/id" },
+        "to": { "$ref": "#/$defs/id" },
+        "curve": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "control1", "control2"],
+              "properties": {
+                "type": { "const": "cubic_bezier" },
+                "control1": { "$ref": "#/$defs/vec3" },
+                "control2": { "$ref": "#/$defs/vec3" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "control_node_ids"],
+              "properties": {
+                "type": { "const": "uniform_cubic_bspline" },
+                "control_node_ids": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "items": { "$ref": "#/$defs/id" }
+                }
+              }
+            }
+          ]
+        },
+        "progress": { "$ref": "#/$defs/progress" },
+        "surface_binding": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/surfaceSample" }
+        },
+        "metadata": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,564 @@
+#include "Window_delta.h"
+#include "swrGamepadNav_delta.h"
+#include "window_mode.h"
+
+#include <stdio.h>
+#include <Windows.h>
+#include <commctrl.h>
+
+#include "globals.h"
+
+#include "stdPlatform.h"
+
+#include <macros.h>
+#include <Gui/swrGui.h>
+#include <Main/swrControl.h>
+#include <Platform/std3D.h>
+#include <Platform/stdControl.h>
+#include <Swr/swrDisplay.h>
+#include <Win95/stdDisplay.h>
+#include <Win95/Window.h>
+#include <Main/swrMain.h>
+#include <Main/swrMain2.h>
+#include <Swr/swrUI.h>
+
+int stdDisplay_Update_Hook();
+
+// Fresh accept/cancel skip edge (defined in swrControl_delta.cpp): 1 for one frame on a genuine
+// press, never for a held key. Used to skip the Smush cinematic without the race-start key bleeding.
+extern int g_cutscene_skip_edge;
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+// Sound card
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
+extern char show_imgui;
+
+const static int glfw_key_to_dik[] = {
+    [GLFW_KEY_SPACE] = DIK_SPACE,
+    [GLFW_KEY_APOSTROPHE] = DIK_APOSTROPHE,
+    [GLFW_KEY_COMMA] = DIK_COMMA,
+    [GLFW_KEY_MINUS] = DIK_MINUS,
+    [GLFW_KEY_PERIOD] = DIK_PERIOD,
+    [GLFW_KEY_SLASH] = DIK_SLASH,
+    [GLFW_KEY_0] = DIK_0,
+    [GLFW_KEY_1] = DIK_1,
+    [GLFW_KEY_2] = DIK_2,
+    [GLFW_KEY_3] = DIK_3,
+    [GLFW_KEY_4] = DIK_4,
+    [GLFW_KEY_5] = DIK_5,
+    [GLFW_KEY_6] = DIK_6,
+    [GLFW_KEY_7] = DIK_7,
+    [GLFW_KEY_8] = DIK_8,
+    [GLFW_KEY_9] = DIK_9,
+    [GLFW_KEY_SEMICOLON] = DIK_SEMICOLON,
+    [GLFW_KEY_EQUAL] = DIK_EQUALS,
+    [GLFW_KEY_A] = DIK_A,
+    [GLFW_KEY_B] = DIK_B,
+    [GLFW_KEY_C] = DIK_C,
+    [GLFW_KEY_D] = DIK_D,
+    [GLFW_KEY_E] = DIK_E,
+    [GLFW_KEY_F] = DIK_F,
+    [GLFW_KEY_G] = DIK_G,
+    [GLFW_KEY_H] = DIK_H,
+    [GLFW_KEY_I] = DIK_I,
+    [GLFW_KEY_J] = DIK_J,
+    [GLFW_KEY_K] = DIK_K,
+    [GLFW_KEY_L] = DIK_L,
+    [GLFW_KEY_M] = DIK_M,
+    [GLFW_KEY_N] = DIK_N,
+    [GLFW_KEY_O] = DIK_O,
+    [GLFW_KEY_P] = DIK_P,
+    [GLFW_KEY_Q] = DIK_Q,
+    [GLFW_KEY_R] = DIK_R,
+    [GLFW_KEY_S] = DIK_S,
+    [GLFW_KEY_T] = DIK_T,
+    [GLFW_KEY_U] = DIK_U,
+    [GLFW_KEY_V] = DIK_V,
+    [GLFW_KEY_W] = DIK_W,
+    [GLFW_KEY_X] = DIK_X,
+    [GLFW_KEY_Y] = DIK_Y,
+    [GLFW_KEY_Z] = DIK_Z,
+    [GLFW_KEY_LEFT_BRACKET] = DIK_LBRACKET,
+    [GLFW_KEY_BACKSLASH] = DIK_BACKSLASH,
+    [GLFW_KEY_RIGHT_BRACKET] = DIK_RBRACKET,
+    [GLFW_KEY_GRAVE_ACCENT] = DIK_GRAVE,
+    [GLFW_KEY_ESCAPE] = DIK_ESCAPE,
+    [GLFW_KEY_ENTER] = DIK_RETURN,
+    [GLFW_KEY_TAB] = DIK_TAB,
+    [GLFW_KEY_BACKSPACE] = DIK_BACKSPACE,
+    [GLFW_KEY_INSERT] = DIK_INSERT,
+    [GLFW_KEY_DELETE] = DIK_DELETE,
+    [GLFW_KEY_RIGHT] = DIK_RIGHT,
+    [GLFW_KEY_LEFT] = DIK_LEFT,
+    [GLFW_KEY_DOWN] = DIK_DOWN,
+    [GLFW_KEY_UP] = DIK_UP,
+    [GLFW_KEY_PAGE_UP] = DIK_PGUP,
+    [GLFW_KEY_PAGE_DOWN] = DIK_PGDN,
+    [GLFW_KEY_HOME] = DIK_HOME,
+    [GLFW_KEY_END] = DIK_END,
+    [GLFW_KEY_CAPS_LOCK] = DIK_CAPSLOCK,
+    [GLFW_KEY_SCROLL_LOCK] = DIK_SCROLL,
+    [GLFW_KEY_NUM_LOCK] = DIK_NUMLOCK,
+    [GLFW_KEY_PAUSE] = DIK_PAUSE,
+    [GLFW_KEY_F1] = DIK_F1,
+    [GLFW_KEY_F2] = DIK_F2,
+    [GLFW_KEY_F3] = DIK_F3,
+    [GLFW_KEY_F4] = DIK_F4,
+    [GLFW_KEY_F5] = DIK_F5,
+    [GLFW_KEY_F6] = DIK_F6,
+    [GLFW_KEY_F7] = DIK_F7,
+    [GLFW_KEY_F8] = DIK_F8,
+    [GLFW_KEY_F9] = DIK_F9,
+    [GLFW_KEY_F10] = DIK_F10,
+    [GLFW_KEY_F11] = DIK_F11,
+    [GLFW_KEY_F12] = DIK_F12,
+    [GLFW_KEY_F13] = DIK_F13,
+    [GLFW_KEY_F14] = DIK_F14,
+    [GLFW_KEY_F15] = DIK_F15,
+    [GLFW_KEY_KP_0] = DIK_NUMPAD0,
+    [GLFW_KEY_KP_1] = DIK_NUMPAD1,
+    [GLFW_KEY_KP_2] = DIK_NUMPAD2,
+    [GLFW_KEY_KP_3] = DIK_NUMPAD3,
+    [GLFW_KEY_KP_4] = DIK_NUMPAD4,
+    [GLFW_KEY_KP_5] = DIK_NUMPAD5,
+    [GLFW_KEY_KP_6] = DIK_NUMPAD6,
+    [GLFW_KEY_KP_7] = DIK_NUMPAD7,
+    [GLFW_KEY_KP_8] = DIK_NUMPAD8,
+    [GLFW_KEY_KP_9] = DIK_NUMPAD9,
+    [GLFW_KEY_KP_DECIMAL] = DIK_NUMPADCOMMA,
+    [GLFW_KEY_KP_DIVIDE] = DIK_NUMPADSLASH,
+    [GLFW_KEY_KP_MULTIPLY] = DIK_NUMPADSTAR,
+    [GLFW_KEY_KP_SUBTRACT] = DIK_NUMPADMINUS,
+    [GLFW_KEY_KP_ADD] = DIK_NUMPADPLUS,
+    [GLFW_KEY_KP_ENTER] = DIK_NUMPADENTER,
+    [GLFW_KEY_KP_EQUAL] = DIK_NUMPADEQUALS,
+    [GLFW_KEY_LEFT_SHIFT] = DIK_LSHIFT,
+    [GLFW_KEY_LEFT_CONTROL] = DIK_LCONTROL,
+    [GLFW_KEY_LEFT_ALT] = DIK_LALT,
+    [GLFW_KEY_LEFT_SUPER] = DIK_LWIN,
+    [GLFW_KEY_RIGHT_SHIFT] = DIK_RSHIFT,
+    [GLFW_KEY_RIGHT_CONTROL] = DIK_RCONTROL,
+    [GLFW_KEY_RIGHT_ALT] = DIK_RALT,
+    [GLFW_KEY_RIGHT_SUPER] = DIK_RWIN,
+    [GLFW_KEY_MENU] = DIK_RMENU,
+};
+
+int g_window_mode = WINDOW_MODE_WINDOWED;
+
+// Geometry of the last normal windowed state, restored when switching back to windowed.
+static int prev_window_x = 0;
+static int prev_window_y = 0;
+static int prev_window_width = 0;
+static int prev_window_height = 0;
+
+void set_window_mode(int mode) {
+    GLFWwindow *window = glfwGetCurrentContext();
+    if (!window)
+        return;
+
+    // Remember the windowed geometry before leaving a normal windowed state, so it can be
+    // restored later. Don't capture while borderless/fullscreen - that would clobber it.
+    const bool is_fullscreen = glfwGetWindowMonitor(window) != NULL;
+    const bool is_decorated = glfwGetWindowAttrib(window, GLFW_DECORATED);
+    if (!is_fullscreen && is_decorated) {
+        glfwGetWindowPos(window, &prev_window_x, &prev_window_y);
+        glfwGetWindowSize(window, &prev_window_width, &prev_window_height);
+    }
+
+    GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode *vidmode = glfwGetVideoMode(monitor);
+
+    switch (mode) {
+        case WINDOW_MODE_WINDOWED: {
+            const int w = prev_window_width > 0 ? prev_window_width : 1280;
+            const int h = prev_window_height > 0 ? prev_window_height : 720;
+            const int x = prev_window_width > 0 ? prev_window_x : (vidmode->width - w) / 2;
+            const int y = prev_window_height > 0 ? prev_window_y : (vidmode->height - h) / 2;
+            glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+            glfwSetWindowMonitor(window, NULL, x, y, w, h, 0);
+            break;
+        }
+        case WINDOW_MODE_BORDERLESS:
+            glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+            glfwSetWindowMonitor(window, NULL, 0, 0, vidmode->width, vidmode->height, 0);
+            break;
+        case WINDOW_MODE_FULLSCREEN:
+            glfwSetWindowMonitor(window, monitor, 0, 0, vidmode->width, vidmode->height,
+                                 vidmode->refreshRate);
+            break;
+        default:
+            return;
+    }
+
+    g_window_mode = mode;
+}
+
+// Fast restart (speedrunner hotkey), defined in swrObjJdge_delta.cpp. Arms an instant,
+// no-loading-screen race restart; returns true if it consumed the press (feature on + live SP race).
+extern bool fast_restart_try_request(void);
+
+static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS && mods & GLFW_MOD_ALT) {
+        // Alt+Enter toggles windowed <-> exclusive fullscreen; borderless is reachable from
+        // the debug menu dropdown.
+        set_window_mode(g_window_mode == WINDOW_MODE_FULLSCREEN ? WINDOW_MODE_WINDOWED
+                                                                : WINDOW_MODE_FULLSCREEN);
+        persist_settings_ini();
+        return;
+    }
+
+    // Fast restart hotkey (Enter; F2 is the camera toggle, Backspace unreliable on Mac/RDP). Only
+    // consumed during a live single-player race, so Enter keeps its normal menu-confirm role
+    // elsewhere. The restart is deferred to service_fast_restart on the next frame.
+    //
+    // Once we've claimed an Enter press for a restart, swallow the WHOLE hold -- the PRESS, every
+    // GLFW_REPEAT while it stays down, and the final RELEASE. Otherwise the repeats feed the game as
+    // accelerate/accept input during the fresh countdown and burn the boost-start charge (holding
+    // Enter even one extra frame after the reset loses the boost).
+    static bool ate_enter = false;
+    if (key == GLFW_KEY_ENTER && ate_enter) {
+        if (action == GLFW_RELEASE)
+            ate_enter = false;
+        return;
+    }
+    if (key == GLFW_KEY_ENTER && action == GLFW_PRESS && fast_restart_try_request()) {
+        ate_enter = true;
+        return;
+    }
+
+    if (key >= ARRAYSIZE(glfw_key_to_dik))
+        return;
+
+    int dik_key = glfw_key_to_dik[key];
+    if (dik_key == 0)
+        return;
+
+    // Toggle imgui with F5
+    if (key == GLFW_KEY_F5 && action == GLFW_PRESS) {
+        show_imgui ^= 1;
+        persist_settings_ini();
+    }
+
+    const bool pressed = action != GLFW_RELEASE;
+
+#if ENABLE_GLFW_INPUT_HANDLING
+    stdControl_aKeyInfos[dik_key] = pressed;
+    stdControl_g_aKeyPressCounter[dik_key] += pressed;
+#endif
+
+    UINT vk = MapVirtualKeyA(dik_key, MAPVK_VSC_TO_VK);
+    if (vk == 0) {
+        // TODO hack: for some reason the arrow keys return 0 on MapVirtualKeyA...
+        switch (key) {
+            case GLFW_KEY_DOWN:
+                vk = VK_DOWN;
+                break;
+            case GLFW_KEY_UP:
+                vk = VK_UP;
+                break;
+            case GLFW_KEY_LEFT:
+                vk = VK_LEFT;
+                break;
+            case GLFW_KEY_RIGHT:
+                vk = VK_RIGHT;
+                break;
+        }
+    }
+
+    // Window_AddKeyEvent(vk, 0, pressed); <-- not actually used by the game
+    swrUI_HandleKeyEvent(vk, pressed);
+}
+
+static void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+#if ENABLE_GLFW_INPUT_HANDLING
+    const bool pressed = action != GLFW_RELEASE;
+    stdControl_aKeyInfos[512 + button] = pressed;
+    stdControl_g_aKeyPressCounter[512 + button] += pressed;
+#endif
+}
+
+extern FILE *hook_log;
+
+extern void renderer_drawSmushFrame(const SmushImage *image);
+
+// 0x00423ae0
+void Window_SetActivated_delta(HWND hwnd, WPARAM activated) {
+    if (activated != 0) {
+        if (Window_Active == 0) {
+            swrDisplay_SetWindowSize();
+            stdDisplay_Refresh(1);
+            std3D_ClearCacheList();
+            swrDisplay_SetWindowSize();
+        }
+        swrMain_GuiAdvanceFunction = (void *) swrMain2_GuiAdvance;
+        Window_Active = 1;
+        swrGui_Stop(0);
+        stdControl_SetActivation(activated);
+        return;
+    }
+    swrMain_GuiAdvanceFunction = (void *) stdPlatform_noop;
+    stdDisplay_Refresh(0);
+    Window_Active = 0;
+    swrGui_Stop(1);
+    stdControl_SetActivation(0);
+}
+
+// 0x00423b90
+void Window_Resize_delta(HWND hwnd, WPARAM edgeOfWindow, struct tagRECT *dragRectangle) {
+    Windows_WinProc_res = 1;
+    return;
+}
+
+// 0x00425070 -- per-frame Smush callback. The auto-skip decision moved to Window_PlayCinematic_delta
+// (renderer_hook.cpp), which has the video filename to tell the startup movies apart from the
+// pre-race cinematic; here we keep only the manual skip (Esc / Enter / gamepad START / window close).
+int Window_SmushPlayCallback_delta(const SmushImage *image) {
+    // Call via the game address, not the swrControl_ProcessInputs reimpl symbol: the reimpl is a
+    // dormant HANG stub, and swrControl_ProcessInputs is hook_replaced onto the game address (see
+    // swrControl_delta.cpp -- the accept/cancel edge debounce), so the game entry routes through
+    // that delta. Calling the reimpl symbol here would hit the hang stub.
+    ((void (*)(void)) swrControl_ProcessInputs_ADDR)();
+
+    renderer_drawSmushFrame(image);
+
+    stdDisplay_Update_Hook();
+
+    // poll events here to avoid a non-responsive window if the controls are inactive
+    glfwPollEvents();
+    // Skip on a FRESH accept/cancel press only (edge, not held), so the Enter that started the race
+    // doesn't skip the movie the instant it begins ("video only sometimes plays"). Gamepad START and
+    // the window-close both still skip.
+    return g_cutscene_skip_edge ||
+#if ENABLE_GAMEPAD_NAV
+           swrGamepadNav_SkipPressed() ||
+#endif
+           glfwWindowShouldClose(glfwGetCurrentContext());
+}
+
+
+// Added
+void GLAPIENTRY Window_glDebugMessageCallback(GLenum source, GLenum type, GLuint id,
+                                              GLenum severity, GLsizei length,
+                                              const GLchar *message, const void *userParam) {
+    const char *source_str = "UNKNOWN";
+
+    switch (source) {
+        case GL_DEBUG_SOURCE_API:
+            source_str = "API";
+            break;
+
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+            source_str = "WINDOW SYSTEM";
+            break;
+
+        case GL_DEBUG_SOURCE_SHADER_COMPILER:
+            source_str = "SHADER COMPILER";
+            break;
+
+        case GL_DEBUG_SOURCE_THIRD_PARTY:
+            source_str = "THIRD PARTY";
+            break;
+
+        case GL_DEBUG_SOURCE_APPLICATION:
+            source_str = "APPLICATION";
+            break;
+    }
+
+    const char *type_str = "UNKNOWN";
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR:
+            type_str = "ERROR";
+            break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+            type_str = "DEPRECATED_BEHAVIOR";
+            break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+            type_str = "UNDEFINED_BEHAVIOR";
+            break;
+        case GL_DEBUG_TYPE_PORTABILITY:
+            type_str = "PORTABILITY";
+            break;
+        case GL_DEBUG_TYPE_PERFORMANCE:
+            type_str = "PERFORMANCE";
+            break;
+        case GL_DEBUG_TYPE_OTHER:
+            type_str = "OTHER";
+            break;
+        case GL_DEBUG_TYPE_MARKER:
+            type_str = "MARKER";
+            break;
+    }
+
+    const char *severity_str = "UNKNOWN";
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_LOW:
+            severity_str = "LOW";
+            break;
+        case GL_DEBUG_SEVERITY_MEDIUM:
+            severity_str = "MEDIUM";
+            break;
+        case GL_DEBUG_SEVERITY_HIGH:
+            severity_str = "HIGH";
+            break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION:
+            severity_str = "NOTIFICATION";
+            break;
+    }
+
+    // Filter out OTHER NOTIFICATION API
+    if (type == GL_DEBUG_TYPE_OTHER && severity == GL_DEBUG_SEVERITY_NOTIFICATION &&
+        source == GL_DEBUG_SOURCE_API) {
+        return;
+    }
+    // Filter out debugGroupMarker NOTIFICATION API
+    if (severity == GL_DEBUG_SEVERITY_NOTIFICATION && source == GL_DEBUG_SOURCE_APPLICATION) {
+        return;
+    }
+    // Filter out PERFORMANCE MEDIUM API (usually shader recompilation)
+    if (type == GL_DEBUG_TYPE_PERFORMANCE && severity == GL_DEBUG_SEVERITY_MEDIUM &&
+        source == GL_DEBUG_SOURCE_API) {
+        return;
+    }
+
+    fprintf(hook_log, "[OpenGL](%d, %s) %s (%s): %s\n", id, type_str, severity_str, source_str,
+            message);
+    fflush(hook_log);
+}
+
+// 0x0049cd40
+// On a live window resize, keep swrDisplay_screenWidth/Height (== screen_width/height) tracking the
+// framebuffer. The GL viewport + MSAA FBO already follow the framebuffer each frame; these globals
+// were the only thing frozen at startup, so without this the 3D projection aspect, the 2D UI ortho,
+// and the resolution-independent UI scale all render for the startup size and get stretched into the
+// resized window. Guard against the 0x0 framebuffer reported while minimized.
+static void Window_FramebufferSizeCallback(GLFWwindow *window, int width, int height) {
+    (void) window;
+    if (width > 0 && height > 0) {
+        swrDisplay_screenWidth = width;
+        swrDisplay_screenHeight = height;
+    }
+}
+
+int Window_Main_delta(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow,
+                      const char *window_name) {
+    InitCommonControls();
+    Window_SetHINSTANCE(hInstance);
+    Window_SetGUID((GUID *) Window_UUID);
+
+    glfwInit();
+
+    {// Core compatibility for RenderDocs
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);// OpenGL debug callback
+    }
+
+    GLFWwindow *window = glfwCreateWindow(640, 480, window_name, NULL, NULL);
+    if (!window) {
+        fprintf(hook_log, "GLFW Window couldn't be created, aborting\n");
+        fflush(hook_log);
+
+        abort();
+    }
+    g_hWnd = glfwGetWin32Window(window);
+    Window_SetHWND(g_hWnd);// Sound card isn't detected without this
+
+    // Floor the window size so a live drag-resize can never hand the GL driver a near-zero-width or
+    // extreme-aspect framebuffer -- dragging the width down to a sliver (against a tall maximized
+    // height) crashes inside nvoglv32 on a degenerate viewport. 320x240 is half the 640x480 design
+    // size, small enough to stay flexible but never degenerate.
+    glfwSetWindowSizeLimits(window, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE);
+    glfwMaximizeWindow(window);
+    glfwMakeContextCurrent(window);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetFramebufferSizeCallback(window, Window_FramebufferSizeCallback);
+
+    Main_Startup((char *) pCmdLine);
+
+    // NEEDS to be AFTER Main_Startup !
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback(Window_glDebugMessageCallback, 0);
+
+    while (!glfwWindowShouldClose(window)) {
+        swrMain2_GuiAdvance();
+#if !ENABLE_GLFW_INPUT_HANDLING
+        // if glfw input handling is enabled, glfwPollEvents is called in stdControl_ReadControls
+        // instead. this is important for the timing of the input state.
+        glfwPollEvents();
+#endif
+    }
+
+    // Closing via the window's X sets glfwWindowShouldClose and drops out of the loop here.
+    // The GLFW window bypasses the original Window_msg_main_handler, so its WM_DESTROY ->
+    // Main_Shutdown() path never runs. Without this the process unwinds out of WinMain and the
+    // OS has to forcibly reclaim the GL context, sound and (still-acquired) input devices, which
+    // stalls the system briefly and never saves the profile. Run the same graceful teardown the
+    // in-game "Quit Game" option does (Main_Shutdown saves the profile, stops sound and releases
+    // input/display in order) so the X button closes as cleanly as the menu quit.
+    Main_Shutdown();
+    // Terminate immediately, exactly like the in-game "Quit Game" (Main_Shutdown(); exit(0);).
+    // Returning instead would unwind back through WinMain and run the DLL's graceful GL/GLFW +
+    // C++ static-destructor teardown, which adds a noticeable ~1s delay after shutdown.
+    ExitProcess(0);
+    return 0;
+}
+
+// 0x0049cea0
+int Window_CreateMainWindow_delta(HINSTANCE hInstance, int unused, const char *window_name,
+                                  int unused2, LPCSTR unused3) {
+    ATOM register_class_res;
+    HWND hWnd;
+    int nHeight;
+    int nWidth;
+    HMENU hMenu;
+    LPVOID lpParam;
+    WNDCLASSEXA wndClass;
+
+    wndClass.cbSize = 0x30;
+    wndClass.hInstance = hInstance;
+    wndClass.lpszClassName = "wKernelJones3D";
+    wndClass.lpszMenuName = NULL;
+    wndClass.lpfnWndProc = Window_msg_main_handler;
+    // FROM LRESULT (*)(HWND, UINT, WPARAM, LPARAM)
+    // TO WNDPROC
+    // aka
+    // long int (*)(HWND__*, unsigned int, unsigned int, long int)
+    // long int (__attribute__((stdcall)) *)(HWND__*, unsigned int, unsigned int, long int)
+    wndClass.style = 0;
+    wndClass.hIcon = LoadIconA(hInstance, "APPICON");
+    if (wndClass.hIcon == NULL) {
+        wndClass.hIcon = LoadIconA(NULL, IDI_APPLICATION);
+    }
+    wndClass.hIconSm = LoadIconA(hInstance, "APPICON");
+    if (wndClass.hIconSm == NULL) {
+        wndClass.hIconSm = LoadIconA(NULL, IDI_APPLICATION);
+    }
+    wndClass.hCursor = LoadCursorA(NULL, IDC_ARROW);
+    wndClass.cbClsExtra = 0;
+    wndClass.cbWndExtra = 0;
+    wndClass.hbrBackground = (HBRUSH) GetStockObject(4);
+    register_class_res = RegisterClassExA(&wndClass);
+    if (register_class_res == 0) {
+        return 0;
+    }
+    hWnd = FindWindowA("wKernelJones3D", window_name);
+    if (hWnd != NULL) {
+        exit(-1);
+    }
+    lpParam = NULL;
+    hMenu = NULL;
+    hWnd = NULL;
+    g_hWnd = CreateWindowExA(8, "wKernelJones3D", window_name, WS_OVERLAPPEDWINDOW, 0, 0,
+                             CW_USEDEFAULT, CW_USEDEFAULT, hWnd, hMenu, hInstance, lpParam);
+    if (g_hWnd == NULL) {
+        return 0;
+    }
+    ShowWindow(g_hWnd, 1);
+    UpdateWindow(g_hWnd);
+    return 1;
+}

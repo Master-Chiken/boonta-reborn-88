@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
+      - ".github/workflows/retire-verified-branch.yml"
       - ".github/workflows/ai-daily-coordinator.yml"
       - ".github/workflows/gemini-invoke.yml"
       - ".github/workflows/gemini-plan-execute.yml"

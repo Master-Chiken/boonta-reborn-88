@@ -1,0 +1,128 @@
+{
+  "format": "boonta-route-graph-v1",
+  "schema_version": 1,
+  "route_id": "closed-loop-demo",
+  "name": "Closed three-edge loop",
+  "source": {
+    "platform": "synthetic",
+    "release": "route-graph-fixtures-v1",
+    "revision": "2026-11-02"
+  },
+  "units": {
+    "distance": "metres",
+    "lateral_axis": "x",
+    "up_axis": "y",
+    "forward_axis": "z"
+  },
+  "closed_loop": true,
+  "start_node_id": "a",
+  "nodes": [
+    {
+      "id": "a",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "b",
+      "position": [
+        10,
+        0,
+        0
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "id": "c",
+      "position": [
+        10,
+        0,
+        10
+      ],
+      "up": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "a-b",
+      "from": "a",
+      "to": "b",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          3.333333333333333,
+          0,
+          0
+        ],
+        "control2": [
+          6.666666666666666,
+          0,
+          0
+        ]
+      },
+      "progress": {
+        "start": 0,
+        "end": 0.3333333333333333
+      }
+    },
+    {
+      "id": "b-c",
+      "from": "b",
+      "to": "c",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          10,
+          0,
+          3.333333333333333
+        ],
+        "control2": [
+          10,
+          0,
+          6.666666666666666
+        ]
+      },
+      "progress": {
+        "start": 0.3333333333333333,
+        "end": 0.6666666666666666
+      }
+    },
+    {
+      "id": "c-a",
+      "from": "c",
+      "to": "a",
+      "curve": {
+        "type": "cubic_bezier",
+        "control1": [
+          6.666666666666668,
+          0,
+          6.666666666666668
+        ],
+        "control2": [
+          3.333333333333334,
+          0,
+          3.333333333333334
+        ]
+      },
+      "progress": {
+        "start": 0.6666666666666666,
+        "end": 1
+      }
+    }
+  ]
+}

@@ -17,6 +17,8 @@ from make_dolphin_dtm import (
     RESET_BOOST_END_FRAME,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
+    FINISH_RESET_PRESS_FRAME,
+    FINISH_RESET_HOLD_FRAMES,
     FINISH_RESTART_PRESS_FRAME,
     FINISH_RESTART_HOLD_FRAMES,
     PAUSE_BOOST_END_FRAME,
@@ -279,6 +281,39 @@ class DolphinDtmTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_dtm(10, steering="right", scenario="full-race")
 
+    def test_finish_reset_profile_reaches_race_window_then_presses_y_alone(self) -> None:
+        frames = FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES + 1
+        blob = build_dtm(frames, steering="none", scenario="finish-reset-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+
+        start = record(blob, 0)
+        self.assertEqual(start[0], A | Y)  # Establish a clean initial state.
+        self.assertTrue(start[1] & IS_CONNECTED)
+        self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        early_boost = record(blob, 20)
+        self.assertEqual(early_boost[0], A | X)
+        before_reset = record(blob, FINISH_RESET_PRESS_FRAME - 1)
+        self.assertEqual(before_reset[0], A)
+        self.assertFalse(before_reset[0] & (B | START | X | Y))
+
+        for frame in range(FINISH_RESET_PRESS_FRAME,
+                           FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES):
+            with self.subTest(reset_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], Y)  # Reset is never combined with throttle.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
+                self.assertEqual(state[2:4], bytes((0, 0)))
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        for frame in (FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES, frames - 1):
+            with self.subTest(frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)  # Leave the restarted race stationary.
+                self.assertTrue(state[1] & IS_CONNECTED)
+                self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
+
     def test_finish_restart_profile_presses_start_alone_after_race_window(self) -> None:
         frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
         blob = build_dtm(frames, steering="none", scenario="finish-restart-check")
@@ -347,6 +382,14 @@ class DolphinDtmTests(unittest.TestCase):
     def test_finish_restart_profile_rejects_too_short_movie(self) -> None:
         with self.assertRaisesRegex(ValueError, "needs enough frames"):
             build_dtm(12000, steering="none", scenario="finish-restart-check")
+
+    def test_finish_reset_profile_rejects_directional_steering(self) -> None:
+        with self.assertRaises(ValueError):
+            build_dtm(16000, steering="left", scenario="finish-reset-check")
+
+    def test_finish_reset_profile_rejects_too_short_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "needs enough frames"):
+            build_dtm(12000, steering="none", scenario="finish-reset-check")
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or road_center_from_asphalt is None,
@@ -535,6 +578,22 @@ class DolphinDtmTests(unittest.TestCase):
         # The reset steering tick is centered at screen x=400 and remains visible.
         draw.rectangle((398, 434, 401, 449), fill=(238, 246, 255))
         self.assertTrue(reset_state_visible(image))
+
+        # Reset HUD metrics must not pass while the finish checkerboard remains.
+        finish_overlay = image.copy()
+        overlay_draw = ImageDraw.Draw(finish_overlay)
+        cx, cy, tile_w, tile_h = 400.0, 280.0, 17.5, 11.7
+        left, top = cx - 2 * tile_w, cy - 1.5 * tile_h
+        for row in range(3):
+            for col in range(4):
+                color = (238, 246, 255) if (row + col) % 2 == 0 else (12, 18, 27)
+                x0 = round(left + col * tile_w)
+                y0 = round(top + row * tile_h)
+                x1 = round(left + (col + 1) * tile_w - 1)
+                y1 = round(top + (row + 1) * tile_h - 1)
+                overlay_draw.rectangle((x0, y0, x1, y1), fill=color)
+        self.assertTrue(finish_banner_visible(finish_overlay))
+        self.assertFalse(reset_state_visible(finish_overlay))
 
         accelerated = image.copy()
         ImageDraw.Draw(accelerated).rectangle((24, 444, 80, 455), fill=(64, 220, 243))

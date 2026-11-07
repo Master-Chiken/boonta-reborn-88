@@ -70,11 +70,11 @@ See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact sta
 
 ## Come build this with us
 
-**You don't need to know everything or arrive with a huge feature.** Curiosity, clear communication, and the willingness to test an idea are valuable here. A useful bug report, a small fix, a model, a tool, or one careful test session can move the game forward.
+**You don't need to know everything or arrive with a huge feature.** Curiosity, clear communication, and the willingness to test an idea are valuable here. A useful bug report, a small fix, a model, a tool, or one careful test session can move the game forward. Broad tester recruitment is deferred until the current gameplay slice is consolidated; code, automated tests, tooling, and clean-room research contributions remain welcome now.
 
 | If you enjoy… | You could help with… |
 | --- | --- |
-| Playing and testing | Run the prototype in a visible Dolphin session, test the controls and full race, and report what works or breaks. |
+| Playing and testing | When the consolidated playtest is announced, run the build in visible Dolphin, test the controls and full race, and report what works or breaks. |
 | C and gameplay | Improve steering feel, race-state transitions, collisions, lap timing, or reset/restart behavior—with regression tests. |
 | Graphics and 3D | Improve the GX scene, camera, course readability, or the validated mesh/texture path. |
 | Python and tooling | Strengthen format validators, synthetic fixtures, artifact checks, and reproducible diagnostics. |
@@ -84,7 +84,7 @@ See [the current acceptance checklist](docs/NEXT_MILESTONE.md) for the exact sta
 
 ### Good places to start
 
-- **Best first contribution:** follow the manual test plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Mark each check **PASS / FAIL / NOT TESTED**; include the Dolphin version, video backend, controller profile, and screenshots or a short video where useful.
+- **Best current contribution:** help finish or review the existing gameplay PRs, add focused regression tests, improve the native build/diagnostic tooling, or document original clean-room behavior. The manual acceptance plan in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126) is retained for the consolidated playtest; do not mark a step **PASS** without actually trying it by hand.
 - **Interested in rendering or asset formats?** Read [issue #181](https://github.com/Master-Chiken/boonta-reborn-88/issues/181) first so new work builds on the existing mesh and test foundations instead of duplicating them.
 - **Not sure where to begin?** Open an issue or join the [Discord community](https://discord.com/servers/star-wars-episode-i-racer-441839750555369474). Explain what you would like to try and what environment you have. Small, focused experiments and well-documented findings are welcome.
 
@@ -107,6 +107,15 @@ make
 
 The expected outputs are `boonta_gc_demo.dol` and `boonta_gc_demo.elf`.
 
+To build the native Wii variant with the same devkitPro installation, run:
+
+```sh
+make -f Makefile.wii clean
+make -f Makefile.wii
+```
+
+The expected outputs are `boonta_wii_demo.dol` and `boonta_wii_demo.elf`. The Wii build uses the native WPAD backend and requires a Wii Remote with a Classic Controller expansion for the Classic input path. Automated builds and input-translation tests do not establish physical controller compatibility; that remains unverified until tested on real Wii hardware.
+
 You can run many host-side checks without a GameCube or Wii toolchain. From the repository root:
 
 ```sh
@@ -128,6 +137,10 @@ For artifact validation, Dolphin diagnostics, troubleshooting, and the full vali
 The original game (Star Wars Episode 1 Racer) is a property of the LucasArts Entertainment Company LLC.
 
 Boonta Reborn 88 is an unofficial fan project and is not affiliated with or endorsed by the original rights holders.
+
+## Separate PC reverse-engineering reference
+
+The repository includes a source-only snapshot of the PC research project in [`research/pc/SW_RACER_RE/`](research/pc/SW_RACER_RE/). That subtree retains its own **AGPL-3.0** license and is not part of the MIT-licensed GameCube/Wii core or its native build. Its original-game media, binary track/model/texture blocks, trainer archives, raw symbol database and third-party vendored dependencies were deliberately excluded. See the snapshot README and [reuse inventory](REUSE.md) before using any of that code.
 
 ## About
 

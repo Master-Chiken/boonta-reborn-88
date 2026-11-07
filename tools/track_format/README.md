@@ -16,6 +16,10 @@ The first point is the start/finish reference. For a closed circuit, the final p
 
 See `example_track.json`. It is a tiny, entirely original oval-ish test circuit and is only test data.
 
+## Relationship to the GameCube/Wii prototype
+
+`example_track.json` remains a small `boonta-track-v1` format fixture. The active GameCube prototype's generated header is now checked against the canonical route graph at `gamecube-demo/data/original-test-oval-route-graph.json`, with explicit road widths in `gamecube-demo/data/original-test-oval-surface-widths.json`. The route graph is offline-baked to track-v1 before the existing C-header exporter runs. The executable still consumes a compiled `generated_track.h`; it does not load JSON or evaluate a branching graph on-console. See `tools/route_graph_format/README.md` for the conversion boundary.
+
 ## Validation
 
 Run:
