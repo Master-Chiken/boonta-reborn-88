@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #330 was merged to main at eb954ec438b49203fb94422b2c51b8149d99e135. It adds a fail-closed GET /api/v1/key preflight for data.free_model_daily_requests.remaining before GitHub App token creation, checkout, OpenCode install, PR-head snapshot and model inference; missing/invalid/zero remaining blocks the request and records the existing UTC cooldown. All…"
+      "next_action_excerpt": "PR #333 was merged to main at 928a282daae0dd557861e15471826ea4025bf428. It adds one read-only preflight on issue #226 for the three current UTC provider cooldown markers before launching any provider workflow; Gemini, OpenRouter and Groq retain their independent in-workflow cooldown/quota/Free-only gates. The three exact-head checks passed: workflow…"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
