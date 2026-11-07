@@ -247,7 +247,9 @@
         "Ledger-bearing PRs avoid impossible self-referential head SHAs and are reconciled from main after merge",
         "OpenRouter fallback fails visibly if its Free-only gate blocks, the actual invocation is skipped, or the report validator does not pass",
         "Optional Groq tertiary fallback has an independent Free-only attestation, secret gate, fixed model allowlist and UTC cooldown",
-        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider"
+        "Readiness reports provider-secret/attestation presence without revealing key values or calling any provider",
+        "OpenRouter prompt receives same-run Free-only preflight, GET /api/v1/key authentication and GitHub App token outcomes as authoritative evidence",
+        "OpenRouter BLOCKED report validation rejects claims contradicted by a successful same-run Free-tier authentication or GitHub App token creation"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -324,9 +326,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/320",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/fc78894e467b493f55672f2e0a9bd7161c369230",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42239804824",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42239803349"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42239803349",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/324",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42276661261",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941774",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941490",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299941827",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42299977186"
       ],
-      "next_action": "PR #316 is merged into main at c38c69068a61b3ba2073c53ba315698a0b5c7676; it adds triage coverage for reusable Gemini/OpenRouter/Groq provider workflow startup failures. PR #320 is merged into main at fc78894e467b493f55672f2e0a9bd7161c369230; its exact-head AI free-tier safety, workflow YAML/embedded-Python self-test, and source-import guard checks passed. It bounds Groq Free retries/timeouts and records an OpenRouter cooldown after a failed GET-only auth check. The latest scheduled parent run #42224707575 predates both merges and failed before creating jobs, so it is not evidence of a provider result. Keep this task BLOCKED until a new scheduled parent run on post-merge main starts readiness and provider jobs, readiness succeeds, and one provider route produces a valid fresh cycle/report. Owner action still required: replace/verify GitHub Actions secret OPENROUTER_API_KEY_02 so GET /api/v1/key returns is_free_tier=true; never read, expose, or edit secrets. Keep €0-only routing, no paid fallback, existing cooldowns, single-writer behavior, provenance and human review gates. If OpenRouter remains invalid or Gemini is unavailable, report that precise blocker and allow the bounded Groq Free fallback only within its attested quota. After activation is genuinely cleared, reuse route-runtime PR #274 at exact head f8c9488fa8bfe1f6434309c7b84c075304a43c54; do not create a duplicate route graph.",
+      "next_action": "PR #324 remains open and unmerged. Its previous exact code head 53fe505983c22e2ebd8478214ce616ac34bcd48 passed all four required exact-head checks: AI free-tier safety (#42299941774), branch automation self-test (#42299941490), Step 102 provenance guard (#42299941827), and trusted source-path guard (#42299977186). Scheduled parent run #42276661261 confirms read-only readiness passed, Gemini was skipped by its same-day failure cooldown, OpenRouter's independent Free-only gate and GET /api/v1/key check passed (is_free_tier=true), and OpenCode invocation completed. Its model report nevertheless requested key replacement, contradicting that same-run evidence; PR #324 passes those facts into the prompt and rejects contradictory BLOCKED claims. The current PR head should be checked for exact-head CI immediately before integration. Next: human review/merge of #324, then inspect a post-merge scheduled cycle for readiness, actual provider invocation, and either a valid cycle-fresh PR or a genuinely verified blocker; reconcile the ledger from main. Do not read/change secrets or request key replacement unless a new GET check actually fails.",
       "updated_at": "2026-11-06"
     },
     {

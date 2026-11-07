@@ -313,11 +313,11 @@ else:
     github_tools = tools_match.group(1).split(",")
     forbidden_github_tools = [
         tool for tool in github_tools
-        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request"))
+        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request", "issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"))
     ]
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    for required_tool in ("create_branch", "push_files", "create_pull_request", "issue_read", "pull_request_read"):
+    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_issues", "search_pull_requests"):
         if required_tool not in github_tools:
             errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
     if "get_workflow_job" in github_tools:
@@ -545,7 +545,7 @@ for required_phrase in (
     "Optimize only a measured hot path",
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
-    "full historical appendices/comments",
+    "Do not read all historical comments",
     "compact inventory of all open pull requests",
     "Deep-inspect changed files and exact-head CI only for PRs",
     "Read logs only for failed jobs",
@@ -706,6 +706,28 @@ if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERAT
     errors.append("Operating rules must prevent duplicate route-runtime branches")
 if "RE-002 is active only as read-only comparative evidence" not in read("docs/PROJECT_OPERATING_RULES.md"):
     errors.append("Operating rules must keep RE-002 limited to read-only comparative evidence")
+
+# Keep all autonomous writer prompts aligned with the newest #226 owner direction.
+phase1_prompts = (
+    ("Gemini", autonomous_prompt),
+    ("OpenRouter", openrouter_fallback),
+    ("Groq", groq_fallback),
+)
+for label, prompt in phase1_prompts:
+    for phrase in (
+        "2026-11-06",
+        "Phase 1",
+        "AUTOMATION-LEDGER-ACTIVATION",
+        "#279",
+        "#317",
+        "#318",
+        "#319",
+        "PR #274 is not an automatic next step",
+    ):
+        if phrase not in prompt:
+            errors.append(f"{label} autonomous prompt is missing current owner-order safeguard: {phrase!r}")
+    if "After Phase 1" not in prompt and "After the Phase 1" not in prompt:
+        errors.append(f"{label} autonomous prompt must defer gameplay work until Phase 1 is complete")
 
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
@@ -969,17 +991,16 @@ for required in (
 if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]:
     errors.append("Gemini daily cooldown must apply only to autonomous invocations, not the manual writer path")
 
-# Both autonomous prompts limit historical issue context to reduce repeated token/context costs.
+# Gemini autonomous context policy: compact supplied briefs, no full issue history or binary/media inputs.
 for required in (
-    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
-    "at most two short comments",
-    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
-    "below roughly 20,000 tokens",
-    "approximately 452 KB",
+    "Do not call issue_read or fetch full bodies/comments for #156, #226 or #279",
+    "below 1,500 tokens per cycle",
+    "Never fetch attachments, images, media, artifacts or binary content",
     "Never repeat the same oversized request",
+    "Never fetch the entire `docs/research/RE-001-route-spline-progress.md` dossier",
 ):
     if required not in autonomous_prompt:
-        errors.append(f"Gemini autonomous prompt must enforce bounded text-only context: {required!r}")
+        errors.append(f"Gemini autonomous prompt must enforce the current bounded text-only context: {required!r}")
 for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
@@ -1041,6 +1062,22 @@ for required in (
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
+# OpenRouter BLOCKED reports must agree with the successful same-run preflight.
+# Its prompt receives workflow outcomes, and the report validator rejects false
+# API-key/Free-tier blockers after a successful GET /api/v1/key check.
+for required in (
+    "OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}",
+    "OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}",
+    "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
+    "process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true'",
+    "process.env.OPENROUTER_AUTH_OUTCOME === 'success'",
+    "BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence",
+    "SAME-RUN VERIFIED EXECUTION FACTS",
+    "Never ask the owner to replace the key.",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter report consistency guard is missing {required!r}")
+
 # The Groq Free fallback must remain useful under its observed 8k TPM limit.
 # OpenCode supports per-model context/output limits; cap this agent well below TPM.
 groq_config_match = re.search(
@@ -1081,6 +1118,36 @@ for required in (
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
 if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
+
+
+# Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
+reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
+for label, content in (
+    ("AGENTS.md", read("AGENTS.md")),
+    ("GEMINI.md", instructions),
+    ("PROJECT_OPERATING_RULES.md", read("docs/PROJECT_OPERATING_RULES.md")),
+    ("Gemini autonomous prompt", autonomous_prompt),
+    ("OpenRouter autonomous prompt", openrouter_fallback),
+    ("Groq autonomous prompt", groq_fallback),
+):
+    if "docs/REVERSE_ENGINEERING_FIRST.md" not in content and label != "reverse-engineering policy":
+        errors.append(f"{label} must explicitly reference the mandatory reverse-engineering-first policy")
+for required in (
+    "Never manually recreate",
+    "DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST",
+    "licence/provenance",
+    "manual recreation",
+    "Reuse / reverse-engineering decision",
+):
+    if required not in reverse_engineering_policy:
+        errors.append(f"Reverse-engineering-first policy is missing required decision-gate language: {required!r}")
+if "REVERSE_ENGINEERING_FIRST.md" not in autonomous_prompt:
+    errors.append("Gemini autonomous startup must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in openrouter_fallback:
+    errors.append("OpenRouter autonomous prompt must read the reverse-engineering-first policy")
+if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:
+    errors.append("Groq autonomous prompt must read the reverse-engineering-first policy")
+
 
 if errors:
     print("AI free-tier safety checks FAILED:")

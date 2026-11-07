@@ -2,6 +2,10 @@ name: '🧙 Gemini Plan Execution'
 
 on:
   workflow_call:
+    outputs:
+      invocation_outcome:
+        description: "Outcome of the actual Gemini CLI invocation step, independent of report validation."
+        value: ${{ jobs.plan-execute.outputs.invocation_outcome }}
     inputs:
       additional_context:
         type: 'string'
@@ -35,6 +39,8 @@ defaults:
 
 jobs:
   plan-execute:
+    outputs:
+      invocation_outcome: ${{ steps.run_gemini.outcome }}
     timeout-minutes: 30
     runs-on: 'ubuntu-latest'
     permissions:

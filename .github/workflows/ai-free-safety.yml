@@ -30,6 +30,12 @@ jobs:
       - name: Run static AI safety checks (no API calls)
         run: python3 tools/check_ai_free_safety.py
 
+      - name: Verify provider fallback stops after a completed model invocation
+        run: python3 tools/check_autonomous_provider_handoff.py
+
+      - name: Validate compact autonomous task summary
+        run: python3 tools/check_task_ledger_summary.py
+
       - name: Validate persistent task ledger and regression tests
         run: |
           python3 tools/check_task_ledger.py

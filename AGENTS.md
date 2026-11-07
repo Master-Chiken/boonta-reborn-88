@@ -16,6 +16,10 @@ This order applies to every project task. Do not skip ahead to polish or optimiz
 
 The order is a decision rule, not a demand for unnecessary work: if a stage is already satisfied, record the evidence and move on. For a performance-focused task, reproduce and define the required behavior first, preserve correctness and maintainability, then optimize the measured bottleneck.
 
+## Mandatory reverse-engineering-first rule
+
+Before manually recreating any game element, asset, format, behavior or subsystem, follow [`docs/REVERSE_ENGINEERING_FIRST.md`](docs/REVERSE_ENGINEERING_FIRST.md). This is a hard pre-implementation gate for every contributor and every task: inspect existing reverse-engineering evidence and Boonta work; determine whether extraction, decoding, conversion, reuse or automatic reproduction is possible; verify platform/version, licence and provenance; and record why any rebuild is necessary. A skipped gate or duplicated recoverable work is grounds to reject the change. Unclear rights mean HOLD—not manual copying or public redistribution. The rule is targeted evidence gathering, not a permanent research quota.
+
 ## Required pre-flight: decide before coding
 
 Before starting any change, answer these questions:

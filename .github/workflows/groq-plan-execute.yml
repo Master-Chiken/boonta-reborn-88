@@ -171,6 +171,11 @@ jobs:
             "model": "groq/openai/gpt-oss-20b",
             "small_model": "groq/openai/gpt-oss-20b",
             "enabled_providers": ["groq"],
+            "agent": {
+              "build": {
+                "steps": 4
+              }
+            },
             "provider": {
               "groq": {
                 "models": {
@@ -194,7 +199,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,issue_read,list_pull_requests,pull_request_read,create_branch,create_or_update_file,create_pull_request,add_issue_comment,get_commit"
+                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -223,17 +228,27 @@ jobs:
           - Use only the fixed Groq Free model configured by this workflow. Never enable billing, paid routes, another provider, change secrets/settings, or reveal credentials.
           - The previous Groq request exceeded the 8,000-token-per-minute Free limit. Keep context compact. If any request returns a TPM, context-size, rate-limit, authentication or quota error, stop immediately and report BLOCKED. Do not retry it.
           - Preserve clean-room provenance, platform boundaries, one active ledger task, exact-head checks and one write-capable task. Never merge, auto-merge, force-push or write to main/dev directly.
-          - Verified provider state for 2026-11-06: Gemini is under its daily failure cooldown; OpenRouter key authentication returned HTTP 401. Do not call OpenRouter again until the owner replaces and verifies the GitHub secret.
+          - Never infer provider state from an earlier run. Respect this run's explicit gates/cooldowns only; do not call another provider or request a secret change from stale logs.
 
           PROJECT ORDER
-          - The sole active ledger task remains AUTOMATION-LEDGER-ACTIVATION. Reconcile it against live state; do not create another active task or begin gameplay work until it is cleared.
-          - PR #314 is the reuse-first/verification-policy candidate for main. PR #274 is the only route-runtime candidate, at inspected head f8c9488fa8bfe1f6434309c7b84c075304a43c54 on dev. Neither may be merged by an agent.
-          - After that gate, route-runtime integration precedes deterministic rival AI. Do not create duplicate route graphs or copy AGPL or ROM-derived code.
+          - Read docs/automation/task-ledger-summary.json for current status; do not assume an active task. AUTOMATION-LEDGER-ACTIVATION is currently blocked pending a real post-merge provider cycle and a valid cycle-fresh report/PR (or a precise verified blocker).
+          - The newest 2026-11-06 owner direction in #226 supersedes earlier route-runtime-first/gameplay ordering. After the activation gate clears, Phase 1 cross-platform inventory and the reuse/convert/adapt/reimplement decision take priority. Consume #279's read-only PC/N64/Dreamcast evidence rather than duplicating it; do not recreate PR #282.
+          - During Phase 1, add only missing source-verified tool/license/utility rows, map PC/N64 formats against the native GameCube/Wii target, label behavior OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, and evaluate graphics/audio/frame-rate/physics against GX/libogc with one lawful experiment each. Keep commercial ROM/disc/binary/extracted data local.
+          - Do not start new gameplay features or visible-Dolphin three-lap acceptance during Phase 1. After Phase 1, reuse the existing rival-AI chain #317 → #318 → #319 in order, then follow #226's race-progression integration target. PR #274 is not an automatic next step; revisit it only if a concrete route-runtime dependency is demonstrated. Do not create duplicate route graphs or copy AGPL/ROM-derived code.
 
           READ ONLY WHAT IS NECESSARY
-          - Read GEMINI.md, docs/automation/task-ledger.json, and only a short relevant excerpt of docs/PROJECT_OPERATING_RULES.md.
+          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Apply the mandatory recovery/reuse gate before any implementation and record its evidence-backed decision. Do not read the full task ledger or full issue bodies.
           - Do NOT call issue_read for #156, #226 or #279. Do not list all PRs, enumerate all branches, or retrieve full comment histories. Inspect only a specific PR if required to verify its exact head.
-          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens; target below 2,000 and stop if that is not possible.
+          - Never fetch the 452 KB route dossier, attachments, images, media, ROMs, disc images, BIOS, binaries or unclear-provenance material. Keep total retrieved text under 3,000 tokens as a hard ceiling; target newly retrieved text below 1,500 tokens total and stop if the task cannot be resolved within that budget.
+
+          The pinned GitHub MCP server exposes only these exact tool names in this workflow:
+          - `github_get_file_contents`
+          - `github_pull_request_read`
+          - `github_create_branch`
+          - `github_push_files`
+          - `github_create_pull_request`
+          - `github_add_issue_comment`
+          The compact task summary contains PR numbers/URLs; use `github_pull_request_read` for exact PR state/head checks. Broad PR search and `github_get_commit` are deliberately omitted to reduce tool-schema TPM overhead. `github_get_pull_request` does not exist. Do not invent tool names or retry unavailable tools.
 
           EXECUTION
           - Use the local read tool for checked-out text and only the reduced GitHub MCP tools for exact PR/commit checks and branch/PR writes. Shell execution is denied.
