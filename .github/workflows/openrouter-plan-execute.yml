@@ -348,9 +348,9 @@ jobs:
           ]
           terminal_provider_error = re.compile(
               r"(free-models-per-day|free-models-per-minute|rate[_ ]limit exceeded|"
-              r"too many requests|HTTP\\s*429|status(?:\\s*code)?\\s*[:=]?\\s*429|"
-              r"tokens per minute\\s*\\(TPM\\)|request too large for model|"
-              r"missing authentication header|HTTP\\s*401|status(?:\\s*code)?\\s*[:=]?\\s*401)",
+              r"too many requests|HTTP\s*429|status(?:\s*code)?\s*[:=]?\s*429|"
+              r"tokens per minute\s*\(TPM\)|request too large for model|"
+              r"missing authentication header|HTTP\s*401|status(?:\s*code)?\s*[:=]?\s*401)",
               re.IGNORECASE,
           )
           process = subprocess.Popen(
