@@ -1,0 +1,170 @@
+'use strict';
+
+const REQUIRED_CHECKS = Object.freeze({
+  main: [
+    'Verify Gemini free-only guardrails',
+    'Reject known held assets and data',
+    'Check proposed source paths using trusted base policy'
+  ],
+  dev: [
+    'Host pause/resume state tests',
+    'build-gamecube-demo',
+    'Dolphin headless process smoke (not visual verification)'
+  ]
+});
+
+function oneLine(lines, key) {
+  const matches = lines.filter((line) => line.startsWith(key + ': '));
+  return matches.length === 1 ? matches[0].slice(key.length + 2).trim() : null;
+}
+
+function fail(core, message) {
+  core.setFailed(message);
+  return { cycle_status: 'invalid' };
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function validateAutonomousCycleReport(options) {
+  const {
+    github, context, core, summary, baseline, snapshotAt,
+    expectedTaskId, expectedBase, provider,
+    maxPolls = 32, pollIntervalMs = 15000, sleep = delay
+  } = options;
+
+  if (!github || !context || !core || typeof summary !== 'string') {
+    return fail(core, 'Cycle-report validator received incomplete inputs.');
+  }
+  if (typeof expectedTaskId !== 'string' || !expectedTaskId.trim() ||
+      !Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)) {
+    return fail(core, 'The reserved task ID or required target branch is missing/invalid.');
+  }
+
+  const lines = summary.trim().split(/\r?\n/);
+  const taskId = oneLine(lines, 'BOONTA_CYCLE_TASK_ID');
+  if (taskId !== expectedTaskId) {
+    return fail(core, 'Cycle report task ID does not match the exact task reservation.');
+  }
+
+  const statusLines = lines.filter((line) =>
+    line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED'
+  );
+  if (statusLines.length !== 1) {
+    return fail(core, 'Cycle report must contain exactly one valid PROGRESS or BLOCKED status.');
+  }
+
+  const valueExists = (key) => {
+    const value = oneLine(lines, key);
+    return typeof value === 'string' && value.length > 0;
+  };
+
+  if (statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {
+    if (!valueExists('BOONTA_CYCLE_BLOCKER') || !valueExists('BOONTA_CYCLE_NEXT_ACTION')) {
+      return fail(core, 'BLOCKED requires one named blocker and one concrete next action.');
+    }
+    const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER');
+    const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION');
+    const fingerprint = require('crypto').createHash('sha256')
+      .update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
+    core.setOutput('blocked_fingerprint', fingerprint);
+    core.setOutput('cycle_status', 'blocked');
+    core.info(provider + ' reported a named blocker for task ' + expectedTaskId + '.');
+    return { cycle_status: 'blocked', blocked_fingerprint: fingerprint };
+  }
+
+  const evidence = summary.match(
+    /^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m
+  );
+  const evidenceBase = oneLine(lines, 'BOONTA_CYCLE_EVIDENCE_BASE');
+  if (!evidence || evidenceBase !== expectedBase) {
+    return fail(core, 'PROGRESS must cite an exact same-repository PR/head and the reserved target branch ' + expectedBase + '.');
+  }
+
+  const baseSnapshot = baseline && typeof baseline === 'object' ? baseline : {};
+  const snapshotTime = Date.parse(snapshotAt || '');
+  if (!Number.isFinite(snapshotTime)) {
+    return fail(core, 'The pre-cycle PR snapshot timestamp is missing or invalid.');
+  }
+
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+  const pullNumber = Number(evidence[1]);
+  const exactHead = evidence[2];
+  const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+  const { data: headCommit } = await github.rest.repos.getCommit({ owner, repo, ref: exactHead });
+  const existedAtStart = Object.prototype.hasOwnProperty.call(baseSnapshot, String(pullNumber));
+  const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime;
+  const advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead;
+  const taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId;
+  const bodyHasTaskMarker = (pr.body || '').split(/\r?\n/).some((line) => line.trim() === taskMarker);
+
+  if (
+    pr.number !== pullNumber ||
+    pr.state !== 'open' ||
+    pr.merged_at ||
+    pr.draft === true ||
+    pr.head.repo?.full_name !== owner + '/' + repo ||
+    pr.base.repo?.full_name !== owner + '/' + repo ||
+    pr.head.sha !== exactHead ||
+    headCommit.sha !== exactHead ||
+    (pr.changed_files ?? 0) < 1 ||
+    pr.base.ref !== expectedBase ||
+    !bodyHasTaskMarker ||
+    (!createdAfterSnapshot && !advancedDuringCycle)
+  ) {
+    return fail(core, 'PROGRESS requires a non-draft, non-empty same-repository PR tied to the reserved task, targeting ' +
+      expectedBase + ', at its exact current head and created or advanced during this cycle.');
+  }
+
+  const required = REQUIRED_CHECKS[expectedBase];
+  let latestCheckRuns = [];
+  let accepted = false;
+  for (let attempt = 0; attempt < maxPolls; attempt += 1) {
+    const { data } = await github.rest.checks.listForRef({
+      owner, repo, ref: exactHead, per_page: 100
+    });
+    const runs = Array.isArray(data?.check_runs) ? data.check_runs : [];
+    latestCheckRuns = required.map((name) => {
+      const matching = runs
+        .filter((run) => run.name === name && run.head_sha === exactHead)
+        .sort((a, b) => Date.parse(b.created_at || b.started_at || '') - Date.parse(a.created_at || a.started_at || ''));
+      return { name, check: matching[0] || null };
+    });
+
+    const failed = latestCheckRuns.find(({ check }) =>
+      check && check.status === 'completed' && check.conclusion !== 'success'
+    );
+    if (failed) {
+      return fail(core, 'Exact-head required CI check failed: ' + failed.name + ' (' + failed.check.conclusion + ').');
+    }
+    accepted = latestCheckRuns.every(({ check }) =>
+      check && check.status === 'completed' && check.conclusion === 'success'
+    );
+    if (accepted) break;
+    if (attempt + 1 < maxPolls) await sleep(pollIntervalMs);
+  }
+
+  if (!accepted) {
+    const state = latestCheckRuns.map(({ name, check }) =>
+      name + '=' + (check ? (check.status === 'completed' ? check.conclusion : check.status) : 'not found')
+    ).join('; ');
+    return fail(core, 'Exact-head CI did not complete successfully within the bounded eight-minute verification window: ' + state);
+  }
+
+  core.setOutput('cycle_status', 'progress');
+  core.setOutput('evidence_pr_number', String(pullNumber));
+  core.setOutput('evidence_head_sha', exactHead);
+  core.setOutput('evidence_base', expectedBase);
+  core.info('Verified task ' + expectedTaskId + ' via PR #' + pullNumber + ' at exact head ' + exactHead +
+    '; required ' + expectedBase + ' checks passed: ' + required.join(', ') + '.');
+  return {
+    cycle_status: 'progress',
+    evidence_pr_number: pullNumber,
+    evidence_head_sha: exactHead,
+    evidence_base: expectedBase
+  };
+}
+
+module.exports = { REQUIRED_CHECKS, validateAutonomousCycleReport };
