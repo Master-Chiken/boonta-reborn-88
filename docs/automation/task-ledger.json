@@ -736,7 +736,7 @@
         "Nintendo 64",
         "GameCube"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "Can the owner-local N64 CompWolf scan be reproduced with a read-only metadata tool and synthetic tests, without publishing ROM-derived data?",
       "acceptance_criteria": [
         "Use the existing local scan and pinned N64 CompWolf format evidence; do not duplicate prior extraction or copy GPL decompressor code",
@@ -744,9 +744,7 @@
         "Scanner validates header lengths and stream terminators and surfaces undefined initial-history reads without silently inventing dictionary bytes",
         "Synthetic tests cover literals, overlapping back-references, initial-window dependencies, malformed lengths, truncation and z64/v64/n64 byte orders",
         "Owner's independent local Python decoder reproduces 92 valid records, zero decode-length failures, tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded-size sum 11,975,612, compressed-stream sum 5,869,155 and header-inclusive span 5,870,259 bytes; the exact repository Perl scanner was also run locally and reported 92 validated, 0 rejected and 0 undefined initial-history reads on 2026-11-07",
-        "No ROM, extracted asset or decoded payload is committed, uploaded to CI or sent to hosted model providers",
-        "T2 candidate check: owner-local sorted Pupp index 10 reports 68,284 decoded bytes, matching the public catalogue size associated with N64 model ID 0087 (Anakin); treat this as a candidate only until full structural parse confirms identity",
-        "Test the pinned MIT swe1r-assets parser against the owner-local decoded Pupp candidate; record parse/runtime type and aggregate structural counts only. Audit N64 compatibility and transitive dependency licenses before any integration or GX conversion"
+        "No ROM, extracted asset or decoded payload is committed, uploaded to CI or sent to hosted model providers"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
@@ -765,11 +763,40 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334#issuecomment-6710857062",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710857468",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710922112",
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/f704140970dcf75dbfa8062f3494a07de4c23550"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action": "T1 exact local acceptance is complete: owner ran exact PR #334 scanner from a clean clone; Perl syntax OK, 20/20 synthetic tests pass, and exact local ROM scan reports 92 validated / 0 rejected / 0 undefined initial-history reads; decoded total 11,975,612 bytes; stream 5,869,155 bytes; header-inclusive span 5,870,259 bytes; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent Python decoder agrees. Keep task in_review until PR #334 is merged. T2: owner-local inspect_block.py Pupp 10 reports 68,284 bytes, matching the public catalogue size for N64 ID 0087 (Anakin); retain candidate status until full structure parse. A safe owner-local temporary decoded file has now been written successfully (68,284 bytes); it was not uploaded or committed. Owner machine is macOS 26.6.2 arm64 with no .NET installed. Next install supported .NET 10.0.403 SDK Arm64 and run an isolated parser-only console probe under ~/racer-work (outside the upstream clone), using the published MIT SWE1R.Assets.Blocks 0.0.1-alpha.15 package that targets netstandard2.1 and is declared by the pinned source revision. This avoids editing the upstream clone's old global.json SDK 8 pin. Report only parser status, runtime type and aggregate counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); failure output only exception type. No model bytes, offsets, dumps, images or extracted assets are uploaded. Audit package dependency licenses and do not integrate it into Boonta until N64 compatibility and provenance are established.",
+      "next_action": "Completed: PR #334 was squash-merged into main at merge commit f704140970dcf75dbfa8062f3494a07de4c23550 from exact branch head 4a6b00540d0eea6acbdfea1d88289a2068962d0d. Owner-local exact PR #334 scan confirmed 92 validated / 0 rejected / 0 undefined initial-history reads, 20/20 synthetic tests, and matching aggregate counts. T2 is tracked separately as N64-COMPWOLF-PUPP-T2-PARSE-PROBE (blocked). The owner-local 68,284-byte candidate has been prepared locally; the machine is macOS 26.6.2 arm64 with no .NET installed. Next install .NET 10.0.403 SDK Arm64 and run an isolated parser-only console probe under ~/racer-work using the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; report only parser status, runtime type and aggregate counts. No model bytes, offsets, dumps, images or extracted assets are uploaded. Audit package licenses and N64 compatibility before integration.",
+      "updated_at": "2026-11-07"
+    },
+    {
+      "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
+      "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
+      "queue": "#226",
+      "platform_scope": [
+        "Nintendo 64",
+        "GameCube"
+      ],
+      "status": "blocked",
+      "question": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
+      "acceptance_criteria": [
+        "Retain sorted Pupp index 10 as a candidate only: 68,284 decoded bytes match the public catalogue size associated with N64 model ID 0087, but identity is not established until structural parsing succeeds",
+        "Use only the already-prepared owner-local decoded candidate; do not upload model bytes, decoded payloads, ROM offsets, dumps, images or assets",
+        "Install .NET 10.0.403 SDK Arm64 only after verifying the current macOS 26.6.2 arm64 environment, then run an isolated parser-only console probe under ~/racer-work outside the upstream clone",
+        "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC out_modelblock input",
+        "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type",
+        "Audit dependency and transitive-dependency licenses and provenance before any parser integration or GX conversion"
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710857468",
+        "https://github.com/OpenSWE1R/swe1r-tools/commit/922ef535f6598a1330ff93d6b07258956f990b34",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710922112",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
+      ],
+      "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
       "updated_at": "2026-11-07"
     }
   ]
