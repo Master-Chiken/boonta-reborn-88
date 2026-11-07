@@ -230,12 +230,14 @@ elif int(reserve_match.group(1)) != openrouter_steps:
 for required in (
     "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
     "quota_required=$MIN_REQUESTS_PER_CYCLE",
-    "this reserve is not a guarantee of cycle completion",
     "QUOTA_REQUIRED: ${{ steps.openrouter_auth_check.outputs.quota_required }}",
     "below the ' + quotaRequired + '-request reserve",
 ):
     if required not in openrouter:
         errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
+
+if "this reserve is not a guarantee of cycle completion" not in budget:
+    errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
