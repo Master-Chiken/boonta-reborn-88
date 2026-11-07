@@ -239,6 +239,24 @@ for required in (
 if "this reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 
+# OpenRouter must stop on the first terminal provider refusal, not consume
+# the remainder of its 180-second window in internal retries.
+for required in (
+    "terminal_provider_error = re.compile(",
+    "free-models-per-day",
+    "rate[_ ]limit exceeded",
+    "tokens per minute",
+    "request too large for model",
+    "missing authentication header",
+    "terminal_provider_error.search(line)",
+    "start_new_session=True",
+    "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    "daily cooldown will be recorded",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter first-refusal watchdog is missing required behavior: {required!r}")
+
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
