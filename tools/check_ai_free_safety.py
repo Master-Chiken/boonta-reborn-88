@@ -1142,11 +1142,11 @@ if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]
 
 # Gemini autonomous context policy: compact supplied briefs, no full issue history or binary/media inputs.
 for required in (
-    "Do not call issue_read or fetch full bodies/comments for #156, #226 or #279",
-    "below 1,500 tokens per cycle",
-    "Never fetch attachments, images, media, artifacts or binary content",
-    "Never repeat the same oversized request",
-    "Never fetch the entire `docs/research/RE-001-route-spline-progress.md` dossier",
+    "Do not fetch full issue bodies or full comment histories for #156, #226 and #279",
+    "below 1,500 tokens total",
+    "Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries",
+    "never repeat the same request",
+    "approximately 452 KB route dossier",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must enforce the current bounded text-only context: {required!r}")
