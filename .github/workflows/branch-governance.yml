@@ -76,8 +76,10 @@ jobs:
                   date = subprocess.check_output(
                       ["gh", "api", f"repos/{repo}/commits/{sha}",
                        "--jq", ".commit.committer.date // .commit.author.date // empty"],
-                      text=True, stderr=subprocess.DEVNULL).strip() or None
-              except subprocess.CalledProcessError:
+                      text=True, stderr=subprocess.DEVNULL, timeout=20).strip() or None
+              except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
+                  # A slow, unavailable, or failed lookup is unknown—not proof
+                  # that a branch is stale. Keep it active until a later audit.
                   date = None
               return sha, date, time.monotonic() - request_started
 
