@@ -179,15 +179,15 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
     errors.append("Gemini must depend on the global cooldown preflight")
 
 # Keep all agents bounded to compact text-only context and the common policy.
-for label, content in (
-    ("Gemini", gemini_prompt),
-    ("OpenRouter", openrouter),
-    ("Groq", groq),
+for label, content, retrieval_budget in (
+    ("Gemini", gemini_prompt, "1,500 tokens"),
+    ("OpenRouter", openrouter, "1,500 tokens"),
+    ("Groq", groq, "800 tokens"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
         "docs/automation/task-ledger-summary.json",
-        "1,500 tokens",
+        retrieval_budget,
         "docs/REVERSE_ENGINEERING_FIRST.md",
     ):
         if required not in content:
@@ -271,7 +271,7 @@ groq_limits = (
 if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
     errors.append("Groq must remain capped at 3072 context / 512 output tokens")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 7000 )); then", "Groq must enforce its prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
     (groq, "timeout --signal=TERM --kill-after=5s 90s", "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, "timeout --signal=TERM --kill-after=5s 180s", "OpenRouter must enforce the 180-second invocation timeout"),
