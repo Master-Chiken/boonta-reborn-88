@@ -340,7 +340,7 @@ for required in (
     'No paid model/provider fallback is available',
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
-    'opencode run --model openrouter/openrouter/free --auto',
+    '"opencode", "run", "--model", "openrouter/openrouter/free",
     'npm install --global opencode-ai@1.19.5',
     'name: Verify OpenRouter Free key authentication without inference',
     'https://openrouter.ai/api/v1/key',
@@ -1217,8 +1217,13 @@ if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDE
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
 if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
     errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
-if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
-    errors.append("OpenRouter fallback must persist its final report for contract validation")
+for required in (
+    '"$RUNNER_TEMP/opencode-cycle-report.txt"',
+    'with open(report_path, "w", encoding="utf-8") as report:',
+    'report.flush()',
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter fallback must persist its final report for contract validation: {required!r}")
 if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
     errors.append("OpenRouter fallback must validate the report it just produced")
 if "exact-40-character-head-SHA" not in autonomous_prompt:
