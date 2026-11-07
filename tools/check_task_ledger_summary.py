@@ -34,6 +34,7 @@ def build_summary(ledger: dict) -> dict:
                 "status": task["status"],
                 "pr_url": task.get("pr_url"),
                 "head_sha": task.get("head_sha"),
+                "target_branch": task.get("target_branch"),
                 "next_action_excerpt": excerpt(task.get("next_action")),
             }
             for task in ledger.get("tasks", [])

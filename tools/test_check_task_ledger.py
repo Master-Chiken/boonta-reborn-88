@@ -26,6 +26,7 @@ def valid_task(task_id="TASK-001", status="queued"):
         "queue": "#226",
         "platform_scope": ["GameCube/Wii"],
         "status": status,
+        "target_branch": "main",
         "question": "What does the pinned evidence establish?",
         "acceptance_criteria": ["Record exact source revision", "Separate facts from unknowns"],
         "evidence": [],
@@ -51,6 +52,11 @@ class TaskLedgerTests(unittest.TestCase):
         data = valid_ledger()
         data["tasks"].append(valid_task())
         self.assertTrue(any("duplicate task_id" in e for e in ledger.validate_ledger(data)))
+
+    def test_rejects_lowercase_or_unsafe_task_id(self):
+        data = valid_ledger()
+        data["tasks"][0]["task_id"] = "task-with-lowercase"
+        self.assertTrue(any("stable uppercase identifier" in e for e in ledger.validate_ledger(data)))
 
     def test_enforces_single_active_task(self):
         data = valid_ledger()
@@ -79,6 +85,20 @@ class TaskLedgerTests(unittest.TestCase):
         data = valid_ledger()
         data["tasks"][0]["platform_scope"] = []
         self.assertTrue(any("platform_scope" in e for e in ledger.validate_ledger(data)))
+
+    def test_active_task_requires_explicit_target_branch(self):
+        data = valid_ledger()
+        task = valid_task(status="active")
+        task.pop("target_branch")
+        data["tasks"] = [task]
+        self.assertTrue(any("target_branch must be main or dev" in e for e in ledger.validate_ledger(data)))
+
+    def test_activation_bootstrap_requires_explicit_target_branch(self):
+        data = valid_ledger()
+        task = valid_task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
+        task.pop("target_branch")
+        data["tasks"] = [task]
+        self.assertTrue(any("target_branch must be main or dev" in e for e in ledger.validate_ledger(data)))
 
 
 class LiveGitHubReconciliationTests(unittest.TestCase):

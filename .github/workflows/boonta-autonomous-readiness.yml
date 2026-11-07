@@ -12,6 +12,12 @@ on:
       writer_state:
         description: Whether the owner has enabled the autonomous writer
         value: ${{ jobs.readiness.outputs.writer_state }}
+      openrouter_ready:
+        description: Whether OpenRouter Free fallback has its owner attestation and key secret
+        value: ${{ jobs.readiness.outputs.openrouter_ready }}
+      groq_ready:
+        description: Whether Groq Free fallback has its owner attestation and key secret
+        value: ${{ jobs.readiness.outputs.groq_ready }}
 
 # The workflow's default token is read-only. The installation token below is
 # minted with the exact permissions the autonomous loop will need, but this
@@ -26,6 +32,8 @@ jobs:
     name: Verify autonomous configuration without running Gemini
     outputs:
       writer_state: ${{ steps.owner_gates.outputs.writer_state }}
+      openrouter_ready: ${{ steps.openrouter_readiness.outputs.ready }}
+      groq_ready: ${{ steps.groq_readiness.outputs.ready }}
     if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -81,13 +89,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report optional OpenRouter Free fallback readiness (no API request)
+        id: openrouter_readiness
         shell: bash
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
           OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}
         run: |
           set -euo pipefail
+          echo "ready=false" >> "$GITHUB_OUTPUT"
           if [[ "${OPENROUTER_FREE_TIER_CONFIRMED:-}" == "true" && -n "${OPENROUTER_API_KEY:-}" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
             {
               echo "## OpenRouter Free fallback: configured"
               echo
@@ -174,13 +185,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report optional Groq Free tertiary fallback readiness (no API request)
+        id: groq_readiness
         shell: bash
         env:
           GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           GROQ_FREE_TIER_CONFIRMED: ${{ vars.GROQ_FREE_TIER_CONFIRMED }}
         run: |
           set -euo pipefail
+          echo "ready=false" >> "$GITHUB_OUTPUT"
           if [[ "${GROQ_FREE_TIER_CONFIRMED:-}" == "true" && -n "${GROQ_API_KEY:-}" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
             {
               echo "## Groq Free tertiary fallback: configured"
               echo
