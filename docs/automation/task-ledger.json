@@ -664,7 +664,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "Which existing public tools can safely identify and statically inspect a local GameCube/Wii DOL/REL, what are their exact platform/language limits, and what evidence is still needed for Racer?",
       "acceptance_criteria": [
         "Pin official repositories, exact revisions and declared licenses for the selected native analysis tools",
@@ -680,9 +680,10 @@
         "https://github.com/morluto/rea/tree/d896ab7bd78331efa15e35337c1f8eff45a21623",
         "https://github.com/morluto/rea/blob/46c457f74c474b224dd540d6eae6bc23080cd95f/docs/ghidra-dol.md",
         "https://github.com/encounter/decomp-toolkit",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/489a117c380af4c837e1c98132998894b238bd06"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/489a117c380af4c837e1c98132998894b238bd06",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/0e03ed6814c55241765fcae1415a70ed53beff0b"
       ],
-      "next_action": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local.",
+      "next_action": "The GameCube/Wii toolchain and clean-room reuse audit is integrated in main via PR #278 (merge commit 0e03ed6814c55241765fcae1415a70ed53beff0b). Any synthetic, non-game DOL/REL fixture validation is tracked as a separate task; original game binaries, disc images, extracted assets and private Ghidra databases remain local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
       "head_sha": "32c256eb511ba75982f1503ea63aa14976a4b506",
       "updated_at": "2026-11-07"
