@@ -8,20 +8,6 @@
   },
   "tasks": [
     {
-      "task_id": "RE001-SYSTEM-MATRIX",
-      "title": "Native-target complete-game system matrix and PC reference gap audit",
-      "queue": "#226",
-      "platform_scope": [
-        "GameCube",
-        "Wii",
-        "PC-reference"
-      ],
-      "status": "in_review",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
-      "next_action_excerpt": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 4dff19dd751765a9a3d89c0f569e6969a398e280 documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the…"
-    },
-    {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
       "title": "Activate and validate persistent autonomous task tracking",
       "queue": "#226",
@@ -32,20 +18,6 @@
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "PR #333 was merged to main at 928a282daae0dd557861e15471826ea4025bf428. It adds one read-only preflight on issue #226 for the three current UTC provider cooldown markers before launching any provider workflow; Gemini, OpenRouter and Groq retain their independent in-workflow cooldown/quota/Free-only gates. The three exact-head checks passed: workflow…"
-    },
-    {
-      "task_id": "RE001-RACE-LIFECYCLE-TRACE",
-      "title": "Trace race completion through post-race phases and Results dispatch (three PC evidence snapshots)",
-      "queue": "#226",
-      "platform_scope": [
-        "PC reference",
-        "GameCube",
-        "Wii"
-      ],
-      "status": "in_review",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
-      "next_action_excerpt": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call…"
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
@@ -59,18 +31,6 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
       "head_sha": "e214d06414d4bdc62c6671b591ec7e9764775bb4",
       "next_action_excerpt": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local."
-    },
-    {
-      "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
-      "title": "Recover PC race-spline cursor/rebind/offset routines and trace their consumers",
-      "queue": "#279",
-      "platform_scope": [
-        "Windows PC reference only"
-      ],
-      "status": "in_review",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59",
-      "next_action_excerpt": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity."
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
