@@ -257,6 +257,7 @@ for required in (
     "start_new_session=True",
     "os.killpg(process.pid, signal.SIGTERM)",
     "signal.signal(signal.SIGTERM, handle_shutdown)",
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s"',
     "daily cooldown will be recorded",
 ):
     if required not in openrouter:
@@ -329,7 +330,7 @@ for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
-    (openrouter, "timeout --signal=TERM --kill-after=5s 180s", "OpenRouter must enforce the 180-second invocation timeout"),
+    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "Never enable billing, paid routes", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),
