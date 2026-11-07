@@ -159,6 +159,15 @@ jobs:
               "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
               "actual auto-delete setting is reported": "delete_branch_on_merge" in governance,
               "single deduplicated branch-budget issue": governance.count('title="Branch governance: branch budget"') == 2,
+              "branch-budget searches are restricted to issue titles": sum(
+                  "gh issue list" in line and "--search" in line and "in:title" in line
+                  for line in governance.splitlines()
+              ) == 2,
+              "branch-budget search cannot match the autonomous task queue body": all(
+                  "in:title" in line
+                  for line in governance.splitlines()
+                  if "gh issue list" in line and "--search" in line
+              ),
               "existing alert gets edited instead of comment spam": "gh issue edit" in governance and 'gh issue comment "$existing"' not in governance,
               "alert closes when inventory is back in budget": "gh issue close" in governance and "below the 10-branch warning threshold" in governance,
               "no automatic branch-ref deletion": "gh api --method DELETE" not in governance and "git push --force" not in governance,
