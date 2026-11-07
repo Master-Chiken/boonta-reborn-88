@@ -289,53 +289,6 @@ jobs:
           exit "$invocation_status"
 
 
-      - name: Record same-day Groq cooldown after an invocation failure
-        if: always() && steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'
-        continue-on-error: true
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
-        env:
-          ISSUE_NUMBER: '${{ inputs.issue_number }}'
-          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-        with:
-          script: |
-            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
-            const todayUtc = new Date().toISOString().slice(0, 10);
-            const marker = '<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
-            const body = [
-              marker,
-              '## Groq Free daily failure cooldown',
-              '',
-              'The autonomous Groq Free invocation failed on UTC date ' + todayUtc + '.',
-              'Further fallback cycles on this UTC date will skip another Groq request. A fresh attempt is allowed on the next UTC date.',
-              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
-              '',
-              '[Inspect the failed Groq invocation](' + process.env.RUN_URL + ')',
-            ].join('\n');
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              per_page: 100,
-            });
-            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GROQ_FAILURE_COOLDOWN:'));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-              core.info('Updated the single persistent Groq cooldown marker on issue #' + issueNumber + '.');
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body,
-              });
-              core.info('Created the persistent Groq cooldown marker on issue #' + issueNumber + '.');
-            }
-
       - name: Validate Groq autonomous cycle report
         id: validate_report
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
@@ -376,6 +329,52 @@ jobs:
               core.setFailed('Groq invocation returned without a valid PROGRESS or BLOCKED report.');
             }
 
+      - name: Record same-day Groq cooldown after an invocation failure
+        if: always() && ((steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              '## Groq Free daily failure cooldown',
+              '',
+              'The autonomous Groq Free invocation or cycle-report validation failed on UTC date ' + todayUtc + '.',
+              'Further fallback cycles on this UTC date will skip another Groq request. A fresh attempt is allowed on the next UTC date.',
+              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed Groq invocation](' + process.env.RUN_URL + ')',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GROQ_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent Groq cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent Groq cooldown marker on issue #' + issueNumber + '.');
+            }
       - name: Fail visibly if the Groq fallback did not complete
         if: always()
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
