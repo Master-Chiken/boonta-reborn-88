@@ -247,7 +247,7 @@ jobs:
           - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json once.
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier. Keep newly retrieved text below 1,500 tokens.
           - The ledger marks AUTOMATION-LEDGER-ACTIVATION blocked, not active. Do not create a competing task/writer. After a real provider invocation, validated report and cycle-fresh PR, the gate can be reconciled.
-          - After activation, follow #226 Phase 1: add only missing source-verified tool/license evidence, consume #279's read-only PC/N64 comparisons, label facts OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, evaluate GX/libogc porting gaps and record a reuse/convert/adapt/reimplement decision. PR #282 is complete; do not duplicate it.
+          - Follow the newest owner direction dated 2026-11-06. After activation, follow #226 Phase 1: add only missing source-verified tool/license evidence, consume #279's read-only PC/N64 comparisons, label facts OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, evaluate GX/libogc porting gaps and record a reuse/convert/adapt/reimplement decision. PR #282 is complete; do not duplicate it. PR #274 is not an automatic next step; revisit it only for a demonstrated route-runtime dependency.
           - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Keep commercial ROM/disc/binary/extracted data local. No gameplay feature work during Phase 1. Later reuse #317 → #318 → #319; revisit #274 only for a demonstrated dependency.
 
           EXECUTION
