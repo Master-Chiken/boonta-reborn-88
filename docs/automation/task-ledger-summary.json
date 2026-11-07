@@ -83,7 +83,7 @@
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action_excerpt": "Review PR #334 and run tools/n64_comp_inventory.pl locally against the owner-held ROM. Reconcile 92 records, Trak/Pupp/Part/Scen counts, 11,975,612 decoded bytes, and the 5,870,259-byte historical figure against the separately reported stream/span totals. Keep T1 in review until that local reproduction is confirmed; only then start T2 for one Pupp record…"
+      "next_action_excerpt": "Owner's independent local Python decoder run on 2026-11-07 reproduced all 92 CompWolf records with zero length failures, tags Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded total 11,975,612 bytes, compressed-stream total 5,869,155 bytes, and header-inclusive span 5,870,259 bytes (92 × 12-byte headers explain the difference). Keep T1 in review until the…"
     }
   ]
 }
