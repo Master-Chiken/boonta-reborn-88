@@ -111,6 +111,9 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
+        f"evidence_pr_number: ${{{{ steps.validate_report.outputs.evidence_pr_number }}}}",
+        f"evidence_head_sha: ${{{{ steps.validate_report.outputs.evidence_head_sha }}}}",
+        f"evidence_base: ${{{{ steps.validate_report.outputs.evidence_base }}}}",
         "tools/validate_autonomous_cycle_report.js",
         "EXPECTED_TASK_ID:",
         "EXPECTED_TASK_TARGET_BRANCH:",
@@ -133,7 +136,7 @@ else:
         "BOONTA_GEMINI_FAILURE_COOLDOWN:",
         "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
         "BOONTA_GROQ_FAILURE_COOLDOWN:",
-        "new Date().toISOString().slice(0, 10)",
+        "const todayUtc = now.toISOString().slice(0, 10)",
         "gemini_active:",
         "openrouter_active:",
         "groq_active:",
@@ -159,7 +162,7 @@ if "needs: [readiness, provider-cooldowns]" not in autonomous:
     errors.append("Gemini job must depend on the global provider cooldown preflight")
 if autonomous.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require one eligible ledger task before invocation")
-if autonomous.count("needs.provider-cooldowns.outputs.reservation_acquired == 'true'") != 3:
+if autonomous.split("  cycle-summary:", 1)[0].count("needs.provider-cooldowns.outputs.reservation_acquired == 'true'") != 3:
     errors.append("All three provider routes must require an acquired task reservation")
 if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
     errors.append("Gemini job must not start while its UTC cooldown is active")
@@ -1034,7 +1037,7 @@ if "needs: readiness" not in autonomous or "needs.readiness.result == 'success'"
     errors.append("Gemini must run only after successful read-only readiness")
 if "needs.readiness.outputs.writer_state == 'enabled'" not in autonomous:
     errors.append("Gemini must not run when the owner has left the autonomous writer disabled")
-readiness_job = autonomous.split("  readiness:", 1)[1].split("  autonomous-cycle:", 1)[0]
+readiness_job = autonomous.split("  readiness:", 1)[1].split("  provider-cooldowns:", 1)[0]
 readiness_job_permissions = dict(re.findall(r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$", readiness_job))
 if readiness_job_permissions != {"contents": "read", "issues": "read", "pull-requests": "read"}:
     errors.append(f"Autonomous loop readiness caller must be read-only; found {readiness_job_permissions!r}")
@@ -1068,9 +1071,10 @@ else:
             job_permissions_match.group("block"),
         )
     )
-    if job_permissions != expected_caller_permissions:
+    expected_provider_job_permissions = {**expected_caller_permissions, "checks": "read"}
+    if job_permissions != expected_provider_job_permissions:
         errors.append(
-            "Autonomous reusable-workflow job permissions must be exactly the contents/issues/PR write set; "
+            "Autonomous reusable-workflow job permissions must be exactly the scoped contents/issues/PR write set plus checks: read for exact-head CI verification; "
             f"found {job_permissions!r}"
         )
 
