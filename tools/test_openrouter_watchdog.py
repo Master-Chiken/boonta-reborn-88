@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration tests for the exact OpenRouter watchdog embedded in its workflow.
+"""Integration tests for the production OpenRouter and Groq watchdogs.
 
 The test extracts the production heredoc rather than maintaining a second
 implementation. A fake OpenCode executable exercises real process-group
@@ -20,7 +20,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github/workflows/openrouter-plan-execute.yml"
+OPENROUTER_WORKFLOW = ROOT / ".github/workflows/openrouter-plan-execute.yml"
+GROQ_WORKFLOW = ROOT / ".github/workflows/groq-plan-execute.yml"
 HEREDOC = (
     'python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" '
     '"$GITHUB_WORKSPACE" <<\'PY\'\n'
@@ -55,6 +56,8 @@ else:
 print("grandchild-pid=" + str(child.pid), flush=True)
 if mode == "refusal":
     print("HTTP 429 Too Many Requests", flush=True)
+elif mode == "groq_refusal":
+    print("tokens per minute (TPM) quota exceeded", flush=True)
 elif mode == "signal":
     print("WATCHDOG_READY", flush=True)
 else:
@@ -68,10 +71,10 @@ time.sleep(30)
 '''
 
 
-def production_watchdog_source() -> str:
-    source = WORKFLOW.read_text(encoding="utf-8")
+def production_watchdog_source(workflow: Path) -> str:
+    source = workflow.read_text(encoding="utf-8")
     if source.count(HEREDOC) != 1:
-        raise AssertionError("Expected exactly one production OpenRouter watchdog heredoc")
+        raise AssertionError(f"Expected exactly one production watchdog heredoc in {workflow.name}")
     body = source.split(HEREDOC, 1)[1].split("\n          PY", 1)[0]
     return textwrap.dedent(body)
 
@@ -81,9 +84,12 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         if shutil.which("timeout") is None:
             raise RuntimeError("GNU timeout is required by the production OpenRouter workflow")
-        cls.watchdog_source = production_watchdog_source()
+        cls.openrouter_watchdog_source = production_watchdog_source(OPENROUTER_WORKFLOW)
+        cls.groq_watchdog_source = production_watchdog_source(GROQ_WORKFLOW)
 
-    def launch(self, root: Path, mode: str) -> tuple[subprocess.Popen[str], Path, Path]:
+    def launch(
+        self, root: Path, mode: str, watchdog_source: str | None = None
+    ) -> tuple[subprocess.Popen[str], Path, Path]:
         bin_dir = root / "bin"
         bin_dir.mkdir()
         fake_cli = bin_dir / "opencode"
@@ -91,7 +97,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
         fake_cli.chmod(0o755)
 
         watchdog = root / "watchdog.py"
-        watchdog.write_text(self.watchdog_source, encoding="utf-8")
+        watchdog.write_text(watchdog_source or self.openrouter_watchdog_source, encoding="utf-8")
         report = root / "opencode-cycle-report.txt"
         heartbeat = root / "grandchild-heartbeat.txt"
         env = os.environ.copy()
@@ -178,6 +184,64 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                         ready = True
                         break
                 self.assertTrue(ready, "The fake provider did not reach its ready state")
+                os.kill(process.pid, signal.SIGTERM)
+                output, _ = process.communicate(timeout=10)
+                self.assertEqual(process.returncode, 128 + signal.SIGTERM, output)
+                self.assertIn("WATCHDOG_READY", report.read_text(encoding="utf-8"))
+                self.assert_heartbeat_stopped(heartbeat)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+                if report.exists():
+                    try:
+                        pid = self.grandchild_pid(report)
+                        os.kill(pid, signal.SIGKILL)
+                    except (AssertionError, ProcessLookupError, PermissionError):
+                        pass
+
+
+    def test_groq_first_tpm_refusal_terminates_process_group_and_preserves_report(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="boonta-groq-watchdog-refusal-") as directory:
+            root = Path(directory)
+            process, report, heartbeat = self.launch(
+                root, "groq_refusal", self.groq_watchdog_source
+            )
+            try:
+                output, _ = process.communicate(timeout=10)
+                self.assertEqual(process.returncode, 75, output)
+                self.assertIn("tokens per minute (TPM)", report.read_text(encoding="utf-8"))
+                self.assertIn("Groq TPM/Free-quota refusal detected", output)
+                self.assert_heartbeat_stopped(heartbeat)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+                if report.exists():
+                    try:
+                        pid = self.grandchild_pid(report)
+                        os.kill(pid, signal.SIGKILL)
+                    except (AssertionError, ProcessLookupError, PermissionError):
+                        pass
+
+    def test_groq_sigterm_terminates_process_group_and_preserves_report(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="boonta-groq-watchdog-signal-") as directory:
+            root = Path(directory)
+            process, report, heartbeat = self.launch(
+                root, "signal", self.groq_watchdog_source
+            )
+            try:
+                self.assertIsNotNone(process.stdout)
+                ready = False
+                deadline = time.monotonic() + 8
+                while time.monotonic() < deadline:
+                    line = process.stdout.readline()
+                    if not line:
+                        break
+                    if "WATCHDOG_READY" in line:
+                        ready = True
+                        break
+                self.assertTrue(ready, "The fake Groq provider did not reach its ready state")
                 os.kill(process.pid, signal.SIGTERM)
                 output, _ = process.communicate(timeout=10)
                 self.assertEqual(process.returncode, 128 + signal.SIGTERM, output)
