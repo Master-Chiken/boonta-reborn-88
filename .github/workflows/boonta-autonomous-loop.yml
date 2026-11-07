@@ -227,18 +227,28 @@ jobs:
                 }
               })
               .filter(Boolean);
-            const malformedReservation = recentBotReservations.find((item) => item.malformed);
+            const malformedReservation = recentBotReservations.find(({ payload, malformed }) =>
+              malformed ||
+              !payload ||
+              payload.schema_version !== 1 ||
+              typeof payload.run_id !== 'string' || !payload.run_id ||
+              !Number.isInteger(Number(payload.run_attempt)) || Number(payload.run_attempt) < 1 ||
+              typeof payload.task_id !== 'string' || !payload.task_id ||
+              !/^[0-9a-f]{16}$/.test(payload.fingerprint || '') ||
+              !['gemini', 'openrouter', 'groq'].includes(payload.provider) ||
+              !Number.isFinite(Date.parse(payload.issued_at || '')) ||
+              !Number.isFinite(Date.parse(payload.expires_at || '')) ||
+              (payload.released_at && !Number.isFinite(Date.parse(payload.released_at)))
+            );
             const activeLeases = recentBotReservations.filter(({ payload }) =>
-              payload && payload.schema_version === 1 &&
-              !payload.released_at &&
-              Number.isFinite(Date.parse(payload.expires_at || '')) &&
-              Date.parse(payload.expires_at) > now.getTime()
+              payload && !payload.released_at && Date.parse(payload.expires_at) > now.getTime()
             );
             const myRunId = String(context.runId);
             const myRunAttempt = Number(context.runAttempt || 1);
+            // A rerun of this exact workflow may reclaim its previous attempt's lease
+            // only when task ID and fingerprint are unchanged.
             const foreignLease = activeLeases.find(({ payload }) =>
               String(payload.run_id) !== myRunId ||
-              Number(payload.run_attempt) !== myRunAttempt ||
               payload.task_id !== selectedTask?.task_id ||
               payload.fingerprint !== taskFingerprint
             );
@@ -260,7 +270,8 @@ jobs:
             } else {
               const sameRunLeases = activeLeases.filter(({ payload }) =>
                 String(payload.run_id) === myRunId &&
-                Number(payload.run_attempt) === myRunAttempt
+                payload.task_id === selectedTask?.task_id &&
+                payload.fingerprint === taskFingerprint
               );
               if (sameRunLeases.length > 1) {
                 reservationReason = 'multiple active leases already reference this run; refusing ambiguous ownership';
@@ -360,6 +371,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
@@ -368,7 +380,7 @@ jobs:
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_title: "Boonta Reborn autonomous work cycle — ${{ needs.provider-cooldowns.outputs.task_id }}"
       task_description: >-
-        Reserved task ID: ${{ needs.provider-cooldowns.outputs.task_id }}. Required PR target branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}. Add the exact standalone PR-body line BOONTA_TASK_ID: <task ID> and report BOONTA_CYCLE_TASK_ID: <task ID>.
+        Reserved task ID: ${{ needs.provider-cooldowns.outputs.task_id }}. Required PR target branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}. Add the exact standalone PR-body line BOONTA_TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }} and report BOONTA_CYCLE_TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}.
         Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
         Keep AUTOMATION-LEDGER-ACTIVATION as the only unresolved activation task until a real provider invocation produces a validated report plus a cycle-fresh PR, or a precise verified blocker. Never start a competing writer.
         Once activation is demonstrated, follow the latest #226 Phase 1: add only missing, source-verified tool/license/utility evidence; consume #279's PC/N64 comparisons rather than duplicating them; map target behavior as OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN; evaluate GX/libogc graphics, audio and frame-rate/physics gaps; finish a concise reuse/convert/adapt/reimplement decision. PR #282 is the completed broad inventory. Keep commercial ROM/disc/binary/extracted data local.
@@ -400,6 +412,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
@@ -433,6 +446,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
