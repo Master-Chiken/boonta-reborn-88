@@ -469,7 +469,8 @@ jobs:
             if (!allowed) {
               core.setFailed('OpenRouter fallback did not execute: its independent Free-only/owner gate blocked the request. No provider request was sent; the separate Groq Free fallback may now be evaluated.');
             } else if (quotaAvailable === 'false') {
-              core.setFailed('OpenRouter Free daily model quota is exhausted according to GET /api/v1/key. No inference request was sent; the daily cooldown was recorded. Retry after the UTC reset; no credits or paid route are permitted.');
+              const quotaRemaining = process.env.QUOTA_REMAINING || '0';
+              core.setFailed('OpenRouter Free daily model quota is exhausted according to GET /api/v1/key (remaining: ' + quotaRemaining + '). No inference request was sent; the daily cooldown was recorded. Retry after the UTC reset; no credits or paid route are permitted.');
             } else if (outcomes.snapshot !== 'success' || outcomes.invocation !== 'success' || outcomes.report !== 'success') {
               core.setFailed('OpenRouter fallback did not complete. Required outcomes: quota preflight, PR snapshot, actual OpenCode invocation, and report validation must all be success. Observed: ' + JSON.stringify(outcomes));
             } else {
