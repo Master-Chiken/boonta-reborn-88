@@ -41,7 +41,7 @@
         "Wii",
         "PC-reference"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "What systems must a complete clean-room native port implement, and what is evidenced versus unknown?",
       "acceptance_criteria": [
         "Complete-game systems are inventoried",
@@ -222,9 +222,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/863c0ce8ae0e67d614bd161cb2c05d0b6fa2a7f4",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/a87fa7f4d80c67c0a5d3b18247892cc78d615283",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf6b6472f6d8a394e0ffd60939c3874fada382a8"
       ],
-      "next_action": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 4dff19dd751765a9a3d89c0f569e6969a398e280 documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the Judge-Fini-to-Hang-Results call edge UNKNOWN until the exact 0x0045E200/0x0045DD80/0x0045A040 call chain and Hang state write are proven within one executable/analysis database. No PC-to-GameCube/Wii parity is inferred.",
+      "next_action": "Completed: PR #282 was squash-merged into main at commit cf6b6472f6d8a394e0ffd60939c3874fada382a8 from exact head 4dff19dd751765a9a3d89c0f569e6969a398e280. The dossier consolidates the PC-reference system matrix and lifecycle evidence while explicitly keeping PC findings separate from GameCube/Wii behavior. Remaining unknowns and platform boundaries are documented; no console parity or unverified runtime behavior is claimed.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
       "updated_at": "2026-11-07"
@@ -373,7 +374,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "What is supported across separate pinned PC code and IDA snapshots about lap finish, manager callbacks, Results dispatch and teardown, and which runtime/native-platform edges remain unresolved?",
       "acceptance_criteria": [
         "Pin every consulted public source to an exact commit and executable/version context where known",
@@ -565,9 +566,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c9dc0ae98d2ecfbe69fe6d2a162bf7edeb8eadeb",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/1bdfa937eff6caef311d8de871c64144de60135c",
         "https://github.com/everalert/swe1r-decomp/blob/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7/idapro/notes/trackloading.txt",
-        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457410.c"
+        "https://github.com/DeonPoncini/swep1r_decomp/blob/d988c6408a91aaf8a0e65dbdbe32b0dbb4b970ef/c/FUN_00457410.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/cf6b6472f6d8a394e0ffd60939c3874fada382a8"
       ],
-      "next_action": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call chain. Exact caller/xref evidence around 0x0045E200, 0x0045DD80, 0x0045A040 and the Hang state-5 write remains required; keep the edge UNKNOWN. Do not infer GameCube/Wii parity.",
+      "next_action": "Completed as a bounded research deliverable in merged PR #282 at commit cf6b6472f6d8a394e0ffd60939c3874fada382a8 (exact head 4dff19dd751765a9a3d89c0f569e6969a398e280). The Steam-PC evidence identifies candidate lifecycle/event boundaries but does not prove the decisive retail finish-to-results dispatch or GameCube/Wii parity; unresolved items remain explicitly UNKNOWN.",
       "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280"
@@ -683,7 +685,7 @@
       "platform_scope": [
         "Windows PC reference only"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "What do the recovered Steam-PC race-specific spline routines do, and which downstream consumers of trackOffset, splineRebindResult and movement flags are actually established in the pinned public source?",
       "acceptance_criteria": [
         "Preserve exact SW_RACER_RE, Steam-PC and independent IDA revisions and keep their executable/build identities separate",
@@ -699,9 +701,10 @@
         "https://github.com/everalert/swe1r-decomp/tree/8d066b9c12ecb57bd819aaab586fd6bd2dd078a7",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/82fca158d6acdfc56fd9d45fc188bbf135a1f483",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/c4cd6b2d49fc291be8fdf43932d4db412fc812a5",
-        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6ee273b5071d8f7560e7b447124194d762f2dab1"
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/6ee273b5071d8f7560e7b447124194d762f2dab1",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/d44caba42614a8099f7d9a34a1f2ab1a3cdded46"
       ],
-      "next_action": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity.",
+      "next_action": "Completed as a bounded PC-reference research pass in merged PR #284 at commit d44caba42614a8099f7d9a34a1f2ab1a3cdded46 (exact head 0afa0b580d8d8c956efbe51f988529e854ba7f59). The bounded Steam-PC offset search did not recover typed downstream readers for splineRebindResult or trackOffset; both remain UNKNOWN pending a full xref pass on the exact local executable/analysis database. No GameCube/Wii parity is inferred.",
       "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
       "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59"
