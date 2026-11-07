@@ -103,14 +103,17 @@ provider_outputs = (
     ("Groq", groq_fallback, "groq-plan-execute", "run_opencode"),
 )
 for provider, workflow, job_name, invocation_step in provider_outputs:
-    for required in (
-        "report_outcome:",
-        "cycle_status:",
+    expected_outputs = (
+        f"value: ${{{{ jobs.{job_name}.outputs.invocation_outcome }}}}",
+        f"value: ${{{{ jobs.{job_name}.outputs.report_outcome }}}}",
+        f"value: ${{{{ jobs.{job_name}.outputs.cycle_status }}}}",
+        f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
         "core.setOutput('cycle_status', 'progress')",
         "core.setOutput('cycle_status', 'blocked')",
-    ):
+    )
+    for required in expected_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must expose validated invocation/report status: {required!r}")
 
