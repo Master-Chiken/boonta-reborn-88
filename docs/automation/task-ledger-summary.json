@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-06",
+  "updated_at": "2026-11-07",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true
@@ -31,7 +31,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #324 remains open and unmerged. Its previous exact code head 53fe505983c22e2ebd8478214ce616ac34bcd48 passed all four required exact-head checks: AI free-tier safety (#42299941774), branch automation self-test (#42299941490), Step 102 provenance guard (#42299941827), and trusted source-path guard (#42299977186). Scheduled parent run #42276661261 confirms…"
+      "next_action_excerpt": "PR #324 was merged to main at exact tested head 927826da2bfd96609f188e44d0d0ed635fd5b077 (merge commit 05b4fac74701092c7b9c9dcbd161054eea6754b3). Exact-head AI safety/provider-handoff/ledger reconciliation, branch automation YAML/embedded-Python self-test, and held-assets/provenance checks all passed. Activation remains blocked until a post-merge autonomous loop run proves readiness and a real provider invocation yields a valid cycle-fresh report/PR, or a precise verified blocker. Static CI alone does not prove activation."
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
