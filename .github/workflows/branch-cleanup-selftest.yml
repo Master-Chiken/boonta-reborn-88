@@ -72,25 +72,29 @@ jobs:
               "safety/openrouter-exact-head-sha": "c52c9b2594b711a76a8f7ccf5e25acce7982c381",
               "test/ares-gdb-smoke-20261021": "fa8cee047ae8e74c30c87cd94977c434bb1c7398",
               "agent/boonta-chatgpt/activation-ledger-evidence-20261107": "05b4fac74701092c7b9c9dcbd161054eea6754b3",
+              "feat/deterministic-rival-ai-20261106": "216e4a8bdef8941dadc7a604a24021ad54f09db8",
+              "feat/rival-curvature-pace-20261106": "b3d215df243a11d3e0022ecf562ab2ba1de96da9",
+              "feat/rival-track-line-20261106": "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
           }
 
           checks = {
               "manual triggers only": "workflow_dispatch:" in header and "issue_comment:" in header and all(token not in header for token in ("push:", "pull_request:", "schedule:")),
               "actor, main ref and dedicated issue gate": "github.actor == 'Master-Chiken'" in workflow and "github.ref == 'refs/heads/main'" in workflow and "github.event.issue.number == 248" in workflow and "github.event.issue.pull_request == null" in workflow,
               "comment requires exact one-line command and explicit confirmation": r"^/retire-branch" in workflow and "CONFIRM$" in workflow and "Use exactly: /retire-branch BRANCH_NAME EXPECTED_SHA CONFIRM" in workflow,
-              "15 unique exact branch/SHA pins": cases == expected and len(cases) == 15,
+              "18 unique exact branch/SHA pins": cases == expected and len(cases) == 18,
               "current open PR heads are not allowlisted": "recovery/all-branch-heads-20261102" not in cases and "feat/native-wii-classic-input-main-20261102" not in cases,
-              "permanent refs cannot be retired": all(name not in cases for name in ("main", "dev", "archive/branch-heads-20261019")),
+              "permanent refs cannot be retired": all(name not in cases for name in ("main", "dev", "archive/branch-heads-20261019", "archive/rival-ai-history-20261107")) and "archive/rival-ai-history-20261107" in workflow,
               "checks exact live head": '.object.sha' in workflow and '== "$EXPECTED_SHA"' in workflow,
               "rejects protected branches": '.protected' in workflow and '== "false"' in workflow,
               "rejects open PR heads and bases": '.head.ref == $branch or .base.ref == $branch' in workflow,
-              "requires protected archive or main ancestry": workflow.count("git merge-base --is-ancestor") == 4 and "refs/remotes/origin/main" in workflow,
+              "requires protected archive, pinned rival-AI archive or main ancestry": workflow.count("git merge-base --is-ancestor") == 6 and "refs/remotes/origin/main" in workflow and 'ARCHIVE_CHECKPOINT="c98ce001b47923c52bb334205b8fd1bf29222e82"' in workflow,
               "rechecks immediately before deletion": workflow.count('ref_json="$(gh api') == 2 and "Recheck exact ref and atomically retire one branch" in workflow,
               "deletion uses exact-SHA lease": 'git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"' in workflow,
               "one ref per workflow run and no broad delete": "branch_name" in workflow and "push --delete" not in workflow and workflow.count('git push --force-with-lease=') == 1,
               "concurrent retirements are serialized": "cancel-in-progress: false" in workflow and "concurrency:" in workflow,
               "new candidate SHA is pinned exactly": cases.get("agent/boonta-chatgpt/activation-ledger-evidence-20261107") == "05b4fac74701092c7b9c9dcbd161054eea6754b3",
-              "new candidate retirement requires archive or main ancestry": "refs/remotes/origin/main" in workflow and "Branch tip is neither in the protected archive nor already integrated into main." in workflow,
+              "all rival-AI branch heads are pinned exactly": cases.get("feat/deterministic-rival-ai-20261106") == "216e4a8bdef8941dadc7a604a24021ad54f09db8" and cases.get("feat/rival-curvature-pace-20261106") == "b3d215df243a11d3e0022ecf562ab2ba1de96da9" and cases.get("feat/rival-track-line-20261106") == "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
+              "new candidate retirement requires pinned archive or main ancestry": "refs/remotes/origin/main" in workflow and "Branch tip is not reachable from a verified archive or main." in workflow and "ARCHIVE_CHECKPOINT" in workflow,
               "never deletes via an unguarded REST DELETE": "gh api --method DELETE" not in workflow,
           }
 
