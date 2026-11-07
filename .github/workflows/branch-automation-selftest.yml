@@ -19,6 +19,7 @@ on:
       - "GEMINI.md"
       - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
       - "tools/check_autonomous_provider_handoff.py"
+      - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
 permissions:
@@ -90,6 +91,10 @@ jobs:
       - name: Run static AI safety checks (no API calls)
         shell: bash
         run: python3 tools/check_ai_free_safety.py
+
+      - name: Exercise OpenRouter watchdog process termination with local fakes
+        shell: bash
+        run: python3 tools/test_openrouter_watchdog.py
 
       - name: Enforce conservative branch budget and lifecycle policy
         shell: bash
