@@ -331,6 +331,15 @@ jobs:
                       pass
                   process.wait()
 
+          def handle_shutdown(signum, _frame):
+              stop_process_group()
+              raise SystemExit(128 + signum)
+
+          # Match OpenRouter: runner cancellation must not orphan the timeout,
+          # OpenCode process, or any descendant in the provider process group.
+          signal.signal(signal.SIGTERM, handle_shutdown)
+          signal.signal(signal.SIGINT, handle_shutdown)
+
           with open(report_path, "w", encoding="utf-8") as report:
               assert process.stdout is not None
               for line in process.stdout:
