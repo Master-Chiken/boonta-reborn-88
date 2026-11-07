@@ -71,6 +71,19 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
       "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62",
       "next_action_excerpt": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity."
+    },
+    {
+      "task_id": "N64-COMPWOLF-INVENTORY",
+      "title": "Reproducible local N64 CompWolf metadata inventory (T1)",
+      "queue": "#226",
+      "platform_scope": [
+        "Nintendo 64",
+        "GameCube"
+      ],
+      "status": "in_review",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
+      "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
+      "next_action_excerpt": "Review PR #334 and run tools/n64_comp_inventory.pl locally against the owner-held ROM. Reconcile 92 records, Trak/Pupp/Part/Scen counts, 11,975,612 decoded bytes, and the 5,870,259-byte historical figure against the separately reported stream/span totals. Keep T1 in review until that local reproduction is confirmed; only then start T2 for one Pupp record…"
     }
   ]
 }
