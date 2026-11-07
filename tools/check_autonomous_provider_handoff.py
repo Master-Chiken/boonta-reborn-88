@@ -293,6 +293,21 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
+
+# Keep autonomous prompts compact and aligned with the already-merged gameplay state.
+# A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
+if len(gemini_prompt) > 8500:
+    errors.append(f"Gemini autonomous prompt exceeds the 8,500-character context ceiling: {len(gemini_prompt)}")
+if gemini_prompt.count("Keep newly retrieved repository/issue text below 1,500 tokens total.") != 1:
+    errors.append("Gemini autonomous prompt must state the 1,500-token retrieval budget exactly once")
+for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq), ("Autonomous loop", loop)):
+    if "#317 → #318 → #319" in content:
+        errors.append(f"{label} instructions still reference the superseded rival-AI PR chain")
+    if "69deb6778f9383887118803428e7014686865a83" not in content:
+        errors.append(f"{label} instructions must identify the merged PR #327 implementation")
+    if "Do not reopen, replay or recreate that chain" not in content:
+        errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
+
 if errors:
     print("Autonomous provider handoff checks FAILED:")
     for error in errors:
