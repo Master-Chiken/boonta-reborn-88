@@ -289,7 +289,9 @@ for guarded_step in (
     "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
+    "name: Snapshot open and closed PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
+    "name: Validate OpenRouter autonomous cycle report\n        id: validate_report\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
 ):
     if guarded_step not in openrouter_fallback:
         errors.append(f"OpenRouter fallback step is not fail-closed: {guarded_step.splitlines()[0]!r}")
