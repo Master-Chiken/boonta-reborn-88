@@ -476,7 +476,7 @@ if fallback_call_position < 0:
 else:
     fallback_call = autonomous[fallback_call_position:]
     for required in (
-        "needs: [readiness, autonomous-cycle]",
+        "needs: [readiness, provider-cooldowns, autonomous-cycle]",
         "needs.readiness.result == 'success'",
         "needs.readiness.outputs.writer_state == 'enabled'",
         "needs.autonomous-cycle.result == 'failure'",
