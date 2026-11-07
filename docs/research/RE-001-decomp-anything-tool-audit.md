@@ -91,3 +91,36 @@ Search of its public symbol names did **not** find a semantically named spline/r
 Environment constraint for this pass: the current container has no `splat`, `spimdisasm`, `rabbitizer`, Capstone or Ghidra, and cannot resolve raw.githubusercontent.com. Consequently I inspected the public code and symbol metadata but did not execute the upstream disassembler against the local ROM. No claim of a successful run or a newly identified route-progress function is made.
 
 **Updated tool decision:** use `sp00nznet/racer` as the narrower, target-specific lead for N64 function addressing/disassembly; use `decomp.anything` if its richer agent workflow adds value; continue using `swe1r-assets` / the independent structural scan for spline-block format. None replaces the others, and none establishes N64-to-GameCube format parity.
+
+## 2026-11-07 — Reproducible local CompWolf metadata inventory (T1)
+
+The earlier local scan is recorded above as having decoded 92 CompWolf records (first-output-tag counts: Trak 19, Pupp 27, Part 44 and Scen 2). That is historical evidence from an owner-local scan; it was not rerun by this documentation-only audit and its full numerical totals must not be treated as independently reproduced here.
+
+A new dependency-free Perl inventory tool is added at tools/n64_comp_inventory.pl, with synthetic-only tests at tools/tests/n64_comp_inventory.t. It runs locally on the owner's ROM and emits metadata only:
+
+- Scans exact CompWolf signatures rather than treating every ASCII Comp occurrence as a block.
+- Accepts canonical z64 order and normalizes v64 / n64 byte-swapped representations.
+- Reads the 12-byte header and declared output length.
+- Walks the LZ77-like token stream until the zero-history-offset terminator, checking the emitted byte count against the declared size.
+- Counts the first four decoded bytes as a short record-type tag, without printing or writing the decoded payload.
+- Reports every record's ROM offset, decoded length, compressed-stream length, full ROM span and any reads that depend on an undefined initial 4 KiB history-window slot.
+- Reports both compressed-stream bytes (terminators included) and full ROM-span bytes (12-byte headers plus streams), so historical byte totals can be reconciled without ambiguity.
+
+The undefined initial-history-read field is a diagnostic, not an automatic format failure. The original routine's caller may establish a window state not represented by a simple standalone helper. In particular, the first back-reference in the owner's posted sample is 00 05, i.e. source offset 0x005 after five literals; its overlapping second byte reads the position just written by the first byte. It does not establish an uninitialised-history read. A previous suspicion based on misreading this pair has been withdrawn in issue #279: https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6696949658.
+
+### Local use
+
+    perl -c tools/n64_comp_inventory.pl
+    perl tools/n64_comp_inventory.pl "$HOME/racer-work/racer_us.z64"
+
+The tool reads the file but does not modify it. It does not create an extracted file, upload anything, print ROM bytes, or store game assets. It is an inventory/structural check, not a general-purpose asset extractor or proof that any Trak record contains route centerlines.
+
+### Synthetic test coverage
+
+The test suite uses only tiny generated fixtures (no commercial game data). It covers literal-only streams, the observed overlapping-copy shape, unknown initial-window references, output-size mismatches, missing terminators and all three N64 byte orders. The 20 synthetic assertions pass locally with the system Perl interpreter. CI is configured to run the same test file.
+
+### Baseline values awaiting owner-local reproduction
+
+The existing research notes report 92 valid records, with tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2. Claude's separate ZIP audit also reports 11,975,612 decoded bytes and 5,870,259 bytes of ROM data, but the exact definition of its compressed-byte total was not established in that ZIP. The new tool deliberately prints two totals to make this comparison explicit. The separate count of 25 top-level Trak headers is not the same as the 19 records whose first decoded tag is Trak; this script does not yet parse nested Trak structures and must not claim to reproduce that count.
+
+T1 is accepted only after the owner runs the scanner locally and the 92-record / per-tag counts and byte totals are reconciled. Keep all output local except for aggregate counts that contain no ROM-derived byte sequences or assets. T2 (inspect one Pupp record and integrate a GameCube-compatible representation in the demo) remains gated on that reconciliation and a separate format/licence/provenance review. No ROM or extracted asset is required in the public repository or CI.
