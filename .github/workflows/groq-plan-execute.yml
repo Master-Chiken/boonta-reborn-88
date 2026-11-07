@@ -285,17 +285,76 @@ jobs:
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
-          # Hard stop limits repeated provider retries if a Free-tier TPM/context error is returned.
-          set +e
-          timeout --signal=TERM --kill-after=5s 90s \
-            opencode run --model groq/openai/gpt-oss-20b --auto --dir "$GITHUB_WORKSPACE" "$PROMPT" \
-            2>&1 | tee "$RUNNER_TEMP/opencode-cycle-report.txt"
-          invocation_status=${PIPESTATUS[0]}
-          set -e
-          if [[ "$invocation_status" -eq 124 || "$invocation_status" -eq 137 ]]; then
-            echo "Groq invocation reached its 90-second hard limit; this cycle will stop and enter the daily cooldown."
-          fi
-          exit "$invocation_status"
+          # OpenCode 1.19.5 retries retryable 429/TPM failures internally. Stop
+          # the process group on the first terminal Free-quota/TPM response so
+          # one agent invocation cannot consume the provider limit repeatedly.
+          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$GITHUB_WORKSPACE" <<'PY'
+          import os
+          import re
+          import signal
+          import subprocess
+          import sys
+
+          prompt, report_path, workspace = sys.argv[1:]
+          command = [
+              "timeout", "--signal=TERM", "--kill-after=5s", "90s",
+              "opencode", "run", "--model", "groq/openai/gpt-oss-20b",
+              "--auto", "--dir", workspace, prompt,
+          ]
+          terminal_quota_error = re.compile(
+              r"(tokens per minute\\s*\\(TPM\\)|free-models-per-day|"
+              r"resource[_ ]exhausted|rate limit exceeded)",
+              re.IGNORECASE,
+          )
+          process = subprocess.Popen(
+              command,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              text=True,
+              encoding="utf-8",
+              errors="replace",
+              bufsize=1,
+              start_new_session=True,
+          )
+
+          def stop_process_group():
+              try:
+                  os.killpg(process.pid, signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
+              try:
+                  process.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  try:
+                      os.killpg(process.pid, signal.SIGKILL)
+                  except ProcessLookupError:
+                      pass
+                  process.wait()
+
+          with open(report_path, "w", encoding="utf-8") as report:
+              assert process.stdout is not None
+              for line in process.stdout:
+                  sys.stdout.write(line)
+                  sys.stdout.flush()
+                  report.write(line)
+                  report.flush()
+                  if terminal_quota_error.search(line):
+                      print(
+                          "Groq TPM/Free-quota refusal detected; terminating OpenCode "
+                          "immediately after the first refusal. Daily cooldown will be recorded.",
+                          flush=True,
+                      )
+                      stop_process_group()
+                      sys.exit(75)
+
+          invocation_status = process.wait()
+          if invocation_status in (124, 137):
+              print(
+                  "Groq invocation reached its 90-second hard limit; daily cooldown will be recorded.",
+                  flush=True,
+              )
+          sys.exit(invocation_status)
+          PY
 
 
       - name: Validate Groq autonomous cycle report
