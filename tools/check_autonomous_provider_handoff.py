@@ -238,6 +238,8 @@ for required in (
 
 if "this reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
+if "process-group watchdog stops OpenCode on the first explicit" not in budget:
+    errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
