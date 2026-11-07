@@ -58,6 +58,10 @@ if mode == "refusal":
     print("HTTP 429 Too Many Requests", flush=True)
 elif mode == "groq_refusal":
     print("tokens per minute (TPM) quota exceeded", flush=True)
+elif mode == "groq_429_refusal":
+    print("HTTP 429 Too Many Requests", flush=True)
+elif mode == "groq_401_refusal":
+    print("HTTP 401 Unauthorized", flush=True)
 elif mode == "signal":
     print("WATCHDOG_READY", flush=True)
 else:
@@ -211,7 +215,37 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                 output, _ = process.communicate(timeout=10)
                 self.assertEqual(process.returncode, 75, output)
                 self.assertIn("tokens per minute (TPM)", report.read_text(encoding="utf-8"))
-                self.assertIn("Groq TPM/Free-quota refusal detected", output)
+                self.assertIn("Groq provider quota/auth refusal detected", output)
+                self.assert_heartbeat_stopped(heartbeat)
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+                if report.exists():
+                    try:
+                        pid = self.grandchild_pid(report)
+                        os.kill(pid, signal.SIGKILL)
+                    except (AssertionError, ProcessLookupError, PermissionError):
+                        pass
+
+    def test_groq_first_http_429_terminates_process_group_and_preserves_report(self) -> None:
+        self.assert_groq_refusal_stops("groq_429_refusal", "HTTP 429 Too Many Requests")
+
+    def test_groq_first_http_401_terminates_process_group_and_preserves_report(self) -> None:
+        self.assert_groq_refusal_stops("groq_401_refusal", "HTTP 401 Unauthorized")
+
+    def assert_groq_refusal_stops(self, mode: str, expected_report_line: str) -> None:
+        with tempfile.TemporaryDirectory(prefix="boonta-groq-watchdog-refusal-") as directory:
+            root = Path(directory)
+            process, report, heartbeat = self.launch(
+                root, mode, self.groq_watchdog_source
+            )
+            try:
+                output, _ = process.communicate(timeout=10)
+                self.assertEqual(process.returncode, 75, output)
+                saved = report.read_text(encoding="utf-8")
+                self.assertIn(expected_report_line, saved)
+                self.assertIn("Groq provider quota/auth refusal detected", output)
                 self.assert_heartbeat_stopped(heartbeat)
             finally:
                 if process.poll() is None:
