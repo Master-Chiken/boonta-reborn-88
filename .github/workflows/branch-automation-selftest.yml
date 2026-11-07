@@ -96,7 +96,7 @@ jobs:
         shell: bash
         run: python3 tools/check_autonomous_provider_handoff.py
 
-      - name: Exercise OpenRouter watchdog process termination with local fakes
+      - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash
         run: python3 tools/test_openrouter_watchdog.py
 
