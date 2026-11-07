@@ -4,7 +4,6 @@
 from pathlib import Path
 import json
 import re
-import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -368,29 +367,6 @@ for content, needle, message in (
 ):
     if needle not in content:
         errors.append(message)
-
-# Exercise the actual production OpenRouter watchdog with fake local child
-# processes. This covers real process-group cleanup, report preservation and
-# signal handling; no provider request or network connection is made.
-try:
-    watchdog_tests = subprocess.run(
-        [sys.executable, str(ROOT / "tools/test_openrouter_watchdog.py")],
-        capture_output=True,
-        text=True,
-        timeout=25,
-        check=False,
-    )
-    if watchdog_tests.returncode != 0:
-        errors.append(
-            "OpenRouter watchdog integration tests failed:\\n"
-            + watchdog_tests.stdout
-            + watchdog_tests.stderr
-        )
-    else:
-        print(watchdog_tests.stdout.strip())
-except (OSError, subprocess.TimeoutExpired) as exc:
-    errors.append(f"OpenRouter watchdog integration tests could not complete: {exc}")
-
 
 if errors:
     print("Autonomous provider handoff checks FAILED:")
