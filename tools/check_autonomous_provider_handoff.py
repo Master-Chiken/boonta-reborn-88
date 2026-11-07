@@ -217,6 +217,81 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     if config.get("agent", {}).get("build", {}).get("steps") != 3:
         errors.append(f"{label} must be limited to three OpenCode build steps")
 
+# OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
+openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
+reserve_match = re.search(r"(?m)^\s*MIN_REQUESTS_PER_CYCLE=(\d+)\s*$", openrouter)
+if not reserve_match:
+    errors.append("OpenRouter must declare a daily request reserve before model inference")
+elif int(reserve_match.group(1)) != openrouter_steps:
+    errors.append(
+        f"OpenRouter daily request reserve ({reserve_match.group(1)}) must match its "
+        f"configured maximum build steps ({openrouter_steps})"
+    )
+for required in (
+    "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
+    "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "QUOTA_REQUIRED: ${{ steps.openrouter_auth_check.outputs.quota_required }}",
+    "below the ' + quotaRequired + '-request reserve",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
+
+if "this reserve is not a guarantee of cycle completion" not in budget:
+    errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
+if "process-group watchdog stops OpenCode on the first explicit" not in budget:
+    errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
+
+# OpenRouter must stop on the first terminal provider refusal, not consume
+# the remainder of its 180-second window in internal retries.
+for required in (
+    "terminal_provider_error = re.compile(",
+    "HTTP\\s*429",
+    "tokens per minute\\s*\\(TPM\\)",
+    "HTTP\\s*401",
+    "free-models-per-day",
+    "rate[_ ]limit exceeded",
+    "tokens per minute",
+    "request too large for model",
+    "missing authentication header",
+    "terminal_provider_error.search(line)",
+    "start_new_session=True",
+    "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s"',
+    "daily cooldown will be recorded",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter first-refusal watchdog is missing required behavior: {required!r}")
+
+
+# Exercise the exact regex fragments embedded in the workflow against provider
+# refusal examples and ordinary output so the guard cannot silently become inert.
+regex_start = openrouter.find("terminal_provider_error = re.compile(")
+regex_end = openrouter.find("re.IGNORECASE,", regex_start)
+if regex_start < 0 or regex_end < 0:
+    errors.append("OpenRouter watchdog regex must be extractable for behavior tests")
+else:
+    regex_block = openrouter[regex_start:regex_end]
+    regex_fragments = re.findall(r'r"([^"]*)"', regex_block)
+    if len(regex_fragments) != 4:
+        errors.append("OpenRouter watchdog must retain exactly four regex fragments")
+    else:
+        try:
+            watchdog = re.compile("".join(regex_fragments), re.IGNORECASE)
+            for sample in (
+                "Rate limit exceeded: free-models-per-day",
+                "Request too large for model openrouter/free on tokens per minute (TPM)",
+                "HTTP 429 Too Many Requests",
+                "HTTP 401 Unauthorized",
+                "Missing Authentication header",
+            ):
+                if not watchdog.search(sample):
+                    errors.append(f"OpenRouter watchdog regex failed to detect a provider refusal: {sample!r}")
+            if watchdog.search("The Boonta racing line is wider at the next turn."):
+                errors.append("OpenRouter watchdog regex must not match ordinary game-development output")
+        except re.error as exc:
+            errors.append(f"OpenRouter watchdog regex must compile: {exc}")
+
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
@@ -274,7 +349,15 @@ for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
     "free-models-per-day",
+    "free-models-per-minute",
+    "HTTP\\s*429",
+    "HTTP\\s*401",
+    "too many requests",
+    "missing authentication header",
+    "invalid api key",
     "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    "signal.signal(signal.SIGINT, handle_shutdown)",
     "sys.exit(75)",
     "report.flush()",
 ):
@@ -284,7 +367,7 @@ for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
-    (openrouter, "timeout --signal=TERM --kill-after=5s 180s", "OpenRouter must enforce the 180-second invocation timeout"),
+    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "Never enable billing, paid routes", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),

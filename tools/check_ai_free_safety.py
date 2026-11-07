@@ -340,13 +340,18 @@ for required in (
     'No paid model/provider fallback is available',
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
-    'opencode run --model openrouter/openrouter/free --auto',
+    '"opencode", "run", "--model", "openrouter/openrouter/free",',
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s",',
     'npm install --global opencode-ai@1.19.5',
     'name: Verify OpenRouter Free key authentication without inference',
     'https://openrouter.ai/api/v1/key',
     'Authorization: Bearer ${OPENROUTER_API_KEY}',
     "jq -e '.data.is_free_tier == true'",
     "jq -er '.data.free_model_daily_requests.remaining | numbers'",
+    "MIN_REQUESTS_PER_CYCLE=3",
+    "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
+    "Minimum reserve for one bounded OpenCode cycle",
     "quota_available=true",
     "quota_available=false",
     'OPENCODE_AUTH_CONTENT',
@@ -399,6 +404,7 @@ for required in (
     "OPENROUTER_COOLDOWN_DATE",
     "steps.openrouter_auth_check.outcome == 'failure'",
     "steps.openrouter_auth_check.outputs.quota_available == 'false'",
+    "below the ' + quotaRequired + '-request reserve",
     "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
     "steps.validate_report.outcome == 'failure'",
     "github.rest.issues.updateComment",
@@ -1102,6 +1108,27 @@ if "gemini_model: 'gemini-3.8-flash'" not in execute:
 if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
+# Pin the tested Gemini CLI release and cap automatic model/network retries.
+if "gemini_cli_version: '0.67.0'" not in execute:
+    errors.append("Autonomous Gemini CLI must remain pinned to the version verified with retry controls")
+settings_marker = "          settings: |-\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in execute or settings_end_marker not in execute:
+    errors.append("Autonomous Gemini workflow is missing its explicit CLI settings block")
+else:
+    settings_text = execute.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+    try:
+        gemini_settings = json.loads(textwrap.dedent(settings_text))
+        general_settings = gemini_settings.get("general", {})
+        if general_settings.get("maxAttempts") != 2:
+            errors.append("Gemini CLI must allow at most two model attempts per request")
+        if general_settings.get("retryFetchErrors") is not False:
+            errors.append("Gemini CLI must disable automatic retries for failed fetch requests")
+        if gemini_settings.get("model", {}).get("maxSessionTurns") != 5:
+            errors.append("Gemini CLI must retain the reviewed five-turn session ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Autonomous Gemini CLI settings must be valid JSON: {exc}")
+
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
 if '"maxSessionTurns": 5' not in execute:
     errors.append("Autonomous Gemini writer must cap its session at five turns to bound Free-tier token use")
@@ -1191,8 +1218,13 @@ if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDE
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
 if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
     errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
-if "tee \"$RUNNER_TEMP/opencode-cycle-report.txt\"" not in openrouter_fallback:
-    errors.append("OpenRouter fallback must persist its final report for contract validation")
+for required in (
+    '"$RUNNER_TEMP/opencode-cycle-report.txt"',
+    'with open(report_path, "w", encoding="utf-8") as report:',
+    'report.flush()',
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter fallback must persist its final report for contract validation: {required!r}")
 if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
     errors.append("OpenRouter fallback must validate the report it just produced")
 if "exact-40-character-head-SHA" not in autonomous_prompt:

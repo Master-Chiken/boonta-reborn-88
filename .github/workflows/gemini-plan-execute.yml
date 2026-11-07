@@ -223,7 +223,7 @@ jobs:
         with:
           # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
-          gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
+          gemini_cli_version: '0.67.0'
           gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
           gemini_model: 'gemini-3.8-flash'
           upload_artifacts: 'false'
@@ -234,6 +234,10 @@ jobs:
           github_issue_number: '${{ inputs.issue_number || github.event.issue.number }}'
           settings: |-
             {
+              "general": {
+                "maxAttempts": 2,
+                "retryFetchErrors": false
+              },
               "model": {
                 "maxSessionTurns": 5
               },

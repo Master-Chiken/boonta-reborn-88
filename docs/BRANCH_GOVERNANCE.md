@@ -47,6 +47,7 @@ The `Branch governance audit` workflow runs weekly, on demand, when a branch is 
 - whether the 10-active-branch target is exceeded, whether the 10-ref warning is reached, and whether the total exceeds the 20-ref red line;
 - branches with open pull requests;
 - branches with no recent commits that may be reviewed for consolidation.
+- Each unique branch-tip lookup is capped at 20 seconds. A timeout or API/process error is reported as an unknown date and conservatively keeps the branch active for later review.
 
 When the total-count warning or red line is reached, it opens or updates one tracking issue rather than spamming comments. It does not merge or delete branches automatically. The issue should be worked through by the project maintainers and AI agents, preserving branch contents and contributions.
 
