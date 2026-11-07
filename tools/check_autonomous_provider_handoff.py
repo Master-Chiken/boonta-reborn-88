@@ -408,6 +408,30 @@ for required in (
 if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 
+# The blocked-task marker is referenced during selection. It must be computed
+# from today's bot comments before that first reference, not later in the script.
+preflight_start = loop.find("      - name: Read the three persistent UTC cooldown markers")
+preflight_script_start = loop.find("          script: |", preflight_start)
+preflight_script_end = loop.find("\n  autonomous-cycle:", preflight_script_start)
+if preflight_start < 0 or preflight_script_start < 0 or preflight_script_end < 0:
+    errors.append("Task eligibility preflight script could not be isolated for ordering checks")
+else:
+    preflight_script = loop[preflight_script_start:preflight_script_end]
+    declaration = preflight_script.find("const taskBlockedActive =")
+    first_use = preflight_script.find("!taskBlockedActive")
+    marker_date = preflight_script.find("const taskBlockedDate =")
+    if not (0 <= marker_date < declaration < first_use):
+        errors.append("Same-day task-blocked marker must be derived before the first task eligibility reference")
+    if preflight_script.count("const taskBlockedActive =") != 1:
+        errors.append("Task-blocked state must be initialized exactly once in the global preflight")
+    for required in (
+        "const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';",
+        "const taskBlockedActive = taskBlockedDate === todayUtc;",
+        "const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');",
+    ):
+        if required not in preflight_script:
+            errors.append(f"Task-blocked preflight derivation is missing {required!r}")
+
 # Cycle-fresh reports may cite only PRs created or advanced after the snapshot.
 for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
     for required in (

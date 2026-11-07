@@ -71,6 +71,14 @@ jobs:
               per_page: 100,
             });
 
+            // Resolve the single-task daily backoff before task selection references it.
+            // Keep this read ahead of the eligibility branch to avoid a temporal-dead-zone error.
+            const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');
+            const taskMarker = /<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9a-f]{16}) -->/;
+            const taskMarkerComment = botComments.find((comment) => taskMarker.test(comment.body || ''));
+            const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
+            const taskBlockedActive = taskBlockedDate === todayUtc;
+
             // Refuse a model call unless the compact canonical queue exposes one eligible task.
             const { data: ledgerFile } = await github.rest.repos.getContent({
               owner: context.repo.owner,
@@ -127,11 +135,6 @@ jobs:
               groq: /<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
             };
             const results = {};
-            const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');
-            const taskMarker = /<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9a-f]{16}) -->/;
-            const taskMarkerComment = botComments.find((comment) => taskMarker.test(comment.body || ''));
-            const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
-            const taskBlockedActive = taskBlockedDate === todayUtc;
             core.setOutput('task_blocked_active', String(taskBlockedActive));
             core.info('single-task daily backoff=' + taskBlockedActive + (taskBlockedDate ? ', recorded UTC date=' + taskBlockedDate : ', no active marker'));
             for (const [provider, marker] of Object.entries(definitions)) {
