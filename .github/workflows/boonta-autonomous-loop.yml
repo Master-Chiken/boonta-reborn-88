@@ -46,8 +46,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
+      contents: read
       issues: read
     outputs:
+      task_ready: ${{ steps.check.outputs.task_ready }}
+      task_id: ${{ steps.check.outputs.task_id }}
+      task_reason: ${{ steps.check.outputs.task_reason }}
       gemini_active: ${{ steps.check.outputs.gemini_active }}
       openrouter_active: ${{ steps.check.outputs.openrouter_active }}
       groq_active: ${{ steps.check.outputs.groq_active }}
@@ -66,6 +70,51 @@ jobs:
               since: todayUtc + 'T00:00:00Z',
               per_page: 100,
             });
+
+            // Refuse a model call unless the compact canonical queue exposes one eligible task.
+            const { data: ledgerFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'docs/automation/task-ledger-summary.json',
+              ref: 'main',
+            });
+            if (!ledgerFile || Array.isArray(ledgerFile) || ledgerFile.encoding !== 'base64') {
+              throw new Error('Canonical compact task ledger is missing or not a base64 file.');
+            }
+            const ledgerSummary = JSON.parse(Buffer.from(ledgerFile.content, 'base64').toString('utf8'));
+            if (ledgerSummary.policy?.max_active_tasks !== 1 || !Array.isArray(ledgerSummary.tasks)) {
+              throw new Error('Canonical compact task ledger schema or one-active-task policy is invalid.');
+            }
+            const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
+            let selectedTask = null;
+            let taskReason = '';
+            if (activeTasks.length === 1 && !activeTasks[0].pr_url && !activeTasks[0].head_sha) {
+              selectedTask = activeTasks[0];
+              taskReason = 'one active ledger task with no existing PR or head';
+            } else if (
+              activeTasks.length === 0 &&
+              activationTask?.status === 'blocked' &&
+              !activationTask.pr_url &&
+              !activationTask.head_sha &&
+              /Next scheduled opportunity after/.test(activationTask.next_action_excerpt || '') &&
+              /Gemini is first eligible/.test(activationTask.next_action_excerpt || '')
+            ) {
+              selectedTask = activationTask;
+              taskReason = 'the explicit post-cooldown autonomous activation task is eligible';
+            } else if (activeTasks.length > 1) {
+              taskReason = 'multiple active tasks violate the one-active-task policy';
+            } else if (activeTasks.length === 1) {
+              taskReason = 'the active task already has a PR/head; reconcile it before another model invocation';
+            } else {
+              taskReason = 'no eligible active task or approved post-cooldown activation task exists';
+            }
+            const taskReady = Boolean(selectedTask);
+            core.setOutput('task_ready', String(taskReady));
+            core.setOutput('task_id', selectedTask?.task_id || '');
+            core.setOutput('task_reason', taskReason);
+            core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
+
             const definitions = {
               gemini: /<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
               openrouter: /<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
@@ -89,15 +138,16 @@ jobs:
               core.info(provider + ': cooldown=' + active + (failedOn ? ', recorded UTC date=' + failedOn : ', no marker'));
             }
             await core.summary
-              .addHeading('Provider cooldown preflight')
+              .addHeading('Provider cooldown and task-eligibility preflight')
               .addTable([
                 [{data: 'Provider', header: true}, {data: 'Cooldown today (UTC)', header: true}],
                 ['Gemini', results.gemini],
                 ['OpenRouter Free', results.openrouter],
                 ['Groq Free', results.groq],
                 ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
+                ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
               ])
-              .addRaw('This is a read-only check of issue #226 comments. Provider workflows retain their own independent cooldown guards.')
+              .addRaw('Read-only checks: issue #226 cooldown comments and the compact main-branch task ledger. No provider starts unless exactly one eligible task is confirmed.')
               .write();
 
   autonomous-cycle:
@@ -106,6 +156,7 @@ jobs:
     if: >-
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.gemini_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -137,6 +188,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -163,6 +215,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -200,6 +253,9 @@ jobs:
           WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
           COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}
           TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
+          TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
+          TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
+          TASK_REASON: ${{ needs.provider-cooldowns.outputs.task_reason }}
           EVENT_NAME: ${{ github.event_name }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
           OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
@@ -271,6 +327,10 @@ jobs:
             echo "- Readiness: **${READINESS_RESULT:-unknown}**"
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
+            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none})"
+            if [[ "${TASK_READY:-false}" != "true" ]]; then
+              echo "- Provider calls skipped before inference: ${TASK_REASON:-canonical queue eligibility was not confirmed}."
+            fi
             echo
             echo "| Provider | Job result | Cooldown active | Model call | Report check | Task queue state | Interpretation |"
             echo "|---|---|---|---|---|---|"

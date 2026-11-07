@@ -197,7 +197,7 @@ jobs:
           TASK_DESCRIPTION: '${{ inputs.task_description }}'
           AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
 
-      - name: Snapshot open and closed PR heads before autonomous cycle
+      - name: Snapshot open PR heads before autonomous cycle
         if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true'
         id: snapshot_pr_heads
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
@@ -206,12 +206,14 @@ jobs:
             const pulls = await github.paginate(github.rest.pulls.list, {
               owner: 'Master-Chiken',
               repo: 'boonta-reborn-88',
-              state: 'all',
+              state: 'open',
               per_page: 100
             });
+            const snapshotAt = new Date().toISOString();
             const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
             core.setOutput('heads', JSON.stringify(baseline));
-            core.info('Captured pre-cycle head SHAs for ' + pulls.length + ' existing pull requests.');
+            core.setOutput('snapshot_at', snapshotAt);
+            core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
 
       - name: 'Run Gemini CLI'
         if: steps.free_tier_guard.outputs.allowed == 'true'
@@ -235,11 +237,11 @@ jobs:
           settings: |-
             {
               "general": {
-                "maxAttempts": 2,
+                "maxAttempts": 1,
                 "retryFetchErrors": false
               },
               "model": {
-                "maxSessionTurns": 5
+                "maxSessionTurns": 3
               },
               "telemetry": {
                 "enabled": false
@@ -286,6 +288,7 @@ jobs:
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           PRE_CYCLE_PR_HEADS: '${{ steps.snapshot_pr_heads.outputs.heads }}'
+          PRE_CYCLE_PR_SNAPSHOT_AT: '${{ steps.snapshot_pr_heads.outputs.snapshot_at }}'
           GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'
           GITHUB_APP_TOKEN_OUTCOME: '${{ steps.mint_identity_token.outcome }}'
         with:
@@ -303,11 +306,17 @@ jobs:
                 return;
               }
               const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
+              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
+              if (!Number.isFinite(snapshotAt)) {
+                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
+                return;
+              }
               const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
               const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
               const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
-              const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2];
-              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || unchangedAtStart) {
+              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
+              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
                 core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
                 return;
               }

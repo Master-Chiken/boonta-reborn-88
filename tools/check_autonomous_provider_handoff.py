@@ -391,6 +391,56 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "Do not reopen, replay or recreate that chain" not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
 
+# A provider request is permitted only when the compact ledger yields one eligible task.
+for required in (
+    "permissions:\n      contents: read\n      issues: read",
+    "path: 'docs/automation/task-ledger-summary.json'",
+    "ledgerSummary.policy?.max_active_tasks !== 1",
+    "activeTasks.length === 1",
+    "activationTask?.status === 'blocked'",
+    "Next scheduled opportunity after",
+    "Gemini is first eligible",
+    "core.setOutput('task_ready', String(taskReady))",
+):
+    if required not in loop:
+        errors.append(f"Task eligibility preflight is missing {required!r}")
+if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
+    errors.append("All three provider routes must require the same eligible-task preflight")
+
+# Cycle-fresh reports may cite only PRs created or advanced after the snapshot.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "state: 'open'",
+        "core.setOutput('snapshot_at', snapshotAt)",
+        "PRE_CYCLE_PR_SNAPSHOT_AT",
+        "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt",
+        "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} cycle-fresh PR gate is missing {required!r}")
+    if "state: 'all'" in workflow:
+        errors.append(f"{label} must not paginate closed-PR history before inference")
+
+# Gemini Free-tier TPM protection: one model attempt and three session turns.
+settings_marker = "          settings: |-\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in gemini or settings_end_marker not in gemini:
+    errors.append("Gemini explicit bounded settings block is missing")
+else:
+    try:
+        settings_text = gemini.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+        settings = json.loads(settings_text)
+        if settings.get("general", {}).get("maxAttempts") != 1:
+            errors.append("Gemini must use one model attempt per invocation")
+        if settings.get("model", {}).get("maxSessionTurns") != 3:
+            errors.append("Gemini must use a three-turn session ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Gemini bounded settings JSON is invalid: {exc}")
+if "exactly 1 attempt per invocation" not in budget or "maximum 3 session turns" not in budget:
+    errors.append("Shared context budget must document Gemini's one-attempt/three-turn cap")
+if "task-eligibility preflight" not in budget or "one eligible task" not in budget:
+    errors.append("Shared context budget must document the pre-inference task gate")
+
 if errors:
     print("Autonomous provider handoff checks FAILED:")
     for error in errors:

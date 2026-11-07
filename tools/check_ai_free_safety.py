@@ -377,7 +377,7 @@ for guarded_step in (
     "name: Mint scoped GitHub App token\n        id: mint_identity_token\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Checkout the protected default branch\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Install pinned OpenCode CLI\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
-    "name: Snapshot open and closed PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
+    "name: Snapshot open PR heads before OpenRouter cycle\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Run OpenCode through the OpenRouter Free route\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
     "name: Validate OpenRouter autonomous cycle report\n        id: validate_report\n        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'",
 ):
@@ -1120,18 +1120,18 @@ else:
     try:
         gemini_settings = json.loads(textwrap.dedent(settings_text))
         general_settings = gemini_settings.get("general", {})
-        if general_settings.get("maxAttempts") != 2:
-            errors.append("Gemini CLI must allow at most two model attempts per request")
+        if general_settings.get("maxAttempts") != 1:
+            errors.append("Gemini CLI must make only one model attempt so terminal 503/TPM failures are not repeated")
         if general_settings.get("retryFetchErrors") is not False:
             errors.append("Gemini CLI must disable automatic retries for failed fetch requests")
-        if gemini_settings.get("model", {}).get("maxSessionTurns") != 5:
-            errors.append("Gemini CLI must retain the reviewed five-turn session ceiling")
+        if gemini_settings.get("model", {}).get("maxSessionTurns") != 3:
+            errors.append("Gemini CLI must retain the three-turn TPM safety ceiling")
     except (json.JSONDecodeError, TypeError) as exc:
         errors.append(f"Autonomous Gemini CLI settings must be valid JSON: {exc}")
 
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
-if '"maxSessionTurns": 5' not in execute:
-    errors.append("Autonomous Gemini writer must cap its session at five turns to bound Free-tier token use")
+if '"maxSessionTurns": 3' not in execute:
+    errors.append("Autonomous Gemini writer must cap its session at three turns to bound Free-tier token use")
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
     if "run_shell_command" in content:
         errors.append(f"{label} must not expose the restricted shell tool to Gemini")
@@ -1189,15 +1189,17 @@ for required in (
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
 
 # Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
-for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback)):
+for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback), ("Groq fallback", groq_fallback)):
     if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
         errors.append(f"{label} must require the machine-readable PROGRESS status")
     if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
         errors.append(f"{label} must support an explicit BLOCKED report")
     if "BOONTA_CYCLE_EVIDENCE_BASE" not in workflow or "evidenceBaseMatch" not in workflow:
         errors.append(f"{label} must require the declared evidence base")
-    if "id: snapshot_pr_heads" not in workflow or "state: 'all'" not in workflow:
-        errors.append(f"{label} must snapshot existing open and closed PR heads before the model call")
+    if "id: snapshot_pr_heads" not in workflow or "state: 'open'" not in workflow:
+        errors.append(f"{label} must snapshot only currently open PR heads before the model call")
+    if "PRE_CYCLE_PR_SNAPSHOT_AT" not in workflow or "outputs.snapshot_at" not in workflow:
+        errors.append(f"{label} must pass a timestamped pre-cycle PR snapshot to its validator")
     if "github.paginate(github.rest.pulls.list" not in workflow:
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
     if "steps.snapshot_pr_heads.outputs.heads" not in workflow:
@@ -1208,8 +1210,8 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must reject progress PRs whose head comes from a fork")
     if "pr.head.sha !== evidence[2]" not in workflow or "headCommit.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
         errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
-    if "const unchangedAtStart = existedAtStart && baseline[String(pr.number)] === evidence[2]" not in workflow:
-        errors.append(f"{label} must reject an unchanged PR that existed at cycle start")
+    if "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt" not in workflow or "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]" not in workflow:
+        errors.append(f"{label} must require a PR created after the snapshot or an existing open PR advanced during the cycle")
     if "pr.base.ref !== evidenceBaseMatch[1]" not in workflow:
         errors.append(f"{label} must check the PR's actual base against its reported main/dev target")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
