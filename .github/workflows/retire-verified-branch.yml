@@ -23,6 +23,9 @@ on:
           - safety/openrouter-exact-head-sha
           - test/ares-gdb-smoke-20261021
           - agent/boonta-chatgpt/activation-ledger-evidence-20261107
+          - feat/deterministic-rival-ai-20261106
+          - feat/rival-curvature-pace-20261106
+          - feat/rival-track-line-20261106
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -104,6 +107,9 @@ jobs:
             "safety/openrouter-exact-head-sha") PINNED_SHA="c52c9b2594b711a76a8f7ccf5e25acce7982c381" ;;
             "test/ares-gdb-smoke-20261021") PINNED_SHA="fa8cee047ae8e74c30c87cd94977c434bb1c7398" ;;
             "agent/boonta-chatgpt/activation-ledger-evidence-20261107") PINNED_SHA="05b4fac74701092c7b9c9dcbd161054eea6754b3" ;;
+            "feat/deterministic-rival-ai-20261106") PINNED_SHA="216e4a8bdef8941dadc7a604a24021ad54f09db8" ;;
+            "feat/rival-curvature-pace-20261106") PINNED_SHA="b3d215df243a11d3e0022ecf562ab2ba1de96da9" ;;
+            "feat/rival-track-line-20261106") PINNED_SHA="1a5e5ed69c9b7f1453322f4deb7de8adcb167642" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -123,7 +129,7 @@ jobs:
           EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
-          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" ]] || {
+          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" ]] || {
             echo "::error::Permanent refs cannot be retired."
             exit 1
           }
@@ -148,12 +154,19 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/main:refs/remotes/origin/main"
-          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019; then
-            git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main || {
-              echo "::error::Branch tip is neither in the protected archive nor already integrated into main."
-              exit 1
-            }
+          ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
+          ARCHIVE_CHECKPOINT="c98ce001b47923c52bb334205b8fd1bf29222e82"
+          archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
+          [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
+            echo "::error::The pinned rival-AI history archive moved or is missing."
+            exit 1
+          }
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main; then
+            echo "::error::Branch tip is not reachable from a verified archive or main."
+            exit 1
           fi
 
       - name: Recheck exact ref and atomically retire one branch
@@ -163,6 +176,10 @@ jobs:
           EXPECTED_SHA: ${{ steps.selection.outputs.expected_sha }}
         run: |
           set -euo pipefail
+          [[ "$BRANCH_NAME" != "main" && "$BRANCH_NAME" != "dev" && "$BRANCH_NAME" != "archive/branch-heads-20261019" && "$BRANCH_NAME" != "archive/rival-ai-history-20261107" ]] || {
+            echo "::error::Permanent refs cannot be retired."
+            exit 1
+          }
           ref_json="$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH_NAME")"
           [[ "$(jq -r '.object.sha' <<< "$ref_json")" == "$EXPECTED_SHA" ]] || {
             echo "::error::Branch moved after the first check."
@@ -182,12 +199,19 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/main:refs/remotes/origin/main"
-          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019; then
-            git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main || {
-              echo "::error::Branch tip is neither in the protected archive nor already integrated into main."
-              exit 1
-            }
+          ARCHIVE_BRANCH="archive/rival-ai-history-20261107"
+          ARCHIVE_CHECKPOINT="c98ce001b47923c52bb334205b8fd1bf29222e82"
+          archive_ref="$(gh api "repos/$GH_REPO/git/ref/heads/$ARCHIVE_BRANCH")"
+          [[ "$(jq -r '.object.sha' <<< "$archive_ref")" == "$ARCHIVE_CHECKPOINT" ]] || {
+            echo "::error::The pinned rival-AI history archive moved or is missing."
+            exit 1
+          }
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main"
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main; then
+            echo "::error::Branch tip is not reachable from a verified archive or main."
+            exit 1
           fi
 
           # Compare-and-swap lease prevents deleting a branch that moved after
