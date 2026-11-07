@@ -69,11 +69,13 @@ jobs:
               openrouter: /<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
               groq: /<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
             };
+            const results = {};
             const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');
             for (const [provider, marker] of Object.entries(definitions)) {
               const markerComment = botComments.find((comment) => marker.test(comment.body || ''));
               const failedOn = markerComment?.body?.match(marker)?.[1] || '';
               const active = failedOn === todayUtc;
+              results[provider] = active ? 'ACTIVE' : 'clear';
               core.setOutput(provider + '_active', String(active));
               core.setOutput(provider + '_failed_on', failedOn);
               core.info(provider + ': cooldown=' + active + (failedOn ? ', recorded UTC date=' + failedOn : ', no marker'));
@@ -82,9 +84,9 @@ jobs:
               .addHeading('Provider cooldown preflight')
               .addTable([
                 [{data: 'Provider', header: true}, {data: 'Cooldown today (UTC)', header: true}],
-                ['Gemini', core.getState('gemini_active') || 'see step outputs'],
-                ['OpenRouter Free', core.getState('openrouter_active') || 'see step outputs'],
-                ['Groq Free', core.getState('groq_active') || 'see step outputs'],
+                ['Gemini', results.gemini],
+                ['OpenRouter Free', results.openrouter],
+                ['Groq Free', results.groq],
               ])
               .addRaw('This is a read-only check of issue #226 comments. Provider workflows retain their own independent cooldown guards.')
               .write();
