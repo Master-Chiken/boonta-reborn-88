@@ -15,6 +15,15 @@ on:
       task_queue_state_outcome:
         description: "Outcome of persisting or clearing the single-task daily backoff marker."
         value: ${{ jobs.groq-plan-execute.outputs.task_queue_state_outcome }}
+      evidence_pr_number:
+        description: "PR verified against the exact task reservation and required exact-head CI."
+        value: ${{ jobs.groq-plan-execute.outputs.evidence_pr_number }}
+      evidence_head_sha:
+        description: "Exact PR head SHA validated during this autonomous cycle."
+        value: ${{ jobs.groq-plan-execute.outputs.evidence_head_sha }}
+      evidence_base:
+        description: "Validated target branch for this autonomous cycle."
+        value: ${{ jobs.groq-plan-execute.outputs.evidence_base }}
     inputs:
       autonomous_mode:
         type: boolean
@@ -22,6 +31,14 @@ on:
       issue_number:
         type: number
         required: true
+      task_id:
+        type: string
+        required: false
+        default: ''
+      task_target_branch:
+        type: string
+        required: false
+        default: ''
       task_blocked_active:
         type: boolean
         required: false
@@ -39,6 +56,9 @@ jobs:
       report_outcome: ${{ steps.validate_report.outcome }}
       cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
       task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
+      evidence_pr_number: ${{ steps.validate_report.outputs.evidence_pr_number }}
+      evidence_head_sha: ${{ steps.validate_report.outputs.evidence_head_sha }}
+      evidence_base: ${{ steps.validate_report.outputs.evidence_base }}
     if: inputs.autonomous_mode == true && inputs.issue_number == 226
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -46,6 +66,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
 
     steps:
       - name: Check same-day Groq failure cooldown
@@ -248,6 +269,13 @@ jobs:
           PROMPT="$(cat <<'PROMPT'
           You are the €0-only Groq Free fallback agent for Boonta Reborn. This workflow may invoke you only on a later eligible cycle after Gemini and OpenRouter cooldowns are already active. Complete at most one bounded task.
 
+          RESERVED TASK CONTRACT
+          - Exact selected task ID: ${{ inputs.task_id }}. Do not substitute another task.
+          - Required target branch: ${{ inputs.task_target_branch }}. Do not choose a different base.
+          - Include this exact standalone PR-body line: BOONTA_TASK_ID: ${{ inputs.task_id }}
+          - Include this exact report line: BOONTA_CYCLE_TASK_ID: ${{ inputs.task_id }}
+          - For PROGRESS, include BOONTA_CYCLE_EVIDENCE_BASE: ${{ inputs.task_target_branch }}.
+
           LIMITS
           - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
           - Never enable billing, paid routes, other providers, change secrets/settings, or reveal credentials.
@@ -379,51 +407,32 @@ jobs:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
           PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
           PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
+          EXPECTED_TASK_ID: ${{ inputs.task_id }}
+          EXPECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
         with:
           script: |
             const fs = require('fs');
             const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
             const lines = summary.split(/\r?\n/);
-            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
             const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
-            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
-            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
-            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
-            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
-              if (!evidence || !evidenceBaseMatch) {
-                core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
-                return;
-              }
-              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
-              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
-              if (!Number.isFinite(snapshotAt)) {
-                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
-                return;
-              }
-              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
-              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
-              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
-              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
-              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
-              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
-                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
-                return;
-              }
-              core.setOutput('cycle_status', 'progress');
-              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
-            } else if (validBlocked) {
+            if (status === 'BOONTA_CYCLE_STATUS: BLOCKED') {
               const blockerLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')) || '';
               const nextActionLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')) || '';
-              const blocker = blockerLine.slice('BOONTA_CYCLE_BLOCKER: '.length);
-              const nextAction = nextActionLine.slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
-              const blockedFingerprint = require('crypto').createHash('sha256').update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
-              core.setOutput('blocked_fingerprint', blockedFingerprint);
-              core.setOutput('cycle_status', 'blocked');
-              core.info('Groq cycle reported a named blocker and next action. Fingerprint: ' + blockedFingerprint);
-            } else {
-              core.setFailed('Groq invocation returned without a valid PROGRESS or BLOCKED report.');
-            }
+              const blockedText = blockerLine + ' ' + nextActionLine;
 
+            }
+            const { validateAutonomousCycleReport } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            await validateAutonomousCycleReport({
+              github,
+              context,
+              core,
+              summary,
+              baseline: JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}'),
+              snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT,
+              expectedTaskId: process.env.EXPECTED_TASK_ID,
+              expectedBase: process.env.EXPECTED_TASK_TARGET_BRANCH,
+              provider: 'Groq'
+            });
       - name: Sync the single-task daily backoff marker
         id: sync_task_queue_state
         if: steps.validate_report.outcome == 'success' && (steps.validate_report.outputs.cycle_status == 'blocked' || inputs.task_blocked_active == true)
