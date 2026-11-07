@@ -20,20 +20,6 @@
       "next_action_excerpt": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180…"
     },
     {
-      "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
-      "title": "Audit the reusable native GameCube/Wii reverse-engineering toolchain and DOL-analysis path",
-      "queue": "#226",
-      "platform_scope": [
-        "GameCube",
-        "Wii"
-      ],
-      "status": "completed",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "32c256eb511ba75982f1503ea63aa14976a4b506",
-      "next_action_excerpt": "The GameCube/Wii toolchain and clean-room reuse audit is integrated in main via PR #278 (merge commit 0e03ed6814c55241765fcae1415a70ed53beff0b). Track synthetic, non-game DOL/REL fixture validation separately; keep original game binaries, disc images, extracted assets and private Ghidra databases local.",
-      "updated_at": "2026-11-07"
-    },
-    {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
       "queue": "#226",
