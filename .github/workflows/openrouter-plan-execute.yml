@@ -304,12 +304,6 @@ jobs:
           PROMPT
           )"
 
-          if (( ${#PROMPT} > 7000 )); then
-            echo "::error::OpenRouter prompt exceeds the 7,000-character safety ceiling; no model request was sent."
-            exit 2
-          fi
-          echo "OpenRouter prompt size: ${#PROMPT} characters."
-
           PROMPT="${PROMPT}
 
           SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
@@ -317,6 +311,12 @@ jobs:
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Continue the current activation task and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
+
+          if (( ${#PROMPT} > 7000 )); then
+            echo "::error::OpenRouter prompt exceeds the 7,000-character safety ceiling; no model request was sent."
+            exit 2
+          fi
+          echo "OpenRouter final prompt size: ${#PROMPT} characters."
 
           # Bound retries/time spent if the Free route rate-limits or returns an oversized request.
           timeout --signal=TERM --kill-after=5s 180s \
