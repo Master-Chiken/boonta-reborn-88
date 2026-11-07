@@ -18,8 +18,8 @@
       ],
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
-      "next_action_excerpt": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 1bdfa937eff6caef311d8de871c64144de60135c documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the…"
+      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
+      "next_action_excerpt": "The consolidated RE-001 system matrix remains in review. The latest addendum at exact head 4dff19dd751765a9a3d89c0f569e6969a398e280 documents the separate PC IDA Hang F4 candidate (0x0045A040), its Fini/Abrt/quit/RStr event vocabulary, the associated track-load routine 0x0045B290, and the independently mapped Hang menu-state-5 Results destination. Keep the…"
     },
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
@@ -44,7 +44,7 @@
       ],
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "1bdfa937eff6caef311d8de871c64144de60135c",
+      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
       "next_action_excerpt": "Human review of PR #282 and exact-head checks. The latest PC-only addendum links the IDA EntitySystem/Hang/trackloading notes and separate Steam-PC Hang load/dispatcher exports. It establishes a candidate event boundary at Hang F4 0x0045A040 and the Hang state-5 Results destination, but not the decisive Judge finish -> Fini dispatch -> Hang state-5 call…"
     },
     {
@@ -57,7 +57,7 @@
       ],
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
-      "head_sha": "03ad8006ce05c335cbcaf01b420e74033bec68c4",
+      "head_sha": "e214d06414d4bdc62c6671b591ec7e9764775bb4",
       "next_action_excerpt": "Keep the native DOL/REL toolchain audit separate from PC course research. After human review of #278, choose one synthetic, non-game DOL/REL fixture to validate the admitted parser/inspection path and record exact platform/language limitations; keep all original game binaries and private analysis databases local."
     },
     {
@@ -69,7 +69,7 @@
       ],
       "status": "in_review",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "dc03bc3cd23836cdb7226eae5e86e1995b6b4d62",
+      "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59",
       "next_action_excerpt": "Human review of PR #284 and exact-head checks. The bounded Steam-PC offset search did not recover a typed downstream reader for splineRebindResult or trackOffset; keep both UNKNOWN until a complete xref pass on the exact local executable/analysis database is available. Do not infer GameCube/Wii parity."
     },
     {
