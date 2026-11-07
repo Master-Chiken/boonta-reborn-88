@@ -127,6 +127,16 @@ if groq_tools != {
 }:
     errors.append("Groq MCP allow-list must remain at the reviewed minimal tool set")
 
+# Provider prompts must call the actual pinned MCP tool names, not guessed aliases.
+for label, prompt in (
+    ("OpenRouter", openrouter),
+    ("Groq", groq),
+):
+    if "github_pull_request_read" not in prompt:
+        errors.append(f"{label} prompt must name the supported github_pull_request_read tool")
+    if "github_get_pull_request" not in prompt or "does not exist" not in prompt:
+        errors.append(f"{label} prompt must explicitly reject the unavailable github_get_pull_request alias")
+
 if errors:
     print("Autonomous provider handoff checks FAILED:")
     for error in errors:
