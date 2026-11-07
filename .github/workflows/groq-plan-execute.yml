@@ -239,7 +239,7 @@ jobs:
 
           LIMITS
           - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
-          - Never use paid routes, billing, other providers, change secrets/settings, or reveal credentials.
+          - Never enable billing, paid routes, other providers, change secrets/settings, or reveal credentials.
           - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
           - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
 
@@ -248,7 +248,7 @@ jobs:
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier. Keep newly retrieved text below 1,500 tokens.
           - The ledger marks AUTOMATION-LEDGER-ACTIVATION blocked, not active. Do not create a competing task/writer. After a real provider invocation, validated report and cycle-fresh PR, the gate can be reconciled.
           - Follow the newest owner direction dated 2026-11-06. After activation, follow #226 Phase 1: add only missing source-verified tool/license evidence, consume #279's read-only PC/N64 comparisons, label facts OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, evaluate GX/libogc porting gaps and record a reuse/convert/adapt/reimplement decision. PR #282 is complete; do not duplicate it. PR #274 is not an automatic next step; revisit it only for a demonstrated route-runtime dependency.
-          - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Keep commercial ROM/disc/binary/extracted data local. No gameplay feature work during Phase 1. Later reuse #317 → #318 → #319; revisit #274 only for a demonstrated dependency.
+          - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Keep commercial ROM/disc/binary/extracted data local. No gameplay feature work during Phase 1. After Phase 1 is complete, resume the ordered gameplay chain #317 → #318 → #319; revisit #274 only for a demonstrated dependency.
 
           EXECUTION
           - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
