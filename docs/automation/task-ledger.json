@@ -756,11 +756,13 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334#issuecomment-6710686378",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710687278",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710698528",
-        "https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6710686927"
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6710686927",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/334#issuecomment-6710745718",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710746026"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action": "Owner's independent local Python decoder run on 2026-11-07 reproduced all 92 CompWolf records with zero length failures, tags Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded total 11,975,612 bytes, compressed-stream total 5,869,155 bytes, and header-inclusive span 5,870,259 bytes (92 × 12-byte headers explain the difference). Keep T1 in review until the exact tools/n64_comp_inventory.pl from PR #334 is run once locally and its rejected-candidate and undefined-history diagnostics are reconciled. Once T1 is confirmed and integrated, T2 should target Anakin's Pupp model ID 0087 (68,284 decoded bytes), not the smallest 18,124-byte Pupp_Ronto sample; test reuse of the pinned MIT swe1r-assets model parser and audit dependencies/N64 compatibility before any GX conversion.",
+      "next_action": "Exact local reproduction of tools/n64_comp_inventory.pl from PR #334 completed on 2026-11-07: perl -c syntax OK; 92 validated CompWolf records; 0 rejected candidates; 0 undefined initial-history reads; decoded-size sum 11,975,612 bytes; compressed stream bytes including terminators 5,869,155; ROM span including 92 × 12-byte headers 5,870,259; tags Pupp 27 / Trak 19 / Part 44 / Scen 2. Independent local Python decoding agrees. T1 acceptance evidence is complete, but retain status in_review because the PR is still open and the repository policy requires a merged PR for completed. T2 targeting refinement: the owner tested sorted Pupp indices 8 and 9 (53,436 and 66,976 bytes); because the sorted helper starts at the smallest size, index 10 is the 68,284-byte inventory candidate corresponding to the public Anakin ID 0087 catalogue size. Next local check is python3 ~/racer-work/inspect_block.py Pupp 10 and verify the exact decoded size before identity assignment. Then test the pinned MIT swe1r-assets parser locally against that owner-held decoded model; do not assume N64 compatibility, publish/commit ROM-derived data, or begin GX conversion until parse structure and dependency/provenance audit pass.",
       "updated_at": "2026-11-07"
     }
   ]
