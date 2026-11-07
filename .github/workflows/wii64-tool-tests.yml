@@ -11,6 +11,7 @@ on:
       - "tools/compare_wii64_rice_profiles.py"
       - "tools/inspect_wii64_rice_ini.py"
       - "tools/verify_wii64_archive.py"
+      - "tools/n64_comp_inventory.pl"
       - "tools/tests/**"
       - ".github/workflows/wii64-tool-tests.yml"
   pull_request:
@@ -19,6 +20,7 @@ on:
       - "tools/compare_wii64_rice_profiles.py"
       - "tools/inspect_wii64_rice_ini.py"
       - "tools/verify_wii64_archive.py"
+      - "tools/n64_comp_inventory.pl"
       - "tools/tests/**"
       - ".github/workflows/wii64-tool-tests.yml"
   workflow_dispatch:
@@ -47,3 +49,20 @@ jobs:
       - name: Run standard-library unit tests
         working-directory: tools
         run: python3 -m unittest discover -s tests -v
+
+
+  perl-compwolf-tests:
+    name: Read-only N64 CompWolf metadata inventory tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check Perl syntax
+        run: perl -c tools/n64_comp_inventory.pl
+
+      - name: Run synthetic-only inventory tests
+        run: prove -v tools/tests/n64_comp_inventory.t
