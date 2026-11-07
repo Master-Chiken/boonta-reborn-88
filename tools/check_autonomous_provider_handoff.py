@@ -412,6 +412,8 @@ for required in (
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
     "ledgerSummary.policy?.max_active_tasks !== 1",
     "new Set(taskIds).size !== taskIds.length",
+    "!/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId)",
+    "next_action_excerpt: selectedTask.next_action_excerpt",
     "activeTasks.length === 1",
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",

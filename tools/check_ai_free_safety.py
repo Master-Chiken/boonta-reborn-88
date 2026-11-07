@@ -148,6 +148,8 @@ else:
         "reservation_acquired:",
         "path: 'docs/automation/task-ledger-summary.json'",
         "ledgerSummary.policy?.max_active_tasks !== 1",
+        "taskIds.some((taskId) => typeof taskId !== 'string' || !/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId))",
+        "next_action_excerpt: selectedTask.next_action_excerpt",
         "const usableTask = (task) => Boolean(",
         "['main', 'dev'].includes(task.target_branch)",
         "reservationMarker",

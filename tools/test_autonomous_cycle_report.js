@@ -54,6 +54,7 @@ function makeGithub(options = {}) {
   const successful = (REQUIRED_CHECKS[options.base || 'main'] || REQUIRED_CHECKS.main)
     .map((name, index) => ({
       name, head_sha: head, status: 'completed', conclusion: 'success',
+      app: { slug: 'github-actions' },
       created_at: new Date(Date.now() - 1_000 + index).toISOString()
     }));
   let polls = 0;
@@ -110,6 +111,14 @@ async function run(name, options = {}) {
   assert.equal(valid.core.outputs.evidence_pr_number, '501');
 
   await run('task mismatch', { reportTaskId: 'AUTOMATION-OTHER', expectFailure: 'task ID' });
+  await run('duplicate status fields', {
+    summary: report() + '\\nBOONTA_CYCLE_STATUS: BLOCKED',
+    expectFailure: 'exactly one valid'
+  });
+  await run('duplicate PR evidence fields', {
+    summary: report() + '\\n' + report().split('\\n').find((line) => line.startsWith('BOONTA_CYCLE_EVIDENCE:')),
+    expectFailure: 'exact same-repository PR/head'
+  });
   await run('declared base differs from reservation', { reportBase: 'dev', expectedBase: 'main', expectFailure: 'reserved target branch' });
   await run('PR body missing task marker', { pr: { ...makeGithub().pr, body: 'Some PR body' }, expectFailure: 'tied to the reserved task' });
   await run('PR closed', { pr: { ...makeGithub().pr, state: 'closed' }, expectFailure: 'non-draft' });
@@ -121,16 +130,27 @@ async function run(name, options = {}) {
   });
   await run('required check failed', {
     checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
-      name, head_sha: head, status: 'completed', conclusion: name === REQUIRED_CHECKS.main[0] ? 'failure' : 'success'
+      name, head_sha: head, status: 'completed', conclusion: name === REQUIRED_CHECKS.main[0] ? 'failure' : 'success',
+      app: { slug: 'github-actions' }
     }))]],
     expectFailure: 'required CI check failed'
   });
+  await run('same-name check from an untrusted app is ignored', {
+    checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
+      name, head_sha: head, status: 'completed', conclusion: 'success',
+      app: { slug: 'untrusted-app' }
+    }))]],
+    maxPolls: 1,
+    expectFailure: 'did not complete successfully'
+  });
 
   const pendingRuns = REQUIRED_CHECKS.main.map((name) => ({
-    name, head_sha: head, status: 'in_progress', conclusion: null
+    name, head_sha: head, status: 'in_progress', conclusion: null,
+    app: { slug: 'github-actions' }
   }));
   const completedRuns = REQUIRED_CHECKS.main.map((name) => ({
-    name, head_sha: head, status: 'completed', conclusion: 'success'
+    name, head_sha: head, status: 'completed', conclusion: 'success',
+    app: { slug: 'github-actions' }
   }));
   const pending = await run('wait for exact-head checks', {
     checkRunsByPoll: [pendingRuns, completedRuns], maxPolls: 2
@@ -143,7 +163,8 @@ async function run(name, options = {}) {
   assert.equal(blocked.core.outputs.blocked_fingerprint.length, 16);
 
   const devChecks = REQUIRED_CHECKS.dev.map((name) => ({
-    name, head_sha: head, status: 'completed', conclusion: 'success'
+    name, head_sha: head, status: 'completed', conclusion: 'success',
+    app: { slug: 'github-actions' }
   }));
   const dev = await run('dev target uses native build/host/emulator checks', {
     base: 'dev', expectedBase: 'dev', checkRunsByPoll: [devChecks]

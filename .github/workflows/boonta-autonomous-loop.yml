@@ -123,15 +123,16 @@ jobs:
             }
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
-              taskIds.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
+              taskIds.some((taskId) => typeof taskId !== 'string' || !/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId)) ||
               new Set(taskIds).size !== taskIds.length
             ) {
-              throw new Error('Canonical compact task ledger contains missing or duplicate task IDs.');
+              throw new Error('Canonical compact task ledger contains missing, invalid or duplicate task IDs.');
             }
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const usableTask = (task) => Boolean(
-              task && typeof task.task_id === 'string' && task.task_id.trim() &&
+              task && typeof task.task_id === 'string' &&
+              /^[A-Z0-9][A-Z0-9-]{2,63}$/.test(task.task_id) &&
               typeof task.title === 'string' && task.title.trim() &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
@@ -209,7 +210,13 @@ jobs:
             // A persistent, expiring issue comment protects against stale/cancelled runs.
             const crypto = require('crypto');
             const taskFingerprint = selectedTask
-              ? crypto.createHash('sha256').update(selectedTask.task_id, 'utf8').digest('hex').slice(0, 16)
+              ? crypto.createHash('sha256').update(JSON.stringify({
+                  task_id: selectedTask.task_id,
+                  title: selectedTask.title,
+                  target_branch: selectedTask.target_branch,
+                  platform_scope: [...selectedTask.platform_scope].sort(),
+                  next_action_excerpt: selectedTask.next_action_excerpt
+                }), 'utf8').digest('hex').slice(0, 16)
               : '';
             const reservationMarker = /<!-- BOONTA_TASK_RESERVATION: ([A-Za-z0-9+/=]+) -->/;
             const releasedMarker = /<!-- BOONTA_TASK_RESERVATION_RELEASED: ([A-Za-z0-9+/=]+) -->/;

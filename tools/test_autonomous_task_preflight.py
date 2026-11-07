@@ -152,6 +152,12 @@ cases = [
         "expected_error": "duplicate task IDs",
     },
     {
+        "name": "malformed lowercase task ID fails closed",
+        "tasks": [task("automation-invalid-id", "active")],
+        "marker_day_offset": None,
+        "expected_error": "invalid, invalid or duplicate task IDs",
+    },
+    {
         "name": "unsupported summary schema fails closed",
         "tasks": [valid_active],
         "marker_day_offset": None,
@@ -303,12 +309,25 @@ async function runCase(testCase) {{
     leaseComments.push(marker);
   }}
   if (testCase.lease_payload) {{
+    const selectedForFingerprint = testCase.tasks.find((item) => item.status === "active") ||
+      testCase.tasks.find((item) => item.task_id === "AUTOMATION-LEDGER-ACTIVATION");
+    const leaseFingerprint = selectedForFingerprint
+      ? require("node:crypto").createHash("sha256").update(JSON.stringify({{
+          task_id: selectedForFingerprint.task_id,
+          title: selectedForFingerprint.title,
+          target_branch: selectedForFingerprint.target_branch,
+          platform_scope: [...selectedForFingerprint.platform_scope].sort(),
+          next_action_excerpt: selectedForFingerprint.next_action_excerpt
+        }}), "utf8").digest("hex").slice(0, 16)
+      : "";
     const payload = {{
       schema_version: 1,
       run_id: testCase.lease_payload.run_id,
       run_attempt: testCase.lease_payload.run_attempt || 1,
       task_id: testCase.lease_payload.task_id,
-      fingerprint: testCase.lease_payload.fingerprint,
+      fingerprint: testCase.lease_payload.fingerprint === "computed-at-runtime"
+        ? leaseFingerprint
+        : testCase.lease_payload.fingerprint,
       provider: testCase.lease_payload.provider || "gemini",
       issued_at: new Date(Date.now() - 60000).toISOString(),
       expires_at: testCase.lease_payload.expires_at
@@ -406,12 +425,7 @@ async function runCase(testCase) {{
 }}
 
 (async () => {{
-  const fingerprint = require("node:crypto").createHash("sha256")
-    .update("AUTOMATION-TEST-ACTIVE", "utf8").digest("hex").slice(0, 16);
   for (const testCase of cases) {{
-    if (testCase.lease_payload && testCase.lease_payload.fingerprint === "computed-at-runtime") {{
-      testCase.lease_payload.fingerprint = fingerprint;
-    }}
     const result = await runCase(testCase);
     if (testCase.expected_error) {{
       if (!result.error.includes(testCase.expected_error)) {{

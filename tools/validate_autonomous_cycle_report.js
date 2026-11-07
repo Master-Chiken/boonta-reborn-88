@@ -48,10 +48,9 @@ async function validateAutonomousCycleReport(options) {
     return fail(core, 'Cycle report task ID does not match the exact task reservation.');
   }
 
-  const statusLines = lines.filter((line) =>
-    line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED'
-  );
-  if (statusLines.length !== 1) {
+  const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
+  if (statusLines.length !== 1 ||
+      !['BOONTA_CYCLE_STATUS: PROGRESS', 'BOONTA_CYCLE_STATUS: BLOCKED'].includes(statusLines[0])) {
     return fail(core, 'Cycle report must contain exactly one valid PROGRESS or BLOCKED status.');
   }
 
@@ -74,9 +73,10 @@ async function validateAutonomousCycleReport(options) {
     return { cycle_status: 'blocked', blocked_fingerprint: fingerprint };
   }
 
-  const evidence = summary.match(
-    /^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m
-  );
+  const evidenceLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_EVIDENCE:'));
+  const evidence = evidenceLines.length === 1
+    ? evidenceLines[0].match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/)
+    : null;
   const evidenceBase = oneLine(lines, 'BOONTA_CYCLE_EVIDENCE_BASE');
   if (!evidence || evidenceBase !== expectedBase) {
     return fail(core, 'PROGRESS must cite an exact same-repository PR/head and the reserved target branch ' + expectedBase + '.');
@@ -98,7 +98,8 @@ async function validateAutonomousCycleReport(options) {
   const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime;
   const advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead;
   const taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId;
-  const bodyHasTaskMarker = (pr.body || '').split(/\r?\n/).some((line) => line.trim() === taskMarker);
+  const taskMarkerCount = (pr.body || '').split(/\r?\n/).filter((line) => line.trim() === taskMarker).length;
+  const bodyHasTaskMarker = taskMarkerCount === 1;
 
   if (
     pr.number !== pullNumber ||
@@ -128,7 +129,7 @@ async function validateAutonomousCycleReport(options) {
     const runs = Array.isArray(data?.check_runs) ? data.check_runs : [];
     latestCheckRuns = required.map((name) => {
       const matching = runs
-        .filter((run) => run.name === name && run.head_sha === exactHead)
+        .filter((run) => run.name === name && run.head_sha === exactHead && run.app?.slug === 'github-actions')
         .sort((a, b) => Date.parse(b.created_at || b.started_at || '') - Date.parse(a.created_at || a.started_at || ''));
       return { name, check: matching[0] || null };
     });

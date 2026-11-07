@@ -53,6 +53,11 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"].append(valid_task())
         self.assertTrue(any("duplicate task_id" in e for e in ledger.validate_ledger(data)))
 
+    def test_rejects_lowercase_or_unsafe_task_id(self):
+        data = valid_ledger()
+        data["tasks"][0]["task_id"] = "task-with-lowercase"
+        self.assertTrue(any("stable uppercase identifier" in e for e in ledger.validate_ledger(data)))
+
     def test_enforces_single_active_task(self):
         data = valid_ledger()
         data["tasks"] = [valid_task("TASK-001", "active"), valid_task("TASK-002", "active")]
