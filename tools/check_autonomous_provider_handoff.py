@@ -230,6 +230,7 @@ elif int(reserve_match.group(1)) != openrouter_steps:
 for required in (
     "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
     "quota_required=$MIN_REQUESTS_PER_CYCLE",
+    "this reserve is not a guarantee of cycle completion",
     "QUOTA_REQUIRED: ${{ steps.openrouter_auth_check.outputs.quota_required }}",
     "below the ' + quotaRequired + '-request reserve",
 ):
