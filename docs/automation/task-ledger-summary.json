@@ -17,7 +17,7 @@
       "status": "blocked",
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #344 is merged at main commit 0664079c. It limits the loop to one provider invocation per run and reduces Gemini/OpenRouter/Groq context and execution budgets. Exact-head AI safety, provenance and branch self-tests passed (#42409296079, #42409296096, #42409296211). Prior 7 Nov failures were provider-side: Gemini 503 plus a 250k input TPM ceiling; OpenRouter Free daily inference quota was exhausted despite successful Free-tier key authentication; Groq requests exceeded 8k TPM and timed out. Post-merge run #42409361776 passed readiness and cooldown preflight, found all three cooldowns active, skipped all providers and recorded no model call/progress. Next scheduled opportunity after UTC reset: 8 Nov 00:17 UTC / 01:17 Paris. Activation remains BLOCKED until a real invocation and valid cycle-fresh report/PR. €0 only; no credits, paid fallback, key rotation or manual cooldown bypass."
+      "next_action_excerpt": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180…"
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
