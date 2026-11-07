@@ -387,10 +387,10 @@ or_checkout_position = openrouter_fallback.find("name: Checkout the protected de
 or_install_position = openrouter_fallback.find("name: Install pinned OpenCode CLI")
 or_snapshot_position = openrouter_fallback.find("id: snapshot_pr_heads")
 or_run_position = openrouter_fallback.find("name: Run OpenCode through the OpenRouter Free route")
-or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure")
 or_validate_position = openrouter_fallback.find("name: Validate OpenRouter autonomous cycle report")
-if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_run_position < or_record_position < or_validate_position):
-    errors.append("OpenRouter daily cooldown and bearer-auth check must run before token mint/model invocation; authentication and invocation failures must be recorded before report validation")
+or_record_position = openrouter_fallback.find("name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure")
+if not (0 <= or_cooldown_position < or_guard_position < or_auth_position < or_mint_position < or_checkout_position < or_install_position < or_snapshot_position < or_run_position < or_validate_position < or_record_position):
+    errors.append("OpenRouter daily cooldown and bearer-auth check must run before token mint/model invocation; invocation and report-validation failures must be recorded after validation")
 for required in (
     "github.paginate(github.rest.issues.listComments",
     "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
@@ -400,6 +400,7 @@ for required in (
     "steps.openrouter_auth_check.outcome == 'failure'",
     "steps.openrouter_auth_check.outputs.quota_available == 'false'",
     "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
+    "steps.validate_report.outcome == 'failure'",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
     "continue-on-error: true",
@@ -1119,9 +1120,10 @@ if expected_gemini_debug not in execute:
 cooldown_check_position = execute.find("id: gemini_cooldown")
 cooldown_guard_position = execute.find("id: free_tier_guard")
 cooldown_model_position = execute.find("name: 'Run Gemini CLI'")
+cooldown_validate_position = execute.find("name: Validate autonomous cycle report contract")
 cooldown_record_position = execute.find("name: Record same-day Gemini cooldown after an autonomous model failure")
-if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_record_position):
-    errors.append("Gemini daily cooldown must be checked before the free-tier guard/model call and recorded after an invocation failure")
+if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_validate_position < cooldown_record_position):
+    errors.append("Gemini cooldown must be checked before inference and recorded after report validation")
 for required in (
     "github.paginate(github.rest.issues.listComments",
     "BOONTA_GEMINI_FAILURE_COOLDOWN:",
@@ -1129,7 +1131,7 @@ for required in (
     "GEMINI_COOLDOWN_ACTIVE",
     "GEMINI_COOLDOWN_DATE",
     "steps.gemini_cooldown.outputs.active != 'true'",
-    "if: always() && inputs.autonomous_mode == true && steps.run_gemini.outcome == 'failure'",
+    "if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
     "continue-on-error: true",
