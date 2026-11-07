@@ -403,7 +403,7 @@ for required in (
     "OPENROUTER_COOLDOWN_DATE",
     "steps.openrouter_auth_check.outcome == 'failure'",
     "steps.openrouter_auth_check.outputs.quota_available == 'false'",
-    "below the '+ quotaRequired + '-request reserve",
+    "below the ' + quotaRequired + '-request reserve",
     "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'",
     "steps.validate_report.outcome == 'failure'",
     "github.rest.issues.updateComment",
