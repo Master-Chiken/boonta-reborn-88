@@ -196,8 +196,7 @@ jobs:
                 providerCandidate = 'openrouter';
               } else if (
                 results.gemini === 'ACTIVE' &&
-                process.env.OPENROUTER_READY === 'true' &&
-                results.openrouter === 'ACTIVE' &&
+                (process.env.OPENROUTER_READY !== 'true' || results.openrouter === 'ACTIVE') &&
                 process.env.GROQ_READY === 'true' &&
                 results.groq === 'clear'
               ) {
@@ -425,7 +424,7 @@ jobs:
       needs.autonomous-cycle.result == 'skipped' &&
       needs.provider-cooldowns.outputs.gemini_active == 'true' &&
       needs.openrouter-fallback.result == 'skipped' &&
-      needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
+      (needs.readiness.outputs.openrouter_ready != 'true' || needs.provider-cooldowns.outputs.openrouter_active == 'true') &&
       needs.openrouter-fallback.outputs.invocation_outcome != 'success' &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
