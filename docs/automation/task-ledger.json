@@ -743,7 +743,7 @@
         "Scanner reports exact CompWolf record offsets, first four decoded bytes as a type tag, decoded-size sum, compressed-stream bytes and full ROM spans",
         "Scanner validates header lengths and stream terminators and surfaces undefined initial-history reads without silently inventing dictionary bytes",
         "Synthetic tests cover literals, overlapping back-references, initial-window dependencies, malformed lengths, truncation and z64/v64/n64 byte orders",
-        "Owner runs the scanner against the local ROM and reconciles the historical 92 records, per-tag counts, decoded-byte total and ROM-byte total before T1 is accepted",
+        "Owner's local independent Python decoder reproduces 92 valid records, zero decode-length failures, tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded-size sum 11,975,612, compressed-stream sum 5,869,155 and header-inclusive span 5,870,259 bytes; the exact repository Perl scanner is also run once locally to verify its rejected-candidate and undefined-initial-history diagnostics before T1 is marked complete",
         "No ROM, extracted asset or decoded payload is committed, uploaded to CI or sent to hosted model providers",
         "T2 remains gated until T1 local metrics reconcile and a lawful format/conversion path for one Pupp record is established"
       ],
@@ -752,11 +752,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710334136",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6710334629",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/docs/research/RE-001-decomp-anything-tool-audit.md",
-        "https://github.com/OpenSWE1R/swe1r-tools/commit/e3751b95d103cba7bd1688779472dbd73edba584"
+        "https://github.com/OpenSWE1R/swe1r-tools/commit/e3751b95d103cba7bd1688779472dbd73edba584",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/334#issuecomment-6710686378",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710687278",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710698528",
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/279#issuecomment-6710686927"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
-      "next_action": "Review PR #334 and run tools/n64_comp_inventory.pl locally against the owner-held ROM. Reconcile 92 records, Trak/Pupp/Part/Scen counts, 11,975,612 decoded bytes, and the 5,870,259-byte historical figure against the separately reported stream/span totals. Keep T1 in review until that local reproduction is confirmed; only then start T2 for one Pupp record and GameCube display.",
+      "next_action": "Owner's independent local Python decoder run on 2026-11-07 reproduced all 92 CompWolf records with zero length failures, tags Trak 19 / Pupp 27 / Part 44 / Scen 2, decoded total 11,975,612 bytes, compressed-stream total 5,869,155 bytes, and header-inclusive span 5,870,259 bytes (92 × 12-byte headers explain the difference). Keep T1 in review until the exact tools/n64_comp_inventory.pl from PR #334 is run once locally and its rejected-candidate and undefined-history diagnostics are reconciled. Once T1 is confirmed and integrated, T2 should target Anakin's Pupp model ID 0087 (68,284 decoded bytes), not the smallest 18,124-byte Pupp_Ronto sample; test reuse of the pinned MIT swe1r-assets model parser and audit dependencies/N64 compatibility before any GX conversion.",
       "updated_at": "2026-11-07"
     }
   ]
