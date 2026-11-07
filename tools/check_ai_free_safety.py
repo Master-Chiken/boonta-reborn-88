@@ -145,10 +145,12 @@ if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonom
     errors.append("OpenRouter fallback must not start while its UTC cooldown is active")
 if "needs.provider-cooldowns.outputs.groq_active != 'true'" not in autonomous:
     errors.append("Groq fallback must not start while its UTC cooldown is active")
-if "(needs.autonomous-cycle.result == 'skipped' && needs.provider-cooldowns.outputs.gemini_active == 'true')" not in autonomous:
-    errors.append("OpenRouter/Groq fallbacks must continue when Gemini is safely pre-skipped by the global cooldown check")
-if "(needs.openrouter-fallback.result == 'skipped' && needs.provider-cooldowns.outputs.openrouter_active == 'true')" not in autonomous:
-    errors.append("Groq fallback must continue when OpenRouter is safely pre-skipped by the global cooldown check")
+if "needs.autonomous-cycle.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.gemini_active == 'true'" not in autonomous:
+    errors.append("OpenRouter must run only on a later cycle where Gemini was skipped by an already-active global cooldown")
+if "needs.openrouter-fallback.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.openrouter_active == 'true'" not in autonomous:
+    errors.append("Groq must run only on a later cycle where OpenRouter was skipped by an already-active global cooldown")
+if "needs.autonomous-cycle.result == 'failure'" in autonomous or "needs.openrouter-fallback.result == 'failure'" in autonomous:
+    errors.append("A failed provider must not trigger another provider invocation in the same workflow run")
 
 summary_marker = "  cycle-summary:"
 if summary_marker not in autonomous:
@@ -422,7 +424,8 @@ for required in (
     "steps.gemini_cooldown.outputs.active != 'true'",
     "steps.free_tier_guard.outputs.allowed != 'true'",
     "core.setFailed(",
-    "needs.autonomous-cycle.result == 'failure'",
+    "needs.autonomous-cycle.result == 'skipped'",
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'",
     "uses: ./.github/workflows/openrouter-plan-execute.yml",
 ):
     if required not in execute and required not in autonomous:
@@ -441,12 +444,10 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    "Read only the issue bodies/current owner-direction blocks for #156, #226 and #279",
-    "at most two short comments",
-    "Do not retrieve full comment histories, issue attachments, images, media, artifacts or binary content",
-    "below roughly 20,000 tokens",
-    "approximately 452 KB docs/research/RE-001-route-spline-progress.md",
-    "never repeat the same oversized request",
+    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
+    "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
+    "Keep newly retrieved text below 1,500 tokens",
+    "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
@@ -462,7 +463,7 @@ else:
     ]
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_issues", "search_pull_requests"):
+    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_pull_requests"):
         if required_tool not in github_tools:
             errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
     if "get_workflow_job" in github_tools:
@@ -479,7 +480,8 @@ else:
         "needs: [readiness, provider-cooldowns, autonomous-cycle]",
         "needs.readiness.result == 'success'",
         "needs.readiness.outputs.writer_state == 'enabled'",
-        "needs.autonomous-cycle.result == 'failure'",
+        "needs.autonomous-cycle.result == 'skipped'",
+        "needs.provider-cooldowns.outputs.gemini_active == 'true'",
         "uses: ./.github/workflows/openrouter-plan-execute.yml",
         "autonomous_mode: true",
         "issue_number: 226",
@@ -693,7 +695,7 @@ for required_phrase in (
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
     "Do not read all historical comments",
-    "compact inventory of all open pull requests",
+    "compact inventory of directly related open pull requests",
     "Deep-inspect changed files and exact-head CI only for PRs",
     "Read logs only for failed jobs",
     "Reuse a successful check for an unchanged exact SHA",
@@ -1059,7 +1061,7 @@ else:
     for required_tool in ("create_branch", "create_pull_request", "push_files", "get_job_logs"):
         if required_tool not in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist is missing required bounded capability {required_tool!r}")
-    for required_tool in ("search_pull_requests", "list_branches"):
+    for required_tool in ("search_pull_requests", "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs"):
         if required_tool not in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist is missing supported inventory tool {required_tool!r}")
     for unsupported_tool in ("list_pull_requests", "create_or_update_file", "get_workflow_job"):
@@ -1070,9 +1072,9 @@ else:
 editing_contract_requirements = (
     "## Repository editing contract (mandatory)",
     "Use only the GitHub MCP `push_files` tool for all repository file writes",
-    "Never call `replace`, `write_file`, `edit_file`, `apply_patch`",
-    "If `push_files` is not available or a write fails, stop modifying files",
-    "do not create a self-referential `in_review` record",
+    "Never call `replace`, `write_file`, `edit_file` or `apply_patch`",
+    "If `push_files` is unavailable or a write fails, stop modifying files",
+    "Do not create a self-referential `in_review` record",
     "after merge, finalize from `main` with the actual merged PR head SHA",
 )
 missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
@@ -1100,9 +1102,9 @@ if "upload_artifacts: 'false'" not in execute:
     errors.append("Autonomous workflow must keep third-party workflow artifact upload disabled")
 
 # Scheduled autonomous runs must not stream verbose model output into public Actions logs.
+if '"maxSessionTurns": 5' not in execute:
+    errors.append("Autonomous Gemini writer must cap its session at five turns to bound Free-tier token use")
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
-    if '"maxSessionTurns": 10' not in content:
-        errors.append(f"{label} must cap Gemini sessions at 10 turns to bound Free-tier token use")
     if "run_shell_command" in content:
         errors.append(f"{label} must not expose the restricted shell tool to Gemini")
     if '"list_pull_requests"' in content:
@@ -1244,9 +1246,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 4096 or groq_limits.get("output") != 768:
+        if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
             errors.append(
-                "Groq GPT-OSS 20B must be capped at 4096 context / 768 output tokens"
+                "Groq GPT-OSS 20B must be capped at 3072 context / 512 output tokens"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1255,11 +1257,11 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "OpenCode is configured for this run with a 4,096-token context limit and a 768-token output limit",
-    "Do NOT call issue_read for #156, #226 or #279",
-    "Do not list all PRs, enumerate all branches, or retrieve full comment histories",
-    "Keep total retrieved text under 3,000 tokens",
-    "Do not retry an oversized request",
+    "This model is limited to 3,072 context tokens and 512 output tokens",
+    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
+    "Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier",
+    "Keep newly retrieved text below 1,500 tokens",
+    "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
