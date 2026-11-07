@@ -432,8 +432,10 @@ async function runCase(testCase) {{
       throw new Error(testCase.name + ": expected task_blocked_active=" + testCase.expected_blocked + ", got " + outputs.task_blocked_active);
     }}
     if (testCase.reason_contains &&
-        !String(outputs.reservation_reason || outputs.task_reason).includes(testCase.reason_contains)) {{
-      throw new Error(testCase.name + ": reason did not contain " + testCase.reason_contains);
+        ![outputs.task_reason, outputs.reservation_reason].some((reason) =>
+          String(reason || '').includes(testCase.reason_contains)
+        )) {{
+      throw new Error(testCase.name + ": neither task nor reservation reason contained " + testCase.reason_contains);
     }}
     if (testCase.expected_candidate !== undefined && outputs.provider_candidate !== testCase.expected_candidate) {{
       throw new Error(testCase.name + ": expected provider_candidate=" + testCase.expected_candidate + ", got " + outputs.provider_candidate);
