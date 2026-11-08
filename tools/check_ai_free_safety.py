@@ -1337,7 +1337,10 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
         errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
-    if "SELECTED_TASK_ID: '${{ inputs.task_id }}'" not in report_step or "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" not in report_step:
+    if ("SELECTED_TASK_ID: '${{ inputs.task_id }}'" not in report_step and "SELECTED_TASK_ID: ${{ inputs.task_id }}" not in report_step) or (
+        "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" not in report_step and
+        "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}" not in report_step
+    ):
         errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight")
 if "github.rest.checks.listForRef" not in cycle_validator:
     errors.append("Autonomous progress must wait for the exact PR-head check runs before reporting progress")
