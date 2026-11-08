@@ -204,7 +204,7 @@ jobs:
           for candidate in "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/boonta-reborn-88"; do
             [[ -d "$candidate" ]] || continue
             candidate="$(cd "$candidate" && pwd -P)"
-            if [[ -f "$candidate/tools/build_autonomous_context.py" && -f "$candidate/docs/REVERSE_ENGINEERING_FIRST.md" && -f "$candidate/docs/automation/task-ledger-summary.json" ]]; then
+            if [[ -f "$candidate/tools/build_autonomous_context.py" && -f "$candidate/docs/REVERSE_ENGINEERING_FIRST.md" && -f "$candidate/docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md" && -f "$candidate/docs/automation/task-ledger-summary.json" ]]; then
               git_root="$(git -C "$candidate" rev-parse --show-toplevel)"
               if [[ "$git_root" == "$candidate" ]]; then repo_root="$candidate"; break; fi
             fi
@@ -213,7 +213,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2500 --max-task-context 1800)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2200 --max-task-context 1400)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
