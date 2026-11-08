@@ -87,12 +87,11 @@ jobs:
           path: .ci/decomp-toolkit
           persist-credentials: false
 
-      - name: Install upstream-compatible Rust toolchain
-        # The audited decomp-toolkit revision's own CI uses stable; 1.85.1 cannot
-        # compile its let-chain expressions in src/util/config.rs.
+      - name: Install minimum compatible pinned Rust toolchain
+        # let-chain expressions in the audited decomp-toolkit source require Rust 1.88+
         uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # pinned action revision
         with:
-          toolchain: stable
+          toolchain: 1.88.0
 
       - name: Build decomp-toolkit from its locked source
         working-directory: .ci/decomp-toolkit
