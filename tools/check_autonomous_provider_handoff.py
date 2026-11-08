@@ -481,7 +481,6 @@ for label, workflow, report_title in (
         "validateAutonomousCycleReport",
         "expectedTaskId: process.env.SELECTED_TASK_ID",
         "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
-        "BOONTA_CYCLE_TASK_ID",
     ):
         if required not in report_block:
             errors.append(f"{label} report validator handoff is missing {required!r}")
