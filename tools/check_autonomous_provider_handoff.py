@@ -449,6 +449,25 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
 
+# Autonomous report identity and branch must match the exact task selected by preflight.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "SELECTED_TASK_ID:",
+        "SELECTED_TASK_TARGET_BRANCH:",
+        "reportedTaskId !== selectedTaskId",
+        "evidenceBaseMatch[1] !== selectedTaskTargetBranch",
+        "BOONTA_CYCLE_TASK_ID: ",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} report validator is missing selected-task integrity check {required!r}")
+for label, prompt in (
+    ("Gemini", gemini_prompt),
+    ("OpenRouter", openrouter),
+    ("Groq", groq),
+):
+    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
+        errors.append(f"{label} report instructions must require the exact selected task ID")
+
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 settings_marker = "          settings: |-\n"
 settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
