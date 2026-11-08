@@ -76,3 +76,23 @@ The upstream audio optimization suggests avoiding repeated directory scans and p
 - No source code was imported from these files, and no Windows build or commercial-game asset extraction was performed.
 - PC code remains within the AGPL-3.0 research boundary. Do not copy it into the repository's MIT GameCube/Wii runtime without a deliberate license decision.
 - Boonta's current GameCube prototype README documents a visible CI scene and scripted finish diagnostic, but interactive three-lap controller acceptance remains outstanding.
+
+
+## Additional upstream renderer/camera/input findings — same review date
+
+| File | Exact blob SHA | Confirmed source observation | Boonta decision |
+|---|---|---|---|
+| `dinput_hook/renderer_hook.cpp` | `1d1d8a570b086dccd3984fd188aeb1ff56fe835a` | The PC renderer caches static mesh geometry by mesh pointer and model matrix, reusing uploaded vertex buffers when transforms are unchanged. Its source comment reports per-frame `glBufferData` re-upload was about 52% of per-draw CPU cost in that PC renderer profile. It also shadows GL state and invalidates the shadow when another draw path changes state. | Strong **optimization hypothesis** for Boonta: identify immutable meshes and avoid regenerating/re-uploading unchanged geometry. The 52% figure is PC/OpenGL-specific and must not be presented as a GameCube measurement. GX has different command/display-list and cache semantics; profile first and use GX-native resource lifetimes. |
+| `dinput_hook/camera/player_camera.cpp` | `90f5fd53fbdfe495e568ff823feaa221f7bcb73f` | Camera modes include near/far chase and first-person variants; configurable chase distance/height, FOV, speed-dependent FOV, roll influence, cockpit offsets and camera shake. It tracks per-camera application to avoid repeatedly re-arming camera state. | **Behavior checklist only.** Boonta currently has a basic chase camera; future camera work should isolate view mode, look-ahead, speed FOV, roll and shake, and avoid mutating camera state every frame when settings are unchanged. No PC camera structs or mode IDs copied. |
+| `dinput_hook/game_deltas/swrRace_delta.cpp` | `df93631655a6b9008c85c32e3dae280d4864513a` | The PC renderer path mirrors per-frame cable deformation data from gameplay to a custom renderer, and tracks entity lifetime/paused-state behavior. | Useful reminder to separate simulation deformation from rendering and clear pointer-keyed caches when entities/tracks unload. Do not copy PC object pointers, model nodes or deformation constants into GX. |
+| `dinput_hook/game_deltas/stdControl_delta.c` | `314c40ffb12048e2716a1cf7967077a66d8173c9` | Remaps Sony controller button/axis layouts into the game's expected Xbox-style input contract and queries axis ranges rather than assuming all devices use the same range. | General input lesson: normalize physical device state into a stable logical control contract, calibrate axis ranges/deadzones and test button semantics. Windows DirectInput/GLFW/HID code is not portable to PAD/WPAD. |
+
+### Updated implementation priority
+
+- **P0:** coherent race progression and rival behavior remain ahead of optional feature work.
+- **P1:** add a frame/renderer telemetry baseline; investigate GX-native caching for immutable mesh/texture resources only after measuring actual hot paths.
+- **P1:** keep camera state updates idempotent and separate gameplay deformation from renderer-specific geometry.
+- **P1:** maintain a platform-neutral logical input contract with backend-specific PAD/WPAD adapters.
+- **P2:** audio and rumble remain deferred until core race flow and controller acceptance are stable.
+
+These are source observations at the exact blob revisions above, not claims that the same code or performance characteristics apply to GameCube/Wii.
