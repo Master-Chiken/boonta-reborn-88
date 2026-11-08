@@ -98,7 +98,7 @@ jobs:
         id: free_tier_guard
         shell: bash
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'
           GEMINI_FREE_TIER_CONFIRMED: '${{ vars.GEMINI_FREE_TIER_CONFIRMED }}'
           GEMINI_WRITE_ENABLED: '${{ vars.GEMINI_WRITE_ENABLED }}'
           GEMINI_AUTONOMOUS_ENABLED: '${{ vars.GEMINI_AUTONOMOUS_ENABLED }}'
@@ -224,7 +224,7 @@ jobs:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
         with:
           # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
-          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'
           gemini_cli_version: '0.67.0'
           gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
           gemini_model: 'gemini-3.8-flash'
