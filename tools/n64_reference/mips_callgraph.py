@@ -132,11 +132,10 @@ def build_call_graph(
         }
     )
 
-    function_by_address = {symbol.vram: symbol.name for symbol in functions.values()}
     incoming_summary = [
         {
             "target_vram": target,
-            "target_name": function_by_address.get(target),
+            "target_names": by_address.get(target, []),
             "static_call_sites": len(sites),
             "callers": sorted(set(sites), key=str.casefold),
         }
@@ -157,6 +156,10 @@ def build_call_graph(
         "functions": per_function,
         "resolved_edges": sorted(
             resolved_edges,
+            key=lambda item: (item["caller_vram"], item["pc"], item["target_vram"]),
+        ),
+        "direct_call_sites": sorted(
+            call_sites,
             key=lambda item: (item["caller_vram"], item["pc"], item["target_vram"]),
         ),
         "incoming_call_sites": incoming_summary,
@@ -202,7 +205,12 @@ def main(argv: list[str] | None = None) -> int:
                 edge for edge in graph["resolved_edges"] if edge["caller"] == symbol.name
             ],
             "outgoing_unresolved": [
-                site for site in graph["functions"] if site["name"] == symbol.name
+                site for site in graph["direct_call_sites"]
+                if site["caller"] == symbol.name and not site["target_names"]
+            ],
+            "outgoing_ambiguous": [
+                site for site in graph["direct_call_sites"]
+                if site["caller"] == symbol.name and len(site["target_names"]) > 1
             ],
             "incoming": [
                 item for item in graph["incoming_call_sites"]
