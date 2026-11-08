@@ -1,4 +1,5 @@
 #include "virtual_block.h"
+#include "virtual_block_policy.h"
 
 #include <algorithm>
 #include <charconv>
@@ -71,10 +72,9 @@ namespace {
             return nullptr;
 
         --it;
-        const long region_size = static_cast<long>(it->size);
-        if (offset < it->virtual_offset || it->virtual_offset > LONG_MAX - region_size)
-            return nullptr;
-        if (offset + span <= it->virtual_offset + region_size)
+        if (virtual_block_policy::long_range_within(
+                offset, static_cast<uint64_t>(size), it->virtual_offset,
+                static_cast<uint64_t>(it->size)))
             return &*it;
         return nullptr;
     }
@@ -86,26 +86,40 @@ namespace {
     // (pixels_off, palette_off, ending where the next entry's pixels begin) and a spline entry as
     // one (ending at the next entry's offset). Every layout therefore needs one extra slot past
     // the last entry to terminate it.
-    int table_words(swrLoader_TYPE type) {
+    bool policy_kind(swrLoader_TYPE type, virtual_block_policy::Kind *out) {
+        if (out == nullptr)
+            return false;
         switch (type) {
             case swrLoader_TYPE_MODEL_BLOCK:
-            case swrLoader_TYPE_TEXTURE_BLOCK:
-                return 2;
+                *out = virtual_block_policy::Kind::Model;
+                return true;
             case swrLoader_TYPE_SPLINE_BLOCK:
-                return 1;
+                *out = virtual_block_policy::Kind::Spline;
+                return true;
+            case swrLoader_TYPE_TEXTURE_BLOCK:
+                *out = virtual_block_policy::Kind::Texture;
+                return true;
             default:
-                return 0;
+                return false;
         }
     }
 
+    int table_words(swrLoader_TYPE type) {
+        virtual_block_policy::Kind kind;
+        uint64_t words = 0;
+        if (!policy_kind(type, &kind) ||
+            !virtual_block_policy::words_per_entry(kind, &words))
+            return 0;
+        return static_cast<int>(words);
+    }
+
     uint64_t table_header_size(swrLoader_TYPE type, uint64_t count) {
-        if (type == swrLoader_TYPE_MODEL_BLOCK)
-            return 4ULL + 4ULL * (2ULL * count + 1ULL);
-        if (type == swrLoader_TYPE_SPLINE_BLOCK)
-            return 4ULL + 4ULL * (count + 1ULL);
-        if (type == swrLoader_TYPE_TEXTURE_BLOCK)
-            return 4ULL + 8ULL * count;
-        return 0;
+        virtual_block_policy::Kind kind;
+        uint64_t size = 0;
+        if (!policy_kind(type, &kind) ||
+            !virtual_block_policy::table_header_size(kind, count, &size))
+            return 0;
+        return size;
     }
 
     uint32_t read_be32(const std::vector<uint8_t> &bytes, size_t offset) {
@@ -163,19 +177,12 @@ namespace {
         // model = 2 words per entry plus one final model-end offset;
         // spline = one offset per entry plus one final end offset;
         // texture = exactly two words per entry, with the final texture ending at EOF.
-        constexpr uint32_t MAX_BLOCK_ENTRIES = 1'000'000;
-        if (count > MAX_BLOCK_ENTRIES) {
-            fclose(f);
-            return false;
-        }
+        virtual_block_policy::Kind layout_kind;
         uint64_t table_words_count = 0;
-        if (type == swrLoader_TYPE_MODEL_BLOCK)
-            table_words_count = 2ULL * count + 1ULL;
-        else if (type == swrLoader_TYPE_SPLINE_BLOCK)
-            table_words_count = static_cast<uint64_t>(count) + 1ULL;
-        else if (type == swrLoader_TYPE_TEXTURE_BLOCK)
-            table_words_count = 2ULL * count;
-        else {
+        if (!policy_kind(type, &layout_kind) ||
+            !virtual_block_policy::table_word_count(layout_kind, count, &table_words_count) ||
+            !virtual_block_policy::source_table_fits(
+                layout_kind, count, static_cast<uint64_t>(file_length))) {
             fclose(f);
             return false;
         }
@@ -228,8 +235,8 @@ namespace {
                 next_first = read_be32(table, 4u * static_cast<size_t>(words) * (i + 1u));
             }
 
-            if (first < table_end || next_first < first ||
-                next_first > static_cast<uint64_t>(file_length)) {
+            if (!virtual_block_policy::source_entry_range_valid(
+                    table_end, static_cast<uint64_t>(file_length), first, next_first)) {
                 entries->clear();
                 return false;
             }
@@ -237,14 +244,14 @@ namespace {
             uint32_t split = 0;
             if (words == 2) {
                 if (type == swrLoader_TYPE_MODEL_BLOCK) {
-                    if (next_first != first && (second <= first || second > next_first)) {
+                    if (!virtual_block_policy::source_model_split_valid(first, second, next_first)) {
                         entries->clear();
                         return false;
                     }
                     split = second >= first ? second - first : 0;
                 } else {
                     // For textures, palette offset zero means no palette is present.
-                    if (second != 0 && (second < first || second > next_first)) {
+                    if (!virtual_block_policy::source_texture_split_valid(first, second, next_first)) {
                         entries->clear();
                         return false;
                     }
@@ -392,18 +399,22 @@ void virtual_block_Install(swrLoader_TYPE type, VirtualBlockView view) {
 
     views[type] = std::move(view);
     stats[type] = {};
-    fprintf(hook_log, "[virtual_block] installed %s view: %u byte header, %u region(s)\n",
-            type_name(type), (unsigned) views[type]->header.size(),
-            (unsigned) views[type]->regions.size());
-    fflush(hook_log);
+    if (hook_log) {
+        fprintf(hook_log, "[virtual_block] installed %s view: %u byte header, %u region(s)\n",
+                type_name(type), (unsigned) views[type]->header.size(),
+                (unsigned) views[type]->regions.size());
+        fflush(hook_log);
+    }
 }
 
 void virtual_block_Remove(swrLoader_TYPE type) {
     if (!valid_type(type) || !views[type].has_value())
         return;
 
-    fprintf(hook_log, "[virtual_block] removed %s view\n", type_name(type));
-    fflush(hook_log);
+    if (hook_log) {
+        fprintf(hook_log, "[virtual_block] removed %s view\n", type_name(type));
+        fflush(hook_log);
+    }
     views[type].reset();
 }
 
@@ -450,9 +461,12 @@ void swrLoader_OpenBlock_delta(swrLoader_TYPE type) {
     const char **path = block_path(type);
     if (path != nullptr && valid_type(type) && last_open_path[type] != (*path ? *path : "")) {
         last_open_path[type] = *path ? *path : "";
-        fprintf(hook_log, "[virtual_block] %s block now reads '%s' (handle=%p on entry)\n",
-                type_name(type), last_open_path[type].c_str(), (const void *) block_handle(type));
-        fflush(hook_log);
+        if (hook_log) {
+            fprintf(hook_log, "[virtual_block] %s block now reads '%s' (handle=%p on entry)\n",
+                    type_name(type), last_open_path[type].c_str(),
+                    (const void *) block_handle(type));
+            fflush(hook_log);
+        }
     }
 
     // The real file is opened either way: a view falls back to it for every entry it does not
@@ -472,14 +486,16 @@ size_t swrLoader_ReadAt_delta(swrLoader_TYPE type, long offset, void *dst, size_
     // A view's fall-through offsets only mean anything in the block it was built from, and a
     // custom track swaps the block path out from under us. Serve the real file instead.
     const char **path = block_path(type);
-    if (path != nullptr && *path != nullptr && view.source_path != *path) {
+    if (path != nullptr &&
+        !virtual_block_policy::source_path_matches(view.source_path.c_str(), *path)) {
         stats[type].wrong_block++;
         return hook_call_original(swrLoader_ReadAt, type, offset, dst, size);
     }
 
     if (offset >= 0 && size <= static_cast<size_t>(LONG_MAX) &&
-        offset <= LONG_MAX - static_cast<long>(size) &&
-        offset + static_cast<long>(size) <= static_cast<long>(view.header.size())) {
+        virtual_block_policy::range_within(static_cast<uint64_t>(offset),
+                                           static_cast<uint64_t>(size), 0,
+                                           static_cast<uint64_t>(view.header.size()))) {
         memcpy(dst, view.header.data() + offset, size);
         stats[type].from_header++;
         return 1;// the original returns fread's element count
@@ -506,12 +522,14 @@ size_t swrLoader_ReadAt_delta(swrLoader_TYPE type, long offset, void *dst, size_
 void swrLoader_CloseBlock_delta(swrLoader_TYPE type) {
     if (valid_type(type) && views[type].has_value()) {
         const ReadStats &s = stats[type];
-        fprintf(hook_log,
-                "[virtual_block] %s block closed: %u header, %u memory, %u file, %u unmapped, "
-                "%u other-block read(s)\n",
-                type_name(type), s.from_header, s.from_memory, s.from_file, s.unmapped,
-                s.wrong_block);
-        fflush(hook_log);
+        if (hook_log) {
+            fprintf(hook_log,
+                    "[virtual_block] %s block closed: %u header, %u memory, %u file, %u unmapped, "
+                    "%u other-block read(s)\n",
+                    type_name(type), s.from_header, s.from_memory, s.from_file, s.unmapped,
+                    s.wrong_block);
+            fflush(hook_log);
+        }
         stats[type] = {};
     }
 

@@ -15,6 +15,7 @@
 #include <simdjson.h>
 
 #include "virtual_block.h"
+#include "track_manifest_policy.h"
 
 extern "C" FILE *hook_log;
 
@@ -25,7 +26,7 @@ namespace {
     const char *TRACKS_DIR = "./assets/tracks";
     const char *CONTENT_DIR = "./assets/content";
 
-    constexpr uint32_t MAX_TRACK_ASSET_BYTES = 64U * 1024U * 1024U;
+    constexpr uint32_t MAX_TRACK_ASSET_BYTES = track_manifest_policy::kMaxTrackAssetBytes;
 
     std::string get_string(simdjson::dom::element parent, const char *key, const char *fallback) {
         std::string_view value;
@@ -42,16 +43,7 @@ namespace {
     }
 
     bool normalize_sha256(std::string_view sha, std::string *normalized) {
-        if (normalized == nullptr || sha.size() != 64)
-            return false;
-        normalized->clear();
-        normalized->reserve(64);
-        for (unsigned char ch: sha) {
-            if (!std::isxdigit(ch))
-                return false;
-            normalized->push_back(static_cast<char>(std::tolower(ch)));
-        }
-        return true;
+        return track_manifest_policy::normalize_sha256(sha, normalized);
     }
 
     bool is_sha256(const std::string &sha) {
@@ -72,13 +64,12 @@ namespace {
             return false;
 
         int64_t index = -1;
-        if (element[index_key].get(index) != simdjson::SUCCESS || index < 0 ||
-            static_cast<uint64_t>(index) >= 1'000'000ULL)
+        if (element[index_key].get(index) != simdjson::SUCCESS)
             return false;
 
         int64_t declared_size = 0;
         if (element["size"].get(declared_size) != simdjson::SUCCESS ||
-            declared_size <= 0 || declared_size > MAX_TRACK_ASSET_BYTES)
+            !track_manifest_policy::is_valid_asset_index_and_size(index, declared_size))
             return false;
 
         out->sha256 = std::move(normalized_sha);
@@ -159,9 +150,7 @@ bool track_manifest_Read(const fs::path &path, TrackManifest *out) {
     manifest.version = get_string(root, "version", "");
     manifest.name = get_string(root, "name", manifest.slug.c_str());
     manifest.content_hash = get_string(root, "content_hash", "");
-    if (manifest.slug.empty() || manifest.slug.size() > 128 ||
-        manifest.slug == "." || manifest.slug == ".." ||
-        manifest.slug.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::string::npos) {
+    if (!track_manifest_policy::is_valid_slug(manifest.slug)) {
         if (hook_log) {
             fprintf(hook_log, "[track_manifest] %s has an invalid or empty slug\n",
                     path.generic_string().c_str());
@@ -249,8 +238,8 @@ bool track_manifest_Read(const fs::path &path, TrackManifest *out) {
         const int64_t planet_track = get_int(placement, "planet_track_number", 0);
         const int64_t favorite = get_int(placement, "favorite_pilot", 0);
         const int64_t stock_slot = get_int(placement, "overrides_stock_slot", -1);
-        if (planet < 0 || planet >= 8 || planet_track < 0 || planet_track > 255 ||
-            favorite < 0 || favorite > 255 || stock_slot < -1 || stock_slot >= 25) {
+        if (!track_manifest_policy::is_valid_placement(
+                planet, planet_track, favorite, stock_slot)) {
             if (hook_log) {
                 fprintf(hook_log, "[track_manifest] %s has an out-of-range placement value\n",
                         path.generic_string().c_str());
@@ -263,6 +252,16 @@ bool track_manifest_Read(const fs::path &path, TrackManifest *out) {
     } else if (placement_error != simdjson::NO_SUCH_FIELD) {
         if (hook_log) {
             fprintf(hook_log, "[track_manifest] %s has a malformed placement field\n",
+                    path.generic_string().c_str());
+            fflush(hook_log);
+        }
+        return false;
+    }
+
+    if (!manifest.has_spline && manifest.placement.overrides_stock_slot < 0) {
+        if (hook_log) {
+            fprintf(hook_log,
+                    "[track_manifest] %s has neither a custom spline nor a stock spline slot\n",
                     path.generic_string().c_str());
             fflush(hook_log);
         }
@@ -511,9 +510,12 @@ bool track_manifest_InstallViews(const TrackManifest &manifest) {
             virtual_block_Install(entry.type, std::move(entry.view));
     }
 
-    fprintf(hook_log, "[track_manifest] installed views for '%s' (%s)\n", manifest.slug.c_str(),
-            manifest.content_hash.empty() ? "no content hash" : manifest.content_hash.c_str());
-    fflush(hook_log);
+    if (hook_log) {
+        fprintf(hook_log, "[track_manifest] installed views for '%s' (%s)\n",
+                manifest.slug.c_str(),
+                manifest.content_hash.empty() ? "no content hash" : manifest.content_hash.c_str());
+        fflush(hook_log);
+    }
     return true;
 }
 
