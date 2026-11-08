@@ -92,6 +92,9 @@ def build_context(
         raise ContextBuildError("Selected task has no acceptance-criteria excerpts")
     if not isinstance(criteria_total, int) or criteria_total < len(criteria):
         raise ContextBuildError("Selected task acceptance-criteria count is inconsistent")
+    required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5]]
+    if not all(item in task_context for item in required_handoff_text):
+        raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts")
 
     bounded_task_context = _short(task_context, max_task_context)
     lines = [
