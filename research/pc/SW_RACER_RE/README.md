@@ -17,7 +17,7 @@ The upstream project is a reverse-engineering and modding project for the **Wind
 
 A curated set of **337 text/source files** from the pinned fork revision: first-party C/C++ source and headers, project build/configuration files, analysis scripts, tests and research documentation. An additional eight source/test files from fork PR [#18](https://github.com/Master-Chiken/SW_RACER_RE/pull/18) at head `95a8026bafb09374c7ab6efa91d8dfdd45a9cec6` are retained below: two production source updates, two policy headers and four synthetic tests. The upstream README is retained as [`UPSTREAM_README.md`](UPSTREAM_README.md), and its original root `.gitignore` is preserved as [`UPSTREAM.gitignore`](UPSTREAM.gitignore). The active `.gitignore` in this snapshot is a stricter local data-exclusion guard. The source paths are preserved below this folder.
 
-This is a research snapshot, not a claim that the PC mod builds from this directory. Some upstream dependencies and data inputs are deliberately absent. The PR #18 tests have zero check runs on their exact source head and are **unverified** here; their presence preserves the work, not a passing-test claim.
+This is a research snapshot, not a claim that the PC mod builds from this directory. Some upstream dependencies and data inputs are deliberately absent. It also retains first-party GLTF validation changes from upstream commit `6be9bc0` (see `UPSTREAM_SYNC_STATUS.md`). The associated third-party fastgltf parser patch was not imported pending separate license/source review. The PR #18 tests have zero check runs on their exact source head and are **unverified** here; their presence preserves the work, not a passing-test claim.
 
 ## What was deliberately excluded
 

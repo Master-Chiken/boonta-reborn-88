@@ -28,6 +28,18 @@ The curated PC snapshot also carries the useful code and test changes from `Mast
 
 **Validation status:** GitHub reported zero check runs on PR #18's exact head when this work was imported. The policy tests are source-only and portable; the integration tests depend on the PC project's Windows/simdjson context. The virtual-block integration test's current-head link/build status is not certified. These tests must be run and any unresolved link/build issue fixed before claiming validation. The PR's GitHub workflow files were not copied into Boonta; the source/test files are kept under this AGPL subtree only.
 
+## Selected upstream GLTF safety update — 2026-11-08
+
+The following first-party source changes were retained from `tim-tim707/SW_RACER_RE` commit `6be9bc02ec92e0efb06a0359df42c0d8835319b8` (AGPL-3.0):
+
+- Added `dinput_hook/gltf_validate.cpp` and `.h`: bounds-checks renderer-consumed accessors, buffer views, embedded images, material/texture references, nodes and animation keyframes using 64-bit range arithmetic.
+- Updated `gltf_utils.cpp/.h` to use a single open/parse/validate path and reject malformed replacement assets before renderer setup.
+- Updated `renderer_utils.cpp` and `replacements.cpp` to use the validation result and avoid walking invalid assets.
+
+The existing PC CMake source glob includes new `.cpp` / `.h` files in this directory. This is a **source-reference import, not a certified Windows build**: the snapshot intentionally omits third-party vendor trees and no PC Windows runtime test has been run here.
+
+**Explicitly not imported:** the same upstream commit modifies the vendored `fastgltf-0.8.0/src/fastgltf.cpp` for malformed base64 data URIs, percent-decoding bounds, accessor min/max bounds and a node-weight parsing fix. Those are third-party dependency changes; keep them as a separately audited follow-up rather than silently modifying or vendoring the dependency.
+
 ## Next reconciliation
 
 1. Compare the 42 upstream-only commits against the pinned fork and identify changes to PC analysis, loader safety, asset format tools and test infrastructure.
