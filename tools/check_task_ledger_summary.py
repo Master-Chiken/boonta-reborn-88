@@ -34,10 +34,10 @@ def build_summary(ledger: dict) -> dict:
                 "status": task["status"],
                 "target_branch": task.get("target_branch"),
                 "question_excerpt": excerpt(task.get("question"), 240),
-                "acceptance_criteria_total": len(task.get("acceptance_criteria", [])),
+                "acceptance_criteria_total": len(task.get("acceptance_criteria") or []),
                 "acceptance_criteria_excerpt": [
                     excerpt(item, 140)
-                    for item in task.get("acceptance_criteria", [])[:5]
+                    for item in (task.get("acceptance_criteria") or [])[:5]
                 ],
                 "pr_url": task.get("pr_url"),
                 "head_sha": task.get("head_sha"),
