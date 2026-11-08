@@ -95,7 +95,7 @@ jobs:
               if (!task) return null;
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
               return openPullRequests.find((pull) =>
-                (pull.body || '').split(/\\r?\\n/).some((line) => line.trim() === markerLine)
+                (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
               ) || null;
             };
 
