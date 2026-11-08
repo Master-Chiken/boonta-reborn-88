@@ -432,6 +432,22 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "Do not reopen, replay or recreate that chain" not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
 
+# A blocked task with no ledger PR/head must reconcile exact matching historic PRs
+# before any provider creates more work. Keep all three agent prompts in sync.
+for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "Post-merge reconciliation",
+        "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
+        "including merged/closed results",
+        "closed-unmerged is not completion",
+        "verify live `merged_at`",
+        "final `head.sha`",
+        "record that original PR URL and exact head SHA as evidence",
+        "Never use the ledger-update PR's own SHA as task evidence",
+    ):
+        if required not in prompt:
+            errors.append(f"{label} prompt is missing the post-merge task reconciliation rule {required!r}")
+
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
     "permissions:\n      contents: read\n      issues: read\n      pull-requests: read",
