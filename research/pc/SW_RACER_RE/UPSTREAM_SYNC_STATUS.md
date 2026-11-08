@@ -16,7 +16,7 @@ At the comparison recorded on 2026-11-07, our fork was **29 commits ahead** and 
 
 ## Local-only work not present in this snapshot
 
-The owner's Mac working copy previously contained an uncommitted safety fix in `dinput_hook/game_deltas/swrRace_delta.cpp` and a locally built `dinput.dll`. Those local artifacts were not on the pinned GitHub fork commit, were not copied here, and the DLL was not validated in a running Windows game. Preserve and review that local work separately before committing or importing it.
+The owner's Mac working copy contained a local safety fix in `dinput_hook/game_deltas/swrRace_delta.cpp`. Its source change is now carried in this Boonta snapshot: the favorite-pilot result path includes `tracks_delta.h`, bounds-checks the signed track index against both `trackCount` and `MAX_NB_TRACKS`, and reads `g_aNewTrackInfos` rather than indexing the 25-entry vanilla `g_aTrackInfos` table with a custom track ID. The locally built `dinput.dll` remains a separate artifact: it was not copied, and it has not been validated in a running Windows game.
 
 ## Next reconciliation
 
