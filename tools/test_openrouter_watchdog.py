@@ -26,6 +26,10 @@ HEREDOC = (
     'python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" '
     '"$GITHUB_WORKSPACE" <<\'PY\'\n'
 )
+OPENROUTER_HEREDOC = (
+    'python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" '
+    '"$REPO_ROOT" <<\'PY\'\n'
+)
 
 FAKE_OPENCODE = r'''#!/usr/bin/env python3
 import os
@@ -77,9 +81,10 @@ time.sleep(30)
 
 def production_watchdog_source(workflow: Path) -> str:
     source = workflow.read_text(encoding="utf-8")
-    if source.count(HEREDOC) != 1:
+    marker = OPENROUTER_HEREDOC if workflow.name == OPENROUTER_WORKFLOW.name else HEREDOC
+    if source.count(marker) != 1:
         raise AssertionError(f"Expected exactly one production watchdog heredoc in {workflow.name}")
-    body = source.split(HEREDOC, 1)[1].split("\n          PY", 1)[0]
+    body = source.split(marker, 1)[1].split("\\n          PY", 1)[0]
     return textwrap.dedent(body)
 
 
