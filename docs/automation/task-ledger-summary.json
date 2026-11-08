@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Portable-systems triage now includes AI tuning, frame telemetry, audio cache, PC model replacement boundaries, camera modes, renderer static-mesh caching, gameplay-to-renderer deformation lifecycle and logical input remapping. Continue auditing the remaining upstream-only commits and overlapping fork files; preserve fork policy code and keep all PC AGPL…"
+      "next_action_excerpt": "The exact upstream-only comparison is indexed for all 42 commits with SHA, subject and initial disposition in UPSTREAM_SYNC_STATUS.md. This is graph-level triage, not a complete function review. Next perform three-way source review of the overlapping track_manifest/track_registry/virtual_block changes against common ancestor…"
     }
   ]
 }
