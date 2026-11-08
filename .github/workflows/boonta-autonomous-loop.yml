@@ -158,7 +158,8 @@ jobs:
               'Next action: ' + selectedTask.next_action_excerpt,
               'Before editing, confirm this exact task ID/title/target branch remains eligible in the compact main-branch summary. If details are insufficient, read only this task record; do not retrieve full issue histories or unrelated tasks.',
               'If acceptance_criteria_total exceeds the compact excerpts shown, read only this matching task object in the canonical ledger and satisfy every acceptance criterion before coding.',
-              'Keep the exact target branch. Never promote research findings into gameplay edits or treat PC/N64/Dreamcast behavior as GameCube/Wii proof.'
+              'Keep the exact target branch. Never promote research findings into gameplay edits or treat PC/N64/Dreamcast behavior as GameCube/Wii proof.',
+              'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.'
             ].join('\n') : '';
             if (taskReady && taskContext.length > 2500) {
               throw new Error('Selected task context exceeds the bounded 2,500-character handoff budget.');
