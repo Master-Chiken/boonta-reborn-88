@@ -31,6 +31,9 @@ on:
       task_target_branch:
         type: string
         required: false
+      task_description:
+        type: string
+        required: false
       task_blocked_active:
         type: boolean
         required: false
@@ -196,6 +199,7 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
         run: |
           set -euo pipefail
           set +x
@@ -210,7 +214,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 3
+                "steps": 6
               }
             },
             "provider": {
@@ -219,7 +223,7 @@ jobs:
                   "openai/gpt-oss-20b": {
                     "limit": {
                       "context": 3072,
-                      "output": 512
+                      "output": 384
                     }
                   }
                 }
@@ -236,7 +240,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"
+                  "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -245,12 +249,11 @@ jobs:
             "permission": {
               "*": "allow",
               "bash": "deny",
-              "read": {
-                "*.env": "deny",
-                "*.env.*": "deny",
-                "**/*.env": "deny",
-                "**/*.env.*": "deny"
-              }
+              "read": "deny",
+              "edit": "deny",
+              "glob": "deny",
+              "grep": "deny",
+              "list": "deny"
             }
           }
           JSON
@@ -258,61 +261,60 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          You are the €0-only Groq Free fallback agent for Boonta Reborn. This workflow may invoke you only on a later eligible cycle after Gemini and OpenRouter cooldowns are already active. Complete at most one bounded task.
+You are the €0-only Groq Free fallback agent for Boonta Reborn. Run only when the global workflow has selected this single task and both Gemini and OpenRouter are already in their same-day cooldowns. Complete at most one bounded task.
 
-          LIMITS
-          - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
-          - Never enable billing, paid routes, other providers, change secrets/settings, or reveal credentials.
-          - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
-          - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
+STRICT LIMITS
+- Model limits: 3,072 context tokens, 384 output tokens; Groq TPM limit observed: 8,000. Minimize prompt and tool overhead.
+- One writer, one task, one branch, one reviewable PR. No merge or auto-merge.
+- €0 only. Never enable billing, credits, paid routes, another provider, or change secrets/settings.
+- Keep commercial ROMs, discs, binaries and extracted data local. Preserve clean-room provenance and exact platform labels.
+- Stop on the first quota, TPM, context, rate-limit or authentication error. Never retry the same request.
 
-          CONTEXT BUDGET AND REUSE GATE
-          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json once.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier. Keep newly retrieved text below 800 tokens.
-          - Follow the mandatory reverse-engineering-first policy; recover, extract, convert or reuse before manually recreating.
-          
-          AUTHORITATIVE SELECTED TASK
-          - The caller passes the single task selected by global preflight. Require TASK_ID, TASK_TITLE and TASK_TARGET_BRANCH; fail closed before inference if missing or target is not main/dev.
-          - Read docs/automation/task-ledger-summary.json once. Find exactly TASK_ID; verify the title and target_branch match and the task has no existing PR/head. Do not substitute another task or follow dated Phase notes instead. Use its question_excerpt, acceptance_criteria_excerpt and next_action_excerpt as the scope; read only its full ledger record if needed. When the full criterion count exceeds the excerpts, read only that task's ledger object and satisfy every criterion.
-          - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence. Preserve platform labels; do not infer target facts across platforms. PR #282 is the completed broad inventory. PR #327's rival racing implementation is integrated in main at merge commit 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. Revisit #274 only for a demonstrated dependency.
-          - Keep commercial ROM/disc/binary/extracted data local. The €0 budget, clean-room provenance, exact-head evidence, one-writer and no-merge policies remain mandatory.
+AUTHORITATIVE TASK
+- The parent has already selected exactly one eligible task from docs/automation/task-ledger-summary.json on main and passes its ID, title, target branch and bounded question/acceptance/next-action context below. Treat that payload as authoritative; do not select a different task or reread the entire queue.
+- Require TASK_ID, TASK_TITLE, TASK_TARGET_BRANCH and TASK_DESCRIPTION. The target must be exactly main or dev. If any are missing, stop and report BLOCKED.
+- If the context explicitly says more than five acceptance criteria exist, fetch only that task's matching object from docs/automation/task-ledger.json at ref main through github_get_file_contents.
 
-          EXECUTION
-          - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
-          - Only these GitHub tools are exposed: github_get_file_contents, github_pull_request_read, github_create_branch, github_push_files, github_create_pull_request and github_add_issue_comment. Do not invent tools or call broad search/list operations. The alias github_get_pull_request does not exist; use github_pull_request_read.
-          - No shell is available. Use one branch from the exact current SHA (main for research/docs, dev for gameplay), one logical push_files operation and one reviewable PR. Never write to main/dev, merge, auto-merge, force-push, delete branches or weaken checks.
-          - Verify the exact PR head and its CI evidence. Do not claim tests ran without exact-head results. If blocked, post one concise evidence-based comment to #226 with one next action.
-          - Limit the task to three tool/action steps. Do not reread files or repeat a failed tool.
+PLATFORM AND REUSE
+- #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence; never infer GameCube/Wii behavior from those platforms.
+- PR #282 is the completed broad inventory. PR #327's rival racing implementation is integrated in main at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded; never recreate them.
+- Follow docs/REVERSE_ENGINEERING_FIRST.md before any recreation: DISCOVER, VERIFY platform/version and license/provenance, then EXTRACT/CONVERT/REUSE, INTEGRATE and TEST. Record unknowns rather than guessing.
 
-          REPORT
-          For verified progress, end with:
-          BOONTA_CYCLE_TASK_ID: <exact TASK_ID supplied above>
-          For a PROGRESS report, the cited PR description must also contain these exact standalone lines:
-          BOONTA_TASK_ID: <exact TASK_ID supplied above>
-          BOONTA_TASK_TARGET_BRANCH: <exact TASK_TARGET_BRANCH supplied above>
-          BOONTA_CYCLE_STATUS: PROGRESS
-          BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
-          BOONTA_CYCLE_EVIDENCE_BASE: main|dev
-          For a genuine blocker, end with:
-          BOONTA_CYCLE_STATUS: BLOCKED
-          BOONTA_CYCLE_BLOCKER: <specific named dependency>
-          BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
-          Never report PROGRESS for no-op work, unchanged PRs, unverified results or unknown heads.
+EXECUTION
+- Local filesystem tools read/edit/glob/grep/list/bash are disabled. Do not try to open local paths. Repository reads must use github_get_file_contents with an explicit path and ref.
+- The only available GitHub tools are github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request. Do not invent other tools or browse unrelated PRs/runs.
+- Use the supplied task context first. Fetch only the exact source/policy files needed; keep newly retrieved text below 600 tokens. Do not fetch issue bodies, comment histories, media, ROMs, binaries, or the large route dossier.
+- Create one branch from the exact current SHA of TASK_TARGET_BRANCH, push one logical change set, then open one PR targeting that same branch. Include these exact standalone lines in the PR body:
+  BOONTA_TASK_ID: <exact TASK_ID>
+  BOONTA_TASK_TARGET_BRANCH: <exact TASK_TARGET_BRANCH>
+- Do not write to main/dev, merge, auto-merge, force-push, delete branches, or claim tests ran without exact-head CI evidence.
+
+REPORT
+- Always end with BOONTA_CYCLE_TASK_ID: <exact TASK_ID>.
+- Verified progress requires:
+  BOONTA_CYCLE_STATUS: PROGRESS
+  BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
+  BOONTA_CYCLE_EVIDENCE_BASE: main|dev
+- A genuine blocker requires:
+  BOONTA_CYCLE_STATUS: BLOCKED
+  BOONTA_CYCLE_BLOCKER: <specific evidenced dependency>
+  BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
+- Never report PROGRESS for a no-op work, unchanged PRs, unverified results or unknown heads. Never claim playable-game acceptance without human evidence.
           PROMPT
           )"
 
-          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
-            echo "::error::Global preflight did not pass a complete selected task; no Groq request was sent."
+          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${TASK_DESCRIPTION:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
+            echo "::error::Global preflight did not pass a complete selected task context; no Groq request was sent."
             exit 2
           fi
           PROMPT="${PROMPT}"$'\n\nAUTHORITATIVE SELECTED TASK\n'
           PROMPT+="Task ID: ${TASK_ID}"$'\n'
           PROMPT+="Task title: ${TASK_TITLE}"$'\n'
           PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"$'\n'
-          PROMPT+="Use exactly this task from docs/automation/task-ledger-summary.json; do not select another."
+          PROMPT+="${TASK_DESCRIPTION}"
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 5000 )); then
+          if (( ${#PROMPT} > 4500 )); then
             echo "::error::Groq prompt exceeds the 5,000-character safety ceiling; no model request was sent."
             exit 2
           fi
