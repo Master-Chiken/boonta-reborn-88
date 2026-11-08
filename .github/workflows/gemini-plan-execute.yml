@@ -116,7 +116,7 @@ jobs:
           if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
             reason="GEMINI_FREE_TIER_CONFIRMED must equal true after the owner verifies Free tier and no linked Cloud Billing account."
           elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
-            reason="The GEMINI_API_KEY repository secret is missing."
+            reason="Neither GEMINI_API_KEY_DEUX nor the legacy GEMINI_API_KEY repository secret is configured."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
             reason="The separate GEMINI_AUTONOMOUS_ENABLED repository variable is not exactly true."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" ]]; then
