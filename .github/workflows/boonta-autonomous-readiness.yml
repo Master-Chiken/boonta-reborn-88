@@ -1,0 +1,199 @@
+name: Boonta Autonomous Readiness
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/boonta-autonomous-readiness.yml
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      writer_state:
+        description: Whether the owner has enabled the autonomous writer
+        value: ${{ jobs.readiness.outputs.writer_state }}
+
+# The workflow's default token is read-only. The installation token below is
+# minted with the exact permissions the autonomous loop will need, but this
+# readiness check uses it only for GET requests.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  readiness:
+    name: Verify autonomous configuration without running Gemini
+    outputs:
+      writer_state: ${{ steps.owner_gates.outputs.writer_state }}
+    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check owner gates and secret presence without printing values
+        id: owner_gates
+        shell: bash
+        env:
+          GEMINI_AUTONOMOUS_ENABLED: ${{ vars.GEMINI_AUTONOMOUS_ENABLED }}
+          GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          APP_ID: ${{ vars.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          missing=()
+          if [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" == "true" ]]; then
+            writer_state="enabled"
+          else
+            writer_state="disabled"
+          fi
+          echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"
+          [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
+          [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY secret is missing")
+          [[ -n "${APP_ID:-}" ]] || missing+=("APP_ID variable is missing")
+          [[ -n "${APP_PRIVATE_KEY:-}" ]] || missing+=("APP_PRIVATE_KEY secret is missing")
+
+          if (( ${#missing[@]} > 0 )); then
+            {
+              echo "## Boonta Autonomous: configuration incomplete"
+              echo
+              printf -- '- %s\n' "${missing[@]}"
+              echo
+              echo "No Gemini model call was made. No repository write was performed."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          {
+            echo "## Boonta Autonomous: owner gates and secret presence"
+            echo
+            echo "- Autonomous writer gate: ${writer_state} (this read-only preflight neither changes the gate nor invokes a model)"
+            if [[ "${writer_state}" == "enabled" ]]; then
+              echo "- The writer is already enabled; no activation toggle is needed."
+            else
+              echo "- The writer remains disabled; the owner may enable it only after all external checks pass."
+            fi
+            echo "- Free-tier owner attestation: present and exactly true"
+            echo "- Gemini API key: secret present (value not inspected or printed)"
+            echo "- GitHub App ID/private key: present (values not printed)"
+            echo
+            echo "This verifies configuration presence only. It does not independently verify Google billing status or the project's Free tier."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report optional OpenRouter Free fallback readiness (no API request)
+        shell: bash
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY_02 || secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_FREE_TIER_CONFIRMED: ${{ vars.OPENROUTER_FREE_TIER_CONFIRMED }}
+        run: |
+          set -euo pipefail
+          if [[ "${OPENROUTER_FREE_TIER_CONFIRMED:-}" == "true" && -n "${OPENROUTER_API_KEY:-}" ]]; then
+            {
+              echo "## OpenRouter Free fallback: configured"
+              echo
+              echo "- Owner attestation is exactly true and API-key secret is present (value not inspected or printed)."
+              echo "- This check does not verify account billing status, key validity, model availability or quota."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## OpenRouter Free fallback: not configured"
+              echo
+              echo "- Optional fallback remains safely disabled until OPENROUTER_API_KEY_02 (preferred) or legacy OPENROUTER_API_KEY is present and OPENROUTER_FREE_TIER_CONFIRMED=true."
+              echo "- Gemini remains the only active autonomous model path."
+              echo "- No OpenRouter API request was made."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Mint a scoped GitHub App installation token
+        id: app_token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-actions: read
+
+      - name: Verify GitHub App access to the canonical project state (GET only)
+        shell: bash
+        env:
+          WRITER_STATE: ${{ steps.owner_gates.outputs.writer_state }}
+          APP_TOKEN: ${{ steps.app_token.outputs.token }}
+          API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          api="${API_URL}/repos/${REPOSITORY}"
+
+          # These GET requests confirm the installation can inspect the same
+          # issues, branches and Actions data used by the autonomous writer.
+          curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${APP_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api}/issues/156" | jq -e '.number == 156' >/dev/null
+          curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${APP_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api}/issues/226" | jq -e '.number == 226' >/dev/null
+          curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${APP_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api}/actions/runs?per_page=1" | jq -e '.workflow_runs | type == "array"' >/dev/null
+          for branch in main dev; do
+            curl --fail --silent --show-error \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${APP_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${api}/git/ref/heads/${branch}" | jq -e --arg branch "${branch}" '.ref == ("refs/heads/" + $branch)' >/dev/null
+          done
+
+          {
+            echo "## GitHub App access: passed"
+            echo
+            echo "- App installation token minted with Contents/Issues/Pull requests write and Actions read."
+            echo "- Read access to issues #156 and #226 confirmed."
+            echo "- Read access to Actions runs confirmed."
+            echo "- main and dev branch refs confirmed."
+            echo "- All API checks above were GET requests. No code, issue, PR, setting or secret was changed."
+            echo
+            echo "## Owner-only checks still required"
+            echo "- Verify in Google AI Studio that this Gemini API project is Free tier and has no linked Cloud Billing account."
+            if [[ "${WRITER_STATE}" == "enabled" ]]; then
+              echo "- GEMINI_AUTONOMOUS_ENABLED is already true; this workflow leaves it unchanged."
+            else
+              echo "- After this preflight passes and branch protection is verified, the owner may set GEMINI_AUTONOMOUS_ENABLED=true as the final activation step."
+            fi
+            echo "- Verify GitHub rulesets protect main and dev against direct updates, force-push and deletion, and require PR review."
+            echo "- Confirm the GitHub App installation is limited to this repository."
+            echo
+            echo "This workflow does not call Gemini and does not prove that the Gemini API key is valid."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report optional Groq Free tertiary fallback readiness (no API request)
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
+          GROQ_FREE_TIER_CONFIRMED: ${{ vars.GROQ_FREE_TIER_CONFIRMED }}
+        run: |
+          set -euo pipefail
+          if [[ "${GROQ_FREE_TIER_CONFIRMED:-}" == "true" && -n "${GROQ_API_KEY:-}" ]]; then
+            {
+              echo "## Groq Free tertiary fallback: configured"
+              echo
+              echo "- Owner attestation is exactly true and API-key secret is present (value not inspected or printed)."
+              echo "- Repository secret TA_CLE_GROQ is present and is mapped internally to GROQ_API_KEY."
+              echo "- The workflow is restricted to groq/openai/gpt-oss-20b; no paid model fallback is configured."
+              echo "- This check does not verify billing, account tier, key validity, model availability or quota."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## Groq Free tertiary fallback: not configured"
+              echo
+              echo "- Optional tertiary fallback remains inactive until repository secret TA_CLE_GROQ is present and GROQ_FREE_TIER_CONFIRMED=true."
+              echo "- No Groq API request was made."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

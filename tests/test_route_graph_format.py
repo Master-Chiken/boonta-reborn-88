@@ -3,6 +3,7 @@ import json
 import math
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -26,6 +27,11 @@ from validate_route_graph import (  # noqa: E402
     validate_route_graph,
 )
 
+from export_closed_loop_track import (  # noqa: E402
+    RouteGraphExportError,
+    export_closed_loop_track,
+)
+
 
 def fixture(name):
     return load_route_graph(FIXTURE_DIR / name)
@@ -39,6 +45,7 @@ class RouteGraphFormatTests(unittest.TestCase):
             "split-rejoin-unequal-lengths.json",
             "three-branch-decisions.json",
             "closed-loop.json",
+            "closed-loop-split-rejoin.json",
         ):
             with self.subTest(fixture=name):
                 graph = fixture(name)
@@ -299,6 +306,111 @@ class RouteGraphFormatTests(unittest.TestCase):
         self.assertAlmostEqual(state["t"], 0.25)
         self.assertAlmostEqual(state["progress"], 0.125)
 
+
+    def test_cursor_move_distance_crosses_unequal_edge_lengths_and_reverses(self):
+        graph = fixture("open-bezier.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        state = cursor.move_distance(4.5)
+        self.assertEqual(state["edge_id"], "middle-finish")
+        self.assertAlmostEqual(state["t"], 0.5, places=3)
+        self.assertAlmostEqual(state["distance_on_edge"], 1.5, places=3)
+        self.assertAlmostEqual(state["edge_length"], 3.0, places=3)
+        self.assertAlmostEqual(state["progress"], 0.75, places=3)
+
+        reversed_state = cursor.move_distance(-2.0)
+        self.assertEqual(reversed_state["edge_id"], "start-middle")
+        self.assertEqual(reversed_state["path_index"], 0)
+        self.assertAlmostEqual(reversed_state["t"], 5.0 / 6.0, places=3)
+        self.assertEqual(reversed_state["path_history"], ("start-middle", "middle-finish"))
+
+    def test_cursor_move_distance_uses_branch_choice_and_preserves_reverse_path(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        state = cursor.move_distance(15.0, {"split": "right-1"})
+        self.assertEqual(state["edge_id"], "right-1")
+        self.assertEqual(state["path_history"], ("approach", "right-1"))
+        self.assertAlmostEqual(state["t"], 0.5, places=3)
+        self.assertAlmostEqual(state["distance_on_edge"], 5.0, places=3)
+
+        backwards = cursor.move_distance(-6.0)
+        self.assertEqual(backwards["edge_id"], "approach")
+        self.assertEqual(backwards["path_index"], 0)
+        self.assertAlmostEqual(backwards["t"], 0.9, places=3)
+        self.assertEqual(backwards["path_history"], ("approach", "right-1"))
+
+    def test_cursor_move_distance_requires_branch_choice_and_rolls_back(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=64)
+        with self.assertRaisesRegex(RouteGraphError, "branch choice required"):
+            cursor.move_distance(10.5)
+        self.assertEqual(cursor.path_history, ["approach"])
+        self.assertEqual(cursor.path_index, 0)
+        self.assertAlmostEqual(cursor.t, 0.0)
+
+
+
+    def test_cursor_move_distance_inverts_nonuniform_bezier_speed(self):
+        graph = fixture("open-bezier.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "start-middle")
+        edge["curve"]["control1"] = [0.1, 0.0, 0.0]
+        edge["curve"]["control2"] = [0.4, 0.0, 0.0]
+        cursor = RouteCursor(graph, distance_samples=512)
+
+        state = cursor.move_distance(1.5)
+        self.assertAlmostEqual(state["distance_on_edge"], 1.5, places=2)
+        self.assertAlmostEqual(state["edge_length"], 3.0, places=2)
+        self.assertGreater(state["t"], 0.5)
+        self.assertAlmostEqual(state["progress"], 0.5 * state["t"], places=8)
+        self.assertNotAlmostEqual(state["progress"], 0.25, places=2)
+
+    def test_cursor_move_distance_can_replace_branch_after_reversing(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        cursor = RouteCursor(graph, distance_samples=256)
+        first_choice = cursor.move_distance(15.0, {"split": "right-1"})
+        self.assertEqual(first_choice["path_history"], ("approach", "right-1"))
+
+        backed_up = cursor.move_distance(-6.0)
+        self.assertEqual(backed_up["edge_id"], "approach")
+        self.assertEqual(backed_up["path_history"], ("approach", "right-1"))
+
+        changed_choice = cursor.move_distance(2.0, {"split": "left-1"})
+        self.assertEqual(changed_choice["edge_id"], "left-1")
+        self.assertEqual(changed_choice["path_history"], ("approach", "left-1"))
+        self.assertAlmostEqual(changed_choice["distance_on_edge"], 1.0, places=2)
+
+    def test_cursor_move_distance_marks_exact_open_finish_and_can_reverse(self):
+        cursor = RouteCursor(fixture("open-bezier.json"), distance_samples=128)
+        first_edge = cursor.move_distance(3.0)
+        self.assertEqual(first_edge["edge_id"], "start-middle")
+        self.assertAlmostEqual(first_edge["t"], 1.0)
+        self.assertFalse(first_edge["finished"])
+
+        finish = cursor.move_distance(3.0)
+        self.assertEqual(finish["edge_id"], "middle-finish")
+        self.assertAlmostEqual(finish["t"], 1.0)
+        self.assertTrue(finish["finished"])
+
+        reversed_state = cursor.move_distance(-0.25)
+        self.assertEqual(reversed_state["edge_id"], "middle-finish")
+        self.assertFalse(reversed_state["finished"])
+        self.assertAlmostEqual(reversed_state["t"], 11.0 / 12.0, places=3)
+
+    def test_cursor_distance_sample_count_must_be_bounded(self):
+        with self.assertRaisesRegex(RouteGraphError, "samples must be an integer"):
+            RouteCursor(fixture("open-bezier.json"), distance_samples=1)
+
+    def test_cursor_distance_tables_are_lazy_per_edge_and_reused(self):
+        graph = fixture("open-bezier.json")
+        cursor = RouteCursor(graph, distance_samples=32)
+        self.assertEqual(cursor._distance_tables, {})
+        first = cursor.move_distance(1.0)
+        tables = cursor._distance_tables
+        self.assertEqual(set(tables), {"start-middle"})
+        second = cursor.move_distance(2.5)
+        self.assertIs(cursor._distance_tables, tables)
+        self.assertEqual(set(tables), {"start-middle", "middle-finish"})
+        self.assertGreater(second["distance_on_edge"], 0.0)
+
     def test_cursor_move_reuses_its_validated_graph(self):
         graph = fixture("open-bezier.json")
         original_validate = route_graph_module.validate_route_graph
@@ -444,6 +556,159 @@ class RouteGraphFormatTests(unittest.TestCase):
             allocate_progress_spans([10.0, 0.0], 0.2, 0.8)
         with self.assertRaises(RouteGraphError):
             allocate_progress_spans([10.0, math.nan], 0.2, 0.8)
+
+    def test_closed_loop_export_bakes_a_single_ordered_track_v1_path(self):
+        graph = fixture("closed-loop.json")
+        track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=4
+        )
+
+        self.assertEqual(track["format"], "boonta-track-v1")
+        self.assertTrue(track["closed_loop"])
+        self.assertEqual(len(track["points"]), 12)
+        self.assertEqual(track["points"][0], {
+            "x": 0.0, "y": 0.0, "z": 0.0,
+            "half_width": 3.6, "checkpoint": True,
+        })
+        self.assertEqual(track["points"][4]["x"], 10.0)
+        self.assertEqual(track["points"][4]["z"], 0.0)
+        self.assertEqual(track["points"][8]["x"], 10.0)
+        self.assertEqual(track["points"][8]["z"], 10.0)
+        self.assertEqual(sum(point["checkpoint"] for point in track["points"]), 1)
+        # The closing node is represented by the first point, not duplicated.
+        self.assertNotEqual(track["points"][-1]["x"], track["points"][0]["x"])
+
+
+    def test_arc_length_sampling_reduces_spacing_variation_on_nonuniform_curve(self):
+        graph = fixture("closed-loop.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "a-b")
+        # The line remains straight, but its Bezier parameter speed is strongly
+        # non-uniform. This isolates parameterization from curve-shape effects.
+        edge["curve"]["control1"] = [0.2, 0.0, 0.0]
+        edge["curve"]["control2"] = [8.0, 0.0, 0.0]
+
+        parameter_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="parameter",
+        )
+        arc_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="arc_length",
+        )
+
+        def first_edge_spacing(track):
+            edge_points = track["points"][:9]
+            return [
+                math.dist(
+                    tuple(edge_points[index][axis] for axis in ("x", "y", "z")),
+                    tuple(edge_points[index + 1][axis] for axis in ("x", "y", "z")),
+                )
+                for index in range(8)
+            ]
+
+        parameter_steps = first_edge_spacing(parameter_track)
+        arc_steps = first_edge_spacing(arc_track)
+        parameter_ratio = max(parameter_steps) / min(parameter_steps)
+        arc_ratio = max(arc_steps) / min(arc_steps)
+        self.assertLess(arc_ratio, parameter_ratio * 0.5)
+        self.assertAlmostEqual(arc_steps[0], arc_steps[-1], delta=0.02)
+
+    def test_default_sampling_is_byte_data_equivalent_to_parameter_mode(self):
+        graph = fixture("closed-loop.json")
+        default_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8
+        )
+        explicit_track = export_closed_loop_track(
+            graph, default_half_width=3.6, samples_per_edge=8,
+            sampling_mode="parameter",
+        )
+        self.assertEqual(default_track, explicit_track)
+
+    def test_closed_loop_export_rejects_unknown_sampling_mode(self):
+        with self.assertRaisesRegex(RouteGraphExportError, "sampling_mode"):
+            export_closed_loop_track(
+                fixture("closed-loop.json"),
+                default_half_width=3.6,
+                samples_per_edge=4,
+                sampling_mode="unknown",
+            )
+
+    def test_closed_loop_export_maps_surface_ids_to_explicit_road_widths(self):
+        graph = fixture("closed-loop.json")
+        edge = next(item for item in graph["edges"] if item["id"] == "a-b")
+        edge["surface_binding"] = [
+            {"t": 0.0, "surface_id": "asphalt"},
+            {"t": 0.5, "surface_id": "shoulder"},
+            {"t": 1.0, "surface_id": "shoulder"},
+        ]
+        track = export_closed_loop_track(
+            graph,
+            default_half_width=3.6,
+            samples_per_edge=4,
+            surface_widths={"asphalt": 3.6, "shoulder": 3.1},
+        )
+        self.assertEqual(
+            [point["half_width"] for point in track["points"][:4]],
+            [3.6, 3.6, 3.1, 3.1],
+        )
+
+    def test_closed_loop_export_requires_width_mapping_for_bound_surfaces(self):
+        graph = fixture("closed-loop.json")
+        edge = graph["edges"][0]
+        edge["surface_binding"] = [
+            {"t": 0.0, "surface_id": "asphalt"},
+            {"t": 1.0, "surface_id": "asphalt"},
+        ]
+        with self.assertRaisesRegex(RouteGraphExportError, "provide its width"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=4)
+
+    def test_closed_loop_export_rejects_branching_even_when_graph_is_valid(self):
+        graph = fixture("split-rejoin-unequal-lengths.json")
+        graph["closed_loop"] = True
+        exit_edge = next(edge for edge in graph["edges"] if edge["id"] == "exit")
+        exit_edge["progress"]["end"] = 0.9
+        graph["edges"].append({
+            "id": "finish-return",
+            "from": "finish",
+            "to": "start",
+            "curve": {
+                "type": "cubic_bezier",
+                "control1": [0.0, 0.0, 20.0],
+                "control2": [0.0, 0.0, 10.0],
+            },
+            "progress": {"start": 0.9, "end": 1.0},
+        })
+        validate_route_graph(graph)
+        with self.assertRaisesRegex(RouteGraphExportError, "branching/rejoining"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=4)
+
+    def test_closed_loop_export_enforces_runtime_point_and_width_limits(self):
+        graph = fixture("closed-loop.json")
+        with self.assertRaisesRegex(RouteGraphExportError, "default_half_width"):
+            export_closed_loop_track(graph, default_half_width=0.1, samples_per_edge=4)
+        with self.assertRaisesRegex(RouteGraphExportError, "4096"):
+            export_closed_loop_track(graph, default_half_width=3.6, samples_per_edge=2048)
+
+    def test_closed_loop_export_cli_writes_track_v1_json(self):
+        source = FIXTURE_DIR / "closed-loop.json"
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "baked-track.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(FORMAT_DIR / "export_closed_loop_track.py"),
+                    str(source),
+                    str(output),
+                    "--half-width", "3.6",
+                    "--samples-per-edge", "4",
+                    "--sampling-mode", "arc_length",
+                ],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            baked = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(baked["format"], "boonta-track-v1")
+            self.assertEqual(len(baked["points"]), 12)
 
     def test_cli_accepts_synthetic_example(self):
         path = FIXTURE_DIR / "open-bezier.json"

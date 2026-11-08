@@ -2,15 +2,50 @@ name: '🧙 Gemini Plan Execution'
 
 on:
   workflow_call:
+    outputs:
+      invocation_outcome:
+        description: "Outcome of the actual Gemini CLI invocation step, independent of report validation."
+        value: ${{ jobs.plan-execute.outputs.invocation_outcome }}
+      report_outcome:
+        description: "Outcome of the Gemini autonomous report validator."
+        value: ${{ jobs.plan-execute.outputs.report_outcome }}
+      cycle_status:
+        description: "Validated Gemini cycle status: progress or blocked."
+        value: ${{ jobs.plan-execute.outputs.cycle_status }}
+      task_queue_state_outcome:
+        description: "Outcome of persisting or clearing the single-task daily backoff marker."
+        value: ${{ jobs.plan-execute.outputs.task_queue_state_outcome }}
     inputs:
       additional_context:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
+      task_title:
+        type: 'string'
+        description: 'Explicit task title for a scheduled autonomous cycle'
+        required: false
+      task_description:
+        type: 'string'
+        description: 'Explicit task context for a scheduled autonomous cycle'
+        required: false
+      issue_number:
+        type: 'number'
+        description: 'Issue receiving the task context and report'
+        required: false
+      autonomous_mode:
+        type: 'boolean'
+        description: 'Run the separately gated owner-authorized autonomous loop'
+        required: false
+        default: false
+      task_blocked_active:
+        type: 'boolean'
+        description: 'Whether global preflight found a valid same-day blocked-task marker'
+        required: false
+        default: false
 
 concurrency:
-  group: '${{ github.workflow }}-plan-execute-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}'
-  cancel-in-progress: true
+  group: boonta-single-writer
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -18,6 +53,11 @@ defaults:
 
 jobs:
   plan-execute:
+    outputs:
+      invocation_outcome: ${{ steps.run_gemini.outcome }}
+      report_outcome: ${{ steps.validate_report.outcome }}
+      cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
+      task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
     timeout-minutes: 30
     runs-on: 'ubuntu-latest'
     permissions:
@@ -26,10 +66,93 @@ jobs:
       pull-requests: 'write'
 
     steps:
+      - name: Check same-day Gemini failure cooldown
+        id: gemini_cooldown
+        if: inputs.autonomous_mode == true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              since: todayUtc + 'T00:00:00Z',
+              per_page: 100,
+            });
+            const markerComment = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:'));
+            const match = markerComment?.body?.match(/<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/);
+            const failedOn = match?.[1] || '';
+            const active = failedOn === todayUtc;
+            core.setOutput('active', String(active));
+            core.setOutput('failed_on', failedOn);
+            if (active) {
+              core.notice('Gemini already failed during UTC day ' + todayUtc + '; skip another Gemini request and allow the separately gated OpenRouter Free fallback.');
+            } else {
+              core.info('No active same-day Gemini failure cooldown.');
+            }
+      - name: Require explicit free-tier attestation before model call
+        id: free_tier_guard
+        shell: bash
+        env:
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GEMINI_FREE_TIER_CONFIRMED: '${{ vars.GEMINI_FREE_TIER_CONFIRMED }}'
+          GEMINI_WRITE_ENABLED: '${{ vars.GEMINI_WRITE_ENABLED }}'
+          GEMINI_AUTONOMOUS_ENABLED: '${{ vars.GEMINI_AUTONOMOUS_ENABLED }}'
+          AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
+          AUTONOMOUS_ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          CALLER_WORKFLOW: '${{ github.workflow }}'
+          CALLER_REF: '${{ github.ref }}'
+          APP_ID: '${{ vars.APP_ID }}'
+          APP_PRIVATE_KEY: '${{ secrets.APP_PRIVATE_KEY }}'
+          GEMINI_COOLDOWN_ACTIVE: '${{ steps.gemini_cooldown.outputs.active }}'
+          GEMINI_COOLDOWN_DATE: '${{ steps.gemini_cooldown.outputs.failed_on }}'
+        run: |-
+          set -euo pipefail
+          reason=""
+          if [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
+            reason="GEMINI_FREE_TIER_CONFIRMED must equal true after the owner verifies Free tier and no linked Cloud Billing account."
+          elif [[ -z "${GEMINI_API_KEY:-}" ]]; then
+            reason="The GEMINI_API_KEY repository secret is missing."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
+            reason="The separate GEMINI_AUTONOMOUS_ENABLED repository variable is not exactly true."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" ]]; then
+            reason="Autonomous mode may only be invoked by the Boonta Autonomous Loop workflow."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_REF:-}" != "refs/heads/main" ]]; then
+            reason="Autonomous mode may only be invoked from the protected default branch main."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
+            reason="Autonomous mode is restricted to the canonical active research queue issue #226."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${GEMINI_COOLDOWN_ACTIVE:-}" == "true" ]]; then
+            reason="Gemini already failed an autonomous model invocation on UTC date ${GEMINI_COOLDOWN_DATE:-today}; skip repeated requests until the next UTC day and use the separately gated OpenRouter Free fallback."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && ( -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ) ]]; then
+            reason="Autonomous mode requires the GitHub App ID variable and APP_PRIVATE_KEY secret so PRs can trigger CI."
+          elif [[ "${AUTONOMOUS_MODE:-false}" != "true" && "${GEMINI_WRITE_ENABLED:-}" != "true" ]]; then
+            reason="The manual writer path requires GEMINI_WRITE_ENABLED=true after owner approval."
+          else
+            reason="none"
+          fi
+          if [[ "$reason" != "none" ]]; then
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "reason=$reason" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Gemini model call skipped safely"
+              echo
+              echo "$reason"
+              echo "No model call or paid fallback was attempted."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=none" >> "$GITHUB_OUTPUT"
+            echo "Free-tier and appropriate write authorization gates passed; no provider or paid fallback is configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: 'Mint identity token'
         id: 'mint_identity_token'
         if: |-
-          ${{ vars.APP_ID }}
+          ${{ steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID }}
         uses: 'actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf' # ratchet:actions/create-github-app-token@v2
         with:
           app-id: '${{ vars.APP_ID }}'
@@ -37,13 +160,16 @@ jobs:
           permission-contents: 'write'
           permission-issues: 'write'
           permission-pull-requests: 'write'
+          permission-actions: 'read'
 
       - name: 'Checkout Code'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
         with:
           persist-credentials: 'false'
 
       - name: 'Prepare prompt context'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: 'bash'
         run: |-
           mkdir -p .gemini
@@ -55,17 +181,42 @@ jobs:
             --arg num "${ISSUE_NUMBER}" \
             --arg repo "${REPOSITORY}" \
             --arg context "${ADDITIONAL_CONTEXT}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context}' > .gemini/context.json
+            --arg task_title "${TASK_TITLE}" \
+            --arg task_description "${TASK_DESCRIPTION}" \
+            --arg autonomous_mode "${AUTONOMOUS_MODE}" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_title: $task_title, task_description: $task_description}' > .gemini/context.json
         env:
-          TITLE: '${{ github.event.pull_request.title || github.event.issue.title }}'
-          DESCRIPTION: '${{ github.event.pull_request.body || github.event.issue.body }}'
+          TITLE: '${{ inputs.task_title || github.event.pull_request.title || github.event.issue.title }}'
+          DESCRIPTION: '${{ inputs.task_description || github.event.pull_request.body || github.event.issue.body }}'
           EVENT_NAME: '${{ github.event_name }}'
           IS_PULL_REQUEST: '${{ !!github.event.pull_request }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          TASK_TITLE: '${{ inputs.task_title }}'
+          TASK_DESCRIPTION: '${{ inputs.task_description }}'
+          AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
+
+      - name: Snapshot open PR heads before autonomous cycle
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true'
+        id: snapshot_pr_heads
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: 'Master-Chiken',
+              repo: 'boonta-reborn-88',
+              state: 'open',
+              per_page: 100
+            });
+            const snapshotAt = new Date().toISOString();
+            const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
+            core.setOutput('heads', JSON.stringify(baseline));
+            core.setOutput('snapshot_at', snapshotAt);
+            core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
 
       - name: 'Run Gemini CLI'
+        if: steps.free_tier_guard.outputs.allowed == 'true'
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
         env:
@@ -74,24 +225,26 @@ jobs:
         with:
           # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
           gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
-          gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
-          gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
-          gemini_model: 'gemini-3.5-flash-lite'
+          gemini_cli_version: '0.67.0'
+          gemini_debug: '${{ inputs.autonomous_mode != true && fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
+          gemini_model: 'gemini-3.8-flash'
           upload_artifacts: 'false'
           workflow_name: 'gemini-plan-execute'
           # Assistant workflows can be triggered by comments on either Issues or PRs.
           # We explicitly map both fields so the CLI can correctly categorize the interaction.
           github_pr_number: '${{ github.event.pull_request.number }}'
-          github_issue_number: '${{ github.event.issue.number }}'
+          github_issue_number: '${{ inputs.issue_number || github.event.issue.number }}'
           settings: |-
             {
+              "general": {
+                "maxAttempts": 1,
+                "retryFetchErrors": false
+              },
               "model": {
-                "maxSessionTurns": 25
+                "maxSessionTurns": 3
               },
               "telemetry": {
-                "enabled": true,
-                "target": "local",
-                "outfile": ".gemini/telemetry.log"
+                "enabled": false
               },
               "mcpServers": {
                 "github": {
@@ -106,20 +259,16 @@ jobs:
                   ],
                   "includeTools": [
                     "add_issue_comment",
-                    "issue_read",
-                    "list_issues",
-                    "search_issues",
                     "create_pull_request",
                     "pull_request_read",
-                    "list_pull_requests",
-                    "search_pull_requests",
                     "create_branch",
-                    "create_or_update_file",
-                    "get_commit",
                     "get_file_contents",
-                    "list_commits",
                     "push_files",
-                    "search_code"
+                    "search_pull_requests",
+                    "list_workflow_runs",
+                    "list_workflow_jobs",
+                    "get_workflow_run",
+                    "get_job_logs"
                   ],
                   "env": {
                     "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
@@ -127,10 +276,230 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["run_shell_command(echo)", "read_file", "glob", "grep_search", "list_directory"]
+                "core": ["read_file", "glob", "grep_search", "list_directory"]
               }
             }
-          prompt: '/gemini-plan-execute'
+          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
+
+      - name: Validate autonomous cycle report contract
+        id: validate_report
+        if: inputs.autonomous_mode == true && steps.run_gemini.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
+          PRE_CYCLE_PR_HEADS: '${{ steps.snapshot_pr_heads.outputs.heads }}'
+          PRE_CYCLE_PR_SNAPSHOT_AT: '${{ steps.snapshot_pr_heads.outputs.snapshot_at }}'
+          GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'
+          GITHUB_APP_TOKEN_OUTCOME: '${{ steps.mint_identity_token.outcome }}'
+        with:
+          script: |
+            const summary = (process.env.GEMINI_SUMMARY || '').trim();
+            const lines = summary.split(/\r?\n/);
+            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
+            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
+            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
+            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
+              if (!evidence || !evidenceBaseMatch) {
+                core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
+                return;
+              }
+              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
+              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
+              if (!Number.isFinite(snapshotAt)) {
+                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
+              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
+              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
+              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
+                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
+                return;
+              }
+              core.setOutput('cycle_status', 'progress');
+              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
+            } else if (validBlocked) {
+              const blocker = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')).slice('BOONTA_CYCLE_BLOCKER: '.length);
+              const nextAction = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')).slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
+              const blockedFingerprint = require('crypto').createHash('sha256').update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
+              core.setOutput('blocked_fingerprint', blockedFingerprint);
+              const blockerText = blocker + ' ' + nextAction;
+              const contradictions = [];
+              if (process.env.GEMINI_PREFLIGHT_ALLOWED === 'true') {
+                if (/\b(?:enable|enabling|turn on|set)\b.{0,80}\bGEMINI_AUTONOMOUS_ENABLED\b/i.test(blockerText) || /\bGEMINI_AUTONOMOUS_ENABLED\b.{0,80}\b(?:missing|disabled|false|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims the autonomous writer gate needs enabling or is disabled although the exact-true preflight passed');
+                }
+                if (/\bGEMINI_FREE_TIER_CONFIRMED\b.{0,80}\b(?:missing|false|unset|not set|must be true)\b/i.test(blockerText) || /\bGEMINI_API_KEY\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims the Free-tier attestation or Gemini API key is absent although the preflight passed');
+                }
+                if (process.env.GITHUB_APP_TOKEN_OUTCOME === 'success' && /\b(?:APP_ID|APP_PRIVATE_KEY)\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(blockerText)) {
+                  contradictions.push('claims GitHub App credentials are absent although the installation token was minted');
+                }
+              }
+              if (contradictions.length > 0) {
+                core.setFailed('BLOCKED report contradicts successful Gemini preflight: ' + contradictions.join('; '));
+                return;
+              }
+              core.setOutput('cycle_status', 'blocked');
+              core.info('Autonomous cycle reported a named blocker consistent with the successful preflight. Fingerprint: ' + blockedFingerprint);
+            } else {
+              core.setFailed('Autonomous Gemini invocation returned without a valid PROGRESS or BLOCKED report.');
+            }
+
+      - name: Sync the single-task daily backoff marker
+        id: sync_task_queue_state
+        if: steps.validate_report.outcome == 'success' && (steps.validate_report.outputs.cycle_status == 'blocked' || inputs.task_blocked_active == true)
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          CYCLE_STATUS: ${{ steps.validate_report.outputs.cycle_status }}
+          BLOCKED_FINGERPRINT: ${{ steps.validate_report.outputs.blocked_fingerprint }}
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const cycleStatus = process.env.CYCLE_STATUS || '';
+            const isBlocked = cycleStatus === 'blocked';
+            const fingerprint = process.env.BLOCKED_FINGERPRINT || '';
+            if (isBlocked && !/^[0-9a-f]{16}$/.test(fingerprint)) {
+              core.setFailed('A valid BLOCKED report must include its deterministic task fingerprint before persistence.');
+              return;
+            }
+            if (!isBlocked && cycleStatus !== 'progress') {
+              core.info('No validated task state to persist.');
+              return;
+            }
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = isBlocked
+              ? '<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ' + todayUtc + ' ' + fingerprint + ' -->'
+              : '<!-- BOONTA_TASK_BLOCKED_COOLDOWN_CLEARED: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              isBlocked ? '## Single active task — daily backoff' : '## Single active task — backoff cleared',
+              '',
+              isBlocked
+                ? 'A valid BLOCKED report was verified for the single active task on UTC date ' + todayUtc + '.'
+                : 'A cycle-fresh PROGRESS report passed exact-head validation on UTC date ' + todayUtc + '.',
+              isBlocked
+                ? 'Fingerprint: ' + fingerprint + '. Scheduled provider calls are paused for the remainder of this UTC day to avoid repeating the same blocked task.'
+                : 'The previous same-day task backoff is cleared. The next eligible scheduled cycle may select work again.',
+              'A valid BLOCKED report is not a provider failure; this task backoff does not record a provider cooldown.',
+              'An owner-authorized manual dispatch or qualifying main push may re-evaluate the task before the next UTC day.',
+              '',
+              '[Inspect the validated cycle](' + process.env.RUN_URL + ')',
+            ].join('\\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) =>
+              comment.user?.login === 'github-actions[bot]' &&
+              (comment.body || '').includes('<!-- BOONTA_TASK_BLOCKED_COOLDOWN')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(isBlocked
+                ? 'Updated the single persistent same-day task backoff marker.'
+                : 'Cleared the single persistent same-day task backoff marker.');
+            } else if (isBlocked) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the single persistent same-day task backoff marker.');
+            } else {
+              core.info('No previous task backoff marker needed clearing.');
+            }
+      - name: Record same-day Gemini cooldown after an autonomous model failure
+        if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              '## Gemini daily failure cooldown',
+              '',
+              'The autonomous Gemini CLI invocation or cycle-report validation failed on UTC date ' + todayUtc + '.',
+              'Further autonomous cycles on this UTC date will skip another Gemini request and proceed to the separately gated OpenRouter Free fallback.',
+              'Gemini is eligible for a fresh attempt on the next UTC date. This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed Gemini invocation](' + process.env.RUN_URL + ')',
+            ].join('\\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GEMINI_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent Gemini cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
+            }
+      - name: Explain why Gemini was not called
+        if: steps.free_tier_guard.outputs.allowed != 'true' && steps.gemini_cooldown.outputs.active != 'true'
+        uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
+          SKIP_REASON: '${{ steps.free_tier_guard.outputs.reason }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
+            if (!issueNumber) {
+              core.warning('Could not resolve the issue or pull request number; the model call was still skipped.');
+              return;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: 'Gemini was not called: ' + (process.env.SKIP_REASON || 'a required authorization/configuration gate failed') + ' No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
+            });
+
+      - name: Fail autonomous cycle when Gemini preflight blocks the model call
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            core.setFailed(
+              'Gemini did not run because its independent owner/free-tier preflight blocked the call. ' +
+              'The caller may now try OpenRouter Free, which must pass its own independent gates.'
+            );
 
       - name: 'Publish Gemini response to the issue or PR'
         if: always() && steps.run_gemini.outcome != 'skipped'
@@ -138,7 +507,7 @@ jobs:
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
           RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
-          ISSUE_NUMBER: '${{ github.event.pull_request.number || github.event.issue.number }}'
+          ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
         with:
           script: |
             const summary = (process.env.GEMINI_SUMMARY || '').trim();

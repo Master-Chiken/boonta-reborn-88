@@ -5,8 +5,23 @@ on:
     paths:
       - ".github/workflows/branch-governance.yml"
       - ".github/workflows/branch-intake-queue.yml"
-      - ".github/workflows/branch-automation-selftest.yml"
       - ".github/workflows/retire-verified-branch.yml"
+      - ".github/workflows/ai-daily-coordinator.yml"
+      - ".github/workflows/gemini-invoke.yml"
+      - ".github/workflows/gemini-plan-execute.yml"
+      - ".github/workflows/openrouter-plan-execute.yml"
+      - ".github/workflows/groq-plan-execute.yml"
+      - ".github/workflows/boonta-autonomous-readiness.yml"
+      - ".github/workflows/boonta-autonomous-loop.yml"
+      - ".github/workflows/ci-failure-triage.yml"
+      - ".github/commands/gemini-autonomous-loop.toml"
+      - ".github/workflows/branch-automation-selftest.yml"
+      - "tools/check_ai_free_safety.py"
+      - "GEMINI.md"
+      - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
+      - "tools/check_autonomous_provider_handoff.py"
+      - "tools/test_autonomous_task_preflight.py"
+      - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
 permissions:
@@ -34,54 +49,15 @@ jobs:
           ruby -e 'require "yaml"; ARGV.each { |path| YAML.parse_file(path); puts "YAML OK: #{path}" }' \
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
-            .github/workflows/branch-automation-selftest.yml \
-            .github/workflows/retire-verified-branch.yml
-
-      - name: Verify two-branch workflow routing and safety exclusions
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          queue = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
-          build = Path(".github/workflows/gamecube-demo-build.yml").read_text(encoding="utf-8")
-          governance = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
-          agents = Path("AGENTS.md").read_text(encoding="utf-8")
-          audit = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
-          retire = Path(".github/workflows/retire-verified-branch.yml").read_text(encoding="utf-8")
-
-          checks = {
-              "intake explicitly targets dev": 'target_branch = "dev"' in queue,
-              "candidate comparisons use the integration target": 'compare/{target_branch}...{sha}' in queue,
-              "created PRs target the integration branch": '"--base", target_branch' in queue,
-              "main is never treated as an intake candidate": 'item.get("name") not in {"main", target_branch}' in queue,
-              "archive and recovery refs are excluded": 'startswith(("archive/", "recovery/"))' in queue,
-              "prototype build runs on main and dev pushes": 'branches: [main, dev]' in build,
-              "governance documents main/dev roles": "`main` — stable/release branch" in governance and "`dev` — integration branch" in governance,
-              "agent rules direct ordinary work to dev": "targeting `dev`" in agents and "separate reviewed PR" in agents,
-              "audit distinguishes permanent branches from temporary work": 'permanent_names = {"main", "dev"}' in audit and "active_work" in audit,
-              "audit excludes archive/recovery refs from active work": 'startswith(("archive/", "recovery/"))' in audit,
-              "audit reports missing main/dev protection": "permanent_protection_missing" in audit and "protect main and dev" in audit,
-              "obsolete 30-active-branch target is removed": "target 30" not in audit and "over_target" not in audit and "Branch governance: consolidation needed" not in audit,
-              "normal intake remains draft-only": '"--head", name, "--draft"' in queue,
-              "intake does not run destructive git ref commands": "git push --force" not in queue and "git branch -D" not in queue and "gh pr merge" not in queue,
-              "retirement workflow is manually triggered only": "workflow_dispatch:" in retire.split("permissions:", 1)[0] and all(trigger not in retire.split("permissions:", 1)[0] for trigger in ("push:", "pull_request:", "schedule:")),
-              "retirement restricted to owner from main": "github.actor == 'Master-Chiken' && github.ref == 'refs/heads/main'" in retire,
-              "retirement requires exact typed branch and SHA": "CONFIRM_BRANCH" in retire and "EXPECTED_SHA" in retire and "PINNED_SHA" in retire,
-              "retirement has exactly five pre-reviewed candidates": all(name in retire for name in ("recovery/branch-heads-20261019-verified", "feat/game-finish-banner-label-20261017", "feat/rocky-canyon-silhouette-20261017", "feat/source-driven-racer-mesh-texture-20261017", "test/dolphin-pause-state-acceptance")),
-              "retirement rejects protected refs and open PRs": ".protected // false" in retire and ".head.ref == $branch or .base.ref == $branch" in retire,
-              "retirement verifies reachability in recovery archive": 'git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/archive/branch-heads-20261019"' in retire,
-              "retirement repeats exact-SHA check immediately before delete": "Recheck immediately before deletion" in retire and retire.count('actual_sha="$(jq -r') >= 2,
-              "retirement does not force-push or merge": "git push --force" not in retire and "gh pr merge" not in retire and "git update-ref" not in retire,
-              "retirement has one delete-ref API call": retire.count('gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH_NAME"') == 1,
-          }
-          for label, ok in checks.items():
-              print(f"{'PASS' if ok else 'FAIL'}: {label}")
-          failures = [label for label, ok in checks.items() if not ok]
-          if failures:
-              raise SystemExit("Two-branch workflow safety validation failed: " + "; ".join(failures))
-          PY
+            .github/workflows/ai-daily-coordinator.yml \
+            .github/workflows/gemini-invoke.yml \
+            .github/workflows/gemini-plan-execute.yml \
+            .github/workflows/openrouter-plan-execute.yml \
+            .github/workflows/groq-plan-execute.yml \
+            .github/workflows/boonta-autonomous-readiness.yml \
+            .github/workflows/boonta-autonomous-loop.yml \
+            .github/workflows/ci-failure-triage.yml \
+            .github/workflows/branch-automation-selftest.yml
 
       - name: Compile embedded Python scripts without executing network operations
         shell: bash
@@ -95,6 +71,7 @@ jobs:
           paths = (
               Path(".github/workflows/branch-governance.yml"),
               Path(".github/workflows/branch-intake-queue.yml"),
+              Path(".github/workflows/ai-daily-coordinator.yml"),
           )
           checked = 0
           for path in paths:
@@ -111,6 +88,124 @@ jobs:
                   checked += 1
                   print(f"Python syntax OK: {path} block {index}")
           print(f"Validated {checked} embedded Python block(s).")
+          PY
+
+      - name: Run static AI safety checks (no API calls)
+        shell: bash
+        run: python3 tools/check_ai_free_safety.py
+
+      - name: Validate autonomous provider handoff contract (offline)
+        shell: bash
+        run: python3 tools/check_autonomous_provider_handoff.py
+
+      - name: Execute global task preflight with mocked GitHub data (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_task_preflight.py
+
+      - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
+        shell: bash
+        run: python3 tools/test_openrouter_watchdog.py
+
+      - name: Enforce conservative branch budget and lifecycle policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
+          intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
+          coordinator = Path(".github/workflows/ai-daily-coordinator.yml").read_text(encoding="utf-8")
+          daily_prompt = Path(".github/commands/gemini-daily-coordinator.toml").read_text(encoding="utf-8")
+          gemini_invoke = Path(".github/workflows/gemini-invoke.yml").read_text(encoding="utf-8")
+          gemini_execute = Path(".github/workflows/gemini-plan-execute.yml").read_text(encoding="utf-8")
+          groq = Path(".github/workflows/groq-plan-execute.yml").read_text(encoding="utf-8")
+          setup = Path("docs/AI_AUTOMATION_SETUP.md").read_text(encoding="utf-8")
+          branch_docs = Path("docs/BRANCH_GOVERNANCE.md").read_text(encoding="utf-8")
+          selftest = Path(".github/workflows/branch-automation-selftest.yml").read_text(encoding="utf-8")
+          yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
+          intake_header = intake.split("permissions:", 1)[0]
+          openrouter = Path(".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
+          autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
+          checks = {
+              "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
+              "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),
+              "OpenRouter checks UTC free-model quota before minting or inference": "free_model_daily_requests.remaining" in openrouter and "outputs.quota_available == 'true'" in openrouter and "model inference is blocked before any provider request" in openrouter,
+              "OpenRouter zero daily quota activates the same-day cooldown": "outputs.quota_available == 'false'" in openrouter and "BOONTA_OPENROUTER_FAILURE_COOLDOWN" in openrouter,
+              "Autonomous loop runs every six hours without chat input": "cron: '17 */6 * * *'" in autonomous_loop and "without asking for another continue message" in autonomous_loop,
+              "Owner merge of relevant main automation/ledger changes starts a continuation cycle": "  push:\n    branches:\n      - main\n    paths:" in autonomous_loop and all(path in autonomous_loop for path in (".github/workflows/boonta-autonomous-loop.yml", ".github/workflows/boonta-autonomous-readiness.yml", ".github/workflows/gemini-plan-execute.yml", ".github/workflows/openrouter-plan-execute.yml", ".github/workflows/groq-plan-execute.yml", "docs/automation/task-ledger.json")),
+              "Push and manual continuation remain owner-only": "github.actor == github.repository_owner" in autonomous_loop and "github.event_name == 'push'" in autonomous_loop,
+              "OpenRouter and Groq Free fallbacks permit the bounded main-push event": '"${CALLER_EVENT:-}" != "push"' in openrouter and '"${CALLER_EVENT:-}" != "push"' in groq,
+              "Autonomous loop serializes all writers": "group: boonta-autonomous-loop" in autonomous_loop and "cancel-in-progress: false" in autonomous_loop,
+              "Provider fallback advances only on a later cycle after pre-existing cooldown": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.openrouter-fallback.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.autonomous-cycle.result == 'failure'" not in autonomous_loop and "needs.openrouter-fallback.result == 'failure'" not in autonomous_loop,
+              "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
+              "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"' in groq,
+              "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
+              "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
+              "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
+              "Groq prompt explicitly stops on provider quota errors": "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
+              "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
+              "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
+              "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
+              "branch intake defaults to one draft PR": 'default: "1"' in intake_header and "'1'" in intake.split("MAX_PRS:", 1)[1].split("\n", 1)[0],
+              "branch intake can prepare at most two draft PRs": '          - "1"\n          - "2"' in intake_header and "1|2) ;;" in intake and "1|3|5|10" not in intake,
+              "red line is above 20 branches": "BRANCH_REDLINE = 20" in governance,
+              "active branch target is 10": "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs match active target": "no more than 10 active working branches" in branch_docs and "no more than 30 active working branches" not in branch_docs and "ACTIVE_BRANCH_TARGET = 10" in governance,
+              "branch governance docs distinguish count warning and red line": "10 or more branch refs" in branch_docs and "more than 20 total branch refs" in branch_docs and "30-active-branch target" not in branch_docs,
+              "branch governance docs preserve no-automatic-deletion rule": "Do not delete branches automatically." in branch_docs and "gh api --method DELETE" not in governance,
+              "branch governance docs reflect live main ruleset": "Live ruleset state verified on 2026-10-23" in branch_docs and "`Protect main 2` is active for `main`" in branch_docs and "approval of the latest push, and the three required status checks" in branch_docs,
+              "branch governance docs record the owner pull-request bypass exception": "Bypass list still includes the repository owner as a `User` with `pull_request` bypass mode" in branch_docs and "remove the actor from the `Bypass list` if no exception is wanted" in branch_docs,
+              "branch governance docs preserve dev required-check gap": "`Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks" in branch_docs and "not yet for `dev`" in branch_docs,
+              "branch governance docs warn not to copy main checks to dev without confirming triggers": "Do not copy the `main` check list directly onto `dev`" in branch_docs and "trigger on PRs targeting `dev`" in branch_docs,
+              "branch governance docs keep auto-merge disabled pending review": "Do not enable automatic merging" in branch_docs and "independent review" in branch_docs,
+              "branch docs list the three universal main checks": all(name in branch_docs for name in ("Verify Gemini free-only guardrails", "Reject known held assets and data", "Check proposed source paths using trusted base policy")),
+              "branch docs warn against globally requiring path-filtered checks": "Do not globally require path-filtered checks" in branch_docs and "always-running aggregate check" in branch_docs,
+              "audit runs when a branch is created": '  create:\n    branches: ["**"]' in governance,
+              "audit reconciles inventory after branch cleanup": '  workflow_run:\n    workflows: ["Retire archived branch refs"]' in governance and 'branches: ["main"]' in governance,
+              "audit runs after its policy changes on main": '  push:\n    branches: ["main"]' in governance and '.github/workflows/branch-governance.yml' in governance,
+              "actual auto-delete setting is reported": "delete_branch_on_merge" in governance,
+              "single deduplicated branch-budget issue": governance.count('title="Branch governance: branch budget"') == 2,
+              "branch-budget searches are restricted to issue titles": sum(
+                  "gh issue list" in line and "--search" in line and "in:title" in line
+                  for line in governance.splitlines()
+              ) == 2,
+              "branch-budget search cannot match the autonomous task queue body": all(
+                  "in:title" in line
+                  for line in governance.splitlines()
+                  if "gh issue list" in line and "--search" in line
+              ),
+              "existing alert gets edited instead of comment spam": "gh issue edit" in governance and 'gh issue comment "$existing"' not in governance,
+              "alert closes when inventory is back in budget": "gh issue close" in governance and "below the 10-branch warning threshold" in governance,
+              "no automatic branch-ref deletion": "gh api --method DELETE" not in governance and "git push --force" not in governance,
+              "branch-budget issue text cannot execute markdown backticks": 'echo "1. Keep only main, dev' in governance and 'echo "1. Keep only `main`' not in governance,
+              "20-branch red line is not the former 105-branch limit": "len(branches) > 105" not in governance and "105-branch hard cap" not in governance,
+              "audit explicitly admits it cannot block a branch after creation": "cannot retroactively prevent that creation" in governance,
+              "AI coordinator remains manual-only": "workflow_dispatch:" in coordinator.split("permissions:", 1)[0] and "schedule:" not in coordinator.split("permissions:", 1)[0] and "cron:" not in coordinator.split("permissions:", 1)[0],
+              "AI coordinator keeps RE-001 and RE-002 in separate owner-authorized scopes": "RE-001 #226 and RE-002 #279" in coordinator and "read-only PC/N64/Dreamcast" in coordinator and "RE-002 (issue #279) is ACTIVE" in daily_prompt and "no gameplay changes" in daily_prompt,
+              "AI coordinator snapshot carries live issue body and defers to newer owner state": '"body": issue.get("body")' in coordinator and "Current-state resolution: read the live bodies of #226 and #279 in the LIVE SNAPSHOT" in coordinator and "newer explicit owner instructions in either body as controlling" in coordinator,
+              "YAML syntax check includes both reusable Gemini workflows": all(path in yaml_validation for path in (".github/workflows/gemini-invoke.yml", ".github/workflows/gemini-plan-execute.yml")),
+              "AI coordinator requires exact free-tier attestation": "GEMINI_FREE_TIER_CONFIRMED" in coordinator and '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' in coordinator,
+              "AI coordinator checks gate before live-data collection and model": coordinator.index("id: key") < coordinator.index("name: Collect live branches, open PRs, and project issue metadata") < coordinator.index("name: Run Gemini read-only coordinator"),
+              "AI coordinator skips live-data collection unless gate passes": "name: Collect live branches, open PRs, and project issue metadata\n        if: steps.key.outputs.available == 'true'" in coordinator,
+              "AI coordinator model action is gated": "name: Run Gemini read-only coordinator\n        id: coordinator\n        if: steps.key.outputs.available == 'true'" in coordinator,
+              "AI coordinator report publication is gated": "if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'" in coordinator,
+              "read-only Gemini invocation blocks setup and uses direct prompt": "id: free_tier_guard" in gemini_invoke and gemini_invoke.index("id: free_tier_guard") < gemini_invoke.index("name: 'Mint identity token'") < gemini_invoke.index("name: 'Checkout Code'") < gemini_invoke.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_invoke and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_invoke and "prompt: |-" in gemini_invoke and "${{ inputs.additional_context }}" in gemini_invoke and "name: 'Prepare prompt context'" not in gemini_invoke and "add_issue_comment" not in gemini_invoke and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_invoke,
+              "write-capable Gemini invocation blocks setup before model calls": "id: free_tier_guard" in gemini_execute and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint identity token'") < gemini_execute.index("name: 'Checkout Code'") < gemini_execute.index("name: 'Prepare prompt context'") < gemini_execute.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_execute and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_execute,
+              "owner attestation is documented as not an automated billing check": "GEMINI_FREE_TIER_CONFIRMED" in setup and "not an automated billing-status check" in setup,
+              "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
+              "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
+              "AI snapshot does not count future commit timestamps as recent activity": "if age < datetime.timedelta(0):" in coordinator and "recent = age < datetime.timedelta(days=30)" in coordinator,
+              "AI coordinator skips model calls when GEMINI_API_KEY is absent": 'echo "available=false" >> "$GITHUB_OUTPUT"' in coordinator and "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing." in coordinator,
+              "AI coordinator cannot write code or delete branch refs": "contents: read" in coordinator and "pull-requests: read" in coordinator and "contents: write" not in coordinator and "gh api --method DELETE" not in coordinator,
+              "AI coordinator explicitly forbids automatic merge and deletion": "never modify code, create branches/PRs, approve or merge, force-push, " in coordinator and "or delete refs." in coordinator,
+          }
+
+          for label, ok in checks.items():
+              print(f"{'PASS' if ok else 'FAIL'}: {label}")
+          failed = [label for label, ok in checks.items() if not ok]
+          if failed:
+              raise SystemExit("Branch budget policy validation failed: " + "; ".join(failed))
           PY
 
       - name: Verify Git patch-equivalence detection with a local fixture

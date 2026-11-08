@@ -16,6 +16,10 @@ This order applies to every project task. Do not skip ahead to polish or optimiz
 
 The order is a decision rule, not a demand for unnecessary work: if a stage is already satisfied, record the evidence and move on. For a performance-focused task, reproduce and define the required behavior first, preserve correctness and maintainability, then optimize the measured bottleneck.
 
+## Mandatory reverse-engineering-first rule
+
+Before manually recreating any game element, asset, format, behavior or subsystem, follow [`docs/REVERSE_ENGINEERING_FIRST.md`](docs/REVERSE_ENGINEERING_FIRST.md). This is a hard pre-implementation gate for every contributor and every task: inspect existing reverse-engineering evidence and Boonta work; determine whether extraction, decoding, conversion, reuse or automatic reproduction is possible; verify platform/version, licence and provenance; and record why any rebuild is necessary. A skipped gate or duplicated recoverable work is grounds to reject the change. Unclear rights mean HOLD—not manual copying or public redistribution. The rule is targeted evidence gathering, not a permanent research quota.
+
 ## Required pre-flight: decide before coding
 
 Before starting any change, answer these questions:
@@ -88,3 +92,7 @@ Every task/PR should state:
 Update the relevant status/roadmap documentation when a change materially alters the project state. A task is not done merely because code was written or committed.
 
 **When in doubt, inspect first, reduce scope, protect the clean-room boundary, and prove the result before expanding.**
+
+## Multi-agent coordination and task routing
+
+Read [the multi-agent research and handoff playbook](docs/MULTI_AGENT_RESEARCH_PLAYBOOK.md) before assigning work to Jules, Gemini, Copilot, OpenRouter, Biddy-Pinky, or another assistant. The active work queue remains [Issue #226](https://github.com/Master-Chiken/boonta-reborn-88/issues/226). Allow parallel evidence lanes only when they address different subquestions under that one active topic; never launch two writers against the same behavior or files. The owner must specify scope, allowed sources, prohibited changes, acceptance evidence, and expected output. Hosted agents cannot read ROMs/archives that exist only in the owner's computer or ChatGPT Library; never upload them to make an agent work. Gemini stays read-only unless the owner explicitly approves a scoped plan and all repository safety gates have been verified. Do not launch another coding task until overlapping PRs have been compared and routed to one canonical candidate.

@@ -29,6 +29,7 @@ typedef struct {
     int slide_active;
     float rival_z[BOONTA_RIVAL_COUNT];
     float rival_lateral[BOONTA_RIVAL_COUNT];
+    float rival_speed[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
     int paused;
     int race_finished;
@@ -82,16 +83,30 @@ static inline float boonta_speed_after_input(float speed, int accelerating, int 
 }
 
 /*
- * Racer-style pitch: a forward/up stick push means nose-down. Pitching down
+ * Racer-style pitch: a forward/up stick push or D-pad Up means nose-down. Pitching down
  * rewards risk with more forward travel but reduces steering authority; pitching
  * up trades speed for tighter control. Ignore small stick noise around center.
+ * D-pad Up adds nose-down pitch (+0.7f) and D-pad Down adds nose-up pitch (-0.7f).
  */
-static inline float boonta_pitch_input(float stick_y)
+static inline float boonta_pitch_input(float stick_y,
+                                        int up_held,
+                                        int down_held)
 {
-    if (!isfinite(stick_y)) return 0.0f;
-    if (stick_y >= -16.0f && stick_y <= 16.0f) return 0.0f;
-    if (stick_y > 0.0f) return boonta_clamp_finite_float((stick_y - 16.0f) / 111.0f, 0.0f, 1.0f);
-    return boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
+    float analog_pitch = 0.0f;
+    float pitch;
+    if (isfinite(stick_y)) {
+        if (stick_y > 16.0f) {
+            analog_pitch = boonta_clamp_finite_float((stick_y - 16.0f) / 111.0f, 0.0f, 1.0f);
+        } else if (stick_y < -16.0f) {
+            analog_pitch = boonta_clamp_finite_float((stick_y + 16.0f) / 112.0f, -1.0f, 0.0f);
+        }
+    }
+    pitch = analog_pitch;
+    if (down_held) pitch -= 0.7f;
+    if (up_held) pitch += 0.7f;
+    if (pitch < -1.0f) return -1.0f;
+    if (pitch > 1.0f) return 1.0f;
+    return pitch;
 }
 
 /* While pitching up (negative), steering grows up to +35%; nose-down loses 40%. */
@@ -183,14 +198,21 @@ static inline float boonta_best_lap_after_finish(float best_seconds,
     return best_seconds;
 }
 
-/* Normalize the GameCube analog stick and D-pad into bounded steering input. */
+/* Normalize steering; filter analog noise in [-16, 16] and rescale smoothly. */
 static inline float boonta_steering_input(float stick_x,
                                           int left_held,
                                           int right_held)
 {
-    /* Corrupt controller data must not poison lateral physics with NaN. */
-    if (!isfinite(stick_x)) stick_x = 0.0f;
-    float steering = stick_x / 128.0f;
+    float analog_steering = 0.0f;
+    float steering;
+    if (isfinite(stick_x)) {
+        if (stick_x > 16.0f) {
+            analog_steering = boonta_clamp_finite_float((stick_x - 16.0f) / 111.0f, 0.0f, 1.0f);
+        } else if (stick_x < -16.0f) {
+            analog_steering = boonta_clamp_finite_float((stick_x + 16.0f) / 112.0f, -1.0f, 0.0f);
+        }
+    }
+    steering = analog_steering;
     if (left_held) steering -= 0.7f;
     if (right_held) steering += 0.7f;
     if (steering < -1.0f) return -1.0f;
@@ -222,6 +244,24 @@ static inline float boonta_lateral_velocity_after_steering(float lateral_velocit
 {
     return boonta_lateral_velocity_after_steering_scaled(
         lateral_velocity, steering, speed, 1.0f);
+}
+
+/*
+ * Slide / drift mode can be initiated with digital L/R trigger buttons or
+ * analog trigger pulls exceeding the threshold.
+ */
+static inline int boonta_slide_input(int trigger_l_held,
+                                     int trigger_r_held,
+                                     unsigned char trigger_l_analog,
+                                     unsigned char trigger_r_analog)
+{
+    if (trigger_l_held || trigger_r_held) {
+        return 1;
+    }
+    if (trigger_l_analog >= 40U || trigger_r_analog >= 40U) {
+        return 1;
+    }
+    return 0;
 }
 
 /*
@@ -394,6 +434,11 @@ static inline float boonta_rival_initial_z(unsigned int rival_index)
     return -18.0f - (float)rival_index * 16.0f;
 }
 
+static inline float boonta_rival_initial_speed(unsigned int rival_index)
+{
+    return 0.56f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.06f;
+}
+
 
 /*
  * Reset every gameplay value affected by the Y-button restart, including the
@@ -426,6 +471,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
         state->rival_z[i] = boonta_rival_initial_z(i);
         state->rival_lateral[i] = 0.0f;
+        state->rival_speed[i] = boonta_rival_initial_speed(i);
     }
 }
 
@@ -462,6 +508,11 @@ static inline int boonta_rival_event(float rival_z,
     }
     if (rival_z >= 1.8f) return BOONTA_RIVAL_EVENT_OVERTAKE;
     return BOONTA_RIVAL_EVENT_NONE;
+}
+
+static inline unsigned int boonta_overtake_count_after_event(unsigned int current_count)
+{
+    return current_count < 0xffffffffU ? current_count + 1U : 0xffffffffU;
 }
 
 static inline float boonta_speed_after_rival_contact(float speed)

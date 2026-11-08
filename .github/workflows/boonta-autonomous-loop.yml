@@ -1,0 +1,381 @@
+name: Boonta Autonomous Loop
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/boonta-autonomous-loop.yml
+      - .github/workflows/boonta-autonomous-readiness.yml
+      - .github/workflows/gemini-plan-execute.yml
+      - .github/workflows/openrouter-plan-execute.yml
+      - .github/workflows/groq-plan-execute.yml
+      - docs/automation/task-ledger.json
+  schedule:
+    # Four bounded opportunities per day; concurrency prevents overlapping writers.
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: boonta-autonomous-loop
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    name: Run the read-only owner/configuration and GitHub App preflight
+    uses: ./.github/workflows/boonta-autonomous-readiness.yml
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    secrets: inherit
+
+  provider-cooldowns:
+    name: Check same-day provider cooldowns before launching agents
+    needs: readiness
+    if: >-
+      needs.readiness.result == 'success' &&
+      needs.readiness.outputs.writer_state == 'enabled' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      task_ready: ${{ steps.check.outputs.task_ready }}
+      task_id: ${{ steps.check.outputs.task_id }}
+      task_reason: ${{ steps.check.outputs.task_reason }}
+      gemini_active: ${{ steps.check.outputs.gemini_active }}
+      openrouter_active: ${{ steps.check.outputs.openrouter_active }}
+      groq_active: ${{ steps.check.outputs.groq_active }}
+      task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}
+    steps:
+      - name: Read the three persistent UTC cooldown markers
+        id: check
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 226,
+              since: todayUtc + 'T00:00:00Z',
+              per_page: 100,
+            });
+
+            // Resolve the single-task daily backoff before task selection references it.
+            // Keep this read ahead of the eligibility branch to avoid a temporal-dead-zone error.
+            const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');
+            const taskMarker = /<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9a-f]{16}) -->/;
+            const taskMarkerComment = botComments.find((comment) => taskMarker.test(comment.body || ''));
+            const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
+            const taskBlockedActive = taskBlockedDate === todayUtc;
+
+            // Refuse a model call unless the compact canonical queue exposes one eligible task.
+            const { data: ledgerFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'docs/automation/task-ledger-summary.json',
+              ref: 'main',
+            });
+            if (!ledgerFile || Array.isArray(ledgerFile) || ledgerFile.encoding !== 'base64') {
+              throw new Error('Canonical compact task ledger is missing or not a base64 file.');
+            }
+            const ledgerSummary = JSON.parse(Buffer.from(ledgerFile.content, 'base64').toString('utf8'));
+            if (
+              ledgerSummary.schema_version !== 1 ||
+              ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
+              !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
+              ledgerSummary.policy?.max_active_tasks !== 1 ||
+              !Array.isArray(ledgerSummary.tasks)
+            ) {
+              throw new Error('Canonical compact task ledger schema or one-active-task policy is invalid.');
+            }
+            const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
+            if (
+              taskIds.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
+              new Set(taskIds).size !== taskIds.length
+            ) {
+              throw new Error('Canonical compact task ledger contains missing or duplicate task IDs.');
+            }
+            const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
+            const usableTask = (task) => Boolean(
+              task && typeof task.task_id === 'string' && task.task_id.trim() &&
+              typeof task.title === 'string' && task.title.trim() &&
+              typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
+              Array.isArray(task.platform_scope) && task.platform_scope.length > 0
+            );
+            let selectedTask = null;
+            let taskReason = '';
+            if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha) {
+              selectedTask = activeTasks[0];
+              taskReason = 'one complete active ledger task with no existing PR or head';
+            } else if (
+              activeTasks.length === 0 &&
+              usableTask(activationTask) &&
+              activationTask.status === 'blocked' &&
+              !activationTask.pr_url &&
+              !activationTask.head_sha &&
+              !taskBlockedActive
+            ) {
+              selectedTask = activationTask;
+              taskReason = 'the single blocked activation task is eligible; no task-level daily backoff is active';
+            } else if (activeTasks.length > 1) {
+              taskReason = 'multiple active tasks violate the one-active-task policy';
+            } else if (activeTasks.length === 1 && !usableTask(activeTasks[0])) {
+              taskReason = 'the sole active task is incomplete; repair its ledger fields before another model invocation';
+            } else if (activeTasks.length === 1) {
+              taskReason = 'the active task already has a PR/head; reconcile it before another model invocation';
+            } else {
+              taskReason = 'no eligible active task or approved post-cooldown activation task exists';
+            }
+            const taskReady = Boolean(selectedTask);
+            core.setOutput('task_ready', String(taskReady));
+            core.setOutput('task_id', selectedTask?.task_id || '');
+            core.setOutput('task_reason', taskReason);
+            core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
+
+            const definitions = {
+              gemini: /<!-- BOONTA_GEMINI_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
+              openrouter: /<!-- BOONTA_OPENROUTER_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
+              groq: /<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/,
+            };
+            const results = {};
+            core.setOutput('task_blocked_active', String(taskBlockedActive));
+            core.info('single-task daily backoff=' + taskBlockedActive + (taskBlockedDate ? ', recorded UTC date=' + taskBlockedDate : ', no active marker'));
+            for (const [provider, marker] of Object.entries(definitions)) {
+              const markerComment = botComments.find((comment) => marker.test(comment.body || ''));
+              const failedOn = markerComment?.body?.match(marker)?.[1] || '';
+              const active = failedOn === todayUtc;
+              results[provider] = active ? 'ACTIVE' : 'clear';
+              core.setOutput(provider + '_active', String(active));
+              core.setOutput(provider + '_failed_on', failedOn);
+              core.info(provider + ': cooldown=' + active + (failedOn ? ', recorded UTC date=' + failedOn : ', no marker'));
+            }
+            await core.summary
+              .addHeading('Provider cooldown and task-eligibility preflight')
+              .addTable([
+                [{data: 'Provider', header: true}, {data: 'Cooldown today (UTC)', header: true}],
+                ['Gemini', results.gemini],
+                ['OpenRouter Free', results.openrouter],
+                ['Groq Free', results.groq],
+                ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
+                ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
+              ])
+              .addRaw('Read-only checks: issue #226 cooldown comments and the compact main-branch task ledger. No provider starts unless exactly one eligible task is confirmed.')
+              .write();
+
+  autonomous-cycle:
+    name: Select and execute one safe project task
+    needs: [readiness, provider-cooldowns]
+    if: >-
+      needs.readiness.result == 'success' &&
+      needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      needs.provider-cooldowns.outputs.gemini_active != 'true' &&
+      needs.readiness.outputs.writer_state == 'enabled' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+    uses: ./.github/workflows/gemini-plan-execute.yml
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      autonomous_mode: true
+      issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+      task_title: "Boonta Reborn autonomous work cycle"
+      task_description: >-
+        Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
+        Keep AUTOMATION-LEDGER-ACTIVATION as the only unresolved activation task until a real provider invocation produces a validated report plus a cycle-fresh PR, or a precise verified blocker. Never start a competing writer.
+        Once activation is demonstrated, follow the latest #226 Phase 1: add only missing, source-verified tool/license/utility evidence; consume #279's PC/N64 comparisons rather than duplicating them; map target behavior as OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN; evaluate GX/libogc graphics, audio and frame-rate/physics gaps; finish a concise reuse/convert/adapt/reimplement decision. PR #282 is the completed broad inventory. Keep commercial ROM/disc/binary/extracted data local.
+        Do not start new gameplay features or visible-Dolphin acceptance during Phase 1. After Phase 1, reuse the rival racing implementation already integrated by PR #327 on main at merge commit 69deb6778f9383887118803428e7014686865a83. PRs #317, #318 and #319 were superseded and closed. Do not reopen, replay or recreate that chain. Then focus on end-to-end race progression in #226. Revisit #274 only for a demonstrated dependency. Preserve the clean-room boundary, €0/free-tier-only rule, one-writer constraint, exact-head checks and human review. Documentation targets main; gameplay targets dev. Never change secrets, billing, permissions, branch protection or merge policy. Never auto-merge, force-push, delete branches or upload proprietary binaries.
+      additional_context: >-
+        Owner-authorized scheduled or manual main-branch loop. Select one bounded task from the current compact queue without asking for another continue message. Use only one provider invocation in this workflow run; a fallback may run only on a later eligible scheduled cycle after the earlier provider's cooldown is active. Keep all existing €0, provenance, exact-head and no-merge safeguards.
+    secrets: inherit
+
+  openrouter-fallback:
+    name: Next-cycle OpenRouter Free fallback after Gemini cooldown
+    needs: [readiness, provider-cooldowns, autonomous-cycle]
+    if: >-
+      always() &&
+      needs.readiness.result == 'success' &&
+      needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
+      needs.readiness.outputs.writer_state == 'enabled' &&
+      needs.autonomous-cycle.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+      needs.autonomous-cycle.outputs.invocation_outcome != 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+    uses: ./.github/workflows/openrouter-plan-execute.yml
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      autonomous_mode: true
+      issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+    secrets: inherit
+
+  groq-fallback:
+    name: Next-cycle Groq Free fallback after Gemini and OpenRouter cooldowns
+    needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
+    if: >-
+      always() &&
+      needs.readiness.result == 'success' &&
+      needs.provider-cooldowns.result == 'success' &&
+      needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      needs.provider-cooldowns.outputs.groq_active != 'true' &&
+      needs.readiness.outputs.writer_state == 'enabled' &&
+      needs.autonomous-cycle.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+      needs.openrouter-fallback.result == 'skipped' &&
+      needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
+      needs.openrouter-fallback.outputs.invocation_outcome != 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+    uses: ./.github/workflows/groq-plan-execute.yml
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      autonomous_mode: true
+      issue_number: 226
+      task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+    secrets: inherit
+
+  cycle-summary:
+    name: Explain provider calls and validated results
+    needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback, groq-fallback]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Publish the exact outcome of each provider stage
+        shell: bash
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          READINESS_RESULT: ${{ needs.readiness.result }}
+          WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
+          COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}
+          TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
+          TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
+          TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
+          TASK_REASON: ${{ needs.provider-cooldowns.outputs.task_reason }}
+          EVENT_NAME: ${{ github.event_name }}
+          GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
+          OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
+          GROQ_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.groq_active }}
+          GEMINI_RESULT: ${{ needs.autonomous-cycle.result }}
+          GEMINI_INVOCATION: ${{ needs.autonomous-cycle.outputs.invocation_outcome }}
+          GEMINI_REPORT: ${{ needs.autonomous-cycle.outputs.report_outcome }}
+          GEMINI_CYCLE_STATUS: ${{ needs.autonomous-cycle.outputs.cycle_status }}
+          GEMINI_TASK_QUEUE_STATE: ${{ needs.autonomous-cycle.outputs.task_queue_state_outcome }}
+          OPENROUTER_RESULT: ${{ needs.openrouter-fallback.result }}
+          OPENROUTER_INVOCATION: ${{ needs.openrouter-fallback.outputs.invocation_outcome }}
+          OPENROUTER_REPORT: ${{ needs.openrouter-fallback.outputs.report_outcome }}
+          OPENROUTER_CYCLE_STATUS: ${{ needs.openrouter-fallback.outputs.cycle_status }}
+          OPENROUTER_TASK_QUEUE_STATE: ${{ needs.openrouter-fallback.outputs.task_queue_state_outcome }}
+          GROQ_RESULT: ${{ needs.groq-fallback.result }}
+          GROQ_INVOCATION: ${{ needs.groq-fallback.outputs.invocation_outcome }}
+          GROQ_REPORT: ${{ needs.groq-fallback.outputs.report_outcome }}
+          GROQ_CYCLE_STATUS: ${{ needs.groq-fallback.outputs.cycle_status }}
+          GROQ_TASK_QUEUE_STATE: ${{ needs.groq-fallback.outputs.task_queue_state_outcome }}
+        run: |
+          set -euo pipefail
+          provider_row() {
+            local provider="$1" job_result="$2" invocation="$3" report="$4" cycle_status="$5" cooldown="$6" task_state="$7"
+            local call="no" detail
+            case "$invocation" in
+              success)
+                call="yes"
+                if [[ "$report" == "success" && "$cycle_status" == "progress" ]]; then
+                  detail="Model called; fresh-PR progress report validated."
+                elif [[ "$report" == "success" && "$cycle_status" == "blocked" ]]; then
+                  detail="Model called; a named BLOCKED report passed validation. No progress is claimed."
+                elif [[ "$report" == "failure" ]]; then
+                  detail="Model called, but report validation failed. Inspect this provider job."
+                else
+                  detail="Model call completed, but report validation/status is not confirmed."
+                fi
+                ;;
+              failure)
+                call="attempted/failed"
+                detail="Provider invocation failed. The daily cooldown should prevent repeated calls."
+                ;;
+              skipped)
+                if [[ "$cooldown" == "true" ]]; then
+                  detail="Skipped before launching the provider workflow: its same-day UTC cooldown is active."
+                else
+                  case "$job_result" in
+                    failure) detail="No model call. A quota, owner, or free-tier gate stopped this provider; inspect its job summary for the exact reason." ;;
+                    skipped) detail="Provider job was not eligible or an upstream/readiness condition prevented launch." ;;
+                    *) detail="No model invocation was recorded." ;;
+                  esac
+                fi
+                ;;
+              *)
+                detail="Provider invocation outcome is unavailable; inspect the workflow logs."
+                ;;
+            esac
+            if [[ "$task_state" == "failure" ]]; then
+              detail="${detail} Task-backoff persistence/clearing failed; the scheduled pause is not confirmed."
+            elif [[ "$task_state" == "success" && "$cycle_status" == "blocked" ]]; then
+              detail="${detail} Same-day task backoff was persisted."
+            elif [[ "$task_state" == "success" && "$cycle_status" == "progress" ]]; then
+              detail="${detail} Any previous same-day task backoff was cleared."
+            fi
+            printf '| %s | %s | %s | %s | %s | %s | %s |\n' "$provider" "$job_result" "$cooldown" "$call" "${report:-not checked}" "${task_state:-not written}" "$detail"
+          }
+          {
+            echo "## Boonta autonomous cycle — provider outcome"
+            echo
+            echo "- Readiness: **${READINESS_RESULT:-unknown}**"
+            echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
+            echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
+            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none})"
+            if [[ "${TASK_READY:-false}" != "true" ]]; then
+              echo "- Provider calls skipped before inference: ${TASK_REASON:-canonical queue eligibility was not confirmed}."
+            fi
+            echo
+            echo "| Provider | Job result | Cooldown active | Model call | Report check | Task queue state | Interpretation |"
+            echo "|---|---|---|---|---|---|"
+            provider_row "Gemini" "${GEMINI_RESULT:-unknown}" "${GEMINI_INVOCATION:-skipped}" "${GEMINI_REPORT:-skipped}" "${GEMINI_CYCLE_STATUS:-unknown}" "${GEMINI_COOLDOWN_ACTIVE:-unknown}" "${GEMINI_TASK_QUEUE_STATE:-skipped}"
+            provider_row "OpenRouter Free" "${OPENROUTER_RESULT:-unknown}" "${OPENROUTER_INVOCATION:-skipped}" "${OPENROUTER_REPORT:-skipped}" "${OPENROUTER_CYCLE_STATUS:-unknown}" "${OPENROUTER_COOLDOWN_ACTIVE:-unknown}" "${OPENROUTER_TASK_QUEUE_STATE:-skipped}"
+            provider_row "Groq Free" "${GROQ_RESULT:-unknown}" "${GROQ_INVOCATION:-skipped}" "${GROQ_REPORT:-skipped}" "${GROQ_CYCLE_STATUS:-unknown}" "${GROQ_COOLDOWN_ACTIVE:-unknown}" "${GROQ_TASK_QUEUE_STATE:-skipped}"
+            echo
+            if [[ "${TASK_BLOCKED_ACTIVE:-false}" == "true" && "${EVENT_NAME:-}" == "schedule" ]]; then
+              echo "**A validated BLOCKED report already exists for the single active task on this UTC day. Scheduled provider calls were skipped; an owner-authorized manual dispatch or qualifying main push may re-evaluate it.**"
+            fi
+            if [[ "${GEMINI_COOLDOWN_ACTIVE:-false}" == "true" && "${OPENROUTER_COOLDOWN_ACTIVE:-false}" == "true" && "${GROQ_COOLDOWN_ACTIVE:-false}" == "true" ]]; then
+              echo "**All three same-day UTC cooldowns are active. No provider workflows were launched and no project progress is claimed.**"
+            elif [[ "${GEMINI_INVOCATION:-skipped}" != "success" && "${OPENROUTER_INVOCATION:-skipped}" != "success" && "${GROQ_INVOCATION:-skipped}" != "success" ]]; then
+              echo "**No provider completed a model invocation. No autonomous project progress is confirmed by this run.**"
+            else
+              echo "At least one provider invocation completed. Check its report validation and progress status above; a valid BLOCKED report is not progress."
+            fi
+            echo
+            echo "At most one provider invocation is allowed per workflow run. A failed provider is not followed by another model call in the same run; the next scheduled cycle may advance to the next Free-only provider after cooldown." 
+            echo
+            echo "This summary does not change provider job conclusions or the canonical activation gate. Budget remains €0."
+            echo
+            echo "[Open the full workflow run](${RUN_URL})"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,10 +1,10 @@
 # Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-10-24
+Last updated: 2026-11-07
 
 ## Owner priority update
 
-Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. Finish the current rail-collision, steering-deadzone, and finish/restart work, then refine handling, rival behavior, camera, and track readability in small, testable changes. Defer the broader visible-Dolphin playtest until the race slice is more consolidated, when testers can provide more useful feedback. Physical GameCube/Wii testing comes later still.
+Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. The current active research queue is RE-001; keep RE-002 parked. The GameCube runtime now evaluates the eight authored cubic Bezier edges directly for its one closed oval, and the post-finish Start-restart transition has been ported into the current route-graph candidate. Continue refining this playable closed-loop slice, its handling, rival behavior, camera, and track readability in small, regression-tested changes. Runtime branch selection remains future work. Defer the human-operated visible-Dolphin checklist until the race slice is consolidated; physical GameCube/Wii testing comes later still.
 
 The manual checklist below remains required before claiming the prototype is fully playable. It is not a blanket blocker for independent code, design, or automated-test improvements. Keep test claims evidence-based, keep the €0/tooling and clean-room constraints, and do not merge without appropriate independent review and required checks.
 
@@ -13,6 +13,16 @@ The manual checklist below remains required before claiming the prototype is ful
 Build and refine the current clean-room prototype in `gamecube-demo/` into a convincing, stable racing slice. Use host tests, native builds, and scripted Dolphin diagnostics for development; reserve human-operated visible-Dolphin acceptance for the consolidated candidate, then test physical hardware separately.
 
 The manual acceptance checklist is the gate for declaring full playability, not a reason to pause all vertical-slice development.
+
+## Development snapshot — 2026-11-03
+
+- [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) carries the direct native Bezier runtime and active RE-001 work. It remains open and unmerged.
+- The runtime sampler caches 128 distance intervals per edge and uses bounded binary searches for edge and interval lookup. Exact-head host tests cover all 1,024 interval boundaries and their midpoints; the current direct Bezier curve measurement differs from the compiled lap coordinate by 0.00026%.
+- Start toggles pause/resume during a live race. In the finished state, Start now follows the same full-state reset path as Y and begins a new run. Host C decision-table tests and a scripted DTM profile cover the finished/live × Start/Y cases.
+- The current race is still one unbranched loop. Route-graph branch choices/history, runtime JSON loading, multiple playable routes, and B-spline execution are not implemented.
+- [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) remains draft pending physical Wii tests of the official Nintendo and Under Control Classic Controllers.
+- Human-operated visible-Dolphin acceptance remains **NOT TESTED** in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Scripted movie/render checks never substitute for that manual checklist.
+
 
 ## What is already verified (CI)
 
@@ -46,7 +56,7 @@ Test in this exact order:
 2. **Throttle / Brake (A / B)**  
    Acceleration and braking visibly change speed. Speed falls naturally when released.
 
-3. **Steering**  
+3. **Steering**
    Control Stick left/right + D-pad. Correct direction, inertia present, drift damps when released, steering stays bounded.
 
 4. **Off-road & rails**  
@@ -90,3 +100,20 @@ Continue this work before the manual acceptance session:
 Step 102 source archive remains on **import hold**.  
 See `SOURCE_IMPORT_GATE.md` and related Step 102 documents.  
 Do not merge unclear-provenance code or any commercial assets.
+
+
+## Native Wii Classic Controller acceptance
+
+The native Wii Classic Controller backend is being consolidated into the same integration as the GameCube route-graph runtime in [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274). Its implementation uses the shared logical input contract and keeps the GameCube PAD backend available. The separate predecessor [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) is being absorbed rather than maintained as a second development line.
+
+**Automated evidence:** the previous exact Wii-backend head `609672632b79d971fd2cb91d91c745bf15937fea` passed host input tests, native GameCube/Wii DOL/ELF builds and artifact validation, Dolphin null-backend smoke, and the optional scripted Software Renderer diagnostic. The combined route-graph + Wii-backend candidate must pass its own exact-head CI before it is merged into `main`.
+
+**Manual hardware acceptance remains NOT TESTED.** It is required before claiming physical Wii Classic Controller compatibility, but it is not a reason to keep the implementation in a separate PR. On real Wii hardware:
+
+1. Load the Wii DOL with the controller connected through Wii Remote channel 0.
+2. Confirm the runtime detects `WPAD_EXP_CLASSIC`; Wii Remote-only and non-Classic expansions must remain neutral.
+3. Test left-stick steering/pitch, D-pad steering/pitch, A/B throttle/brake, X+A boost, ZL/ZR and analog L/R shoulders for slide, Plus pause/restart, and Y reset.
+4. Disconnect and reconnect the controller; verify neutral input while disconnected and recovery only after Classic detection and report setup.
+5. Record the Wii model, controller identification, exact tested build SHA, results, and video or notes.
+
+The button masks and Classic expansion identifiers are cross-checked against upstream libogc `wpad.h`; its implementation also exposes the Classic shoulder values as normalized raw values divided by `0x1F`. This source check is not a substitute for a physical test. The original N64 game running in Not64 is a separate input path and is not covered by this Boonta backend.

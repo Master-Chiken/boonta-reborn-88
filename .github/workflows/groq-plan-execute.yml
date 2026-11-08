@@ -1,0 +1,569 @@
+name: Groq Free autonomous fallback
+
+on:
+  workflow_call:
+    outputs:
+      invocation_outcome:
+        description: "Outcome of the actual Groq/OpenCode invocation step."
+        value: ${{ jobs.groq-plan-execute.outputs.invocation_outcome }}
+      report_outcome:
+        description: "Outcome of the Groq autonomous report validator."
+        value: ${{ jobs.groq-plan-execute.outputs.report_outcome }}
+      cycle_status:
+        description: "Validated Groq cycle status: progress or blocked."
+        value: ${{ jobs.groq-plan-execute.outputs.cycle_status }}
+      task_queue_state_outcome:
+        description: "Outcome of persisting or clearing the single-task daily backoff marker."
+        value: ${{ jobs.groq-plan-execute.outputs.task_queue_state_outcome }}
+    inputs:
+      autonomous_mode:
+        type: boolean
+        required: true
+      issue_number:
+        type: number
+        required: true
+      task_blocked_active:
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: boonta-single-writer
+  cancel-in-progress: false
+
+jobs:
+  groq-plan-execute:
+    name: One bounded Groq Free research/engineering cycle
+    outputs:
+      invocation_outcome: ${{ steps.run_opencode.outcome }}
+      report_outcome: ${{ steps.validate_report.outcome }}
+      cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
+      task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
+    if: inputs.autonomous_mode == true && inputs.issue_number == 226
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Check same-day Groq failure cooldown
+        id: groq_cooldown
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              since: todayUtc + 'T00:00:00Z',
+              per_page: 100,
+            });
+            const markerComment = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GROQ_FAILURE_COOLDOWN:'));
+            const match = markerComment?.body?.match(/<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ([0-9]{4}-[0-9]{2}-[0-9]{2}) -->/);
+            const failedOn = match?.[1] || '';
+            const active = failedOn === todayUtc;
+            core.setOutput('active', String(active));
+            core.setOutput('failed_on', failedOn);
+            if (active) {
+              core.notice('Groq Free already failed during UTC day ' + todayUtc + '; skip another request until the next UTC day.');
+            } else {
+              core.info('No active same-day Groq Free failure cooldown.');
+            }
+      - name: Require explicit Groq Free and autonomous owner gates
+        id: free_tier_guard
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
+          GROQ_FREE_TIER_CONFIRMED: ${{ vars.GROQ_FREE_TIER_CONFIRMED }}
+          GEMINI_AUTONOMOUS_ENABLED: ${{ vars.GEMINI_AUTONOMOUS_ENABLED }}
+          AUTONOMOUS_MODE: ${{ inputs.autonomous_mode }}
+          AUTONOMOUS_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          CALLER_WORKFLOW: ${{ github.workflow }}
+          CALLER_REF: ${{ github.ref }}
+          CALLER_EVENT: ${{ github.event_name }}
+          APP_ID: ${{ vars.APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          GROQ_COOLDOWN_ACTIVE: ${{ steps.groq_cooldown.outputs.active }}
+          GROQ_COOLDOWN_DATE: ${{ steps.groq_cooldown.outputs.failed_on }}
+        run: |
+          set -euo pipefail
+          set +x
+          reason="none"
+          if [[ "${GROQ_FREE_TIER_CONFIRMED:-}" != "true" ]]; then
+            reason="GROQ_FREE_TIER_CONFIRMED must equal true only after the owner verifies the Groq Free account, zero payment methods/credits, and no paid usage."
+          elif [[ -z "${GROQ_API_KEY:-}" ]]; then
+            reason="The TA_CLE_GROQ repository secret is missing; it is mapped to the GROQ_API_KEY environment variable for OpenCode."
+          elif [[ "${GEMINI_AUTONOMOUS_ENABLED:-}" != "true" ]]; then
+            reason="The master GEMINI_AUTONOMOUS_ENABLED owner gate is not exactly true."
+          elif [[ "${AUTONOMOUS_MODE:-false}" != "true" || "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
+            reason="Groq fallback is restricted to autonomous issue #226."
+          elif [[ "${CALLER_WORKFLOW:-}" != "Boonta Autonomous Loop" || "${CALLER_REF:-}" != "refs/heads/main" ]]; then
+            reason="Groq fallback may only be called by Boonta Autonomous Loop from main."
+          elif [[ "${CALLER_EVENT:-}" != "schedule" && "${CALLER_EVENT:-}" != "workflow_dispatch" && "${CALLER_EVENT:-}" != "push" ]]; then
+            reason="Unsupported caller event; only schedule, owner-dispatched workflow, or owner-authorized main push is allowed."
+          elif [[ "${GROQ_COOLDOWN_ACTIVE:-}" == "true" ]]; then
+            reason="Groq Free already failed an autonomous invocation on UTC date ${GROQ_COOLDOWN_DATE:-today}; skip repeated requests until the next UTC day. No provider request will be made."
+          elif [[ -z "${APP_ID:-}" || -z "${APP_PRIVATE_KEY:-}" ]]; then
+            reason="The scoped GitHub App ID variable or private-key secret is missing."
+          fi
+
+          if [[ "$reason" != "none" ]]; then
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Groq Free fallback skipped safely"
+              echo
+              echo "$reason"
+              echo "No Groq request, repository write, or paid fallback was attempted."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "reason=none" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Groq Free fallback gate passed"
+              echo
+              echo "Only the fixed groq/openai/gpt-oss-20b model is configured. Groq Free plan only; no paid model/provider fallback is available."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Mint scoped GitHub App token
+        id: mint_identity_token
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # ratchet:actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-actions: read
+
+      - name: Checkout the protected default branch
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: main
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: false
+
+      - name: Install pinned OpenCode CLI
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global opencode-ai@1.19.5
+          opencode --version
+
+      - name: Snapshot open PR heads before Groq cycle
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        id: snapshot_pr_heads
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        with:
+          script: |
+            const pulls = await github.paginate(github.rest.pulls.list, {
+              owner: 'Master-Chiken',
+              repo: 'boonta-reborn-88',
+              state: 'open',
+              per_page: 100
+            });
+            const snapshotAt = new Date().toISOString();
+            const baseline = Object.fromEntries(pulls.map((pr) => [String(pr.number), pr.head.sha]));
+            core.setOutput('heads', JSON.stringify(baseline));
+            core.setOutput('snapshot_at', snapshotAt);
+            core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
+
+      - name: Run OpenCode through the Groq Free route
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success'
+        id: run_opencode
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
+          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
+        run: |
+          set -euo pipefail
+          set +x
+
+          # This config exposes only the explicitly allow-listed GitHub MCP tools.
+          # Shell execution is denied; repository changes must use branch/PR MCP tools.
+          cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "model": "groq/openai/gpt-oss-20b",
+            "small_model": "groq/openai/gpt-oss-20b",
+            "enabled_providers": ["groq"],
+            "agent": {
+              "build": {
+                "steps": 3
+              }
+            },
+            "provider": {
+              "groq": {
+                "models": {
+                  "openai/gpt-oss-20b": {
+                    "limit": {
+                      "context": 3072,
+                      "output": 512
+                    }
+                  }
+                }
+              }
+            },
+            "mcp": {
+              "github": {
+                "type": "local",
+                "command": [
+                  "docker", "run", "-i", "--rm",
+                  "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+                  "-e", "GITHUB_TOOLS",
+                  "ghcr.io/github/github-mcp-server:v0.27.0"
+                ],
+                "environment": {
+                  "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
+                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"
+                },
+                "enabled": true,
+                "timeout": 60000
+              }
+            },
+            "permission": {
+              "*": "allow",
+              "bash": "deny",
+              "read": {
+                "*.env": "deny",
+                "*.env.*": "deny",
+                "**/*.env": "deny",
+                "**/*.env.*": "deny"
+              }
+            }
+          }
+          JSON
+
+          export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
+
+          PROMPT="$(cat <<'PROMPT'
+          You are the €0-only Groq Free fallback agent for Boonta Reborn. This workflow may invoke you only on a later eligible cycle after Gemini and OpenRouter cooldowns are already active. Complete at most one bounded task.
+
+          LIMITS
+          - This model is limited to 3,072 context tokens and 512 output tokens. The provider TPM limit is 8,000. Keep all context/tool reads minimal.
+          - Never enable billing, paid routes, other providers, change secrets/settings, or reveal credentials.
+          - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
+          - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
+
+          CONTEXT AND TASK
+          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json once.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier. Keep newly retrieved text below 800 tokens.
+          - The ledger marks AUTOMATION-LEDGER-ACTIVATION blocked, not active. Do not create a competing task/writer. After a real provider invocation, validated report and cycle-fresh PR, the gate can be reconciled.
+          - Follow the newest owner direction dated 2026-11-06. After activation, follow #226 Phase 1: add only missing source-verified tool/license evidence, consume #279's read-only PC/N64 comparisons, label facts OBSERVED/INFERRED/HYPOTHESIS/UNKNOWN, evaluate GX/libogc porting gaps and record a reuse/convert/adapt/reimplement decision. PR #282 is complete; do not duplicate it. PR #274 is not an automatic next step; revisit it only for a demonstrated route-runtime dependency.
+          - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Keep commercial ROM/disc/binary/extracted data local. No gameplay feature work during Phase 1. After Phase 1, reuse the rival racing implementation already integrated by PR #327 on main at merge commit 69deb6778f9383887118803428e7014686865a83. PRs #317, #318 and #319 were superseded and closed. Do not reopen, replay or recreate that chain. Then focus on end-to-end race progression in #226. Revisit #274 only for a demonstrated dependency.
+
+          EXECUTION
+          - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
+          - Only these GitHub tools are exposed: github_get_file_contents, github_pull_request_read, github_create_branch, github_push_files, github_create_pull_request and github_add_issue_comment. Do not invent tools or call broad search/list operations. The alias github_get_pull_request does not exist; use github_pull_request_read.
+          - No shell is available. Use one branch from the exact current SHA (main for research/docs, dev for gameplay), one logical push_files operation and one reviewable PR. Never write to main/dev, merge, auto-merge, force-push, delete branches or weaken checks.
+          - Verify the exact PR head and its CI evidence. Do not claim tests ran without exact-head results. If blocked, post one concise evidence-based comment to #226 with one next action.
+          - Limit the task to three tool/action steps. Do not reread files or repeat a failed tool.
+
+          REPORT
+          For verified progress, end with:
+          BOONTA_CYCLE_STATUS: PROGRESS
+          BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
+          BOONTA_CYCLE_EVIDENCE_BASE: main|dev
+          For a genuine blocker, end with:
+          BOONTA_CYCLE_STATUS: BLOCKED
+          BOONTA_CYCLE_BLOCKER: <specific named dependency>
+          BOONTA_CYCLE_NEXT_ACTION: <one concrete unblocking action>
+          Never report PROGRESS for no-op work, unchanged PRs, unverified results or unknown heads.
+          PROMPT
+          )"
+
+          # Refuse accidental prompt growth before any provider request.
+          if (( ${#PROMPT} > 5000 )); then
+            echo "::error::Groq prompt exceeds the 5,000-character safety ceiling; no model request was sent."
+            exit 2
+          fi
+          echo "Groq prompt size: ${#PROMPT} characters."
+          # OpenCode 1.19.5 retries retryable 429/TPM failures internally. Stop
+          # the process group on the first terminal Free-quota/TPM response so
+          # one agent invocation cannot consume the provider limit repeatedly.
+          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$GITHUB_WORKSPACE" <<'PY'
+          import os
+          import re
+          import signal
+          import subprocess
+          import sys
+
+          prompt, report_path, workspace = sys.argv[1:]
+          command = [
+              "timeout", "--signal=TERM", "--kill-after=5s", "90s",
+              "opencode", "run", "--model", "groq/openai/gpt-oss-20b",
+              "--auto", "--dir", workspace, prompt,
+          ]
+          terminal_quota_error = re.compile(
+              r"(tokens per minute\s*\(TPM\)|free-models-per-day|free-models-per-minute|"
+              r"resource[_ ]exhausted|rate[_ ]limit exceeded|too many requests|"
+              r"HTTP\s*429|status(?:\s*code)?\s*[:=]?\s*429|error code\s*[:=]?\s*429|"
+              r"HTTP\s*401|status(?:\s*code)?\s*[:=]?\s*401|error code\s*[:=]?\s*401|"
+              r"missing authentication header|unauthorized|invalid api key|authentication failed)",
+              re.IGNORECASE,
+          )
+          process = subprocess.Popen(
+              command,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              text=True,
+              encoding="utf-8",
+              errors="replace",
+              bufsize=1,
+              start_new_session=True,
+          )
+
+          def stop_process_group():
+              try:
+                  os.killpg(process.pid, signal.SIGTERM)
+              except ProcessLookupError:
+                  pass
+              try:
+                  process.wait(timeout=5)
+              except subprocess.TimeoutExpired:
+                  try:
+                      os.killpg(process.pid, signal.SIGKILL)
+                  except ProcessLookupError:
+                      pass
+                  process.wait()
+
+          def handle_shutdown(signum, _frame):
+              stop_process_group()
+              raise SystemExit(128 + signum)
+
+          # Match OpenRouter: runner cancellation must not orphan the timeout,
+          # OpenCode process, or any descendant in the provider process group.
+          signal.signal(signal.SIGTERM, handle_shutdown)
+          signal.signal(signal.SIGINT, handle_shutdown)
+
+          with open(report_path, "w", encoding="utf-8") as report:
+              assert process.stdout is not None
+              for line in process.stdout:
+                  sys.stdout.write(line)
+                  sys.stdout.flush()
+                  report.write(line)
+                  report.flush()
+                  if terminal_quota_error.search(line):
+                      print(
+                          "Groq provider quota/auth refusal detected; terminating OpenCode "
+                          "immediately after the first refusal. Daily cooldown will be recorded.",
+                          flush=True,
+                      )
+                      stop_process_group()
+                      sys.exit(75)
+
+          invocation_status = process.wait()
+          if invocation_status in (124, 137):
+              print(
+                  "Groq invocation reached its 90-second hard limit; daily cooldown will be recorded.",
+                  flush=True,
+              )
+          sys.exit(invocation_status)
+          PY
+
+
+      - name: Validate Groq autonomous cycle report
+        id: validate_report
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
+          PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
+          PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const lines = summary.split(/\r?\n/);
+            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
+            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
+            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
+            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
+            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
+            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
+              if (!evidence || !evidenceBaseMatch) {
+                core.setFailed('PROGRESS requires the same-repository PR URL, exact 40-character head SHA, and declared base (main or dev).');
+                return;
+              }
+              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
+              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
+              if (!Number.isFinite(snapshotAt)) {
+                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
+                return;
+              }
+              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
+              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
+              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
+              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
+              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
+                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
+                return;
+              }
+              core.setOutput('cycle_status', 'progress');
+              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
+            } else if (validBlocked) {
+              const blockerLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')) || '';
+              const nextActionLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')) || '';
+              const blocker = blockerLine.slice('BOONTA_CYCLE_BLOCKER: '.length);
+              const nextAction = nextActionLine.slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
+              const blockedFingerprint = require('crypto').createHash('sha256').update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
+              core.setOutput('blocked_fingerprint', blockedFingerprint);
+              core.setOutput('cycle_status', 'blocked');
+              core.info('Groq cycle reported a named blocker and next action. Fingerprint: ' + blockedFingerprint);
+            } else {
+              core.setFailed('Groq invocation returned without a valid PROGRESS or BLOCKED report.');
+            }
+
+      - name: Sync the single-task daily backoff marker
+        id: sync_task_queue_state
+        if: steps.validate_report.outcome == 'success' && (steps.validate_report.outputs.cycle_status == 'blocked' || inputs.task_blocked_active == true)
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          CYCLE_STATUS: ${{ steps.validate_report.outputs.cycle_status }}
+          BLOCKED_FINGERPRINT: ${{ steps.validate_report.outputs.blocked_fingerprint }}
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const cycleStatus = process.env.CYCLE_STATUS || '';
+            const isBlocked = cycleStatus === 'blocked';
+            const fingerprint = process.env.BLOCKED_FINGERPRINT || '';
+            if (isBlocked && !/^[0-9a-f]{16}$/.test(fingerprint)) {
+              core.setFailed('A valid BLOCKED report must include its deterministic task fingerprint before persistence.');
+              return;
+            }
+            if (!isBlocked && cycleStatus !== 'progress') {
+              core.info('No validated task state to persist.');
+              return;
+            }
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = isBlocked
+              ? '<!-- BOONTA_TASK_BLOCKED_COOLDOWN: ' + todayUtc + ' ' + fingerprint + ' -->'
+              : '<!-- BOONTA_TASK_BLOCKED_COOLDOWN_CLEARED: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              isBlocked ? '## Single active task — daily backoff' : '## Single active task — backoff cleared',
+              '',
+              isBlocked
+                ? 'A valid BLOCKED report was verified for the single active task on UTC date ' + todayUtc + '.'
+                : 'A cycle-fresh PROGRESS report passed exact-head validation on UTC date ' + todayUtc + '.',
+              isBlocked
+                ? 'Fingerprint: ' + fingerprint + '. Scheduled provider calls are paused for the remainder of this UTC day to avoid repeating the same blocked task.'
+                : 'The previous same-day task backoff is cleared. The next eligible scheduled cycle may select work again.',
+              'A valid BLOCKED report is not a provider failure; this task backoff does not record a provider cooldown.',
+              'An owner-authorized manual dispatch or qualifying main push may re-evaluate the task before the next UTC day.',
+              '',
+              '[Inspect the validated cycle](' + process.env.RUN_URL + ')',
+            ].join('\\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) =>
+              comment.user?.login === 'github-actions[bot]' &&
+              (comment.body || '').includes('<!-- BOONTA_TASK_BLOCKED_COOLDOWN')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(isBlocked
+                ? 'Updated the single persistent same-day task backoff marker.'
+                : 'Cleared the single persistent same-day task backoff marker.');
+            } else if (isBlocked) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the single persistent same-day task backoff marker.');
+            } else {
+              core.info('No previous task backoff marker needed clearing.');
+            }
+      - name: Record same-day Groq cooldown after an invocation failure
+        if: always() && ((steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const todayUtc = new Date().toISOString().slice(0, 10);
+            const marker = '<!-- BOONTA_GROQ_FAILURE_COOLDOWN: ' + todayUtc + ' -->';
+            const body = [
+              marker,
+              '## Groq Free daily failure cooldown',
+              '',
+              'The autonomous Groq Free invocation or cycle-report validation failed on UTC date ' + todayUtc + '.',
+              'Further fallback cycles on this UTC date will skip another Groq request. A fresh attempt is allowed on the next UTC date.',
+              'This marker does not change provider settings, billing, secrets, quota, or owner attestations.',
+              '',
+              '[Inspect the failed Groq invocation](' + process.env.RUN_URL + ')',
+            ].join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && (comment.body || '').includes('<!-- BOONTA_GROQ_FAILURE_COOLDOWN:'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Updated the single persistent Groq cooldown marker on issue #' + issueNumber + '.');
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body,
+              });
+              core.info('Created the persistent Groq cooldown marker on issue #' + issueNumber + '.');
+            }
+      - name: Fail visibly if the Groq fallback did not complete
+        if: always()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          GATE_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+          SNAPSHOT_OUTCOME: ${{ steps.snapshot_pr_heads.outcome }}
+          INVOCATION_OUTCOME: ${{ steps.run_opencode.outcome }}
+          REPORT_OUTCOME: ${{ steps.validate_report.outcome }}
+        with:
+          script: |
+            const allowed = process.env.GATE_ALLOWED === 'true';
+            const outcomes = {
+              snapshot: process.env.SNAPSHOT_OUTCOME || 'skipped',
+              invocation: process.env.INVOCATION_OUTCOME || 'skipped',
+              report: process.env.REPORT_OUTCOME || 'skipped',
+            };
+            if (!allowed) {
+              core.setFailed('Groq fallback did not execute: its independent Free-only/owner gate blocked the request. No provider request was sent; the separate Groq Free fallback may now be evaluated.');
+            } else if (outcomes.snapshot !== 'success' || outcomes.invocation !== 'success' || outcomes.report !== 'success') {
+              core.setFailed('Groq fallback did not complete. Required outcomes: PR snapshot, actual OpenCode invocation, and report validation must all be success. Observed: ' + JSON.stringify(outcomes));
+            } else {
+              core.info('Groq fallback passed all execution postconditions: gate, actual invocation, and validated report.');
+            }

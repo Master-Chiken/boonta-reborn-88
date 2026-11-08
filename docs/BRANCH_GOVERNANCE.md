@@ -1,61 +1,66 @@
-# Branch governance — two-permanent-branch model
+# Branch governance — Boonta Reborn 88
 
-## Target branch model
+## Policy
 
-The project has **two permanent integration branches**:
+- **Active-branch target:** no more than 10 active working branches.
+- **Total-count warning:** 10 or more branch refs.
+- **Red line:** more than 20 total branch refs.
+- **Do not delete branches automatically.** This is an explicit project rule.
+- The total branch count may remain above the active-branch target while inactive or historical branches are retained.
+- Preserve every branch's commits and useful work. Prefer reviewing, testing, and merging completed work into `main`; do not merge merely to reduce the count.
+- Keep `main` protected. Do not describe CI as merge-blocking unless the applicable GitHub ruleset explicitly requires the selected status checks.
+- Avoid creating a branch when an existing work branch can safely be reused. Prefer one focused branch per task and avoid duplicate `-v2` / `-v3` branches unless the reason is documented.
+- An AI agent may inventory branches, classify candidates, prepare consolidation PRs, and report recommendations. It must not delete branches or force-push without explicit human authorization.
 
-- **`main` — stable/release branch.** This remains the repository default branch and is protected. Only a reviewed promotion from `dev` should normally reach `main`.
-- **`dev` — integration branch.** New implementation work is reviewed and integrated here first. Protect this branch before relying on it as the default PR target.
+## Merge gates and required status checks
 
-Task branches and recovery references may exist temporarily. “Two branches” means two permanent integration branches, not that an open pull request may never have its own branch.
+**Live ruleset state verified on 2026-10-23:** `Protect main 2` is active for `main` and currently requires a pull request, one approving review, approval of the latest push, and the three required status checks listed below. The live GitHub API confirms these checks are enforced for normal merges. However, the ruleset's Bypass list still includes the repository owner as a `User` with `pull_request` bypass mode; GitHub documents that this actor can bypass applicable rules only through a pull request, not by direct push. This is a deliberate exception; remove the actor from the `Bypass list` if no exception is wanted. The `Protect dev` ruleset still requires a pull request and an approval but does not define required CI status checks. Therefore, CI is a merge-blocking gate for `main`, but not yet for `dev`.
 
-## Contribution workflow
+Ruleset configuration is an owner-side repository setting; repository workflows do not change it. Preserve existing approval/latest-push safeguards. Do not enable automatic merging merely because these checks are green: independent review, scope review, and the applicable gameplay acceptance gate remain necessary.
 
-1. Start a focused temporary branch from the current `dev`, preferably named `task/<short-name>`, `fix/<short-name>`, `feat/<short-name>`, or `docs/<short-name>`.
-2. Open a pull request targeting `dev`. Keep the PR draft while work is incomplete. Review the complete diff and require the relevant CI checks to pass on the exact head SHA.
-3. Merge into `dev` only after review. Do not push directly to `main` or `dev`.
-4. Promote integrated work by opening a separate PR from `dev` to `main`. The release PR must pass the relevant checks and the product acceptance gates; a green build alone does not prove manual playability.
-5. Retire the temporary task branch after its PR is merged or intentionally closed and its current tip is known to be recoverable. Reuse a branch only if it is still dedicated to the same task.
+### Required status checks for `main` (live verified 2026-10-23)
 
-The repository default branch remains `main` for stable public browsing and releases. The branch-intake automation targets `dev` for candidate changes. It must exclude `main`, `dev`, and all `archive/*` or `recovery/*` references from normal task intake.
+The following exact GitHub Actions check-run names are now configured in the `main` ruleset and were observed passing on recent pull requests. They are triggered for every pull request targeting `main`, without path filters:
 
-## No-loss branch retirement
+- `Verify Gemini free-only guardrails` — static AI free-tier safety check.
+- `Reject known held assets and data` — source-import/provenance policy plus its unit tests.
+- `Check proposed source paths using trusted base policy` — trusted-base path-policy validation.
 
-- **Do not delete branches automatically.** An agent may inventory, compare, classify, and prepare a deletion recommendation, but a human maintainer must authorize each retirement.
-- Before retiring a ref, record its exact current SHA and confirm it has not moved since the inventory.
-- Check all open PR head references. Never retire a branch used by an open PR.
-- Compare the branch tip with both `dev` and `main`; confirm all unique changes are either integrated, deliberately retained elsewhere, or explicitly rejected after review.
-- Confirm the exact tip is reachable from `main`, `dev`, or a verified recovery checkpoint. A JSON file containing a SHA is not, by itself, a recovery mechanism.
-- Remove only one ref at a time, verify the result, then refresh the inventory. Do not force-push or rewrite commits to reduce the count.
-- A branch being behind `main` with no unique commits is a strong retirement candidate, but open PRs, protection, and the current ref SHA still need checking.
+The ruleset also requires the pull-request branch to be up to date before merging. Do not describe unrelated path-filtered tests as globally required.
 
-## Recovery references
+### Remaining gap on `dev`
 
-The project is temporarily retaining recovery references while the migration is completed:
+The `Protect dev` ruleset does not currently require CI status checks. Do not copy the `main` check list directly onto `dev` until the workflows are confirmed to trigger on PRs targeting `dev`; otherwise GitHub could wait for required checks that never run. If `dev` is meant to have the same enforcement, first add/verify stable checks or an always-running aggregate gate for `dev`, then configure and re-read the live `dev` ruleset.
 
-- `archive/branch-heads-20261019` is the existing protected archive. Never merge this branch wholesale into `main` or `dev`; its history intentionally includes captured branch tips.
-- `recovery/branch-heads-20261019-verified` is a verified multi-parent checkpoint. Its checkpoint commit has the exact pre-cleanup live branch heads as parents and the accompanying snapshot manifest records their names and SHAs.
-- Keep these recovery references until the owner confirms the needed unique work has been accounted for and the branch cleanup is complete. They are temporary safety references, not permanent integration branches.
+**Do not globally require path-filtered checks:** `Read-only Wii64 tooling unit tests`, `Branch automation self-test`, `GameCube first-render prototype build`, and Dolphin diagnostics only run for selected file paths or opt-in cases. Requiring a path-filtered workflow globally can leave unrelated pull requests stuck waiting for a check that did not run. If the project later wants every relevant gameplay/tooling test to be a formal merge gate, add and test an always-running aggregate check that runs those tests conditionally based on changed paths, then require that aggregate check.
 
-## Manual verified ref-retirement workflow
+The three baseline checks on `main` are a universal policy/provenance gate; they do **not** replace gameplay build tests, visible Dolphin acceptance, independent code review, or the owner's verification of the Google Free-tier billing state.
 
-The `.github/workflows/retire-verified-branch.yml` workflow is an owner-operated tool for the **five refs explicitly reviewed in the inventory**. It is manual-only and is available for use after the workflow has been merged to `main` and `main` remains the repository default.
+## What counts as active?
 
-Before it can retire a ref, it requires the repository owner account, a run from `main`, a selection from the fixed allowlist, the exact pinned SHA, and the branch name typed again as confirmation. It checks the current head SHA, rejects protected refs, rejects any open PR that uses the branch as head or base, and confirms that the exact tip is reachable from the protected recovery archive. It repeats the head/protection, open-PR, and archive-ancestry checks immediately before the single DELETE-ref operation, then verifies that GitHub no longer lists the branch.
+The GitHub Actions audit treats a branch as active if it is the default branch, has an open pull request, its latest commit is no more than 30 days old, or its commit date cannot be verified. The unknown-date rule is deliberately conservative. This is a practical heuristic, not proof that a branch is safe to retire.
 
-The allowlist is intentionally limited to `recovery/branch-heads-20261019-verified` and these four refs whose tips were verified as already represented in `main`: `feat/game-finish-banner-label-20261017`, `feat/rocky-canyon-silhouette-20261017`, `feat/source-driven-racer-mesh-texture-20261017`, and `test/dolphin-pause-state-acceptance`.
+## Automated audit
 
-This workflow does not retire arbitrary branches, does not run on push/schedule/PR events, and cannot merge or rewrite commits. A ref outside this allowlist requires a separate inventory, review, and owner-authorized retirement. Because deletion uses GitHub's ref API, there remains a tiny race between the final read and DELETE if someone moves a branch concurrently; avoid pushing to a retirement candidate during a run. If any check fails, the workflow stops before deletion.
+The `Branch governance audit` workflow runs weekly, on demand, when a branch is created, after relevant policy changes reach `main`, and after the archived-branch cleanup workflow completes. It reports:
+- total branches and active branches;
+- whether the 10-active-branch target is exceeded, whether the 10-ref warning is reached, and whether the total exceeds the 20-ref red line;
+- branches with open pull requests;
+- branches with no recent commits that may be reviewed for consolidation.
+- Each unique branch-tip lookup is capped at 20 seconds. A timeout or API/process error is reported as an unknown date and conservatively keeps the branch active for later review.
 
-## Automated audit and intake
+When the total-count warning or red line is reached, it opens or updates one tracking issue rather than spamming comments. It does not merge or delete branches automatically. The issue should be worked through by the project maintainers and AI agents, preserving branch contents and contributions.
 
-The `Branch governance audit` workflow reports branch count, open-PR references, recent activity, and candidates for review. It must not delete or merge branches.
+## Manual review sequence
 
-The `Branch intake queue` compares candidate branches with `dev` and opens draft PRs targeting `dev`. It does not push to either permanent branch, merge PRs, force-push, or delete references. Step 102/source-import work and large, stale, or overlapping changes remain deferred for manual review.
+1. Identify each branch's purpose, latest commit, open PR, and whether its commits are already represented in `main`.
+2. Group duplicate or related work and select a canonical branch for each task.
+3. Test and merge useful work through PRs.
+4. Keep historical or uncertain branches untouched until their contents have been reviewed and preserved.
+5. Report active count and remaining blockers; aim for 10 or fewer active branches, investigate the total-count warning at 10 refs and red line above 20, and do not delete branch refs automatically.
 
-## Current migration safeguards
+## Automated intake of branch work
 
-- `main` is protected. Configure an equivalent protection ruleset for `dev` before merging the migration PR or retargeting ongoing work to `dev`.
-- Existing PRs should not be retargeted merely to conform to the new model while their review or acceptance gates are active.
-- The rail-collision gameplay PR remains draft until the human-operated Dolphin acceptance checklist is recorded.
-- Branch-count reduction must never be used as a reason to merge unreviewed gameplay, provenance-sensitive content, or the multi-parent recovery archive.
+The companion [Branch intake queue](BRANCH_INTAKE.md) compares existing branch tips with the default branch and prepares a limited number of draft PRs for small, distinct changes. It runs the existing GameCube prototype tests for relevant code candidates and defers overlapping, oversized, and Step 102/source-import changes for manual review.
+
+The intake queue does not create branches, merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must still pass the exact-head checks and the mainline acceptance gate before a maintainer merges it.
