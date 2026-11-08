@@ -460,7 +460,7 @@ if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
-if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests:
+if 'options.state === "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests:
     errors.append("Offline task-preflight tests must enforce the bounded open-PR query")
 
 # The blocked-task marker is referenced during selection. It must be computed
