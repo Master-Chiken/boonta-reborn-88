@@ -344,9 +344,9 @@ jobs:
           - For PROGRESS, include BOONTA_CYCLE_EVIDENCE_BASE: ${{ inputs.task_target_branch }}.
 
           CONTEXT
-          - The workflow has already read and validated the mandatory reuse policy, provider budget and compact task ledger. Their bounded snapshot is appended below; do not spend agent steps reopening or searching for those files.
+          - The workflow has already read and validated docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json. Their bounded snapshot is appended below; do not reopen or search for those files.
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
-          - Keep newly retrieved task-specific text below 1,500 tokens. Inspect only the exact file/PR needed for the selected task. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
+          - Keep newly retrieved text below 1,500 tokens total. Inspect only the exact file/PR needed for the selected task. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
 
           PROJECT ORDER
           - The ledger marks AUTOMATION-LEDGER-ACTIVATION blocked, not active. Do not create a competing task/writer. It clears only after a completed provider invocation, a valid report and a cycle-fresh PR, or a precise verified blocker.
@@ -473,7 +473,7 @@ jobs:
 
       - name: Validate OpenRouter autonomous cycle report
         id: validate_report
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.run_opencode.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && steps.run_opencode.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
