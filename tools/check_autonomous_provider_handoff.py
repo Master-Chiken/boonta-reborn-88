@@ -15,6 +15,7 @@ FILES = {
     "gemini_prompt": ROOT / ".github/commands/gemini-autonomous-loop.toml",
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
+    "context_builder": ROOT / "tools/build_autonomous_context.py",
 }
 
 
@@ -31,6 +32,7 @@ groq = read("groq")
 loop = read("loop")
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
+context_builder = read("context_builder")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
@@ -334,6 +336,37 @@ else:
     if {"merge_pull_request", "delete_branch", "update_pull_request", "list_pull_requests"}.intersection(gemini_tools):
         errors.append("Gemini MCP allow-list exposes an unsafe or unavailable repository mutation/list tool")
 
+# Both OpenCode providers must resolve the actual checked-out repository root,
+# validate the selected task against schema v2, and preload policy/context before
+# spending provider inference or scarce agent tool steps.
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    required = (
+        "id: prepare_context",
+        "tools/build_autonomous_context.py",
+        'git -C "$candidate" rev-parse --show-toplevel',
+        'AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}',
+        'REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}',
+        "steps.prepare_context.outcome == 'success'",
+        '"$REPO_ROOT" <<' + "'PY'",
+    )
+    for needle in required:
+        if needle not in content:
+            errors.append(f"{label} must resolve the checked-out root and preload schema-v2 context: missing {needle!r}")
+    if '"$GITHUB_WORKSPACE" <<' + "'PY'" in content:
+        errors.append(f"{label} must not launch OpenCode from the ambiguous outer workspace root")
+
+for required in (
+    'summary.get("schema_version") != 2',
+    'summary.get("source") != "docs/automation/task-ledger.json"',
+    'task.get("title") != task_title or task.get("target_branch") != target_branch',
+    'task.get("pr_url") or task.get("head_sha")',
+    'task_id != "AUTOMATION-LEDGER-ACTIVATION"',
+    'required_handoff_text',
+    'task["question_excerpt"]',
+    'task["next_action_excerpt"]',
+):
+    if required not in context_builder:
+        errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
@@ -343,8 +376,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
-    errors.append("Groq must remain capped at 3072 context / 512 output tokens")
+if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
+    errors.append("Groq must remain capped at 2048 context / 256 output tokens after the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
@@ -364,7 +397,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 4500 )); then", "Groq must enforce its 4,500-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
