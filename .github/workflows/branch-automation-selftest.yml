@@ -127,7 +127,9 @@ jobs:
           intake_header = intake.split("permissions:", 1)[0]
           openrouter = Path(".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
           autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
+          readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
           checks = {
+              "Readiness GitHub App token uses GET-only permissions": "permission-contents: read" in readiness and "permission-issues: read" in readiness and "permission-pull-requests: read" in readiness and "permission-contents: write" not in readiness and "permission-issues: write" not in readiness and "permission-pull-requests: write" not in readiness,
               "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
               "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),
               "OpenRouter checks UTC free-model quota before minting or inference": "free_model_daily_requests.remaining" in openrouter and "outputs.quota_available == 'true'" in openrouter and "model inference is blocked before any provider request" in openrouter,

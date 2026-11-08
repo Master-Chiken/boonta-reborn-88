@@ -1003,9 +1003,9 @@ for required_secret in ("GEMINI_API_KEY", "APP_ID", "APP_PRIVATE_KEY"):
     if required_secret not in readiness:
         errors.append(f"Autonomous readiness must verify presence of {required_secret}")
 for required_permission in (
-    "permission-contents: write",
-    "permission-issues: write",
-    "permission-pull-requests: write",
+    "permission-contents: read",
+    "permission-issues: read",
+    "permission-pull-requests: read",
     "permission-actions: read",
 ):
     if required_permission not in readiness:
