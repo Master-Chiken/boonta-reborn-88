@@ -31,6 +31,28 @@ byte-swapped `.v64`, and word-swapped `.n64` images. The section-relative
 mapping comes from the supplied TOML `[[section]]` entries; no ROM offset is
 hard-coded into the Boonta tool.
 
+## Create a provisional symbol map
+
+When no local symbol map is available, the companion scanner can list common
+`addiu $sp, $sp, -N` stack-allocation prologue candidates and write a TOML
+file that the inspector accepts:
+
+```sh
+python3 tools/n64_reference/mips_symbol_scanner.py \
+  --rom "$HOME/racer-work/racer_us.z64" \
+  --rom-offset 0x1000 \
+  --vram-base 0x80000400 \
+  --code-size "$CODE_SIZE" \
+  --output "$HOME/racer-work/symbols-candidates.toml"
+```
+
+Set `CODE_SIZE` to the verified size of the executable region for the exact
+ROM/revision; the tool deliberately does not guess a code-end address. Its
+output uses the next prologue as a **provisional** function-size boundary.
+Prologue detection can miss leaf functions and mistake instruction/data bytes
+for starts. Verify each candidate, boundary and caller/callee manually before
+using it as evidence.
+
 ## Limits and provenance
 
 - This is a **partial MIPS III decoder**, not a full disassembler or decompiler.
