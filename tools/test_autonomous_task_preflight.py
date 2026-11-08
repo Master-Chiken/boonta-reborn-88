@@ -107,7 +107,7 @@ cases = [
         "marker_day_offset": None,
         "open_task_prs": [{
             "number": 123,
-            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\\nBOONTA_TASK_TARGET_BRANCH: main"
+            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
