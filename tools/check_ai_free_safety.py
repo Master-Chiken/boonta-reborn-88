@@ -474,7 +474,7 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    "GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment",
+    '"GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment"',
     "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
     "Keep newly retrieved text below 1,500 tokens",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
