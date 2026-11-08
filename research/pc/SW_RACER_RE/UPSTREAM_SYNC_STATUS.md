@@ -46,3 +46,20 @@ The existing PC CMake source glob includes new `.cpp` / `.h` files in this direc
 2. Retain fork-specific changes unless a specific upstream change is shown to improve them.
 3. Do not copy upstream media, game data, symbol databases, trainer archives or vendor code without a separate rights/license audit.
 4. Keep all imported PC material under this directory's AGPL-3.0 boundary and keep it out of the MIT GameCube/Wii build.
+
+
+## 2026-11-08 — second upstream delta triage
+
+Latest original upstream checked: [`tim-tim707/SW_RACER_RE` at `4f898953ecb31c9f02e7ab01e10f62cd9738df0d`](https://github.com/tim-tim707/SW_RACER_RE/tree/4f898953ecb31c9f02e7ab01e10f62cd9738df0d), dated 2026-11-05. The divergence remains 42 upstream-only commits versus 29 fork-only commits from the imported fork baseline `66120be334a3fd38c10a259f3528cffbfed8ddc5`. This is not a fast-forward candidate.
+
+### Findings retained as references, not copied into the console runtime
+
+- The upstream comparison contains PC-hook changes to its debug UI/ImGui, renderer hooks, performance stats, model replacement, track manifests/registry and virtual-block handling. These are specific to the Windows DirectInput/OpenGL mod and are not GameCube GX implementations.
+- The upstream adds PC controller-rumble and sound-hook files. These may inform separately specified input/audio behaviour, but their Win32/game-hook dependencies prevent direct use in the GameCube/Wii executable.
+- New Python utilities cover custom-track pack conversion, raw-asset extraction, content-store management and raw-model validation. They are useful leads for the PC format workflow only. Do not run them on game data in CI or publish any extracted or converted proprietary output.
+- The local fork snapshot's policy-oriented `track_manifest.cpp`, `track_registry.cpp` and `virtual_block.cpp` are materially different from the current upstream versions (the reviewed copies are respectively 530/346, 159/126 and 754/468 lines). They carry fork-specific policy logic and are covered by the isolated tests in this branch. Do not overwrite them with shorter upstream files without a function-by-function diff and a replacement test.
+- The selected first-party GLTF validator import remains present. The vendored fastgltf change remains excluded: it needs an independent dependency-version, license and regression review before any update.
+
+### Decision
+
+Keep the curated snapshot and the upstream repository as separate PC research references. Do not merge the 42-commit history, copy the vendor tree, or move AGPL PC code into the MIT GameCube/Wii runtime. The already imported, tested portable policy helpers are retained under this AGPL research boundary; no additional upstream source files were copied in this triage.
