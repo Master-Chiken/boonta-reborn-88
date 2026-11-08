@@ -395,7 +395,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 for required in (
     "permissions:\n      contents: read\n      issues: read",
     "path: 'docs/automation/task-ledger-summary.json'",
-    "ledgerSummary.schema_version !== 1",
+    "ledgerSummary.schema_version !== 2",
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
     "ledgerSummary.policy?.max_active_tasks !== 1",
     "new Set(taskIds).size !== taskIds.length",
