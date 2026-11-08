@@ -468,35 +468,7 @@ for label, prompt in (
     if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
         errors.append(f"{label} report instructions must require the exact selected task ID")
 
-# Reject doubled shell escapes in fallback prompt construction; settings_marker = "          settings: |-\n"
-settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
-if settings_marker not in gemini or settings_end_marker not in gemini:
-    errors.append("Gemini explicit bounded settings block is missing")
-else:
-    try:
-        settings_text = gemini.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
-        settings = json.loads(settings_text)
-        if settings.get("general", {}).get("maxAttempts") != 1:
-            errors.append("Gemini must use one model attempt per invocation")
-        if settings.get("model", {}).get("maxSessionTurns") != 3:
-            errors.append("Gemini must use a three-turn session ceiling")
-    except (json.JSONDecodeError, TypeError) as exc:
-        errors.append(f"Gemini bounded settings JSON is invalid: {exc}")
-if "exactly 1 attempt per invocation" not in budget or "maximum 3 session turns" not in budget:
-    errors.append("Shared context budget must document Gemini's one-attempt/three-turn cap")
-if "task-eligibility preflight" not in budget or "one eligible task" not in budget:
-    errors.append("Shared context budget must document the pre-inference task gate")
-
-if errors:
-    print("Autonomous provider handoff checks FAILED:")
-    for error in errors:
-        print(f" - {error}")
-    sys.exit(1)
-
-print("Autonomous provider handoff checks passed.")
-print("- At most one provider can invoke a model in a workflow run.")
-print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
-print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
+# Reject doubled shell escapes in fallback prompt construction.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     prompt_lines = [
         line for line in workflow.splitlines()
@@ -504,9 +476,10 @@ for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     ]
     if any((chr(92) * 2 + "n") in line for line in prompt_lines):
         errors.append(f"{label} prompt handoff contains a literal double-escaped newline")
+
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 settings_marker = "          settings: |-\n"
-settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+settings_end_marker = "          prompt: \${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
 if settings_marker not in gemini or settings_end_marker not in gemini:
     errors.append("Gemini explicit bounded settings block is missing")
 else:
@@ -531,6 +504,6 @@ if errors:
     sys.exit(1)
 
 print("Autonomous provider handoff checks passed.")
-print("- At most one provider can invoke a model in a workflow run.")
+print("- At most one model provider invocation is allowed per workflow run.")
 print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
 print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
