@@ -266,6 +266,13 @@ jobs:
           - On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.
           - Preserve the €0 budget, clean-room provenance, platform boundaries, one active ledger task, exact-head evidence and no-merge policy.
 
+          CONTEXT BUDGET AND REUSE GATE
+          - Read docs/REVERSE_ENGINEERING_FIRST.md, docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md and docs/automation/task-ledger-summary.json once.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279.
+          - Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier.
+          - Keep newly retrieved text below 800 tokens.
+          - Follow the mandatory reverse-engineering-first policy in docs/REVERSE_ENGINEERING_FIRST.md before all implementation; recover, extract, convert or reuse before manually recreating.
+
           AUTHORITATIVE SELECTED TASK
           - The caller passes the single task selected by global preflight. Require TASK_ID, TASK_TITLE and TASK_TARGET_BRANCH; fail closed before inference if missing or target is not main/dev.
           - Read docs/automation/task-ledger-summary.json once. Find exactly TASK_ID; verify the title and target_branch match and the task has no existing PR/head. Do not substitute another task or follow dated Phase notes instead. Use its question_excerpt, acceptance_criteria_excerpt and next_action_excerpt as the scope; read only its full ledger record if needed. When the full criterion count exceeds the excerpts, read only that task's ledger object and satisfy every criterion.
