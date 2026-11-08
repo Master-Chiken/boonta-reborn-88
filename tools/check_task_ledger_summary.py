@@ -18,7 +18,7 @@ def excerpt(value: object, maximum: int = 360) -> str:
 
 def build_summary(ledger: dict) -> dict:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "source": "docs/automation/task-ledger.json",
         "updated_at": ledger.get("updated_at"),
         "policy": {
@@ -32,9 +32,16 @@ def build_summary(ledger: dict) -> dict:
                 "queue": task.get("queue"),
                 "platform_scope": task.get("platform_scope", []),
                 "status": task["status"],
+                "target_branch": task.get("target_branch"),
+                "question_excerpt": excerpt(task.get("question"), 240),
+                "acceptance_criteria_total": len(task.get("acceptance_criteria", [])),
+                "acceptance_criteria_excerpt": [
+                    excerpt(item, 140)
+                    for item in task.get("acceptance_criteria", [])[:5]
+                ],
                 "pr_url": task.get("pr_url"),
                 "head_sha": task.get("head_sha"),
-                "next_action_excerpt": excerpt(task.get("next_action")),
+                "next_action_excerpt": excerpt(task.get("next_action"), 420),
             }
             for task in ledger.get("tasks", [])
             if task.get("status") in {"active", "blocked", "in_review"}
