@@ -105,10 +105,7 @@ cases = [
         "name": "100 open PRs fail closed at the bounded inventory ceiling",
         "tasks": [activation],
         "marker_day_offset": None,
-        "open_task_prs": Array.from({ length: 100 }, (_, index) => ({
-            "number": index + 1,
-            "body": "Unrelated PR"
-        })),
+        "open_task_prs": [{"number": number, "body": "Unrelated PR"} for number in range(100)],
         "expected_error": "100-item safety ceiling",
     },
     {
