@@ -440,7 +440,7 @@ for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("G
         "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
         "including merged/closed results",
         "closed-unmerged is not completion",
-        "verify live `merged_at`",
+        "Verify live `merged_at`",
         "final `head.sha`",
         "record that original PR URL and exact head SHA as evidence",
         "Never use the ledger-update PR's own SHA as task evidence",
