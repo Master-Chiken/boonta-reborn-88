@@ -493,14 +493,19 @@ else:
     ]
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_pull_requests"):
-        if required_tool not in github_tools:
-            errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
-    if "get_workflow_job" in github_tools:
-        errors.append("OpenRouter GitHub MCP allow-list contains a tool absent from the pinned v0.27.0 server")
-    for required_tool in ("get_file_contents", "get_workflow_run", "get_job_logs", "list_workflow_jobs", "list_workflow_runs"):
-        if required_tool not in github_tools:
-            errors.append(f"OpenRouter GitHub MCP allow-list is missing pinned-server tool {required_tool!r}")
+    expected_github_tools = [
+        "get_file_contents",
+        "search_pull_requests",
+        "create_branch",
+        "push_files",
+        "create_pull_request",
+    ]
+    if github_tools != expected_github_tools:
+        errors.append(
+            "OpenRouter GitHub MCP allow-list must match the minimal five-tool execution contract exactly"
+        )
+    if any(tool not in expected_github_tools for tool in github_tools):
+        errors.append("OpenRouter GitHub MCP allow-list exposes tools outside the reviewed minimal contract")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
     errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
