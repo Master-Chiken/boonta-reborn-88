@@ -21,6 +21,8 @@ on:
       - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
       - "tools/check_autonomous_provider_handoff.py"
       - "tools/test_autonomous_task_preflight.py"
+      - "tools/build_autonomous_context.py"
+      - "tools/test_autonomous_context.py"
       - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
@@ -101,6 +103,10 @@ jobs:
       - name: Execute global task preflight with mocked GitHub data (offline)
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
+
+      - name: Validate schema-v2 autonomous context builder with offline fixtures
+        shell: bash
+        run: python3 tools/test_autonomous_context.py
 
       - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash
