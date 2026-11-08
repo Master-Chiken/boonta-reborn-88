@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Portable systems triage now covers AI, performance telemetry, audio metadata, asset replacement boundaries, camera, static-mesh caching, deformation lifetime and logical input mapping. Adapt design lessons only; preserve AGPL/MIT boundary. Next prioritize coherent race progression and measured GX performance, then finish remaining upstream path inventory."
+      "next_action_excerpt": "Portable-systems triage now includes AI tuning, frame telemetry, audio cache, PC model replacement boundaries, camera modes, renderer static-mesh caching, gameplay-to-renderer deformation lifecycle and logical input remapping. Continue auditing the remaining upstream-only commits and overlapping fork files; preserve fork policy code and keep all PC AGPL…"
     }
   ]
 }
