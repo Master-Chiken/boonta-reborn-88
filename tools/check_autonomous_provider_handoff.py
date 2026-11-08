@@ -398,8 +398,10 @@ for content, needle, message in (
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),
-    (groq, "github_get_pull_request does not exist", "Groq must name the supported PR read tool and reject an unavailable alias"),
+    (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
+    (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
+    (openrouter, "github_get_file_contents", "OpenRouter must not reference a nonexistent GitHub MCP alias"),
+    (groq, "github_get_file_contents", "Groq must not reference a nonexistent GitHub MCP alias"),
 ):
     if needle not in content:
         errors.append(message)
