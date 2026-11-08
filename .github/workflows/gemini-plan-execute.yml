@@ -20,6 +20,14 @@ on:
         type: 'string'
         description: 'Any additional context from the request'
         required: false
+      task_id:
+        type: 'string'
+        description: 'Canonical task ID selected by the global autonomous preflight'
+        required: false
+      task_target_branch:
+        type: 'string'
+        description: 'Canonical target branch selected by the global autonomous preflight'
+        required: false
       task_title:
         type: 'string'
         description: 'Explicit task title for a scheduled autonomous cycle'
@@ -181,10 +189,12 @@ jobs:
             --arg num "${ISSUE_NUMBER}" \
             --arg repo "${REPOSITORY}" \
             --arg context "${ADDITIONAL_CONTEXT}" \
+            --arg task_id "${TASK_ID}" \
             --arg task_title "${TASK_TITLE}" \
             --arg task_description "${TASK_DESCRIPTION}" \
+            --arg task_target_branch "${TASK_TARGET_BRANCH}" \
             --arg autonomous_mode "${AUTONOMOUS_MODE}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_title: $task_title, task_description: $task_description}' > .gemini/context.json
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_id: $task_id, task_title: $task_title, task_description: $task_description, task_target_branch: $task_target_branch}' > .gemini/context.json
         env:
           TITLE: '${{ inputs.task_title || github.event.pull_request.title || github.event.issue.title }}'
           DESCRIPTION: '${{ inputs.task_description || github.event.pull_request.body || github.event.issue.body }}'
@@ -193,8 +203,10 @@ jobs:
           ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          TASK_ID: '${{ inputs.task_id }}'
           TASK_TITLE: '${{ inputs.task_title }}'
           TASK_DESCRIPTION: '${{ inputs.task_description }}'
+          TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'
           AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
 
       - name: Snapshot open PR heads before autonomous cycle
