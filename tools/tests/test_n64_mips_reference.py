@@ -9,7 +9,7 @@ TOOLS_ROOT = Path(__file__).resolve().parents[1]
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from n64_reference.mips_function_inspector import (
+from n64_reference.mips_symbol_scanner import (\n    ScanError,\n    build_candidate_symbols_toml,\n    find_stack_frame_prologues,\n)\nfrom n64_reference.mips_function_inspector import (
     FunctionSymbol,
     SymbolMapError,
     disassemble_instruction,
@@ -102,6 +102,41 @@ size = 0x20
     def test_rejects_unknown_rom_header(self) -> None:
         with self.assertRaises(ValueError):
             normalize_n64_rom(bytes(64))
+
+    def test_scanner_finds_only_negative_aligned_stack_frames(self) -> None:
+        rom = bytearray(0x1010)
+        rom[:4] = bytes.fromhex("80371240")
+        rom[0x1000:0x1010] = bytes.fromhex(
+            "27bdffe0"  # addiu sp, sp, -0x20
+            "27bd0008"  # positive adjustment: not a prologue candidate
+            "27bdffc0"  # addiu sp, sp, -0x40
+            "00000000"
+        )
+        candidates = find_stack_frame_prologues(bytes(rom), 0x1000, 0x80000400, 0x10)
+        self.assertEqual(candidates, [0, 8])
+
+    def test_scanner_emits_provisional_symbols_accepted_by_inspector(self) -> None:
+        toml = build_candidate_symbols_toml([0, 8], 0x1000, 0x80000400, 0x10)
+        self.assertIn("PROVISIONAL ONLY", toml)
+        self.assertIn("candidate_80000400", toml)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "candidate-symbols.toml"
+            path.write_text(toml, encoding="utf-8")
+            symbols = load_symbol_map(path)
+        self.assertEqual(symbols["candidate_80000400"].size, 8)
+        self.assertEqual(symbols["candidate_80000408"].size, 8)
+
+    def test_scanner_rejects_out_of_range_or_empty_scan(self) -> None:
+        with self.assertRaises(ScanError):
+            find_stack_frame_prologues(bytes(16), 12, 0x80000000, 8)
+        with self.assertRaises(ScanError):
+            build_candidate_symbols_toml([], 0x1000, 0x80000400, 0x10)
+
+    def test_scanner_rejects_misaligned_region(self) -> None:
+        with self.assertRaises(ScanError):
+            find_stack_frame_prologues(bytes(64), 0, 0x80000001, 16)
+        with self.assertRaises(ScanError):
+            find_stack_frame_prologues(bytes(64), 0, 0x80000000, 14)
 
 
 if __name__ == "__main__":
