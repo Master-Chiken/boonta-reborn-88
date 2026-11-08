@@ -1085,9 +1085,24 @@ static void draw_hud(void)
         const float top = cy - 21.0f;
         const GXColor finish_panel = { 8, 18, 30, 245 };
         const GXColor black = { 12, 18, 27, 255 };
+        char finish_time_text[32];
+        char finish_best_text[32];
         unsigned int row;
         unsigned int col;
-        append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
+
+        (void)snprintf(finish_time_text, sizeof(finish_time_text),
+                       "TIME %s", time_text);
+        if (g_best_lap_seconds > 0.0f) {
+            (void)snprintf(finish_best_text, sizeof(finish_best_text),
+                           "BEST %s", best_text);
+        } else {
+            (void)snprintf(finish_best_text, sizeof(finish_best_text),
+                           "BEST --:--.-");
+        }
+
+        /* Preserve the checkerboard's established center so Dolphin's
+         * finish-state diagnostic continues to test the same visual marker. */
+        append_screen_quad(cx - 70.0f, cy - 54.0f, cx + 70.0f, cy + 54.0f,
                            0.6f, finish_panel);
         append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);
         for (row = 0; row < 3U; ++row) {
@@ -1100,6 +1115,10 @@ static void draw_hud(void)
                                    0.2f, square);
             }
         }
+
+        /* Turn the demo's finish flag into a minimal results card. */
+        append_text(finish_time_text, cx - 29.0f, cy + 29.0f, 0.8f, white);
+        append_text(finish_best_text, cx - 29.0f, cy + 42.0f, 0.8f, heat_cool);
     } else if (g_paused) {
         /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
