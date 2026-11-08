@@ -13,6 +13,7 @@ from n64_reference.mips_callgraph import build_call_graph, decode_jal_target
 from n64_reference.mips_function_inspector import FunctionSymbol
 from n64_reference.mips_os_candidates import analyze_function
 from n64_reference.mips_string_scanner import categorize_string, extract_strings
+from n64_reference.mips_symbol_progress import calculate_progress, is_automatic_symbol_name
 
 
 def put_word(buffer: bytearray, offset: int, word: int) -> None:
@@ -143,6 +144,42 @@ class MipsOsCandidateTests(unittest.TestCase):
         symbol = FunctionSymbol("bad", 0x80000000, 4, 8, "code")
         with self.assertRaises(ValueError):
             analyze_function(bytes(8), symbol)
+
+
+
+class MipsSymbolProgressTests(unittest.TestCase):
+    def test_classifies_only_known_generated_name_patterns_as_automatic(self) -> None:
+        self.assertTrue(is_automatic_symbol_name("func_80000000"))
+        self.assertTrue(is_automatic_symbol_name("candidate_80000000"))
+        self.assertTrue(is_automatic_symbol_name("static_0_80000000"))
+        self.assertTrue(is_automatic_symbol_name("libultra_split_80000000"))
+        self.assertFalse(is_automatic_symbol_name("race_update"))
+        self.assertFalse(is_automatic_symbol_name("function_80000000"))
+
+    def test_reports_symbol_name_coverage_and_largest_candidates(self) -> None:
+        symbols = {
+            "func_80000000": FunctionSymbol("func_80000000", 0x80000000, 0, 32, "code"),
+            "race_update": FunctionSymbol("race_update", 0x80000020, 0x20, 128, "code"),
+            "candidate_800000A0": FunctionSymbol("candidate_800000A0", 0x800000A0, 0xA0, 512, "code"),
+            "vehicle_physics": FunctionSymbol("vehicle_physics", 0x800002A0, 0x2A0, 2048, "code"),
+        }
+        report = calculate_progress(symbols)
+
+        self.assertEqual(report["function_count"], 4)
+        self.assertEqual(report["named_function_count"], 2)
+        self.assertEqual(report["automatic_name_count"], 2)
+        self.assertEqual(report["total_mapped_bytes"], 2720)
+        self.assertEqual(report["named_mapped_bytes"], 2176)
+        self.assertAlmostEqual(report["named_byte_ratio"], 0.8)
+        self.assertEqual(
+            report["largest_automatic_functions"][0]["name"],
+            "candidate_800000A0",
+        )
+        self.assertIn("not semantic completion", report["scope"])
+
+    def test_rejects_empty_symbol_map(self) -> None:
+        with self.assertRaises(ValueError):
+            calculate_progress({})
 
 
 if __name__ == "__main__":
