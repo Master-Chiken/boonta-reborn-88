@@ -85,12 +85,16 @@ jobs:
 
             // An open PR carrying this task's exact identity marker is an in-flight
             // writer. Reconcile it before allowing another provider invocation.
-            const openPullRequests = await github.paginate(github.rest.pulls.list, {
+            const { data: openPullRequests } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               per_page: 100,
+              page: 1,
             });
+            if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
+              throw new Error('Open PR inventory reached the 100-item safety ceiling; refusing provider invocation to avoid duplicate task work.');
+            }
             const openTaskPullRequest = (task) => {
               if (!task) return null;
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
