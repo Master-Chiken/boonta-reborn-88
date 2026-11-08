@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Third upstream batch triaged and documented: retain content-addressed-store, manifest, round-trip validation and report-only GC design lessons; do not copy/run PC block extractors or transplant RAWM/RAWS/RAWT/PE assumptions. Continue the remaining 42-commit/path inventory in small batches, prioritizing first-party non-vendor code and tests."
+      "next_action_excerpt": "Portable-systems triage documented: AI behavior dimensions, non-blocking frame telemetry, manifest-driven owned assets, audio metadata caching and platform-specific rumble. Adapt behavior/design only; no PC AGPL code or RAWM data copied into MIT GameCube/Wii runtime. Continue the remaining upstream-only file/commit inventory and prioritize coherent race progression."
     }
   ]
 }
