@@ -531,8 +531,18 @@ for label, content in (
             errors.append(f"Forbidden legacy/paid-auth setting {marker!r} in {label}")
 
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
-    if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
-        errors.append(f"{label} must use only the GEMINI_API_KEY secret")
+    expected_gemini_key_binding = (
+        "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'"
+        if label == "gemini-invoke.yml"
+        else "gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'"
+    )
+    if expected_gemini_key_binding not in content:
+        errors.append(f"{label} must use its explicitly allowed Gemini API-key binding")
+    if label == "gemini-plan-execute.yml" and (
+        "GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'" not in content
+        or "GEMINI_API_KEY_DEUX" not in readiness
+    ):
+        errors.append("Autonomous Gemini guard, CLI and readiness must prefer GEMINI_API_KEY_DEUX with legacy fallback")
     if (
         "id: free_tier_guard" not in content
         or "GEMINI_FREE_TIER_CONFIRMED" not in content
