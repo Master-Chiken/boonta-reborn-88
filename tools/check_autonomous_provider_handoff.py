@@ -301,29 +301,24 @@ groq_tools = set(
     groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
 required_writer_tools = {
-    "get_file_contents", "pull_request_read", "create_branch",
-    "push_files", "create_pull_request", "add_issue_comment",
+    "get_file_contents", "search_pull_requests", "create_branch",
+    "push_files", "create_pull_request",
 }
 for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
-    if not required_writer_tools.issubset(toolset):
-        errors.append(f"{label} is missing a required bounded branch/PR editing tool")
+    if toolset != required_writer_tools:
+        errors.append(f"{label} must expose exactly the reviewed five-tool read/search/branch/PR contract")
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
-        "update_pull_request",
+        "update_pull_request", "add_issue_comment", "pull_request_read",
+        "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
     }
     if forbidden.intersection(toolset):
         errors.append(f"{label} MCP allow-list exposes unnecessary or unsafe tools: {sorted(forbidden.intersection(toolset))}")
 
-required_openrouter_ci_tools = {
-    "search_pull_requests", "list_workflow_runs", "list_workflow_jobs",
-    "get_workflow_run", "get_job_logs",
+required_gemini_ci_tools = {
+    "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
 }
-if not required_openrouter_ci_tools.issubset(openrouter_tools):
-    errors.append("OpenRouter must retain bounded read-only PR/Actions CI diagnostic tools")
-if groq_tools != required_writer_tools:
-    errors.append("Groq must retain the reviewed six-tool minimal GitHub MCP allow-list")
-
 gemini_settings_match = re.search(r'"includeTools":\s*\[(.*?)\]', gemini, re.DOTALL)
 if not gemini_settings_match:
     errors.append("Gemini MCP allow-list is missing")
@@ -331,7 +326,7 @@ else:
     gemini_tools = set(re.findall(r'"([^"]+)"', gemini_settings_match.group(1)))
     if not required_writer_tools.issubset(gemini_tools):
         errors.append("Gemini MCP allow-list is missing a bounded branch/PR editing tool")
-    if not required_openrouter_ci_tools.issubset(gemini_tools):
+    if not required_gemini_ci_tools.issubset(gemini_tools):
         errors.append("Gemini must retain bounded read-only PR/Actions CI diagnostic tools")
     if {"merge_pull_request", "delete_branch", "update_pull_request", "list_pull_requests"}.intersection(gemini_tools):
         errors.append("Gemini MCP allow-list exposes an unsafe or unavailable repository mutation/list tool")
