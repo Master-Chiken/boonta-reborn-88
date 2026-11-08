@@ -308,7 +308,7 @@ jobs:
           EXECUTION
           - Use only these six GitHub tools: get_file_contents, pull_request_read, create_branch, push_files, create_pull_request and add_issue_comment. The supported PR read tool is pull_request_read; github_get_pull_request does not exist.
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Read only the source files needed; keep new retrieved text below 300 tokens.
-          - Apply DISCOVER → VERIFY → REUSE; keep PC/N64/Dreamcast facts separate from GameCube/Wii. Reuse the merged PR #327 implementation at commit 69deb6778f9383887118803428e7014686865a83; do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
+          - Apply DISCOVER → VERIFY → REUSE; keep PC/N64/Dreamcast facts separate from GameCube/Wii. Reuse the merged PR #327 implementation at commit 69deb6778f9383887118803428e7014686865a83; Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
           - Create one branch from the selected base's exact SHA, push one logical patch and open one PR on that base. Include exact PR-body lines BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>.
           - Never write to main/dev, force-push or delete refs. Do not claim tests ran without exact-head CI evidence.
 
