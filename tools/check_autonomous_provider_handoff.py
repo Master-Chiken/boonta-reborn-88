@@ -457,6 +457,9 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
         "reportedTaskId !== selectedTaskId",
         "evidenceBaseMatch[1] !== selectedTaskTargetBranch",
         "BOONTA_CYCLE_TASK_ID: ",
+        "taskMarkers = new Set((pr.body || '').split",
+        "taskMarkers.has('BOONTA_TASK_ID: ' + selectedTaskId)",
+        "taskMarkers.has('BOONTA_TASK_TARGET_BRANCH: ' + selectedTaskTargetBranch)",
     ):
         if required not in workflow:
             errors.append(f"{label} report validator is missing selected-task integrity check {required!r}")
@@ -467,6 +470,8 @@ for label, prompt in (
 ):
     if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
         errors.append(f"{label} report instructions must require the exact selected task ID")
+    if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
+        errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
 
 # Reject doubled shell escapes in fallback prompt construction.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
