@@ -12,7 +12,7 @@ Cette page décrit les automatismes disponibles dans le dépôt. **Boonta Autono
 
 ## Gemini zero-cost gate
 
-Before any Gemini workflow can call a model, the repository Actions variable `GEMINI_FREE_TIER_CONFIRMED` must equal the exact string `true`, and the `GEMINI_API_KEY` secret must exist. If either requirement is missing, the model step is skipped; there is no paid fallback.
+Before any Gemini workflow can call a model, the repository Actions variable `GEMINI_FREE_TIER_CONFIRMED` must equal the exact string `true`, and either `GEMINI_API_KEY_DEUX` (preferred) or the legacy `GEMINI_API_KEY` secret must exist. If either requirement is missing, the model step is skipped; there is no paid fallback.
 
 **Do not set this variable until you personally verify the project in Google AI Studio.** Open the AI Studio Projects/Billing view and confirm the API-key project is on the **Free** tier and is not linked to a Cloud Billing account. Google documents that API keys inherit the billing tier of their project and that projects linked to a Cloud Billing account inherit the account's usage tier ([official billing documentation](https://ai.google.dev/gemini-api/docs/billing/)). The model has both Free and Paid pricing tiers ([official pricing](https://ai.google.dev/gemini-api/docs/pricing)).
 
@@ -26,12 +26,12 @@ Le propriétaire peut aussi lancer [Boonta Autonomous Readiness](../.github/work
 
 Ce précontrôle ne prouve pas que la clé Gemini est valide ou que le projet Google est réellement au Free tier. Il ne peut pas non plus vérifier les rulesets de protection, car le GitHub App n'obtient volontairement aucun droit d'administration. Le propriétaire doit encore vérifier manuellement l'absence de Cloud Billing lié et la protection de `main`/`dev`.
 
-Ordre d'activation initial recommandé : (1) fusionner la PR #277 ; (2) configurer `GEMINI_FREE_TIER_CONFIRMED=true`, une clé `GEMINI_API_KEY` valide, `APP_ID` et `APP_PRIVATE_KEY`, en laissant `GEMINI_AUTONOMOUS_ENABLED` désactivé ; (3) vérifier les règles de protection `main`/`dev` ; (4) lancer le précontrôle et exiger son succès ; (5) définir `GEMINI_AUTONOMOUS_ENABLED=true` en dernier ; (6) lancer **Boonta Autonomous Loop** depuis Actions en sélectionnant `main`, puis contrôler la PR et le rapport de cycle. Une fois activée, la readiness peut être relancée à tout moment pour vérifier la présence des configurations et l'accès GitHub sans toucher à l'interrupteur autonome.
+Ordre d'activation initial recommandé : (1) fusionner la PR #277 ; (2) configurer `GEMINI_FREE_TIER_CONFIRMED=true`, une clé `GEMINI_API_KEY_DEUX` (préférée) ou `GEMINI_API_KEY` valide, `APP_ID` et `APP_PRIVATE_KEY`, en laissant `GEMINI_AUTONOMOUS_ENABLED` désactivé ; (3) vérifier les règles de protection `main`/`dev` ; (4) lancer le précontrôle et exiger son succès ; (5) définir `GEMINI_AUTONOMOUS_ENABLED=true` en dernier ; (6) lancer **Boonta Autonomous Loop** depuis Actions en sélectionnant `main`, puis contrôler la PR et le rapport de cycle. Une fois activée, la readiness peut être relancée à tout moment pour vérifier la présence des configurations et l'accès GitHub sans toucher à l'interrupteur autonome.
 
 L'exécution d'écriture reste fermée tant que toutes les conditions suivantes ne sont pas réunies :
 - La variable Actions `GEMINI_AUTONOMOUS_ENABLED` vaut exactement `true`.
 - `GEMINI_FREE_TIER_CONFIRMED` vaut exactement `true` après vérification personnelle du Free tier et de l'absence de compte Cloud Billing lié.
-- Le secret `GEMINI_API_KEY` est configuré.
+- Le secret `GEMINI_API_KEY_DEUX` (préféré) ou `GEMINI_API_KEY` (compatibilité historique) est configuré.
 - La variable `APP_ID` et le secret `APP_PRIVATE_KEY` sont configurés. Le GitHub App doit disposer de `Contents: write`, `Issues: write`, `Pull requests: write` et `Actions: read` : les trois premières permissions permettent de créer des branches/PR et de publier le suivi, la dernière permet à l'agent de lire les exécutions CI et les journaux d'échec.
 - Les rulesets `main`/`dev` protègent les branches concernées. L'agent ne reçoit aucun droit de fusion, de modification des paramètres, de force-push ou de suppression.
 

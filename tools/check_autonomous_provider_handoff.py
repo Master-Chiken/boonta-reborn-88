@@ -395,7 +395,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 for required in (
     "permissions:\n      contents: read\n      issues: read",
     "path: 'docs/automation/task-ledger-summary.json'",
-    "ledgerSummary.schema_version !== 1",
+    "ledgerSummary.schema_version !== 2",
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
     "ledgerSummary.policy?.max_active_tasks !== 1",
     "new Set(taskIds).size !== taskIds.length",
@@ -449,6 +449,39 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
 
+# Autonomous report identity and branch must match the exact task selected by preflight.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "SELECTED_TASK_ID:",
+        "SELECTED_TASK_TARGET_BRANCH:",
+        "reportedTaskId !== selectedTaskId",
+        "evidenceBaseMatch[1] !== selectedTaskTargetBranch",
+        "BOONTA_CYCLE_TASK_ID: ",
+        "taskMarkers = new Set((pr.body || '').split",
+        "taskMarkers.has('BOONTA_TASK_ID: ' + selectedTaskId)",
+        "taskMarkers.has('BOONTA_TASK_TARGET_BRANCH: ' + selectedTaskTargetBranch)",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} report validator is missing selected-task integrity check {required!r}")
+for label, prompt in (
+    ("Gemini", gemini_prompt),
+    ("OpenRouter", openrouter),
+    ("Groq", groq),
+):
+    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
+        errors.append(f"{label} report instructions must require the exact selected task ID")
+    if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
+        errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
+
+# Reject doubled shell escapes in fallback prompt construction.
+for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
+    prompt_lines = [
+        line for line in workflow.splitlines()
+        if line.lstrip().startswith("PROMPT=") or line.lstrip().startswith("PROMPT+=")
+    ]
+    if any((chr(92) * 2 + "n") in line for line in prompt_lines):
+        errors.append(f"{label} prompt handoff contains a literal double-escaped newline")
+
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 settings_marker = "          settings: |-\n"
 settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
@@ -476,6 +509,6 @@ if errors:
     sys.exit(1)
 
 print("Autonomous provider handoff checks passed.")
-print("- At most one provider can invoke a model in a workflow run.")
+print("- At most one model provider invocation is allowed per workflow run.")
 print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
 print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")

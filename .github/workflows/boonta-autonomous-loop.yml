@@ -51,6 +51,9 @@ jobs:
     outputs:
       task_ready: ${{ steps.check.outputs.task_ready }}
       task_id: ${{ steps.check.outputs.task_id }}
+      task_title: ${{ steps.check.outputs.task_title }}
+      task_context: ${{ steps.check.outputs.task_context }}
+      task_target_branch: ${{ steps.check.outputs.task_target_branch }}
       task_reason: ${{ steps.check.outputs.task_reason }}
       gemini_active: ${{ steps.check.outputs.gemini_active }}
       openrouter_active: ${{ steps.check.outputs.openrouter_active }}
@@ -91,7 +94,7 @@ jobs:
             }
             const ledgerSummary = JSON.parse(Buffer.from(ledgerFile.content, 'base64').toString('utf8'));
             if (
-              ledgerSummary.schema_version !== 1 ||
+              ledgerSummary.schema_version !== 2 ||
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
@@ -111,8 +114,11 @@ jobs:
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
+              typeof task.question_excerpt === 'string' && task.question_excerpt.trim() &&
+              Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0 &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
-              Array.isArray(task.platform_scope) && task.platform_scope.length > 0
+              Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
+              ['main', 'dev'].includes(task.target_branch)
             );
             let selectedTask = null;
             let taskReason = '';
@@ -139,8 +145,31 @@ jobs:
               taskReason = 'no eligible active task or approved post-cooldown activation task exists';
             }
             const taskReady = Boolean(selectedTask);
+            const taskContext = taskReady ? [
+              'Owner-authorized scheduled loop runs autonomously without asking for another continue message.',
+              'AUTHORITATIVE SELECTED TASK — use this exact task; do not substitute another queue item.',
+              'Task ID: ' + selectedTask.task_id,
+              'Title: ' + selectedTask.title,
+              'Target branch: ' + selectedTask.target_branch,
+              'Queue: ' + (selectedTask.queue || 'unspecified'),
+              'Platform/scope: ' + selectedTask.platform_scope.join(', '),
+              'Question: ' + selectedTask.question_excerpt,
+              'Acceptance criteria (' + selectedTask.acceptance_criteria_total + ' total; compact index shows up to five):',
+              ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
+              'Next action: ' + selectedTask.next_action_excerpt,
+              'Before editing, confirm this exact task ID/title/target branch remains eligible in the compact main-branch summary. If details are insufficient, read only this task record; do not retrieve full issue histories or unrelated tasks.',
+              'If acceptance_criteria_total exceeds the compact excerpts shown, read only this matching task object in the canonical ledger and satisfy every acceptance criterion before coding.',
+              'Keep the exact target branch. Never promote research findings into gameplay edits or treat PC/N64/Dreamcast behavior as GameCube/Wii proof.',
+              'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.'
+            ].join('\n') : '';
+            if (taskReady && taskContext.length > 2500) {
+              throw new Error('Selected task context exceeds the bounded 2,500-character handoff budget.');
+            }
             core.setOutput('task_ready', String(taskReady));
             core.setOutput('task_id', selectedTask?.task_id || '');
+            core.setOutput('task_title', selectedTask?.title || '');
+            core.setOutput('task_context', taskContext);
+            core.setOutput('task_target_branch', selectedTask?.target_branch || '');
             core.setOutput('task_reason', taskReason);
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
@@ -170,6 +199,7 @@ jobs:
                 ['Groq Free', results.groq],
                 ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
+                ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
               ])
               .addRaw('Read-only checks: issue #226 cooldown comments and the compact main-branch task ledger. No provider starts unless exactly one eligible task is confirmed.')
               .write();
@@ -195,14 +225,12 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
-      task_title: "Boonta Reborn autonomous work cycle"
-      task_description: >-
-        Use the compact ledger summary and this bounded owner brief only; do not fetch full append-only issue bodies/comments for #156, #226 or #279.
-        Keep AUTOMATION-LEDGER-ACTIVATION as the only unresolved activation task until a real provider invocation produces a validated report plus a cycle-fresh PR, or a precise verified blocker. Never start a competing writer.
-        Once activation is demonstrated, follow the latest #226 Phase 1: add only missing, source-verified tool/license/utility evidence; consume #279's PC/N64 comparisons rather than duplicating them; map target behavior as OBSERVED, INFERRED, HYPOTHESIS or UNKNOWN; evaluate GX/libogc graphics, audio and frame-rate/physics gaps; finish a concise reuse/convert/adapt/reimplement decision. PR #282 is the completed broad inventory. Keep commercial ROM/disc/binary/extracted data local.
-        Do not start new gameplay features or visible-Dolphin acceptance during Phase 1. After Phase 1, reuse the rival racing implementation already integrated by PR #327 on main at merge commit 69deb6778f9383887118803428e7014686865a83. PRs #317, #318 and #319 were superseded and closed. Do not reopen, replay or recreate that chain. Then focus on end-to-end race progression in #226. Revisit #274 only for a demonstrated dependency. Preserve the clean-room boundary, €0/free-tier-only rule, one-writer constraint, exact-head checks and human review. Documentation targets main; gameplay targets dev. Never change secrets, billing, permissions, branch protection or merge policy. Never auto-merge, force-push, delete branches or upload proprietary binaries.
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
       additional_context: >-
-        Owner-authorized scheduled or manual main-branch loop. Select one bounded task from the current compact queue without asking for another continue message. Use only one provider invocation in this workflow run; a fallback may run only on a later eligible scheduled cycle after the earlier provider's cooldown is active. Keep all existing €0, provenance, exact-head and no-merge safeguards.
+        Owner-authorized scheduled or manual main-branch loop. The selected task ID, title, acceptance criteria and target branch are supplied by the read-only preflight and must remain identical across providers. Use only one provider invocation per workflow run; fallback is allowed only on a later eligible run after the earlier provider cooldown is already active. Budget €0; preserve provenance, exact-head checks and human review. Never merge or change secrets, billing, permissions, branch protection or merge policy.
     secrets: inherit
 
   openrouter-fallback:
@@ -230,6 +258,10 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
   groq-fallback:
@@ -259,6 +291,10 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
   cycle-summary:
@@ -279,6 +315,8 @@ jobs:
           TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
           TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
           TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
+          TASK_TITLE: ${{ needs.provider-cooldowns.outputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
           TASK_REASON: ${{ needs.provider-cooldowns.outputs.task_reason }}
           EVENT_NAME: ${{ github.event_name }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
@@ -351,7 +389,7 @@ jobs:
             echo "- Readiness: **${READINESS_RESULT:-unknown}**"
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
-            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none})"
+            echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none}: ${TASK_TITLE:-untitled}; target ${TASK_TARGET_BRANCH:-unknown})"
             if [[ "${TASK_READY:-false}" != "true" ]]; then
               echo "- Provider calls skipped before inference: ${TASK_REASON:-canonical queue eligibility was not confirmed}."
             fi

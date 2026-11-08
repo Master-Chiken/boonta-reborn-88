@@ -28,7 +28,7 @@ jobs:
         id: free_tier_guard
         shell: bash
         env:
-          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'
           GEMINI_FREE_TIER_CONFIRMED: '${{ vars.GEMINI_FREE_TIER_CONFIRMED }}'
         run: |-
           set -euo pipefail
@@ -45,7 +45,7 @@ jobs:
             {
               echo "## Gemini model call skipped safely"
               echo
-              echo "No Gemini API request was sent because the GEMINI_API_KEY repository secret is missing."
+              echo "No Gemini API request was sent because the GEMINI_API_KEY_DEUX (preferred) or GEMINI_API_KEY repository secret is missing."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "allowed=true" >> "$GITHUB_OUTPUT"
@@ -79,7 +79,7 @@ jobs:
           GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
         with:
           # API-key-only Gemini API configuration. Do not add Vertex/Cloud billing fallbacks.
-          gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'
           gemini_cli_version: '${{ vars.GEMINI_CLI_VERSION }}'
           gemini_debug: '${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}'
           gemini_model: 'gemini-3.8-flash'
@@ -189,7 +189,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issueNumber,
-              body: 'Gemini was not called. The workflow requires the repository Actions variable GEMINI_FREE_TIER_CONFIRMED to equal the exact string true, plus a configured GEMINI_API_KEY. Before setting the variable, verify in Google AI Studio that this project is on the Free tier and is not linked to Cloud Billing. The variable is an owner attestation, not an automated billing check. No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
+              body: 'Gemini was not called. The workflow requires the repository Actions variable GEMINI_FREE_TIER_CONFIRMED to equal the exact string true, plus a configured GEMINI_API_KEY_DEUX (preferred) or GEMINI_API_KEY. Before setting the variable, verify in Google AI Studio that this project is on the Free tier and is not linked to Cloud Billing. The variable is an owner attestation, not an automated billing check. No paid fallback was attempted. [Workflow log](' + process.env.RUN_URL + ')'
             });
 
       - name: 'Publish Gemini response to the issue or PR'

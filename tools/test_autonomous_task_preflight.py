@@ -44,11 +44,24 @@ if not script or "const taskBlockedActive =" not in script:
     fail("extracted task preflight script is empty or incomplete")
 
 
-def task(task_id: str, status: str, *, complete: bool = True) -> dict:
+def task(
+    task_id: str,
+    status: str,
+    *,
+    complete: bool = True,
+    target_branch: str = "main",
+) -> dict:
     value = {
         "task_id": task_id,
         "title": "Offline fixture task",
         "status": status,
+        "target_branch": target_branch,
+        "question_excerpt": "Can the selected task be executed safely?",
+        "acceptance_criteria_total": 2,
+        "acceptance_criteria_excerpt": [
+            "Use the canonical source of truth",
+            "Verify the exact target branch",
+        ],
         "next_action_excerpt": "Complete one small, source-verified automation task.",
         "platform_scope": ["automation"],
         "pr_url": "",
@@ -62,6 +75,7 @@ def task(task_id: str, status: str, *, complete: bool = True) -> dict:
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
+invalid_target = task("AUTOMATION-TEST-INVALID-TARGET", "active", target_branch="feature")
 represented_active = task("AUTOMATION-TEST-REPRESENTED", "active")
 represented_active["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/999"
 represented_active["head_sha"] = "0123456789abcdef0123456789abcdef01234567"
@@ -116,6 +130,15 @@ cases = [
         "reason_contains": "incomplete",
     },
     {
+        "name": "unsupported task target branch fails closed",
+        "tasks": [invalid_target],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "reason_contains": "incomplete",
+    },
+    {
         "name": "three same-day provider cooldowns are detected",
         "tasks": [valid_active],
         "marker_day_offset": None,
@@ -151,10 +174,10 @@ cases = [
         "expected_error": "duplicate task IDs",
     },
     {
-        "name": "unsupported summary schema fails closed",
+        "name": "legacy summary schema fails closed",
         "tasks": [valid_active],
         "marker_day_offset": None,
-        "schema_version": 2,
+        "schema_version": 1,
         "expected_error": "schema or one-active-task policy",
     },
 ]
@@ -193,7 +216,7 @@ async function runCase(testCase) {{
     }});
   }}
   const ledger = {{
-    schema_version: testCase.schema_version === undefined ? 1 : testCase.schema_version,
+    schema_version: testCase.schema_version === undefined ? 2 : testCase.schema_version,
     source: "docs/automation/task-ledger.json",
     updated_at: todayUtc,
     policy: {{ max_active_tasks: 1 }},
@@ -260,6 +283,20 @@ async function runCase(testCase) {{
     }}
     if (outputs.task_id !== testCase.expected_task_id) {{
       throw new Error(testCase.name + ": expected task_id=" + testCase.expected_task_id + ", got " + outputs.task_id);
+    }}
+    if (testCase.expected_ready) {{
+      const selected = testCase.tasks.find((item) => item.task_id === testCase.expected_task_id);
+      if (outputs.task_title !== selected.title || outputs.task_target_branch !== selected.target_branch) {{
+        throw new Error(testCase.name + ": selected task title/target branch were not propagated");
+      }}
+      for (const expectedText of [selected.task_id, selected.title, selected.question_excerpt,
+        ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt]) {{
+        if (!String(outputs.task_context).includes(expectedText)) {{
+          throw new Error(testCase.name + ": task context omitted " + expectedText);
+        }}
+      }}
+    }} else if (outputs.task_title !== "" || outputs.task_target_branch !== "" || outputs.task_context !== "") {{
+      throw new Error(testCase.name + ": unselected task context must be empty");
     }}
     if (outputs.task_blocked_active !== String(testCase.expected_blocked)) {{
       throw new Error(testCase.name + ": expected task_blocked_active=" + testCase.expected_blocked + ", got " + outputs.task_blocked_active);

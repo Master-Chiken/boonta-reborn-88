@@ -138,15 +138,28 @@ else:
         "task_id:",
         "task_reason:",
         "path: 'docs/automation/task-ledger-summary.json'",
+        "ledgerSummary.schema_version !== 2",
         "ledgerSummary.policy?.max_active_tasks !== 1",
         "const usableTask = (task) => Boolean(",
+        "typeof task.question_excerpt === 'string' && task.question_excerpt.trim()",
+        "Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0",
+        "['main', 'dev'].includes(task.target_branch)",
         "!taskBlockedActive",
         "core.setOutput('task_ready', String(taskReady))",
+        "core.setOutput('task_title', selectedTask?.title || '')",
+        "core.setOutput('task_context', taskContext)",
+        "core.setOutput('task_target_branch', selectedTask?.target_branch || '')",
     ):
         if required not in cooldown_job:
             errors.append(f"Read-only provider cooldown preflight is missing {required!r}")
 if "needs: [readiness, provider-cooldowns]" not in autonomous:
     errors.append("Gemini job must depend on the global provider cooldown preflight")
+for field in ("task_id", "task_title", "task_target_branch"):
+    expected = f"{field}: ${{{{ needs.provider-cooldowns.outputs.{field} }}}}"
+    if autonomous.count(expected) != 3:
+        errors.append(f"All three providers must receive the same selected task field {field!r}")
+if "task_description: ${{ needs.provider-cooldowns.outputs.task_context }}" not in autonomous:
+    errors.append("Gemini must receive the compact selected-task question, acceptance criteria and next action")
 if autonomous.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require one eligible ledger task before invocation")
 if "needs.provider-cooldowns.outputs.gemini_active != 'true'" not in autonomous:
@@ -531,8 +544,18 @@ for label, content in (
             errors.append(f"Forbidden legacy/paid-auth setting {marker!r} in {label}")
 
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
-    if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
-        errors.append(f"{label} must use only the GEMINI_API_KEY secret")
+    expected_gemini_key_binding = (
+        "gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'"
+    )
+    if expected_gemini_key_binding not in content:
+        errors.append(f"{label} must use its explicitly allowed Gemini API-key binding")
+    if label == "gemini-plan-execute.yml" and (
+        "GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'" not in content
+        or "GEMINI_API_KEY_DEUX" not in readiness
+        or "GEMINI_API_KEY_DEUX" not in invoke
+        or "GEMINI_API_KEY_DEUX" not in daily
+    ):
+        errors.append("Autonomous Gemini guard, CLI and readiness must prefer GEMINI_API_KEY_DEUX with legacy fallback")
     if (
         "id: free_tier_guard" not in content
         or "GEMINI_FREE_TIER_CONFIRMED" not in content
@@ -610,8 +633,8 @@ if "issues: write" not in daily:
 for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', '"delete_file"', '"create_pull_request"', '"merge_pull_request"'):
     if forbidden in daily:
         errors.append(f"Project coordinator must not expose write tool {forbidden}")
-if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
-    errors.append("Project coordinator must use the existing Gemini API-key secret only")
+if "gemini_api_key: ${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}" not in daily:
+    errors.append("Project coordinator must prefer GEMINI_API_KEY_DEUX with legacy fallback")
 if (
     'GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}' not in daily
     or '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' not in daily
@@ -873,27 +896,57 @@ if "Do not create another route-runtime branch" not in read("docs/PROJECT_OPERAT
 if "RE-002 is active only as read-only comparative evidence" not in read("docs/PROJECT_OPERATING_RULES.md"):
     errors.append("Operating rules must keep RE-002 limited to read-only comparative evidence")
 
-# Keep all autonomous writer prompts aligned with the newest #226 owner direction.
-phase1_prompts = (
+# Every autonomous provider must consume the one exact task selected by the global preflight.
+dynamic_task_prompts = (
     ("Gemini", autonomous_prompt),
     ("OpenRouter", openrouter_fallback),
     ("Groq", groq_fallback),
 )
-for label, prompt in phase1_prompts:
-    for phrase in (
-        "2026-11-06",
-        "Phase 1",
-        "AUTOMATION-LEDGER-ACTIVATION",
-        "#279",
-        "PR #327",
-        "69deb6778f9383887118803428e7014686865a83",
-        "Do not reopen, replay or recreate that chain",
-        "PR #274 is not an automatic next step",
+for label, prompt in dynamic_task_prompts:
+    for required in (
+        "AUTHORITATIVE SELECTED TASK",
+        "task-ledger-summary.json",
+        "acceptance_criteria_excerpt",
+        "Do not substitute another task",
+        "€0",
     ):
-        if phrase not in prompt:
-            errors.append(f"{label} autonomous prompt is missing current owner-order safeguard: {phrase!r}")
-    if "After Phase 1" not in prompt and "After the Phase 1" not in prompt:
-        errors.append(f"{label} autonomous prompt must defer gameplay work until Phase 1 is complete")
+        if required not in prompt:
+            errors.append(f"{label} autonomous prompt is missing dynamic selected-task safeguard {required!r}")
+    if label == "Gemini":
+        for required in ("task_id", "task_title", "task_description", "task_target_branch"):
+            if required not in prompt:
+                errors.append(f"Gemini autonomous prompt is missing selected-task context key {required!r}")
+    else:
+        for required in ("TASK_ID", "TASK_TITLE", "TASK_TARGET_BRANCH"):
+            if required not in prompt:
+                errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
+    if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
+        errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
+for required in (
+    "TASK_ID: '${{ inputs.task_id }}'",
+    "TASK_TITLE: '${{ inputs.task_title }}'",
+    "TASK_DESCRIPTION: '${{ inputs.task_description }}'",
+    "TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'",
+    "task_id: $task_id",
+    "task_target_branch: $task_target_branch",
+):
+    if required not in execute:
+        errors.append(f"Gemini workflow context is missing selected-task binding {required!r}")
+for label, workflow in (
+    ("OpenRouter", openrouter_fallback),
+    ("Groq", groq_fallback),
+):
+    for required in (
+        "task_id:",
+        "task_title:",
+        "task_target_branch:",
+        "TASK_ID: ${{ inputs.task_id }}",
+        "TASK_TITLE: ${{ inputs.task_title }}",
+        "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+        "Use exactly this task from docs/automation/task-ledger-summary.json",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} reusable workflow is missing selected-task binding {required!r}")
 
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
