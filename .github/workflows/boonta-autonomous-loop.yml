@@ -261,6 +261,7 @@ jobs:
       task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
   groq-fallback:
@@ -293,6 +294,7 @@ jobs:
       task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
   cycle-summary:
