@@ -69,6 +69,26 @@ class MipsCallGraphTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_call_graph(bytes(0x24), {"bad": symbol})
 
+    def test_reports_ambiguous_symbol_address_without_choosing_a_name(self) -> None:
+        rom = bytearray(0x40)
+        put_word(rom, 0x00, jal(0x80000020))
+        caller = FunctionSymbol("caller", 0x80000000, 0x00, 4, "code")
+        target_a = FunctionSymbol("target_a", 0x80000020, 0x20, 4, "code")
+        target_b = FunctionSymbol("target_b", 0x80000020, 0x20, 4, "code")
+
+        result = build_call_graph(
+            bytes(rom),
+            {"caller": caller, "target_a": target_a, "target_b": target_b},
+        )
+
+        self.assertEqual(result["ambiguous_target_count"], 1)
+        self.assertEqual(result["ambiguous_target_vrams"], ["0x80000020"])
+        self.assertEqual(result["resolved_edges"], [])
+        self.assertEqual(
+            result["direct_call_sites"][0]["target_names"],
+            ["target_a", "target_b"],
+        )
+
 
 class MipsStringScannerTests(unittest.TestCase):
     def test_extracts_and_categorizes_local_strings(self) -> None:
