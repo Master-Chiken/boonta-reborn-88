@@ -334,6 +334,12 @@ jobs:
                 return;
               }
               const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
+              const taskMarkers = new Set((pr.body || '').split(/\r?\n/).map((line) => line.trim()));
+              if (!taskMarkers.has('BOONTA_TASK_ID: ' + selectedTaskId) ||
+                  !taskMarkers.has('BOONTA_TASK_TARGET_BRANCH: ' + selectedTaskTargetBranch)) {
+                core.setFailed('Cycle PR body must identify the exact selected task ID and target branch.');
+                return;
+              }
               const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
               const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
               const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
