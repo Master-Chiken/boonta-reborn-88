@@ -146,6 +146,7 @@ jobs:
             }
             const taskReady = Boolean(selectedTask);
             const taskContext = taskReady ? [
+              'Owner-authorized scheduled loop runs autonomously without asking for another continue message.',
               'AUTHORITATIVE SELECTED TASK — use this exact task; do not substitute another queue item.',
               'Task ID: ' + selectedTask.task_id,
               'Title: ' + selectedTask.title,
