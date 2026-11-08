@@ -49,7 +49,7 @@ jobs:
           fi
           echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"
           [[ "${GEMINI_FREE_TIER_CONFIRMED:-}" == "true" ]] || missing+=("GEMINI_FREE_TIER_CONFIRMED must be exactly true after the owner verifies Free tier and no linked Cloud Billing account")
-          [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY secret is missing")
+          [[ -n "${GEMINI_API_KEY:-}" ]] || missing+=("GEMINI_API_KEY_DEUX (preferred) or legacy GEMINI_API_KEY secret is missing")
           [[ -n "${APP_ID:-}" ]] || missing+=("APP_ID variable is missing")
           [[ -n "${APP_PRIVATE_KEY:-}" ]] || missing+=("APP_PRIVATE_KEY secret is missing")
 
