@@ -850,9 +850,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/research/pc/SW_RACER_RE/LICENSE",
         "https://github.com/Master-Chiken/SW_RACER_RE/pull/18",
         "https://github.com/Master-Chiken/SW_RACER_RE/pull/22",
-        "https://github.com/Master-Chiken/SW_RACER_RE/tree/archive/branch-heads-20261019"
+        "https://github.com/Master-Chiken/SW_RACER_RE/tree/archive/branch-heads-20261019",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/3a43ae68fd76e813e59c2bf1b0e8bff6a61b962f",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/aa540828258ddfbb4382df84c1f4ae245e8c1d2f/scripts/convert_track_pack.py",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/2af4a28696b5d47b3309e075d705b9a52628cc07/scripts/extract_raw_asset.py",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/31697dfa23bc003fbff1f7369eef0b5ca52dd483/scripts/gc_content_store.py",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/dd554c3e6e4bb423477d35409ec5a783e59f4f51/scripts/validate_raw_model.py"
       ],
-      "next_action": "Triage the 42 upstream-only commits in small batches. Start with loose-model replacement, GLTF input validation, discrete spline/texture extraction, custom-track manifests, virtual asset blocks and content-store safety. For each batch, compare exact patches and tests against the pinned fork snapshot, then import only safe non-vendor text/source changes and update the evidence record.",
+      "next_action": "Third upstream batch triaged and documented: retain only the content-addressed-store, manifest, round-trip validation and report-only GC design lessons; do not copy/run PC block extractors or transplant RAWM/RAWS/RAWT/PE assumptions. Continue the remaining 42-commit/path inventory in small batches, prioritizing first-party non-vendor code and tests; record explicit accept/reference/reject decisions and preserve fork-specific policy helpers.",
       "pr_url": null,
       "head_sha": null,
       "updated_at": "2026-11-08"
