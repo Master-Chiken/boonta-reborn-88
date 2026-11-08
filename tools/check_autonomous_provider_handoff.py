@@ -449,65 +449,6 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
 
-# OpenRouter/Groq append the selected-task context with real Bash newlines, not literal escaped text.
-for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
-    prompt_lines = [
-        line for line in workflow.splitlines()
-        if line.lstrip().startswith("PROMPT=") or line.lstrip().startswith("PROMPT+=")
-    ]
-    if any((chr(92) * 2 + "n") in line for line in prompt_lines):
-        errors.append(f"{label} prompt handoff uses literal escaped backslash-n instead of a Bash newline")
-    expected = 'PROMPT="${PROMPT}"for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
-    for required in (
-        "SELECTED_TASK_ID:",
-        "SELECTED_TASK_TARGET_BRANCH:",
-        "reportedTaskId !== selectedTaskId",
-        "evidenceBaseMatch[1] !== selectedTaskTargetBranch",
-        "BOONTA_CYCLE_TASK_ID: ",
-    ):
-        if required not in workflow:
-            errors.append(f"{label} report validator is missing selected-task integrity check {required!r}")
-for label, prompt in (
-    ("Gemini", gemini_prompt),
-    ("OpenRouter", openrouter),
-    ("Groq", groq),
-):
-    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
-        errors.append(f"{label} report instructions must require the exact selected task ID")
-
-# Gemini Free-tier TPM protection: one model attempt and three session turns.
-settings_marker = "          settings: |-\n"
-settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
-if settings_marker not in gemini or settings_end_marker not in gemini:
-    errors.append("Gemini explicit bounded settings block is missing")
-else:
-    try:
-        settings_text = gemini.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
-        settings = json.loads(settings_text)
-        if settings.get("general", {}).get("maxAttempts") != 1:
-            errors.append("Gemini must use one model attempt per invocation")
-        if settings.get("model", {}).get("maxSessionTurns") != 3:
-            errors.append("Gemini must use a three-turn session ceiling")
-    except (json.JSONDecodeError, TypeError) as exc:
-        errors.append(f"Gemini bounded settings JSON is invalid: {exc}")
-if "exactly 1 attempt per invocation" not in budget or "maximum 3 session turns" not in budget:
-    errors.append("Shared context budget must document Gemini's one-attempt/three-turn cap")
-if "task-eligibility preflight" not in budget or "one eligible task" not in budget:
-    errors.append("Shared context budget must document the pre-inference task gate")
-
-if errors:
-    print("Autonomous provider handoff checks FAILED:")
-    for error in errors:
-        print(f" - {error}")
-    sys.exit(1)
-
-print("Autonomous provider handoff checks passed.")
-print("- At most one provider can invoke a model in a workflow run.")
-print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
-print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
- + "'" + (chr(92) + "n") * 2 + "AUTHORITATIVE SELECTED TASK" + chr(92) + "n" + "'"
-    if expected not in workflow:
-        errors.append(f"{label} prompt must append selected-task context using actual Bash newline escapes")
 # Autonomous report identity and branch must match the exact task selected by preflight.
 for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
     for required in (
