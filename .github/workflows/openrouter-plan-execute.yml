@@ -241,8 +241,7 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
-          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
-          AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
         run: |
           set -euo pipefail
           repo_root=''
@@ -278,7 +277,8 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
-          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
+          AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
         run: |
           set -euo pipefail
           set +x
