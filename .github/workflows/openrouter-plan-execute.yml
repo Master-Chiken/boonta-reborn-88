@@ -307,7 +307,7 @@ jobs:
 
           AUTHORITATIVE SELECTED TASK
           - The caller passes the single task selected by the global read-only preflight. Require TASK_ID, TASK_TITLE and TASK_TARGET_BRANCH; fail closed before inference if any are absent or the branch is not main/dev.
-          - Read docs/automation/task-ledger-summary.json once. Locate exactly TASK_ID and verify its title and target_branch match the supplied values, and that the task has no existing PR/head. Do not substitute another task or let dated Phase plans override this selection. Use its question_excerpt, acceptance_criteria_excerpt and next_action_excerpt as the scope; read only that task's full ledger record if required.
+          - Read docs/automation/task-ledger-summary.json once. Locate exactly TASK_ID and verify its title and target_branch match the supplied values, and that the task has no existing PR/head. Do not substitute another task or let dated Phase plans override this selection. Use its question_excerpt, acceptance_criteria_excerpt and next_action_excerpt as the scope; read only that task's full ledger record if required. When the full criterion count exceeds the excerpts, read only that task's ledger object and satisfy every criterion.
           - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast comparison. Never treat PC/N64/Dreamcast facts as GameCube/Wii proof. PR #282 is the completed broad inventory; PR #327's rival implementation is already integrated. Do not recreate superseded PRs #317/#318/#319. Revisit #274 only for a demonstrated dependency.
           - Keep ROMs, discs, binaries and extracted commercial data local. €0 only. Never use paid routes, alter provider settings/secrets/billing, or copy AGPL/ROM-derived code or proprietary assets.
 
@@ -335,9 +335,7 @@ jobs:
             echo "::error::Global preflight did not pass a complete selected task; no OpenRouter request was sent."
             exit 2
           fi
-          PROMPT="${PROMPT}"
-          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
-          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+          PROMPT="${PROMPT}"          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Execute only the task selected by the global preflight and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
@@ -659,10 +657,8 @@ jobs:
             } else {
               core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
-\n\nAUTHORITATIVE SELECTED TASK\n'
-          PROMPT+="Task ID: ${TASK_ID}"
-          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
-          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+\\n\\nAUTHORITATIVE SELECTED TASK\\n'
+          PROMPT+="Task ID: ${TASK_ID}"          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Continue the current activation task and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
@@ -984,10 +980,8 @@ jobs:
             } else {
               core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
-\n'
-          PROMPT+="Task title: ${TASK_TITLE}"
-          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
-          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+\\n'
+          PROMPT+="Task title: ${TASK_TITLE}"          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Continue the current activation task and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
@@ -1309,10 +1303,8 @@ jobs:
             } else {
               core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
-\n'
-          PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"
-          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
-          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+\\n'
+          PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Continue the current activation task and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
@@ -1634,7 +1626,7 @@ jobs:
             } else {
               core.info('OpenRouter fallback passed all execution postconditions: gate, actual invocation, and validated report.');
             }
-\n'
+\\n'
           PROMPT+="Use exactly this task from docs/automation/task-ledger-summary.json; do not select another."
 
           PROMPT="${PROMPT}
