@@ -266,7 +266,7 @@ jobs:
             "enabled_providers": ["openrouter"],
             "agent": {
               "build": {
-                "steps": 6
+                "steps": 3
               }
             },
             "mcp": {
@@ -280,7 +280,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -315,8 +315,10 @@ jobs:
           - If the context explicitly says more than five acceptance criteria exist, fetch only that task's matching object from docs/automation/task-ledger.json at ref main through github_get_file_contents; do not fetch the full issue or backlog.
           
           PLATFORM AND REUSE
+          - Read docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md once and obey its provider/token/timeout budget.
+          - pull_request_read is the supported PR read tool; github_get_pull_request does not exist.
           - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence; never infer GameCube/Wii behavior from those platforms.
-          - PR #282 is the completed broad inventory. PR #327's rival racing implementation is already integrated in main at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded; never recreate them. Revisit #274 only for a demonstrated dependency.
+          - PR #282 is the completed broad inventory. PR #327's rival racing implementation is already integrated in main at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. Revisit #274 only for a demonstrated dependency.
           - Follow docs/REVERSE_ENGINEERING_FIRST.md before any recreation: DISCOVER, VERIFY platform/version and license/provenance, then EXTRACT/CONVERT/REUSE, INTEGRATE and TEST. Record unknowns rather than guessing.
           
           EXECUTION
