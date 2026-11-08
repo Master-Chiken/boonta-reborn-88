@@ -64,6 +64,17 @@ with tempfile.TemporaryDirectory() as temp:
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
 
+    try:
+        MODULE.build_context(
+            root, "AUTOMATION-LEDGER-ACTIVATION",
+            "Activate and validate persistent autonomous task tracking",
+            "main", context, max_task_context=250,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "truncates required" in str(exc)
+    else:
+        raise AssertionError("Expected a tight context budget to reject truncated required task excerpts")
+
     for kwargs in (
         {"target_branch": "dev"},
         {"task_title": "Wrong title"},
@@ -98,4 +109,4 @@ with tempfile.TemporaryDirectory() as temp:
     else:
         raise AssertionError("Expected a legacy schema to fail closed")
 
-print("PASS: schema-v2 task identity, target branch, task excerpts and fail-closed cases")
+print("PASS: schema-v2 identity, target branch, required excerpts and truncation fail-closed cases")
