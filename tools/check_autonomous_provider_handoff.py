@@ -184,7 +184,7 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
     ("OpenRouter", openrouter, "1,500 tokens"),
-    ("Groq", groq, "800 tokens"),
+    ("Groq", groq, "300 tokens"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
