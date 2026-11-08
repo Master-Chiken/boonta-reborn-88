@@ -35,6 +35,16 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 
 - **Valid BLOCKED report:** do not mark the provider as failed. Persist a separate task-level UTC-day backoff marker so scheduled cycles do not spend another model call repeating the same blocked task. A validated PROGRESS report clears that marker. Owner-authorized manual dispatch or a qualifying main-branch push can re-evaluate earlier; the next UTC day also rechecks automatically.
 
+## Preloaded verified context for OpenRouter Free
+
+The reusable OpenRouter workflow now runs `tools/build_autonomous_context.py` after checkout/PR snapshot and before invoking OpenCode. The preparation step resolves the actual checkout root (including the nested GitHub Actions workspace layout), reads the reverse-engineering policy, this budget and the compact task summary once, validates the single-writer ledger contract, and emits a deterministic snapshot capped at 1,200 characters.
+
+The workflow appends that snapshot to the model prompt and passes the resolved repository root to OpenCode. The agent is explicitly instructed not to spend its three build steps reopening those policy files or searching for their paths. Only the task-specific evidence still needs to be retrieved, under the normal 1,500-token budget.
+
+If a required policy/summary file is missing, the compact ledger is malformed, the schema/policy is unexpected, or more than one actionable task is present, preparation fails closed **before model inference**. The failed preparation is not a provider invocation and must not create a provider failure cooldown. The report validator is gated on successful preparation and successful invocation.
+
+This preloaded-context path currently applies to **OpenRouter Free** only. Gemini and Groq retain their existing bounded prompt/tool budgets; do not claim they use the preloader until their own workflows pass equivalent exact-head tests.
+
 ## Reverse-engineering and provenance
 
 Before implementation, inspect existing Boonta source, generated outputs, exporters, parsers, fixtures, tests, docs and directly related PRs. Prefer DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST. Record exact source revision, platform/version, license/provenance, recovery decision and unknowns. Keep PC, N64, Dreamcast and GameCube/Wii behavior separate. Never send commercial game data or unclear-provenance material to hosted agents or public GitHub.
