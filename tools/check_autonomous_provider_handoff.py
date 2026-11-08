@@ -444,8 +444,10 @@ for required in (
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",
     "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
-    "const openPullRequests = await github.paginate(github.rest.pulls.list",
+    "const { data: openPullRequests } = await github.rest.pulls.list({",
     "state: 'open'",
+    "page: 1",
+    "openPullRequests.length >= 100",
     "const openTaskPullRequest = (task) =>",
     "const markerLine = 'BOONTA_TASK_ID: ' + task.task_id",
     "const activationTaskOpenPr = openTaskPullRequest(activationTask)",
@@ -460,8 +462,10 @@ if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
-if 'options.state === "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests:
-    errors.append("Offline task-preflight tests must enforce the bounded open-PR query")
+if '"name": "100 open PRs fail closed at the bounded inventory ceiling"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove the open-PR inventory ceiling fails closed")
+if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests or "options.page !== 1" not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must enforce the bounded one-page open-PR query")
 
 # The blocked-task marker is referenced during selection. It must be computed
 # from today's bot comments before that first reference, not later in the script.
