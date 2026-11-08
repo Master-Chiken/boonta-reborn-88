@@ -15,6 +15,8 @@ FILES = {
     "gemini_prompt": ROOT / ".github/commands/gemini-autonomous-loop.toml",
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
+    "cycle_validator": ROOT / "tools/validate_autonomous_cycle_report.js",
+    "cycle_validator_tests": ROOT / "tools/test_autonomous_cycle_report.js",
 }
 
 
@@ -31,6 +33,8 @@ groq = read("groq")
 loop = read("loop")
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
+cycle_validator = read("cycle_validator")
+cycle_validator_tests = read("cycle_validator_tests")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
@@ -116,9 +120,12 @@ for label, workflow, validator_title, sync_title, failure_title in task_backoff_
     if not (0 <= validator_position < sync_position < failure_position):
         errors.append(f"{label} task backoff must follow report validation and precede provider failure cooldown")
     validator_block = workflow[validator_position:sync_position] if validator_position >= 0 and sync_position > validator_position else ""
-    for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')"):
+    for required in ("validateAutonomousCycleReport", "expectedTaskId: process.env.SELECTED_TASK_ID", "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH"):
         if required not in validator_block:
-            errors.append(f"{label} BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
+            errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator: {required!r}")
+for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')", "const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER')", "const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION')"):
+    if required not in cycle_validator:
+        errors.append(f"Shared BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
     sync_block = workflow[sync_position:failure_position] if sync_position >= 0 and failure_position > sync_position else ""
     for required in (
         "steps.validate_report.outcome == 'success'",
@@ -441,28 +448,67 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
         "state: 'open'",
         "core.setOutput('snapshot_at', snapshotAt)",
         "PRE_CYCLE_PR_SNAPSHOT_AT",
-        "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt",
-        "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]",
+        "steps.snapshot_pr_heads.outputs.heads",
+        "validateAutonomousCycleReport",
+        "snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT",
     ):
         if required not in workflow:
             errors.append(f"{label} cycle-fresh PR gate is missing {required!r}")
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
+for required in (
+    "createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime",
+    "advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead",
+    "(!createdAfterSnapshot && !advancedDuringCycle)",
+    "pr.head.sha !== exactHead",
+    "headCommit.sha !== exactHead",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared exact-head validator is missing the cycle-fresh PR gate {required!r}")
 
 # Autonomous report identity and branch must match the exact task selected by preflight.
-for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+for label, workflow, report_title in (
+    ("Gemini", gemini, "Validate autonomous cycle report contract"),
+    ("OpenRouter", openrouter, "Validate OpenRouter autonomous cycle report"),
+    ("Groq", groq, "Validate Groq autonomous cycle report"),
+):
+    report_start = workflow.find("name: " + report_title)
+    sync_start = workflow.find("name: Sync the single-task daily backoff marker", report_start)
+    report_block = workflow[report_start:sync_start] if report_start >= 0 and sync_start > report_start else ""
     for required in (
         "SELECTED_TASK_ID:",
         "SELECTED_TASK_TARGET_BRANCH:",
-        "reportedTaskId !== selectedTaskId",
-        "evidenceBaseMatch[1] !== selectedTaskTargetBranch",
-        "BOONTA_CYCLE_TASK_ID: ",
-        "taskMarkers = new Set((pr.body || '').split",
-        "taskMarkers.has('BOONTA_TASK_ID: ' + selectedTaskId)",
-        "taskMarkers.has('BOONTA_TASK_TARGET_BRANCH: ' + selectedTaskTargetBranch)",
+        "validateAutonomousCycleReport",
+        "expectedTaskId: process.env.SELECTED_TASK_ID",
+        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        "BOONTA_CYCLE_TASK_ID",
     ):
-        if required not in workflow:
-            errors.append(f"{label} report validator is missing selected-task integrity check {required!r}")
+        if required not in report_block:
+            errors.append(f"{label} report validator handoff is missing {required!r}")
+for required in (
+    "BOONTA_CYCLE_TASK_ID",
+    "taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId",
+    "targetBranchMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + expectedBase",
+    "bodyHasTaskMarker",
+    "bodyHasTargetBranchMarker",
+    "taskMarkerCount === 1",
+    "targetBranchMarkerCount === 1",
+    "evidenceBase !== expectedBase",
+    "pr.base.ref !== expectedBase",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared report validator is missing selected-task integrity check {required!r}")
+for required in (
+    "missing PR target-branch marker",
+    "duplicate PR target-branch markers",
+    "required check failed",
+    "same-name check from an untrusted app is ignored",
+    "wait for exact-head checks",
+    "dev target uses native build/host/emulator checks",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Shared report validator regression suite is missing {required!r}")
+
 for label, prompt in (
     ("Gemini", gemini_prompt),
     ("OpenRouter", openrouter),
