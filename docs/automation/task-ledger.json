@@ -865,9 +865,10 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/1d1d8a570b086dccd3984fd188aeb1ff56fe835a/dinput_hook/renderer_hook.cpp",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/90f5fd53fbdfe495e568ff823feaa221f7bcb73f/dinput_hook/camera/player_camera.cpp",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/df93631655a6b9008c85c32e3dae280d4864513a/dinput_hook/game_deltas/swrRace_delta.cpp",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/314c40ffb12048e2716a1cf7967077a66d8173c9/dinput_hook/game_deltas/stdControl_delta.c"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/314c40ffb12048e2716a1cf7967077a66d8173c9/dinput_hook/game_deltas/stdControl_delta.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/automation/task-lease-and-evidence-acceptance-20261107/research/pc/SW_RACER_RE/UPSTREAM_SYNC_STATUS.md"
       ],
-      "next_action": "Portable-systems triage now includes AI tuning, frame telemetry, audio cache, PC model replacement boundaries, camera modes, renderer static-mesh caching, gameplay-to-renderer deformation lifecycle and logical input remapping. Continue auditing the remaining upstream-only commits and overlapping fork files; preserve fork policy code and keep all PC AGPL code out of the MIT GameCube/Wii runtime. Prioritize a measurable GX performance baseline and coherent race progression.",
+      "next_action": "The exact upstream-only comparison is indexed for all 42 commits with SHA, subject and initial disposition in UPSTREAM_SYNC_STATUS.md. This is graph-level triage, not a complete function review. Next perform three-way source review of the overlapping track_manifest/track_registry/virtual_block changes against common ancestor a9863edd4caaa573f89ff634fa7d1cd6d41738ab, preserve fork-specific policy/tests, then evaluate audio/startup and GLTF changes. Keep AGPL PC code isolated from the MIT GameCube/Wii runtime; do not import vendor code or proprietary data.",
       "pr_url": null,
       "head_sha": null,
       "updated_at": "2026-11-08"
