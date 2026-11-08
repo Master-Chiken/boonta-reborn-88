@@ -87,7 +87,7 @@ class MipsStringScannerTests(unittest.TestCase):
 
     def test_respects_scan_bounds_and_minimum_length(self) -> None:
         rom = b"skip\x00short\x00Longer string\x00tail"
-        found = extract_strings(rom, 5, 22, min_length=8, min_alpha=3)
+        found = extract_strings(rom, 5, 25, min_length=8, min_alpha=3)
         self.assertEqual([item.text for item in found], ["Longer string"])
 
     def test_ignores_non_ascii_and_unterminated_strings(self) -> None:
