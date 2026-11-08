@@ -48,7 +48,7 @@ def fixture(root: Path) -> str:
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
         "Target branch: main\n"
-        "Platform scope: automation\nQuestion: reconcile the ledger\nAcceptance criteria (2 total; compact index shows up to five):\n- One active task maximum\n- Exact PR state is recorded\nNext action: Complete a verified provider cycle."
+        "Platform scope: automation\nQuestion: Does the loop reconcile the task ledger?\nAcceptance criteria (2 total; compact index shows up to five):\n- One active task maximum\n- Exact PR state is recorded\nNext action: Complete a verified provider cycle."
     )
 
 
