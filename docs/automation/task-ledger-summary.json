@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Portable-systems triage documented: AI behavior dimensions, non-blocking frame telemetry, manifest-driven owned assets, audio metadata caching and platform-specific rumble. Adapt behavior/design only; no PC AGPL code or RAWM data copied into MIT GameCube/Wii runtime. Continue the remaining upstream-only file/commit inventory and prioritize coherent race progression."
+      "next_action_excerpt": "Portable systems triage now covers AI, performance telemetry, audio metadata, asset replacement boundaries, camera, static-mesh caching, deformation lifetime and logical input mapping. Adapt design lessons only; preserve AGPL/MIT boundary. Next prioritize coherent race progression and measured GX performance, then finish remaining upstream path inventory."
     }
   ]
 }
