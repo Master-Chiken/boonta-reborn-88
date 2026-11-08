@@ -149,7 +149,7 @@ jobs:
               "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
-              "Groq prompt explicitly stops on provider quota errors": "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
+              "Groq prompt explicitly stops on provider quota errors": "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry." in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
