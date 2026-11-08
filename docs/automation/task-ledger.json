@@ -868,7 +868,7 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/314c40ffb12048e2716a1cf7967077a66d8173c9/dinput_hook/game_deltas/stdControl_delta.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/automation/task-lease-and-evidence-acceptance-20261107/research/pc/SW_RACER_RE/UPSTREAM_SYNC_STATUS.md"
       ],
-      "next_action": "The exact upstream-only comparison is indexed for all 42 commits with SHA, subject and initial disposition in UPSTREAM_SYNC_STATUS.md. This is graph-level triage, not a complete function review. Next perform three-way source review of the overlapping track_manifest/track_registry/virtual_block changes against common ancestor a9863edd4caaa573f89ff634fa7d1cd6d41738ab, preserve fork-specific policy/tests, then evaluate audio/startup and GLTF changes. Keep AGPL PC code isolated from the MIT GameCube/Wii runtime; do not import vendor code or proprietary data.",
+      "next_action": "All 42 upstream-only commits now have a graph-level index, and the divergent track_manifest.cpp, track_registry.cpp and virtual_block.cpp copies have a source-level semantic comparison with exact fork/upstream blob SHAs. Preserve the fork's stricter manifest/file/offset validation, stable-index rescan and virtual-block guards. Next inspect the WAV startup/audio metadata cache, GLTF validator integration and renderer optimizations at exact blobs; compare callers and tests, do not replace fork policy files or import vendor/proprietary data. Record Windows/in-game tests as unverified and keep AGPL PC code isolated from the MIT GameCube/Wii runtime.",
       "pr_url": null,
       "head_sha": null,
       "updated_at": "2026-11-08"
