@@ -63,3 +63,16 @@ Latest original upstream checked: [`tim-tim707/SW_RACER_RE` at `4f898953ecb31c9f
 ### Decision
 
 Keep the curated snapshot and the upstream repository as separate PC research references. Do not merge the 42-commit history, copy the vendor tree, or move AGPL PC code into the MIT GameCube/Wii runtime. The already imported, tested portable policy helpers are retained under this AGPL research boundary; no additional upstream source files were copied in this triage.
+
+## 2026-11-08 — third upstream delta triage: asset pipeline utilities
+
+The following first-party upstream scripts were inspected at the exact current `tim-tim707/SW_RACER_RE:master` file revisions:
+
+- `scripts/convert_track_pack.py` (`aa540828258ddfbb4382df84c1f4ae245e8c1d2f`): compares PC custom-track model/spline/texture blocks against stock PC blocks, reads the Windows PE `TrackInfo[25]` table at virtual address `0x004BFEE8`, carves changed records and writes SHA-256-addressed blobs plus manifests. The useful architecture is content-addressed storage, explicit block-index texture references, and manifest-driven track assembly. The PE address, stock table, RAWM/RAWS/RAWT record layouts and PC block assumptions are **not** portable to N64 or GameCube/Wii without independent format proof.
+- `scripts/extract_raw_asset.py` (`2af4a28696b5d47b3309e075d705b9a52628cc07`): extracts individual PC model/spline/texture records and offers a byte-for-byte round-trip check. The inspected upstream version trusts offset-table values and has fewer range/alignment checks than the hardened fork-side copy. **Do not replace the hardened fork copy with this upstream version.** The round-trip test concept is useful for future Boonta-owned formats.
+- `scripts/validate_raw_model.py` (`dd554c3e6e4bb423477d35409ec5a783e59f4f51`): validates PC RAWM mask/model sizes, tags, pointer bounds and texture-reference markers. It assumes the PC loader's exact data contract; its low-level `be32` reads and optional stock-table reads are not comprehensively bounded in this upstream revision. Keep the hardened fork implementation as reference and do not treat RAWM as a GameCube GX asset format.
+- `scripts/gc_content_store.py` (`31697dfa23bc003fbff1f7369eef0b5ca52dd483`): checks manifest references, missing blobs, orphan blobs and optional SHA-256 integrity. It is a useful design pattern for a future Boonta-owned content store. Its default is report-only; `--delete` is destructive and must never be used in an automated pipeline without a separate dry-run, explicit approval and backup policy.
+
+### Disposition
+
+**No additional script was copied or executed.** These tools require local PC game installation/block inputs and can emit extracted proprietary payloads. CI must remain synthetic-only. Retain only the architecture lessons (content-addressed assets, manifest references, lossless round-trip tests, integrity checks and report-only garbage collection) as research requirements. Before implementing a console asset pipeline, first establish the target format from independently sourced evidence and write synthetic fixtures; do not transplant PC offsets, record tags, pointer rules or file layouts.
