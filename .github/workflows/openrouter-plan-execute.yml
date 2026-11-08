@@ -312,7 +312,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment"
+                  "GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -346,15 +346,14 @@ jobs:
           
           PLATFORM AND REUSE
           - The workflow preloaded the mandatory context-budget and reverse-engineering policies. Do not spend provider steps rereading them.
-          - pull_request_read is the supported PR read tool; github_get_pull_request does not exist.
           - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence; never infer GameCube/Wii behavior from those platforms.
           - PR #282 is the completed broad inventory. PR #327's rival racing implementation is already integrated in main at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. Revisit #274 only for a demonstrated dependency.
           - Apply the preloaded DISCOVER/VERIFY/REUSE gate before any recreation. Record exact source, platform, provenance, tests and unknowns.
           
           EXECUTION
-          - Local filesystem tools read/edit/glob/grep/list/bash are disabled. Do not try to open local paths. The repository root and mandatory policies are preloaded; inspect only task-specific repository files through github_get_file_contents with an explicit path and ref.
-          - Available GitHub tools: github_get_file_contents, github_get_pull_request (the server tool is named pull_request_read), search_pull_requests, list_workflow_runs, list_workflow_jobs, get_workflow_run, get_job_logs, create_branch, push_files and create_pull_request. Do not invent aliases or browse unrelated PRs/runs.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,500 tokens total; target below 1,000 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
+          - Local filesystem tools read/edit/glob/grep/list/bash are disabled. Do not try to open local paths. The repository root and mandatory policies are preloaded; inspect only task-specific repository files through get_file_contents with an explicit path and ref.
+          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. No workflow-log, comment-writing, local filesystem or shell tools are exposed.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Create one branch from the exact current SHA of TASK_TARGET_BRANCH, push one logical change set, then open one PR targeting that same branch. Include these exact standalone lines in the PR body:
             BOONTA_TASK_ID: <exact TASK_ID>
             BOONTA_TASK_TARGET_BRANCH: <exact TASK_TARGET_BRANCH>
