@@ -139,6 +139,7 @@ else:
         "task_reason:",
         "path: 'docs/automation/task-ledger-summary.json'",
         "ledgerSummary.schema_version !== 2",
+        "ledgerSummary.schema_version !== 2",
         "ledgerSummary.policy?.max_active_tasks !== 1",
         "const usableTask = (task) => Boolean(",
         "typeof task.question_excerpt === 'string' && task.question_excerpt.trim()",
