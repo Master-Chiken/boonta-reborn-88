@@ -45,7 +45,7 @@ All additions live under `tools/n64_reference/`, preserve the upstream MIT notic
 | `mips_os_candidates.py` | COP0/MMIO/FPU analysis in `tools/libultra_identify.py` and `tools/identify_libultra.py` | Reports instruction evidence and candidate tags; does not rename functions or claim an OS API from weak heuristics |
 | `mips_symbol_progress.py` | `tools/progress.py` symbol coverage report | Counts named/automatic symbols, mapped bytes, size buckets and largest auto-named candidates; explicitly does not claim semantic completion |
 
-The combined synthetic test coverage for these six helpers is 27 tests. They validate parsing, bounds, byte orders, selected instructions, graph edges, unresolved/indirect calls, string categorization and OS/hardware evidence tags. They do **not** validate a retail ROM or prove Racer compatibility.
+The combined synthetic test coverage for these six helpers is 28 tests. They validate parsing, bounds, byte orders, selected instructions, graph edges, unresolved/indirect calls, string categorization and OS/hardware evidence tags. They do **not** validate a retail ROM or prove Racer compatibility.
 
 ## What was reviewed and deliberately not copied
 
