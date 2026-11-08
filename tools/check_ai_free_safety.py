@@ -474,7 +474,7 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
+    "Use only the six enabled GitHub tools: get_file_contents, pull_request_read, create_branch, push_files, create_pull_request and add_issue_comment.",
     "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
     "Keep newly retrieved text below 1,500 tokens",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
@@ -1345,9 +1345,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
+        if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must be capped at 3072 context / 512 output tokens"
+                "Groq GPT-OSS 20B must be capped at 2048 context / 256 output tokens after the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1356,16 +1356,16 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "This model is limited to 3,072 context tokens and 512 output tokens",
+    "Stay within the configured 2,048 input / 256 output token cap. The observed Groq TPM ceiling is 8,000; keep this prompt and all retrieved text minimal.",
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
-    "Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 800 tokens",
-    "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
+    "If the summary says more than five criteria exist, inspect only the selected task record before editing and satisfy all criteria.",
+    "Read only source files directly needed for this task; keep new retrieved text below 300 tokens",
+    "Stop at the first TPM, quota, context, rate-limit or authentication refusal. Never retry the same request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 5000 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 5,000-character prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 4500 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 4,500-character prompt ceiling before inference")
 if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
