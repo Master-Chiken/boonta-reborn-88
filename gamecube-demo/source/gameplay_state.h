@@ -2,6 +2,7 @@
 #define BOONTA_REBORN_GAMEPLAY_STATE_H
 
 #include <math.h>
+#include <stddef.h>
 
 #define BOONTA_RIVAL_COUNT 3U
 #define BOONTA_MAX_FRAME_SCALE 3.0f
