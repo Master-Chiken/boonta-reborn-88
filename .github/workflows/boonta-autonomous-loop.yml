@@ -221,6 +221,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
@@ -254,6 +255,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
@@ -287,6 +289,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       autonomous_mode: true
       issue_number: 226
