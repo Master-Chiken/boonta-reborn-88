@@ -140,9 +140,9 @@ For a new question, use the tools in this order:
 - The tools are read-only with respect to the ROM. The symbol scanner writes
   only the explicitly requested TOML output path; direct analysis tools print
   metadata to stdout.
-- CI tests use only generated instruction words, synthetic ROM headers and
-  source-authored strings. They do not validate any commercial Racer ROM or
-  establish compatibility with the retail game.
+- CI currently runs 28 synthetic N64-tool tests using generated instruction
+  words, synthetic ROM headers and source-authored strings. They do not validate
+  any commercial Racer ROM or establish compatibility with the retail game.
 - The upstream symbol table and N64Recomp configuration are not copied here:
   they are revision-specific research metadata, not a portable GameCube/Wii
   code base.
