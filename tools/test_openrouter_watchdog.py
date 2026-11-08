@@ -84,7 +84,7 @@ def production_watchdog_source(workflow: Path) -> str:
     marker = OPENROUTER_HEREDOC if workflow.name == OPENROUTER_WORKFLOW.name else HEREDOC
     if source.count(marker) != 1:
         raise AssertionError(f"Expected exactly one production watchdog heredoc in {workflow.name}")
-    body = source.split(marker, 1)[1].split("\\n          PY", 1)[0]
+    body = source.split(marker, 1)[1].split("\n          PY", 1)[0]
     return textwrap.dedent(body)
 
 
