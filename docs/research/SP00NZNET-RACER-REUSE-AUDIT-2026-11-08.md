@@ -43,8 +43,9 @@ All additions live under `tools/n64_reference/`, preserve the upstream MIT notic
 | `mips_callgraph.py` | Call-graph pass in `tools/libultra_identify.py` | Correct JAL target region from PC+4; exact symbol-start matching; separate unresolved/ambiguous targets and indirect JALR sites |
 | `mips_string_scanner.py` | `tools/string_dumper.py` | Explicit scan bounds, three N64 byte orders, categorization hints, stdout-only local output |
 | `mips_os_candidates.py` | COP0/MMIO/FPU analysis in `tools/libultra_identify.py` and `tools/identify_libultra.py` | Reports instruction evidence and candidate tags; does not rename functions or claim an OS API from weak heuristics |
+| `mips_symbol_progress.py` | `tools/progress.py` symbol coverage report | Counts named/automatic symbols, mapped bytes, size buckets and largest auto-named candidates; explicitly does not claim semantic completion |
 
-The combined synthetic test coverage for these helpers is 24 tests. They validate parsing, bounds, byte orders, selected instructions, graph edges, unresolved/indirect calls, string categorization and OS/hardware evidence tags. They do **not** validate a retail ROM or prove Racer compatibility.
+The combined synthetic test coverage for these six helpers is 27 tests. They validate parsing, bounds, byte orders, selected instructions, graph edges, unresolved/indirect calls, string categorization and OS/hardware evidence tags. They do **not** validate a retail ROM or prove Racer compatibility.
 
 ## What was reviewed and deliberately not copied
 
@@ -72,8 +73,9 @@ For an owner-local N64 reference investigation:
 2. Run the string scanner to list likely menu strings, file names, debug labels and race terminology.
 3. Run the call-graph tool to find caller clusters, shared helpers, unresolved direct targets and indirect-call sites.
 4. Run the OS-candidate analyser to identify likely libultra/MMIO support routines so they are not confused with Racer-specific gameplay.
-5. Inspect only promising functions with the MIPS inspector and record the exact address, instructions, callers/callees, data references, counter-evidence and confidence.
-6. Write a behavioural specification independently. Validate N64-only claims against N64 observations, then validate any proposed GameCube/Wii behaviour on its own platform.
+5. Use the symbol-progress report to prioritize the largest still-auto-named routines for manual inspection; treat all resulting ratios as name/byte metrics only.
+6. Inspect only promising functions with the MIPS inspector and record the exact address, instructions, callers/callees, data references, counter-evidence and confidence.
+7. Write a behavioural specification independently. Validate N64-only claims against N64 observations, then validate any proposed GameCube/Wii behaviour on its own platform.
 
 This reduces time spent manually locating functions and separating OS support from game-specific code. It does **not** remove the need to implement Boonta's race engine, rendering, input, audio, UI, asset pipeline or course systems.
 
