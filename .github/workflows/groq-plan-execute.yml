@@ -303,7 +303,7 @@ jobs:
           - Workflow schema-v2 preloader validates the task and preloads policies; do not reread policies or the full task ledger.
 
           AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json; do not substitute another task. Its acceptance_criteria_excerpt and next_action_excerpt are preloaded.
+          - Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. Its acceptance_criteria_excerpt and next_action_excerpt are preloaded.
 
           EXECUTION
           - Use only these six GitHub tools: get_file_contents, pull_request_read, create_branch, push_files, create_pull_request and add_issue_comment.
