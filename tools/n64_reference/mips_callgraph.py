@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
                 item for item in graph["incoming_call_sites"]
                 if symbol.vram == item["target_vram"]
             ],
-            "unresolved_or_ambiguous": graph["scope"],
+            "scope": graph["scope"],\n            "global_unresolved_target_vrams": graph["unresolved_target_vrams"],\n            "global_ambiguous_target_vrams": graph["ambiguous_target_vrams"],
         }
         print(json.dumps(selected, indent=2))
         return 0
