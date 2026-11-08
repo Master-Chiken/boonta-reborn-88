@@ -95,12 +95,12 @@ def build_context(
 
     bounded_task_context = _short(task_context, max_task_context)
     lines = [
-        "VERIFIED REPOSITORY CONTEXT — prepared before provider inference:",
-        "Reuse: DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST. Record source revision, platform and licence/provenance; unknown rights mean HOLD.",
-        "Platform boundary: PC, N64 and Dreamcast evidence is not GameCube/Wii proof. Keep commercial ROMs, discs, binaries, BIOS and extracted assets out of Git, CI and hosted prompts.",
-        "Automation: €0 only; one provider invocation per loop run; one selected task/writer; no retries after provider refusal; no merge or auto-merge.",
-        f"Canonical ledger v2: {summary.get('updated_at', 'unknown')}; selected task={task_id}; status={status}; target={target_branch}; scope={', '.join(scope)}.",
-        "Exact task question, all compact acceptance excerpts, and next action from the global preflight:",
+        "VERIFIED CONTEXT (prepared before provider inference):",
+        "Reuse: DISCOVER → VERIFY → REUSE → INTEGRATE → TEST; record source/licence/platform; unknown rights mean HOLD.",
+        "Boundary: PC/N64/Dreamcast is not GameCube/Wii proof; exclude commercial game data from Git/CI/hosted prompts; preserve AGPL/MIT separation.",
+        "Cycle: €0; one provider/run; one task/writer; no retries after refusals; no merge/auto-merge.",
+        f"Canonical ledger v2 {summary.get('updated_at', 'unknown')}: {task_id} [{status}], base={target_branch}, scope={', '.join(scope)}.",
+        "Authoritative task context from global preflight:",
         bounded_task_context,
     ]
     output = "\n".join(lines)
