@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Triage all 42 upstream-only SW_RACER_RE commits against fork head 66120be and common ancestor a9863ed. Preserve 29 fork-only commits and the migrated custom-track bounds fix; review changed paths three-way, import only useful AGPL-safe text/source under research/pc, exclude assets and unreviewed vendor trees, and keep PC code out of GameCube/Wii targets."
+      "next_action_excerpt": "Triage the 42 upstream-only commits in small batches. Start with loose-model replacement, GLTF input validation, discrete spline/texture extraction, custom-track manifests, virtual asset blocks and content-store safety. For each batch, compare exact patches and tests against the pinned fork snapshot, then import only safe non-vendor text/source changes and…"
     }
   ]
 }
