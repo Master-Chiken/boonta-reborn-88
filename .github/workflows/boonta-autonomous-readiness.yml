@@ -110,9 +110,9 @@ jobs:
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-issues: write
-          permission-pull-requests: write
+          permission-contents: read
+          permission-issues: read
+          permission-pull-requests: read
           permission-actions: read
 
       - name: Verify GitHub App access to the canonical project state (GET only)
