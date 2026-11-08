@@ -1356,17 +1356,16 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "Stay within the configured 2,048 input / 256 output token cap. The observed Groq TPM ceiling is 8,000; keep this prompt and all retrieved text minimal.",
+    "2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000.",
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
-    "If the summary says more than five criteria exist, inspect only the selected task record before editing and satisfy all criteria.",
-    "Read only source files directly needed for this task; keep new retrieved text below 300 tokens",
-    "Stop at the first TPM, quota, context, rate-limit or authentication refusal. Never retry the same request.",
+    "Read only the source files needed; keep new retrieved text below 300 tokens.",
+    "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
 if 'if (( ${#PROMPT} > 4500 )); then' not in groq_fallback:
     errors.append("Groq fallback must enforce the 4,500-character prompt ceiling before inference")
-if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
+if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
