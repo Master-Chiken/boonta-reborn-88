@@ -319,6 +319,8 @@ jobs:
           - Keep the operation bounded to one task and three tool/action steps. Do not re-read the same file or repeat a failed tool.
 
           REPORT CONTRACT
+          Every report, including BLOCKED reports, must include this exact selected-task identity line:
+          BOONTA_CYCLE_TASK_ID: <exact TASK_ID supplied above>
           For verified progress, end with:
           BOONTA_CYCLE_STATUS: PROGRESS
           BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
