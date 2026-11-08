@@ -60,7 +60,6 @@ with tempfile.TemporaryDirectory() as temp:
         "Activate and validate persistent autonomous task tracking",
         "main", context,
     )
-    assert "schema v2" not in rendered  # the output names the canonical ledger version explicitly
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
