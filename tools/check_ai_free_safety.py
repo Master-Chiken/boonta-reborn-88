@@ -138,6 +138,7 @@ else:
         "task_id:",
         "task_reason:",
         "path: 'docs/automation/task-ledger-summary.json'",
+        "ledgerSummary.schema_version !== 2",
         "ledgerSummary.policy?.max_active_tasks !== 1",
         "const usableTask = (task) => Boolean(",
         "typeof task.question_excerpt === 'string' && task.question_excerpt.trim()",
@@ -894,9 +895,6 @@ dynamic_task_prompts = (
 for label, prompt in dynamic_task_prompts:
     for required in (
         "AUTHORITATIVE SELECTED TASK",
-        "TASK_ID",
-        "TASK_TITLE",
-        "TASK_TARGET_BRANCH",
         "task-ledger-summary.json",
         "acceptance_criteria_excerpt",
         "Do not substitute another task",
@@ -904,13 +902,21 @@ for label, prompt in dynamic_task_prompts:
     ):
         if required not in prompt:
             errors.append(f"{label} autonomous prompt is missing dynamic selected-task safeguard {required!r}")
+    if label == "Gemini":
+        for required in ("task_id", "task_title", "task_description", "task_target_branch"):
+            if required not in prompt:
+                errors.append(f"Gemini autonomous prompt is missing selected-task context key {required!r}")
+    else:
+        for required in ("TASK_ID", "TASK_TITLE", "TASK_TARGET_BRANCH"):
+            if required not in prompt:
+                errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
 for required in (
-    "task_id: ${{ inputs.task_id }}",
-    "task_title: ${{ inputs.task_title }}",
-    "task_target_branch: ${{ inputs.task_target_branch }}",
-    "task_description: ${{ inputs.task_description }}",
+    "TASK_ID: '${{ inputs.task_id }}'",
+    "TASK_TITLE: '${{ inputs.task_title }}'",
+    "TASK_DESCRIPTION: '${{ inputs.task_description }}'",
+    "TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'",
     "task_id: $task_id",
     "task_target_branch: $task_target_branch",
 ):
