@@ -235,27 +235,22 @@ async function runCase(testCase) {{
     policy: {{ max_active_tasks: 1 }},
     tasks: testCase.tasks
   }};
-  const listComments = async () => ({{ data: comments }});
-  const listPulls = async () => ({{ data: testCase.open_task_prs || [] }});
   const github = {{
-    paginate: async (endpoint, options) => {{
-      if (endpoint === listComments) {{
-        if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
-          throw new Error("unexpected issue-comment query");
-        }}
-        return comments;
-      }}
-      if (endpoint === listPulls) {{
-        if (options.state !== "open" || options.per_page !== 100) {{
+    paginate: async (_endpoint, options) => {{
+      if (options.state === "open") {{
+        if (options.per_page !== 100) {{
           throw new Error("unexpected open-PR query");
         }}
         return testCase.open_task_prs || [];
       }}
-      throw new Error("unexpected paginated GitHub endpoint");
+      if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
+        throw new Error("unexpected issue-comment query");
+      }}
+      return comments;
     }},
     rest: {{
-      issues: {{ listComments }},
-      pulls: {{ list: listPulls }},
+      issues: {{ listComments: async () => ({{ data: comments }}) }},
+      pulls: {{ list: async () => ({{ data: testCase.open_task_prs || [] }}) }},
       repos: {{
         getContent: async (options) => {{
           if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
