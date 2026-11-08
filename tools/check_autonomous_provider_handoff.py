@@ -497,7 +497,6 @@ print("Autonomous provider handoff checks passed.")
 print("- At most one provider can invoke a model in a workflow run.")
 print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
 print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
-\\n' must decode to a newline.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     prompt_lines = [
         line for line in workflow.splitlines()
