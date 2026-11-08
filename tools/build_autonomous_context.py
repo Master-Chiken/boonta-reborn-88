@@ -97,6 +97,10 @@ def build_context(
         raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts")
 
     bounded_task_context = _short(task_context, max_task_context)
+    if not all(item in bounded_task_context for item in required_handoff_text):
+        raise ContextBuildError(
+            "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
+        )
     lines = [
         "VERIFIED CONTEXT (prepared before provider inference):",
         "Reuse: DISCOVER → VERIFY → REUSE → INTEGRATE → TEST; record source/licence/platform; unknown rights mean HOLD.",
