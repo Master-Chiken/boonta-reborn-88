@@ -855,9 +855,15 @@
         "https://github.com/tim-tim707/SW_RACER_RE/blob/aa540828258ddfbb4382df84c1f4ae245e8c1d2f/scripts/convert_track_pack.py",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/2af4a28696b5d47b3309e075d705b9a52628cc07/scripts/extract_raw_asset.py",
         "https://github.com/tim-tim707/SW_RACER_RE/blob/31697dfa23bc003fbff1f7369eef0b5ca52dd483/scripts/gc_content_store.py",
-        "https://github.com/tim-tim707/SW_RACER_RE/blob/dd554c3e6e4bb423477d35409ec5a783e59f4f51/scripts/validate_raw_model.py"
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/dd554c3e6e4bb423477d35409ec5a783e59f4f51/scripts/validate_raw_model.py",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/a7f2f5d7d6cbc936b3d0b3cd05aa6e6d4ceec3f0/dinput_hook/ai_tuning.cpp",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/51c15c27c43ab2fcf05f346bf6ee836793d75f16/dinput_hook/perf_stats.cpp",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/7b834f8af486a7412cbdbd194cb7109c56f88413/dinput_hook/game_deltas/swrSound_delta.cpp",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/53cc76da6d22158caa74a8134b7ba1cdba4b8a93/dinput_hook/model_replacement.cpp",
+        "https://github.com/tim-tim707/SW_RACER_RE/blob/f4f49c810020f7df2bfe0d0fd4736a3c073b9484/dinput_hook/game_deltas/sony_pad_rumble.cpp",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/automation/task-lease-and-evidence-acceptance-20261107/docs/research/SW_RACER_RE-PORTABLE-SYSTEMS-TRIAGE-2026-11-08.md"
       ],
-      "next_action": "Third upstream batch triaged and documented: retain only the content-addressed-store, manifest, round-trip validation and report-only GC design lessons; do not copy/run PC block extractors or transplant RAWM/RAWS/RAWT/PE assumptions. Continue the remaining 42-commit/path inventory in small batches, prioritizing first-party non-vendor code and tests; record explicit accept/reference/reject decisions and preserve fork-specific policy helpers.",
+      "next_action": "Portable-systems triage documented at docs/research/SW_RACER_RE-PORTABLE-SYSTEMS-TRIAGE-2026-11-08.md. Continue the 42 upstream-only commit/path inventory: next inspect remaining first-party game_deltas, camera/renderer and AI/race changes in small batches; classify each as accept/reference/reject, preserve fork-specific behavior, and keep PC AGPL code outside the MIT GameCube/Wii runtime. Prioritize P0 race progression and P1 telemetry/owned asset-manifest requirements; do not add audio/rumble dependencies before build and license checks.",
       "pr_url": null,
       "head_sha": null,
       "updated_at": "2026-11-08"
