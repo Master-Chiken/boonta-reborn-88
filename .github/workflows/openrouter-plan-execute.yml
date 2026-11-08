@@ -321,6 +321,9 @@ jobs:
           REPORT CONTRACT
           For verified progress, end with:
           BOONTA_CYCLE_TASK_ID: <exact TASK_ID supplied above>
+          For a PROGRESS report, the cited PR description must also contain these exact standalone lines:
+          BOONTA_TASK_ID: <exact TASK_ID supplied above>
+          BOONTA_TASK_TARGET_BRANCH: <exact TASK_TARGET_BRANCH supplied above>
           BOONTA_CYCLE_STATUS: PROGRESS
           BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
           BOONTA_CYCLE_EVIDENCE_BASE: main|dev
