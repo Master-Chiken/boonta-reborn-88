@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "The exact upstream-only comparison is indexed for all 42 commits with SHA, subject and initial disposition in UPSTREAM_SYNC_STATUS.md. This is graph-level triage, not a complete function review. Next perform three-way source review of the overlapping track_manifest/track_registry/virtual_block changes against common ancestor…"
+      "next_action_excerpt": "All 42 upstream-only commits now have a graph-level index, and the divergent track_manifest.cpp, track_registry.cpp and virtual_block.cpp copies have a source-level semantic comparison with exact fork/upstream blob SHAs. Preserve the fork's stricter manifest/file/offset validation, stable-index rescan and virtual-block guards. Next inspect the WAV…"
     }
   ]
 }
