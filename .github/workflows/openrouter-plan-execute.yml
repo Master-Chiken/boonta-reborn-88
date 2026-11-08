@@ -342,8 +342,7 @@ jobs:
           - Stop on the first quota, TPM, context, rate-limit or authentication error. Never retry the same request.
           
           AUTHORITATIVE TASK — AUTHORITATIVE SELECTED TASK
-          - The preceding workflow step validates the exact selected row from canonical task-ledger schema v2 and passes its bounded question, acceptance criteria and next action below.
-          - Use only that selected task ID/title/base/context. The global task preflight and schema-v2 builder are authoritative; never select a different row or open the full ledger.
+          - AUTHORITATIVE SELECTED TASK: use exactly this task from docs/automation/task-ledger-summary.json. Do not substitute another task. The schema-v2 preloader passes its acceptance_criteria_excerpt and next action below; do not open the full ledger.
           
           PLATFORM AND REUSE
           - The workflow preloaded the mandatory context-budget and reverse-engineering policies. Do not spend provider steps rereading them.
