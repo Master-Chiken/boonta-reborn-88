@@ -64,7 +64,16 @@ function makeGithub(options = {}) {
         get: async () => ({ data: options.pr || pr })
       },
       repos: {
-        getCommit: async () => ({ data: { sha: options.commitSha || head } })
+        getCommit: async () => ({
+          data: {
+            sha: options.commitSha || head,
+            commit: {
+              committer: {
+                date: options.committerDate || new Date(Date.now() - 5_000).toISOString()
+              }
+            }
+          }
+        })
       },
       checks: {
         listForRef: async () => {
@@ -135,6 +144,14 @@ async function run(name, options = {}) {
   });
   await run('PR closed', { pr: { ...makeGithub().pr, state: 'closed' }, expectFailure: 'non-draft' });
   await run('head SHA mismatch', { commitSha: 'b'.repeat(40), expectFailure: 'non-draft' });
+  await run('new PR points at a commit created before this cycle', {
+    committerDate: new Date(Date.now() - 120_000).toISOString(),
+    expectFailure: 'cycle-fresh commit'
+  });
+  await run('new PR points at a commit with an implausibly future timestamp', {
+    committerDate: new Date(Date.now() + 10 * 60_000).toISOString(),
+    expectFailure: 'cycle-fresh commit'
+  });
   await run('old unchanged PR', {
     baseline: { '501': head },
     snapshotAt: new Date(Date.now() - 10_000).toISOString(),
