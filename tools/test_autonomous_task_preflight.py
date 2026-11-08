@@ -102,6 +102,18 @@ cases = [
         "reason_contains": "open PR #356",
     },
     {
+        "name": "open PR for a different task does not block activation",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 123,
+            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\\nBOONTA_TASK_TARGET_BRANCH: main"
+        }],
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_blocked": False,
+    },
+    {
         "name": "100 open PRs fail closed at the bounded inventory ceiling",
         "tasks": [activation],
         "marker_day_offset": None,
