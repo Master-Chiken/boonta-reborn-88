@@ -41,7 +41,7 @@ def build_context(
         raise ContextBuildError("Selected task identity or target branch is invalid")
     if not task_context.strip() or len(task_context) > 2500:
         raise ContextBuildError("Global preflight task context is empty or exceeds 2,500 characters")
-    for expected in (f"Task ID: {task_id}", f"Task title: {task_title}", f"Target branch: {target_branch}"):
+    for expected in (f"Task ID: {task_id}", f"Title: {task_title}", f"Target branch: {target_branch}"):
         if expected not in task_context:
             raise ContextBuildError(f"Global preflight context does not contain {expected!r}")
     if max_chars < 900 or max_task_context < 250:
@@ -100,13 +100,9 @@ def build_context(
         "Platform boundary: PC, N64 and Dreamcast evidence is not GameCube/Wii proof. Keep commercial ROMs, discs, binaries, BIOS and extracted assets out of Git, CI and hosted prompts.",
         "Automation: €0 only; one provider invocation per loop run; one selected task/writer; no retries after provider refusal; no merge or auto-merge.",
         f"Canonical ledger v2: {summary.get('updated_at', 'unknown')}; selected task={task_id}; status={status}; target={target_branch}; scope={', '.join(scope)}.",
-        f"Question: {_short(task['question_excerpt'], 220)}",
-        f"Acceptance excerpts ({len(criteria)} of {criteria_total}):",
+        "Exact task question, all compact acceptance excerpts, and next action from the global preflight:",
+        bounded_task_context,
     ]
-    lines.extend(f"- {_short(item, 145)}" for item in criteria[:5])
-    lines.append(f"Next action: {_short(task['next_action_excerpt'], 260)}")
-    lines.append("Exact global preflight handoff:")
-    lines.append(bounded_task_context)
     output = "\n".join(lines)
     if len(output) > max_chars:
         raise ContextBuildError(
