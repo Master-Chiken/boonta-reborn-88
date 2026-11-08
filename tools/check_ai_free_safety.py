@@ -544,8 +544,18 @@ for label, content in (
             errors.append(f"Forbidden legacy/paid-auth setting {marker!r} in {label}")
 
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
-    if "gemini_api_key: '${{ secrets.GEMINI_API_KEY }}'" not in content:
-        errors.append(f"{label} must use only the GEMINI_API_KEY secret")
+    expected_gemini_key_binding = (
+        "gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'"
+    )
+    if expected_gemini_key_binding not in content:
+        errors.append(f"{label} must use its explicitly allowed Gemini API-key binding")
+    if label == "gemini-plan-execute.yml" and (
+        "GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'" not in content
+        or "GEMINI_API_KEY_DEUX" not in readiness
+        or "GEMINI_API_KEY_DEUX" not in invoke
+        or "GEMINI_API_KEY_DEUX" not in daily
+    ):
+        errors.append("Autonomous Gemini guard, CLI and readiness must prefer GEMINI_API_KEY_DEUX with legacy fallback")
     if (
         "id: free_tier_guard" not in content
         or "GEMINI_FREE_TIER_CONFIRMED" not in content
@@ -623,8 +633,8 @@ if "issues: write" not in daily:
 for forbidden in ('"create_branch"', '"create_or_update_file"', '"push_files"', '"delete_file"', '"create_pull_request"', '"merge_pull_request"'):
     if forbidden in daily:
         errors.append(f"Project coordinator must not expose write tool {forbidden}")
-if "gemini_api_key: ${{ secrets.GEMINI_API_KEY }}" not in daily:
-    errors.append("Project coordinator must use the existing Gemini API-key secret only")
+if "gemini_api_key: ${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}" not in daily:
+    errors.append("Project coordinator must prefer GEMINI_API_KEY_DEUX with legacy fallback")
 if (
     'GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}' not in daily
     or '[[ "${GEMINI_FREE_TIER_CONFIRMED:-}" != "true" ]]' not in daily
