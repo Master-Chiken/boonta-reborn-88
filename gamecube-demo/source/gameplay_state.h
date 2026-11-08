@@ -35,6 +35,68 @@ typedef struct {
     int race_finished;
 } BoontaRaceState;
 
+/* Renderer-owned chase-camera state, kept deterministic for host regression tests. */
+typedef struct {
+    float x, y, z;
+} BoontaCameraVector;
+
+typedef struct {
+    BoontaCameraVector position;
+    BoontaCameraVector target;
+    int initialized;
+} BoontaCameraState;
+
+static inline void boonta_camera_state_reset(BoontaCameraState *state)
+{
+    if (state == NULL) return;
+    state->position.x = state->position.y = state->position.z = 0.0f;
+    state->target.x = state->target.y = state->target.z = 0.0f;
+    state->initialized = 0;
+}
+
+static inline float boonta_camera_smoothing_alpha(float delta_seconds,
+                                                   float response)
+{
+    if (!isfinite(delta_seconds) || delta_seconds <= 0.0f ||
+        !isfinite(response) || response <= 0.0f) return 0.0f;
+    if (delta_seconds > 0.05f) delta_seconds = 0.05f;
+    if (response > 30.0f) response = 30.0f;
+    return 1.0f - expf(-response * delta_seconds);
+}
+
+static inline void boonta_camera_state_update(BoontaCameraState *state,
+                                               BoontaCameraVector desired_position,
+                                               BoontaCameraVector desired_target,
+                                               float delta_seconds,
+                                               float response)
+{
+    float alpha;
+    if (state == NULL) return;
+    if (!isfinite(desired_position.x) || !isfinite(desired_position.y) ||
+        !isfinite(desired_position.z) || !isfinite(desired_target.x) ||
+        !isfinite(desired_target.y) || !isfinite(desired_target.z)) return;
+    if (!state->initialized) {
+        state->position = desired_position;
+        state->target = desired_target;
+        state->initialized = 1;
+        return;
+    }
+    alpha = boonta_camera_smoothing_alpha(delta_seconds, response);
+    state->position.x += (desired_position.x - state->position.x) * alpha;
+    state->position.y += (desired_position.y - state->position.y) * alpha;
+    state->position.z += (desired_position.z - state->position.z) * alpha;
+    state->target.x += (desired_target.x - state->target.x) * alpha;
+    state->target.y += (desired_target.y - state->target.y) * alpha;
+    state->target.z += (desired_target.z - state->target.z) * alpha;
+    if (!isfinite(state->position.x) || !isfinite(state->position.y) ||
+        !isfinite(state->position.z) || !isfinite(state->target.x) ||
+        !isfinite(state->target.y) || !isfinite(state->target.z)) {
+        state->initialized = 0;
+        boonta_camera_state_update(state, desired_position, desired_target,
+                                   delta_seconds, response);
+    }
+}
+
 /* Deterministic gameplay transitions shared by the native loop and host tests. */
 
 /* Clamp finite simulation state; recover NaN/infinity without propagating it. */
