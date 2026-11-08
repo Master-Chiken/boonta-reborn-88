@@ -474,9 +474,9 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    '"GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment"',
+    '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"',
     "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 1,500 tokens",
+    "Keep newly retrieved text below 1,000 tokens total; target below 700 tokens",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
@@ -1359,6 +1359,7 @@ for required in (
     "2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000.",
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
     "Read only the source files needed; keep new retrieved text below 300 tokens.",
+    "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.",
     "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
