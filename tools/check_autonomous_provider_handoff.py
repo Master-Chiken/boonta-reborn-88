@@ -36,6 +36,10 @@ context_builder = read("context_builder")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    if "github_get_file_contents" in content or "github_get_pull_request" in content:
+        errors.append(f"{label} prompt references a nonexistent GitHub MCP tool alias")
+
 for content, needle, message in (
     (gemini, "value: ${{ jobs.plan-execute.outputs.invocation_outcome }}", "Gemini must expose its invocation result"),
     (gemini, "invocation_outcome: ${{ steps.run_gemini.outcome }}", "Gemini must publish its actual model-step outcome"),
@@ -183,7 +187,7 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "1,500 tokens"),
+    ("OpenRouter", openrouter, "1,000 tokens"),
     ("Groq", groq, "300 tokens"),
 ):
     for required in (
@@ -400,8 +404,7 @@ for content, needle, message in (
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
     (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
-    (openrouter, "github_get_file_contents", "OpenRouter must not reference a nonexistent GitHub MCP alias"),
-    (groq, "github_get_file_contents", "Groq must not reference a nonexistent GitHub MCP alias"),
+
 ):
     if needle not in content:
         errors.append(message)
