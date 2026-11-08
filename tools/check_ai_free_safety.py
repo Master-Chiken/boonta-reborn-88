@@ -32,6 +32,7 @@ autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
+selftest = read(".github/workflows/branch-automation-selftest.yml")
 cycle_validator = read("tools/validate_autonomous_cycle_report.js")
 cycle_validator_tests = read("tools/test_autonomous_cycle_report.js")
 
@@ -112,8 +113,9 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
-        "core.setOutput('cycle_status', 'progress')",
-        "core.setOutput('cycle_status', 'blocked')",
+        "validateAutonomousCycleReport",
+        "expectedTaskId: process.env.SELECTED_TASK_ID",
+        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
     )
     for required in expected_outputs:
         if required not in workflow:
@@ -1313,7 +1315,8 @@ for required in (
         errors.append(f"Shared autonomous report tests are missing regression case {required!r}")
 
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback), ("Groq fallback", groq_fallback)):
-    report_start = workflow.find("      - name: Validate ")
+    report_name = "Validate autonomous cycle report contract" if label == "Gemini" else "Validate OpenRouter autonomous cycle report" if label == "OpenRouter fallback" else "Validate Groq autonomous cycle report"
+    report_start = workflow.find("      - name: " + report_name)
     report_end = workflow.find("      - name: Sync the single-task daily backoff marker", report_start)
     report_step = workflow[report_start:report_end] if report_start >= 0 and report_end > report_start else ""
     for required in (
