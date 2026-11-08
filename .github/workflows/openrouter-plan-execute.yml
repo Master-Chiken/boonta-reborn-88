@@ -248,7 +248,7 @@ jobs:
           for candidate in "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/boonta-reborn-88"; do
             [[ -d "$candidate" ]] || continue
             candidate="$(cd "$candidate" && pwd -P)"
-            if [[ -f "$candidate/tools/build_autonomous_context.py" && -f "$candidate/docs/REVERSE_ENGINEERING_FIRST.md" && -f "$candidate/docs/automation/task-ledger-summary.json" ]]; then
+            if [[ -f "$candidate/tools/build_autonomous_context.py" && -f "$candidate/docs/REVERSE_ENGINEERING_FIRST.md" && -f "$candidate/docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md" && -f "$candidate/docs/automation/task-ledger-summary.json" ]]; then
               git_root="$(git -C "$candidate" rev-parse --show-toplevel)"
               if [[ "$git_root" == "$candidate" ]]; then repo_root="$candidate"; break; fi
             fi
