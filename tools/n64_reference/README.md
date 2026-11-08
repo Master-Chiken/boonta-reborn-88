@@ -99,6 +99,21 @@ jr ra sites. It deliberately does not rename a function to osPiStartDma,
 osViManager or another API from partial evidence. Confirm the full body and
 callers/callees before assigning a semantic name.
 
+### 6. Prioritize the next functions to inspect
+
+~~~sh
+python3 tools/n64_reference/mips_symbol_progress.py \
+  --symbols "$HOME/racer-work/symbols.toml" --top 20
+
+python3 tools/n64_reference/mips_symbol_progress.py \
+  --symbols "$HOME/racer-work/symbols.toml" --json
+~~~
+
+This reports how many functions have descriptive names versus common
+auto-generated names, mapped byte coverage, size distribution and the largest
+remaining auto-named candidates. It does not claim a named function is
+understood, correctly identified or implemented; use it only as a triage aid.
+
 ## Research sequence
 
 For a new question, use the tools in this order:
