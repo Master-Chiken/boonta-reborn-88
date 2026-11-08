@@ -17,6 +17,7 @@ FILES = {
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
     "context_builder": ROOT / "tools/build_autonomous_context.py",
     "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
+    "task_preflight_tests": ROOT / "tools/test_autonomous_task_preflight.py",
 }
 
 
@@ -35,6 +36,7 @@ gemini_prompt = read("gemini_prompt")
 budget = read("budget")
 context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
+task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
@@ -432,7 +434,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
-    "permissions:\n      contents: read\n      issues: read",
+    "permissions:\n      contents: read\n      issues: read\n      pull-requests: read",
     "path: 'docs/automation/task-ledger-summary.json'",
     "ledgerSummary.schema_version !== 2",
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
@@ -442,6 +444,13 @@ for required in (
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",
     "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "const openPullRequests = await github.paginate(github.rest.pulls.list",
+    "state: 'open'",
+    "const openTaskPullRequest = (task) =>",
+    "const markerLine = 'BOONTA_TASK_ID: ' + task.task_id",
+    "const activationTaskOpenPr = openTaskPullRequest(activationTask)",
+    "!activationTaskOpenPr",
+    "activeTaskOpenPr",
     "!taskBlockedActive",
     "core.setOutput('task_ready', String(taskReady))",
 ):
@@ -449,6 +458,10 @@ for required in (
         errors.append(f"Task eligibility preflight is missing {required!r}")
 if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
+if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
+if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must enforce the bounded open-PR query")
 
 # The blocked-task marker is referenced during selection. It must be computed
 # from today's bot comments before that first reference, not later in the script.
