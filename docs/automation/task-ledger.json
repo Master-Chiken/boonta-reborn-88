@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-07",
+  "updated_at": "2026-11-08",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -819,6 +819,43 @@
       ],
       "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
       "updated_at": "2026-11-07"
+    },
+    {
+      "task_id": "PC-UPSTREAM-42-COMMIT-RECONCILIATION",
+      "title": "Reconcile the 42 upstream-only SW_RACER_RE commits into Boonta's PC reference snapshot",
+      "queue": "#226",
+      "platform_scope": [
+        "Windows PC research",
+        "AGPL reference snapshot",
+        "Boonta research"
+      ],
+      "target_branch": "main",
+      "status": "active",
+      "question": "Which of the 42 commits present in tim-tim707/SW_RACER_RE:master but absent from Master-Chiken/SW_RACER_RE:master should be incorporated into Boonta's curated PC reference snapshot, while preserving fork-specific work, license boundaries and the clean-room GameCube/Wii runtime?",
+      "acceptance_criteria": [
+        "Review all 42 upstream-only commits and all changed paths from the exact upstream comparison; record an outcome for every commit or changed file.",
+        "Use common ancestor a9863edd4caaa573f89ff634fa7d1cd6d41738ab for three-way review of overlapping changes against fork head 66120be334a3fd38c10a259f3528cffbfed8ddc5 and upstream head 4f898953ecb31c9f02e7ab01e10f62cd9738df0d.",
+        "Preserve the 29 fork-only commits and the migrated custom-track favorite-pilot bounds fix; do not blindly replace overlapping files.",
+        "Integrate useful, text-only PC reference source and tests under research/pc/SW_RACER_RE/ only when their provenance and license notices are retained.",
+        "Exclude commercial game assets/data, ROM/ISO/DOL/REL files, memory dumps, raw symbol databases, generated binaries, private analysis databases, and unreviewed third-party vendor trees.",
+        "Keep upstream Windows PC hooks, DirectX, x86 addresses and PC file layouts isolated from the native GameCube/Wii build; implement portable behavior independently in the Boonta runtime.",
+        "Run available applicable offline/static tests for accepted changes and mark any unrun Windows/in-game tests explicitly as unverified.",
+        "Update UPSTREAM_SYNC_STATUS.md with the reconciled upstream and fork SHAs, decisions, exclusions and remaining gaps."
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/SW_RACER_RE/compare/master...tim-tim707:master",
+        "https://github.com/Master-Chiken/SW_RACER_RE/compare/tim-tim707:master...master",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/research/pc/SW_RACER_RE/README.md",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/research/pc/SW_RACER_RE/UPSTREAM_SYNC_STATUS.md",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/research/pc/SW_RACER_RE/LICENSE",
+        "https://github.com/Master-Chiken/SW_RACER_RE/pull/18",
+        "https://github.com/Master-Chiken/SW_RACER_RE/pull/22",
+        "https://github.com/Master-Chiken/SW_RACER_RE/tree/archive/branch-heads-20261019"
+      ],
+      "next_action": "Triage the 42 upstream-only commits in small batches. Start with loose-model replacement, GLTF input validation, discrete spline/texture extraction, custom-track manifests, virtual asset blocks and content-store safety. For each batch, compare exact patches and tests against the pinned fork snapshot, then import only safe non-vendor text/source changes and update the evidence record.",
+      "pr_url": null,
+      "head_sha": null,
+      "updated_at": "2026-11-08"
     }
   ]
 }
