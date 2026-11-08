@@ -94,7 +94,7 @@ cases = [
         "marker_day_offset": None,
         "open_task_prs": [{
             "number": 356,
-            "body": "Existing automation PR\\nBOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\\nBOONTA_TASK_TARGET_BRANCH: main"
+            "body": "Existing automation PR\nBOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
         "expected_ready": False,
         "expected_task_id": "",
@@ -237,40 +237,40 @@ async function runCase(testCase) {{
   }};
   const listComments = async () => ({{ data: comments }});
   const listPulls = async () => ({{ data: testCase.open_task_prs || [] }});
-  const github = {{{{
-    paginate: async (endpoint, options) => {{{{
-      if (endpoint === listComments) {{{{
-        if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{{{
+  const github = {{
+    paginate: async (endpoint, options) => {{
+      if (endpoint === listComments) {{
+        if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
           throw new Error("unexpected issue-comment query");
-        }}}}
+        }}
         return comments;
-      }}}}
-      if (endpoint === listPulls) {{{{
-        if (options.state !== "open" || options.per_page !== 100) {{{{
+      }}
+      if (endpoint === listPulls) {{
+        if (options.state !== "open" || options.per_page !== 100) {{
           throw new Error("unexpected open-PR query");
-        }}}}
+        }}
         return testCase.open_task_prs || [];
-      }}}}
+      }}
       throw new Error("unexpected paginated GitHub endpoint");
-    }}}},
-    rest: {{{{
-      issues: {{{{ listComments }}}}},
-      pulls: {{{{ list: listPulls }}}}},
-      repos: {{{{
-        getContent: async (options) => {{{{
-          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{{{
+    }},
+    rest: {{
+      issues: {{ listComments }}},
+      pulls: {{ list: listPulls }}},
+      repos: {{
+        getContent: async (options) => {{
+          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
             throw new Error("unexpected canonical-ledger read");
-          }}}}
-          return {{{{
-            data: {{{{
+          }}
+          return {{
+            data: {{
               encoding: "base64",
               content: Buffer.from(JSON.stringify(ledger), "utf8").toString("base64")
-            }}}}
-          }}}};
-        }}}}
-      }}}}
-    }}}}
-  }}}};
+            }}
+          }};
+        }}
+      }}
+    }}
+  }};
   const core = {{
     setOutput: (key, value) => {{ outputs[key] = String(value); }},
     info: () => {{}},
