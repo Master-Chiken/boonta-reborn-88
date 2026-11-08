@@ -462,6 +462,8 @@ if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
+if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove unrelated task markers do not block the selected task")
 if '"name": "100 open PRs fail closed at the bounded inventory ceiling"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove the open-PR inventory ceiling fails closed")
 if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests or "options.page !== 1" not in task_preflight_tests:
