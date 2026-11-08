@@ -375,7 +375,7 @@ jobs:
           PROMPT
           )"
 
-          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${TASK_DESCRIPTION:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
+          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${AUTONOMOUS_CONTEXT:-}" || -z "${REPO_ROOT:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
             echo "::error::Global preflight did not pass a complete selected task context; no OpenRouter request was sent."
             exit 2
           fi
