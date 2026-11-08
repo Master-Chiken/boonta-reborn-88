@@ -304,6 +304,7 @@ jobs:
 
           AUTHORITATIVE SELECTED TASK
           - Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. Its acceptance_criteria_excerpt and next_action_excerpt are preloaded.
+          - Post-merge reconciliation: if the selected task is blocked with no ledger PR/head, search only for PRs carrying the exact `BOONTA_TASK_ID: <task_id>` body marker and targeting the selected base, including merged and closed results. Inspect only those matches. A closed unmerged PR is not completion; never recreate work already represented by a merged PR. Verify `merged_at`, the base repository/branch and the final live `head.sha`. If all acceptance criteria are satisfied, record the original merged PR URL and its exact final head SHA as evidence in the canonical task ledger via one reviewable ledger PR, regenerate the compact summary, and activate exactly one next unanswered task. Never use the ledger-update PR's own SHA as the completed task's evidence. If criteria remain, implement only the verified missing work.
 
           EXECUTION
           - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. No comments, workflow diagnostics, local filesystem or shell tools are exposed.
