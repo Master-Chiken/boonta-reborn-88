@@ -9,7 +9,12 @@ TOOLS_ROOT = Path(__file__).resolve().parents[1]
 if str(TOOLS_ROOT) not in sys.path:
     sys.path.insert(0, str(TOOLS_ROOT))
 
-from n64_reference.mips_symbol_scanner import (\n    ScanError,\n    build_candidate_symbols_toml,\n    find_stack_frame_prologues,\n)\nfrom n64_reference.mips_function_inspector import (
+from n64_reference.mips_symbol_scanner import (
+    ScanError,
+    build_candidate_symbols_toml,
+    find_stack_frame_prologues,
+)
+from n64_reference.mips_function_inspector import (
     FunctionSymbol,
     SymbolMapError,
     disassemble_instruction,
