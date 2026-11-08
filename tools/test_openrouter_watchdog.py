@@ -24,7 +24,7 @@ OPENROUTER_WORKFLOW = ROOT / ".github/workflows/openrouter-plan-execute.yml"
 GROQ_WORKFLOW = ROOT / ".github/workflows/groq-plan-execute.yml"
 HEREDOC = (
     'python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" '
-    '"$GITHUB_WORKSPACE" <<\'PY\'\n'
+    '"$REPO_ROOT" <<\'PY\'\n'
 )
 
 FAKE_OPENCODE = r'''#!/usr/bin/env python3
