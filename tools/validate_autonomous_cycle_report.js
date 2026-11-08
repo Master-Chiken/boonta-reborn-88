@@ -97,6 +97,10 @@ async function validateAutonomousCycleReport(options) {
   const existedAtStart = Object.prototype.hasOwnProperty.call(baseSnapshot, String(pullNumber));
   const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime;
   const advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead;
+  const commitTimestamp = Date.parse(headCommit.commit?.committer?.date || '');
+  const commitCreatedDuringCycle = Number.isFinite(commitTimestamp) &&
+    commitTimestamp >= snapshotTime &&
+    commitTimestamp <= Date.now() + 5 * 60 * 1000;
   const taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId;
   const taskMarkerCount = (pr.body || '').split(/\r?\n/).filter((line) => line.trim() === taskMarker).length;
   const bodyHasTaskMarker = taskMarkerCount === 1;
@@ -117,10 +121,11 @@ async function validateAutonomousCycleReport(options) {
     pr.base.ref !== expectedBase ||
     !bodyHasTaskMarker ||
     !bodyHasTargetBranchMarker ||
-    (!createdAfterSnapshot && !advancedDuringCycle)
+    (!createdAfterSnapshot && !advancedDuringCycle) ||
+    !commitCreatedDuringCycle
   ) {
     return fail(core, 'PROGRESS requires a non-draft, non-empty same-repository PR tied to the reserved task, targeting ' +
-      expectedBase + ', at its exact current head and created or advanced during this cycle.');
+      expectedBase + ', at its exact current head, created or advanced during this cycle, with a cycle-fresh commit.');
   }
 
   const required = REQUIRED_CHECKS[expectedBase];
