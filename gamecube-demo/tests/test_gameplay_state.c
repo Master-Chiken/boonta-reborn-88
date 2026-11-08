@@ -844,7 +844,67 @@ static void invalid_scaled_frame_tests(void) {
  assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
 }
 
+static void camera_follow_damping_tests(void) {
+ BoontaCameraState camera = {0};
+ BoontaCameraState camera60 = {0};
+ BoontaCameraState camera50 = {0};
+ BoontaCameraVector position = {0.0f, 2.0f, 3.0f};
+ BoontaCameraVector target = {0.0f, 0.0f, 10.0f};
+ BoontaCameraVector moved_position = {10.0f, 4.0f, 5.0f};
+ BoontaCameraVector moved_target = {10.0f, 1.0f, 12.0f};
+ float alpha;
+
+ /* First frame snaps to the requested pose: no origin-to-camera sweep. */
+ boonta_camera_state_update(&camera, position, target, 1.0f / 60.0f, 10.0f);
+ assert(camera.initialized);
+ assert(nearf(camera.position.x, 0.0f));
+ assert(nearf(camera.position.y, 2.0f));
+ assert(nearf(camera.target.z, 10.0f));
+
+ /* Subsequent frames ease toward the target without teleporting. */
+ alpha = boonta_camera_smoothing_alpha(1.0f / 60.0f, 10.0f);
+ boonta_camera_state_update(&camera, moved_position, moved_target,
+                            1.0f / 60.0f, 10.0f);
+ assert(camera.position.x > 0.0f && camera.position.x < moved_position.x);
+ assert(nearf(camera.position.x, moved_position.x * alpha));
+ assert(camera.target.x > 0.0f && camera.target.x < moved_target.x);
+
+ /* Exponential time response gives the same one-second result at 50/60 Hz. */
+ boonta_camera_state_update(&camera60, position, target, 1.0f / 60.0f, 10.0f);
+ boonta_camera_state_update(&camera50, position, target, 1.0f / 50.0f, 10.0f);
+ {
+  int i;
+  for (i = 0; i < 60; ++i)
+   boonta_camera_state_update(&camera60, moved_position, moved_target,
+                              1.0f / 60.0f, 10.0f);
+  for (i = 0; i < 50; ++i)
+   boonta_camera_state_update(&camera50, moved_position, moved_target,
+                              1.0f / 50.0f, 10.0f);
+ }
+ assert(nearf(camera60.position.x, camera50.position.x));
+ assert(nearf(camera60.target.y, camera50.target.y));
+
+ /* Invalid/zero deltas never inject NaNs or move the camera. */
+ {
+  const float before = camera60.position.x;
+  boonta_camera_state_update(&camera60, position, target, NAN, 10.0f);
+  assert(nearf(camera60.position.x, before));
+  assert(nearf(boonta_camera_smoothing_alpha(INFINITY, 10.0f), 0.0f));
+  assert(nearf(boonta_camera_smoothing_alpha(0.02f, NAN), 0.0f));
+ }
+
+ /* Long stalls are bounded; reset makes the next frame snap cleanly. */
+ assert(nearf(boonta_camera_smoothing_alpha(1.0f, 10.0f),
+              boonta_camera_smoothing_alpha(0.05f, 10.0f)));
+ boonta_camera_state_reset(&camera60);
+ assert(!camera60.initialized);
+ boonta_camera_state_update(&camera60, position, target, 1.0f / 60.0f, 10.0f);
+ assert(nearf(camera60.position.x, position.x));
+ assert(nearf(camera60.target.z, target.z));
+}
+
 int main(void) {
+ camera_follow_damping_tests();
  race_state_reset_tests();
  finite_clamp_tests();
  frame_scale_tests();
