@@ -47,7 +47,7 @@
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main",
-      "next_action_excerpt": "Triage the 42 upstream-only commits in small batches. Start with loose-model replacement, GLTF input validation, discrete spline/texture extraction, custom-track manifests, virtual asset blocks and content-store safety. For each batch, compare exact patches and tests against the pinned fork snapshot, then import only safe non-vendor text/source changes and…"
+      "next_action_excerpt": "Third upstream batch triaged and documented: retain content-addressed-store, manifest, round-trip validation and report-only GC design lessons; do not copy/run PC block extractors or transplant RAWM/RAWS/RAWT/PE assumptions. Continue the remaining 42-commit/path inventory in small batches, prioritizing first-party non-vendor code and tests."
     }
   ]
 }
