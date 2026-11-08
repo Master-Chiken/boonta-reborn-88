@@ -32,6 +32,8 @@ autonomous_prompt = read(".github/commands/gemini-autonomous-loop.toml")
 invoke_prompt = read(".github/commands/gemini-invoke.toml")
 execute_prompt = read(".github/commands/gemini-plan-execute.toml")
 instructions = read("GEMINI.md")
+cycle_validator = read("tools/validate_autonomous_cycle_report.js")
+cycle_validator_tests = read("tools/test_autonomous_cycle_report.js")
 
 # The on-demand Gemini action installs its own default /gemini-invoke command,
 # whose template uses shell substitutions. Invoke our read-only instructions
@@ -1093,9 +1095,10 @@ else:
             job_permissions_match.group("block"),
         )
     )
-    if job_permissions != expected_caller_permissions:
+    expected_provider_permissions = {**expected_caller_permissions, "checks": "read"}
+    if job_permissions != expected_provider_permissions:
         errors.append(
-            "Autonomous reusable-workflow job permissions must be exactly the contents/issues/PR write set; "
+            "Autonomous Gemini reusable-workflow permissions must be contents/issues/PR write plus checks read only; "
             f"found {job_permissions!r}"
         )
 
@@ -1251,34 +1254,92 @@ for required in (
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
 
-# Autonomous progress must be cycle-fresh, same-repository evidence at the exact live head.
+# Autonomous progress is validated centrally so all providers share one exact-head contract.
+for required in (
+    "const REQUIRED_CHECKS = Object.freeze({",
+    "'Verify Gemini free-only guardrails'",
+    "'Reject known held assets and data'",
+    "'Check proposed source paths using trusted base policy'",
+    "'Host pause/resume state tests'",
+    "'build-gamecube-demo'",
+    "'Dolphin headless process smoke (not visual verification)'",
+    "async function validateAutonomousCycleReport(options)",
+    "BOONTA_CYCLE_TASK_ID",
+    "BOONTA_CYCLE_STATUS:",
+    "BOONTA_CYCLE_STATUS: PROGRESS",
+    "BOONTA_CYCLE_STATUS: BLOCKED",
+    "BOONTA_CYCLE_EVIDENCE:",
+    "BOONTA_CYCLE_EVIDENCE_BASE",
+    "expectedBase",
+    "github.rest.pulls.get",
+    "github.rest.repos.getCommit",
+    "github.rest.checks.listForRef",
+    "pr.head.repo?.full_name !== owner + '/' + repo",
+    "pr.base.repo?.full_name !== owner + '/' + repo",
+    "pr.draft === true",
+    "pr.head.sha !== exactHead",
+    "headCommit.sha !== exactHead",
+    "(pr.changed_files ?? 0) < 1",
+    "pr.base.ref !== expectedBase",
+    "bodyHasTaskMarker",
+    "bodyHasTargetBranchMarker",
+    "createdAfterSnapshot",
+    "advancedDuringCycle",
+    "run.head_sha === exactHead",
+    "run.app?.slug === 'github-actions'",
+    "check.status === 'completed' && check.conclusion === 'success'",
+    "core.setOutput('cycle_status', 'progress')",
+    "core.setOutput('cycle_status', 'blocked')",
+    "maxPolls = 32",
+    "pollIntervalMs = 15000",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared autonomous report validator is missing exact-head safety contract: {required!r}")
+
+if "test_autonomous_cycle_report.js" not in selftest:
+    errors.append("Branch self-test must watch the shared cycle validator and its regression suite")
+if "node tools/test_autonomous_cycle_report.js" not in selftest:
+    errors.append("Branch self-test must execute the shared autonomous cycle report regression suite")
+for required in (
+    "missing PR target-branch marker",
+    "duplicate PR target-branch markers",
+    "required check failed",
+    "same-name check from an untrusted app is ignored",
+    "wait for exact-head checks",
+    "dev target uses native build/host/emulator checks",
+    "named task blocker",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Shared autonomous report tests are missing regression case {required!r}")
+
 for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_fallback), ("Groq fallback", groq_fallback)):
-    if "BOONTA_CYCLE_STATUS: PROGRESS" not in workflow:
-        errors.append(f"{label} must require the machine-readable PROGRESS status")
-    if "BOONTA_CYCLE_STATUS: BLOCKED" not in workflow:
-        errors.append(f"{label} must support an explicit BLOCKED report")
-    if "BOONTA_CYCLE_EVIDENCE_BASE" not in workflow or "evidenceBaseMatch" not in workflow:
-        errors.append(f"{label} must require the declared evidence base")
+    report_start = workflow.find("      - name: Validate ")
+    report_end = workflow.find("      - name: Sync the single-task daily backoff marker", report_start)
+    report_step = workflow[report_start:report_end] if report_start >= 0 and report_end > report_start else ""
+    for required in (
+        "id: validate_report",
+        "validateAutonomousCycleReport",
+        "expectedTaskId: process.env.SELECTED_TASK_ID",
+        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        "baseline: JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}')",
+        "snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT",
+        "steps.snapshot_pr_heads.outputs.heads",
+        "PRE_CYCLE_PR_SNAPSHOT_AT",
+    ):
+        if required not in report_step:
+            errors.append(f"{label} must call the shared exact-head cycle validator with {required!r}")
     if "id: snapshot_pr_heads" not in workflow or "state: 'open'" not in workflow:
         errors.append(f"{label} must snapshot only currently open PR heads before the model call")
-    if "PRE_CYCLE_PR_SNAPSHOT_AT" not in workflow or "outputs.snapshot_at" not in workflow:
-        errors.append(f"{label} must pass a timestamped pre-cycle PR snapshot to its validator")
     if "github.paginate(github.rest.pulls.list" not in workflow:
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
-    if "steps.snapshot_pr_heads.outputs.heads" not in workflow:
-        errors.append(f"{label} must pass the pre-cycle head inventory to the progress validator")
-    if "github.rest.pulls.get" not in workflow or "github.rest.repos.getCommit" not in workflow:
-        errors.append(f"{label} must verify the live PR and reported head commit")
-    if "pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88'" not in workflow:
-        errors.append(f"{label} must reject progress PRs whose head comes from a fork")
-    if "pr.head.sha !== evidence[2]" not in workflow or "headCommit.sha !== evidence[2]" not in workflow or "(pr.changed_files ?? 0) < 1" not in workflow:
-        errors.append(f"{label} must require a non-empty PR at the exact reported head SHA")
-    if "const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt" not in workflow or "const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2]" not in workflow:
-        errors.append(f"{label} must require a PR created after the snapshot or an existing open PR advanced during the cycle")
-    if "pr.base.ref !== evidenceBaseMatch[1]" not in workflow:
-        errors.append(f"{label} must check the PR's actual base against its reported main/dev target")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
         errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
+    if "SELECTED_TASK_ID: '${{ inputs.task_id }}'" not in report_step or "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" not in report_step:
+        errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight")
+if "github.rest.checks.listForRef" not in cycle_validator:
+    errors.append("Autonomous progress must wait for the exact PR-head check runs before reporting progress")
+if "The check runs must be from the GitHub Actions app" not in cycle_validator and "run.app?.slug === 'github-actions'" not in cycle_validator:
+    errors.append("Autonomous exact-head checks must reject same-named runs from untrusted apps")
 if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
 if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
