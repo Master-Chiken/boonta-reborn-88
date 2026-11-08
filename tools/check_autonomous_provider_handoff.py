@@ -479,7 +479,7 @@ for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
 
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 settings_marker = "          settings: |-\n"
-settings_end_marker = "          prompt: \${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
 if settings_marker not in gemini or settings_end_marker not in gemini:
     errors.append("Gemini explicit bounded settings block is missing")
 else:
