@@ -372,7 +372,8 @@
       "next_action": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180 seconds; Groq is capped at 3 steps, 3,072 context / 512 output tokens, 5,000 prompt characters and 90 seconds, with process termination on the first TPM refusal. Exact-head CI passed: AI Free safety #42409296079, Step 102 provenance #42409296096 and branch self-test #42409296211. Prior provider evidence on 2026-11-07: Gemini run #42323079983 failed after Google 503 high-demand responses and a Free-tier input TPM limit of 250,000 tokens/minute; OpenRouter run #42354691945 passed GET /api/v1/key authentication with is_free_tier=true but inference was rejected by free-models-per-day; Groq run #42323079983 exceeded the observed 8,000 TPM limit with requests around 9.8k–10.3k tokens and ended on its timeout. Do not rotate keys or add credits based on these errors. Post-merge main run #42409361776 passed read-only readiness (writer enabled), GitHub App access and the global cooldown preflight; all three UTC cooldowns were correctly detected active for 2026-11-07, so all provider jobs were skipped and the summary explicitly recorded no model call/no progress. This validates cooldown suppression and safe startup, not a completed autonomous inference cycle. Next scheduled opportunity after the 2026-11-07 UTC cooldowns expire is 2026-11-08 00:17 UTC / 01:17 Europe/Paris. Gemini is first eligible; any fallback advances only on a later loop run after the prior provider's cooldown is visible at global preflight. Keep activation BLOCKED until a post-reset run demonstrates a real provider invocation and valid cycle-fresh report/PR, then reconcile the ledger. A verified named blocker may be recorded without claiming progress. Preserve €0: no paid fallback, credits, manual cooldown bypass, secret/key rotation or provider-setting changes. The workflow checks owner attestations/presence; the owner remains responsible for truthful Free-tier/no-billing attestations.",
       "updated_at": "2026-11-07",
       "pr_url": null,
-      "head_sha": null
+      "head_sha": null,
+      "target_branch": "main"
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
@@ -817,7 +818,8 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
       ],
       "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
-      "updated_at": "2026-11-07"
+      "updated_at": "2026-11-07",
+      "target_branch": "main"
     }
   ]
 }
