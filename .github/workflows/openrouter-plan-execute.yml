@@ -305,7 +305,7 @@ jobs:
           
           NON-NEGOTIABLE LIMITS
           - One writer, one task, one branch, one reviewable PR. No merge or auto-merge.
-          - €0 only. Never enable billing, credits, paid routes, another provider, or change secrets/settings.
+          - €0 only. Never enable billing, paid routes, credits, another provider, or change secrets/settings.
           - Keep commercial ROMs, discs, binaries and extracted data local. Preserve clean-room provenance and exact platform labels.
           - Stop on the first quota, TPM, context, rate-limit or authentication error. Never retry the same request.
           
