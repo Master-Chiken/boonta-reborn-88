@@ -1,0 +1,50 @@
+name: PC reference policy tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/pc-reference-policy-tests.yml"
+      - "research/pc/SW_RACER_RE/dinput_hook/track_manifest_policy.h"
+      - "research/pc/SW_RACER_RE/dinput_hook/virtual_block_policy.h"
+      - "research/pc/SW_RACER_RE/tests/track_manifest_policy_test.cpp"
+      - "research/pc/SW_RACER_RE/tests/virtual_block_policy_test.cpp"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/pc-reference-policy-tests.yml"
+      - "research/pc/SW_RACER_RE/dinput_hook/track_manifest_policy.h"
+      - "research/pc/SW_RACER_RE/dinput_hook/virtual_block_policy.h"
+      - "research/pc/SW_RACER_RE/tests/track_manifest_policy_test.cpp"
+      - "research/pc/SW_RACER_RE/tests/virtual_block_policy_test.cpp"
+
+permissions:
+  contents: read
+
+jobs:
+  policy-regressions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: g++
+            extra_flags: ""
+          - compiler: clang++
+            extra_flags: ""
+          - compiler: g++
+            extra_flags: "-fsanitize=address,undefined -fno-omit-frame-pointer"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report compiler
+        run: ${{ matrix.compiler }} --version
+      - name: Build and run manifest-policy tests
+        shell: bash
+        run: |
+          ${{ matrix.compiler }} -std=c++20 -Wall -Wextra -Werror -pedantic ${{ matrix.extra_flags }} research/pc/SW_RACER_RE/tests/track_manifest_policy_test.cpp -o /tmp/track-manifest-policy-test
+          /tmp/track-manifest-policy-test
+      - name: Build and run virtual-block-policy tests
+        shell: bash
+        run: |
+          ${{ matrix.compiler }} -std=c++20 -Wall -Wextra -Werror -pedantic ${{ matrix.extra_flags }} research/pc/SW_RACER_RE/tests/virtual_block_policy_test.cpp -o /tmp/virtual-block-policy-test
+          /tmp/virtual-block-policy-test
