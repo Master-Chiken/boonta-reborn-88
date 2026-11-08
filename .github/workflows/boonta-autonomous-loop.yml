@@ -48,6 +48,7 @@ jobs:
     permissions:
       contents: read
       issues: read
+      pull-requests: read
     outputs:
       task_ready: ${{ steps.check.outputs.task_ready }}
       task_id: ${{ steps.check.outputs.task_id }}
@@ -82,6 +83,22 @@ jobs:
             const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
             const taskBlockedActive = taskBlockedDate === todayUtc;
 
+            // An open PR carrying this task's exact identity marker is an in-flight
+            // writer. Reconcile it before allowing another provider invocation.
+            const openPullRequests = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const openTaskPullRequest = (task) => {
+              if (!task) return null;
+              const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
+              return openPullRequests.find((pull) =>
+                (pull.body || '').split(/\\r?\\n/).some((line) => line.trim() === markerLine)
+              ) || null;
+            };
+
             // Refuse a model call unless the compact canonical queue exposes one eligible task.
             const { data: ledgerFile } = await github.rest.repos.getContent({
               owner: context.repo.owner,
@@ -111,6 +128,8 @@ jobs:
             }
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
+            const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
+            const activationTaskOpenPr = openTaskPullRequest(activationTask);
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
@@ -122,19 +141,32 @@ jobs:
             );
             let selectedTask = null;
             let taskReason = '';
-            if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha) {
+            if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
               selectedTask = activeTasks[0];
-              taskReason = 'one complete active ledger task with no existing PR or head';
+              taskReason = 'one complete active ledger task with no existing PR, head or open task PR';
+            } else if (activeTasks.length === 1 && usableTask(activeTasks[0]) && activeTaskOpenPr) {
+              taskReason = 'the active task already has open PR #' + activeTaskOpenPr.number + '; reconcile it before another provider invocation';
             } else if (
               activeTasks.length === 0 &&
               usableTask(activationTask) &&
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
               !activationTask.head_sha &&
-              !taskBlockedActive
+              !taskBlockedActive &&
+              !activationTaskOpenPr
             ) {
               selectedTask = activationTask;
-              taskReason = 'the single blocked activation task is eligible; no task-level daily backoff is active';
+              taskReason = 'the single blocked activation task is eligible; no task-level daily backoff or open task PR is active';
+            } else if (
+              activeTasks.length === 0 &&
+              usableTask(activationTask) &&
+              activationTask.status === 'blocked' &&
+              !activationTask.pr_url &&
+              !activationTask.head_sha &&
+              !taskBlockedActive &&
+              activationTaskOpenPr
+            ) {
+              taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
             } else if (activeTasks.length > 1) {
               taskReason = 'multiple active tasks violate the one-active-task policy';
             } else if (activeTasks.length === 1 && !usableTask(activeTasks[0])) {
@@ -201,7 +233,7 @@ jobs:
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
               ])
-              .addRaw('Read-only checks: issue #226 cooldown comments and the compact main-branch task ledger. No provider starts unless exactly one eligible task is confirmed.')
+              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
               .write();
 
   autonomous-cycle:
