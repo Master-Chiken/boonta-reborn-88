@@ -238,9 +238,9 @@ for required in (
     if required not in openrouter:
         errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
 
-if "this reserve is not a guarantee of cycle completion" not in budget:
+if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
-if "process-group watchdog stops OpenCode on the first explicit" not in budget:
+if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -401,7 +401,7 @@ for content, needle, message in (
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
-    (groq, "Never enable billing, paid routes", "Groq must preserve the €0/no-paid-route rule"),
+    (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),
     (groq, "github_get_pull_request does not exist", "Groq must name the supported PR read tool and reject an unavailable alias"),
