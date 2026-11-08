@@ -16,6 +16,7 @@ FILES = {
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
     "context_builder": ROOT / "tools/build_autonomous_context.py",
+    "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
 }
 
 
@@ -33,6 +34,7 @@ loop = read("loop")
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
 context_builder = read("context_builder")
+context_builder_tests = read("context_builder_tests")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
@@ -363,9 +365,13 @@ for required in (
     'required_handoff_text',
     'task["question_excerpt"]',
     'task["next_action_excerpt"]',
+    "if not all(item in bounded_task_context for item in required_handoff_text)",
+    "truncates required question, acceptance-criteria or next-action excerpts",
 ):
     if required not in context_builder:
         errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
+if "tight context budget to reject truncated required task excerpts" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must prove required task excerpts are not silently truncated")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
