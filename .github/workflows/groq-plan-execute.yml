@@ -270,7 +270,7 @@ jobs:
           - The caller passes the single task selected by global preflight. Require TASK_ID, TASK_TITLE and TASK_TARGET_BRANCH; fail closed before inference if missing or target is not main/dev.
           - Read docs/automation/task-ledger-summary.json once. Find exactly TASK_ID; verify the title and target_branch match and the task has no existing PR/head. Do not substitute another task or follow dated Phase notes instead. Use its question_excerpt, acceptance_criteria_excerpt and next_action_excerpt as the scope; read only its full ledger record if needed.
           - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence. Preserve platform labels; do not infer target facts across platforms. PR #282 is the completed broad inventory; PR #327's rival implementation is already integrated. Do not recreate PRs #317/#318/#319. Revisit #274 only for a demonstrated dependency.
-          - Keep commercial ROM/disc/binary/extracted data local. The 0€ budget, clean-room provenance, exact-head evidence, one-writer and no-merge policies remain mandatory.
+          - Keep commercial ROM/disc/binary/extracted data local. The €0 budget, clean-room provenance, exact-head evidence, one-writer and no-merge policies remain mandatory.
 
           EXECUTION
           - Apply the reverse-engineering/reuse gate before editing. Record exact source revision, license/provenance, platform boundary, tests and unknowns.
