@@ -254,8 +254,8 @@ async function runCase(testCase) {{
       throw new Error("unexpected paginated GitHub endpoint");
     }},
     rest: {{
-      issues: {{ listComments }}},
-      pulls: {{ list: listPulls }}},
+      issues: {{ listComments }},
+      pulls: {{ list: listPulls }},
       repos: {{
         getContent: async (options) => {{
           if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
