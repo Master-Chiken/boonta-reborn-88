@@ -305,10 +305,10 @@ jobs:
             echo "::error::Global preflight did not pass a complete selected task; no Groq request was sent."
             exit 2
           fi
-          PROMPT="${PROMPT}"$'\\n\\nAUTHORITATIVE SELECTED TASK\\n'
-          PROMPT+="Task ID: ${TASK_ID}"$'\\n'
-          PROMPT+="Task title: ${TASK_TITLE}"$'\\n'
-          PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"$'\\n'
+          PROMPT="${PROMPT}"\\nAUTHORITATIVE SELECTED TASK\\n'\n\\nAUTHORITATIVE SELECTED TASK\\n'
+          PROMPT+="Task ID: ${TASK_ID}"'\n'
+          PROMPT+="Task title: ${TASK_TITLE}"'\n'
+          PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"'\n'
           PROMPT+="Use exactly this task from docs/automation/task-ledger-summary.json; do not select another."
 
           # Refuse accidental prompt growth before any provider request.
