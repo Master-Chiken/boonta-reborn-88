@@ -213,7 +213,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2800 --max-task-context 850)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2800 --max-task-context 2000)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -304,7 +304,7 @@ jobs:
 
           EXECUTION
           - Use only the six enabled GitHub tools: get_file_contents, pull_request_read, create_branch, push_files, create_pull_request and add_issue_comment.
-          - Use the preloaded task ID/title/target/context exactly. Read only source files directly needed for this task; keep new retrieved text below 300 tokens.
+          - Use the preloaded task ID/title/target/context exactly. If the summary says more than five criteria exist, inspect only the selected task record before editing and satisfy all criteria. Read only source files directly needed for this task; keep new retrieved text below 300 tokens.
           - Apply DISCOVER → VERIFY → REUSE before implementation. Keep PC/N64/Dreamcast facts separate from GameCube/Wii; keep commercial data and AGPL material out of the clean-room runtime and hosted context.
           - Create one branch from the exact current SHA of the selected base; push one logical patch; open one PR targeting the same base. Include exact standalone PR-body lines BOONTA_TASK_ID: <task ID> and BOONTA_TASK_TARGET_BRANCH: <base>.
           - Never write to main/dev, merge, auto-merge, force-push, delete refs, or claim tests ran without exact-head CI evidence.
