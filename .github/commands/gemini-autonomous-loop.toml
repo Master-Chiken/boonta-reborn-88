@@ -41,6 +41,10 @@ Use only the GitHub MCP `push_files` tool for all repository file writes. Never 
 Every report, including BLOCKED reports, must first identify the exact selected task using this literal line:
 BOONTA_CYCLE_TASK_ID: <exact task_id from .gemini/context.json>
 
+For a PROGRESS report, the cited PR description must also contain these exact standalone lines:
+BOONTA_TASK_ID: <exact task_id from .gemini/context.json>
+BOONTA_TASK_TARGET_BRANCH: <exact task_target_branch from .gemini/context.json>
+
 For verified progress, finish with these literal lines:
 BOONTA_CYCLE_STATUS: PROGRESS
 BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>
