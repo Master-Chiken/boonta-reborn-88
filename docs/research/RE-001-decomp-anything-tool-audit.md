@@ -124,3 +124,12 @@ The test suite uses only tiny generated fixtures (no commercial game data). It c
 The existing research notes report 92 valid records, with tag counts Trak 19 / Pupp 27 / Part 44 / Scen 2. Claude's separate ZIP audit also reports 11,975,612 decoded bytes and 5,870,259 bytes of ROM data, but the exact definition of its compressed-byte total was not established in that ZIP. The new tool deliberately prints two totals to make this comparison explicit. The separate count of 25 top-level Trak headers is not the same as the 19 records whose first decoded tag is Trak; this script does not yet parse nested Trak structures and must not claim to reproduce that count.
 
 T1 is accepted only after the owner runs the scanner locally and the 92-record / per-tag counts and byte totals are reconciled. Keep all output local except for aggregate counts that contain no ROM-derived byte sequences or assets. T2 (inspect one Pupp record and integrate a GameCube-compatible representation in the demo) remains gated on that reconciliation and a separate format/licence/provenance review. No ROM or extracted asset is required in the public repository or CI.
+
+
+## 2026-11-08 — current upstream head check
+
+The previous source-level audit remains pinned to `fd8c15ea975678ae32f70988440c1fdbeac1405c`; the reusable-tool inventory separately records the fuller follow-up audit at `b410ac528ded6fa9adb7fad4f000cebbf5f341e6`. The current upstream head was checked at [`dd3c42536cbb7a1b4434e60d62736ed167050063`](https://github.com/giveen/decomp.anything/tree/dd3c42536cbb7a1b4434e60d62736ed167050063) (2026-11-05). The three commits after `b410ac5` touch nine files around room/network patience, repeat-attempt handling, persistence and tests. No change in that delta establishes a new Star Wars Racer course/spline parser, nor a new GameCube/Wii target capability.
+
+The current README still documents the workbench as local-first, for Linux x86-64 or Windows through WSL 2; native macOS is not listed as supported. The project is therefore retained as an optional analysis environment, not vendored or made a Boonta dependency. The matching workflow still requires the exact target binary and matching toolchain; REA work items remain evidence prompts, not proof that a hypothesised function has been identified.
+
+No source code, ROM, disc image, extracted asset or game-derived output was imported or run against the target in this head check. The exact local N64 import experiment remains outstanding.
