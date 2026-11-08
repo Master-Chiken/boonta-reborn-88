@@ -102,6 +102,16 @@ cases = [
         "reason_contains": "open PR #356",
     },
     {
+        "name": "100 open PRs fail closed at the bounded inventory ceiling",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": Array.from({ length: 100 }, (_, index) => ({
+            "number": index + 1,
+            "body": "Unrelated PR"
+        })),
+        "expected_error": "100-item safety ceiling",
+    },
+    {
         "name": "same-day blocked marker suppresses activation",
         "tasks": [activation],
         "marker_day_offset": 0,
@@ -237,12 +247,6 @@ async function runCase(testCase) {{
   }};
   const github = {{
     paginate: async (_endpoint, options) => {{
-      if (options.state === "open") {{
-        if (options.per_page !== 100) {{
-          throw new Error("unexpected open-PR query");
-        }}
-        return testCase.open_task_prs || [];
-      }}
       if (options.issue_number !== 226 || options.since !== todayUtc + "T00:00:00Z") {{
         throw new Error("unexpected issue-comment query");
       }}
@@ -250,7 +254,14 @@ async function runCase(testCase) {{
     }},
     rest: {{
       issues: {{ listComments: async () => ({{ data: comments }}) }},
-      pulls: {{ list: async () => ({{ data: testCase.open_task_prs || [] }}) }},
+      pulls: {{
+        list: async (options) => {{
+          if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected open-PR query");
+          }}
+          return {{ data: testCase.open_task_prs || [] }};
+        }}
+      }},
       repos: {{
         getContent: async (options) => {{
           if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
