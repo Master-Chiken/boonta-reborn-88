@@ -203,6 +203,19 @@ async function run(name, options = {}) {
     maxPolls: 1,
     expectFailure: 'changed while exact-head CI was running'
   });
+  await run('PR closed while exact-head CI was polling', {
+    prSequence: [originalPr, { ...originalPr, state: 'closed' }],
+    maxPolls: 1,
+    expectFailure: 'changed while exact-head CI was running'
+  });
+  await run('PR head repository changed while exact-head CI was polling', {
+    prSequence: [originalPr, {
+      ...originalPr,
+      head: { ...originalPr.head, repo: { full_name: 'other-owner/boonta-reborn-88' } }
+    }],
+    maxPolls: 1,
+    expectFailure: 'changed while exact-head CI was running'
+  });
   await run('required check failed', {
     checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
       name, head_sha: head, status: 'completed', conclusion: name === REQUIRED_CHECKS.main[0] ? 'failure' : 'success',
