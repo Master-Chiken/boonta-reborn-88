@@ -64,18 +64,18 @@ with tempfile.TemporaryDirectory() as temp:
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
 
-    # Regression: compact handoffs near the provider ceiling must still fit.
-    bounded_handoff = context + "\n" + ("Supplemental verified evidence note. " * 18)
-    assert 800 < len(bounded_handoff) <= 1200
-    bounded_rendered = MODULE.build_context(
+    # Regression: real activation handoffs exceed the former 1,200-char cap.
+    long_handoff = context + "\n" + ("Supplemental verified evidence note. " * 40)
+    assert 1200 < len(long_handoff) <= 2200
+    long_rendered = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
-        "main", bounded_handoff, max_chars=1500, max_task_context=1200,
+        "main", long_handoff, max_chars=2400, max_task_context=2200,
     )
-    assert len(bounded_rendered) <= 1500
-    assert "One active task maximum" in bounded_rendered
-    assert "Exact PR state is recorded" in bounded_rendered
-    assert "Complete a verified provider cycle." in bounded_rendered
+    assert len(long_rendered) <= 2400
+    assert "One active task maximum" in long_rendered
+    assert "Exact PR state is recorded" in long_rendered
+    assert "Complete a verified provider cycle." in long_rendered
 
     try:
         MODULE.build_context(
