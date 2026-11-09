@@ -346,7 +346,7 @@ jobs:
           AUTHORITATIVE SELECTED TASK
           - Use exactly this task from docs/automation/task-ledger-summary.json. Its acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
           - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens.
-          - For a blocked task, search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results. Verify live `merged_at`, repository, base and final `head.sha`; closed-unmerged is not completion.
+          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results. verify live `merged_at`, repository, base and final `head.sha`; closed-unmerged is not completion.
           - If all criteria are met, record that original PR URL and exact head SHA as evidence in one reviewable canonical-ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence. Otherwise implement only verified gaps.
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
 
