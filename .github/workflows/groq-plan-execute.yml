@@ -301,15 +301,15 @@ jobs:
           - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Three build steps.
           - Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
           - One task/writer/branch/PR; no merges, protected-branch writes, force-pushes or deletes.
-          - Keep commercial game data out of Git, CI and hosted prompts; preserve provenance and PC/N64/Dreamcast versus GameCube/Wii boundaries.
+          - Exclude commercial game data; preserve provenance and distinguish PC/N64/Dreamcast from GameCube/Wii.
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279.
           - Read only the source files needed; keep new retrieved text below 300 tokens.
           - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
-          - Required policies and schema-v2 task excerpts are preloaded; do not reread full ledgers or policy files.
+          - Policy/task excerpts are preloaded; do not reread full ledgers or policies.
           
           TASK
-          - Use the exact task, acceptance_criteria_excerpt and next_action in preloaded context; never substitute.
-          - Match exact BOONTA_TASK_ID PR markers; verify merged_at, repository, base and head SHA. Closed-unmerged is not done.
+          - Follow the preloaded task, acceptance criteria and next action exactly; never substitute.
+          - Match BOONTA_TASK_ID PRs; verify merged_at, repo, base and head SHA. Closed-unmerged is not complete.
           - When complete, record the original PR URL and exact head SHA in one reviewable ledger PR and regenerate summary; otherwise implement only verified gaps.
           
           EXECUTION
