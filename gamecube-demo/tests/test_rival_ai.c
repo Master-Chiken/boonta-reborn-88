@@ -73,7 +73,8 @@ static void avoidance_respects_available_road_room(void)
     const float target = boonta_rival_ai_target_lateral(
         0U, -10.0f, 2.0f, NAN, z, lateral, 2U, 0.0f, 2.2f);
 
-    assert(nearf_ai(target, 1.55f));
+    assert(nearf_ai(target, 1.25f));
+    assert(target <= 1.55f);
     assert(target < 2.0f);
 }
 
