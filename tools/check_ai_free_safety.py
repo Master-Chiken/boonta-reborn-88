@@ -936,7 +936,7 @@ for label, prompt in dynamic_task_prompts:
 # and prevented both free providers from reaching inference.
 for label, workflow, expected_max_chars, expected_task_chars in (
     ("OpenRouter", openrouter_fallback, "2400", "2200"),
-    ("Groq", groq_fallback, "1600", "1400"),
+    ("Groq", groq_fallback, "1400", "1200"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -1469,8 +1469,8 @@ for required in (
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3400 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,400-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 3,500-character TPM prompt ceiling before inference")
 if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
