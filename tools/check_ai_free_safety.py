@@ -1287,6 +1287,10 @@ for required in (
     "bodyHasTargetBranchMarker",
     "createdAfterSnapshot",
     "advancedDuringCycle",
+    "contentChangedDuringCycle",
+    "previousHeadCommit.commit?.tree?.sha",
+    "exactTreeSha",
+    "!contentChangedDuringCycle",
     "run.head_sha === exactHead",
     "run.app?.slug === 'github-actions'",
     "check.status === 'completed' && check.conclusion === 'success'",
@@ -1294,6 +1298,11 @@ for required in (
     "core.setOutput('cycle_status', 'blocked')",
     "maxPolls = 32",
     "pollIntervalMs = 15000",
+    "const { data: finalPr } = await github.rest.pulls.get",
+    "finalPr.state !== 'open'",
+    "finalPr.head.sha !== exactHead",
+    "finalPr.base.ref !== expectedBase",
+    "changed while exact-head CI was running",
 ):
     if required not in cycle_validator:
         errors.append(f"Shared autonomous report validator is missing exact-head safety contract: {required!r}")
@@ -1310,6 +1319,9 @@ for required in (
     "wait for exact-head checks",
     "dev target uses native build/host/emulator checks",
     "named task blocker",
+    "fresh empty commit on an existing PR is not progress",
+    "existing PR with changed tree content is eligible for exact-head checks",
+    "PR head updated while exact-head CI was polling",
 ):
     if required not in cycle_validator_tests:
         errors.append(f"Shared autonomous report tests are missing regression case {required!r}")
