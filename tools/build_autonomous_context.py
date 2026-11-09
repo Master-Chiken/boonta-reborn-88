@@ -102,11 +102,10 @@ def build_context(
             "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
         )
     lines = [
-        "VERIFIED PRE-INFERENCE CONTEXT:",
-        "Boundary: PC/N64/Dreamcast is not GameCube/Wii proof; no commercial game data; preserve AGPL/MIT provenance.",
-        "Cycle: €0; one provider/run; one task/writer; no retries or merges.",
-        f"Canonical ledger v2 {summary.get('updated_at', 'unknown')}: {task_id} [{status}], base={target_branch}, scope={', '.join(scope)}.",
-        "Selected task context:",
+        "VERIFIED CONTEXT:",
+        "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
+        "Canonical ledger v2 verified.",
+        "Task:",
         bounded_task_context,
     ]
     output = "\n".join(lines)
