@@ -231,6 +231,17 @@ async function run(name, options = {}) {
     }))]],
     expectFailure: 'required CI check failed'
   });
+
+  await run('validator self-test check is required', {
+    checkRunsByPoll: [[...REQUIRED_CHECKS.main
+      .filter((name) => name !== 'Validate workflow YAML and embedded Python')
+      .map((name) => ({
+        name, head_sha: head, status: 'completed', conclusion: 'success',
+        app: { slug: 'github-actions' }
+      }))]],
+    maxPolls: 1,
+    expectFailure: 'did not complete successfully'
+  });
   await run('same-name check from an untrusted app is ignored', {
     checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
       name, head_sha: head, status: 'completed', conclusion: 'success',
@@ -267,7 +278,7 @@ async function run(name, options = {}) {
   });
   assert.equal(dev.core.outputs.cycle_status, 'progress');
 
-  process.stdout.write('Autonomous cycle report tests passed: task binding, PR identity/base, exact SHA, cycle freshness, BLOCKED contract and exact-head CI polling.\n');
+  process.stdout.write('Autonomous cycle report tests passed: task binding, PR identity/base, exact SHA, cycle freshness, BLOCKED contract and all required exact-head CI checks including the validator self-test.\n');
 })().catch((error) => {
   process.stderr.write(String(error.stack || error) + '\n');
   process.exitCode = 1;
