@@ -313,7 +313,7 @@ jobs:
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
           - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
           - Branch from selected-base SHA; push one PR to base; no protected writes.
-          - PR body exact standalone lines:
+          - PR body exact lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
