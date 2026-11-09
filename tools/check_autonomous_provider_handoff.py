@@ -547,6 +547,8 @@ for required in (
     "headCommit.sha !== exactHead",
     "const { data: finalPr } = await github.rest.pulls.get",
     "finalPr.state !== 'open'",
+    "finalPr.head.repo?.full_name !== owner + '/' + repo",
+    "finalPr.base.repo?.full_name !== owner + '/' + repo",
     "finalPr.head.sha !== exactHead",
     "finalPr.base.ref !== expectedBase",
     "changed while exact-head CI was running",
