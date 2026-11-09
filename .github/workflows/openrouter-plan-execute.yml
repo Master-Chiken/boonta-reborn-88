@@ -351,7 +351,13 @@ jobs:
           - If all criteria are met, record that original PR URL and exact head SHA as evidence in one reviewable canonical-ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence. Otherwise implement only verified gaps.
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
 
-          EXECUTION
+          EXECUTION — USE THE EIGHT STEPS FOR DELIVERY, NOT EXPLORATION
+          - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list the repository root.
+          - The selected task identity and compact context are already preloaded above. Do not reread docs/automation/task-ledger-summary.json or fetch the repository root.
+          - If the full acceptance criteria are needed, read docs/automation/task-ledger.json once and inspect only the exact selected task row. Do not reread the same path.
+          - Use the direct GitHub MCP tools in this order: (1) search exact BOONTA_TASK_ID PR matches; (2) read only the exact task row if needed; (3) create one branch from the current selected base ref (main/dev, never a stale hard-coded SHA); (4) push one logical patch with one push_files call; (5) create one PR to the selected base; (6) search/read back that PR and its exact current head SHA. Use remaining steps only to resolve a concrete task-specific dependency or verify the result.
+          - Do not spend build steps on generic repository exploration, repeated reads, summaries or plans. If there is no verified useful patch to make within this task, return BLOCKED with one evidenced blocker and one concrete next action; do not create an empty branch or PR.
+          - The PR must advance the selected task's acceptance criteria. A documentation-only change is acceptable only when it corrects a verified automation/task-tracking defect that blocks this exact task.
           - The `GITHUB_TOOLS` allowlist uses raw server names; OpenCode v1.19.5 exposes model-facing names with the `github_` prefix.
           - Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.
           - `OPENCODE_EXPERIMENTAL_CODE_MODE=false`; call these direct tools, not `execute`. Shell/filesystem tools remain disabled. Read only task-specific files.
@@ -360,7 +366,7 @@ jobs:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - Do not stop after reading the ledger or describing intended work. Use the available tools to complete the branch, patch, push and PR sequence within the bounded agent steps.
-          - Your FINAL response is a machine-readable report, not a narrative. It MUST include exactly one line for every field below; substitute real values, never placeholders:
+          - Your FINAL response must contain only the machine-readable report lines below: no narrative, headings, Markdown fences, preamble or postscript. Copy the exact selected task ID from the preloaded Task ID field. It MUST include exactly one line for every required field; substitute real values, never placeholders:
             BOONTA_CYCLE_TASK_ID: <exact task ID>
             BOONTA_CYCLE_STATUS: PROGRESS or BLOCKED
             BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>
