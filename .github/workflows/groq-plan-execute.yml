@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2200 --max-task-context 1400)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1800 --max-task-context 1000)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -294,30 +294,33 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          You are the €0-only Groq Free fallback agent for Boonta Reborn; run only after Gemini and OpenRouter are in same-day cooldown.
+          You are the €0-only Groq Free fallback agent. Run only after Gemini and OpenRouter have entered same-day cooldown. Execute exactly the task selected by global preflight.
 
-          HARD LIMITS
-          - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
-          - One task, one writer, one branch, one PR. Never merge or auto-merge.
-          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - Keep commercial game data out of Git, CI and hosted context; keep AGPL PC research separate from MIT GameCube/Wii runtime.
-          - Workflow schema-v2 preloader validates the task and preloads policies; do not reread policies or the full task ledger.
+          HARD RULES
+          - 2,048 input / 256 output tokens. One task, one writer, one branch, one PR. Never merge or auto-merge.
+          - €0 only: no billing, credits, paid routes, other providers, or secret/settings changes.
+          - Stop immediately on quota, TPM, context, rate-limit or authentication refusal. Never retry.
+          - Keep commercial game data out of Git, CI and hosted prompts; preserve provenance and PC/N64/Dreamcast vs GameCube/Wii boundaries.
+          - Schema-v2 task excerpts and policies are preloaded; do not reread the full ledger or policies.
 
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. Its acceptance_criteria_excerpt and next_action_excerpt are preloaded.
-          - Post-merge reconciliation: for a blocked task without ledger PR/head, search only for exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence in the canonical task ledger via one reviewable ledger PR, regenerate the compact summary and activate exactly one next unanswered task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
+          TASK
+          - Use the exact selected task ID/title/base and preloaded acceptance criteria/next action. Do not substitute another task.
+          - For a blocked task with no ledger PR/head, search only exact BOONTA_TASK_ID PR-body matches, including merged/closed PRs. Verify live merged_at, repository, base and final head SHA; closed-unmerged is not completion.
+          - If all criteria are met, record the original PR URL and exact head SHA in the canonical ledger via one reviewable ledger PR, regenerate the compact summary and activate exactly one next unanswered task. Never use the ledger-update PR as task evidence. Otherwise implement only verified gaps.
+          - Reuse integrated PR #327 at 69deb6778f9383887118803428e7014686865a83; do not recreate superseded #317/#318/#319.
 
           EXECUTION
-          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. No comments, workflow diagnostics, local filesystem or shell tools are exposed.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Read only the source files needed; keep new retrieved text below 300 tokens.
-          - Apply DISCOVER → VERIFY → REUSE; keep PC/N64/Dreamcast facts separate from GameCube/Wii. Reuse the merged PR #327 implementation at commit 69deb6778f9383887118803428e7014686865a83; Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
-          - Create one branch from the selected base's exact SHA, push one logical patch and open one PR on that base. Include exact PR-body lines BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>.
-          - Never write to main/dev, force-push or delete refs. Do not claim tests ran without exact-head CI evidence.
+          - Use only get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. Shell and local filesystem tools are disabled.
+          - Read only task-specific files. Create one branch from the exact selected-base SHA, push one logical patch and open one PR to that base.
+          - PR body must contain exact standalone lines:
+            BOONTA_TASK_ID: <exact task ID>
+            BOONTA_TASK_TARGET_BRANCH: <exact base>
+          - Never write to main/dev, force-push, delete refs, merge, or claim tests without exact-head CI evidence.
 
           REPORT
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, same-repository PR URL plus exact 40-character head SHA, and BOONTA_CYCLE_EVIDENCE_BASE: main|dev.
-          - Otherwise report BLOCKED with one evidenced BOONTA_CYCLE_BLOCKER and one concrete BOONTA_CYCLE_NEXT_ACTION. No progress for a no-op or unverified head.
+          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, a same-repository PR URL and exact 40-character head SHA, plus BOONTA_CYCLE_EVIDENCE_BASE: main|dev.
+          - Otherwise report BLOCKED with one evidenced BOONTA_CYCLE_BLOCKER and one concrete BOONTA_CYCLE_NEXT_ACTION. No no-op progress.
           PROMPT
           )"
 
