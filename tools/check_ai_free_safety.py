@@ -1491,8 +1491,8 @@ for required in (
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,500-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 3600 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 3,600-character TPM prompt ceiling before inference")
 if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
