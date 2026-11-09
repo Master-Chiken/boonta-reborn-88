@@ -81,8 +81,8 @@ for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
 # OpenRouter's eight-step budget must be spent on the reserved task, not discovery.
 for required in (
     "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
-    "Do not list the repository root.",
-    "Do not reread docs/automation/task-ledger-summary.json or fetch the repository root.",
+    "Do not list the repository root or reread the compact summary.",
+    "Do not list the repository root or reread the compact summary.",
     "read docs/automation/task-ledger.json once and inspect only the exact selected task row",
     "create one branch from the current selected base ref",
     "push one logical patch with one push_files call",
