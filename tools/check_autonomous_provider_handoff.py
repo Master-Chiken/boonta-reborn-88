@@ -509,9 +509,9 @@ for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("G
     required_rules = (
         (
             "Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.",
-            "Complete only if merged_at, repo/base and final head SHA match; closed-unmerged is incomplete.",
-            "If complete: one ledger PR with original PR URL + task head SHA; regenerate summary; activate one next task.",
-            "Never cite ledger PR SHA as task evidence.",
+            "Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.",
+            "If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.",
+            "Never cite ledger PR SHA as task evidence; else fix verified gaps only.",
         )
         if label == "Groq" else (
             "Post-merge reconciliation",
