@@ -1463,6 +1463,12 @@ if "€0 only: no billing, paid routes, credits, alternate providers or secret/s
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
+# Gemini's observed transport failure was a transient fetch error, not a quota refusal.
+# Permit exactly one bounded retry for this specific transport class; keep all other
+# provider retry behavior and the one-provider-per-cycle policy unchanged.
+if '"maxAttempts": 2' not in execute or '"retryFetchErrors": true' not in execute:
+    errors.append("Gemini must allow at most one retry for transient fetch failures")
+
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
 for label, content in (
