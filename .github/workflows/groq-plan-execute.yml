@@ -314,7 +314,7 @@ jobs:
           - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
           - GITHUB_TOOLS uses raw names; set OPENCODE_EXPERIMENTAL_CODE_MODE=false. No execute, shell or filesystem tools.
           EXECUTION
-          - Branch from selected-base SHA; push one patch and open a non-draft PR to that base with standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH lines.
+          - PR body: standalone BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>; branch from selected SHA; one non-draft PR.
           - No plan-only response: finish the tool calls and read back the exact PR head SHA.
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>. PROGRESS needs status, PR URL, exact 40-char SHA and evidence base; BLOCKED needs one blocker and next action.
           PROMPT
