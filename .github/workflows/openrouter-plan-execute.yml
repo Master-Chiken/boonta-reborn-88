@@ -233,8 +233,39 @@ jobs:
             core.setOutput('snapshot_at', snapshotAt);
             core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
 
-      - name: Run OpenCode through the OpenRouter Free route
+      - name: Prepare the exact selected task and repository root before inference
+        id: prepare_context
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success'
+        shell: bash
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          TASK_TITLE: ${{ inputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
+        run: |
+          set -euo pipefail
+          repo_root=''
+          for candidate in "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/boonta-reborn-88"; do
+            [[ -d "$candidate" ]] || continue
+            candidate="$(cd "$candidate" && pwd -P)"
+            if [[ -f "$candidate/tools/build_autonomous_context.py" && -f "$candidate/docs/REVERSE_ENGINEERING_FIRST.md" && -f "$candidate/docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md" && -f "$candidate/docs/automation/task-ledger-summary.json" ]]; then
+              git_root="$(git -C "$candidate" rev-parse --show-toplevel)"
+              if [[ "$git_root" == "$candidate" ]]; then repo_root="$candidate"; break; fi
+            fi
+          done
+          if [[ -z "$repo_root" ]]; then
+            echo "::error::Could not identify the exact checked-out Boonta repository root; no OpenRouter inference was sent."
+            exit 1
+          fi
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3500 --max-task-context 2200)"
+          {
+            printf 'repo_root=%s\n' "$repo_root"
+            echo 'context<<BOONTA_CONTEXT_EOF'
+            printf '%s\n' "$context"
+            echo 'BOONTA_CONTEXT_EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Run OpenCode through the OpenRouter Free route
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success'
         id: run_opencode
         shell: bash
         env:
@@ -246,7 +277,8 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
-          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
+          AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
         run: |
           set -euo pipefail
           set +x
@@ -280,7 +312,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,pull_request_read,search_pull_requests,list_workflow_runs,list_workflow_jobs,get_workflow_run,get_job_logs,create_branch,push_files,create_pull_request,add_issue_comment"
+                  "GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -310,21 +342,19 @@ jobs:
           - Stop on the first quota, TPM, context, rate-limit or authentication error. Never retry the same request.
           
           AUTHORITATIVE TASK — AUTHORITATIVE SELECTED TASK
-          - The parent has already selected exactly one eligible task from docs/automation/task-ledger-summary.json on main and passes its ID, title, target branch and bounded question/acceptance/next-action context below. Use exactly this task from docs/automation/task-ledger-summary.json. Do not substitute another task or reread the entire queue. The handoff includes question_excerpt and acceptance_criteria_excerpt.
-          - Require TASK_ID, TASK_TITLE, TASK_TARGET_BRANCH and TASK_DESCRIPTION. The target must be exactly main or dev. If any are missing, stop and report BLOCKED.
-          - If the context explicitly says more than five acceptance criteria exist, fetch only that task's matching object from docs/automation/task-ledger.json at ref main through github_get_file_contents; do not fetch the full issue or backlog.
+          - AUTHORITATIVE SELECTED TASK: Use exactly this task from docs/automation/task-ledger-summary.json. Do not substitute another task. The schema-v2 preloader passes its acceptance_criteria_excerpt and next action below; do not open the full ledger.
+          - Post-merge reconciliation: for a blocked task without ledger PR/head, search only for exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence in the canonical task ledger via one reviewable ledger PR, regenerate the compact summary and activate exactly one next unanswered task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
           
           PLATFORM AND REUSE
-          - Read docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md once and obey its provider/token/timeout budget.
-          - pull_request_read is the supported PR read tool; github_get_pull_request does not exist.
+          - The workflow preloaded the mandatory context-budget and reverse-engineering policies. Do not spend provider steps rereading them.
           - #226 is native GameCube/Wii research and implementation. #279 is read-only PC/N64/Dreamcast evidence; never infer GameCube/Wii behavior from those platforms.
           - PR #282 is the completed broad inventory. PR #327's rival racing implementation is already integrated in main at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. Revisit #274 only for a demonstrated dependency.
-          - Follow docs/REVERSE_ENGINEERING_FIRST.md before any recreation: DISCOVER, VERIFY platform/version and license/provenance, then EXTRACT/CONVERT/REUSE, INTEGRATE and TEST. Record unknowns rather than guessing.
+          - Apply the preloaded DISCOVER/VERIFY/REUSE gate before any recreation. Record exact source, platform, provenance, tests and unknowns.
           
           EXECUTION
-          - Local filesystem tools read/edit/glob/grep/list/bash are disabled. Do not try to open local paths. Repository reads must use github_get_file_contents with an explicit path and ref.
-          - Available GitHub tools: github_get_file_contents, github_get_pull_request (the server tool is named pull_request_read), search_pull_requests, list_workflow_runs, list_workflow_jobs, get_workflow_run, get_job_logs, create_branch, push_files and create_pull_request. Do not invent aliases or browse unrelated PRs/runs.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,500 tokens total; target below 1,000 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
+          - Local filesystem tools read/edit/glob/grep/list/bash are disabled. Do not try to open local paths. The repository root and mandatory policies are preloaded; inspect only task-specific repository files through get_file_contents with an explicit path and ref.
+          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. No workflow-log, comment-writing, local filesystem or shell tools are exposed.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Create one branch from the exact current SHA of TASK_TARGET_BRANCH, push one logical change set, then open one PR targeting that same branch. Include these exact standalone lines in the PR body:
             BOONTA_TASK_ID: <exact TASK_ID>
             BOONTA_TASK_TARGET_BRANCH: <exact TASK_TARGET_BRANCH>
@@ -344,15 +374,16 @@ jobs:
           PROMPT
           )"
 
-          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${TASK_DESCRIPTION:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
+          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${AUTONOMOUS_CONTEXT:-}" || -z "${REPO_ROOT:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
             echo "::error::Global preflight did not pass a complete selected task context; no OpenRouter request was sent."
             exit 2
           fi
-          PROMPT="${PROMPT}"$'\n\nAUTHORITATIVE SELECTED TASK\n'
-          PROMPT+="Task ID: ${TASK_ID}"$'\n'
-          PROMPT+="Task title: ${TASK_TITLE}"$'\n'
-          PROMPT+="Target branch: ${TASK_TARGET_BRANCH}"$'\n'
-          PROMPT+="${TASK_DESCRIPTION}"
+          if [[ -z "${REPO_ROOT:-}" || -z "${AUTONOMOUS_CONTEXT:-}" ]]; then
+            echo "::error::Validated repository/task context is missing; no OpenRouter inference was sent."
+            exit 2
+          fi
+          PROMPT="${PROMPT}"$'\n\n'
+          PROMPT+="${AUTONOMOUS_CONTEXT}"
 
           PROMPT="${PROMPT}
 
@@ -370,7 +401,7 @@ jobs:
 
           # Stop OpenCode on the first explicit provider throttle/quota/auth refusal.
           # This prevents internal retries from multiplying a known terminal failure.
-          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$GITHUB_WORKSPACE" <<'PY'
+          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$REPO_ROOT" <<'PY'
           import os
           import re
           import signal

@@ -89,6 +89,38 @@ cases = [
         "expected_blocked": False,
     },
     {
+        "name": "open PR with exact task marker blocks duplicate activation",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 356,
+            "body": "Existing automation PR\nBOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\nBOONTA_TASK_TARGET_BRANCH: main"
+        }],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "reason_contains": "open PR #356",
+    },
+    {
+        "name": "open PR for a different task does not block activation",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 123,
+            "body": "BOONTA_TASK_ID: AUTOMATION-OTHER-TASK\nBOONTA_TASK_TARGET_BRANCH: main"
+        }],
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_blocked": False,
+    },
+    {
+        "name": "100 open PRs fail closed at the bounded inventory ceiling",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{"number": number, "body": "Unrelated PR"} for number in range(100)],
+        "expected_error": "100-item safety ceiling",
+    },
+    {
         "name": "same-day blocked marker suppresses activation",
         "tasks": [activation],
         "marker_day_offset": 0,
@@ -231,6 +263,14 @@ async function runCase(testCase) {{
     }},
     rest: {{
       issues: {{ listComments: async () => ({{ data: comments }}) }},
+      pulls: {{
+        list: async (options) => {{
+          if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected open-PR query");
+          }}
+          return {{ data: testCase.open_task_prs || [] }};
+        }}
+      }},
       repos: {{
         getContent: async (options) => {{
           if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{

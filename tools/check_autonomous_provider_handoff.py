@@ -15,6 +15,9 @@ FILES = {
     "gemini_prompt": ROOT / ".github/commands/gemini-autonomous-loop.toml",
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
+    "context_builder": ROOT / "tools/build_autonomous_context.py",
+    "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
+    "task_preflight_tests": ROOT / "tools/test_autonomous_task_preflight.py",
 }
 
 
@@ -31,9 +34,16 @@ groq = read("groq")
 loop = read("loop")
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
+context_builder = read("context_builder")
+context_builder_tests = read("context_builder_tests")
+task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
 
 # Provider invocations and validated reports must be separately observable.
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    if "github_get_file_contents" in content or "github_get_pull_request" in content:
+        errors.append(f"{label} prompt references a nonexistent GitHub MCP tool alias")
+
 for content, needle, message in (
     (gemini, "value: ${{ jobs.plan-execute.outputs.invocation_outcome }}", "Gemini must expose its invocation result"),
     (gemini, "invocation_outcome: ${{ steps.run_gemini.outcome }}", "Gemini must publish its actual model-step outcome"),
@@ -181,8 +191,8 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "1,500 tokens"),
-    ("Groq", groq, "800 tokens"),
+    ("OpenRouter", openrouter, "1,000 tokens"),
+    ("Groq", groq, "300 tokens"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
@@ -236,9 +246,9 @@ for required in (
     if required not in openrouter:
         errors.append(f"OpenRouter quota reserve must fail closed and report its threshold: {required!r}")
 
-if "this reserve is not a guarantee of cycle completion" not in budget:
+if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
-if "process-group watchdog stops OpenCode on the first explicit" not in budget:
+if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -299,29 +309,24 @@ groq_tools = set(
     groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
 required_writer_tools = {
-    "get_file_contents", "pull_request_read", "create_branch",
-    "push_files", "create_pull_request", "add_issue_comment",
+    "get_file_contents", "search_pull_requests", "create_branch",
+    "push_files", "create_pull_request",
 }
 for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
-    if not required_writer_tools.issubset(toolset):
-        errors.append(f"{label} is missing a required bounded branch/PR editing tool")
+    if toolset != required_writer_tools:
+        errors.append(f"{label} must expose exactly the reviewed five-tool read/search/branch/PR contract")
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
-        "update_pull_request",
+        "update_pull_request", "add_issue_comment", "pull_request_read",
+        "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
     }
     if forbidden.intersection(toolset):
         errors.append(f"{label} MCP allow-list exposes unnecessary or unsafe tools: {sorted(forbidden.intersection(toolset))}")
 
-required_openrouter_ci_tools = {
-    "search_pull_requests", "list_workflow_runs", "list_workflow_jobs",
-    "get_workflow_run", "get_job_logs",
+required_gemini_ci_tools = {
+    "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
 }
-if not required_openrouter_ci_tools.issubset(openrouter_tools):
-    errors.append("OpenRouter must retain bounded read-only PR/Actions CI diagnostic tools")
-if groq_tools != required_writer_tools:
-    errors.append("Groq must retain the reviewed six-tool minimal GitHub MCP allow-list")
-
 gemini_settings_match = re.search(r'"includeTools":\s*\[(.*?)\]', gemini, re.DOTALL)
 if not gemini_settings_match:
     errors.append("Gemini MCP allow-list is missing")
@@ -329,11 +334,46 @@ else:
     gemini_tools = set(re.findall(r'"([^"]+)"', gemini_settings_match.group(1)))
     if not required_writer_tools.issubset(gemini_tools):
         errors.append("Gemini MCP allow-list is missing a bounded branch/PR editing tool")
-    if not required_openrouter_ci_tools.issubset(gemini_tools):
+    if not required_gemini_ci_tools.issubset(gemini_tools):
         errors.append("Gemini must retain bounded read-only PR/Actions CI diagnostic tools")
     if {"merge_pull_request", "delete_branch", "update_pull_request", "list_pull_requests"}.intersection(gemini_tools):
         errors.append("Gemini MCP allow-list exposes an unsafe or unavailable repository mutation/list tool")
 
+# Both OpenCode providers must resolve the actual checked-out repository root,
+# validate the selected task against schema v2, and preload policy/context before
+# spending provider inference or scarce agent tool steps.
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    required = (
+        "id: prepare_context",
+        "tools/build_autonomous_context.py",
+        'git -C "$candidate" rev-parse --show-toplevel',
+        'AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}',
+        'REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}',
+        "steps.prepare_context.outcome == 'success'",
+        '"$REPO_ROOT" <<' + "'PY'",
+    )
+    for needle in required:
+        if needle not in content:
+            errors.append(f"{label} must resolve the checked-out root and preload schema-v2 context: missing {needle!r}")
+    if '"$GITHUB_WORKSPACE" <<' + "'PY'" in content:
+        errors.append(f"{label} must not launch OpenCode from the ambiguous outer workspace root")
+
+for required in (
+    'summary.get("schema_version") != 2',
+    'summary.get("source") != "docs/automation/task-ledger.json"',
+    'task.get("title") != task_title or task.get("target_branch") != target_branch',
+    'task.get("pr_url") or task.get("head_sha")',
+    'task_id != "AUTOMATION-LEDGER-ACTIVATION"',
+    'required_handoff_text',
+    'task["question_excerpt"]',
+    'task["next_action_excerpt"]',
+    "if not all(item in bounded_task_context for item in required_handoff_text)",
+    "truncates required question, acceptance-criteria or next-action excerpts",
+):
+    if required not in context_builder:
+        errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
+if "tight context budget to reject truncated required task excerpts" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must prove required task excerpts are not silently truncated")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
@@ -343,8 +383,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
-    errors.append("Groq must remain capped at 3072 context / 512 output tokens")
+if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
+    errors.append("Groq must remain capped at 2048 context / 256 output tokens after the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
@@ -364,14 +404,15 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 5000 )); then", "Groq must enforce its 5,000-character prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 4500 )); then", "Groq must enforce its 4,500-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
-    (groq, "Never enable billing, paid routes", "Groq must preserve the €0/no-paid-route rule"),
+    (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "github_get_pull_request does not exist", "OpenRouter must name the supported PR read tool and reject an unavailable alias"),
-    (groq, "github_get_pull_request does not exist", "Groq must name the supported PR read tool and reject an unavailable alias"),
+    (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
+    (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
+
 ):
     if needle not in content:
         errors.append(message)
@@ -391,9 +432,25 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "Do not reopen, replay or recreate that chain" not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
 
+# A blocked task with no ledger PR/head must reconcile exact matching historic PRs
+# before any provider creates more work. Keep all three agent prompts in sync.
+for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "Post-merge reconciliation",
+        "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
+        "including merged/closed results",
+        "closed-unmerged is not completion",
+        "verify live `merged_at`",
+        "final `head.sha`",
+        "record that original PR URL and exact head SHA as evidence",
+        "Never use the ledger-update PR's own SHA as task evidence",
+    ):
+        if required not in prompt:
+            errors.append(f"{label} prompt is missing the post-merge task reconciliation rule {required!r}")
+
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
-    "permissions:\n      contents: read\n      issues: read",
+    "permissions:\n      contents: read\n      issues: read\n      pull-requests: read",
     "path: 'docs/automation/task-ledger-summary.json'",
     "ledgerSummary.schema_version !== 2",
     "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
@@ -403,6 +460,15 @@ for required in (
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",
     "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "const { data: openPullRequests } = await github.rest.pulls.list({",
+    "state: 'open'",
+    "page: 1",
+    "openPullRequests.length >= 100",
+    "const openTaskPullRequest = (task) =>",
+    "const markerLine = 'BOONTA_TASK_ID: ' + task.task_id",
+    "const activationTaskOpenPr = openTaskPullRequest(activationTask)",
+    "!activationTaskOpenPr",
+    "activeTaskOpenPr",
     "!taskBlockedActive",
     "core.setOutput('task_ready', String(taskReady))",
 ):
@@ -410,6 +476,14 @@ for required in (
         errors.append(f"Task eligibility preflight is missing {required!r}")
 if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
+if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
+if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove unrelated task markers do not block the selected task")
+if '"name": "100 open PRs fail closed at the bounded inventory ceiling"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove the open-PR inventory ceiling fails closed")
+if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests or "options.page !== 1" not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must enforce the bounded one-page open-PR query")
 
 # The blocked-task marker is referenced during selection. It must be computed
 # from today's bot comments before that first reference, not later in the script.
