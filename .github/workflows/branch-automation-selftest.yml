@@ -2,28 +2,8 @@ name: Branch automation self-test
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/branch-governance.yml"
-      - ".github/workflows/branch-intake-queue.yml"
-      - ".github/workflows/retire-verified-branch.yml"
-      - ".github/workflows/ai-daily-coordinator.yml"
-      - ".github/workflows/gemini-invoke.yml"
-      - ".github/workflows/gemini-plan-execute.yml"
-      - ".github/workflows/openrouter-plan-execute.yml"
-      - ".github/workflows/groq-plan-execute.yml"
-      - ".github/workflows/boonta-autonomous-readiness.yml"
-      - ".github/workflows/boonta-autonomous-loop.yml"
-      - ".github/workflows/ci-failure-triage.yml"
-      - ".github/commands/gemini-autonomous-loop.toml"
-      - ".github/workflows/branch-automation-selftest.yml"
-      - "tools/check_ai_free_safety.py"
-      - "GEMINI.md"
-      - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
-      - "tools/check_autonomous_provider_handoff.py"
-      - "tools/test_autonomous_task_preflight.py"
-      - "tools/build_autonomous_context.py"
-      - "tools/test_autonomous_context.py"
-      - "tools/test_openrouter_watchdog.py"
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -107,6 +87,10 @@ jobs:
       - name: Validate schema-v2 autonomous context builder with offline fixtures
         shell: bash
         run: python3 tools/test_autonomous_context.py
+
+      - name: Execute autonomous cycle report contract tests (offline)
+        shell: bash
+        run: node tools/test_autonomous_cycle_report.js
 
       - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash

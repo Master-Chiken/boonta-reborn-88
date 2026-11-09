@@ -58,6 +58,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
 
     steps:
       - name: Check same-day Groq failure cooldown
@@ -431,60 +432,18 @@ jobs:
           script: |
             const fs = require('fs');
             const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
-            const lines = summary.split(/\r?\n/);
-            const selectedTaskId = process.env.SELECTED_TASK_ID || '';
-            const selectedTaskTargetBranch = process.env.SELECTED_TASK_TARGET_BRANCH || '';
-            const reportedTaskIdLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_TASK_ID: ')) || '';
-            const reportedTaskId = reportedTaskIdLine.slice('BOONTA_CYCLE_TASK_ID: '.length).trim();
-            if (!selectedTaskId || !['main', 'dev'].includes(selectedTaskTargetBranch) || reportedTaskId !== selectedTaskId) {
-              core.setFailed('Cycle report must identify the exact selected task and its authorized target branch.');
-              return;
-            }
-            const valueExists = (key) => lines.some((line) => line.startsWith(key + ': ') && line.slice(key.length + 2).trim().length > 0);
-            const status = lines.find((line) => line === 'BOONTA_CYCLE_STATUS: PROGRESS' || line === 'BOONTA_CYCLE_STATUS: BLOCKED');
-            const evidence = summary.match(/^BOONTA_CYCLE_EVIDENCE: https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/([1-9][0-9]*) @ ([0-9a-f]{40})$/m);
-            const evidenceBaseMatch = summary.match(/^BOONTA_CYCLE_EVIDENCE_BASE: (main|dev)$/m);
-            const validBlocked = status === 'BOONTA_CYCLE_STATUS: BLOCKED' && valueExists('BOONTA_CYCLE_BLOCKER') && valueExists('BOONTA_CYCLE_NEXT_ACTION');
-            if (status === 'BOONTA_CYCLE_STATUS: PROGRESS') {
-              if (!evidence || !evidenceBaseMatch || evidenceBaseMatch[1] !== selectedTaskTargetBranch) {
-                core.setFailed('PROGRESS must cite the exact selected task branch, same-repository PR URL and 40-character head SHA.');
-                return;
-              }
-              const baseline = JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}');
-              const snapshotAt = Date.parse(process.env.PRE_CYCLE_PR_SNAPSHOT_AT || '');
-              if (!Number.isFinite(snapshotAt)) {
-                core.setFailed('The pre-cycle PR snapshot timestamp is missing or invalid.');
-                return;
-              }
-              const { data: pr } = await github.rest.pulls.get({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', pull_number: Number(evidence[1]) });
-              const taskMarkers = new Set((pr.body || '').split(/\r?\n/).map((line) => line.trim()));
-              if (!taskMarkers.has('BOONTA_TASK_ID: ' + selectedTaskId) ||
-                  !taskMarkers.has('BOONTA_TASK_TARGET_BRANCH: ' + selectedTaskTargetBranch)) {
-                core.setFailed('Cycle PR body must identify the exact selected task ID and target branch.');
-                return;
-              }
-              const { data: headCommit } = await github.rest.repos.getCommit({ owner: 'Master-Chiken', repo: 'boonta-reborn-88', ref: evidence[2] });
-              const existedAtStart = Object.prototype.hasOwnProperty.call(baseline, String(pr.number));
-              const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotAt;
-              const advancedDuringCycle = existedAtStart && baseline[String(pr.number)] !== evidence[2];
-              if (pr.state !== 'open' || pr.merged_at || pr.head.repo?.full_name !== 'Master-Chiken/boonta-reborn-88' || pr.head.sha !== evidence[2] || headCommit.sha !== evidence[2] || (pr.changed_files ?? 0) < 1 || pr.base.ref !== evidenceBaseMatch[1] || (!createdAfterSnapshot && !advancedDuringCycle)) {
-                core.setFailed('PROGRESS must cite a non-empty same-repository PR at its exact current head, targeting the declared main/dev base, and created or advanced during this cycle.');
-                return;
-              }
-              core.setOutput('cycle_status', 'progress');
-              core.info('Verified cycle-fresh progress PR #' + pr.number + ' at exact head ' + pr.head.sha + ' targeting ' + pr.base.ref);
-            } else if (validBlocked) {
-              const blockerLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')) || '';
-              const nextActionLine = lines.find((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')) || '';
-              const blocker = blockerLine.slice('BOONTA_CYCLE_BLOCKER: '.length);
-              const nextAction = nextActionLine.slice('BOONTA_CYCLE_NEXT_ACTION: '.length);
-              const blockedFingerprint = require('crypto').createHash('sha256').update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
-              core.setOutput('blocked_fingerprint', blockedFingerprint);
-              core.setOutput('cycle_status', 'blocked');
-              core.info('Groq cycle reported a named blocker and next action. Fingerprint: ' + blockedFingerprint);
-            } else {
-              core.setFailed('Groq invocation returned without a valid PROGRESS or BLOCKED report.');
-            }
+            const { validateAutonomousCycleReport } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            await validateAutonomousCycleReport({
+              github,
+              context,
+              core,
+              summary,
+              baseline: JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}'),
+              snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT,
+              expectedTaskId: process.env.SELECTED_TASK_ID,
+              expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH,
+              provider: 'Groq'
+            });
 
       - name: Sync the single-task daily backoff marker
         id: sync_task_queue_state

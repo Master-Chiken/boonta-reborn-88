@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-08",
+  "updated_at": "2026-11-09",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true
@@ -27,7 +27,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180 seconds; Groq is capped at 3 steps, 3,072 context / 512…"
+      "next_action_excerpt": "#356 merged: context preload; Groq 2,048/256 tokens, 4,500-char prompt. #357 merged: read-only readiness. Run #42540013937 skipped providers because the exact-task PR was open; no model call/progress. After reconciliation, require a real €0 provider call and exact-head-validated PR; verify merged state/base/head SHA, record evidence in a separate ledger update, regenerate summary, and activate one next task."
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
