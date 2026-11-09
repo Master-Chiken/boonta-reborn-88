@@ -250,8 +250,8 @@ jobs:
           settings: |-
             {
               "general": {
-                "maxAttempts": 1,
-                "retryFetchErrors": false
+                "maxAttempts": 2,
+                "retryFetchErrors": true
               },
               "model": {
                 "maxSessionTurns": 3
