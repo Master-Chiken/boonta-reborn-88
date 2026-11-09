@@ -44,3 +44,15 @@ Before implementation, inspect existing Boonta source, generated outputs, export
 The owner-approved workflow brief and compact task summary identify the bounded task. GitHub is authoritative for live PR state, exact head SHAs and CI evidence. If the task cannot proceed safely within this budget, stop with a specific BLOCKED report and one concrete next action; do not create empty branches/PRs or invent work.
 
 All clean-room, licensing, €0, single-writer, exact-head and human-review rules remain in force.
+
+## Autonomous PROGRESS acceptance
+
+A provider's `PROGRESS` report is evidence only when all of these conditions hold:
+
+- The report identifies the exact selected ledger task, and the PR body contains exactly one matching task-ID marker and one matching target-branch marker.
+- A new PR has a non-empty diff. An existing PR must have a new head **and a different Git tree** from the pre-cycle head; an empty commit or metadata-only update is not progress.
+- The PR is open, non-draft, unmerged, hosted in this repository and targets the selected `main` or `dev` branch.
+- Required CI checks have completed successfully on the exact reported head SHA, from the GitHub Actions app.
+- After CI polling, the validator fetches the PR again and rechecks its state, repository identity, base branch, task markers and exact current head. Any intervening change invalidates the report.
+
+A validated `BLOCKED` report records a blocker and next action; it never counts as progress. These gates prevent stale heads, empty commits and unrelated PRs from satisfying the autonomous activation task.
