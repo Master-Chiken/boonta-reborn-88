@@ -113,9 +113,8 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
-        "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        "core.setOutput('cycle_status', 'progress')",
+        "core.setOutput('cycle_status', 'blocked')",
     )
     for required in expected_outputs:
         if required not in workflow:
@@ -478,9 +477,9 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
+    '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"',
     "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 1,500 tokens",
+    "Keep newly retrieved text below 1,000 tokens total; target below 700 tokens",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
@@ -497,14 +496,19 @@ else:
     ]
     if forbidden_github_tools:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    for required_tool in ("create_branch", "push_files", "create_pull_request", "pull_request_read", "search_pull_requests"):
-        if required_tool not in github_tools:
-            errors.append(f"OpenRouter GitHub MCP allow-list is missing {required_tool!r}")
-    if "get_workflow_job" in github_tools:
-        errors.append("OpenRouter GitHub MCP allow-list contains a tool absent from the pinned v0.27.0 server")
-    for required_tool in ("get_file_contents", "get_workflow_run", "get_job_logs", "list_workflow_jobs", "list_workflow_runs"):
-        if required_tool not in github_tools:
-            errors.append(f"OpenRouter GitHub MCP allow-list is missing pinned-server tool {required_tool!r}")
+    expected_github_tools = [
+        "get_file_contents",
+        "search_pull_requests",
+        "create_branch",
+        "push_files",
+        "create_pull_request",
+    ]
+    if github_tools != expected_github_tools:
+        errors.append(
+            "OpenRouter GitHub MCP allow-list must match the minimal five-tool execution contract exactly"
+        )
+    if any(tool not in expected_github_tools for tool in github_tools):
+        errors.append("OpenRouter GitHub MCP allow-list exposes tools outside the reviewed minimal contract")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
     errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
@@ -1429,9 +1433,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 3072 or groq_limits.get("output") != 512:
+        if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must be capped at 3072 context / 512 output tokens"
+                "Groq GPT-OSS 20B must be capped at 2048 context / 256 output tokens after the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1440,17 +1444,17 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "This model is limited to 3,072 context tokens and 512 output tokens",
+    "2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000.",
     "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
-    "Do not enumerate all branches/PRs or fetch attachments, images, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 800 tokens",
-    "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately. Never retry the same request.",
+    "Read only the source files needed; keep new retrieved text below 300 tokens.",
+    "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.",
+    "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 5000 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 5,000-character prompt ceiling before inference")
-if "paid" in groq_fallback.lower() and "Never enable billing, paid routes" not in groq_fallback:
+if 'if (( ${#PROMPT} > 4500 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 4,500-character prompt ceiling before inference")
+if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
