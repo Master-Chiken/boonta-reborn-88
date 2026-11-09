@@ -302,26 +302,22 @@ jobs:
 
           PROMPT="$(cat <<'PROMPT'
           Groq Free (€0 only).
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt; Do not substitute another task.
-          - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.
-          - Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
-          - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.
-          - Never cite ledger PR SHA as task evidence; else fix verified gaps only.
-          - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
+          TASK
+          - Use only the preloaded reserved task and its acceptance criteria; never switch tasks.
+          - Reconcile PRs by exact BOONTA_TASK_ID marker. Complete only after merged_at, repository, base and head SHA match; record original task PR URL/head as evidence, never the ledger-update PR.
+          - #327 is integrated; #317/#318/#319 are superseded. Never recreate them.
           SAFETY
-          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
+          - €0 only: no billing, paid routes, credits, provider or secret/settings changes.
           - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
+          - No full issue bodies/comments, attachments or media; new retrieved text below 300 tokens.
           - One task/branch/patch/PR; never merge, write protected branches, force-push or delete refs.
           TOOLS
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
-          - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
-          - GITHUB_TOOLS uses raw names; set OPENCODE_EXPERIMENTAL_CODE_MODE=false. No execute, shell or filesystem tools.
+          - Only top-level github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request; direct MCP, no execute, shell, filesystem or subagents.
           EXECUTION
-          - PR body: standalone BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>; branch from selected SHA; one non-draft PR.
-          - No plan-only response: finish the tool calls and read back the exact PR head SHA.
-          - End with only the machine-readable report. The shell appends the exact reserved task ID and evidence base; copy both literally and never use placeholders. PROGRESS needs status, PR URL, exact 40-char SHA and evidence base; BLOCKED needs one blocker and next action.
+          - Exact-task PR search; at most one task-row read; one branch, one push_files patch, one PR and exact head readback.
+          - PR body requires BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>.
+          - Output only machine-readable lines including BOONTA_CYCLE_TASK_ID: <exact task ID>, copied from the literal reserved value appended below. PROGRESS needs PR URL/current SHA/base; BLOCKED needs one blocker/next action. NO PROSE OR MARKDOWN FENCES.
           PROMPT
           )"
 

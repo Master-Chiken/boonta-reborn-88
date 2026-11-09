@@ -365,7 +365,7 @@ jobs:
           - PR must advance this task's criteria; docs-only changes must fix a verified blocker. PR body: exactly one standalone BOONTA_TASK_ID: <exact task ID> and one BOONTA_TASK_TARGET_BRANCH: <exact base>.
           
           FINAL REPORT
-          - Output only the required machine-readable lines; no prose or Markdown fences.
+          - Output only the required machine-readable lines. NO PROSE OR MARKDOWN FENCES. Include exactly one BOONTA_CYCLE_TASK_ID: <exact task ID> line copied from the literal reserved value appended below.
           - The shell appends the exact reserved task ID and target branch after this prompt. Copy both literal values verbatim; never echo placeholders or substitute another task.
           - Choose exactly one status. For BLOCKED, omit both evidence lines and include exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.
           - PROGRESS requires a new/advanced same-repository PR and exact current head SHA read back after creation. Never report planned work as evidence.

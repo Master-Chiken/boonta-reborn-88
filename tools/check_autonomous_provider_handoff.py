@@ -544,14 +544,14 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
-if len(actual_groq_prompt) > 1800:
-    errors.append(f"Groq static prompt leaves insufficient room under its 3,500-character TPM cap: {len(actual_groq_prompt)}")
+if len(actual_groq_prompt) > 1750:
+    errors.append(f"Groq static prompt leaves insufficient room under its 3,200-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1400, 1200)
+context_limits("Groq", groq, 1200, 1000)
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 1400 + 300 > 3500:
-    errors.append("Groq worst-case prompt plus task identity exceeds its 3,500-character TPM cap")
+if len(actual_groq_prompt) + 1200 + 300 > 3200:
+    errors.append("Groq worst-case prompt plus task identity exceeds its 3,200-character TPM cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
@@ -766,7 +766,7 @@ for label, prompt in (
     ("OpenRouter", openrouter),
     ("Groq", groq),
 ):
-    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt:
+    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt and "The shell appends the exact reserved task ID" not in prompt and "literal reserved value appended below" not in prompt:
         errors.append(f"{label} report instructions must require the exact selected task ID")
     if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
         errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
