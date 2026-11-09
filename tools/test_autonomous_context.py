@@ -64,6 +64,19 @@ with tempfile.TemporaryDirectory() as temp:
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
 
+    # Regression: real autonomous handoffs exceed the old 1,200-character cap.
+    long_context = context + "\n" + ("Supplemental verified context; no new acceptance criterion. " * 30)
+    assert 1200 < len(long_context) < 2500
+    long_rendered = MODULE.build_context(
+        root, "AUTOMATION-LEDGER-ACTIVATION",
+        "Activate and validate persistent autonomous task tracking",
+        "main", long_context, max_chars=2700, max_task_context=2200,
+    )
+    assert len(long_rendered) <= 2700
+    assert "One active task maximum" in long_rendered
+    assert "Exact PR state is recorded" in long_rendered
+    assert "Complete a verified provider cycle." in long_rendered
+
     try:
         MODULE.build_context(
             root, "AUTOMATION-LEDGER-ACTIVATION",
