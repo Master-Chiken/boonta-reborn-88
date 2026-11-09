@@ -133,7 +133,9 @@ jobs:
           intake_header = intake.split("permissions:", 1)[0]
           openrouter = Path(".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
           autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
+          readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
           checks = {
+              "Readiness GitHub App token uses GET-only permissions": "permission-contents: read" in readiness and "permission-issues: read" in readiness and "permission-pull-requests: read" in readiness and "permission-contents: write" not in readiness and "permission-issues: write" not in readiness and "permission-pull-requests: write" not in readiness,
               "OpenRouter exposes only five necessary GitHub MCP tools": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in openrouter and "Available GitHub tools (exact server names)" in openrouter and "github_get_file_contents" not in openrouter,
               "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
               "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),

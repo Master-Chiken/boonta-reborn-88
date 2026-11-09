@@ -13,9 +13,9 @@ on:
         description: Whether the owner has enabled the autonomous writer
         value: ${{ jobs.readiness.outputs.writer_state }}
 
-# The workflow's default token is read-only. The installation token below is
-# minted with the exact permissions the autonomous loop will need, but this
-# readiness check uses it only for GET requests.
+# The workflow's default token and this readiness-only installation token are
+# read-only. The autonomous writer mints a separate, narrowly scoped token
+# only in its write-capable execution workflow.
 permissions:
   contents: read
   issues: read
@@ -110,9 +110,9 @@ jobs:
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-issues: write
-          permission-pull-requests: write
+          permission-contents: read
+          permission-issues: read
+          permission-pull-requests: read
           permission-actions: read
 
       - name: Verify GitHub App access to the canonical project state (GET only)
@@ -154,7 +154,7 @@ jobs:
           {
             echo "## GitHub App access: passed"
             echo
-            echo "- App installation token minted with Contents/Issues/Pull requests write and Actions read."
+            echo "- Read-only App installation token minted with Contents/Issues/Pull requests read and Actions read."
             echo "- Read access to issues #156 and #226 confirmed."
             echo "- Read access to Actions runs confirmed."
             echo "- main and dev branch refs confirmed."
