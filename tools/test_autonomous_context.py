@@ -70,9 +70,9 @@ with tempfile.TemporaryDirectory() as temp:
     long_rendered = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
-        "main", long_handoff, max_chars=2400, max_task_context=2200,
+        "main", long_handoff, max_chars=2200, max_task_context=2200,
     )
-    assert len(long_rendered) <= 2400
+    assert len(long_rendered) <= 2200
     assert "One active task maximum" in long_rendered
     assert "Exact PR state is recorded" in long_rendered
     assert "Complete a verified provider cycle." in long_rendered
