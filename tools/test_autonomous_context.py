@@ -100,8 +100,8 @@ with tempfile.TemporaryDirectory() as temp:
         "If criteria exceed these excerpts, read only this task record in the canonical ledger before coding.",
         "PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.",
     ])
-    full_handoff += " X" * max(0, 1349 - len(full_handoff))
-    full_handoff = full_handoff[:1349]
+    assert len(full_handoff) <= 1349
+    full_handoff += "X" * (1349 - len(full_handoff))
     assert len(full_handoff) == 1349
     bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
