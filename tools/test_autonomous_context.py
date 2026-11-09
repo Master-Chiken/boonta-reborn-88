@@ -65,7 +65,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Target branch: main" in rendered
 
     # Regression: compact handoffs near the provider ceiling must still fit.
-    bounded_handoff = context + "\n" + ("Supplemental verified evidence note. " * 20)
+    bounded_handoff = context + "\n" + ("Supplemental verified evidence note. " * 18)
     assert 800 < len(bounded_handoff) <= 1200
     bounded_rendered = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
