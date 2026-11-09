@@ -144,7 +144,7 @@ jobs:
               "Groq prompt explicitly stops on provider quota errors": "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry." in groq,
               "OpenRouter and Groq deny Task subagents to preserve direct execution": all(re.search(r'"task"\s*:\s*\{\s*"\*"\s*:\s*"deny"\s*\}', workflow) for workflow in (openrouter, groq)),
               "OpenRouter and Groq inject the reserved task ID into final reports": all("BOONTA_CYCLE_TASK_ID: " in workflow and "TASK_ID}" in workflow for workflow in (openrouter, groq)),
-              "Groq keeps the reduced TPM-safe request and prompt limits": '"context": 1536' in groq and '"output": 96' in groq and "--max-chars 1080 --max-task-context 1000" in groq and "if (( ${#PROMPT} > 3200 )); then" in groq,
+              "Groq preserves the complete activation-task handoff under a bounded TPM-safe prompt": '"context": 1536' in groq and '"output": 96' in groq and "--max-chars 1500 --max-task-context 1400" in groq and "if (( ${#PROMPT} > 3500 )); then" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
