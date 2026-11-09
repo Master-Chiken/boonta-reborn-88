@@ -319,6 +319,15 @@ if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
 if groq_config.get("agent", {}).get("build", {}).get("steps") != 3:
     errors.append("Groq must remain limited to three OpenCode build steps")
+for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
+    task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
+    if task_permissions.get("*") != "deny":
+        errors.append(f"{label} build agent must deny Task subagents to preserve bounded direct MCP execution")
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    if 'PROMPT+="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in content:
+        errors.append(f"{label} must inject the literal preflight-reserved task ID into the final machine report")
+    if 'PROMPT+="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"' not in content:
+        errors.append(f"{label} must inject the literal reserved target branch into the final machine report")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
@@ -343,6 +352,8 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
+if "1,536 context tokens and 96 output tokens" not in budget or "1,200-character verified-context ceiling; 1,000-character task handoff" not in budget:
+    errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
@@ -476,8 +487,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1792 or groq_limits.get("output") != 128:
-    errors.append("Groq must remain capped at 1792 context / 128 output tokens to leave margin below the observed 8k TPM refusal")
+if groq_limits.get("context") != 1536 or groq_limits.get("output") != 96:
+    errors.append("Groq must remain capped at 1536 context / 96 output tokens to leave margin below the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
@@ -497,7 +508,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 3500 )); then", "Groq must enforce its 3,500-character TPM prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 3200 )); then", "Groq must enforce its 3,200-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
