@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2700 --max-task-context 2200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2400 --max-task-context 2200)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -294,30 +294,27 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          €0-only Groq Free agent. Execute the globally selected task only.
+          €0-only Groq Free agent. Execute the selected task.
           
           SAFETY
-          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Three build steps.
-          - Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
-          - One task/writer/branch/PR; no merges, protected-branch writes, force-pushes or deletes.
-          - Exclude commercial game data; preserve provenance and distinguish PC/N64/Dreamcast from GameCube/Wii.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279.
-          - Read only the source files needed; keep new retrieved text below 300 tokens.
-          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
+          - €0: no billing, paid routes/credits, other providers or secret/settings changes.
+          - 2,048 input/256 output tokens; 8,000 TPM; 3 build steps. Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
+          - One task/writer/branch/PR; no merges, protected-branch writes, force-pushes or ref deletion.
+          - Exclude commercial game data; preserve provenance and PC/N64/Dreamcast vs GameCube/Wii.
+          - Avoid full issues/comments or issue_read for #156/#226/#279; retrieved text <300 tokens.
+          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. No shell/local files.
           
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json; its acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
-          - Match BOONTA_TASK_ID PRs; verify merged_at, repo, base and head SHA. Closed-unmerged is not complete.
-          - When complete, record the original PR URL and exact head SHA in one reviewable ledger PR and regenerate summary; otherwise implement only verified gaps.
+          Post-merge reconciliation
+          - Use exactly docs/automation/task-ledger-summary.json; do not substitute.
+          - Search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results; closed-unmerged is not completion.
+          - verify live `merged_at`, repo/base and final `head.sha`. If complete, record that original PR URL and exact head SHA as evidence in one reviewable ledger PR, regenerate summary and activate one next task; otherwise fix verified gaps.
+          - Never use the ledger-update PR's own SHA as task evidence.
+          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
           
           EXECUTION
-          - No shell/local files. Branch from the exact selected base SHA; one logical push and one PR to that base; never write to protected branches.
-          - PR body must contain exact standalone lines:
-            BOONTA_TASK_ID: <exact task ID>
-            BOONTA_TASK_TARGET_BRANCH: <exact base>
-          - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires status PROGRESS, same-repository PR URL, exact 40-character head SHA and target base; otherwise report BLOCKED with one evidenced blocker and next action.
+          - Branch from exact selected-base SHA; one logical push/PR to that base; never write protected branches.
+          - PR body exact lines: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact base>.
+          - End with BOONTA_CYCLE_TASK_ID: <exact task ID>. PROGRESS requires same-repo PR URL, exact 40-char head SHA and target base; otherwise report BLOCKED with one evidenced blocker and next action.
           PROMPT
           )"
 
