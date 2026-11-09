@@ -931,6 +931,18 @@ for label, prompt in dynamic_task_prompts:
                 errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
+# Provider handoff budgets must match the tested schema-v2 activation context.
+# The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
+# and prevented both free providers from reaching inference.
+for label, workflow, expected_max_chars in (
+    ("OpenRouter", openrouter_fallback, "2400"),
+    ("Groq", groq_fallback, "2400"),
+):
+    if f"--max-task-context 2200" not in workflow:
+        errors.append(f"{label} context builder must preserve the full tested 2,200-character task handoff")
+    if f"--max-chars {expected_max_chars} --max-task-context 2200" not in workflow:
+        errors.append(f"{label} context builder must match its documented verified-context ceiling")
+
 for required in (
     "TASK_ID: '${{ inputs.task_id }}'",
     "TASK_TITLE: '${{ inputs.task_title }}'",
@@ -1449,11 +1461,11 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000.",
-    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
-    "Read only the source files needed; keep new retrieved text below 300 tokens.",
-    "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.",
-    "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
+    "2,048 context / 256 output tokens; three steps.",
+    "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
+    "new retrieved text below 300 tokens.",
+    "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
+    "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
