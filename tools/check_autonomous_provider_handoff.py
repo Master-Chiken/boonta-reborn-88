@@ -767,7 +767,7 @@ for label, prompt in (
     ("Groq", groq),
 ):
     if label == "Groq":
-        if "Copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim." not in prompt or 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in prompt:
+        if "copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim." not in prompt or 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in prompt:
             errors.append("Groq report instructions must require the exact selected task ID")
         if "PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH." not in prompt:
             errors.append("Groq PR instructions must require exact task/target markers in the PR body")
