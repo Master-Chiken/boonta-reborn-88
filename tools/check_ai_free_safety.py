@@ -702,8 +702,8 @@ if "Never push" not in daily_prompt or "Never recommend publishing ROMs" not in 
 autonomous_trigger = autonomous.split("permissions:", 1)[0]
 if "schedule:" not in autonomous_trigger or "workflow_dispatch:" not in autonomous_trigger:
     errors.append("Boonta autonomous loop must support scheduled and owner-manual execution")
-if "- cron: '17 */6 * * *'" not in autonomous_trigger:
-    errors.append("Boonta autonomous loop must use the bounded six-hour schedule")
+if "- cron: '17 0,6,12,18 * * *'" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must run every six hours, including immediately after UTC daily quota reset")
 if "group: boonta-autonomous-loop" not in autonomous or "cancel-in-progress: false" not in autonomous:
     errors.append("Boonta autonomous loop must serialize writers without cancelling active work")
 if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" not in execute:
