@@ -317,7 +317,7 @@ jobs:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires status, same-repo PR URL, exact 40-char head SHA and evidence base main|dev. Otherwise BLOCKED requires one evidenced blocker and next action.
+          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, same-repo PR URL, exact 40-char SHA and evidence base main|dev; otherwise BLOCKED needs one evidenced blocker and next action.
           PROMPT
           )"
 
