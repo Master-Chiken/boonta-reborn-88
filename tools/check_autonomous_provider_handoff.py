@@ -449,11 +449,15 @@ for content, needle, message in (
 # guards only rejected oversized prompts after assembling them; they did not
 # prove that the configured maximum context could fit below those guards.
 def actual_provider_prompt(label: str, workflow: str) -> str:
-    match = re.search(r"(?m)^          PROMPT=\"\$\(cat <<'PROMPT'\)\n([\s\S]*?)\n          PROMPT\n          \)\"", workflow)
-    if not match:
+    start_marker = "          PROMPT=\"$(cat <<'PROMPT'\n"
+    end_marker = "\n          PROMPT\n          )\""
+    start = workflow.find(start_marker)
+    end = workflow.find(end_marker, start + len(start_marker)) if start >= 0 else -1
+    if start < 0 or end < 0:
         errors.append(f"{label} provider prompt heredoc is missing")
         return ""
-    return "\n".join(line[10:] if line.startswith("          ") else line for line in match.group(1).splitlines())
+    body = workflow[start + len(start_marker):end]
+    return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
 
 def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
     match = re.search(r"--max-chars (\d+) --max-task-context (\d+)", workflow)
