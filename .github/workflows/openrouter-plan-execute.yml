@@ -345,18 +345,17 @@ jobs:
           
           AUTHORITATIVE SELECTED TASK
           - Use exactly this task from docs/automation/task-ledger-summary.json; acceptance_criteria_excerpt and next action are preloaded. Do not substitute another task.
-          - Preflight task ID/title/base/context are authoritative. Never use a different task or queue.
+          - Preflight task ID/title/base/context are authoritative. Do not use another task or queue.
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list the repository root or reread the compact summary.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
           - If essential, read docs/automation/task-ledger.json once and inspect only the exact selected task row.
-          - Search exact BOONTA_TASK_ID PR-body matches across all states; inspect matches only. Verify merged_at, repository, base and final head.sha; closed-unmerged is not completion.
-          - If criteria are met, record original PR URL/head in a separate ledger PR and regenerate summary; never self-reference the ledger PR's SHA. Otherwise fix only verified gaps.
-          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded; never reopen or recreate them.
+          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results; closed-unmerged is not completion. Verify live `merged_at`, repository/base and final `head.sha`. If complete, record that original PR URL and exact head SHA as evidence, regenerate summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise fix verified gaps only.
+          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           
           EXECUTION
           - Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.
           - OpenCode v1.19.5 prefixes raw GITHUB_TOOLS names with github_. OPENCODE_EXPERIMENTAL_CODE_MODE=false; direct tools only, no execute, shell or filesystem.
-          - Spend eight steps on: exact-task PR search; at most one exact task-row read; create one branch from the current selected base ref (never a stale SHA); push one logical patch with one push_files call; create one PR to the selected base; search/read back that PR and its exact current head SHA.
+          - Spend eight steps on exact-task PR search; at most one task-row read; create one branch from the current selected base ref; push one logical patch with one push_files call; create one PR to the selected base; search/read back that PR and its exact current head SHA.
           - No generic exploration, repeated reads, summaries or plans. If no verified useful patch exists, report BLOCKED with one evidenced blocker and one next action; no empty branch/PR.
           - PR must advance this task's criteria; docs-only changes must fix a verified blocker. PR body: exactly one standalone BOONTA_TASK_ID: <exact task ID> and one BOONTA_TASK_TARGET_BRANCH: <exact base>.
           
