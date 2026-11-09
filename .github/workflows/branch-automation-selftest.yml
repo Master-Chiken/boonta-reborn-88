@@ -49,6 +49,7 @@ jobs:
           import re
           import textwrap
           from pathlib import Path
+          import re
 
           paths = (
               Path(".github/workflows/branch-governance.yml"),
@@ -141,7 +142,7 @@ jobs:
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
               "Groq prompt explicitly stops on provider quota errors": "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry." in groq,
-              "OpenRouter and Groq deny Task subagents to preserve direct execution": all('"task": {\n                  "*": "deny"\n                }' in workflow for workflow in (openrouter, groq)),
+              "OpenRouter and Groq deny Task subagents to preserve direct execution": all(re.search(r'"task"\s*:\s*\{\s*"\*"\s*:\s*"deny"\s*\}', workflow) for workflow in (openrouter, groq)),
               "OpenRouter and Groq inject the reserved task ID into final reports": all("BOONTA_CYCLE_TASK_ID: " in workflow and "TASK_ID}" in workflow for workflow in (openrouter, groq)),
               "Groq keeps the reduced TPM-safe request and prompt limits": '"context": 1536' in groq and '"output": 96' in groq and "--max-chars 1080 --max-task-context 1000" in groq and "if (( ${#PROMPT} > 3200 )); then" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
