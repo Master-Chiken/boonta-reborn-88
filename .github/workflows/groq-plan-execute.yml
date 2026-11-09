@@ -298,7 +298,7 @@ jobs:
 
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - 2,048/256 token limits; 3 steps max; stop at first quota, TPM, rate-limit or auth refusal.
+          - 2,048/256 limits; max 3 steps. Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
           - One task/branch/PR; no merges, protected writes, force-pushes or ref deletes.
           - No commercial game data; preserve provenance; follow docs/REVERSE_ENGINEERING_FIRST.md.
           - Schema-v2 task, ledger and policies are preloaded; do not reread full files.
