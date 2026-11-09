@@ -294,25 +294,25 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          €0-only Groq Free fallback. Execute only the exact selected task after Gemini and OpenRouter cooldowns.
+          €0-only Groq Free fallback; execute only the selected task after Gemini/OpenRouter cooldowns.
 
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - 2,048 context / 256 output tokens; max 3 steps. Stop on first quota, TPM, rate-limit or auth refusal; never retry.
-          - One task, branch and PR only. Never merge, write protected branches, force-push or delete refs.
-          - No commercial game data; preserve provenance and follow docs/REVERSE_ENGINEERING_FIRST.md.
-          - Schema-v2 ledger, policies and selected-task excerpts are preloaded; do not reread full files.
+          - One task/branch/PR; never merge, touch protected branches, force-push or delete refs.
+          - No commercial game data; preserve provenance; follow docs/REVERSE_ENGINEERING_FIRST.md.
+          - Schema-v2 ledger, policies and task excerpts are preloaded; do not reread full files.
 
           TASK
-          - Use only the exact selected task; its acceptance and next-action excerpts are authoritative. Never substitute another task.
-          - Reconcile exact `BOONTA_TASK_ID: <task_id>` PR markers across all states. Completion requires merged_at, same repository/base and final head SHA; closed-unmerged is not completion.
-          - If complete, create one ledger PR recording the original task PR URL and exact task head SHA, regenerate the summary and activate one next task. Never use the ledger PR SHA as task evidence. Otherwise fix only verified gaps.
-          - #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Never replay them.
+          - Use only the exact selected task; acceptance/next-action excerpts are authoritative. Never substitute.
+          - Check exact `BOONTA_TASK_ID: <task_id>` PR markers in all states. Complete only with merged_at, same repo/base and final head SHA; closed-unmerged is incomplete.
+          - If complete, open one ledger PR with original task PR URL + exact task head SHA, regenerate summary and activate one next task. Never use ledger PR SHA as task evidence; otherwise fix verified gaps only.
+          - #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded; do not replay.
 
           EXECUTION
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
           - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
-          - Branch from the exact selected-base SHA; one logical push/PR to that base. Never write to protected branches.
+          - Branch from selected-base SHA; one logical push/PR to that base. Never write to protected branches.
           - PR body must contain these exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
