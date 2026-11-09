@@ -113,8 +113,9 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
-        "core.setOutput('cycle_status', 'progress')",
-        "core.setOutput('cycle_status', 'blocked')",
+        "validateAutonomousCycleReport",
+        "expectedTaskId: process.env.SELECTED_TASK_ID",
+        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
     )
     for required in expected_outputs:
         if required not in workflow:
