@@ -88,7 +88,7 @@ for required in (
     "push one logical patch with one push_files call",
     "create one PR to the selected base",
     "search/read back that PR and its exact current head SHA",
-    "no narrative, headings, Markdown fences, preamble or postscript",
+    "NO PROSE OR MARKDOWN FENCES",
 ):
     if required not in openrouter:
         errors.append(f"OpenRouter direct-execution contract is missing {required!r}")
