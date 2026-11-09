@@ -78,6 +78,21 @@ for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
+# OpenRouter's eight-step budget must be spent on the reserved task, not discovery.
+for required in (
+    "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
+    "Do not list the repository root.",
+    "Do not reread docs/automation/task-ledger-summary.json or fetch the repository root.",
+    "read docs/automation/task-ledger.json once and inspect only the exact selected task row",
+    "create one branch from the current selected base ref",
+    "push one logical patch with one push_files call",
+    "create one PR to the selected base",
+    "search/read back that PR and its exact current head SHA",
+    "no narrative, headings, Markdown fences, preamble or postscript",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter direct-execution contract is missing {required!r}")
+
 for content, needle, message in (
     (gemini, "value: ${{ jobs.plan-execute.outputs.invocation_outcome }}", "Gemini must expose its invocation result"),
     (gemini, "invocation_outcome: ${{ steps.run_gemini.outcome }}", "Gemini must publish its actual model-step outcome"),
