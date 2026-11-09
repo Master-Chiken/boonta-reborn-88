@@ -239,6 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
+          # 1,792/128 limits; max 3 steps.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
