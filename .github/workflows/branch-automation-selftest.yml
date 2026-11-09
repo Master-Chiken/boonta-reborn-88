@@ -21,9 +21,11 @@ on:
       - "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md"
       - "tools/check_autonomous_provider_handoff.py"
       - "tools/test_autonomous_task_preflight.py"
-      - "tools/test_openrouter_watchdog.py"
+      - "tools/build_autonomous_context.py"
+      - "tools/test_autonomous_context.py"
       - "tools/validate_autonomous_cycle_report.js"
       - "tools/test_autonomous_cycle_report.js"
+      - "tools/test_openrouter_watchdog.py"
   workflow_dispatch:
 
 permissions:
@@ -104,6 +106,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
 
+      - name: Validate schema-v2 autonomous context builder with offline fixtures
+        shell: bash
+        run: python3 tools/test_autonomous_context.py
+
       - name: Execute autonomous cycle report contract tests (offline)
         shell: bash
         run: node tools/test_autonomous_cycle_report.js
@@ -136,6 +142,7 @@ jobs:
           readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
           checks = {
               "Readiness GitHub App token uses GET-only permissions": "permission-contents: read" in readiness and "permission-issues: read" in readiness and "permission-pull-requests: read" in readiness and "permission-contents: write" not in readiness and "permission-issues: write" not in readiness and "permission-pull-requests: write" not in readiness,
+              "OpenRouter exposes only five necessary GitHub MCP tools": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in openrouter and "Available GitHub tools (exact server names)" in openrouter and "github_get_file_contents" not in openrouter,
               "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
               "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),
               "OpenRouter checks UTC free-model quota before minting or inference": "free_model_daily_requests.remaining" in openrouter and "outputs.quota_available == 'true'" in openrouter and "model inference is blocked before any provider request" in openrouter,
@@ -147,11 +154,14 @@ jobs:
               "Autonomous loop serializes all writers": "group: boonta-autonomous-loop" in autonomous_loop and "cancel-in-progress: false" in autonomous_loop,
               "Provider fallback advances only on a later cycle after pre-existing cooldown": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.openrouter-fallback.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.autonomous-cycle.result == 'failure'" not in autonomous_loop and "needs.openrouter-fallback.result == 'failure'" not in autonomous_loop,
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
-              "Groq fallback exposes a reduced GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,pull_request_read,create_branch,push_files,create_pull_request,add_issue_comment"' in groq,
+              "Groq fallback exposes a minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in groq,
+              "Groq prompt uses exact exposed tool names": "Use only these five GitHub tools (exact server names)" in groq and "github_get_file_contents" not in groq,
+              "OpenRouter exposes the minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in openrouter,
+              "OpenRouter prompt uses exact exposed tool names": "Available GitHub tools (exact server names)" in openrouter and "github_get_file_contents" not in openrouter,
               "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
-              "Groq prompt explicitly stops on provider quota errors": "On any TPM, context-size, rate-limit, authentication or quota error, stop immediately" in groq,
+              "Groq prompt explicitly stops on provider quota errors": "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry." in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,
