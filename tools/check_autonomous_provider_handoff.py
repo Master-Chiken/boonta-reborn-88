@@ -434,6 +434,17 @@ for content, needle, message in (
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
+    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
+    (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
+    (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
+    (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
+    (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
+
+):
+    if needle not in content:
+        errors.append(message)
+
+
 # Measure the actual de-indented heredoc sent to each provider. The prior
 # guards only rejected oversized prompts after assembling them; they did not
 # prove that the configured maximum context could fit below those guards.
@@ -461,15 +472,6 @@ if len(actual_groq_prompt) + 1500 + 300 > 4500:
     errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
-    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
-    (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
-    (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
-    (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
-
-):
-    if needle not in content:
-        errors.append(message)
 
 
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.
