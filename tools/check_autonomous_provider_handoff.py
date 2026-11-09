@@ -463,9 +463,18 @@ for required in (
     "commitTimestamp >= snapshotTime",
     "commitTimestamp <= Date.now() + 5 * 60 * 1000",
     "(!createdAfterSnapshot && !advancedDuringCycle)",
+    "contentChangedDuringCycle",
+    "previousHeadCommit.commit?.tree?.sha",
+    "exactTreeSha",
+    "!contentChangedDuringCycle",
     "!commitCreatedDuringCycle",
     "pr.head.sha !== exactHead",
     "headCommit.sha !== exactHead",
+    "const { data: finalPr } = await github.rest.pulls.get",
+    "finalPr.state !== 'open'",
+    "finalPr.head.sha !== exactHead",
+    "finalPr.base.ref !== expectedBase",
+    "changed while exact-head CI was running",
 ):
     if required not in cycle_validator:
         errors.append(f"Shared exact-head validator is missing the cycle-fresh PR gate {required!r}")
@@ -513,6 +522,14 @@ for required in (
 ):
     if required not in cycle_validator_tests:
         errors.append(f"Shared report validator regression suite is missing {required!r}")
+
+for required in (
+    "fresh empty commit on an existing PR is not progress",
+    "existing PR with changed tree content is eligible for exact-head checks",
+    "PR head updated while exact-head CI was polling",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Shared exact-head regression suite is missing {required!r}")
 
 for label, prompt in (
     ("Gemini", gemini_prompt),
