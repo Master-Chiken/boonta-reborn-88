@@ -375,7 +375,7 @@ for required in (
     'Authorization: Bearer ${OPENROUTER_API_KEY}',
     "jq -e '.data.is_free_tier == true'",
     "jq -er '.data.free_model_daily_requests.remaining | numbers'",
-    "MIN_REQUESTS_PER_CYCLE=3",
+    "MIN_REQUESTS_PER_CYCLE=8",
     "quota_required=$MIN_REQUESTS_PER_CYCLE",
     "if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then",
     "Minimum reserve for one bounded OpenCode cycle",
