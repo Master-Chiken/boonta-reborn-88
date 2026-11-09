@@ -935,7 +935,7 @@ for label, prompt in dynamic_task_prompts:
 # The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
 # and prevented both free providers from reaching inference.
 for label, workflow, expected_max_chars in (
-    ("OpenRouter", openrouter_fallback, "2200"),
+    ("OpenRouter", openrouter_fallback, "2400"),
     ("Groq", groq_fallback, "2400"),
 ):
     if f"--max-task-context 2200" not in workflow:
