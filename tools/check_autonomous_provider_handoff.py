@@ -474,7 +474,7 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
 if len(actual_groq_prompt) > 1800:
-    errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
+    errors.append(f"Groq static prompt leaves insufficient room under its 3,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 1400, 1200)
@@ -497,7 +497,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "Never reopen/replay/recreate superseded #317/#318/#319."
+        "#317/#318/#319 are superseded; never replay."
         if label == "Groq" else "Do not reopen, replay or recreate that chain"
     )
     if required_reopen_rule not in content:
@@ -508,10 +508,10 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
     required_rules = (
         (
-            "Reconcile exact `BOONTA_TASK_ID: <task_id>` PR-body matches across all states.",
-            "Verify merged_at, repository, base and final head SHA; closed-unmerged is not completion.",
-            "If complete, create one ledger PR recording original PR URL and exact task head SHA, regenerate summary and activate one next task.",
-            "Never use the ledger PR SHA as task evidence.",
+            "Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.",
+            "Complete only if merged_at, repo/base and final head SHA match; closed-unmerged is incomplete.",
+            "If complete: one ledger PR with original PR URL + task head SHA; regenerate summary; activate one next task.",
+            "Never cite ledger PR SHA as task evidence.",
         )
         if label == "Groq" else (
             "Post-merge reconciliation",
