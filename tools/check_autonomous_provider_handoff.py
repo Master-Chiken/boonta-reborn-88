@@ -438,14 +438,14 @@ for content, needle, message in (
 # guards only rejected oversized prompts after assembling them; they did not
 # prove that the configured maximum context could fit below those guards.
 def actual_provider_prompt(label: str, workflow: str) -> str:
-    match = re.search(r"(?m)^          PROMPT=\\"\\$\\(cat <<'PROMPT'\\)\\n([\\s\\S]*?)\\n          PROMPT\\n          \\)\\"", workflow)
+    match = re.search(r"(?m)^          PROMPT=\"\$\(cat <<'PROMPT'\)\n([\s\S]*?)\n          PROMPT\n          \)\"", workflow)
     if not match:
         errors.append(f"{label} provider prompt heredoc is missing")
         return ""
-    return "\\n".join(line[10:] if line.startswith("          ") else line for line in match.group(1).splitlines())
+    return "\n".join(line[10:] if line.startswith("          ") else line for line in match.group(1).splitlines())
 
 def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
-    match = re.search(r"--max-chars (\\d+) --max-task-context (\\d+)", workflow)
+    match = re.search(r"--max-chars (\d+) --max-task-context (\d+)", workflow)
     if not match or (int(match.group(1)), int(match.group(2))) != (expected_chars, expected_task):
         errors.append(f"{label} context builder must use the reviewed {expected_chars}/{expected_task}-character limits")
 
