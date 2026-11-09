@@ -113,6 +113,15 @@ with tempfile.TemporaryDirectory() as temp:
     assert task["next_action_excerpt"] in bounded
     assert all(item in bounded for item in task["acceptance_criteria_excerpt"])
 
+    # Restore the initial fixture before the independent truncation test below.
+    task["question_excerpt"] = "Does the loop reconcile the task ledger?"
+    task["next_action_excerpt"] = "Complete a verified provider cycle."
+    task["acceptance_criteria_total"] = 2
+    task["acceptance_criteria_excerpt"] = [
+        "One active task maximum", "Exact PR state is recorded",
+    ]
+    summary_path.write_text(json.dumps(payload), encoding="utf-8")
+
     try:
         MODULE.build_context(
             root, "AUTOMATION-LEDGER-ACTIVATION",
