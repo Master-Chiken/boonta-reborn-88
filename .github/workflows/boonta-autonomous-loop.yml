@@ -12,7 +12,8 @@ on:
       - .github/workflows/groq-plan-execute.yml
       - docs/automation/task-ledger.json
   schedule:
-    # Four bounded opportunities per day; concurrency prevents overlapping writers.
+    # Four bounded opportunities per day; runs without asking for another continue message.
+    # Concurrency prevents overlapping writers.
     - cron: '17 */6 * * *'
   workflow_dispatch:
 
