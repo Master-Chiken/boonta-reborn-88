@@ -346,6 +346,8 @@ jobs:
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
+          # Local prompt/context guards must never create a provider cooldown.
+          echo "provider_request_started=true" >> "$GITHUB_OUTPUT"
           # OpenCode 1.19.5 retries retryable 429/TPM failures internally. Stop
           # the process group on the first terminal Free-quota/TPM response so
           # one agent invocation cannot consume the provider limit repeatedly.
@@ -532,7 +534,7 @@ jobs:
               core.info('No previous task backoff marker needed clearing.');
             }
       - name: Record same-day Groq cooldown after an invocation failure
-        if: always() && ((steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        if: always() && ((steps.run_opencode.outputs.provider_request_started == 'true' && steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
