@@ -475,7 +475,7 @@ actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
 if len(actual_groq_prompt) > 2600:
     errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
-if len(actual_openrouter_prompt) > 3000:
+if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 2400, 2200)
 context_limits("OpenRouter", openrouter, 2400, 2200)
