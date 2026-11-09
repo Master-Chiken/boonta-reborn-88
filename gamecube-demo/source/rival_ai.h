@@ -12,6 +12,7 @@
 #define BOONTA_RIVAL_AI_LATERAL_LIMIT 2.1f
 #define BOONTA_RIVAL_AI_PLAYER_GAP 1.25f
 #define BOONTA_RIVAL_AI_TRAFFIC_GAP 1.15f
+#define BOONTA_RIVAL_AI_AVOIDANCE_STEP 0.75f
 
 static inline float boonta_rival_ai_clamp(float value, float low, float high)
 {
@@ -88,6 +89,27 @@ static inline float boonta_rival_ai_target_line_lateral(
         -lateral_limit, lateral_limit);
 }
 
+/*
+ * Smooth proximity weight used to combine all nearby hazards. Summing these
+ * values makes avoidance independent of the order in which rival slots are
+ * visited; a closer longitudinal/lateral overlap contributes more pressure.
+ */
+static inline float boonta_rival_ai_avoidance_pressure(
+    float longitudinal_gap, float lateral_gap,
+    float longitudinal_range, float lateral_range)
+{
+    if (!isfinite(longitudinal_gap) || !isfinite(lateral_gap) ||
+        !isfinite(longitudinal_range) || !isfinite(lateral_range) ||
+        longitudinal_range <= 0.0f || lateral_range <= 0.0f ||
+        longitudinal_gap >= longitudinal_range ||
+        lateral_gap >= lateral_range) {
+        return 0.0f;
+    }
+
+    return ((longitudinal_range - longitudinal_gap) / longitudinal_range) *
+           ((lateral_range - lateral_gap) / lateral_range);
+}
+
 static inline float boonta_rival_ai_target_lateral(
     unsigned int rival_index,
     float rival_z,
@@ -101,6 +123,10 @@ static inline float boonta_rival_ai_target_lateral(
 {
     float target;
     float lateral_limit;
+    float avoid_left_pressure = 0.0f;
+    float avoid_right_pressure = 0.0f;
+    float left_room;
+    float right_room;
     unsigned int i;
     const int player_position_valid = isfinite(player_lateral);
 
@@ -120,25 +146,76 @@ static inline float boonta_rival_ai_target_lateral(
     target = boonta_rival_ai_target_line_lateral(
         rival_index, signed_curvature, road_half_width);
 
-    /* Avoid the player only when the two racers are close longitudinally. */
-    if (player_position_valid && fabsf(rival_z - 1.0f) < 5.5f &&
-        fabsf(current_lateral - player_lateral) < BOONTA_RIVAL_AI_PLAYER_GAP) {
-        target = player_lateral <= current_lateral ? 1.45f : -1.45f;
+    /*
+     * Accumulate avoidance pressure instead of overwriting the target for each
+     * car. A hazard to the left asks for a right move and vice versa.
+     */
+    if (player_position_valid) {
+        const float longitudinal_gap = fabsf(rival_z - 1.0f);
+        const float lateral_gap = fabsf(current_lateral - player_lateral);
+        const float pressure = boonta_rival_ai_avoidance_pressure(
+            longitudinal_gap, lateral_gap, 5.5f,
+            BOONTA_RIVAL_AI_PLAYER_GAP);
+        if (player_lateral <= current_lateral) {
+            avoid_right_pressure += pressure;
+        } else {
+            avoid_left_pressure += pressure;
+        }
     }
 
-    /* Keep a small lateral gap from nearby rivals; ignore distant traffic. */
     if (other_z != 0 && other_lateral != 0) {
         for (i = 0U; i < rival_count; ++i) {
             float longitudinal_gap;
             float lateral_gap;
+            float pressure;
             if (i == rival_index || !isfinite(other_z[i]) ||
                 !isfinite(other_lateral[i])) continue;
             longitudinal_gap = fabsf(rival_z - other_z[i]);
-            lateral_gap = current_lateral - other_lateral[i];
-            if (longitudinal_gap < 3.5f &&
-                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target = current_lateral + (lateral_gap < 0.0f ? -0.75f : 0.75f);
+            lateral_gap = fabsf(current_lateral - other_lateral[i]);
+            pressure = boonta_rival_ai_avoidance_pressure(
+                longitudinal_gap, lateral_gap, 3.5f,
+                BOONTA_RIVAL_AI_TRAFFIC_GAP);
+            if (other_lateral[i] > current_lateral) {
+                avoid_left_pressure += pressure;
+            } else {
+                avoid_right_pressure += pressure;
             }
+        }
+    }
+
+    if (avoid_left_pressure > 0.0f || avoid_right_pressure > 0.0f) {
+        int direction;
+        left_room = current_lateral + lateral_limit;
+        right_room = lateral_limit - current_lateral;
+        if (left_room < 0.0f) left_room = 0.0f;
+        if (right_room < 0.0f) right_room = 0.0f;
+
+        if (avoid_left_pressure > avoid_right_pressure) {
+            direction = -1;
+        } else if (avoid_right_pressure > avoid_left_pressure) {
+            direction = 1;
+        } else if (left_room > right_room + 0.001f) {
+            direction = -1;
+        } else if (right_room > left_room + 0.001f) {
+            direction = 1;
+        } else if (target < current_lateral - 0.001f) {
+            direction = -1;
+        } else if (target > current_lateral + 0.001f) {
+            direction = 1;
+        } else {
+            direction = (rival_index % 2U == 0U) ? -1 : 1;
+        }
+
+        /* If the preferred escape side is at the road edge, use the other side. */
+        if (direction < 0 && left_room <= 0.001f) direction = 1;
+        if (direction > 0 && right_room <= 0.001f) direction = -1;
+
+        if (direction < 0) {
+            const float step = left_room < BOONTA_RIVAL_AI_AVOIDANCE_STEP ? left_room : BOONTA_RIVAL_AI_AVOIDANCE_STEP;
+            target = current_lateral - step;
+        } else {
+            const float step = right_room < BOONTA_RIVAL_AI_AVOIDANCE_STEP ? right_room : BOONTA_RIVAL_AI_AVOIDANCE_STEP;
+            target = current_lateral + step;
         }
     }
 
