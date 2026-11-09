@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1700 --max-task-context 1200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1500 --max-task-context 1200)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -322,6 +322,9 @@ jobs:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - Never write to main/dev, force-push, delete refs, merge, or claim tests without exact-head CI evidence.
+
+          - Post-merge reconciliation: search only exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results; closed-unmerged is not completion. verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence in the canonical ledger via one reviewable ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence.
+          - Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
 
           REPORT
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
