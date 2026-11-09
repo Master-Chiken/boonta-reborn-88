@@ -2,6 +2,7 @@
 
 const REQUIRED_CHECKS = Object.freeze({
   main: [
+    'Validate workflow YAML and embedded Python',
     'Verify Gemini free-only guardrails',
     'Reject known held assets and data',
     'Check proposed source paths using trusted base policy'
