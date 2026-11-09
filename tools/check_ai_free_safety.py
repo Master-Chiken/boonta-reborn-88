@@ -1465,7 +1465,7 @@ for required in (
     "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
-    "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
+    "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
