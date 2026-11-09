@@ -12,6 +12,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - A Start-button pause toggle with a visible pause icon; gameplay simulation freezes while paused.
+- A time-based damped chase camera that follows both the vehicle-relative position and route look-ahead target; its exponential response is stable across 50/60 Hz update cadence, bounded after stalls, and snapped cleanly on race reset.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
 This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and a full physics model are not implemented.
