@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1500 --max-task-context 1200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2700 --max-task-context 2200)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -294,26 +294,26 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          You are the €0-only Groq Free fallback. Run only after Gemini and OpenRouter are in same-day cooldown. Execute the exact globally selected task.
-
+          You are the €0-only Groq Free fallback. This run is eligible only after earlier free-provider cooldowns. Execute only the exact globally selected task.
+          
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Three build steps.
           - Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
           - One task, one writer, one branch and one PR. Never merge, auto-merge, write to main/dev, force-push or delete refs.
           - Keep commercial game data out of Git, CI and hosted prompts. Preserve provenance and PC/N64/Dreamcast versus GameCube/Wii boundaries.
-          - Policies and schema-v2 task excerpts are preloaded; do not reread the full ledger or policies.
-
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json. Its acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
-          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results. verify live `merged_at`, repository, base and final `head.sha`; closed-unmerged is not completion.
-          - If all criteria are met, record that original PR URL and exact head SHA as evidence in one reviewable canonical-ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence. Otherwise implement only verified gaps.
-          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
-
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279.
+          - Read only the source files needed; keep new retrieved text below 300 tokens.
+          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
+          - The schema-v2 task excerpts and required policies are preloaded; do not reread full ledgers or policy files.
+          
+          AUTHORITATIVE TASK
+          - Use the exact task, acceptance_criteria_excerpt and next_action in the preloaded context. Do not substitute another task.
+          - Reconcile post-merge state using exact BOONTA_TASK_ID PR-body matches; verify live merged_at, repository, base and final head.sha. Closed-unmerged is not completion.
+          - When all criteria are met, record the original PR URL and exact head SHA in one reviewable ledger PR, regenerate the compact summary and activate one next task. Otherwise implement only verified gaps.
+          
           EXECUTION
-          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. Shell and local filesystem tools are disabled.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Read only the source files needed; keep new retrieved text below 300 tokens.
-          - Create one branch from the selected base's exact SHA, push one logical patch and open one PR to that base. Never write to protected branches.
+          - Shell and local filesystem tools are disabled. Create one branch from the selected base's exact SHA, make one logical push and open one PR to that same base. Never write to protected branches.
           - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
