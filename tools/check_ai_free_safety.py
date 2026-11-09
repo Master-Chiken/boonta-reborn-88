@@ -1492,6 +1492,36 @@ if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:
     errors.append("Groq autonomous prompt must read the reverse-engineering-first policy")
 
 
+# Both OpenCode fallbacks must preserve every required global task excerpt.
+# The actual activation task context is above 2,000 characters; smaller budgets
+# fail closed before inference even when the provider key and Free quota pass.
+for label, workflow in (("OpenRouter", openrouter_fallback), ("Groq", groq_fallback)):
+    builder_call = re.search(
+        r'build_autonomous_context\.py".*?--max-chars (\d+) --max-task-context (\d+)',
+        workflow,
+    )
+    if not builder_call:
+        errors.append(f"{label} fallback must use the canonical bounded context builder")
+    else:
+        max_chars, max_task_context = map(int, builder_call.groups())
+        if max_chars < 2700 or max_task_context < 2200:
+            errors.append(
+                f"{label} context budget must preserve the full 2,067-character activation handoff; "
+                f"found max_chars={max_chars}, max_task_context={max_task_context}"
+            )
+
+groq_prompt_match = re.search(
+    r'PROMPT="\$\(cat <<\'PROMPT\'\n(.*?)\n\s*PROMPT',
+    groq_fallback,
+    re.DOTALL,
+)
+if not groq_prompt_match:
+    errors.append("Groq fallback prompt must remain a bounded heredoc")
+else:
+    groq_prompt = textwrap.dedent(groq_prompt_match.group(1)).strip()
+    if len(groq_prompt) > 1800:
+        errors.append(f"Groq fixed prompt must leave room for verified task context; found {len(groq_prompt)} characters")
+
 if errors:
     print("AI free-tier safety checks FAILED:")
     for error in errors:
