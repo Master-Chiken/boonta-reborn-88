@@ -395,6 +395,9 @@ jobs:
           fi
           echo "OpenRouter final prompt size: ${#PROMPT} characters."
 
+          # Mark the boundary between local preparation and an actual provider invocation.
+          # Local prompt/context guards must never create a provider cooldown.
+          echo "provider_request_started=true" >> "$GITHUB_OUTPUT"
           # Stop OpenCode on the first explicit provider throttle/quota/auth refusal.
           # This prevents internal retries from multiplying a known terminal failure.
           python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$REPO_ROOT" <<'PY'
@@ -600,7 +603,7 @@ jobs:
               core.info('No previous task backoff marker needed clearing.');
             }
       - name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure
-        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || steps.openrouter_auth_check.outputs.quota_available == 'false' || (steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
+        if: always() && (steps.openrouter_auth_check.outcome == 'failure' || steps.openrouter_auth_check.outputs.quota_available == 'false' || (steps.run_opencode.outputs.provider_request_started == 'true' && steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped') || steps.validate_report.outcome == 'failure')
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
