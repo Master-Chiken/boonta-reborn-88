@@ -39,6 +39,44 @@ static void nearby_rival_avoidance(void)
     assert(target > 0.1f);
 }
 
+static void avoidance_is_independent_of_rival_array_order(void)
+{
+    const float z_a[3] = {-10.0f, -9.0f, -11.0f};
+    const float lateral_a[3] = {0.0f, 1.0f, -1.0f};
+    const float z_b[3] = {-10.0f, -11.0f, -9.0f};
+    const float lateral_b[3] = {0.0f, -1.0f, 1.0f};
+    const float target_a = boonta_rival_ai_target_lateral(
+        0U, -10.0f, 0.0f, NAN, z_a, lateral_a, 3U, 0.0f, 3.4f);
+    const float target_b = boonta_rival_ai_target_lateral(
+        0U, -10.0f, 0.0f, NAN, z_b, lateral_b, 3U, 0.0f, 3.4f);
+
+    /* Same surrounding cars in a different slot order must give the same result. */
+    assert(nearf_ai(target_a, target_b));
+    assert(target_a < 0.0f);
+}
+
+static void avoidance_prefers_the_less_blocked_side(void)
+{
+    const float z[3] = {-10.0f, -11.0f, -11.0f};
+    const float lateral[3] = {0.0f, 0.2f, -1.0f};
+    const float target = boonta_rival_ai_target_lateral(
+        0U, -10.0f, 0.0f, NAN, z, lateral, 3U, 0.0f, 3.4f);
+
+    /* The close car on the right is a stronger hazard than the distant-side car. */
+    assert(target < 0.0f);
+}
+
+static void avoidance_respects_available_road_room(void)
+{
+    const float z[2] = {-10.0f, -9.0f};
+    const float lateral[2] = {2.0f, 2.05f};
+    const float target = boonta_rival_ai_target_lateral(
+        0U, -10.0f, 2.0f, NAN, z, lateral, 2U, 0.0f, 2.2f);
+
+    assert(nearf_ai(target, 1.55f));
+    assert(target < 2.0f);
+}
+
 static void movement_is_bounded_and_time_scaled(void)
 {
     assert(nearf_ai(boonta_rival_ai_after_frame(0.0f, 1.0f, 1.0f), 0.035f));
