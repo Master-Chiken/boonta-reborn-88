@@ -10,6 +10,9 @@ on:
       - .github/workflows/gemini-plan-execute.yml
       - .github/workflows/openrouter-plan-execute.yml
       - .github/workflows/groq-plan-execute.yml
+      - .github/commands/gemini-autonomous-loop.toml
+      - tools/check_autonomous_provider_handoff.py
+      - docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md
       - docs/automation/task-ledger.json
   schedule:
     # Four bounded opportunities per day, including 00:17 UTC just after daily quota reset; runs without asking for another continue message.
