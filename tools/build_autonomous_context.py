@@ -103,7 +103,6 @@ def build_context(
         )
     lines = [
         "VERIFIED CONTEXT (prepared before provider inference):",
-        "Reuse: DISCOVER → VERIFY → REUSE → INTEGRATE → TEST; record source/licence/platform; unknown rights mean HOLD.",
         "Boundary: PC/N64/Dreamcast is not GameCube/Wii proof; exclude commercial game data from Git/CI/hosted prompts; preserve AGPL/MIT separation.",
         "Cycle: €0; one provider/run; one task/writer; no retries after refusals; no merge/auto-merge.",
         f"Canonical ledger v2 {summary.get('updated_at', 'unknown')}: {task_id} [{status}], base={target_branch}, scope={', '.join(scope)}.",
