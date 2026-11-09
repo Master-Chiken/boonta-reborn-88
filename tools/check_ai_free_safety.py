@@ -1461,7 +1461,7 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "2,048 context / 256 output tokens; max 3 steps.",
+    "2,048/256 token limits; 3 steps max.",
     "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
