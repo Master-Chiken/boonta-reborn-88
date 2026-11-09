@@ -296,6 +296,12 @@ jobs:
           PROMPT="$(cat <<'PROMPT'
           €0-only Groq Free agent. Execute selected task.
           
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json; the global preflight has selected and supplied its identity.
+          - Treat TASK_ID, TASK_TITLE, TASK_TARGET_BRANCH and AUTONOMOUS_CONTEXT as the authoritative task binding.
+          - The verified AUTONOMOUS_CONTEXT contains the selected task's question, acceptance_criteria_excerpt and next action; satisfy those criteria for this exact task.
+          - Do not substitute another task, queue item, issue or project objective, even if another item appears easier.
+          
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Three build steps.
