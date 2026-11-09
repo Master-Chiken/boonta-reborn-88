@@ -215,10 +215,10 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
     errors.append("Gemini must depend on the global cooldown preflight")
 
 # Keep the global payload within the reviewed provider task-context ceiling.
-if "if (taskReady && taskContext.length > 1200)" not in loop:
-    errors.append("Global preflight must fail closed above the 1,200-character task-context limit")
-if "task context exceeds the 1,200-character provider handoff budget" not in task_preflight_tests:
-    errors.append("Mocked task preflight must test the 1,200-character context ceiling")
+if "if (taskReady && taskContext.length > 2500)" not in loop:
+    errors.append("Global preflight must fail closed above the 2,500-character task-context limit")
+if "task context exceeds the 2,500-character provider handoff budget" not in task_preflight_tests:
+    errors.append("Mocked task preflight must test the 2,500-character context ceiling")
 
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
