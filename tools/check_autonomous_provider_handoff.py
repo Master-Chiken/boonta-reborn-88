@@ -43,6 +43,25 @@ context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
 
+# Every provider needs checks:read for the shared exact-head validator, with no
+# broader permissions than its existing contents/issues/PR write operations.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    permissions_match = re.search(
+        r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
+        workflow.split("jobs:", 1)[1] if "jobs:" in workflow else "",
+    )
+    if not permissions_match:
+        errors.append(f"{label} provider workflow must declare explicit least-privilege job permissions")
+    else:
+        permissions = dict(re.findall(
+            r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
+            permissions_match.group("block"),
+        ))
+        expected = {"contents": "write", "issues": "write", "pull-requests": "write", "checks": "read"}
+        if permissions != expected:
+            errors.append(f"{label} provider job permissions must be contents/issues/PR write plus checks read only; found {permissions!r}")
+
+
 # Provider invocations and validated reports must be separately observable.
 for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
     if "github_get_file_contents" in content or "github_get_pull_request" in content:
@@ -545,6 +564,10 @@ for required in (
     "!commitCreatedDuringCycle",
     "pr.head.sha !== exactHead",
     "headCommit.sha !== exactHead",
+    "github.rest.checks.listForRef",
+    "run.head_sha === exactHead",
+    "run.app?.slug === 'github-actions'",
+    "check.status === 'completed' && check.conclusion === 'success'",
     "const { data: finalPr } = await github.rest.pulls.get",
     "finalPr.state !== 'open'",
     "finalPr.head.repo?.full_name !== owner + '/' + repo",
