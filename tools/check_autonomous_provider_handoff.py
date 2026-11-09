@@ -215,10 +215,10 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
     errors.append("Gemini must depend on the global cooldown preflight")
 
 # Keep the global payload within the reviewed provider task-context ceiling.
-if "if (taskReady && taskContext.length > 1200)" not in loop:
-    errors.append("Global preflight must fail closed above the 1,200-character task-context limit")
-if "task context exceeds the 1,200-character provider handoff budget" not in task_preflight_tests:
-    errors.append("Mocked task preflight must test the 1,200-character context ceiling")
+if "if (taskReady && taskContext.length > 2500)" not in loop:
+    errors.append("Global preflight must fail closed above the 2,500-character task-context limit")
+if "task context exceeds the 2,500-character provider handoff budget" not in task_preflight_tests:
+    errors.append("Mocked task preflight must test the 2,500-character context ceiling")
 
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
@@ -444,7 +444,7 @@ for content, needle, message in (
     (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
-    (groq, "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
+    (groq, "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
 
 ):
     if needle not in content:
@@ -478,7 +478,7 @@ if len(actual_openrouter_prompt) > 3000:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 2400, 2200)
 context_limits("OpenRouter", openrouter, 2200, 2200)
-if len(actual_groq_prompt) + 1500 + 300 > 4500:
+if len(actual_groq_prompt) + 2200 + 300 > 4500:
     errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
@@ -495,22 +495,35 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
         errors.append(f"{label} instructions still reference the superseded rival-AI PR chain")
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
-    if "Do not reopen, replay or recreate that chain" not in content:
+    required_reopen_rule = (
+        "Never reopen/replay/recreate superseded #317/#318/#319."
+        if label == "Groq" else "Do not reopen, replay or recreate that chain"
+    )
+    if required_reopen_rule not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
 
 # A blocked task with no ledger PR/head must reconcile exact matching historic PRs
 # before any provider creates more work. Keep all three agent prompts in sync.
 for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
-    for required in (
-        "Post-merge reconciliation",
-        "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
-        "including merged/closed results",
-        "closed-unmerged is not completion",
-        "verify live `merged_at`",
-        "final `head.sha`",
-        "record that original PR URL and exact head SHA as evidence",
-        "Never use the ledger-update PR's own SHA as task evidence",
-    ):
+    required_rules = (
+        (
+            "Reconcile exact `BOONTA_TASK_ID: <task_id>` PR-body matches across all states.",
+            "Verify merged_at, repository, base and final head SHA; closed-unmerged is not completion.",
+            "If complete, create one ledger PR recording original PR URL and exact task head SHA, regenerate summary and activate one next task.",
+            "Never use the ledger PR SHA as task evidence.",
+        )
+        if label == "Groq" else (
+            "Post-merge reconciliation",
+            "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
+            "including merged/closed results",
+            "closed-unmerged is not completion",
+            "verify live `merged_at`",
+            "final `head.sha`",
+            "record that original PR URL and exact head SHA as evidence",
+            "Never use the ledger-update PR's own SHA as task evidence",
+        )
+    )
+    for required in required_rules:
         if required not in prompt:
             errors.append(f"{label} prompt is missing the post-merge task reconciliation rule {required!r}")
 
