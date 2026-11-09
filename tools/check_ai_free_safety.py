@@ -934,13 +934,13 @@ for label, prompt in dynamic_task_prompts:
 # Provider handoff budgets must match the tested schema-v2 activation context.
 # The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
 # and prevented both free providers from reaching inference.
-for label, workflow, expected_max_chars in (
-    ("OpenRouter", openrouter_fallback, "2400"),
-    ("Groq", groq_fallback, "2400"),
+for label, workflow, expected_max_chars, expected_task_chars in (
+    ("OpenRouter", openrouter_fallback, "2400", "2200"),
+    ("Groq", groq_fallback, "1600", "1400"),
 ):
-    if f"--max-task-context 2200" not in workflow:
-        errors.append(f"{label} context builder must preserve the full tested 2,200-character task handoff")
-    if f"--max-chars {expected_max_chars} --max-task-context 2200" not in workflow:
+    if f"--max-task-context {expected_task_chars}" not in workflow:
+        errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
+    if f"--max-chars {expected_max_chars} --max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must match its documented verified-context ceiling")
 
 for required in (
@@ -1452,7 +1452,7 @@ else:
         groq_limits = groq_model.get("limit", {})
         if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must be capped at 2048 context / 256 output tokens after the observed TPM refusal"
+                "Groq GPT-OSS 20B must retain 2048 context / 256 output limits while the prompt is trimmed below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1461,7 +1461,7 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "2,048 context / 256 output tokens; three steps.",
+    "2,048 context / 256 output tokens; max 3 steps.",
     "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
@@ -1469,8 +1469,8 @@ for required in (
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 4500 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 4,500-character prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 3400 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 3,400-character TPM prompt ceiling before inference")
 if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
