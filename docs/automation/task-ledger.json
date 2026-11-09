@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-08",
+  "updated_at": "2026-11-09",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -254,7 +254,7 @@
         "OpenRouter Free daily-quota preflight reads data.free_model_daily_requests.remaining from GET /api/v1/key before any inference/setup; missing, invalid or zero remaining quota fails closed and records the UTC cooldown without a model request.",
         "A single read-only global preflight reads bot-owned UTC cooldown markers for Gemini, OpenRouter and Groq on issue #226 before provider workflows launch; it fails closed on preflight errors, preserves each provider's independent inner guard, and allows eligible fallbacks when earlier providers are pre-skipped.",
         "At most one model provider is invoked per Boonta Autonomous Loop run; fallback providers are eligible only on a later run when the preceding provider's UTC cooldown was already active at global preflight.",
-        "Gemini autonomous prompt and MCP context are compact and bounded; OpenRouter is limited to three build steps, a 7,000-character prompt and 180 seconds; Groq is limited to three build steps, 3,072 context tokens, 512 output tokens, a 5,000-character prompt and 90 seconds, and stops on the first TPM refusal."
+        "Provider budgets in the canonical ledger, compact summary and workflows must match: Gemini remains bounded; OpenRouter uses 3 build steps, a 7,000-character prompt and 180 seconds; Groq uses 3 build steps, 2,048 context / 256 output tokens, a 4,500-character prompt and 90 seconds, stopping on the first TPM refusal."
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -367,10 +367,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42409296096",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42409296211",
         "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42409361776",
-        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42323079983"
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42323079983",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/356",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/4d8b7259d9b385156f951ae5e0efde45932cd38f",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/357",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/61b3755817c585a1a94a04e47cdb544d51bc9595",
+        "https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/42540013937"
       ],
-      "next_action": "PR #344 is merged into main at exact source head ce32b4c00819434c41297e7626e3fcc1998074dd; merge commit 0664079c046f09a3b3fe820ab12eaf02d1a3f7ca. It serializes provider failover to one model invocation per loop run and reduces free-tier context/turns: Gemini prompt/MCP surface is compacted; OpenRouter is capped at 3 steps, 7,000 prompt characters and 180 seconds; Groq is capped at 3 steps, 3,072 context / 512 output tokens, 5,000 prompt characters and 90 seconds, with process termination on the first TPM refusal. Exact-head CI passed: AI Free safety #42409296079, Step 102 provenance #42409296096 and branch self-test #42409296211. Prior provider evidence on 2026-11-07: Gemini run #42323079983 failed after Google 503 high-demand responses and a Free-tier input TPM limit of 250,000 tokens/minute; OpenRouter run #42354691945 passed GET /api/v1/key authentication with is_free_tier=true but inference was rejected by free-models-per-day; Groq run #42323079983 exceeded the observed 8,000 TPM limit with requests around 9.8k–10.3k tokens and ended on its timeout. Do not rotate keys or add credits based on these errors. Post-merge main run #42409361776 passed read-only readiness (writer enabled), GitHub App access and the global cooldown preflight; all three UTC cooldowns were correctly detected active for 2026-11-07, so all provider jobs were skipped and the summary explicitly recorded no model call/no progress. This validates cooldown suppression and safe startup, not a completed autonomous inference cycle. Next scheduled opportunity after the 2026-11-07 UTC cooldowns expire is 2026-11-08 00:17 UTC / 01:17 Europe/Paris. Gemini is first eligible; any fallback advances only on a later loop run after the prior provider's cooldown is visible at global preflight. Keep activation BLOCKED until a post-reset run demonstrates a real provider invocation and valid cycle-fresh report/PR, then reconcile the ledger. A verified named blocker may be recorded without claiming progress. Preserve €0: no paid fallback, credits, manual cooldown bypass, secret/key rotation or provider-setting changes. The workflow checks owner attestations/presence; the owner remains responsible for truthful Free-tier/no-billing attestations.",
-      "updated_at": "2026-11-07",
+      "next_action": "#356 merged: context preload; Groq 2,048/256 tokens, 4,500-char prompt. #357 merged: read-only readiness. Run #42540013937 skipped providers because the exact-task PR was open; no model call/progress. After reconciliation, require a real €0 provider call and exact-head-validated PR; verify merged state/base/head SHA, record evidence in a separate ledger update, regenerate summary, and activate one next task.",
+      "updated_at": "2026-11-09",
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main"
