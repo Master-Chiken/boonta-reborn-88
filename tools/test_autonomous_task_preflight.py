@@ -325,8 +325,8 @@ async function runCase(testCase) {{
       throw new Error(testCase.name + ": expected task_id=" + testCase.expected_task_id + ", got " + outputs.task_id);
     }}
     if (testCase.expected_ready) {{
-      if (String(outputs.task_context).length > 2500) {{
-        throw new Error(testCase.name + ": task context exceeds the 2,500-character provider handoff budget");
+      if (String(outputs.task_context).length > 1200) {{
+        throw new Error(testCase.name + ": task context exceeds the 1,200-character provider handoff budget");
       }}
       const selected = testCase.tasks.find((item) => item.task_id === testCase.expected_task_id);
       if (outputs.task_title !== selected.title || outputs.task_target_branch !== selected.target_branch) {{
