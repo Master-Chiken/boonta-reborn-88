@@ -186,9 +186,10 @@ jobs:
               'Title: ' + selectedTask.title,
               'Target branch: ' + selectedTask.target_branch,
               'Question: ' + selectedTask.question_excerpt,
-              'Acceptance criteria (' + selectedTask.acceptance_criteria_total + ' total; first five):',
+              'Acceptance criteria (' + selectedTask.acceptance_criteria_total + '; first 5):',
               ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
-              'Next action: ' + selectedTask.next_action_excerpt,
+              'Next: ' + selectedTask.next_action_excerpt,
+              'If criteria exceed these excerpts, read only this task record in the canonical ledger before coding.',
               'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.',
             ].join('\n') : '';
             if (taskReady && taskContext.length > 2500) {
