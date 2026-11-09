@@ -179,6 +179,9 @@ int main(void)
     lane_preference_is_deterministic();
     player_avoidance_only_when_close();
     nearby_rival_avoidance();
+    avoidance_is_independent_of_rival_array_order();
+    avoidance_prefers_the_less_blocked_side();
+    avoidance_respects_available_road_room();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
     curvature_samples_are_measured_and_bounded();
