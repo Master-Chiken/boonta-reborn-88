@@ -12,8 +12,8 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Three-turn budget: reconcile task, one useful patch, PR and exact-head readback.
 
 ## AUTHORITATIVE SELECTED TASK
-- Read `.gemini/context.json` first. In autonomous mode, `task_id`, `task_title`, `task_description` and `task_target_branch` are supplied by the global read-only preflight and are authoritative for this run.
-- Read `docs/automation/task-ledger-summary.json` once. Match exact `task_id`, title and base to preflight. Treat `question_excerpt`, `acceptance_criteria_excerpt` and `next_action_excerpt` as the task contract. Do not substitute another task or queue item.
+- Keep the preflight-selected `.gemini/context.json` task ID/title/description/base authoritative; do not switch queues.
+- Read `docs/automation/task-ledger-summary.json` once; match exact task ID/title/base and use its question, criteria and next-action excerpts.
 - Base must match the ledger and be exactly `main` (docs/research) or `dev` (gameplay). If identity, criteria or base is missing/mismatched, an existing PR/head is represented, or budget is exceeded, stop without writing and report the blocker.
 - If task details are insufficient, read only the matching task record from `docs/automation/task-ledger.json`; do not fetch full issue histories, unrelated queue items, or broad backlogs.
 - Post-merge reconciliation: for a blocked task without ledger PR/head, search only exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. For a merged match, verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence via one reviewable ledger PR, regenerate the summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
@@ -36,6 +36,9 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 - Let CI run. Verify the exact PR head SHA. Do not push empty commits; read only the failing job logs. If checks are pending, record that state and stop. With no documented safe rerun action, leave transient failures alone; if a job remains active five minutes beyond that timeout, report likely stale runner/Actions state and do not wait indefinitely. Treat optional `continue-on-error` diagnostics separately.
 - Open PRs are in_review, not completed. Do not create a self-referential `in_review` record; after merge, finalize from `main` with the actual merged PR head SHA. Complete only after merge and ledger evidence.
 - Never merge a PR. Never push directly to either protected branch. Never auto-merge, force-push, delete refs, weaken tests or change secrets/settings/permissions/billing/branch protection. The strict project budget is €0.
+
+## Repository editing contract (mandatory)
+Use only the GitHub MCP `push_files` tool for all repository file writes. Never call `replace`, `write_file`, `edit_file` or `apply_patch`. If `push_files` is unavailable or a write fails, stop modifying files.
 
 ## Facts established before this prompt can run
 - This prompt is reached only after the autonomous writer gate, Free-tier owner-attestation check, secret-presence checks and scoped GitHub App token creation have passed in the current workflow.
