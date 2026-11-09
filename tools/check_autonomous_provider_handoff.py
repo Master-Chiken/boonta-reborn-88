@@ -62,6 +62,40 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
             errors.append(f"{label} provider job permissions must be contents/issues/PR write plus checks read only; found {permissions!r}")
 
 
+# Gemini CLI exposes MCP tools as mcp_{serverName}_{toolName}. Derive the
+# model-facing FQNs from the actual server alias and includeTools configuration.
+gemini_settings_marker = "          settings: |-\n"
+gemini_settings_end = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if gemini_settings_marker not in gemini or gemini_settings_end not in gemini:
+    errors.append("Gemini MCP settings block is missing; cannot verify model-visible tool names")
+else:
+    try:
+        gemini_settings_text = gemini.split(gemini_settings_marker, 1)[1].split(gemini_settings_end, 1)[0]
+        gemini_settings = json.loads(gemini_settings_text)
+        gemini_server_name, gemini_server = next(iter(gemini_settings.get("mcpServers", {}).items()))
+        raw_gemini_tools = gemini_server.get("includeTools", [])
+        expected_gemini_tools = {f"mcp_{gemini_server_name}_{tool}" for tool in raw_gemini_tools}
+        missing_gemini_tools = sorted(name for name in expected_gemini_tools if name not in gemini_prompt)
+        if gemini_server_name != "github":
+            errors.append(f"Gemini GitHub MCP server alias must remain 'github'; found {gemini_server_name!r}")
+        if len(raw_gemini_tools) != 11:
+            errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
+        if missing_gemini_tools:
+            errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
+        if "Gemini CLI model-facing MCP names are FQNs" not in gemini_prompt:
+            errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
+    except (json.JSONDecodeError, StopIteration, AttributeError, TypeError) as exc:
+        errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
+
+for required in (
+    "No Explore/subagents/planning, repo-wide discovery",
+    "create one branch from latest selected base",
+    "one `mcp_github_push_files` call",
+    "read back exact current head SHA",
+):
+    if required not in gemini_prompt:
+        errors.append(f"Gemini direct-execution contract is missing {required!r}")
+
 # OpenCode 1.19.5 exposes MCP tools as top-level names prefixed with the
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
 model_visible_github_tools = (
