@@ -316,6 +316,7 @@ jobs:
           - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Read only the source files needed; keep new retrieved text below 300 tokens.
           - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
           - €0 only: no paid route, billing, credits, other providers, or secret/settings changes.
+          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - Read only task-specific files. Create one branch from the exact selected-base SHA, push one logical patch and open one PR to that base.
           - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
