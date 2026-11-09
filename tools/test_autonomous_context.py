@@ -77,6 +77,42 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Exact PR state is recorded" in long_rendered
     assert "Complete a verified provider cycle." in long_rendered
 
+    # Regression for the real activation handoff budget: preserve every
+    # required excerpt when the preflight context is about 1.35k characters.
+    summary_path = root / "docs/automation/task-ledger-summary.json"
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    task = payload["tasks"][0]
+    task["question_excerpt"] = "Q" * 105
+    task["next_action_excerpt"] = "N" * 400
+    task["acceptance_criteria_total"] = 5
+    task["acceptance_criteria_excerpt"] = [
+        "A" * 48, "B" * 78, "C" * 35, "D" * 93, "E" * 133,
+    ]
+    summary_path.write_text(json.dumps(payload), encoding="utf-8")
+    full_handoff = " ".join([
+        "Task ID: AUTOMATION-LEDGER-ACTIVATION",
+        "Title: Activate and validate persistent autonomous task tracking",
+        "Target branch: main",
+        "Question: " + task["question_excerpt"],
+        "Acceptance criteria (5; first 5):",
+        *["- " + item for item in task["acceptance_criteria_excerpt"]],
+        "Next: " + task["next_action_excerpt"],
+        "If criteria exceed these excerpts, read only this task record in the canonical ledger before coding.",
+        "PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.",
+    ])
+    full_handoff += " X" * max(0, 1349 - len(full_handoff))
+    full_handoff = full_handoff[:1349]
+    assert len(full_handoff) == 1349
+    bounded = MODULE.build_context(
+        root, "AUTOMATION-LEDGER-ACTIVATION",
+        "Activate and validate persistent autonomous task tracking",
+        "main", full_handoff, max_chars=1500, max_task_context=1400,
+    )
+    assert len(bounded) <= 1500
+    assert task["question_excerpt"] in bounded
+    assert task["next_action_excerpt"] in bounded
+    assert all(item in bounded for item in task["acceptance_criteria_excerpt"])
+
     try:
         MODULE.build_context(
             root, "AUTOMATION-LEDGER-ACTIVATION",
