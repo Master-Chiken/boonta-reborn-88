@@ -295,30 +295,26 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free €0 fallback after Gemini/OpenRouter cooldowns.
-          
-          TASK
-          - Use only selected task ID/title/base and preloaded schema-v2 context.
+          Groq Free (€0 only).
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt; Do not substitute another task.
           - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.
           - Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
           - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.
           - Never cite ledger PR SHA as task evidence; else fix verified gaps only.
           - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
-          
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - No ROMs/discs/commercial binaries/extracted assets; follow docs/REVERSE_ENGINEERING_FIRST.md; preserve provenance/platform boundaries.
-          - One task/branch/patch/PR. Never merge, write main/dev, force-push or delete refs.
-          
-          TOOLS (OpenCode v1.19.5)
+          - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
+          - One task/branch/patch/PR; never merge, write protected branches, force-push or delete refs.
+          TOOLS
+          - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
           - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
-          - GITHUB_TOOLS uses raw server names; OpenCode prefixes `github_`. OPENCODE_EXPERIMENTAL_CODE_MODE=false; no `execute`, shell or filesystem.
-          - New retrieved text below 300 tokens; no broad scans or full issue bodies/comments.
-          
+          - GITHUB_TOOLS uses raw names; set OPENCODE_EXPERIMENTAL_CODE_MODE=false. No execute, shell or filesystem tools.
           EXECUTION
-          - Branch from selected-base SHA, push one patch and open a non-draft PR to that base. PR body includes standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH lines.
-          - Do not return a plan: finish tool calls and read back the exact PR head SHA.
+          - Branch from selected-base SHA; push one patch and open a non-draft PR to that base with standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH lines.
+          - No plan-only response: finish the tool calls and read back the exact PR head SHA.
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>. PROGRESS needs status, PR URL, exact 40-char SHA and evidence base; BLOCKED needs one blocker and next action.
           PROMPT
           )"

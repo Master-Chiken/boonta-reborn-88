@@ -1450,9 +1450,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
+        if groq_limits.get("context") != 1792 or groq_limits.get("output") != 128:
             errors.append(
-                "Groq GPT-OSS 20B must retain 2048 context / 256 output limits while the prompt is trimmed below the observed TPM refusal"
+                "Groq GPT-OSS 20B must retain 1792 context / 128 output limits to leave margin below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1461,7 +1461,7 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "2,048/256 limits; max 3 steps.",
+    "1,792/128 limits; max 3 steps.",
     "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
@@ -1474,6 +1474,19 @@ if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
 if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
+
+for required in (
+    "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
+    "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
+):
+    if required not in groq_fallback:
+        errors.append(f"Groq direct MCP tool contract is missing {required!r}")
+for required in (
+    "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
+    "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.",
+):
+    if required not in openrouter_fallback:
+        errors.append(f"OpenRouter direct MCP tool contract is missing {required!r}")
 
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
