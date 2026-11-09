@@ -182,25 +182,18 @@ jobs:
             }
             const taskReady = Boolean(selectedTask);
             const taskContext = taskReady ? [
-              'Owner-authorized scheduled loop runs autonomously without asking for another continue message.',
-              'AUTHORITATIVE SELECTED TASK — use this exact task; do not substitute another queue item.',
               'Task ID: ' + selectedTask.task_id,
               'Title: ' + selectedTask.title,
               'Target branch: ' + selectedTask.target_branch,
-              'Queue: ' + (selectedTask.queue || 'unspecified'),
-              'Platform/scope: ' + selectedTask.platform_scope.join(', '),
               'Question: ' + selectedTask.question_excerpt,
-              'Acceptance criteria (' + selectedTask.acceptance_criteria_total + ' total; compact index shows up to five):',
+              'Acceptance criteria (' + selectedTask.acceptance_criteria_total + ' total; first five):',
               ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
               'Next action: ' + selectedTask.next_action_excerpt,
-              'Before editing, confirm this exact task ID/title/target branch remains eligible in the compact main-branch summary. If details are insufficient, read only this task record; do not retrieve full issue histories or unrelated tasks.',
-              'If acceptance_criteria_total exceeds the compact excerpts shown, read only this matching task object in the canonical ledger and satisfy every acceptance criterion before coding.',
-              'Keep the exact target branch. Never promote research findings into gameplay edits or treat PC/N64/Dreamcast behavior as GameCube/Wii proof.',
-              'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.'
-            ].join('\\n') : '';
-            if (taskReady && taskContext.length > 2500) {
-              throw new Error('Selected task context exceeds the bounded 2,500-character handoff budget.');
+            ].join('\n') : '';
+            if (taskReady && taskContext.length > 1200) {
+              throw new Error('Selected task context exceeds the bounded 1,200-character provider handoff budget.');
             }
+
             core.setOutput('task_ready', String(taskReady));
             core.setOutput('task_id', selectedTask?.task_id || '');
             core.setOutput('task_title', selectedTask?.title || '');
