@@ -215,10 +215,10 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
     errors.append("Gemini must depend on the global cooldown preflight")
 
 # Keep the global payload within the reviewed provider task-context ceiling.
-if "if (taskReady && taskContext.length > 2500)" not in loop:
-    errors.append("Global preflight must fail closed above the 2,500-character task-context limit")
-if "task context exceeds the 2,500-character provider handoff budget" not in task_preflight_tests:
-    errors.append("Mocked task preflight must test the 2,500-character context ceiling")
+if "if (taskReady && taskContext.length > 1200)" not in loop:
+    errors.append("Global preflight must fail closed above the 1,200-character task-context limit")
+if "task context exceeds the 1,200-character provider handoff budget" not in task_preflight_tests:
+    errors.append("Mocked task preflight must test the 1,200-character context ceiling")
 
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
@@ -476,9 +476,9 @@ if len(actual_groq_prompt) > 2600:
     errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3000:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 2200, 2200)
-context_limits("OpenRouter", openrouter, 2200, 2200)
-if len(actual_groq_prompt) + 2200 + 300 > 4500:
+context_limits("Groq", groq, 1500, 1200)
+context_limits("OpenRouter", openrouter, 2200, 1200)
+if len(actual_groq_prompt) + 1500 + 300 > 4500:
     errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
