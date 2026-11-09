@@ -40,6 +40,7 @@ function makeCore() {
 }
 
 function makeGithub(options = {}) {
+  const previousHead = options.previousHead || 'b'.repeat(40);
   const pr = {
     number: 501,
     state: 'open',
@@ -58,22 +59,39 @@ function makeGithub(options = {}) {
       created_at: new Date(Date.now() - 1_000 + index).toISOString()
     }));
   let polls = 0;
+  let prFetches = 0;
   const github = {
     rest: {
       pulls: {
-        get: async () => ({ data: options.pr || pr })
+        get: async () => {
+          const sequence = options.prSequence || [options.pr || pr];
+          const current = sequence[Math.min(prFetches, sequence.length - 1)];
+          prFetches += 1;
+          return { data: current };
+        }
       },
       repos: {
-        getCommit: async () => ({
-          data: {
-            sha: options.commitSha || head,
-            commit: {
-              committer: {
-                date: options.committerDate || new Date(Date.now() - 5_000).toISOString()
+        getCommit: async ({ ref }) => {
+          if (ref === previousHead) {
+            return {
+              data: {
+                sha: previousHead,
+                commit: { tree: { sha: options.previousTreeSha || 'tree-before' } }
+              }
+            };
+          }
+          return {
+            data: {
+              sha: options.commitSha || head,
+              commit: {
+                tree: { sha: options.treeSha || 'tree-after' },
+                committer: {
+                  date: options.committerDate || new Date(Date.now() - 5_000).toISOString()
+                }
               }
             }
-          }
-        })
+          };
+        }
       },
       checks: {
         listForRef: async () => {
@@ -156,6 +174,34 @@ async function run(name, options = {}) {
     baseline: { '501': head },
     snapshotAt: new Date(Date.now() - 10_000).toISOString(),
     expectFailure: 'created or advanced'
+  });
+  const priorHead = 'b'.repeat(40);
+  await run('fresh empty commit on an existing PR is not progress', {
+    baseline: { '501': priorHead },
+    previousHead: priorHead,
+    previousTreeSha: 'unchanged-tree',
+    treeSha: 'unchanged-tree',
+    expectFailure: 'changed file content'
+  });
+  await run('existing PR with changed tree content is eligible for exact-head checks', {
+    baseline: { '501': priorHead },
+    previousHead: priorHead,
+    previousTreeSha: 'old-tree',
+    treeSha: 'new-tree',
+    checkRunsByPoll: [REQUIRED_CHECKS.main.map(name => ({
+      name, head_sha: head, status: 'completed', conclusion: 'success',
+      app: { slug: 'github-actions' }
+    }))]
+  });
+  const originalPr = makeGithub().pr;
+  const movedPr = {
+    ...originalPr,
+    head: { ...originalPr.head, sha: 'c'.repeat(40) }
+  };
+  await run('PR head updated while exact-head CI was polling', {
+    prSequence: [originalPr, movedPr],
+    maxPolls: 1,
+    expectFailure: 'changed while exact-head CI was running'
   });
   await run('required check failed', {
     checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
