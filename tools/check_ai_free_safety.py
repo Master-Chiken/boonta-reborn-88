@@ -1326,6 +1326,7 @@ for required in (
     "PR head updated while exact-head CI was polling",
     "PR closed while exact-head CI was polling",
     "PR head repository changed while exact-head CI was polling",
+    "PR base changed while exact-head CI was polling",
 ):
     if required not in cycle_validator_tests:
         errors.append(f"Shared autonomous report tests are missing regression case {required!r}")
