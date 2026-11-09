@@ -355,7 +355,7 @@ jobs:
           EXECUTION
           - Direct tools only: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request. OpenCode v1.19.5 prefixes the raw GITHUB_TOOLS names with github_.
           - OPENCODE_EXPERIMENTAL_CODE_MODE=false; no execute, shell or filesystem tools.
-          - Spend the eight steps on: exact-task PR search; at most one exact task-row read; branch from current selected base ref (never a stale SHA); one logical push_files; create one PR to that base; search/read back its exact current head SHA.
+          - Spend the eight steps on: exact-task PR search; at most one exact task-row read; create one branch from the current selected base ref (never a stale SHA); push one logical patch with one push_files call; create one PR to the selected base; search/read back that PR and its exact current head SHA.
           - No generic exploration, repeated reads, summaries or plans. If no verified useful patch exists, report BLOCKED with one evidenced blocker and one next action; do not create an empty branch/PR.
           - PR must advance this task's criteria; documentation-only changes must fix a verified blocker. PR body must contain exactly one line each: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact base>.
           
