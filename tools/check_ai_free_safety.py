@@ -931,6 +931,18 @@ for label, prompt in dynamic_task_prompts:
                 errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
+# Provider handoff budgets must match the tested schema-v2 activation context.
+# The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
+# and prevented both free providers from reaching inference.
+for label, workflow, expected_max_chars in (
+    ("OpenRouter", openrouter_fallback, "2200"),
+    ("Groq", groq_fallback, "2400"),
+):
+    if f"--max-task-context 2200" not in workflow:
+        errors.append(f"{label} context builder must preserve the full tested 2,200-character task handoff")
+    if f"--max-chars {expected_max_chars} --max-task-context 2200" not in workflow:
+        errors.append(f"{label} context builder must match its documented verified-context ceiling")
+
 for required in (
     "TASK_ID: '${{ inputs.task_id }}'",
     "TASK_TITLE: '${{ inputs.task_title }}'",
