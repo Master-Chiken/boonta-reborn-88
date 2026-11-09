@@ -294,30 +294,30 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          €0-only Groq Free fallback. Run only after Gemini and OpenRouter are already in same-day cooldown. Execute the exact globally selected task below.
+          €0-only Groq Free fallback; run only after earlier providers are already in same-day cooldown. Execute the exact selected task.
 
           SAFETY
-          - €0: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - Model cap 2,048 context / 256 output; three build steps; stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - One task, one writer, one branch and one PR. Never merge, write to main/dev, force-push or delete refs.
-          - No commercial game data. Preserve source provenance and PC/N64/Dreamcast versus GameCube/Wii boundaries.
-          - The schema-v2 ledger, policy and task excerpts are preloaded; do not reread full ledgers/policies.
+          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
+          - 2,048 context / 256 output tokens; three steps. Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
+          - One task/writer/branch/PR. Never merge, write to main/dev, force-push or delete refs.
+          - No commercial game data; preserve provenance and PC/N64/Dreamcast versus GameCube/Wii boundaries.
+          - Schema-v2 ledger, policies and selected task excerpts are preloaded; do not reread full files.
 
-          AUTHORITATIVE TASK
-          - Use exactly the selected task and its acceptance_criteria_excerpt/next action. Do not substitute another task.
-          - Reconcile exact `BOONTA_TASK_ID: <task_id>` PR-body matches across open, merged and closed PRs. Verify live merged_at, repository, base and final head SHA; closed-unmerged is not completion.
-          - If already complete, create one reviewable ledger PR recording the original PR URL and exact task head SHA, regenerate the summary and activate one next task. Never cite the ledger PR's SHA as task evidence. Otherwise implement only verified gaps.
-          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate superseded PRs #317/#318/#319.
+          TASK
+          - Use only the authoritative selected task and its acceptance criteria/next action. Never substitute another task.
+          - Reconcile exact `BOONTA_TASK_ID: <task_id>` PR-body matches across all states. Verify merged_at, repository, base and final head SHA; closed-unmerged is not completion.
+          - If complete, create one ledger PR recording the original PR URL and exact task head SHA, regenerate summary and activate one next task. Never use the ledger PR SHA as task evidence. Otherwise fix only verified gaps.
+          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83. Never reopen/replay/recreate superseded #317/#318/#319.
 
           EXECUTION
-          - Use only: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools are disabled.
-          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. New retrieved text must stay below 300 tokens.
-          - Branch from the selected base's exact SHA; make one logical push and one PR to that base. Never write to protected branches.
-          - PR body must contain exact standalone lines:
+          - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
+          - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
+          - Branch from exact selected-base SHA; one logical push/PR to that base. Never write protected branches.
+          - PR body exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, same-repository PR URL, exact 40-character head SHA and BOONTA_CYCLE_EVIDENCE_BASE: main|dev. Otherwise report BLOCKED with one evidenced blocker and one concrete next action.
+          - PROGRESS needs BOONTA_CYCLE_STATUS: PROGRESS, same-repo PR URL, exact 40-char head SHA and BOONTA_CYCLE_EVIDENCE_BASE: main|dev. Otherwise BLOCKED needs one evidenced blocker and one concrete next action.
           PROMPT
           )"
 
