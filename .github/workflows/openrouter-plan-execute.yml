@@ -345,6 +345,8 @@ jobs:
 
           TASK AND RECONCILIATION
           - Use only the selected task ID/title/base and its preloaded question, acceptance criteria and next action.
+          - AUTHORITATIVE SELECTED TASK: Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. The preloaded acceptance_criteria_excerpt and next action are authoritative.
+          - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - For a blocked task with no ledger PR/head, search only PRs whose body contains the exact BOONTA_TASK_ID marker, including merged/closed PRs. Verify live merged_at, repository, base and final head SHA. Closed-unmerged is not completion.
           - If every criterion is already satisfied, record the original PR URL and exact head SHA in the canonical ledger via one reviewable ledger PR, regenerate the compact summary, and activate exactly one next unanswered task. Never cite the ledger-update PR as task evidence. Otherwise implement only verified gaps.
           - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Reuse integrated PR #327 at 69deb6778f9383887118803428e7014686865a83; do not recreate superseded PRs #317/#318/#319. Record source, revision, platform, licence, tests and unknowns.
