@@ -62,10 +62,21 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
             errors.append(f"{label} provider job permissions must be contents/issues/PR write plus checks read only; found {permissions!r}")
 
 
-# Provider invocations and validated reports must be separately observable.
+# OpenCode 1.19.5 exposes MCP tools as top-level names prefixed with the
+# sanitized server name. Keep direct mode explicit; do not request Code Mode.
+model_visible_github_tools = (
+    "github_get_file_contents",
+    "github_search_pull_requests",
+    "github_create_branch",
+    "github_push_files",
+    "github_create_pull_request",
+)
 for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    if "github_get_file_contents" in content or "github_get_pull_request" in content:
-        errors.append(f"{label} prompt references a nonexistent GitHub MCP tool alias")
+    missing = [name for name in model_visible_github_tools if name not in content]
+    if missing:
+        errors.append(f"{label} prompt is missing OpenCode model-visible GitHub tools: {missing!r}")
+    if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
+        errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
 for content, needle, message in (
     (gemini, "value: ${{ jobs.plan-execute.outputs.invocation_outcome }}", "Gemini must expose its invocation result"),
@@ -416,8 +427,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 2048 or groq_limits.get("output") != 256:
-    errors.append("Groq must remain capped at 2048 context / 256 output tokens after the observed 8k TPM refusal")
+if groq_limits.get("context") != 1792 or groq_limits.get("output") != 128:
+    errors.append("Groq must remain capped at 1792 context / 128 output tokens to leave margin below the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
@@ -444,8 +455,8 @@ for content, needle, message in (
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.", "OpenRouter must document only the exact five exposed GitHub MCP tools"),
-    (groq, "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.", "Groq must document only the exact five exposed GitHub MCP tools"),
+    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
 
 ):
     if needle not in content:

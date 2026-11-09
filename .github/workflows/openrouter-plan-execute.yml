@@ -275,6 +275,7 @@ jobs:
           OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
           OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
+          OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
@@ -351,8 +352,9 @@ jobs:
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
 
           EXECUTION
-          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
-          - Local filesystem and shell tools are disabled. Read only task-specific files.
+          - The `GITHUB_TOOLS` allowlist uses raw server names; OpenCode v1.19.5 exposes model-facing names with the `github_` prefix.
+          - Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.
+          - `OPENCODE_EXPERIMENTAL_CODE_MODE=false`; call these direct tools, not `execute`. Shell/filesystem tools remain disabled. Read only task-specific files.
           - Create one branch from the selected base's exact SHA, push one logical patch and open one PR to that same base.
           - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>

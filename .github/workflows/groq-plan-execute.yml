@@ -228,6 +228,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
+          OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
@@ -238,6 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
+          # 1,792/128 limits; max 3 steps.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -255,8 +257,8 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "limit": {
-                      "context": 2048,
-                      "output": 256
+                      "context": 1792,
+                      "output": 128
                     }
                   }
                 }
@@ -294,31 +296,27 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free (€0 only); run after Gemini/OpenRouter cooldowns.
-
+          Groq Free (€0 only).
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt; Do not substitute another task.
+          - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.
+          - Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
+          - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.
+          - Never cite ledger PR SHA as task evidence; else fix verified gaps only.
+          - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - 2,048/256 limits; max 3 steps. Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - One task/branch/PR; no merges, protected writes, force-pushes or ref deletes.
-          - No commercial game data; preserve provenance; follow docs/REVERSE_ENGINEERING_FIRST.md.
-          - Schema-v2 context is preloaded; do not reread files.
-
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json; acceptance_criteria_excerpt and next_action_excerpt are authoritative. Do not substitute another task.
-          - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states. Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
-          - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task. Never cite ledger PR SHA as task evidence; else fix verified gaps only.
-          - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
-
-          EXECUTION
-          - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
+          - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
           - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
-          - Branch from selected-base SHA; push one PR to base; no protected writes.
-          - PR body exact lines:
-            BOONTA_TASK_ID: <exact task ID>
-            BOONTA_TASK_TARGET_BRANCH: <exact base>
-          - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, same-repo PR URL, exact 40-char SHA and evidence base main|dev; otherwise BLOCKED needs one evidenced blocker and next action.
-          PROMPT
+          - One task/branch/patch/PR; never merge, write protected branches, force-push or delete refs.
+          TOOLS
+          - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
+          - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - GITHUB_TOOLS uses raw names; set OPENCODE_EXPERIMENTAL_CODE_MODE=false. No execute, shell or filesystem tools.
+          EXECUTION
+          - PR body: standalone BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>; branch from selected SHA; one non-draft PR.
+          - No plan-only response: finish the tool calls and read back the exact PR head SHA.
+          - End with BOONTA_CYCLE_TASK_ID: <exact task ID>. PROGRESS needs status, PR URL, exact 40-char SHA and evidence base; BLOCKED needs one blocker and next action.
           PROMPT
           )"
 
