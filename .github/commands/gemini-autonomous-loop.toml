@@ -6,13 +6,13 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 ## Startup and context budget
 - Read `.gemini/context.json` first; its preflight-selected task ID/title/base/criteria are authoritative.
 - Read the compact summary once; read only the matching full-ledger row once if its criteria excerpt is incomplete. Never reread either or preloaded context.
-- At startup read `docs/REVERSE_ENGINEERING_FIRST.md` once; apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST. Do not manually recreate proven work.
+- At startup read `docs/REVERSE_ENGINEERING_FIRST.md` once; apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST. no manual recreation of proven work.
 - Keep newly retrieved repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279; do not read all historical comments. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries or proprietary assets; do not ingest the approximately 452 KB route dossier. Stop on context, TPM, quota, rate-limit or authentication errors; never repeat the same request. Do not read all historical comments.
 - Keep a compact inventory of directly related open pull requests. Deep-inspect changed files and exact-head CI only for PRs tied to the selected task. Read logs only for failed jobs. Reuse a successful check for an unchanged exact SHA without launching duplicate runs.
-- Three-turn budget: reconcile task, one useful patch, PR and exact-head readback.
+- Three turns: reconcile → patch → PR/head readback.
 
 ## AUTHORITATIVE SELECTED TASK
-- Keep the preflight-selected `.gemini/context.json` task ID/title/description/base authoritative; do not switch queues.
+- Keep preflight `.gemini/context.json` `task_title`/`task_description`/task ID/base authoritative; use `acceptance_criteria_excerpt`. Do not substitute another task.
 - Read `docs/automation/task-ledger-summary.json` once; match exact task ID/title/base and use its question, criteria and next-action excerpts.
 - Base must match the ledger and be exactly `main` (docs/research) or `dev` (gameplay). If identity, criteria or base is missing/mismatched, an existing PR/head is represented, or budget is exceeded, stop without writing and report the blocker.
 - If task details are insufficient, read only the matching task record from `docs/automation/task-ledger.json`; do not fetch full issue histories, unrelated queue items, or broad backlogs.
