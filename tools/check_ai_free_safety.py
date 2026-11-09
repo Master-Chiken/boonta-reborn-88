@@ -912,13 +912,22 @@ dynamic_task_prompts = (
     ("Groq", groq_fallback),
 )
 for label, prompt in dynamic_task_prompts:
-    for required in (
-        "AUTHORITATIVE SELECTED TASK",
-        "task-ledger-summary.json",
-        "acceptance_criteria_excerpt",
-        "Do not substitute another task",
-        "€0",
-    ):
+    required_task_safeguards = (
+        (
+            "preloaded schema-v2 context is authoritative",
+            "exact BOONTA_TASK_ID across all PR states",
+            "€0 only",
+        )
+        if label == "Groq"
+        else (
+            "AUTHORITATIVE SELECTED TASK",
+            "task-ledger-summary.json",
+            "acceptance_criteria_excerpt",
+            "Do not substitute another task",
+            "€0",
+        )
+    )
+    for required in required_task_safeguards:
         if required not in prompt:
             errors.append(f"{label} autonomous prompt is missing dynamic selected-task safeguard {required!r}")
     if label == "Gemini":
@@ -957,15 +966,28 @@ for label, workflow in (
     ("OpenRouter", openrouter_fallback),
     ("Groq", groq_fallback),
 ):
-    for required in (
-        "task_id:",
-        "task_title:",
-        "task_target_branch:",
-        "TASK_ID: ${{ inputs.task_id }}",
-        "TASK_TITLE: ${{ inputs.task_title }}",
-        "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
-        "Use exactly this task from docs/automation/task-ledger-summary.json",
-    ):
+    required_task_bindings = (
+        (
+            "task_id:",
+            "task_title:",
+            "task_target_branch:",
+            "TASK_ID: ${{ inputs.task_id }}",
+            "TASK_TITLE: ${{ inputs.task_title }}",
+            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+            "preloaded schema-v2 context is authoritative",
+        )
+        if label == "Groq"
+        else (
+            "task_id:",
+            "task_title:",
+            "task_target_branch:",
+            "TASK_ID: ${{ inputs.task_id }}",
+            "TASK_TITLE: ${{ inputs.task_title }}",
+            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+            "Use exactly this task from docs/automation/task-ledger-summary.json",
+        )
+    )
+    for required in required_task_bindings:
         if required not in workflow:
             errors.append(f"{label} reusable workflow is missing selected-task binding {required!r}")
 
@@ -1462,22 +1484,22 @@ else:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
     "1,536/96 limits; max 3 steps.",
-    "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
+    "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
-    "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
-    "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.",
+    "Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
+    "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
 if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
     errors.append("Groq fallback must enforce the 3,500-character TPM prompt ceiling before inference")
-if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
+if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
+    "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
