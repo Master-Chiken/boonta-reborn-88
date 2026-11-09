@@ -1300,6 +1300,8 @@ for required in (
     "pollIntervalMs = 15000",
     "const { data: finalPr } = await github.rest.pulls.get",
     "finalPr.state !== 'open'",
+    "finalPr.head.repo?.full_name !== owner + '/' + repo",
+    "finalPr.base.repo?.full_name !== owner + '/' + repo",
     "finalPr.head.sha !== exactHead",
     "finalPr.base.ref !== expectedBase",
     "changed while exact-head CI was running",
@@ -1322,6 +1324,8 @@ for required in (
     "fresh empty commit on an existing PR is not progress",
     "existing PR with changed tree content is eligible for exact-head checks",
     "PR head updated while exact-head CI was polling",
+    "PR closed while exact-head CI was polling",
+    "PR head repository changed while exact-head CI was polling",
 ):
     if required not in cycle_validator_tests:
         errors.append(f"Shared autonomous report tests are missing regression case {required!r}")
