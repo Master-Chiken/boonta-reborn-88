@@ -931,12 +931,12 @@ for label, prompt in dynamic_task_prompts:
                 errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
-# Provider handoff budgets must match the tested schema-v2 activation context.
-# The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
-# and prevented both free providers from reaching inference.
+# Provider handoff budgets must match their tested schema-v2 activation context.
+# Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
+# reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
     ("OpenRouter", openrouter_fallback, "2400", "2200"),
-    ("Groq", groq_fallback, "1400", "1200"),
+    ("Groq", groq_fallback, "1200", "1000"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -1386,8 +1386,8 @@ if "The check runs must be from the GitHub Actions app" not in cycle_validator a
     errors.append("Autonomous exact-head checks must reject same-named runs from untrusted apps")
 if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
-if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
-    errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
+if "BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}" not in openrouter_fallback:
+    errors.append("OpenRouter fallback prompt must append the exact main/dev target reserved by task preflight")
 for required in (
     '"$RUNNER_TEMP/opencode-cycle-report.txt"',
     'with open(report_path, "w", encoding="utf-8") as report:',
@@ -1450,9 +1450,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1792 or groq_limits.get("output") != 128:
+        if groq_limits.get("context") != 1536 or groq_limits.get("output") != 96:
             errors.append(
-                "Groq GPT-OSS 20B must retain 1792 context / 128 output limits to leave margin below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1536 context / 96 output tokens to leave margin below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1461,7 +1461,7 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,792/128 limits; max 3 steps.",
+    "1,536/96 limits; max 3 steps.",
     "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
@@ -1469,8 +1469,8 @@ for required in (
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,500-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 3200 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 3,200-character TPM prompt ceiling before inference")
 if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
