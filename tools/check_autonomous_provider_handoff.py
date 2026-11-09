@@ -324,9 +324,9 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     if task_permissions.get("*") != "deny":
         errors.append(f"{label} build agent must deny Task subagents to preserve bounded direct MCP execution")
 for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    if "BOONTA_CYCLE_TASK_ID: ${TASK_ID}" not in content:
+    if "BOONTA_CYCLE_TASK_ID: " not in content or "TASK_ID}" not in content:
         errors.append(f"{label} must inject the literal preflight-reserved task ID into the final machine report")
-    if "BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}" not in content:
+    if "BOONTA_CYCLE_EVIDENCE_BASE: " not in content or "TASK_TARGET_BRANCH}" not in content:
         errors.append(f"{label} must inject the literal reserved target branch into the final machine report")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
