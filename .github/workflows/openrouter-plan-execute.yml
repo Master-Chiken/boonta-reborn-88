@@ -349,7 +349,7 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list the repository root or reread the compact summary.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
           - If essential, read docs/automation/task-ledger.json once and inspect only the exact selected task row.
-          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results; closed-unmerged is not completion. Verify live `merged_at`, repository/base and final `head.sha`. If complete, record that original PR URL and exact head SHA as evidence, regenerate summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise fix verified gaps only.
+          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results; closed-unmerged is not completion. verify live `merged_at`, repository/base and final `head.sha`. If complete, record that original PR URL and exact head SHA as evidence, regenerate summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise fix verified gaps only.
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           
           EXECUTION
