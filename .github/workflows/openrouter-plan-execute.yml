@@ -164,7 +164,7 @@ jobs:
             exit 1
           fi
           # Match the maximum configured OpenCode build steps before allowing inference.
-          MIN_REQUESTS_PER_CYCLE=3
+          MIN_REQUESTS_PER_CYCLE=8
           echo "quota_remaining=$quota_remaining" >> "$GITHUB_OUTPUT"
           echo "quota_required=$MIN_REQUESTS_PER_CYCLE" >> "$GITHUB_OUTPUT"
           if (( quota_remaining >= MIN_REQUESTS_PER_CYCLE )); then
@@ -299,7 +299,7 @@ jobs:
             "enabled_providers": ["openrouter"],
             "agent": {
               "build": {
-                "steps": 3
+                "steps": 8
               }
             },
             "mcp": {
@@ -357,7 +357,14 @@ jobs:
           - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
-          - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
+          - Do not stop after reading the ledger or describing intended work. Use the available tools to complete the branch, patch, push and PR sequence within the bounded agent steps.
+          - Your FINAL response is a machine-readable report, not a narrative. It MUST include exactly one line for every field below; substitute real values, never placeholders:
+            BOONTA_CYCLE_TASK_ID: <exact task ID>
+            BOONTA_CYCLE_STATUS: PROGRESS or BLOCKED
+            BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>
+            BOONTA_CYCLE_EVIDENCE_BASE: main or dev
+          - For BLOCKED, omit EVIDENCE fields and instead include exactly one BOONTA_CYCLE_BLOCKER: <verified blocker> and one BOONTA_CYCLE_NEXT_ACTION: <concrete action>.
+          - Never claim PROGRESS without actually creating/updating the PR and reading back its exact current head SHA. Never report a planned PR as evidence.
           - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, a same-repository PR URL, exact 40-character head SHA and BOONTA_CYCLE_EVIDENCE_BASE: main|dev. Otherwise report BLOCKED with one evidenced blocker and one concrete next action.
           PROMPT
           )"

@@ -255,9 +255,10 @@ def load_opencode_config(label: str, source: str) -> dict:
 
 openrouter_config = load_opencode_config("OpenRouter", openrouter)
 groq_config = load_opencode_config("Groq", groq)
-for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
-    if config.get("agent", {}).get("build", {}).get("steps") != 3:
-        errors.append(f"{label} must be limited to three OpenCode build steps")
+if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
+    errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 3:
+    errors.append("Groq must remain limited to three OpenCode build steps")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
@@ -474,7 +475,7 @@ actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
 if len(actual_groq_prompt) > 2600:
     errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
-if len(actual_openrouter_prompt) > 3000:
+if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 2400, 2200)
 context_limits("OpenRouter", openrouter, 2400, 2200)
