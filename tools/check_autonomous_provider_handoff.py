@@ -54,7 +54,7 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
         errors.append(f"{label} provider workflow must declare explicit least-privilege job permissions")
     else:
         permissions = dict(re.findall(
-            r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
+            r"(?m)^      ([a-zA-Z-]+):\s*['\"]?([a-zA-Z]+)['\"]?\s*$",
             permissions_match.group("block"),
         ))
         expected = {"contents": "write", "issues": "write", "pull-requests": "write", "checks": "read"}
