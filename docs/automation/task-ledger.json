@@ -381,7 +381,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/367",
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/727ef16bebf0e373fb9fc525539b54651cbebd90"
       ],
-      "next_action": "#358/#359 fixed prompt guards/cooldowns; #364 gives OpenRouter 8 steps and machine-readable reports; #365/#367 correct Groq TPM and OpenCode MCP tools; #366 schedules 00:17/06:17/12:17/18:17 UTC. Next: require one real €0 provider call, actual MCP branch/PR creation and a valid exact-task/exact-head report on an eligible post-reset cycle. Reconcile merged evidence before activating #307.",
+      "next_action": "#358/#359 fixed prompt/cooldowns; #364 OpenRouter 8 steps/reports; #365/#367 Groq TPM/MCP; #366 schedules four UTC cycles. Next: require a real €0 provider call, MCP branch/PR and exact-task/exact-head validation. Then select the owner-directed Phase 1 cross-platform reuse/compatibility decision in #226 (PROJECT_OPERATING_RULES.md); defer #307 until the playable race slice is coherent (GEMINI.md).",
       "updated_at": "2026-11-09",
       "pr_url": null,
       "head_sha": null,
