@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1800 --max-task-context 1000)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1800 --max-task-context 900)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -311,6 +311,11 @@ jobs:
 
           EXECUTION
           - Use only get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request. Shell and local filesystem tools are disabled.
+          - AUTHORITATIVE SELECTED TASK: Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. Its acceptance_criteria_excerpt and next action are authoritative.
+          - 2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000. Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.
+          - Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279. Read only the source files needed; keep new retrieved text below 300 tokens.
+          - Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
+          - €0 only: no paid route, billing, credits, other providers, or secret/settings changes.
           - Read only task-specific files. Create one branch from the exact selected-base SHA, push one logical patch and open one PR to that base.
           - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
