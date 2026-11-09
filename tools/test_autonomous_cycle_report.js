@@ -216,6 +216,14 @@ async function run(name, options = {}) {
     maxPolls: 1,
     expectFailure: 'changed while exact-head CI was running'
   });
+  await run('PR base changed while exact-head CI was polling', {
+    prSequence: [originalPr, {
+      ...originalPr,
+      base: { ...originalPr.base, ref: 'dev' }
+    }],
+    maxPolls: 1,
+    expectFailure: 'changed while exact-head CI was running'
+  });
   await run('required check failed', {
     checkRunsByPoll: [[...REQUIRED_CHECKS.main.map((name) => ({
       name, head_sha: head, status: 'completed', conclusion: name === REQUIRED_CHECKS.main[0] ? 'failure' : 'success',
