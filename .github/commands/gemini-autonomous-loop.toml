@@ -30,7 +30,7 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 ## Execution and review contract
 - One task/writer/branch/PR. Docs/research target main; gameplay targets dev. Start from the exact current base SHA.
 - No Explore/subagents/planning, repo-wide discovery, broad PR inventory or root listing. Search exact task-marker PRs; inspect only matches and task-specific files.
-- Direct order: reconcile live task PR state/base/head; read at most one exact task row if needed; create one branch from latest selected base; make all related writes in one `mcp_github_push_files` call; create one PR with exact task/target markers; read back exact current head SHA.
+- Direct order: reconcile live task PR state/base/head; read at most one exact task row if needed; create one branch from latest selected base; make all related writes with exactly one `mcp_github_push_files` call; create one PR with exact task/target markers; read back exact current head SHA.
 - No local shell/git/.git access. Use only the FQNs above; all repository writes must use `mcp_github_push_files`.
 - Let CI run. Claim checks only with exact-head evidence; read failed-job logs only. If checks are pending, record that state and stop. No empty commits. Reuse checks for unchanged SHAs; don't wait indefinitely on stale runners.
 - Open PRs are in_review, not completed. Complete only after merge and ledger evidence; never use a ledger PR's SHA as its own task evidence.

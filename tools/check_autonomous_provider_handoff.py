@@ -64,7 +64,7 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
 
 # Gemini CLI exposes MCP tools as mcp_{serverName}_{toolName}. Derive the
 # model-facing FQNs from the actual server alias and includeTools configuration.
-gemini_settings_marker = "          settings: |-\\n"
+gemini_settings_marker = "          settings: |-\n"
 gemini_settings_end = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
 if gemini_settings_marker not in gemini or gemini_settings_end not in gemini:
     errors.append("Gemini MCP settings block is missing; cannot verify model-visible tool names")
