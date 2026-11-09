@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-09",
+  "updated_at": "2026-11-10",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -254,7 +254,7 @@
         "OpenRouter Free daily-quota preflight reads data.free_model_daily_requests.remaining from GET /api/v1/key before any inference/setup; missing, invalid or zero remaining quota fails closed and records the UTC cooldown without a model request.",
         "A single read-only global preflight reads bot-owned UTC cooldown markers for Gemini, OpenRouter and Groq on issue #226 before provider workflows launch; it fails closed on preflight errors, preserves each provider's independent inner guard, and allows eligible fallbacks when earlier providers are pre-skipped.",
         "At most one model provider is invoked per Boonta Autonomous Loop run; fallback providers are eligible only on a later run when the preceding provider's UTC cooldown was already active at global preflight.",
-        "Provider budgets in the canonical ledger, compact summary and workflows must match: Gemini remains bounded; OpenRouter uses 8 build steps, a 7,000-character prompt and 180 seconds; Groq uses 3 build steps, 1,792 context / 128 output tokens, a 3,500-character prompt and 90 seconds, stopping on the first TPM refusal."
+        "Provider budgets in the canonical ledger, compact summary and workflows must match: Gemini remains bounded; OpenRouter uses 8 build steps, a 7,000-character prompt and 180 seconds; Groq uses 3 build steps, 1,536 context / 96 output tokens, a 1,400-character task handoff, a 1,500-character verified-context ceiling, a 3,600-character prompt and 90 seconds, stopping on the first TPM refusal."
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/281",
@@ -382,7 +382,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/commit/727ef16bebf0e373fb9fc525539b54651cbebd90"
       ],
       "next_action": "#358/#359 fixed prompt/cooldowns; #364 OpenRouter 8 steps/reports; #365/#367 Groq TPM/MCP; #366 schedules four UTC cycles. Next: require a real €0 provider call, MCP branch/PR and exact-task/exact-head validation. Then select the owner-directed Phase 1 cross-platform reuse/compatibility decision in #226 (PROJECT_OPERATING_RULES.md); defer #307 until the playable race slice is coherent (GEMINI.md).",
-      "updated_at": "2026-11-09",
+      "updated_at": "2026-11-10",
       "pr_url": null,
       "head_sha": null,
       "target_branch": "main"
