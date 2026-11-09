@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2400 --max-task-context 2200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1600 --max-task-context 1400)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -294,30 +294,31 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          €0-only Groq Free fallback; run only after earlier providers are already in same-day cooldown. Execute the exact selected task.
+          €0-only Groq Free fallback. Execute only the exact selected task after Gemini and OpenRouter cooldowns.
 
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - 2,048 context / 256 output tokens; three steps. Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - One task/branch/PR; never merge, write protected branches, force-push or delete refs.
-          - No commercial game data; preserve provenance.
-          - Schema-v2 ledger, policies and selected task excerpts are preloaded; do not reread full files.
+          - 2,048 context / 256 output tokens; max 3 steps. Stop on first quota, TPM, rate-limit or auth refusal; never retry.
+          - One task, branch and PR only. Never merge, write protected branches, force-push or delete refs.
+          - No commercial game data; preserve provenance and follow docs/REVERSE_ENGINEERING_FIRST.md.
+          - Schema-v2 ledger, policies and selected-task excerpts are preloaded; do not reread full files.
 
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json; its acceptance_criteria_excerpt/next action are authoritative. Do not substitute another task.
-          - Reconcile exact `BOONTA_TASK_ID: <task_id>` PR-body matches across all states. Verify merged_at, repository, base and final head SHA; closed-unmerged is not completion.
-          - If complete, create one ledger PR recording original PR URL and exact task head SHA, regenerate summary and activate one next task. Never use the ledger PR SHA as task evidence. Otherwise fix only verified gaps.
-          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83. Never reopen/replay/recreate superseded #317/#318/#319.
+          TASK
+          - Use only the exact selected task; its acceptance and next-action excerpts are authoritative. Never substitute another task.
+          - Reconcile exact `BOONTA_TASK_ID: <task_id>` PR markers across all states. Completion requires merged_at, same repository/base and final head SHA; closed-unmerged is not completion.
+          - If complete, create one ledger PR recording the original task PR URL and exact task head SHA, regenerate the summary and activate one next task. Never use the ledger PR SHA as task evidence. Otherwise fix only verified gaps.
+          - #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Never replay them.
 
           EXECUTION
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
           - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
-          - Branch from exact selected-base SHA; one logical push/PR to that base. Never write to protected branches.
-          - PR body exact standalone lines:
+          - Branch from the exact selected-base SHA; one logical push/PR to that base. Never write to protected branches.
+          - PR body must contain these exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
           - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, same-repo PR URL, exact 40-char SHA and evidence base main|dev; otherwise BLOCKED needs one evidenced blocker and next action.
+          PROMPT
           PROMPT
           )"
 
@@ -329,8 +330,8 @@ jobs:
           PROMPT+="${AUTONOMOUS_CONTEXT}"
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 4500 )); then
-            echo "::error::Groq prompt exceeds the 4,500-character safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 3400 )); then
+            echo "::error::Groq prompt exceeds the 3,400-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
