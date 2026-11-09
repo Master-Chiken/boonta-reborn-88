@@ -550,6 +550,7 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
     if "state: 'all'" in workflow:
         errors.append(f"{label} must not paginate closed-PR history before inference")
 for required in (
+    "'Validate workflow YAML and embedded Python'",
     "createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime",
     "previousHeadSha = existedAtStart ? baseSnapshot[String(pullNumber)] : ''",
     "advancedDuringCycle = existedAtStart && previousHeadSha !== exactHead",
@@ -611,6 +612,7 @@ for required in (
     if required not in cycle_validator:
         errors.append(f"Shared report validator is missing selected-task integrity check {required!r}")
 for required in (
+    "validator self-test check is required",
     "missing PR target-branch marker",
     "duplicate PR target-branch markers",
     "required check failed",
