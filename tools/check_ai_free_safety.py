@@ -1461,10 +1461,10 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "2,048 input / 256 output tokens; observed Groq TPM ceiling 8,000.",
-    "Do not fetch full issue bodies/comments or call issue_read for #156, #226 or #279",
-    "Read only the source files needed; keep new retrieved text below 300 tokens.",
-    "Use only these five GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.",
+    "2,048 context / 256 output tokens; three steps.",
+    "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
+    "new retrieved text below 300 tokens.",
+    "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
     "Stop on first quota, TPM, context, rate-limit or auth refusal; never retry.",
 ):
     if required not in groq_fallback:
