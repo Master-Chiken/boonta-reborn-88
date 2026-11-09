@@ -96,7 +96,19 @@ async function validateAutonomousCycleReport(options) {
   const { data: headCommit } = await github.rest.repos.getCommit({ owner, repo, ref: exactHead });
   const existedAtStart = Object.prototype.hasOwnProperty.call(baseSnapshot, String(pullNumber));
   const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime;
-  const advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead;
+  const previousHeadSha = existedAtStart ? baseSnapshot[String(pullNumber)] : '';
+  const advancedDuringCycle = existedAtStart && previousHeadSha !== exactHead;
+  let contentChangedDuringCycle = !existedAtStart && (pr.changed_files ?? 0) >= 1;
+  if (existedAtStart) {
+    const { data: previousHeadCommit } = await github.rest.repos.getCommit({
+      owner, repo, ref: previousHeadSha
+    });
+    const previousTreeSha = previousHeadCommit.commit?.tree?.sha;
+    const exactTreeSha = headCommit.commit?.tree?.sha;
+    contentChangedDuringCycle = Boolean(
+      previousTreeSha && exactTreeSha && previousTreeSha !== exactTreeSha
+    );
+  }
   const commitTimestamp = Date.parse(headCommit.commit?.committer?.date || '');
   const commitCreatedDuringCycle = Number.isFinite(commitTimestamp) &&
     commitTimestamp >= snapshotTime &&
@@ -122,10 +134,11 @@ async function validateAutonomousCycleReport(options) {
     !bodyHasTaskMarker ||
     !bodyHasTargetBranchMarker ||
     (!createdAfterSnapshot && !advancedDuringCycle) ||
+    !contentChangedDuringCycle ||
     !commitCreatedDuringCycle
   ) {
     return fail(core, 'PROGRESS requires a non-draft, non-empty same-repository PR tied to the reserved task, targeting ' +
-      expectedBase + ', at its exact current head, created or advanced during this cycle, with a cycle-fresh commit.');
+      expectedBase + ', at its exact current head, created or advanced during this cycle, with changed file content and a cycle-fresh commit.');
   }
 
   const required = REQUIRED_CHECKS[expectedBase];
@@ -161,6 +174,29 @@ async function validateAutonomousCycleReport(options) {
       name + '=' + (check ? (check.status === 'completed' ? check.conclusion : check.status) : 'not found')
     ).join('; ');
     return fail(core, 'Exact-head CI did not complete successfully within the bounded eight-minute verification window: ' + state);
+  }
+
+  // CI may take several minutes. Re-fetch the PR after polling so a head
+  // update, close, merge or base change during that window cannot be accepted.
+  const { data: finalPr } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
+  const finalTaskMarkerCount = (finalPr.body || '').split(/\r?\n/)
+    .filter((line) => line.trim() === taskMarker).length;
+  const finalTargetMarkerCount = (finalPr.body || '').split(/\r?\n/)
+    .filter((line) => line.trim() === targetBranchMarker).length;
+  if (
+    finalPr.number !== pullNumber ||
+    finalPr.state !== 'open' ||
+    finalPr.merged_at ||
+    finalPr.draft === true ||
+    finalPr.head.repo?.full_name !== owner + '/' + repo ||
+    finalPr.base.repo?.full_name !== owner + '/' + repo ||
+    finalPr.head.sha !== exactHead ||
+    finalPr.base.ref !== expectedBase ||
+    (finalPr.changed_files ?? 0) < 1 ||
+    finalTaskMarkerCount !== 1 ||
+    finalTargetMarkerCount !== 1
+  ) {
+    return fail(core, 'The cited PR changed while exact-head CI was running; refusing stale progress evidence.');
   }
 
   core.setOutput('cycle_status', 'progress');
