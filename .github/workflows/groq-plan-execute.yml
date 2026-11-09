@@ -302,20 +302,21 @@ jobs:
 
           PROMPT="$(cat <<'PROMPT'
           Groq Free (€0 only).
-          TASK
-          - Use only the preloaded reserved task and its acceptance criteria; never switch tasks.
-          - Reconcile PRs by exact BOONTA_TASK_ID marker. Complete only after merged_at, repository, base and head SHA match; record original task PR URL/head as evidence, never the ledger-update PR.
-          - #327 is integrated; #317/#318/#319 are superseded. Never recreate them.
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt. Do not substitute another task.
+          - Reconcile PRs by exact BOONTA_TASK_ID marker; complete only after merged_at, repo, base and head SHA match. Record original task PR URL/head, never the ledger-update PR.
+          - #327 is integrated; #317/#318/#319 are superseded. Never recreate.
           SAFETY
-          - €0 only: no billing, paid routes, credits, provider or secret/settings changes.
+          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - No full issue bodies/comments, attachments or media; new retrieved text below 300 tokens.
+          - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
           - One task/branch/patch/PR; never merge, write protected branches, force-push or delete refs.
           TOOLS
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
-          - Only top-level github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request; direct MCP, no execute, shell, filesystem or subagents.
+          - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - Direct MCP only; no execute, shell, filesystem or subagents.
           EXECUTION
-          - Exact-task PR search; at most one task-row read; one branch, one push_files patch, one PR and exact head readback.
+          - Exact-task PR search; at most one task row; one branch, one push_files patch, one PR and exact head readback.
           - PR body requires BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>.
           - Output only machine-readable lines including BOONTA_CYCLE_TASK_ID: <exact task ID>, copied from the literal reserved value appended below. PROGRESS needs PR URL/current SHA/base; BLOCKED needs one blocker/next action. NO PROSE OR MARKDOWN FENCES.
           PROMPT
