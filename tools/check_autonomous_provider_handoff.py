@@ -458,7 +458,8 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
         errors.append(f"{label} must not paginate closed-PR history before inference")
 for required in (
     "createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime",
-    "advancedDuringCycle = existedAtStart && baseSnapshot[String(pullNumber)] !== exactHead",
+    "previousHeadSha = existedAtStart ? baseSnapshot[String(pullNumber)] : ''",
+    "advancedDuringCycle = existedAtStart && previousHeadSha !== exactHead",
     "commitCreatedDuringCycle",
     "commitTimestamp >= snapshotTime",
     "commitTimestamp <= Date.now() + 5 * 60 * 1000",
