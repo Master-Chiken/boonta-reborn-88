@@ -359,6 +359,10 @@ jobs:
             BOONTA_TASK_TARGET_BRANCH: <exact base>
           - Never write to main/dev, force-push, delete refs, merge, or claim tests without exact-head CI evidence.
 
+          - Post-merge reconciliation: search only exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results; closed-unmerged is not completion. verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence in the canonical ledger via one reviewable ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence.
+          - Reuse integrated PR #327; Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
+          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
+
           REPORT
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
           - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, a same-repository PR URL and exact 40-character head SHA in BOONTA_CYCLE_EVIDENCE, plus BOONTA_CYCLE_EVIDENCE_BASE: main|dev.
