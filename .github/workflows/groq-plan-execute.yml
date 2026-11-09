@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1200 --max-task-context 1000)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1080 --max-task-context 1000)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -304,8 +304,11 @@ jobs:
           Groq Free (€0 only).
           AUTHORITATIVE SELECTED TASK
           - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt. Do not substitute another task.
-          - Reconcile PRs by exact BOONTA_TASK_ID marker; complete only after merged_at, repo, base and head SHA match. Record original task PR URL/head, never the ledger-update PR.
-          - #327 is integrated; #317/#318/#319 are superseded. Never recreate.
+          - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.
+          - Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
+          - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.
+          - Never cite ledger PR SHA as task evidence; else fix verified gaps only.
+          - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.

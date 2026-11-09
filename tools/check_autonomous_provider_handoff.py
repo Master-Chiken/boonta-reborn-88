@@ -352,7 +352,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,536 context tokens and 96 output tokens" not in budget or "1,200-character verified-context ceiling; 1,000-character task handoff" not in budget:
+if "1,536 context tokens and 96 output tokens" not in budget or "1,080-character verified-context ceiling; 1,000-character task handoff" not in budget:
     errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -544,13 +544,13 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
-if len(actual_groq_prompt) > 1750:
+if len(actual_groq_prompt) > 1820:
     errors.append(f"Groq static prompt leaves insufficient room under its 3,200-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1200, 1000)
+context_limits("Groq", groq, 1080, 1000)
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 1200 + 300 > 3200:
+if len(actual_groq_prompt) + 1080 + 300 > 3200:
     errors.append("Groq worst-case prompt plus task identity exceeds its 3,200-character TPM cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
