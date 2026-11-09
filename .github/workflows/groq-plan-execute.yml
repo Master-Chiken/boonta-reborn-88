@@ -214,7 +214,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1080 --max-task-context 1000)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1500 --max-task-context 1400)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -301,27 +301,25 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free (€0 only).
-          AUTHORITATIVE SELECTED TASK
-          - Use exactly this task from docs/automation/task-ledger-summary.json and its acceptance_criteria_excerpt. Do not substitute another task.
-          - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.
-          - Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.
-          - If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.
-          - Never cite ledger PR SHA as task evidence; else fix verified gaps only.
-          - #327=69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
+          Groq Free agent — €0 only. Execute the exact task selected by global preflight.
+          TASK IDENTITY
+          - Treat the canonical v2 ledger and preflight task identity as authoritative. Match the exact BOONTA_TASK_ID marker across every PR state.
+          - A task is complete only with merged_at and matching repository, target branch and exact HEAD SHA; closed-unmerged is incomplete.
+          - If already complete, update the ledger with the original task PR URL and exact task SHA, regenerate the summary, then use the next queued task. Never use the ledger-update SHA as task evidence.
+          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Never recreate them.
           SAFETY
-          - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
-          - Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.
-          - One task/branch/patch/PR; never merge, write protected branches, force-push or delete refs.
+          - €0 only: no billing, credits, paid routes/providers, or secret/settings changes.
+          - Stop on the first quota, TPM, rate-limit, context or authentication refusal; never retry.
+          - Do not read full issue bodies/comments for #156/#226/#279; keep any additional retrieved text below 300 tokens.
+          - One task/writer/branch/patch/PR. Never merge, auto-merge, write to main/dev, force-push or delete refs.
           TOOLS
-          - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
-          - Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
-          - Direct MCP only; no execute, shell, filesystem or subagents.
-          EXECUTION
-          - Exact-task PR search; at most one task row; one branch, one push_files patch, one PR and exact head readback.
-          - PR body requires BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact base>.
-          - Output only machine-readable lines including BOONTA_CYCLE_TASK_ID: <exact task ID>, copied from the literal reserved value appended below. PROGRESS needs PR URL/current SHA/base; BLOCKED needs one blocker/next action. NO PROSE OR MARKDOWN FENCES.
+          - Only GitHub MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
+          - Use top-level OpenCode FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - Direct MCP only: no shell, execute wrapper, filesystem tools or subagents.
+          DELIVERY
+          - Search the exact-task PR; read at most one task row; create one branch, one push_files patch and one non-draft PR; read back its exact HEAD.
+          - PR body includes standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH markers.
+          - Output machine-readable report only, without prose/fences. Copy the reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE exactly. PROGRESS requires same-repository PR URL, current 40-character HEAD and target base. BLOCKED requires exactly one blocker and one next action; never fabricate evidence.
           PROMPT
           )"
 
@@ -340,8 +338,8 @@ jobs:
           PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 3200 )); then
-            echo "::error::Groq prompt exceeds the 3,200-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 3500 )); then
+            echo "::error::Groq prompt exceeds the 3,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
