@@ -1264,6 +1264,7 @@ for required in (
 # Autonomous progress is validated centrally so all providers share one exact-head contract.
 for required in (
     "const REQUIRED_CHECKS = Object.freeze({",
+    "'Validate workflow YAML and embedded Python'",
     "'Verify Gemini free-only guardrails'",
     "'Reject known held assets and data'",
     "'Check proposed source paths using trusted base policy'",
@@ -1318,10 +1319,13 @@ if "test_autonomous_cycle_report.js" not in selftest:
     errors.append("Branch self-test must watch the shared cycle validator and its regression suite")
 if "node tools/test_autonomous_cycle_report.js" not in selftest:
     errors.append("Branch self-test must execute the shared autonomous cycle report regression suite")
+if "on:\n  pull_request:\n    branches:\n      - main\n  workflow_dispatch:" not in selftest:
+    errors.append("Branch self-test must run on every main PR so exact-head progress can require its validator check")
 for required in (
     "missing PR target-branch marker",
     "duplicate PR target-branch markers",
     "required check failed",
+    "validator self-test check is required",
     "same-name check from an untrusted app is ignored",
     "wait for exact-head checks",
     "dev target uses native build/host/emulator checks",
