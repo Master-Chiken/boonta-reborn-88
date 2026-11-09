@@ -301,25 +301,24 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free agent — €0 only. Execute the exact task selected by global preflight.
-          TASK IDENTITY
-          - Treat the canonical v2 ledger and preflight task identity as authoritative. Match the exact BOONTA_TASK_ID marker across every PR state.
-          - A task is complete only with merged_at and matching repository, target branch and exact HEAD SHA; closed-unmerged is incomplete.
-          - If already complete, update the ledger with the original task PR URL and exact task SHA, regenerate the summary, then use the next queued task. Never use the ledger-update SHA as task evidence.
-          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Never recreate them.
+          Groq Free (€0 only). Execute only the canonical task selected by global preflight.
+          TASK
+          - The schema-v2 preflight context is authoritative. Search the exact BOONTA_TASK_ID across all PR states; read at most one task row.
+          - Complete only when merged and repository/base/HEAD match. Closed-unmerged is incomplete. If already complete, update the ledger with original task PR URL and task SHA, regenerate the summary; never cite the ledger-update SHA as task evidence.
+          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded; never recreate.
           SAFETY
-          - €0 only: no billing, credits, paid routes/providers, or secret/settings changes.
-          - Stop on the first quota, TPM, rate-limit, context or authentication refusal; never retry.
-          - Do not read full issue bodies/comments for #156/#226/#279; keep any additional retrieved text below 300 tokens.
-          - One task/writer/branch/patch/PR. Never merge, auto-merge, write to main/dev, force-push or delete refs.
+          - €0 only: no paid routes, billing, credits, provider/secret/settings changes.
+          - Stop at the first quota, TPM, rate-limit, context or auth refusal; never retry.
+          - No full bodies/comments for #156/#226/#279; additional retrieved text below 300 tokens.
+          - One task/writer/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
           TOOLS
-          - Only GitHub MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
-          - Use top-level OpenCode FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
-          - Direct MCP only: no shell, execute wrapper, filesystem tools or subagents.
-          DELIVERY
-          - Search the exact-task PR; read at most one task row; create one branch, one push_files patch and one non-draft PR; read back its exact HEAD.
-          - PR body includes standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH markers.
-          - Output machine-readable report only, without prose/fences. Copy the reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE exactly. PROGRESS requires same-repository PR URL, current 40-character HEAD and target base. BLOCKED requires exactly one blocker and one next action; never fabricate evidence.
+          - Only GitHub MCP: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
+          - Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - Direct MCP only; no shell, execute wrapper, filesystem tools or subagents.
+          OUTPUT
+          - One exact-task PR search, at most one task row, one branch, one push_files patch, one PR and exact HEAD readback.
+          - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
+          - Machine lines only, no prose/fences. Copy reserved BOONTA_CYCLE_TASK_ID/EVIDENCE_BASE exactly. PROGRESS: same-repo PR URL, current 40-char SHA and base. BLOCKED: exactly one verified blocker and next action; no evidence lines.
           PROMPT
           )"
 
