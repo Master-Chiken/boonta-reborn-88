@@ -437,7 +437,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 4500 )); then", "Groq must enforce its 4,500-character prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 3400 )); then", "Groq must enforce its 3,400-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
@@ -473,14 +473,14 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
-if len(actual_groq_prompt) > 2600:
+if len(actual_groq_prompt) > 1800:
     errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 2400, 2200)
+context_limits("Groq", groq, 1600, 1400)
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 2200 + 300 > 4500:
-    errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
+if len(actual_groq_prompt) + 1400 + 300 > 3400:
+    errors.append("Groq worst-case prompt plus task identity exceeds its 3,400-character TPM cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
