@@ -301,24 +301,22 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free agent. €0 only. Execute only the task selected by global preflight.
+          Groq Free. €0 only; execute the preflight-selected task.
           TASK
-          - Use the preloaded schema-v2 task context. Match the exact BOONTA_TASK_ID across all PR states; read at most one full task row.
-          - Completion requires merged_at plus matching repository, base branch and exact PR HEAD. Closed-unmerged is incomplete. If already complete, reconcile the ledger with the original task PR URL and task SHA; never cite a ledger-update SHA as task evidence.
-          - PR #327 is integrated at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Never recreate them.
+          - The preloaded schema-v2 context is authoritative. Match exact BOONTA_TASK_ID across all PR states; read at most one task row.
+          - Complete only on a merged PR with matching repository, base and exact HEAD. Closed-unmerged is incomplete. Reconcile the ledger using the original PR URL and task SHA, never the ledger-update SHA.
+          - PR #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           SAFETY
-          - No paid routes, billing, credits, provider or secret/settings changes.
-          - Stop after the first quota, TPM, rate-limit, context or auth refusal; never retry.
-          - No full issue bodies/comments for #156/#226/#279; extra retrieved text below 300 tokens.
-          - One task/writer/branch/patch/PR. Never write main/dev, merge, auto-merge, force-push or delete refs.
+          - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
+          - No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.
+          - One task/writer/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
           TOOLS
-          - Only GitHub MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.
-          - Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
           - Direct MCP only; no shell, execute wrapper, filesystem tools or subagents.
-          REPORT
-          - Exact-task PR search; at most one task row; one branch, one push_files patch, one non-draft PR; read back exact HEAD.
+          DELIVERY
+          - Exact-task PR search; max one row read, one branch, one push_files patch, one non-draft PR, exact HEAD readback.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
-          - Machine-readable lines only, no prose/fences. Copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. PROGRESS needs same-repo PR URL, exact 40-char HEAD and base. BLOCKED needs exactly one verified blocker and one next action; no evidence lines.
+          - Machine report only; copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
           PROMPT
           )"
 
