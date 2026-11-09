@@ -27,7 +27,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "#356 merged: context preload; Groq 2,048/256 tokens, 4,500-char prompt. #357 merged: read-only readiness. Run #42540013937 skipped providers because the exact-task PR was open; no model call/progress. After reconciliation, require a real €0 provider call and exact-head-validated PR; verify merged state/base/head SHA, record evidence in a separate ledger update, regenerate summary, and activate one next task."
+      "next_action_excerpt": "#358/#359 fixed prompt guards/cooldowns; #364 gives OpenRouter 8 steps and machine-readable reports; #365/#367 correct Groq TPM and OpenCode MCP tools; #366 schedules 00:17/06:17/12:17/18:17 UTC. Next: require one real €0 provider call, actual MCP branch/PR creation and a valid exact-task/exact-head report on an eligible post-reset cycle. Reconcile merged evidence before activating #307."
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
