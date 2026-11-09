@@ -477,7 +477,7 @@ if len(actual_groq_prompt) > 2600:
 if len(actual_openrouter_prompt) > 3000:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 2400, 2200)
-context_limits("OpenRouter", openrouter, 2200, 2200)
+context_limits("OpenRouter", openrouter, 2400, 2200)
 if len(actual_groq_prompt) + 2200 + 300 > 4500:
     errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
