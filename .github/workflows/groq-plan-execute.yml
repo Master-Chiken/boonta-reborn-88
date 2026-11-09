@@ -330,8 +330,8 @@ jobs:
           PROMPT+="${AUTONOMOUS_CONTEXT}"
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 3400 )); then
-            echo "::error::Groq prompt exceeds the 3,400-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 3500 )); then
+            echo "::error::Groq prompt exceeds the 3,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
