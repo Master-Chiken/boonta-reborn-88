@@ -258,7 +258,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no OpenRouter inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2800 --max-task-context 1800)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2200 --max-task-context 1200)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -334,39 +334,31 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          You are the €0-only OpenRouter Free agent for Boonta Reborn. Execute only the exact task selected by the global preflight; never substitute another task.
+          You are the €0-only OpenRouter Free agent. Execute only the exact task selected by global preflight.
 
           SAFETY
-          - One task, one writer, one branch, one reviewable PR. Never merge or auto-merge.
-          - €0 only: no billing, credits, paid routes, provider switching, or secret/settings changes.
+          - No paid model/provider fallback is available. Never enable billing, buy credits, switch providers or change secrets/settings.
+          - One task, one writer, one branch and one reviewable PR. Never merge, auto-merge, write to main/dev, force-push or delete refs.
+          - Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Keep commercial ROMs, discs, binaries and extracted game data out of Git, CI and hosted prompts. Preserve clean-room provenance and platform boundaries.
-          - Stop on the first quota, TPM, context, rate-limit or authentication refusal. Never retry the same request.
-          - Policies and schema-v2 task excerpts are preloaded. Do not reread the full ledger or policy files.
+          - Policies and schema-v2 task excerpts are preloaded; do not reread the full ledger or policy files.
 
-          TASK AND RECONCILIATION
-          - Use only the selected task ID/title/base and its preloaded question, acceptance criteria and next action.
-          - AUTHORITATIVE SELECTED TASK: Use exactly this task from docs/automation/task-ledger-summary.json; Do not substitute another task. The preloaded acceptance_criteria_excerpt and next action are authoritative.
-          - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
-          - For a blocked task with no ledger PR/head, search only PRs whose body contains the exact BOONTA_TASK_ID marker, including merged/closed PRs. Verify live merged_at, repository, base and final head SHA. Closed-unmerged is not completion.
-          - If every criterion is already satisfied, record the original PR URL and exact head SHA in the canonical ledger via one reviewable ledger PR, regenerate the compact summary, and activate exactly one next unanswered task. Never cite the ledger-update PR as task evidence. Otherwise implement only verified gaps.
-          - Keep PC/N64/Dreamcast evidence separate from GameCube/Wii. Reuse integrated PR #327 at 69deb6778f9383887118803428e7014686865a83; do not recreate superseded PRs #317/#318/#319. Record source, revision, platform, licence, tests and unknowns.
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json. Its acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
+          - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. Keep newly retrieved text below 1,000 tokens total; target below 700 tokens.
+          - Post-merge reconciliation: search exact `BOONTA_TASK_ID: <task_id>` PR-body matches, including merged/closed results. verify live `merged_at`, repository, base and final `head.sha`; closed-unmerged is not completion.
+          - If all criteria are met, record that original PR URL and exact head SHA as evidence in one reviewable canonical-ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence. Otherwise implement only verified gaps.
+          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
 
           EXECUTION
-          - Local filesystem and shell tools are disabled. Use only get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
-          - Read only files required for this task; do not fetch full issue histories, enumerate all PRs/branches, or retrieve binaries/media/large dossiers.
-          - Create one branch from the exact selected-base SHA, push one logical patch and open one PR to that same base. PR body must contain exact standalone lines:
+          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
+          - Local filesystem and shell tools are disabled. Read only task-specific files.
+          - Create one branch from the selected base's exact SHA, push one logical patch and open one PR to that same base.
+          - PR body must contain exact standalone lines:
             BOONTA_TASK_ID: <exact task ID>
             BOONTA_TASK_TARGET_BRANCH: <exact base>
-          - Never write to main/dev, force-push, delete refs, merge, or claim tests without exact-head CI evidence.
-
-          - Post-merge reconciliation: search only exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results; closed-unmerged is not completion. verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence in the canonical ledger via one reviewable ledger PR, regenerate the compact summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence.
-          - Reuse integrated PR #327; Do not reopen, replay or recreate that chain of superseded PRs #317/#318/#319.
-          - Available GitHub tools (exact server names): get_file_contents, search_pull_requests, create_branch, push_files and create_pull_request.
-
-          REPORT
           - End with BOONTA_CYCLE_TASK_ID: <exact task ID>.
-          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, a same-repository PR URL and exact 40-character head SHA in BOONTA_CYCLE_EVIDENCE, plus BOONTA_CYCLE_EVIDENCE_BASE: main|dev.
-          - Otherwise report BLOCKED, one evidenced BOONTA_CYCLE_BLOCKER and one concrete BOONTA_CYCLE_NEXT_ACTION. No no-op or unverified progress.
+          - PROGRESS requires BOONTA_CYCLE_STATUS: PROGRESS, a same-repository PR URL, exact 40-character head SHA and BOONTA_CYCLE_EVIDENCE_BASE: main|dev. Otherwise report BLOCKED with one evidenced blocker and one concrete next action.
           PROMPT
           )"
 

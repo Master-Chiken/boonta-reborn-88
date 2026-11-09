@@ -433,6 +433,7 @@ for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 4500 )); then", "Groq must enforce its 4,500-character prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
+
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
@@ -442,6 +443,39 @@ for content, needle, message in (
 ):
     if needle not in content:
         errors.append(message)
+
+
+# Measure the actual de-indented heredoc sent to each provider. The prior
+# guards only rejected oversized prompts after assembling them; they did not
+# prove that the configured maximum context could fit below those guards.
+def actual_provider_prompt(label: str, workflow: str) -> str:
+    start_marker = "          PROMPT=\"$(cat <<'PROMPT'\n"
+    end_marker = "\n          PROMPT\n          )\""
+    start = workflow.find(start_marker)
+    end = workflow.find(end_marker, start + len(start_marker)) if start >= 0 else -1
+    if start < 0 or end < 0:
+        errors.append(f"{label} provider prompt heredoc is missing")
+        return ""
+    body = workflow[start + len(start_marker):end]
+    return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
+
+def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
+    match = re.search(r"--max-chars (\d+) --max-task-context (\d+)", workflow)
+    if not match or (int(match.group(1)), int(match.group(2))) != (expected_chars, expected_task):
+        errors.append(f"{label} context builder must use the reviewed {expected_chars}/{expected_task}-character limits")
+
+actual_groq_prompt = actual_provider_prompt("Groq", groq)
+actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
+if len(actual_groq_prompt) > 2600:
+    errors.append(f"Groq static prompt leaves insufficient room under its 4,500-character cap: {len(actual_groq_prompt)}")
+if len(actual_openrouter_prompt) > 3000:
+    errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
+context_limits("Groq", groq, 1500, 1200)
+context_limits("OpenRouter", openrouter, 2200, 1200)
+if len(actual_groq_prompt) + 1500 + 300 > 4500:
+    errors.append("Groq worst-case prompt plus task identity exceeds its 4,500-character cap")
+if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
+    errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
 
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.
