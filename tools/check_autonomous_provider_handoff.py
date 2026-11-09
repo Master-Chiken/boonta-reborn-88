@@ -352,7 +352,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,536 context tokens and 96 output tokens" not in budget or "1,080-character verified-context ceiling; 1,000-character task handoff" not in budget:
+if "1,536 context tokens and 96 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
     errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -508,15 +508,15 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 3200 )); then", "Groq must enforce its 3,200-character TPM prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 3500 )); then", "Groq must enforce its 3,500-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
-    (groq, "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
+    (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
 
 ):
     if needle not in content:
@@ -545,13 +545,13 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
 if len(actual_groq_prompt) > 1820:
-    errors.append(f"Groq static prompt leaves insufficient room under its 3,200-character TPM cap: {len(actual_groq_prompt)}")
+    errors.append(f"Groq static prompt leaves insufficient room under its 3,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1080, 1000)
+context_limits("Groq", groq, 1500, 1400)
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 1080 + 300 > 3200:
-    errors.append("Groq worst-case prompt plus task identity exceeds its 3,200-character TPM cap")
+if len(actual_groq_prompt) + 1500 + 300 > 3500:
+    errors.append("Groq worst-case prompt plus task context and report exceeds its 3,500-character TPM cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
@@ -568,7 +568,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "#317/#318/#319 superseded; never replay."
+        "#317/#318/#319 are superseded. Do not recreate them."
         if label == "Groq" else "Do not reopen, replay or recreate that chain"
     )
     if required_reopen_rule not in content:
@@ -579,10 +579,10 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
 for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
     required_rules = (
         (
-            "Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states.",
-            "Complete only if merged_at, repo/base and head SHA match; closed-unmerged is incomplete.",
-            "If complete: ledger PR records original task PR URL + exact task SHA; regenerate summary; activate next task.",
-            "Never cite ledger PR SHA as task evidence; else fix verified gaps only.",
+            "Match exact BOONTA_TASK_ID across all PR states; read at most one task row.",
+            "Complete only on a merged PR with matching repository, base and exact HEAD. Closed-unmerged is incomplete.",
+            "If already complete, reconcile the ledger with the original PR URL and task SHA, regenerate the summary, and use the next queued task",
+            "never cite a ledger-update SHA",
         )
         if label == "Groq" else (
             "Post-merge reconciliation",
@@ -766,10 +766,16 @@ for label, prompt in (
     ("OpenRouter", openrouter),
     ("Groq", groq),
 ):
-    if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt and "The shell appends the exact reserved task ID" not in prompt and "literal reserved value appended below" not in prompt:
-        errors.append(f"{label} report instructions must require the exact selected task ID")
-    if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
-        errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
+    if label == "Groq":
+        if "Copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim." not in prompt or 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in prompt:
+            errors.append("Groq report instructions must require the exact selected task ID")
+        if "PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH." not in prompt:
+            errors.append("Groq PR instructions must require exact task/target markers in the PR body")
+    else:
+        if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt and "The shell appends the exact reserved task ID" not in prompt and "literal reserved value appended below" not in prompt:
+            errors.append(f"{label} report instructions must require the exact selected task ID")
+        if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
+            errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
 
 # Reject doubled shell escapes in fallback prompt construction.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
