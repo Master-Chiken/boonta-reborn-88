@@ -294,20 +294,20 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          €0-only Groq Free fallback; execute only the selected task after Gemini/OpenRouter cooldowns.
+          €0-only Groq Free fallback; run only after Gemini/OpenRouter cooldowns.
 
           SAFETY
           - €0 only: no billing, paid routes, credits, alternate providers or secret/settings changes.
           - 2,048/256 limits; max 3 steps. Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.
           - One task/branch/PR; no merges, protected writes, force-pushes or ref deletes.
           - No commercial game data; preserve provenance; follow docs/REVERSE_ENGINEERING_FIRST.md.
-          - Schema-v2 task, ledger and policies are preloaded; do not reread full files.
+          - Schema-v2 context is preloaded; do not reread full files.
 
-          TASK
-          - Exact selected task only; use its acceptance/next-action excerpts; never substitute.
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json; acceptance_criteria_excerpt and next_action_excerpt are authoritative. Do not substitute another task.
           - Match exact `BOONTA_TASK_ID: <task_id>` markers across all PR states. Complete only if merged_at, repo/base and final head SHA match; closed-unmerged is incomplete.
           - If complete: one ledger PR with original PR URL + task head SHA; regenerate summary; activate one next task. Never cite ledger PR SHA as task evidence. Otherwise fix verified gaps only.
-          - #327 merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 superseded; never replay.
+          - #327 merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded; never replay.
 
           EXECUTION
           - Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Shell/local tools disabled.
