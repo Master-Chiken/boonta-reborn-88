@@ -335,8 +335,8 @@ jobs:
           PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 3500 )); then
-            echo "::error::Groq prompt exceeds the 3,500-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 3600 )); then
+            echo "::error::Groq prompt exceeds the 3,600-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
