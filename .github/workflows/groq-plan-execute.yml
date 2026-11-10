@@ -250,6 +250,7 @@ jobs:
             "agent": {
               "build": {
                 "steps": 5,
+                "temperature": 0.2,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -264,7 +265,8 @@ jobs:
                     "limit": {
                       "context": 1344,
                       "output": 96
-                    }
+                    },
+                    "temperature": true
                   }
                 }
               }
