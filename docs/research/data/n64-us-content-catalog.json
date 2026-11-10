@@ -3399,7 +3399,7 @@
         "index": 6,
         "valueId": 106,
         "name": "__SPLINE__106",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 7,
@@ -3423,7 +3423,7 @@
         "index": 10,
         "valueId": 110,
         "name": "__SPLINE__110",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 11,
@@ -3495,7 +3495,7 @@
         "index": 22,
         "valueId": 122,
         "name": "__SPLINE__122",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 23,
@@ -3507,19 +3507,19 @@
         "index": 24,
         "valueId": 124,
         "name": "__SPLINE__124",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 25,
         "valueId": 125,
         "name": "__SPLINE__125",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 26,
         "valueId": 126,
         "name": "__SPLINE__126",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 27,
@@ -3531,13 +3531,13 @@
         "index": 28,
         "valueId": 128,
         "name": "__SPLINE__128",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 29,
         "valueId": 129,
         "name": "__SPLINE__129",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 30,
@@ -3555,19 +3555,19 @@
         "index": 32,
         "valueId": 132,
         "name": "__SPLINE__132",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 33,
         "valueId": 133,
         "name": "__SPLINE__133",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 34,
         "valueId": 134,
         "name": "__SPLINE__134",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 35,
@@ -3627,19 +3627,19 @@
         "index": 44,
         "valueId": 144,
         "name": "__SPLINE__144",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 45,
         "valueId": 145,
         "name": "__SPLINE__145",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 46,
         "valueId": 146,
         "name": "__SPLINE__146",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 47,
@@ -3651,13 +3651,13 @@
         "index": 48,
         "valueId": 148,
         "name": "__SPLINE__148",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 49,
         "valueId": 149,
         "name": "__SPLINE__149",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 50,
@@ -3669,13 +3669,13 @@
         "index": 51,
         "valueId": 151,
         "name": "__SPLINE__151",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 52,
         "valueId": 152,
         "name": "__SPLINE__152",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 53,
@@ -3687,7 +3687,7 @@
         "index": 54,
         "valueId": 154,
         "name": "__SPLINE__154",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 55,
@@ -3699,7 +3699,7 @@
         "index": 56,
         "valueId": 156,
         "name": "__SPLINE__156",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 57,
@@ -3753,19 +3753,19 @@
         "index": 65,
         "valueId": 165,
         "name": "__SPLINE__165",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 66,
         "valueId": 166,
         "name": "__SPLINE__166",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 67,
         "valueId": 167,
         "name": "__SPLINE__167",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 68,
@@ -3783,31 +3783,31 @@
         "index": 70,
         "valueId": 170,
         "name": "__SPLINE__170",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 71,
         "valueId": 171,
         "name": "__SPLINE__171",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 72,
         "valueId": 172,
         "name": "__SPLINE__172",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 73,
         "valueId": 173,
         "name": "__SPLINE__173",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 74,
         "valueId": 174,
         "name": "__SPLINE__174",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 75,
@@ -3819,7 +3819,7 @@
         "index": 76,
         "valueId": 176,
         "name": "__SPLINE__176",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 77,
@@ -3849,25 +3849,25 @@
         "index": 81,
         "valueId": 181,
         "name": "__SPLINE__181",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 82,
         "valueId": 182,
         "name": "__SPLINE__182",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 83,
         "valueId": 183,
         "name": "__SPLINE__183",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 84,
         "valueId": 184,
         "name": "__SPLINE__184",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 85,
@@ -3891,19 +3891,19 @@
         "index": 88,
         "valueId": 188,
         "name": "__SPLINE__188",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 89,
         "valueId": 189,
         "name": "__SPLINE__189",
-        "category": ""
+        "category": "generic-spline"
       },
       {
         "index": 90,
         "valueId": 190,
         "name": "__SPLINE__190",
-        "category": ""
+        "category": "generic-spline"
       }
     ],
     "sprite": [
@@ -14857,7 +14857,7 @@
       "uniqueNames": 91,
       "categoryCounts": {
         "track": 28,
-        "": 36,
+        "generic-spline": 36,
         "part": 13,
         "camera": 14
       }
