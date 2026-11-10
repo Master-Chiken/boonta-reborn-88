@@ -279,6 +279,20 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         with self.assertRaisesRegex(DeliveryPlanError, "exact-path scope"):
             self.plan()
 
+    def test_delivery_bundle_git_blob_sha_must_match_content(self):
+        report = json.loads(self.verified_path.read_text(encoding="utf-8"))
+        report["delivery_bundle"][0]["result_blob_sha"] = "0" * 40
+        self.verified_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(DeliveryPlanError, "Git blob SHA does not match"):
+            self.plan()
+
+    def test_delivery_bundle_base_blob_sha_must_match_exact_base(self):
+        report = json.loads(self.verified_path.read_text(encoding="utf-8"))
+        report["delivery_bundle"][0]["base_blob_sha"] = "0" * 40
+        self.verified_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(DeliveryPlanError, "base blob SHA is stale"):
+            self.plan()
+
     def test_empty_queue_cannot_produce_delivery_plan(self):
         self.ledger["tasks"][0]["status"] = "blocked"
         self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
