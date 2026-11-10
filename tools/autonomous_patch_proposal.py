@@ -301,11 +301,13 @@ def load_allowlist_report(
         raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ProposalError("Allowlist report is not readable valid UTF-8 JSON") from exc
-    required = {"status", "task_id", "base_sha", "approval_ref", "purpose", "allowed_paths"}
-    if not isinstance(report, dict) or set(report) != required:
-        raise ProposalError("Allowlist report must contain exactly the six generated fields")
+    if not isinstance(report, dict):
+        raise ProposalError("Allowlist report must be a JSON object")
     if report.get("status") != "READY":
         raise ProposalError("Allowlist report is not READY; no write paths are authorized")
+    required = {"status", "task_id", "base_sha", "approval_ref", "purpose", "allowed_paths"}
+    if set(report) != required:
+        raise ProposalError("READY allowlist report must contain exactly the six generated fields")
     if report.get("task_id") != expected_task_id:
         raise ProposalError("Allowlist report task ID does not match the trusted preflight task")
     if report.get("base_sha") != expected_base_sha:
