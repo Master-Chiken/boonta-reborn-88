@@ -315,9 +315,9 @@ openrouter_config = load_opencode_config("OpenRouter", openrouter)
 groq_config = load_opencode_config("Groq", groq)
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
-if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
-    errors.append("Groq must have four bounded direct-delivery steps")
-elif 4 * (1536 + 96) >= 8000:
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 5:
+    errors.append("Groq must have five bounded delivery/report steps")
+elif 5 * (1344 + 96) >= 8000:
     errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
@@ -352,7 +352,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,536 context tokens and 96 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
+if "1,344 context tokens and 96 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
     errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -490,8 +490,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1536 or groq_limits.get("output") != 96:
-    errors.append("Groq must remain capped at 1536 context / 96 output tokens to leave margin below the observed 8k TPM refusal")
+if groq_limits.get("context") != 1344 or groq_limits.get("output") != 96:
+    errors.append("Groq must remain capped at 1344 context / 96 output tokens so five bounded steps stay below the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
