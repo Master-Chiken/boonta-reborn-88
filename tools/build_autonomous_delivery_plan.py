@@ -127,7 +127,11 @@ def build_delivery_plan(
     except (ProposalError, AllowlistError) as exc:
         raise DeliveryPlanError(str(exc)) from exc
     if current_scope.get("status") != "READY":
-        raise DeliveryPlanError("Current canonical task/path policy is not READY")
+        status = current_scope.get("status", "UNKNOWN")
+        reason = current_scope.get("reason", "owner-approved exact paths are unavailable")
+        raise DeliveryPlanError(
+            f"Current canonical task/path policy is not READY ({status}): {reason}"
+        )
     if set(current_scope.get("allowed_paths", [])) != allowed_paths:
         raise DeliveryPlanError("Supplied allowlist report differs from the current owner-reviewed policy")
     if current_scope.get("approval_ref") != _load_report(allowlist_report_path).get("approval_ref"):
