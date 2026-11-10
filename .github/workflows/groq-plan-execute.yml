@@ -306,7 +306,7 @@ jobs:
           TASK
           - Global preflight is authoritative: activation pr_url/head_sha are empty; no matching open PR exists.
           - Do not search PR history: ignore older merged automation PRs. Do not reread summary, ledger or budget.
-          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
+          - #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           
           SAFETY
           - No paid routes, billing, credits, or provider/secret/settings changes.
@@ -316,10 +316,10 @@ jobs:
           
           TOOLS
           - Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.
-          - Direct MCP only; no subagents, execute wrapper, shell or filesystem.
+          - Direct MCP only; no Task/subagents, shell or filesystem.
           
           DELIVERY
-          - Five model steps: optional one-file read, branch, one push_files patch, one non-draft PR, final report.
+          - Five model steps: optional read, branch, push, PR, final report.
           - Use create_pull_request result URL/head_sha; shared validator re-fetches PR and checks exact-head CI.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           
