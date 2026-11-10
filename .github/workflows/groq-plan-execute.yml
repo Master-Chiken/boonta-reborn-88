@@ -250,6 +250,7 @@ jobs:
             "agent": {
               "build": {
                 "steps": 4,
+                "temperature": 0.2,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -261,6 +262,7 @@ jobs:
               "groq": {
                 "models": {
                   "openai/gpt-oss-20b": {
+                    "temperature": true,
                     "limit": {
                       "context": 1152,
                       "output": 384

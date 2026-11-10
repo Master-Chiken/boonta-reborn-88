@@ -1508,6 +1508,10 @@ else:
             errors.append(
                 "Groq GPT-OSS 20B must remain capped at 1152 context / 384 output tokens so four direct-delivery steps stay below the observed TPM refusal"
             )
+        if groq_model.get("temperature") is not True:
+            errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
+        if groq_config.get("agent", {}).get("build", {}).get("temperature") != 0.2:
+            errors.append("Groq build agent must request temperature 0.2 for focused structured tool calls")
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
         if groq_config.get("enabled_providers") != ["groq"]:
