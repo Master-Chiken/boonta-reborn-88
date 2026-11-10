@@ -304,7 +304,7 @@ jobs:
           Groq Free. €0 only; execute the preflight-selected task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight has selected exactly one task, loaded its question/criteria/next action and confirmed pr_url/head_sha are empty with no matching open PR. Do not read files; report BLOCKED if this handoff is insufficient.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: it selected exactly one task, loaded its question/criteria/next action, and confirmed activation pr_url/head_sha are empty with no matching open PR. Do not read files; report BLOCKED if this handoff is insufficient.
           - Do not search PR history: ignore older merged automation PRs. Do not reread summary, ledger or budget.
           - #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           
