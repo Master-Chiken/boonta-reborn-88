@@ -33,15 +33,18 @@ def resolve_checkout(root: Path) -> Path:
     root = root.resolve()
     if not root.is_dir():
         raise TestDispatchError("Repository checkout does not exist")
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        cwd=root,
-        stdin=subprocess.DEVNULL,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=10,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=root,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise TestDispatchError("Could not verify the Git checkout root") from exc
     if result.returncode != 0 or Path(result.stdout.strip()).resolve() != root:
         raise TestDispatchError("repo_root must be the exact Git checkout root")
     return root
