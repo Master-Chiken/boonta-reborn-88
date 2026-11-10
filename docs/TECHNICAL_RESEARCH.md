@@ -79,3 +79,7 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 ## Additional external reuse leads — 2026-11-10
 
 - [Additional reuse leads: Wind Waker GameCube SDK/JSystem reference, devkitPro GX texture conversion, OpenSWE1R scope, and Galactic Racer design benchmark](research/RE-001-ADDITIONAL-REUSE-LEADS-2026-11-10.md) — exact revisions, licence/provenance boundaries, target-platform limits and ranked follow-up actions. No code or game assets imported.
+
+## Full content catalogue and production bill of materials — 2026-11-10
+
+- [RE-001 content catalogue and asset BOM](research/RE-001-CONTENT-CATALOG-AND-ASSET-BOM-2026-11-10.md) — 25 reference tracks across eight worlds, four championships, 23 standard pilots plus two N64 cheat variants, 25 named pod configurations, seven upgrade-stat families, and the complete track/pilot/pod/world/UI/audio/progression asset checklist. It also records the present Boonta content gap, lawful CC0 asset candidates, source/licence gates and a ranked production sequence. Reference metadata only; no commercial payload was imported.
