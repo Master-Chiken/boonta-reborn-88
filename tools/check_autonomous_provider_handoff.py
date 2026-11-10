@@ -723,6 +723,17 @@ for label, workflow, report_title in (
     ):
         if required not in report_block:
             errors.append(f"{label} report validator handoff is missing {required!r}")
+# Free-tier provider reports must not contradict a GitHub App token that
+# was successfully minted earlier in the same cycle. OpenRouter also checks
+# its authenticated provider-key preflight through the shared helper.
+for required in (
+    "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
+    "findBlockedReportContradictions",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
+):
+    if required not in groq:
+        errors.append(f"Groq report consistency guard is missing {required!r}")
+
 for required in (
     "BOONTA_CYCLE_TASK_ID",
     "taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId",
