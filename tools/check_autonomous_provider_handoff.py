@@ -653,6 +653,35 @@ for required in (
         errors.append(f"Task eligibility preflight is missing {required!r}")
 if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
     errors.append("All three provider routes must require the same eligible-task preflight")
+
+# A skipped provider cycle must explain whether the queue is empty, blocked,
+# waiting for task promotion, or waiting for PR reconciliation.
+for required in (
+    "queue_state: ${{ steps.check.outputs.queue_state }}",
+    "queued_count: ${{ steps.check.outputs.queued_count }}",
+    "const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');",
+    "const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');",
+    "queueState = 'EMPTY_QUEUE';",
+    "queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';",
+    "queueState = 'BLOCKED_TASKS_ONLY';",
+    "core.setOutput('queue_state', queueState)",
+    "QUEUE_STATE: ${{ needs.provider-cooldowns.outputs.queue_state }}",
+    "EMPTY_QUEUE — WAITING_FOR_OWNER_APPROVAL",
+    "No AI provider was invoked, no provider cooldown was written",
+):
+    if required not in loop:
+        errors.append(f"Autonomous queue-state reporting is missing {required!r}")
+for required_case in (
+    '"name": "empty canonical ledger reports EMPTY_QUEUE"',
+    '"name": "queued task is visible but not silently promoted"',
+    '"name": "blocked non-activation tasks are not auto-unblocked"',
+    '"name": "activation same-day backoff is reported separately from empty queue"',
+    '"name": "open task PR is reported as waiting for reconciliation"',
+):
+    if required_case not in task_preflight_tests:
+        errors.append(f"Offline task-preflight tests are missing queue-state scenario {required_case!r}")
+if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must assert the queue-state output")
 if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
     errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
 if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:

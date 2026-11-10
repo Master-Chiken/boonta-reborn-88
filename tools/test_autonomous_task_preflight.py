@@ -73,6 +73,8 @@ def task(
 
 
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
+valid_queued = task("AUTOMATION-TEST-QUEUED", "queued")
+valid_blocked = task("N64-COMPWOLF-PUPP-T2-PARSE-PROBE", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
 invalid_target = task("AUTOMATION-TEST-INVALID-TARGET", "active", target_branch="feature")
@@ -81,12 +83,64 @@ represented_active["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-8
 represented_active["head_sha"] = "0123456789abcdef0123456789abcdef01234567"
 cases = [
     {
+        "name": "empty canonical ledger reports EMPTY_QUEUE",
+        "tasks": [],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "EMPTY_QUEUE",
+    },
+    {
+        "name": "queued task is visible but not silently promoted",
+        "tasks": [valid_queued],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
+        "expected_queued_count": 1,
+    },
+    {
+        "name": "blocked non-activation tasks are not auto-unblocked",
+        "tasks": [valid_blocked],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "BLOCKED_TASKS_ONLY",
+        "expected_blocked_count": 1,
+    },
+    {
+        "name": "activation same-day backoff is reported separately from empty queue",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": True,
+        "expected_queue_state": "TASK_BACKOFF",
+    },
+    {
+        "name": "open task PR is reported as waiting for reconciliation",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 356,
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+        }],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+    },
+    {
         "name": "activation opens after UTC reset",
         "tasks": [activation],
         "marker_day_offset": None,
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
         "expected_blocked": False,
+        "expected_queue_state": "READY",
     },
     {
         "name": "open PR with exact task marker blocks duplicate activation",
@@ -196,6 +250,7 @@ cases = [
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-TEST-ACTIVE",
         "expected_blocked": False,
+        "expected_queue_state": "READY",
     },
     {
         "name": "multiple active tasks fail closed",
@@ -204,6 +259,7 @@ cases = [
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
     },
     {
         "name": "incomplete active task fails closed with precise reason",
@@ -250,6 +306,7 @@ cases = [
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
         "reason_contains": "PR/head",
     },
     {
@@ -377,6 +434,20 @@ async function runCase(testCase) {{
     const outputs = result.outputs;
     if (outputs.task_ready !== String(testCase.expected_ready)) {{
       throw new Error(testCase.name + ": expected task_ready=" + testCase.expected_ready + ", got " + outputs.task_ready);
+    }}
+    if (testCase.expected_queue_state !== undefined && outputs.queue_state !== testCase.expected_queue_state) {{
+      throw new Error(testCase.name + ": expected queue_state=" + testCase.expected_queue_state + ", got " + outputs.queue_state);
+    }}
+    if (testCase.expected_queued_count !== undefined && outputs.queued_count !== String(testCase.expected_queued_count)) {{
+      throw new Error(testCase.name + ": expected queued_count=" + testCase.expected_queued_count + ", got " + outputs.queued_count);
+    }}
+    if (testCase.expected_blocked_count !== undefined && outputs.blocked_count !== String(testCase.expected_blocked_count)) {{
+      throw new Error(testCase.name + ": expected blocked_count=" + testCase.expected_blocked_count + ", got " + outputs.blocked_count);
+    }}
+    if (testCase.expected_queue_state === "EMPTY_QUEUE" && (
+      outputs.task_ready !== "false" || outputs.task_id !== "" || outputs.task_context !== ""
+    )) {{
+      throw new Error(testCase.name + ": EMPTY_QUEUE must not expose a provider task handoff");
     }}
     if (outputs.task_id !== testCase.expected_task_id) {{
       throw new Error(testCase.name + ": expected task_id=" + testCase.expected_task_id + ", got " + outputs.task_id);

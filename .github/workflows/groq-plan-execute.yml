@@ -144,6 +144,139 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Revalidate selected task after acquiring the shared writer slot
+        id: fresh_task_guard
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        with:
+          script: |
+            const taskId = process.env.TASK_ID || '';
+            const targetBranch = process.env.TASK_TARGET_BRANCH || '';
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
+            const failClosed = (reason) => {
+              core.setOutput('allowed', 'false');
+              core.setFailed('Fresh task revalidation blocked before provider invocation: ' + reason);
+            };
+            
+            if (issueNumber !== 226) {
+              failClosed('autonomous task execution is restricted to canonical issue #226');
+              return;
+            }
+            if (!/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId)) {
+              failClosed('selected task ID is missing or malformed');
+              return;
+            }
+            if (!['main', 'dev'].includes(targetBranch)) {
+              failClosed('selected target branch must be main or dev');
+              return;
+            }
+            
+            // This GET-only check runs after the shared boonta-single-writer concurrency
+            // slot has been acquired. It refreshes the earlier global selection so a run
+            // that waited in the queue cannot act on a task that changed meanwhile.
+            const { data: ledgerFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'docs/automation/task-ledger-summary.json',
+              ref: 'main'
+            });
+            if (!ledgerFile || Array.isArray(ledgerFile) || ledgerFile.encoding !== 'base64') {
+              failClosed('canonical compact task ledger is missing or not a base64 file');
+              return;
+            }
+            
+            let ledgerSummary;
+            try {
+              ledgerSummary = JSON.parse(Buffer.from(ledgerFile.content, 'base64').toString('utf8'));
+            } catch (error) {
+              failClosed('canonical compact task ledger is not valid JSON');
+              return;
+            }
+            if (
+              ledgerSummary.schema_version !== 2 ||
+              ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
+              !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
+              ledgerSummary.policy?.max_active_tasks !== 1 ||
+              !Array.isArray(ledgerSummary.tasks)
+            ) {
+              failClosed('canonical compact task ledger schema or one-active-task policy is invalid');
+              return;
+            }
+            
+            const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
+            if (
+              taskIds.some((id) => typeof id !== 'string' || !/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(id)) ||
+              new Set(taskIds).size !== taskIds.length
+            ) {
+              failClosed('canonical compact task ledger contains missing, invalid or duplicate task IDs');
+              return;
+            }
+            const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            if (activeTasks.length > 1) {
+              failClosed('canonical task ledger violates the one-active-task policy');
+              return;
+            }
+            const matches = ledgerSummary.tasks.filter((task) => task.task_id === taskId);
+            if (matches.length !== 1) {
+              failClosed('the selected task is no longer present exactly once in the canonical ledger');
+              return;
+            }
+            const task = matches[0];
+            const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const eligibleStatus = activationBootstrap
+              ? task.status === 'blocked' && activeTasks.length === 0
+              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+            if (!eligibleStatus) {
+              failClosed('the selected task status or active-task reservation changed while this run waited');
+              return;
+            }
+            if (
+              task.target_branch !== targetBranch ||
+              !task.title?.trim() ||
+              !task.question_excerpt?.trim() ||
+              !task.next_action_excerpt?.trim() ||
+              !Array.isArray(task.acceptance_criteria_excerpt) ||
+              task.acceptance_criteria_excerpt.length === 0 ||
+              !Array.isArray(task.platform_scope) ||
+              task.platform_scope.length === 0
+            ) {
+              failClosed('the selected task no longer matches its canonical branch or complete execution context');
+              return;
+            }
+            if (task.pr_url || task.head_sha) {
+              failClosed('the selected task already has PR or HEAD evidence and must be reconciled before another run');
+              return;
+            }
+            
+            const { data: openPullRequests } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+              page: 1
+            });
+            if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
+              failClosed('open PR inventory reached the 100-item safety ceiling');
+              return;
+            }
+            const markerLine = 'BOONTA_TASK_ID: ' + taskId;
+            const duplicate = openPullRequests.find((pull) =>
+              (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
+            );
+            if (duplicate) {
+              failClosed('open PR #' + duplicate.number + ' already represents this exact task');
+              return;
+            }
+            
+            core.setOutput('allowed', 'true');
+            core.info(
+              'Fresh task revalidation passed after the shared writer slot: ' +
+              taskId + ' -> ' + targetBranch + '; no matching open PR or stale ledger state.'
+            );
       - name: Mint scoped GitHub App token
         id: mint_identity_token
         if: steps.free_tier_guard.outputs.allowed == 'true'
