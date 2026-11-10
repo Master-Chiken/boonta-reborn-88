@@ -108,6 +108,18 @@ The N64 USA model block contains named groups beyond the headline pilot and trac
 
 Several upgrade records have only generic labels such as `Part_Upgrade_55`; their function remains unknown until the model/material graph or a runtime observation establishes it.
 
+### Named N64 spline records by circuit
+
+The N64 spline block has **28 `Trak_*` rows**. Exact name parsing links **26** to **20** catalogue tracks. Some tracks have multiple named spline entries (for example Beedo's Wild Ride and Howler Gorge have two each; Baroo Coast has segments `_1` and `_3`).
+
+Five catalogue tracks have no explicitly named exact-match spline row in this snapshot: **Boonta Training Course, Boonta Classic, Andobi Prime Centrum, Bumpy's Breakers and Zugga Challenge**. This does not prove their spline data is absent; records may be generic, release-specific or referenced indirectly.
+
+Two named spline rows remain unresolved:
+- `Trak_Aquilaris_Partial` (physical index 19): planet-level Aquilaris candidate only; no exact individual circuit identity is asserted.
+- `Trak_37` (physical index 55): generic name with no reliable track association.
+
+The machine-readable catalogue records each exact spline-row-to-track link and keeps those two rows unresolved.
+
 ### Non-racer Pupp models — 13 entries
 
 The N64 model block includes 38 `Pupp_*` records in total. **25** are the 25 pilots' pod-racer driver models; the other **13** are supporting characters, creatures, droids and a prop:
