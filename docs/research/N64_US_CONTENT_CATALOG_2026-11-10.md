@@ -176,7 +176,7 @@ Each model reference is stored as a logical catalogue ID and, when resolvable, i
 
 ## Track catalogue — 25 entries
 
-`Track.Model` is a logical model catalogue reference, not a physical block index. Exact-name matching resolved **11/25** track references. The remaining **14** have release-specific or placeholder aliases that this pass did not resolve. **Unresolved does not mean missing.** The physical N64 model inventory also contains 14 `N64__`-prefixed alias records; the equal counts are a lead for further mapping work, **not** proof of a one-to-one assignment to those 14 tracks.
+`Track.Model` is a logical model catalogue reference, not a physical block index. Exact-name matching resolved **11/25** track references. The remaining **14** have release-specific or placeholder aliases that this pass did not resolve. **Unresolved does not mean missing.** Of the 11 exact-name matches, only **4** also match the canonical model-value metadata hash; **7** point to a distinct value variant despite sharing the name. An exact name is therefore a catalogue link, not proof of identical model content. The physical N64 model inventory also contains 14 `N64__`-prefixed alias records; the equal counts are a lead for further mapping work, **not** proof of a one-to-one assignment to those 14 tracks.
 
 | ID | Track | Planet | Model catalogue reference | N64 exact-name match |
 |---:|---|---|---:|---|
