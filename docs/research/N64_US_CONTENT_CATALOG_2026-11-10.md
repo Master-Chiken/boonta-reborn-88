@@ -20,6 +20,63 @@ The broader metadata catalogue contains 433 model-value rows across these prefix
 
 The catalogue also contains 127 spline records (46 track-segment rows, 25 camera records and 56 other entries), 180 sprite metadata rows and 1675 texture metadata rows. The selected N64 USA block contains 173 sprites and 1648 textures.
 
+## Physical block inventories
+
+The machine-readable file now contains every mapped item entry from all four selected N64 USA blocks, using only physical index, metadata ValueId, descriptive name (when available) and a derived category.
+
+### Model block — 307 entries
+
+| Category | Entries |
+|---|---:|
+| part | 183 |
+| racer-model | 38 |
+| alternate-pod | 25 |
+| pod | 25 |
+| N64-alias | 14 |
+| track | 11 |
+| model | 9 |
+| scene | 2 |
+
+All 307 model entries have a metadata name; there are 306 unique names (one duplicate name).
+
+### Spline block — 91 entries
+
+| Category | Entries |
+|---|---:|
+|  | 36 |
+| track | 28 |
+| camera | 14 |
+| part | 13 |
+
+Generic `__SPLINE__` records and `Part_` entries are retained as-is rather than assigned a guessed circuit role.
+
+### Sprite block — 173 entries
+
+| Category | Entries |
+|---|---:|
+| sprite | 54 |
+| gui | 26 |
+| avatar | 23 |
+| racerflag | 23 |
+| system-ui | 12 |
+| planet | 8 |
+| light | 6 |
+| banner | 5 |
+| countdown | 3 |
+| palette | 3 |
+| winnerflag | 3 |
+| background | 2 |
+| lucasarts | 2 |
+| tatooine | 1 |
+| gradient | 1 |
+| teamphoto | 1 |
+
+There are 169 unique names; repeated names and generic `Sprite_` entries are preserved by physical index.
+
+### Texture block — 1648 entries
+
+The selected block maps 1648 physical indices, but the upstream `TextureBlockItem.csv` supplies **no descriptive names** for these rows. The JSON therefore records each `Index`/`ValueId` pair and leaves its name null. Materials and their texture references must provide the semantic association; no labels or image content are inferred.
+
 ## Racer roster — 25 entries
 
 Each model reference is stored as a logical catalogue ID and, when resolvable, its physical N64 USA block index. Joining by exact model name produced **123/123** unique matches across **123** distinct model indices. The last two roster entries have no LOD2 reference in this metadata snapshot.
