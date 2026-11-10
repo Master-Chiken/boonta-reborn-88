@@ -26,7 +26,7 @@ Required properties:
 - `test_ids`: identifiers from a fixed allowlist; no command strings, scripts or shell arguments.
 - `limitations`: up to eight short caveats.
 
-Unknown and duplicate JSON properties are rejected. The model cannot choose or widen the path allowlist: the caller must pass one or more `--allowed-path` arguments derived from the approved task's trusted scope.
+Unknown and duplicate JSON properties are rejected. The model cannot choose or widen the path allowlist. `tools/build_autonomous_path_allowlist.py` reads the canonical schema-v2 task summary and the separate owner-reviewed `docs/automation/patch-path-allowlist.json`. It issues exact paths only for the unique active task, only when an owner-review evidence URL exists, and only for pre-existing regular tracked files. No glob, directory prefix or model-selected path is supported. The policy file is empty initially because the canonical task ledger currently has no active task.
 
 ## Guardrails
 
@@ -56,7 +56,7 @@ python3 tools/autonomous_patch_proposal.py \
   --proposal /tmp/boonta-proposal.json \
   --expected-task-id "TASK-ID-FROM-PREFLIGHT" \
   --expected-base-sha "40_CHAR_SHA_FROM_PREFLIGHT" \
-  --allowed-path "gamecube-demo/source/main.c"
+  --allowlist-report /tmp/boonta-allowlist.json
 ```
 
 Apply to a disposable clean checkout only:
@@ -67,7 +67,7 @@ python3 tools/autonomous_patch_proposal.py \
   --proposal /tmp/boonta-proposal.json \
   --expected-task-id "TASK-ID-FROM-PREFLIGHT" \
   --expected-base-sha "40_CHAR_SHA_FROM_PREFLIGHT" \
-  --allowed-path "gamecube-demo/source/main.c" \
+  --allowlist-report /tmp/boonta-allowlist.json \
   --apply
 ```
 
@@ -76,6 +76,7 @@ Regression tests use temporary Git repositories and synthetic source files:
 ```bash
 python3 tools/test_autonomous_patch_proposal.py
 python3 tools/test_autonomous_patch_test_runner.py
+python3 tools/test_autonomous_path_allowlist.py
 ```
 
 ## Fixed test dispatcher
@@ -98,10 +99,25 @@ python3 tools/run_autonomous_patch_tests.py \
 
 The model may choose only IDs present in the registry. It cannot pass test arguments or commands. The runner uses argv execution without a shell, strips GitHub/provider secret variables from child environments, caps each test at 120 seconds, and stops after the first failure. Registered scripts and the validator/dispatcher themselves are protected from model-authored patches. No GameCube test ID is offered until a stable, bounded host-test command is confirmed.
 
+## Owner-reviewed path generation
+
+The owner-maintained policy starts empty. For an active task, the trusted runner generates its allowlist report before any model call:
+
+```bash
+python3 tools/build_autonomous_path_allowlist.py \
+  --repo-root "$PWD" \
+  --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT" \
+  --task-id "$TASK_ID_FROM_PREFLIGHT" \
+  > /tmp/boonta-allowlist.json
+```
+
+The proposal validator then consumes that exact report via `--allowlist-report`. A non-READY report (empty queue, blocked task or missing owner-reviewed paths) produces no authorized paths and the validator refuses the proposal. The registry, generator and tests are themselves protected from model-authored patches. CI verifies that the current empty canonical queue yields `NO_ACTIVE_TASK` with an empty path list.
+
+The owner-reviewed path policy is separate from the canonical task ledger. A policy entry contains exactly a task ID, short purpose, GitHub PR review-evidence URL and 1–20 exact file paths. Additions to that file require a normal human-reviewed PR; no automation writes policy entries.
+
 ## Not implemented yet
 
 - No structured-output provider request or model route is configured.
-- No trusted task-to-path allowlist generator exists yet.
 - The fixed dispatcher runs only the three verified offline automation checks. GameCube build/test commands are not in the registry because no stable, bounded host-test command has yet been confirmed.
 - No build/test stage is wired between patch validation and GitHub writing.
 - No deterministic writer, branch lease, PR creator or exact-head report is connected.
