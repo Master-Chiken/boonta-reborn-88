@@ -36,6 +36,7 @@ def resolve_checkout(root: Path) -> Path:
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
         cwd=root,
+        stdin=subprocess.DEVNULL,
         text=True,
         capture_output=True,
         check=False,
@@ -99,6 +100,7 @@ def run_test_ids(
                 [sys.executable, script],
                 cwd=root,
                 env=env,
+                stdin=subprocess.DEVNULL,
                 text=True,
                 capture_output=True,
                 check=False,
