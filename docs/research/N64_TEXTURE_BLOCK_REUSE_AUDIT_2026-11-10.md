@@ -91,6 +91,18 @@ Pinned references:
 - [Material texture fields](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/MaterialTexture.cs)
 - [Mesh material fields](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/MeshMaterial.cs)
 
+## Existing community unpacker: useful, but not a ROM extractor
+
+A second public candidate exists in [louriccia/SWE1R-Mods](https://github.com/louriccia/SWE1R-Mods):
+
+- `tools/textureblock_unpack.js` reads an existing `out_textureblock.bin` and optionally the neighboring `out_modelblock.bin`; the latter supplies size/format metadata for textures not in its static 1,648-entry `_textures.js` catalogue.
+- It preserves unused/unknown texture payloads as raw bytes and writes PNGs only when it has dimensions and format metadata.
+- Its README asks the user to place game `data/lev01` block files in `tools/in/`; it does **not** document reading an N64 ROM or rebuilding the texture block from a raw cartridge image.
+- The README separately advertises a restored-texture pack for the N64 version. That is evidence of N64-related modding work, not evidence that this unpack script accepts the retail N64 ROM directly.
+- No clear root-level license declaration was established during this review. Treat the repository as a research lead only; do not import its implementation into Boonta until file-level licensing and dependencies are confirmed.
+
+This makes it a possible cross-check for generic texture-block layout and index/format metadata, but it does not remove our current need for a complete, region-matched N64 texture block. It also reinforces that a PNG decoder alone is insufficient: the material table is needed to recover each texture's dimensions and interpretation.
+
 ## Technical decision
 
 **Reuse the pinned MIT parser/exporter as a read-only extraction dependency or reference; do not write a second texture conversion implementation.** A narrowly scoped local adapter is still needed to feed the already-decoded Pupp material graph and the complete N64 texture block into the existing lower-level exporter; it should not need to rebuild the full outer model block.
