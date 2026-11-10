@@ -1437,21 +1437,41 @@ for required in (
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
-# OpenRouter BLOCKED reports must agree with the successful same-run preflight.
-# Its prompt receives workflow outcomes, and the report validator rejects false
-# API-key/Free-tier blockers after a successful GET /api/v1/key check.
+# OpenRouter BLOCKED reports must agree with successful same-run preflight evidence.
+# The shared validator catches both explicit auth errors and natural-language
+# missing-key/token claims that would otherwise evade narrow string matching.
 for required in (
     "OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}",
     "OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}",
     "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
-    "process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true'",
-    "process.env.OPENROUTER_AUTH_OUTCOME === 'success'",
-    "BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence",
+    "findBlockedReportContradictions",
+    "openRouterAuthSucceeded:",
+    "githubAppTokenMinted:",
     "SAME-RUN VERIFIED EXECUTION FACTS",
     "Never ask the owner to replace the key.",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter report consistency guard is missing {required!r}")
+
+for required in (
+    "providerKeyUnavailable",
+    "explicitAuthFailure",
+    "tokenUnavailable",
+    "appCredentialsMissing",
+    "openRouterAuthSucceeded === true",
+    "githubAppTokenMinted === true",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared cycle validator is missing its preflight contradiction rule {required!r}")
+
+for required in (
+    "no provider key was available",
+    "no verified live GitHub App token",
+    "intentionally not exposed to the model",
+    "successful authentication evidence is absent",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Cycle validator tests are missing credential-contradiction coverage {required!r}")
 
 # The Groq Free fallback must remain useful under its observed 8k TPM limit.
 # OpenCode supports per-model context/output limits; cap this agent well below TPM.
