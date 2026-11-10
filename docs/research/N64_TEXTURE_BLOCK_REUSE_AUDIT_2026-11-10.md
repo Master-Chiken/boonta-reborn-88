@@ -64,6 +64,33 @@ The pinned source exposes a shorter path for the already-decoded candidate:
 
 `MeshMaterialExporter` is constructed from a single `MeshMaterial` plus a texture block; it does not take a `ModelBlock` or `Block<ModelBlockItem>`. The lower-level `MaterialTextureExporter` is narrower still: it takes a `MaterialTexture`, its selected child and the texture block. Therefore a small local adapter can likely use the already-decoded Pupp graph without reconstructing the full outer model block. This is **source-level API evidence only**; the adapter has not yet been run against the user's local candidate and a complete N64 texture block. Preserve the selected material texture indices, child selection, effective-image mirroring and alpha handling. The API's first-child choice is explicitly marked as a `HACK` upstream, so verify it for this model rather than assuming every material has only one child.
 
+## UV reconstruction and OBJ material mapping
+
+The pinned MIT source also contains the missing UV conversion routine, so Boonta should not invent a new N64 UV scale:
+
+- `Vtx.Tc` stores the signed texture-coordinate pair from the 16-byte F3DEX2 vertex record.
+- `VtxExtensions.GetEffectiveUV(vtx, materialTextureChild)` divides each coordinate by **4096** normally, or **8192** on the corresponding axis when the child marks double width/height.
+- The same method subtracts 1 from U or V for the horizontal/vertical flip flags.
+- `MaterialTextureChild.DimensionsBitmask` defines those flags: double height `0x01`, vertical flip `0x02`, double width `0x10`, horizontal flip `0x20`.
+- Each `Mesh` has an explicit `MeshMaterial` reference, and its vertices are stored with the mesh. This is the association needed to preserve per-mesh material assignments during OBJ/MTL export.
+
+There are important limitations to carry into any adapter:
+
+1. The upstream UV helper contains a TODO to consider `Material.Properties.IsFlipped`.
+2. `MeshMaterial` stores `TextureOffsetX` and `TextureOffsetY`, but the helper above does not apply them. Their effect must be checked against the relevant N64 model before treating the UVs as final.
+3. `MaterialTexture` holds six child slots; the current upstream `MeshMaterialExporter` chooses `Children.FirstOrDefault()` and labels this a HACK. The correct child must be validated per material rather than assumed.
+4. OBJ export must preserve the command-list triangle indices and the exact mesh-to-material relationship; deduplicating vertices across material/UV seams can corrupt texture mapping.
+
+Therefore, the existing source gives us a strong reusable UV formula and material association, but a final textured OBJ still needs those TODO/HACK cases checked on the local Anakin candidate. This is a local validation step, not a reason to repeat the already-passed structural parser probe.
+
+Pinned references:
+- [F3DEX2 vertex record](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/F3DEX2/Vtx.cs)
+- [Effective UV calculation](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Meshes/VtxExtensions.cs)
+- [Material texture child flags](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/MaterialTextureChild.cs)
+- [Mesh-to-material and vertex references](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Meshes/Mesh.cs)
+- [Material texture fields](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/MaterialTexture.cs)
+- [Mesh material fields](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/MeshMaterial.cs)
+
 ## Technical decision
 
 **Reuse the pinned MIT parser/exporter as a read-only extraction dependency or reference; do not write a second texture conversion implementation.** A narrowly scoped local adapter is still needed to feed the already-decoded Pupp material graph and the complete N64 texture block into the existing lower-level exporter; it should not need to rebuild the full outer model block.
