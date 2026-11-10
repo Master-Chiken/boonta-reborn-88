@@ -2051,169 +2051,169 @@
         "index": 86,
         "valueId": 86,
         "name": "Pupp_Racer_Teemto_Pagalies",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 87,
         "valueId": 87,
         "name": "Pupp_Racer_Anakin_Skywalker",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 88,
         "valueId": 88,
         "name": "Pupp_Racer_Gasgano",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 89,
         "valueId": 89,
         "name": "Pupp_Racer_Mawhonic",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 90,
         "valueId": 90,
         "name": "Pupp_Racer_Ody_Mandrell",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 91,
         "valueId": 91,
         "name": "Pupp_Racer_Sebulba",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 92,
         "valueId": 92,
         "name": "Pupp_Racer_Mars_Guo",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 93,
         "valueId": 93,
         "name": "Pupp_Racer_Ratts_Tyerell",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 94,
         "valueId": 94,
         "name": "Pupp_Racer_Ben_Quadinaros",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 95,
         "valueId": 95,
         "name": "Pupp_Racer_Ebe_E_Endocott",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 96,
         "valueId": 96,
         "name": "Pupp_Racer_Ark_Roose",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 97,
         "valueId": 97,
         "name": "Pupp_Racer_Clegg_Holdfast",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 98,
         "valueId": 98,
         "name": "Pupp_Racer_Dud_Bolt",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 99,
         "valueId": 99,
         "name": "Pupp_Racer_Wan_Sandage",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 100,
         "valueId": 100,
         "name": "Pupp_Racer_Elan_Mak",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 101,
         "valueId": 101,
         "name": "Pupp_Racer_Toy_Dampner",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 102,
         "valueId": 102,
         "name": "Pupp_Racer_Fud_Sang",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 103,
         "valueId": 103,
         "name": "Pupp_Racer_Neva_Kee",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 104,
         "valueId": 104,
         "name": "Pupp_Racer_Slide_Paramita",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 105,
         "valueId": 105,
         "name": "Pupp_Racer_Aldar_Beedo",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 106,
         "valueId": 106,
         "name": "Pupp_Racer_Bozzie_Baranta",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 107,
         "valueId": 107,
         "name": "Pupp_Racer_Boles_Roor",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 108,
         "valueId": 108,
         "name": "Pupp_Racer_Navior",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 109,
         "valueId": 109,
         "name": "Pupp_Pit_Droid",
-        "category": "racer-model"
+        "category": "droid-model"
       },
       {
         "index": 110,
         "valueId": 110,
         "name": "Pupp_Watto",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 111,
         "valueId": 111,
         "name": "Pupp_Dewback",
-        "category": "racer-model"
+        "category": "creature-model"
       },
       {
         "index": 112,
         "valueId": 112,
         "name": "Pupp_Ronto",
-        "category": "racer-model"
+        "category": "creature-model"
       },
       {
         "index": 113,
         "valueId": 113,
         "name": "Pupp_Jabba",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 114,
@@ -2441,7 +2441,7 @@
         "index": 151,
         "valueId": 155,
         "name": "Pupp_OpeeSeaKiller",
-        "category": "racer-model"
+        "category": "creature-model"
       },
       {
         "index": 152,
@@ -2555,7 +2555,7 @@
         "index": 170,
         "valueId": 175,
         "name": "Pupp_Cantina_Holo_Machine",
-        "category": "racer-model"
+        "category": "environment-prop-model"
       },
       {
         "index": 171,
@@ -2969,31 +2969,31 @@
         "index": 239,
         "valueId": 244,
         "name": "Pupp_Cantina_Hammerhead",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 240,
         "valueId": 245,
         "name": "Pupp_Droid_C3PO",
-        "category": "racer-model"
+        "category": "droid-model"
       },
       {
         "index": 241,
         "valueId": 246,
         "name": "Pupp_JarJar",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 242,
         "valueId": 247,
         "name": "Pupp_Java",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 243,
         "valueId": 1243,
         "name": "Pupp_Droid_R2D2",
-        "category": "racer-model"
+        "category": "droid-model"
       },
       {
         "index": 244,
@@ -3263,13 +3263,13 @@
         "index": 288,
         "valueId": 1288,
         "name": "Pupp_Racer_Jinn_Reeso",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 289,
         "valueId": 1289,
         "name": "Pupp_Racer_Cy_Yunga",
-        "category": "racer-model"
+        "category": "racer-pupp-model"
       },
       {
         "index": 290,
@@ -3353,7 +3353,7 @@
         "index": 303,
         "valueId": 1303,
         "name": "Pupp_QuiGon_Jinn",
-        "category": "racer-model"
+        "category": "character-model"
       },
       {
         "index": 304,
@@ -14862,9 +14862,13 @@
         "track": 11,
         "pod": 25,
         "part": 183,
-        "racer-model": 38,
+        "racer-pupp-model": 25,
+        "droid-model": 3,
+        "character-model": 6,
+        "creature-model": 3,
         "model": 9,
         "N64-alias": 14,
+        "environment-prop-model": 1,
         "scene": 2
       }
     },
@@ -15976,6 +15980,189 @@
         }
       ],
       "note": ""
+    },
+    {
+      "key": "non-racer-pupp-models",
+      "label": "Non-racer Pupp character, creature and prop models",
+      "count": 13,
+      "items": [
+        {
+          "index": 109,
+          "valueId": 109,
+          "name": "Pupp_Pit_Droid",
+          "category": "droid-model"
+        },
+        {
+          "index": 110,
+          "valueId": 110,
+          "name": "Pupp_Watto",
+          "category": "character-model"
+        },
+        {
+          "index": 111,
+          "valueId": 111,
+          "name": "Pupp_Dewback",
+          "category": "creature-model"
+        },
+        {
+          "index": 112,
+          "valueId": 112,
+          "name": "Pupp_Ronto",
+          "category": "creature-model"
+        },
+        {
+          "index": 113,
+          "valueId": 113,
+          "name": "Pupp_Jabba",
+          "category": "character-model"
+        },
+        {
+          "index": 151,
+          "valueId": 155,
+          "name": "Pupp_OpeeSeaKiller",
+          "category": "creature-model"
+        },
+        {
+          "index": 170,
+          "valueId": 175,
+          "name": "Pupp_Cantina_Holo_Machine",
+          "category": "environment-prop-model"
+        },
+        {
+          "index": 239,
+          "valueId": 244,
+          "name": "Pupp_Cantina_Hammerhead",
+          "category": "character-model"
+        },
+        {
+          "index": 240,
+          "valueId": 245,
+          "name": "Pupp_Droid_C3PO",
+          "category": "droid-model"
+        },
+        {
+          "index": 241,
+          "valueId": 246,
+          "name": "Pupp_JarJar",
+          "category": "character-model"
+        },
+        {
+          "index": 242,
+          "valueId": 247,
+          "name": "Pupp_Java",
+          "category": "character-model"
+        },
+        {
+          "index": 243,
+          "valueId": 1243,
+          "name": "Pupp_Droid_R2D2",
+          "category": "droid-model"
+        },
+        {
+          "index": 303,
+          "valueId": 1303,
+          "name": "Pupp_QuiGon_Jinn",
+          "category": "character-model"
+        }
+      ],
+      "note": "These 13 Pupp records are not among the 25 racer-model references in Racer.csv; they include NPCs, creatures, droids and a cantina prop."
+    },
+    {
+      "key": "droid-models",
+      "label": "Droids",
+      "count": 3,
+      "items": [
+        {
+          "index": 109,
+          "valueId": 109,
+          "name": "Pupp_Pit_Droid"
+        },
+        {
+          "index": 240,
+          "valueId": 245,
+          "name": "Pupp_Droid_C3PO"
+        },
+        {
+          "index": 243,
+          "valueId": 1243,
+          "name": "Pupp_Droid_R2D2"
+        }
+      ],
+      "note": "Metadata name-based planning category only; no visual/runtime role is asserted beyond the name."
+    },
+    {
+      "key": "creature-models",
+      "label": "Creatures",
+      "count": 3,
+      "items": [
+        {
+          "index": 111,
+          "valueId": 111,
+          "name": "Pupp_Dewback"
+        },
+        {
+          "index": 112,
+          "valueId": 112,
+          "name": "Pupp_Ronto"
+        },
+        {
+          "index": 151,
+          "valueId": 155,
+          "name": "Pupp_OpeeSeaKiller"
+        }
+      ],
+      "note": "Metadata name-based planning category only; no visual/runtime role is asserted beyond the name."
+    },
+    {
+      "key": "character-models",
+      "label": "Characters / NPCs",
+      "count": 6,
+      "items": [
+        {
+          "index": 110,
+          "valueId": 110,
+          "name": "Pupp_Watto"
+        },
+        {
+          "index": 113,
+          "valueId": 113,
+          "name": "Pupp_Jabba"
+        },
+        {
+          "index": 239,
+          "valueId": 244,
+          "name": "Pupp_Cantina_Hammerhead"
+        },
+        {
+          "index": 241,
+          "valueId": 246,
+          "name": "Pupp_JarJar"
+        },
+        {
+          "index": 242,
+          "valueId": 247,
+          "name": "Pupp_Java"
+        },
+        {
+          "index": 303,
+          "valueId": 1303,
+          "name": "Pupp_QuiGon_Jinn"
+        }
+      ],
+      "note": "Metadata name-based planning category only; no visual/runtime role is asserted beyond the name."
+    },
+    {
+      "key": "environment-props",
+      "label": "Environment props",
+      "count": 1,
+      "items": [
+        {
+          "index": 170,
+          "valueId": 175,
+          "name": "Pupp_Cantina_Holo_Machine"
+        }
+      ],
+      "note": "Metadata name-based planning category only; no visual/runtime role is asserted beyond the name."
     }
   ],
   "trackGroundAssociations": [
@@ -16200,6 +16387,13 @@
     "hangar": 7,
     "hud": 4,
     "effects": 13,
-    "scenes": 2
+    "scenes": 2,
+    "nonRacerPuppModels": 13,
+    "nonRacerPuppSubgroups": {
+      "droid-models": 3,
+      "creature-models": 3,
+      "character-models": 6,
+      "environment-props": 1
+    }
   }
 }
