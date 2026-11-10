@@ -1,0 +1,1446 @@
+{
+  "schemaVersion": 1,
+  "generatedOn": "2026-11-10",
+  "purpose": "Metadata-only clean-room planning inventory. No ROM bytes, geometry, textures, asset hashes, binary offsets or extracted payloads.",
+  "source": {
+    "repository": "akopetsch/swe1r-assets",
+    "commit": "922ef535f6598a1330ff93d6b07258956f990b34",
+    "licenseNote": "The parser source project declares MIT. That licence does not grant rights to any commercial game assets or extracted payloads. This file preserves only names and IDs from public metadata.",
+    "files": [
+      {
+        "name": "ModelBlockItem",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/ModelBlockItem.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/ModelBlockItem.csv"
+      },
+      {
+        "name": "Racer",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/Racer.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Racer.csv"
+      },
+      {
+        "name": "Track",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/Track.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Track.csv"
+      },
+      {
+        "name": "BlockItem",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/BlockItem.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/BlockItem.csv"
+      },
+      {
+        "name": "Block",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/Block.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Block.csv"
+      },
+      {
+        "name": "SplineBlockItem",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/SplineBlockItem.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/SplineBlockItem.csv"
+      },
+      {
+        "name": "SpriteBlockItem",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/SpriteBlockItem.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/SpriteBlockItem.csv"
+      },
+      {
+        "name": "TextureBlockItem",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/TextureBlockItem.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/TextureBlockItem.csv"
+      },
+      {
+        "name": "Release",
+        "path": "src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv",
+        "url": "https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/Release.csv"
+      }
+    ]
+  },
+  "release": {
+    "id": 3,
+    "name": "Nintendo 64 (USA)",
+    "blocks": {
+      "model": {
+        "id": 2,
+        "name": "n64_us",
+        "count": 307
+      },
+      "spline": {
+        "id": 1,
+        "name": "n64",
+        "count": 91
+      },
+      "sprite": {
+        "id": 2,
+        "name": "n64_us",
+        "count": 173
+      },
+      "texture": {
+        "id": 1,
+        "name": "n64",
+        "count": 1648
+      }
+    }
+  },
+  "catalogueTotals": {
+    "modelItemMetadataRows": 433,
+    "modelKinds": {
+      "MAlt": 29,
+      "Trak": 34,
+      "Podd": 29,
+      "Part": 233,
+      "Pupp": 51,
+      "Modl": 15,
+      "Scen": 28,
+      "N64": 14
+    },
+    "racers": 25,
+    "tracks": 25,
+    "splineItemMetadataRows": 127,
+    "splineNameGroups": {
+      "trackSegmentRows": 46,
+      "cameraRows": 25,
+      "otherRows": 56
+    },
+    "spriteItemMetadataRows": 180,
+    "textureItemMetadataRows": 1675
+  },
+  "racers": [
+    {
+      "id": 1,
+      "name": "Anakin Skywalker",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 2,
+          "name": "Podd_Anakin_Skywalker",
+          "n64UsBlockIndex": 2,
+          "n64UsValueId": 2,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 0,
+          "name": "MAlt_Anakin_Skywalker",
+          "n64UsBlockIndex": 0,
+          "n64UsValueId": 0,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 87,
+          "name": "Pupp_Racer_Anakin_Skywalker",
+          "n64UsBlockIndex": 87,
+          "n64UsValueId": 87,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 256,
+          "name": "Part_Racer_Lod1_Anakin_Skywalker",
+          "n64UsBlockIndex": 251,
+          "n64UsValueId": 256,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 208,
+          "name": "Part_Racer_Lod2_Anakin_Skywalker",
+          "n64UsBlockIndex": 203,
+          "n64UsValueId": 208,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "name": "Teemto Pagalies",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 4,
+          "name": "Podd_Teemto_Pagalies",
+          "n64UsBlockIndex": 4,
+          "n64UsValueId": 4,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 3,
+          "name": "MAlt_Teemto_Pagalies",
+          "n64UsBlockIndex": 3,
+          "n64UsValueId": 3,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 86,
+          "name": "Pupp_Racer_Teemto_Pagalies",
+          "n64UsBlockIndex": 86,
+          "n64UsValueId": 86,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 257,
+          "name": "Part_Racer_Lod1_Teemto_Pagalies",
+          "n64UsBlockIndex": 252,
+          "n64UsValueId": 257,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 227,
+          "name": "Part_Racer_Lod2_Teemto_Pagalies",
+          "n64UsBlockIndex": 222,
+          "n64UsValueId": 227,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "name": "Sebulba",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 6,
+          "name": "Podd_Sebulba",
+          "n64UsBlockIndex": 6,
+          "n64UsValueId": 6,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 5,
+          "name": "MAlt_Sebulba",
+          "n64UsBlockIndex": 5,
+          "n64UsValueId": 5,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 91,
+          "name": "Pupp_Racer_Sebulba",
+          "n64UsBlockIndex": 91,
+          "n64UsValueId": 91,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 255,
+          "name": "Part_Racer_Lod1_Sebulba",
+          "n64UsBlockIndex": 250,
+          "n64UsValueId": 255,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 225,
+          "name": "Part_Racer_Lod2_Sebulba",
+          "n64UsBlockIndex": 220,
+          "n64UsValueId": 225,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "name": "Ratts Tyerell",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 8,
+          "name": "Podd_Ratts_Tyerell",
+          "n64UsBlockIndex": 8,
+          "n64UsValueId": 8,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 7,
+          "name": "MAlt_Ratts_Tyerell",
+          "n64UsBlockIndex": 7,
+          "n64UsValueId": 7,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 93,
+          "name": "Pupp_Racer_Ratts_Tyerell",
+          "n64UsBlockIndex": 93,
+          "n64UsValueId": 93,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 258,
+          "name": "Part_Racer_Lod1_Ratts_Tyerell",
+          "n64UsBlockIndex": 253,
+          "n64UsValueId": 258,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 220,
+          "name": "Part_Racer_Lod2_Ratts_Tyerell",
+          "n64UsBlockIndex": 215,
+          "n64UsValueId": 220,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "name": "Aldar Beedo",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 9,
+          "name": "Podd_Aldar_Beedo",
+          "n64UsBlockIndex": 9,
+          "n64UsValueId": 9,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 10,
+          "name": "MAlt_Aldar_Beedo",
+          "n64UsBlockIndex": 10,
+          "n64UsValueId": 10,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 105,
+          "name": "Pupp_Racer_Aldar_Beedo",
+          "n64UsBlockIndex": 105,
+          "n64UsValueId": 105,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 259,
+          "name": "Part_Racer_Lod1_Aldar_Beedo",
+          "n64UsBlockIndex": 254,
+          "n64UsValueId": 259,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 207,
+          "name": "Part_Racer_Lod2_Aldar_Beedo",
+          "n64UsBlockIndex": 202,
+          "n64UsValueId": 207,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "name": "Mawhonic",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 12,
+          "name": "Podd_Mawhonic",
+          "n64UsBlockIndex": 12,
+          "n64UsValueId": 12,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 11,
+          "name": "MAlt_Mawhonic",
+          "n64UsBlockIndex": 11,
+          "n64UsValueId": 11,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 89,
+          "name": "Pupp_Racer_Mawhonic",
+          "n64UsBlockIndex": 89,
+          "n64UsValueId": 89,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 260,
+          "name": "Part_Racer_Lod1_Mawhonic",
+          "n64UsBlockIndex": 255,
+          "n64UsValueId": 260,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 222,
+          "name": "Part_Racer_Lod2_Mawhonic",
+          "n64UsBlockIndex": 217,
+          "n64UsValueId": 222,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "name": "Ark Bumpy Roose",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 14,
+          "name": "Podd_Ark_Roose",
+          "n64UsBlockIndex": 14,
+          "n64UsValueId": 14,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 13,
+          "name": "MAlt_Ark_Roose",
+          "n64UsBlockIndex": 13,
+          "n64UsValueId": 13,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 96,
+          "name": "Pupp_Racer_Ark_Roose",
+          "n64UsBlockIndex": 96,
+          "n64UsValueId": 96,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 261,
+          "name": "Part_Racer_Lod1_Ark_Roose",
+          "n64UsBlockIndex": 256,
+          "n64UsValueId": 261,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 213,
+          "name": "Part_Racer_Lod2_Ark_Roose",
+          "n64UsBlockIndex": 208,
+          "n64UsValueId": 213,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "name": "Mars Guo",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 16,
+          "name": "Podd_Mars_Guo",
+          "n64UsBlockIndex": 16,
+          "n64UsValueId": 16,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 18,
+          "name": "MAlt_Mars_Guo",
+          "n64UsBlockIndex": 18,
+          "n64UsValueId": 18,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 92,
+          "name": "Pupp_Racer_Mars_Guo",
+          "n64UsBlockIndex": 92,
+          "n64UsValueId": 92,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 263,
+          "name": "Part_Racer_Lod1_Mars_Guo",
+          "n64UsBlockIndex": 258,
+          "n64UsValueId": 263,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 221,
+          "name": "Part_Racer_Lod2_Mars_Guo",
+          "n64UsBlockIndex": 216,
+          "n64UsValueId": 221,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "name": "Wan Sandage",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 17,
+          "name": "Podd_Wan_Sandage",
+          "n64UsBlockIndex": 17,
+          "n64UsValueId": 17,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 15,
+          "name": "MAlt_Wan_Sandage",
+          "n64UsBlockIndex": 15,
+          "n64UsValueId": 15,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 99,
+          "name": "Pupp_Racer_Wan_Sandage",
+          "n64UsBlockIndex": 99,
+          "n64UsValueId": 99,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 262,
+          "name": "Part_Racer_Lod1_Wan_Sandage",
+          "n64UsBlockIndex": 257,
+          "n64UsValueId": 262,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 229,
+          "name": "Part_Racer_Lod2_Wan_Sandage",
+          "n64UsBlockIndex": 224,
+          "n64UsValueId": 229,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "name": "Ebe E. Endocott",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 20,
+          "name": "Podd_Ebe_E_Endocott",
+          "n64UsBlockIndex": 20,
+          "n64UsValueId": 20,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 19,
+          "name": "MAlt_Ebe_E_Endocott",
+          "n64UsBlockIndex": 19,
+          "n64UsValueId": 19,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 95,
+          "name": "Pupp_Racer_Ebe_E_Endocott",
+          "n64UsBlockIndex": 95,
+          "n64UsValueId": 95,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 264,
+          "name": "Part_Racer_Lod1_Ebe_E_Endocott",
+          "n64UsBlockIndex": 259,
+          "n64UsValueId": 264,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 216,
+          "name": "Part_Racer_Lod2_Ebe_E_Endocott",
+          "n64UsBlockIndex": 211,
+          "n64UsValueId": 216,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "name": "Dud Bolt",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 22,
+          "name": "Podd_Dud_Bolt",
+          "n64UsBlockIndex": 22,
+          "n64UsValueId": 22,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 21,
+          "name": "MAlt_Dud_Bolt",
+          "n64UsBlockIndex": 21,
+          "n64UsValueId": 21,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 98,
+          "name": "Pupp_Racer_Dud_Bolt",
+          "n64UsBlockIndex": 98,
+          "n64UsValueId": 98,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 265,
+          "name": "Part_Racer_Lod1_Dud_Bolt",
+          "n64UsBlockIndex": 260,
+          "n64UsValueId": 265,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 215,
+          "name": "Part_Racer_Lod2_Dud_Bolt",
+          "n64UsBlockIndex": 210,
+          "n64UsValueId": 215,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "name": "Gasgano",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 24,
+          "name": "Podd_Gasgano",
+          "n64UsBlockIndex": 24,
+          "n64UsValueId": 24,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 23,
+          "name": "MAlt_Gasgano",
+          "n64UsBlockIndex": 23,
+          "n64UsValueId": 23,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 88,
+          "name": "Pupp_Racer_Gasgano",
+          "n64UsBlockIndex": 88,
+          "n64UsValueId": 88,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 266,
+          "name": "Part_Racer_Lod1_Gasgano",
+          "n64UsBlockIndex": 261,
+          "n64UsValueId": 266,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 219,
+          "name": "Part_Racer_Lod2_Gasgano",
+          "n64UsBlockIndex": 214,
+          "n64UsValueId": 219,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "name": "Clegg Holdfast",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 26,
+          "name": "Podd_Clegg_Holdfast",
+          "n64UsBlockIndex": 26,
+          "n64UsValueId": 26,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 25,
+          "name": "MAlt_Clegg_Holdfast",
+          "n64UsBlockIndex": 25,
+          "n64UsValueId": 25,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 97,
+          "name": "Pupp_Racer_Clegg_Holdfast",
+          "n64UsBlockIndex": 97,
+          "n64UsValueId": 97,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 267,
+          "name": "Part_Racer_Lod1_Clegg_Holdfast",
+          "n64UsBlockIndex": 262,
+          "n64UsValueId": 267,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 214,
+          "name": "Part_Racer_Lod2_Clegg_Holdfast",
+          "n64UsBlockIndex": 209,
+          "n64UsValueId": 214,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "name": "Elan Mak",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 28,
+          "name": "Podd_Elan_Mak",
+          "n64UsBlockIndex": 28,
+          "n64UsValueId": 28,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 27,
+          "name": "MAlt_Elan_Mak",
+          "n64UsBlockIndex": 27,
+          "n64UsValueId": 27,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 100,
+          "name": "Pupp_Racer_Elan_Mak",
+          "n64UsBlockIndex": 100,
+          "n64UsValueId": 100,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 268,
+          "name": "Part_Racer_Lod1_Elan_Mak",
+          "n64UsBlockIndex": 263,
+          "n64UsValueId": 268,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 217,
+          "name": "Part_Racer_Lod2_Elan_Mak",
+          "n64UsBlockIndex": 212,
+          "n64UsValueId": 217,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "name": "Neva Kee",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 30,
+          "name": "Podd_Neva_Kee",
+          "n64UsBlockIndex": 30,
+          "n64UsValueId": 30,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 29,
+          "name": "MAlt_Neva_Kee",
+          "n64UsBlockIndex": 29,
+          "n64UsValueId": 29,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 103,
+          "name": "Pupp_Racer_Neva_Kee",
+          "n64UsBlockIndex": 103,
+          "n64UsValueId": 103,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 269,
+          "name": "Part_Racer_Lod1_Neva_Kee",
+          "n64UsBlockIndex": 264,
+          "n64UsValueId": 269,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 223,
+          "name": "Part_Racer_Lod2_Neva_Kee",
+          "n64UsBlockIndex": 218,
+          "n64UsValueId": 223,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "name": "Bozziee Baranta",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 32,
+          "name": "Podd_Bozzie_Baranta",
+          "n64UsBlockIndex": 32,
+          "n64UsValueId": 32,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 31,
+          "name": "MAlt_Bozzie_Baranta",
+          "n64UsBlockIndex": 31,
+          "n64UsValueId": 31,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 106,
+          "name": "Pupp_Racer_Bozzie_Baranta",
+          "n64UsBlockIndex": 106,
+          "n64UsValueId": 106,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 270,
+          "name": "Part_Racer_Lod1_Bozzie_Baranta",
+          "n64UsBlockIndex": 265,
+          "n64UsValueId": 270,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 211,
+          "name": "Part_Racer_Lod2_Bozzie_Baranta",
+          "n64UsBlockIndex": 206,
+          "n64UsValueId": 211,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "name": "Boles Roor",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 34,
+          "name": "Podd_Boles_Roor",
+          "n64UsBlockIndex": 34,
+          "n64UsValueId": 34,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 33,
+          "name": "MAlt_Boles_Roor",
+          "n64UsBlockIndex": 33,
+          "n64UsValueId": 33,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 107,
+          "name": "Pupp_Racer_Boles_Roor",
+          "n64UsBlockIndex": 107,
+          "n64UsValueId": 107,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 271,
+          "name": "Part_Racer_Lod1_Boles_Roor",
+          "n64UsBlockIndex": 266,
+          "n64UsValueId": 271,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 210,
+          "name": "Part_Racer_Lod2_Boles_Roor",
+          "n64UsBlockIndex": 205,
+          "n64UsValueId": 210,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "name": "Ody Mandrell",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 36,
+          "name": "Podd_Ody_Mandrell",
+          "n64UsBlockIndex": 36,
+          "n64UsValueId": 36,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 35,
+          "name": "MAlt_Ody_Mandrell",
+          "n64UsBlockIndex": 35,
+          "n64UsValueId": 35,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 90,
+          "name": "Pupp_Racer_Ody_Mandrell",
+          "n64UsBlockIndex": 90,
+          "n64UsValueId": 90,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 272,
+          "name": "Part_Racer_Lod1_Ody_Mandrell",
+          "n64UsBlockIndex": 267,
+          "n64UsValueId": 272,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 224,
+          "name": "Part_Racer_Lod2_Ody_Mandrell",
+          "n64UsBlockIndex": 219,
+          "n64UsValueId": 224,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "name": "Fud Sang",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 38,
+          "name": "Podd_Fud_Sang",
+          "n64UsBlockIndex": 38,
+          "n64UsValueId": 38,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 37,
+          "name": "MAlt_Fud_Sang",
+          "n64UsBlockIndex": 37,
+          "n64UsValueId": 37,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 102,
+          "name": "Pupp_Racer_Fud_Sang",
+          "n64UsBlockIndex": 102,
+          "n64UsValueId": 102,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 273,
+          "name": "Part_Racer_Lod1_Fud_Sang",
+          "n64UsBlockIndex": 268,
+          "n64UsValueId": 273,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 218,
+          "name": "Part_Racer_Lod2_Fud_Sang",
+          "n64UsBlockIndex": 213,
+          "n64UsValueId": 218,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "name": "Ben Quadinaros",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 40,
+          "name": "Podd_Ben_Quadinaros",
+          "n64UsBlockIndex": 40,
+          "n64UsValueId": 40,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 39,
+          "name": "MAlt_Ben_Quadinaros",
+          "n64UsBlockIndex": 39,
+          "n64UsValueId": 39,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 94,
+          "name": "Pupp_Racer_Ben_Quadinaros",
+          "n64UsBlockIndex": 94,
+          "n64UsValueId": 94,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 274,
+          "name": "Part_Racer_Lod1_Ben_Quadinaros",
+          "n64UsBlockIndex": 269,
+          "n64UsValueId": 274,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 209,
+          "name": "Part_Racer_Lod2_Ben_Quadinaros",
+          "n64UsBlockIndex": 204,
+          "n64UsValueId": 209,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "name": "Slide Paramita",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 42,
+          "name": "Podd_Slide_Paramita",
+          "n64UsBlockIndex": 42,
+          "n64UsValueId": 42,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 41,
+          "name": "MAlt_Slide_Paramita",
+          "n64UsBlockIndex": 41,
+          "n64UsValueId": 41,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 104,
+          "name": "Pupp_Racer_Slide_Paramita",
+          "n64UsBlockIndex": 104,
+          "n64UsValueId": 104,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 275,
+          "name": "Part_Racer_Lod1_Slide_Paramita",
+          "n64UsBlockIndex": 270,
+          "n64UsValueId": 275,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 226,
+          "name": "Part_Racer_Lod2_Slide_Paramita",
+          "n64UsBlockIndex": 221,
+          "n64UsValueId": 226,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "name": "Toy Dampner",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 44,
+          "name": "Podd_Toy_Dampner",
+          "n64UsBlockIndex": 44,
+          "n64UsValueId": 44,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 43,
+          "name": "MAlt_Toy_Dampner",
+          "n64UsBlockIndex": 43,
+          "n64UsValueId": 43,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 101,
+          "name": "Pupp_Racer_Toy_Dampner",
+          "n64UsBlockIndex": 101,
+          "n64UsValueId": 101,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 276,
+          "name": "Part_Racer_Lod1_Toy_Dampner",
+          "n64UsBlockIndex": 271,
+          "n64UsValueId": 276,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 228,
+          "name": "Part_Racer_Lod2_Toy_Dampner",
+          "n64UsBlockIndex": 223,
+          "n64UsValueId": 228,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "name": "Bullseye Navior",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 46,
+          "name": "Podd_Navior",
+          "n64UsBlockIndex": 46,
+          "n64UsValueId": 46,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 45,
+          "name": "MAlt_Navior",
+          "n64UsBlockIndex": 45,
+          "n64UsValueId": 45,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 108,
+          "name": "Pupp_Racer_Navior",
+          "n64UsBlockIndex": 108,
+          "n64UsValueId": 108,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 277,
+          "name": "Part_Racer_Lod1_Navior",
+          "n64UsBlockIndex": 272,
+          "n64UsValueId": 277,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": {
+          "catalogId": 212,
+          "name": "Part_Racer_Lod2_Navior",
+          "n64UsBlockIndex": 207,
+          "n64UsValueId": 212,
+          "resolution": "exact_name_match"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "name": "Jinn Reeso",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 299,
+          "name": "Podd_Jinn_Reeso",
+          "n64UsBlockIndex": 283,
+          "n64UsValueId": 1283,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 298,
+          "name": "MAlt_Jinn_Reeso",
+          "n64UsBlockIndex": 282,
+          "n64UsValueId": 1282,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 304,
+          "name": "Pupp_Racer_Jinn_Reeso",
+          "n64UsBlockIndex": 288,
+          "n64UsValueId": 1288,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 302,
+          "name": "Part_Racer_Lod1_Jinn_Reeso",
+          "n64UsBlockIndex": 286,
+          "n64UsValueId": 1286,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": null
+      }
+    },
+    {
+      "id": 25,
+      "name": "Cy Yunga",
+      "modelRefs": {
+        "Podd": {
+          "catalogId": 301,
+          "name": "Podd_Cy_Yunga",
+          "n64UsBlockIndex": 285,
+          "n64UsValueId": 1285,
+          "resolution": "exact_name_match"
+        },
+        "MAlt": {
+          "catalogId": 300,
+          "name": "MAlt_Cy_Yunga",
+          "n64UsBlockIndex": 284,
+          "n64UsValueId": 1284,
+          "resolution": "exact_name_match"
+        },
+        "Pupp": {
+          "catalogId": 305,
+          "name": "Pupp_Racer_Cy_Yunga",
+          "n64UsBlockIndex": 289,
+          "n64UsValueId": 1289,
+          "resolution": "exact_name_match"
+        },
+        "Lod1": {
+          "catalogId": 303,
+          "name": "Part_Racer_Lod1_Cy_Yunga",
+          "n64UsBlockIndex": 287,
+          "n64UsValueId": 1287,
+          "resolution": "exact_name_match"
+        },
+        "Lod2": null
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "id": 0,
+      "sourceName": "The Boonta Traning Course",
+      "displayName": "The Boonta Training Course",
+      "planetId": 0,
+      "planetName": "Tatooine",
+      "modelCatalogRef": 115,
+      "modelCatalogName": "Trak_Tatooine_BoontaTrainingCourse",
+      "n64UsExactNameMatch": {
+        "blockIndex": 115,
+        "valueId": 1115
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 1,
+      "sourceName": "The Boonta Classic",
+      "displayName": "The Boonta Classic",
+      "planetId": 0,
+      "planetName": "Tatooine",
+      "modelCatalogRef": 1,
+      "modelCatalogName": "Trak_Tatooine_BoontaClassic",
+      "n64UsExactNameMatch": {
+        "blockIndex": 1,
+        "valueId": 1001
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 2,
+      "sourceName": "Beedo's Wild Ride",
+      "displayName": "Beedo's Wild Ride",
+      "planetId": 1,
+      "planetName": "Ando Prime",
+      "modelCatalogRef": 130,
+      "modelCatalogName": "Trak_AndoPrime_BeedosWildRide",
+      "n64UsExactNameMatch": {
+        "blockIndex": 130,
+        "valueId": 130
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 3,
+      "sourceName": "Howler Gorge",
+      "displayName": "Howler Gorge",
+      "planetId": 1,
+      "planetName": "Ando Prime",
+      "modelCatalogRef": 131,
+      "modelCatalogName": "Trak_AndoPrime_HowlerGorge",
+      "n64UsExactNameMatch": {
+        "blockIndex": 131,
+        "valueId": 131
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 4,
+      "sourceName": "Andobi Mountain Run",
+      "displayName": "Andobi Mountain Run",
+      "planetId": 1,
+      "planetName": "Ando Prime",
+      "modelCatalogRef": 132,
+      "modelCatalogName": "Trak_AndoPrime_AndobiMountainRun",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 5,
+      "sourceName": "Andobi Prime Centrum",
+      "displayName": "Andobi Prime Centrum",
+      "planetId": 1,
+      "planetName": "Ando Prime",
+      "modelCatalogRef": 128,
+      "modelCatalogName": "Trak_AndoPrime_AndoPrimeCentrum",
+      "n64UsExactNameMatch": {
+        "blockIndex": 128,
+        "valueId": 1128
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 6,
+      "sourceName": "Aquilaris Classic",
+      "displayName": "Aquilaris Classic",
+      "planetId": 2,
+      "planetName": "Aquilaris",
+      "modelCatalogRef": 133,
+      "modelCatalogName": "Trak_Aquilaris_AquilarisClassic",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 7,
+      "sourceName": "Sunken City",
+      "displayName": "Sunken City",
+      "planetId": 2,
+      "planetName": "Aquilaris",
+      "modelCatalogRef": 134,
+      "modelCatalogName": "Trak_Aquilaris_SunkenCity",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 8,
+      "sourceName": "Bumpy's Breakers",
+      "displayName": "Bumpy's Breakers",
+      "planetId": 2,
+      "planetName": "Aquilaris",
+      "modelCatalogRef": 135,
+      "modelCatalogName": "Trak_Aquilaris_BumbysBreakers",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 9,
+      "sourceName": "Scrapper's Run",
+      "displayName": "Scrapper's Run",
+      "planetId": 3,
+      "planetName": "Ord Ibanna",
+      "modelCatalogRef": 136,
+      "modelCatalogName": "Trak_OrdIbanna_ScrappersRun",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 10,
+      "sourceName": "Dethro's Revenge",
+      "displayName": "Dethro's Revenge",
+      "planetId": 3,
+      "planetName": "Ord Ibanna",
+      "modelCatalogRef": 137,
+      "modelCatalogName": "Trak_OrdIbanna_DethrosRevenge",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 11,
+      "sourceName": "Abyss",
+      "displayName": "Abyss",
+      "planetId": 3,
+      "planetName": "Ord Ibanna",
+      "modelCatalogRef": 138,
+      "modelCatalogName": "Trak_OrdIbanna_Abyss",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 12,
+      "sourceName": "Baroo Coast",
+      "displayName": "Baroo Coast",
+      "planetId": 4,
+      "planetName": "Baroonda",
+      "modelCatalogRef": 139,
+      "modelCatalogName": "Trak_Baroonda_BarooCoast",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 13,
+      "sourceName": "Grabvine Gateway",
+      "displayName": "Grabvine Gateway",
+      "planetId": 4,
+      "planetName": "Baroonda",
+      "modelCatalogRef": 140,
+      "modelCatalogName": "Trak_Baroonda_GrabvineGateway",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 14,
+      "sourceName": "Fire Mountain Rally",
+      "displayName": "Fire Mountain Rally",
+      "planetId": 4,
+      "planetName": "Baroonda",
+      "modelCatalogRef": 141,
+      "modelCatalogName": "Trak_Baroonda_FireMountainRally",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 15,
+      "sourceName": "Inferno",
+      "displayName": "Inferno",
+      "planetId": 4,
+      "planetName": "Baroonda",
+      "modelCatalogRef": 129,
+      "modelCatalogName": "Trak_Baroonda_Inferno",
+      "n64UsExactNameMatch": {
+        "blockIndex": 129,
+        "valueId": 129
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 16,
+      "sourceName": "Mon Gazza Speedway",
+      "displayName": "Mon Gazza Speedway",
+      "planetId": 5,
+      "planetName": "Mon Gazza",
+      "modelCatalogRef": 142,
+      "modelCatalogName": "Trak_MonGazza_Speedway",
+      "n64UsExactNameMatch": {
+        "blockIndex": 142,
+        "valueId": 1142
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 17,
+      "sourceName": "Spice Mine Run",
+      "displayName": "Spice Mine Run",
+      "planetId": 5,
+      "planetName": "Mon Gazza",
+      "modelCatalogRef": 143,
+      "modelCatalogName": "Trak_MonGazza_SpiceMineRun",
+      "n64UsExactNameMatch": {
+        "blockIndex": 143,
+        "valueId": 143
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 18,
+      "sourceName": "Zugga Challenge",
+      "displayName": "Zugga Challenge",
+      "planetId": 5,
+      "planetName": "Mon Gazza",
+      "modelCatalogRef": 144,
+      "modelCatalogName": "Trak_MonGazza_ZuggaChallenge",
+      "n64UsExactNameMatch": {
+        "blockIndex": 144,
+        "valueId": 1144
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 19,
+      "sourceName": "Vengeance",
+      "displayName": "Vengeance",
+      "planetId": 6,
+      "planetName": "Oovo IV",
+      "modelCatalogRef": 145,
+      "modelCatalogName": "Trak_OovoIv_Vengeance",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 20,
+      "sourceName": "Executioner",
+      "displayName": "Executioner",
+      "planetId": 6,
+      "planetName": "Oovo IV",
+      "modelCatalogRef": 148,
+      "modelCatalogName": "Trak_OovoIv_Executioner",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 21,
+      "sourceName": "The Gauntlet",
+      "displayName": "The Gauntlet",
+      "planetId": 6,
+      "planetName": "Oovo IV",
+      "modelCatalogRef": 231,
+      "modelCatalogName": "Trak_OovoIv_TheGauntlet",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 22,
+      "sourceName": "Malastare 100",
+      "displayName": "Malastare 100",
+      "planetId": 7,
+      "planetName": "Malastare",
+      "modelCatalogRef": 232,
+      "modelCatalogName": "Trak_Malastare_Malastare100",
+      "n64UsExactNameMatch": null,
+      "n64UsResolution": "unresolved_alias_or_mapping"
+    },
+    {
+      "id": 23,
+      "sourceName": "Dug Derby",
+      "displayName": "Dug Derby",
+      "planetId": 7,
+      "planetName": "Malastare",
+      "modelCatalogRef": 233,
+      "modelCatalogName": "Trak_Malastare_DugDerby",
+      "n64UsExactNameMatch": {
+        "blockIndex": 228,
+        "valueId": 1228
+      },
+      "n64UsResolution": "exact_name_match"
+    },
+    {
+      "id": 24,
+      "sourceName": "Sebulba's Legacy",
+      "displayName": "Sebulba's Legacy",
+      "planetId": 7,
+      "planetName": "Malastare",
+      "modelCatalogRef": 315,
+      "modelCatalogName": "Trak_Malastare_SebulbasLegacy",
+      "n64UsExactNameMatch": {
+        "blockIndex": 299,
+        "valueId": 1299
+      },
+      "n64UsResolution": "exact_name_match"
+    }
+  ],
+  "mappingRules": [
+    "Racer fields Podd, MAlt, Pupp, Lod1 and Lod2 are logical ModelBlockItem catalogue references, not physical N64 block indices.",
+    "Racer model physical indices were resolved by joining each canonical ModelBlockItem name to exactly one item in the N64 USA model block map. All non-null racer model references have a unique exact-name match in this snapshot.",
+    "Track.Model is a logical model catalogue reference. This pass resolves a physical N64 index only when the N64 block's item-value name exactly matches the canonical catalogue name; unresolved aliases are retained as unresolved, not treated as missing tracks.",
+    "BlockItem.Index is the physical item index within the selected block; BlockItem.ValueId is a metadata value ID. Neither is interchangeable with a ModelBlockItem logical reference.",
+    "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation."
+  ],
+  "audit": {
+    "n64ModelPhysicalEntries": 307,
+    "racerModelReferenceSlots": 123,
+    "racerModelReferencesResolved": 123,
+    "distinctN64RacerModelIndices": 123,
+    "tracksExactNameResolved": 11,
+    "tracksAliasUnresolved": 14
+  }
+}
