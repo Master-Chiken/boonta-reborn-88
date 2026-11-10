@@ -674,6 +674,19 @@ A metadata-only pass over the pinned `swe1r-assets` catalogue gives a concrete c
 
 The important technical distinction is that `ModelBlockItem.Id` and `Track.Model` are logical catalogue references, `BlockItem.ValueId` is a value ID attached to a block entry, and `BlockItem.Index` is the physical position in that selected block. They must not be mixed. The new [human-readable content inventory](N64_US_CONTENT_CATALOG_2026-11-10.md) and [machine-readable JSON catalogue](data/n64-us-content-catalog.json) preserve the references without any geometry, textures, hashes, ROM bytes or extracted assets.
 
+## 2026-11-10 — N64 regional model/sprite comparison
+
+The pinned `Release.csv`, `Block.csv` and `BlockItem.csv` metadata were compared by physical block index:
+
+- USA uses model block 2 (`n64_us`), 307 entries; Europe and Japan share model block 1 (`n64_eu-jp`), also 307 entries.
+- The mapped model names are identical at all **307/307 physical indices** between USA and the shared Europe/Japan block. The 123 non-null racer model references also resolve by exact model name in all three selected N64 model blocks.
+- USA selects sprite block 2 (`n64_us`, 173 entries); Europe selects sprite block 0 (`_default`, 179 entries); Japan selects sprite block 1 (`n64_jp`, 182 entries). USA has 8 physical-index sprite-name differences against Europe/default and 11 against Japan.
+- All three N64 release rows select the same spline block ID 1 and texture block ID 1.
+
+**Implication:** treat N64 model/spline/texture mapping as a shared regional baseline in this metadata snapshot, but keep sprite selection and indices region-specific. This is metadata comparison, not a binary-level/runtime equivalence test; no sprite or texture payload is copied.
+
+See the [full metadata-only content catalogue](N64_US_CONTENT_CATALOG_2026-11-10.md) and its [regional comparison data](data/n64-us-content-catalog.json).
+
 ## 2026-11-10 — N64 texture-block reuse path
 
 A pinned source audit found that `swe1r-assets@922ef535f6598a1330ff93d6b07258956f990b34` already has N64 release selectors for a dedicated big-endian texture block (ID 1, 1,648 entries) and a model-material-to-texture PNG exporter. The upstream `SWE1R.Assets.Blocks.Original` project also embeds a full N64 texture-block reference resource at `Resources/out_textureblock.bin/n64.bin` (2,741,112 bytes; SHA-1 `9130090c3ceafff6ed05609045909f54f666e54f`) and a full N64 USA model-block reference resource at `Resources/out_modelblock.bin/n64_us.bin` (12,406,512 bytes). These are game-derived resource fixtures, not covered by the parser library's MIT code licence; do not copy them into Boonta or CI.
