@@ -108,6 +108,35 @@ The N64 USA model block contains named groups beyond the headline pilot and trac
 
 Several upgrade records have only generic labels such as `Part_Upgrade_55`; their function remains unknown until the model/material graph or a runtime observation establishes it.
 
+### Non-racer Pupp models — 13 entries
+
+The N64 model block includes 38 `Pupp_*` records in total. **25** are the 25 pilots' pod-racer driver models; the other **13** are supporting characters, creatures, droids and a prop:
+
+| Category | Entries |
+|---|---:|
+| Droids | 3 |
+| Creatures | 3 |
+| Characters / NPCs | 6 |
+| Environment props | 1 |
+
+| N64 physical index | Model metadata name | Category |
+|---:|---|---|
+| 109 | Pupp_Pit_Droid | droid-model |
+| 110 | Pupp_Watto | character-model |
+| 111 | Pupp_Dewback | creature-model |
+| 112 | Pupp_Ronto | creature-model |
+| 113 | Pupp_Jabba | character-model |
+| 151 | Pupp_OpeeSeaKiller | creature-model |
+| 170 | Pupp_Cantina_Holo_Machine | environment-prop-model |
+| 239 | Pupp_Cantina_Hammerhead | character-model |
+| 240 | Pupp_Droid_C3PO | droid-model |
+| 241 | Pupp_JarJar | character-model |
+| 242 | Pupp_Java | character-model |
+| 243 | Pupp_Droid_R2D2 | droid-model |
+| 303 | Pupp_QuiGon_Jinn | character-model |
+
+These are metadata-name categories only; they do not prove the character's in-game appearance, animation state or where the object is used.
+
 ### One auxiliary track-ground part per circuit
 
 All **25/25** `Part_TrackGround_*` records name-match one row in the 25-track catalogue:
