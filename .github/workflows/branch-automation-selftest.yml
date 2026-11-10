@@ -84,6 +84,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
 
+      - name: Revalidate queued autonomous tasks with mocked GitHub data (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_fresh_task_guard.py
+
       - name: Validate schema-v2 autonomous context builder with offline fixtures
         shell: bash
         run: python3 tools/test_autonomous_context.py
