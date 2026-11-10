@@ -157,6 +157,21 @@ A separate comparison of `Release.csv`, `Block.csv` and `BlockItem.csv` at the s
 
 These differences suggest a practical content-pipeline split: shared N64 model/spline/texture metadata, but separately resolved regional sprite catalogues. No sprite payload or image is included.
 
+### Group-level candidates for the 14 unresolved tracks
+
+The 14 unresolved `Track.Model` rows can be narrowed to six candidate groups by planet label in the N64 model block:
+
+| Planet | Unresolved track IDs | Candidate physical indices | Confidence |
+|---|---|---|---|
+| Ando Prime | 4 | 132 | HYPOTHESIS |
+| Aquilaris | 6, 7, 8 | 133, 134, 135 | HYPOTHESIS |
+| Ord Ibanna | 9, 10, 11 | 136, 137, 138 | HYPOTHESIS |
+| Baroonda | 12, 13, 14 | 139, 140, 141 | HYPOTHESIS |
+| Oovo IV | 19, 20, 21 | 145, 148, 226 | HYPOTHESIS; all three aliases are marked UNITYNULLREF |
+| Malastare | 22 | 227 | HYPOTHESIS |
+
+The candidate counts and planet labels line up, but they do not establish individual track-to-index identity. In particular, do not map same-planet tracks by order alone. The full alias names and per-track group membership are included in the JSON as `trackAliasCandidateGroups`.
+
 ## Critical mapping rule
 
 Three different identifiers occur in the source metadata:
