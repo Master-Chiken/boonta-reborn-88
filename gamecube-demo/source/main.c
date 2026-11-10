@@ -75,6 +75,7 @@ static float g_vehicle_anchor_progress;
 static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
+static BoontaCameraState g_camera_state;
 static BoontaRouteGraphSampler g_route_sampler;
 static BoontaRouteCursor g_route_cursor;
 static int g_route_cursor_ready;
@@ -1188,7 +1189,7 @@ static void initialise_video_and_gx(void)
     GX_CopyDisp(g_framebuffers[0], GX_TRUE);
 }
 
-static void draw_frame(void)
+static void draw_frame(float frame_delta_seconds)
 {
     Point3 camera_point;
     Point3 target_point;
@@ -1199,6 +1200,22 @@ static void draw_frame(void)
                          3.20f - 0.20f * g_pitch_down, &camera_point);
     track_world_point_at(g_distance + 8.0f, g_player_lateral,
                          -0.05f - 0.45f * g_pitch_down, &target_point);
+    {
+        const BoontaCameraVector desired_position = {
+            camera_point.x, camera_point.y, camera_point.z
+        };
+        const BoontaCameraVector desired_target = {
+            target_point.x, target_point.y, target_point.z
+        };
+        boonta_camera_state_update(&g_camera_state, desired_position,
+                                   desired_target, frame_delta_seconds, 10.0f);
+        camera_point.x = g_camera_state.position.x;
+        camera_point.y = g_camera_state.position.y;
+        camera_point.z = g_camera_state.position.z;
+        target_point.x = g_camera_state.target.x;
+        target_point.y = g_camera_state.target.y;
+        target_point.z = g_camera_state.target.z;
+    }
     guVector camera = { camera_point.x, camera_point.y, camera_point.z };
     guVector up = { 0.0f, 1.0f, 0.0f };
     guVector target = { target_point.x, target_point.y, target_point.z };
@@ -1279,6 +1296,7 @@ int main(int argc, char **argv)
     (void)argv;
     initialise_video_and_gx();
     boonta_race_state_reset(&g_race_state);
+    boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
     previous_tick = gettime();
 
@@ -1308,9 +1326,10 @@ int main(int argc, char **argv)
                                      (buttons_down & BOONTA_BUTTON_START) != 0U,
                                      (buttons_down & BOONTA_BUTTON_Y) != 0U)) {
             boonta_race_state_reset(&g_race_state);
+            boonta_camera_state_reset(&g_camera_state);
             (void)reset_runtime_route_cursor();
             /* Render the clean start state before any input advances the race. */
-            draw_frame();
+            draw_frame(frame_delta_seconds);
             continue;
         }
         if (!g_race_finished && (buttons_down & BOONTA_BUTTON_START) != 0U) {
@@ -1320,7 +1339,7 @@ int main(int argc, char **argv)
         if (g_paused || g_race_finished) {
             g_boost_active = 0;
             g_slide_active = 0;
-            draw_frame();
+            draw_frame(frame_delta_seconds);
             continue;
         }
 
@@ -1478,7 +1497,7 @@ int main(int argc, char **argv)
             }
         }
 
-        draw_frame();
+        draw_frame(frame_delta_seconds);
     }
     return 0;
 }

@@ -60,7 +60,7 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertIn("GX_CLAMP, GX_CLAMP, GX_FALSE", SOURCE)
 
     def test_player_source_mesh_replaces_side_debug_meshes(self) -> None:
-        frame = SOURCE.split("static void draw_frame(void)", 1)[1].split(
+        frame = SOURCE.split("static void draw_frame(", 1)[1].split(
             "int main(", 1
         )[0]
         self.assertIn('#include "generated_mesh_player_pod.h"', SOURCE)
@@ -73,6 +73,13 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertNotIn("draw_synthetic_mesh(", frame)
         self.assertNotIn("boonta_generated_mesh_original_synthetic_triangle_view", frame)
         self.assertNotIn("boonta_generated_mesh_original_synthetic_diamond_view", frame)
+
+    def test_chase_camera_uses_frame_time_and_resets_with_race(self) -> None:
+        self.assertIn("static void draw_frame(float frame_delta_seconds)", SOURCE)
+        self.assertIn("boonta_camera_state_update(&g_camera_state", SOURCE)
+        self.assertIn("desired_target, frame_delta_seconds, 10.0f", SOURCE)
+        self.assertIn("boonta_camera_state_reset(&g_camera_state);", SOURCE)
+        self.assertIn("draw_frame(frame_delta_seconds);", SOURCE)
 
     def test_canyon_uses_contiguous_varied_ridge_profile_and_rock_fins(self) -> None:
         profile = SOURCE.split("static float canyon_ridge_height_for_phase", 1)[1].split(
