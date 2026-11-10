@@ -63,6 +63,8 @@ ALLOWED_TEST_IDS = {
     "automation.task_ledger",
 }
 MAX_DIFF_BYTES = 32 * 1024
+MAX_PROPOSAL_BYTES = 96 * 1024
+MAX_ALLOWLIST_REPORT_BYTES = 16 * 1024
 MAX_FILES = 5
 MAX_HUNKS = 100
 PROTECTED_EXACT = {
@@ -107,10 +109,18 @@ def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
 
 
 def load_proposal(path: Path) -> dict[str, Any]:
+    if path.is_symlink():
+        raise ProposalError("Proposal file must not be a symlink")
     try:
+        if path.stat().st_size > MAX_PROPOSAL_BYTES:
+            raise ProposalError("Proposal JSON exceeds the 96 KiB input limit")
         raw = path.read_text(encoding="utf-8")
+    except ProposalError:
+        raise
     except OSError as exc:
         raise ProposalError("Proposal file cannot be read") from exc
+    if len(raw.encode("utf-8")) > MAX_PROPOSAL_BYTES:
+        raise ProposalError("Proposal JSON exceeds the 96 KiB input limit")
     try:
         value = json.loads(raw, object_pairs_hook=_unique_object)
     except (json.JSONDecodeError, UnicodeError) as exc:
@@ -297,12 +307,16 @@ def load_allowlist_report(
     if path.is_symlink():
         raise ProposalError("Allowlist report must not be a symlink")
     try:
+        if path.stat().st_size > MAX_ALLOWLIST_REPORT_BYTES:
+            raise ProposalError("Allowlist report exceeds the 16 KiB input limit")
         raw = path.read_text(encoding="utf-8")
         report = json.loads(raw, object_pairs_hook=_unique_object)
     except ProposalError:
         raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ProposalError("Allowlist report is not readable valid UTF-8 JSON") from exc
+    if len(raw.encode("utf-8")) > MAX_ALLOWLIST_REPORT_BYTES:
+        raise ProposalError("Allowlist report exceeds the 16 KiB input limit")
     if not isinstance(report, dict):
         raise ProposalError("Allowlist report must be a JSON object")
     if report.get("status") != "READY":
