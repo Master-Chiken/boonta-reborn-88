@@ -86,6 +86,12 @@ jobs:
             const taskMarkerComment = botComments.find((comment) => taskMarker.test(comment.body || ''));
             const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';
             const taskBlockedActive = taskBlockedDate === todayUtc;
+            // A same-day task backoff suppresses scheduled retries, but the repository owner
+            // may explicitly re-evaluate the task via workflow_dispatch or a main-branch push.
+            // Provider failure cooldowns remain independent and continue to gate each provider.
+            const ownerReevaluationAllowed = context.actor === context.repo.owner &&
+              (context.eventName === 'workflow_dispatch' || context.eventName === 'push');
+            const taskBackoffAllowsSelection = !taskBlockedActive || ownerReevaluationAllowed;
 
             // An open PR carrying this task's exact identity marker is an in-flight
             // writer. Reconcile it before allowing another provider invocation.
@@ -160,18 +166,20 @@ jobs:
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
               !activationTask.head_sha &&
-              !taskBlockedActive &&
+              taskBackoffAllowsSelection &&
               !activationTaskOpenPr
             ) {
               selectedTask = activationTask;
-              taskReason = 'the single blocked activation task is eligible; no task-level daily backoff or open task PR is active';
+              taskReason = taskBlockedActive
+                ? 'owner-authorized re-evaluation of the blocked activation task despite its same-day task backoff'
+                : 'the single blocked activation task is eligible; no task-level daily backoff or open task PR is active';
             } else if (
               activeTasks.length === 0 &&
               usableTask(activationTask) &&
               activationTask.status === 'blocked' &&
               !activationTask.pr_url &&
               !activationTask.head_sha &&
-              !taskBlockedActive &&
+              taskBackoffAllowsSelection &&
               activationTaskOpenPr
             ) {
               taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
@@ -181,6 +189,16 @@ jobs:
               taskReason = 'the sole active task is incomplete; repair its ledger fields before another model invocation';
             } else if (activeTasks.length === 1) {
               taskReason = 'the active task already has a PR/head; reconcile it before another model invocation';
+            } else if (
+              activeTasks.length === 0 &&
+              usableTask(activationTask) &&
+              activationTask.status === 'blocked' &&
+              !activationTask.pr_url &&
+              !activationTask.head_sha &&
+              taskBlockedActive &&
+              !ownerReevaluationAllowed
+            ) {
+              taskReason = 'the activation task is paused by its same-day UTC backoff; a qualifying owner manual dispatch or main push is required';
             } else {
               taskReason = 'no eligible active task or approved post-cooldown activation task exists';
             }
