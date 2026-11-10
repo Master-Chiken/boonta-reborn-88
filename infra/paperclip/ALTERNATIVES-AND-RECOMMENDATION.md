@@ -128,3 +128,15 @@ Until a real cross-runtime lease protocol is implemented and tested:
 - GitHub guidance on self-hosted-runner security: https://docs.github.com/en/actions/reference/security/secure-use
 - Temporal retry policies: https://docs.temporal.io/encyclopedia/retry-policies
 - Restate durable execution: https://github.com/restatedev/restate
+
+
+### Local inference alternative: llama.cpp server
+
+[llama.cpp](https://github.com/ggml-org/llama.cpp) is worth one controlled comparison with Ollama because its server exposes OpenAI-compatible endpoints, schema-constrained JSON responses and function/tool calling. OpenCode can discover local Ollama/LM Studio/vLLM models and can be configured for other OpenAI-compatible servers.
+
+This is a **candidate for a local Mac experiment only**, not a new GitHub Actions dependency. It may improve strict output formatting for a suitable model, but neither the server nor constrained JSON makes a weak coding model reliable. Tool calling depends on the model/chat template and must pass the same synthetic contract test used for hosted providers. Do not download a model until the Mac's RAM, free disk and available acceleration have been checked.
+
+Official references:
+- llama.cpp HTTP server: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
+- OpenCode local model support: https://opencode.ai/docs/models/
+- Ollama tool calling: https://github.com/ollama/ollama/blob/main/docs/capabilities/tool-calling.mdx
