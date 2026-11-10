@@ -95,7 +95,7 @@ class ProposalValidationTests(PatchFixture):
         self.assertEqual(report["status"], "APPLIED")
         self.assertEqual(self.target.read_text(encoding="utf-8"), "int main(void) {\n    return 7;\n}\n")
         self.assertEqual(git(self.root, "rev-parse", "HEAD"), self.base_sha)
-        self.assertIn(" M gamecube-demo/source/main.c", git(self.root, "status", "--porcelain"))
+        self.assertIn("M gamecube-demo/source/main.c", git(self.root, "status", "--porcelain"))
 
     def test_wrong_task_id_is_rejected(self):
         with self.assertRaisesRegex(ProposalError, "task_id"):
@@ -187,7 +187,7 @@ class ProposalValidationTests(PatchFixture):
         self.assertEqual(self.target.read_text(encoding="utf-8"), "int main(void) {\n    return 0;\n}\n")
 
     def test_invalid_patch_never_changes_worktree(self):
-        proposal = dict(self.proposal, unified_diff=self.diff.replace("return 7", "return 9"))
+        proposal = dict(self.proposal, unified_diff=self.diff.replace("-    return 0;", "-    return 9;"))
         with self.assertRaises(ProposalError):
             self.check(proposal, apply=True)
         self.assertEqual(self.target.read_text(encoding="utf-8"), "int main(void) {\n    return 0;\n}\n")
