@@ -216,6 +216,42 @@ if r"/^@gemini-cli\s+\/approve(?:\s|$)/" not in dispatch:
     errors.append("The /approve command matcher must use a whitespace-aware, anchored expression")
 if "approval-denied:" not in dispatch or "The /approve command is restricted to the repository owner" not in dispatch:
     errors.append("Unauthorized approval attempts must be explicitly rejected")
+
+# Reusable workflows cannot elevate GITHUB_TOKEN permissions above the caller.
+# The write-capable Gemini workflow also reads check results, so both the
+# caller's top-level ceiling and the specific call job must grant that union.
+top_permissions_text = dispatch.split("permissions:\n", 1)[1].split("\njobs:\n", 1)[0] if "permissions:\n" in dispatch else ""
+top_permissions = dict(re.findall(r"(?m)^  ([a-z-]+):\s*(read|write|none)\s*$", top_permissions_text))
+expected_dispatch_ceiling = {
+    "contents": "write",
+    "checks": "read",
+    "issues": "write",
+    "pull-requests": "write",
+}
+if top_permissions != expected_dispatch_ceiling:
+    errors.append(
+        "Gemini dispatch caller must grant the reusable workflows' exact permission ceiling "
+        f"{expected_dispatch_ceiling!r}; found {top_permissions!r}"
+    )
+
+if "  plan-execute:\n" not in dispatch:
+    errors.append("Gemini dispatch is missing the owner-gated reusable plan-execute call")
+else:
+    plan_execute_caller = dispatch.split("  plan-execute:\n", 1)[1]
+    caller_permission_text = (
+        plan_execute_caller.split("    permissions:\n", 1)[1].split("    with:\n", 1)[0]
+        if "    permissions:\n" in plan_execute_caller and "    with:\n" in plan_execute_caller
+        else ""
+    )
+    caller_permissions = dict(re.findall(r"(?m)^      ([a-z-]+):\s*(read|write|none)\s*$", caller_permission_text))
+    if caller_permissions != expected_dispatch_ceiling:
+        errors.append(
+            "Owner-approved Gemini plan-execute call must grant the reusable workflow's exact permission set "
+            f"{expected_dispatch_ceiling!r}; found {caller_permissions!r}"
+        )
+
+if "  plan-execute:\n    needs: dispatch\n    if: needs.dispatch.outputs.command == 'approve' && vars.GEMINI_WRITE_ENABLED == 'true'" not in dispatch:
+    errors.append("Gemini reusable write workflow must remain restricted to owner /approve plus exact-true GEMINI_WRITE_ENABLED")
 if "GEMINI_WRITE_ENABLED" not in setup or "protect" not in setup.lower():
     errors.append("Setup documentation must require branch protection before enabling writes")
 
