@@ -140,6 +140,7 @@ cases = [
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
         "expected_blocked": False,
+        "expected_queue_state": "READY",
     },
     {
         "name": "open PR with exact task marker blocks duplicate activation",
@@ -249,6 +250,7 @@ cases = [
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-TEST-ACTIVE",
         "expected_blocked": False,
+        "expected_queue_state": "READY",
     },
     {
         "name": "multiple active tasks fail closed",
@@ -257,6 +259,7 @@ cases = [
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
     },
     {
         "name": "incomplete active task fails closed with precise reason",
@@ -303,6 +306,7 @@ cases = [
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
         "reason_contains": "PR/head",
     },
     {
