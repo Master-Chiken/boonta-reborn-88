@@ -230,7 +230,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.base_sha = git(self.root, "rev-parse", "HEAD")
         self.write_allowlist(base_sha=self.base_sha)
         self.write_verified(base_sha=self.base_sha)
-        with self.assertRaisesRegex(DeliveryPlanError, "exactly one canonical active task"):
+        with self.assertRaisesRegex(DeliveryPlanError, "not READY.*NO_ACTIVE_TASK"):
             self.plan()
 
     def test_invalid_target_branch_is_rejected(self):
