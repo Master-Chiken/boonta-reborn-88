@@ -723,6 +723,16 @@ for label, workflow, report_title in (
     ):
         if required not in report_block:
             errors.append(f"{label} report validator handoff is missing {required!r}")
+gemini_report_start = gemini.find("name: Validate autonomous cycle report contract")
+gemini_report_end = gemini.find("name: Sync the single-task daily backoff marker", gemini_report_start)
+gemini_report_block = gemini[gemini_report_start:gemini_report_end] if gemini_report_start >= 0 and gemini_report_end > gemini_report_start else ""
+for required in (
+    "findBlockedReportContradictions",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
+):
+    if required not in gemini_report_block:
+        errors.append(f"Gemini report consistency guard is missing {required!r}")
+
 # Free-tier provider reports must not contradict a GitHub App token that
 # was successfully minted earlier in the same cycle. OpenRouter also checks
 # its authenticated provider-key preflight through the shared helper.
