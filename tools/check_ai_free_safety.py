@@ -1504,9 +1504,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1344 or groq_limits.get("output") != 96:
+        if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1344 context / 96 output tokens so five steps stay below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1152 context / 384 output tokens so four direct-delivery steps stay below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1515,10 +1515,10 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,344/96 limits; max 5 steps (7,200 nominal tokens).",
+    "1,152/384 limits; max 4 steps (6,144 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
-    "Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request.",
+    "Only MCP tools: create_branch, push_files, create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
@@ -1531,7 +1531,7 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or pro
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.",
+    "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
