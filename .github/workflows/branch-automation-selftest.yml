@@ -118,7 +118,7 @@ jobs:
           intake_header = intake.split("permissions:", 1)[0]
           openrouter = Path(".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
           openrouter_validator = openrouter.split("      - name: Validate OpenRouter autonomous cycle report", 1)[1].split("      - name: Sync the single-task daily backoff marker", 1)[0]
-          openrouter_validator_require = openrouter_validator.find("const { findBlockedReportContradictions, validateAutonomousCycleReport } = require(")
+          openrouter_validator_require = re.search(r"const\\s+\\{\\s*findBlockedReportContradictions,\\s*validateAutonomousCycleReport\\s*\\}\\s*=\\s*require\\(", openrouter_validator)
           openrouter_validator_call = openrouter_validator.find("findBlockedReportContradictions(blockedText")
           autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
           readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
@@ -140,7 +140,7 @@ jobs:
               "Groq fallback exposes a minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in groq,
               "Groq prompt uses OpenCode-prefixed direct GitHub tools": "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request." in groq and "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" in groq,
               "OpenRouter exposes the minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in openrouter,
-              "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require >= 0 and openrouter_validator_call >= 0 and openrouter_validator_require < openrouter_validator_call,
+              "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require is not None and openrouter_validator_call >= 0 and openrouter_validator_require.start() < openrouter_validator_call,
               "OpenRouter prompt uses OpenCode-prefixed direct GitHub tools": "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request." in openrouter,
               "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
