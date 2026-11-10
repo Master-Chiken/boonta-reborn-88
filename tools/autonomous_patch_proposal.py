@@ -282,6 +282,47 @@ def validate_checkout(root: Path, expected_base_sha: str) -> None:
 
 
 
+def load_allowlist_report(
+    path: Path,
+    *,
+    expected_task_id: str,
+    expected_base_sha: str,
+) -> set[str]:
+    """Load a trusted report from the repository-owned path-policy generator."""
+    if path.is_symlink():
+        raise ProposalError("Allowlist report must not be a symlink")
+    try:
+        raw = path.read_text(encoding="utf-8")
+        report = json.loads(raw, object_pairs_hook=_unique_object)
+    except ProposalError:
+        raise
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ProposalError("Allowlist report is not readable valid UTF-8 JSON") from exc
+    required = {"status", "task_id", "base_sha", "approval_ref", "purpose", "allowed_paths"}
+    if not isinstance(report, dict) or set(report) != required:
+        raise ProposalError("Allowlist report must contain exactly the six generated fields")
+    if report.get("status") != "READY":
+        raise ProposalError("Allowlist report is not READY; no write paths are authorized")
+    if report.get("task_id") != expected_task_id:
+        raise ProposalError("Allowlist report task ID does not match the trusted preflight task")
+    if report.get("base_sha") != expected_base_sha:
+        raise ProposalError("Allowlist report base SHA does not match the trusted checkout")
+    if (
+        not isinstance(report.get("approval_ref"), str)
+        or not report["approval_ref"].startswith("https://github.com/Master-Chiken/boonta-reborn-88/")
+    ):
+        raise ProposalError("Allowlist report lacks owner-review evidence")
+    if not isinstance(report.get("purpose"), str) or not report["purpose"].strip():
+        raise ProposalError("Allowlist report purpose is missing")
+    paths = report.get("allowed_paths")
+    if not isinstance(paths, list) or not 1 <= len(paths) <= 20:
+        raise ProposalError("Allowlist report must contain one to twenty exact file paths")
+    checked = [_safe_path(item) for item in paths]
+    if len(set(checked)) != len(checked):
+        raise ProposalError("Allowlist report contains duplicate paths")
+    return set(checked)
+
+
 def validate_tracked_targets(root: Path, paths: tuple[str, ...]) -> None:
     """Reject new files, symlinks, submodules and non-regular tracked targets."""
     for path in paths:
@@ -346,7 +387,7 @@ def main() -> int:
     parser.add_argument("--proposal", type=Path)
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
-    parser.add_argument("--allowed-path", action="append", default=[])
+    parser.add_argument("--allowlist-report", type=Path)
     parser.add_argument("--apply", action="store_true", help="apply only after all validation checks pass")
     parser.add_argument("--print-schema", action="store_true", help="print the strict proposal JSON Schema")
     args = parser.parse_args()
@@ -354,16 +395,21 @@ def main() -> int:
     if args.print_schema:
         print(json.dumps(SCHEMA, indent=2, sort_keys=True))
         return 0
-    if not all((args.repo_root, args.proposal, args.expected_task_id, args.expected_base_sha)):
-        parser.error("--repo-root, --proposal, --expected-task-id and --expected-base-sha are required")
+    if not all((args.repo_root, args.proposal, args.expected_task_id, args.expected_base_sha, args.allowlist_report)):
+        parser.error("--repo-root, --proposal, --expected-task-id, --expected-base-sha and --allowlist-report are required")
     try:
+        allowed_paths = load_allowlist_report(
+            args.allowlist_report,
+            expected_task_id=args.expected_task_id,
+            expected_base_sha=args.expected_base_sha,
+        )
         proposal = load_proposal(args.proposal)
         report = validate_or_apply(
             args.repo_root,
             proposal,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
-            allowed_paths=set(args.allowed_path),
+            allowed_paths=allowed_paths,
             apply=args.apply,
         )
     except ProposalError as exc:
