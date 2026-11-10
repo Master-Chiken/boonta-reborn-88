@@ -441,7 +441,7 @@ jobs:
           script: |
             const fs = require('fs');
             const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
-            const lines = summary.split(/\\r?\\n/);
+            const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {
               const blocker = lines.filter((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')).join(' ');
