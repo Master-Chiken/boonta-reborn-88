@@ -53,7 +53,7 @@ For a self-hosted instance, Paperclip's managed GitHub App path is generally ava
 
 Start with Metadata read, Contents read/write (for branch commits), Issues read/write, Pull requests read/write, and Checks read. Do not grant Actions write, workflow editing, administration, secrets or repository-wide access. Restrict the connection to the Boonta agent(s).
 
-Important: Paperclip documents that shell `git` and `gh` operations use the connected GitHub identity and are not bounded by the connector action switches. The real security boundary is the token's repository scope plus GitHub branch protection. Keep `main` protected, require PRs, independent human review and required CI checks, and do not permit agent merges.
+Important: Paperclip's current connector docs distinguish the two credential paths: the managed GitHub App connection (available only when the instance is enrolled with Paperclip Cloud) can provide a durable identity for shell `git` and `gh`; the fine-grained PAT path is auditable but does not provide that durable shell identity. Where shell GitHub operations are available, connector action switches do not limit them. Do not assume an action toggle is a security boundary. Enforce repository scope on the credential, keep `main` protected, require PRs, independent human review and required CI checks, and do not permit agent merges.
 
 ## 4. Add a Free-tier provider
 
