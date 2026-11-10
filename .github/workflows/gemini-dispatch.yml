@@ -8,8 +8,10 @@ on:
   pull_request_review:
     types: [submitted]
 
+# Maximum permission envelope for reusable calls; every job below narrows it.
 permissions:
-  contents: read
+  contents: write
+  checks: read
   issues: write
   pull-requests: write
 
@@ -131,6 +133,7 @@ jobs:
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
+      checks: read
       issues: write
       pull-requests: write
     with:
