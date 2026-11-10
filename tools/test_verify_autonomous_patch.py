@@ -79,6 +79,7 @@ class PipelineFixture(unittest.TestCase):
             "Path('src/main.c').write_text('int boonta(void) { return 99; }\\n', encoding='utf-8')\n",
             encoding="utf-8",
         )
+        (tools / "test_pass.py").write_text("print('pass')\n", encoding="utf-8")
         git(self.root, "add", SOURCE_PATH, "tools")
         git(self.root, "commit", "-qm", "pipeline fixture base")
         self.base_sha = git(self.root, "rev-parse", "HEAD")
@@ -182,6 +183,8 @@ class IsolatedPatchPipelineTests(PipelineFixture):
 
     def test_test_mutating_a_validated_file_is_rejected(self):
         run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[0]] = ("tools/test_mutate.py",)
+        run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[1]] = ("tools/test_pass.py",)
+        run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[2]] = ("tools/test_pass.py",)
         with self.assertRaisesRegex(PipelineError, "modified a validated patch file"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
