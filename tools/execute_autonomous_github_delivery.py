@@ -11,8 +11,6 @@ import argparse
 import json
 import os
 import re
-import sys
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -199,8 +197,9 @@ def execute_delivery(
     token: str,
     request=_api_request,
 ) -> dict[str, Any]:
-    if not token or len(token) < 20:
-        raise DeliveryExecutionError("A valid GitHub token is required")
+    approved_token = require_execution_gates(repository)
+    if token != approved_token:
+        raise DeliveryExecutionError("The supplied token does not match the explicitly gated execution token")
     write_plan = plan["github_write_plan"]
     preconditions = write_plan["preconditions"]
     target_branch = plan["target_branch"]
@@ -211,7 +210,8 @@ def execute_delivery(
         token, "GET",
         f"/repos/{repository}/git/ref/heads/{urllib.parse.quote(target_branch, safe='/')}",
     )
-    if not isinstance(base_ref, dict) or base_ref.get("object", {}).get("sha") != preconditions["target_branch_head_must_equal"]:
+    base_ref_object = base_ref.get("object") if isinstance(base_ref, dict) else None
+    if not isinstance(base_ref_object, dict) or base_ref_object.get("sha") != preconditions["target_branch_head_must_equal"]:
         raise DeliveryExecutionError("Target branch moved since the patch was verified; rebuild and retest")
 
     existing_branch = request(
@@ -256,7 +256,8 @@ def execute_delivery(
         token, "POST", f"/repos/{repository}/git/refs",
         payload={"ref": write_plan["create_ref"]["ref"], "sha": commit_sha},
     )
-    if not isinstance(ref, dict) or ref.get("object", {}).get("sha") != commit_sha:
+    ref_object = ref.get("object") if isinstance(ref, dict) else None
+    if not isinstance(ref_object, dict) or ref_object.get("sha") != commit_sha:
         raise DeliveryExecutionError("GitHub did not confirm the exact new branch ref")
 
     # Recheck the target immediately before opening the PR. If it moved after
@@ -265,7 +266,8 @@ def execute_delivery(
         token, "GET",
         f"/repos/{repository}/git/ref/heads/{urllib.parse.quote(target_branch, safe='/')}",
     )
-    if not isinstance(latest_base, dict) or latest_base.get("object", {}).get("sha") != base_sha:
+    latest_base_object = latest_base.get("object") if isinstance(latest_base, dict) else None
+    if not isinstance(latest_base_object, dict) or latest_base_object.get("sha") != base_sha:
         raise DeliveryExecutionError("Target branch moved after branch creation; no PR was opened")
 
     pr_payload = write_plan["create_pull_request"]
