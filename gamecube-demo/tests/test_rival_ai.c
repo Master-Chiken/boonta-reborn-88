@@ -78,6 +78,28 @@ static void avoidance_respects_available_road_room(void)
     assert(target < 2.0f);
 }
 
+static void same_lateral_player_uses_the_roomier_escape_side(void)
+{
+    const float z[1] = {NAN};
+    const float lateral[1] = {NAN};
+    const float target = boonta_rival_ai_target_lateral(
+        1U, 0.0f, 1.0f, 1.0f, z, lateral, 1U, 0.0f, 2.2f);
+
+    /* At the right edge, an exactly overlapping player must not force a move farther right. */
+    assert(nearf_ai(target, 0.25f));
+}
+
+static void same_lateral_rival_uses_the_roomier_escape_side(void)
+{
+    const float z[2] = {-10.0f, -10.0f};
+    const float lateral[2] = {1.0f, 1.0f};
+    const float target = boonta_rival_ai_target_lateral(
+        0U, -10.0f, 1.0f, NAN, z, lateral, 2U, 0.0f, 2.2f);
+
+    /* An overlapping rival in the same lane is symmetric; more road is available on the left. */
+    assert(nearf_ai(target, 0.25f));
+}
+
 static void movement_is_bounded_and_time_scaled(void)
 {
     assert(nearf_ai(boonta_rival_ai_after_frame(0.0f, 1.0f, 1.0f), 0.035f));
@@ -183,6 +205,8 @@ int main(void)
     avoidance_is_independent_of_rival_array_order();
     avoidance_prefers_the_less_blocked_side();
     avoidance_respects_available_road_room();
+    same_lateral_player_uses_the_roomier_escape_side();
+    same_lateral_rival_uses_the_roomier_escape_side();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
     curvature_samples_are_measured_and_bounded();
