@@ -1129,9 +1129,10 @@
       "modelCatalogName": "Trak_Tatooine_BoontaTrainingCourse",
       "n64UsExactNameMatch": {
         "blockIndex": 115,
-        "valueId": 1115
+        "valueId": 1115,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 1,
@@ -1143,9 +1144,10 @@
       "modelCatalogName": "Trak_Tatooine_BoontaClassic",
       "n64UsExactNameMatch": {
         "blockIndex": 1,
-        "valueId": 1001
+        "valueId": 1001,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 2,
@@ -1157,9 +1159,10 @@
       "modelCatalogName": "Trak_AndoPrime_BeedosWildRide",
       "n64UsExactNameMatch": {
         "blockIndex": 130,
-        "valueId": 130
+        "valueId": 130,
+        "metadataHashMatchesCanonicalCatalogue": true
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_and_hash_match"
     },
     {
       "id": 3,
@@ -1171,9 +1174,10 @@
       "modelCatalogName": "Trak_AndoPrime_HowlerGorge",
       "n64UsExactNameMatch": {
         "blockIndex": 131,
-        "valueId": 131
+        "valueId": 131,
+        "metadataHashMatchesCanonicalCatalogue": true
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_and_hash_match"
     },
     {
       "id": 4,
@@ -1196,9 +1200,10 @@
       "modelCatalogName": "Trak_AndoPrime_AndoPrimeCentrum",
       "n64UsExactNameMatch": {
         "blockIndex": 128,
-        "valueId": 1128
+        "valueId": 1128,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 6,
@@ -1309,9 +1314,10 @@
       "modelCatalogName": "Trak_Baroonda_Inferno",
       "n64UsExactNameMatch": {
         "blockIndex": 129,
-        "valueId": 129
+        "valueId": 129,
+        "metadataHashMatchesCanonicalCatalogue": true
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_and_hash_match"
     },
     {
       "id": 16,
@@ -1323,9 +1329,10 @@
       "modelCatalogName": "Trak_MonGazza_Speedway",
       "n64UsExactNameMatch": {
         "blockIndex": 142,
-        "valueId": 1142
+        "valueId": 1142,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 17,
@@ -1337,9 +1344,10 @@
       "modelCatalogName": "Trak_MonGazza_SpiceMineRun",
       "n64UsExactNameMatch": {
         "blockIndex": 143,
-        "valueId": 143
+        "valueId": 143,
+        "metadataHashMatchesCanonicalCatalogue": true
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_and_hash_match"
     },
     {
       "id": 18,
@@ -1351,9 +1359,10 @@
       "modelCatalogName": "Trak_MonGazza_ZuggaChallenge",
       "n64UsExactNameMatch": {
         "blockIndex": 144,
-        "valueId": 1144
+        "valueId": 1144,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 19,
@@ -1409,9 +1418,10 @@
       "modelCatalogName": "Trak_Malastare_DugDerby",
       "n64UsExactNameMatch": {
         "blockIndex": 228,
-        "valueId": 1228
+        "valueId": 1228,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     },
     {
       "id": 24,
@@ -1423,9 +1433,10 @@
       "modelCatalogName": "Trak_Malastare_SebulbasLegacy",
       "n64UsExactNameMatch": {
         "blockIndex": 299,
-        "valueId": 1299
+        "valueId": 1299,
+        "metadataHashMatchesCanonicalCatalogue": false
       },
-      "n64UsResolution": "exact_name_match"
+      "n64UsResolution": "exact_name_only_value_variant"
     }
   ],
   "mappingRules": [
@@ -1435,7 +1446,8 @@
     "BlockItem.Index is the physical item index within the selected block; BlockItem.ValueId is a metadata value ID. Neither is interchangeable with a ModelBlockItem logical reference.",
     "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation.",
     "The N64 USA model block contains 14 N64-prefixed alias records, while 14 Track.Model references remain unresolved by exact-name matching. The matching counts are a research lead only; no one-to-one track assignment is assumed without stronger evidence.",
-    "The 14 unresolved track references can be grouped by planet against 14 N64-prefixed Trak alias records (six groups). These are hypothesis-level candidate sets only; do not assign a specific alias to a specific circuit without a validated name/hash/source/runtime link."
+    "The 14 unresolved track references can be grouped by planet against 14 N64-prefixed Trak alias records (six groups). These are hypothesis-level candidate sets only; do not assign a specific alias to a specific circuit without a validated name/hash/source/runtime link.",
+    "For exact-name track matches, the canonical Track.Model value and the N64 physical block entry's ValueId can have different metadata hashes. An exact name match is therefore not evidence of identical model content; the inventory exposes a boolean metadata-hash comparison without storing hash strings."
   ],
   "audit": {
     "n64ModelPhysicalEntries": 307,
@@ -1443,7 +1455,9 @@
     "racerModelReferencesResolved": 123,
     "distinctN64RacerModelIndices": 123,
     "tracksExactNameResolved": 11,
-    "tracksAliasUnresolved": 14
+    "tracksAliasUnresolved": 14,
+    "trackExactNameButValueVariant": 7,
+    "trackExactNameAndHashMatched": 4
   },
   "regionalComparison": {
     "note": "Counts and names are derived from Release.csv, Block.csv and BlockItem.csv at the pinned metadata revision. A physical-index name comparison uses the mapped ModelBlockItem/ SpriteBlockItem ValueId record.",
