@@ -105,6 +105,7 @@ def verify_in_isolated_worktree(
     # the directory whose cleanliness and exact HEAD were just validated.
     with tempfile.TemporaryDirectory(prefix="boonta-patch-verify-") as temp_dir:
         worktree = (Path(temp_dir) / "checkout").resolve()
+        worktree_added = False
         try:
             temp_parent = Path(temp_dir).resolve()
             if temp_parent == root or root in temp_parent.parents:
@@ -112,6 +113,7 @@ def verify_in_isolated_worktree(
             add = _git(root, ["worktree", "add", "--detach", str(worktree), expected_base_sha])
             if add.returncode != 0:
                 raise PipelineError("Could not create a detached verification worktree")
+            worktree_added = True
 
             if _git_output(worktree, ["rev-parse", "HEAD"]) != expected_base_sha:
                 raise PipelineError("Disposable worktree did not start at the trusted base SHA")
@@ -173,7 +175,7 @@ def verify_in_isolated_worktree(
                 "network_accessed": False,
             }
         finally:
-            if worktree.exists():
+            if worktree_added:
                 _remove_worktree(root, worktree)
 
 
