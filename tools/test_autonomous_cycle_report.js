@@ -158,7 +158,7 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
 async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) {
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/gemini-plan-execute.yml',
-    stepName: 'Validate Gemini autonomous cycle report',
+    stepName: 'Validate autonomous cycle report contract',
     nextStepName: 'Sync the single-task daily backoff marker',
     summaryEnv: 'GEMINI_SUMMARY',
     blocker,
