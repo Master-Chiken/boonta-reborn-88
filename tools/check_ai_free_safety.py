@@ -707,6 +707,40 @@ if "group: boonta-autonomous-loop" not in autonomous or "cancel-in-progress: fal
     errors.append("Boonta autonomous loop must serialize writers without cancelling active work")
 if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" not in execute:
     errors.append("All manual and autonomous Gemini writers must share one non-cancelling concurrency group")
+
+# Every autonomous provider must refresh its selected task after acquiring the
+# shared non-cancelling writer slot, before checkout/setup or model invocation.
+fresh_guard_providers = (
+    ("Gemini", execute, "name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
+    ("OpenRouter", openrouter_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
+    ("Groq", groq_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the Groq Free route"),
+)
+for label, workflow, mint_marker, invocation_marker in fresh_guard_providers:
+    cooldown_position = workflow.find("id: " + ("gemini_cooldown" if label == "Gemini" else "openrouter_cooldown" if label == "OpenRouter" else "groq_cooldown"))
+    free_guard_position = workflow.find("id: free_tier_guard")
+    fresh_guard_position = workflow.find("id: fresh_task_guard")
+    mint_position = workflow.find(mint_marker)
+    invocation_position = workflow.find(invocation_marker)
+    if not (0 <= cooldown_position < free_guard_position < fresh_guard_position < mint_position < invocation_position):
+        errors.append(f"{label} must revalidate the selected task after its Free-only gate and before identity setup/model invocation")
+    for required in (
+        "if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true'",
+        "TASK_ID: ${{ inputs.task_id }}",
+        "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+        "taskIds.some((id) => typeof id !== 'string'",
+        "ledgerSummary.policy?.max_active_tasks !== 1",
+        "const duplicate = openPullRequests.find(",
+        "core.setFailed('Fresh task revalidation blocked before provider invocation: '",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} post-queue task guard is missing {required!r}")
+openrouter_fresh_guard_start = openrouter_fallback.find("      - name: Revalidate selected task after acquiring the shared writer slot")
+openrouter_fresh_guard_end = openrouter_fallback.find("\n      - name:", openrouter_fresh_guard_start + 1)
+openrouter_fresh_guard = openrouter_fallback[openrouter_fresh_guard_start:openrouter_fresh_guard_end]
+if "steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'" not in openrouter_fresh_guard:
+    errors.append("OpenRouter fresh task guard must run only after its GET-only Free quota/authentication preflight passes")
+if "test_autonomous_fresh_task_guard.py" not in selftest or "python3 tools/test_autonomous_fresh_task_guard.py" not in selftest:
+    errors.append("Branch automation self-test must execute post-queue task guard regressions")
 if "uses: ./.github/workflows/gemini-plan-execute.yml" not in autonomous or "autonomous_mode: true" not in autonomous:
     errors.append("Boonta autonomous loop must call the separately gated reusable writer in autonomous mode")
 if "issue_number: 226" not in autonomous or "GEMINI_AUTONOMOUS_ENABLED" not in execute:
