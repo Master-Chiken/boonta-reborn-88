@@ -181,6 +181,7 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
     hunks = 0
     current: str | None = None
     saw_hunk = False
+    in_hunk = False
     for line in lines:
         if line.startswith("diff --git "):
             match = re.fullmatch(r"diff --git a/([^ ]+) b/([^ ]+)", line)
@@ -197,6 +198,7 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
             paths.append(old_path)
             current = old_path
             saw_hunk = False
+            in_hunk = False
             continue
         if line.startswith((
             "new file mode ", "deleted file mode ", "old mode ", "new mode ",
@@ -215,6 +217,7 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
                 raise ProposalError("Hunk appears before a file header")
             hunks += 1
             saw_hunk = True
+            in_hunk = True
             if hunks > MAX_HUNKS:
                 raise ProposalError("Diff exceeds the 100-hunk safety limit")
     if not paths:
