@@ -186,21 +186,6 @@ def build_allowlist(
         if task_id in task_map:
             raise AllowlistError(f"Canonical ledger has duplicate task ID: {task_id}")
         task_map[task_id] = item
-    active = [item for item in task_map.values() if item.get("status") == "active"]
-    if len(active) > 1:
-        raise AllowlistError("Canonical ledger violates the one-active-task policy")
-    if not active:
-        return {
-            "status": "NO_ACTIVE_TASK",
-            "task_id": requested_task_id,
-            "base_sha": expected_base_sha,
-            "allowed_paths": [],
-            "reason": "No canonical task is active; no model write path is available.",
-        }
-    selected = active[0]
-    if selected.get("task_id") != requested_task_id:
-        raise AllowlistError("Requested task ID does not match the unique canonical active task")
-
     policy_map: dict[str, dict[str, Any]] = {}
     for entry in entries:
         if not isinstance(entry, dict) or set(entry) != {"task_id", "purpose", "approval_ref", "allowed_paths"}:
@@ -228,6 +213,21 @@ def build_allowlist(
         if len(set(checked)) != len(checked):
             raise AllowlistError(f"Path policy contains duplicate paths for task: {task_id}")
         policy_map[task_id] = {**entry, "allowed_paths": checked}
+
+    active = [item for item in task_map.values() if item.get("status") == "active"]
+    if len(active) > 1:
+        raise AllowlistError("Canonical ledger violates the one-active-task policy")
+    if not active:
+        return {
+            "status": "NO_ACTIVE_TASK",
+            "task_id": requested_task_id,
+            "base_sha": expected_base_sha,
+            "allowed_paths": [],
+            "reason": "No canonical task is active; no model write path is available.",
+        }
+    selected = active[0]
+    if selected.get("task_id") != requested_task_id:
+        raise AllowlistError("Requested task ID does not match the unique canonical active task")
 
     owner_entry = policy_map.get(requested_task_id)
     if owner_entry is None:
