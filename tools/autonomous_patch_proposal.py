@@ -79,6 +79,8 @@ PROTECTED_EXACT = {
     ".gitmodules",
     "tools/autonomous_patch_proposal.py",
     "tools/build_autonomous_path_allowlist.py",
+    "tools/build_autonomous_delivery_plan.py",
+    "tools/test_autonomous_delivery_plan.py",
     "tools/test_autonomous_path_allowlist.py",
     "tools/verify_autonomous_patch.py",
     "tools/test_verify_autonomous_patch.py",
