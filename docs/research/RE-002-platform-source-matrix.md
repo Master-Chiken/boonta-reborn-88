@@ -636,3 +636,7 @@ A decisive result needs a complete typed xref/data-flow pass over the exact loca
 
 **Platform boundary:** all findings above are Steam-PC source/search evidence only. They establish no Windows retail-build identity, N64, Dreamcast, GameCube, or Wii behavior. No binary, ROM, disc image, BIOS, extracted asset, analysis database, or third-party code was copied or uploaded.
 
+
+## 2026-11-10 — N64 texture-block reuse path
+
+A pinned source audit found that `swe1r-assets@922ef535f6598a1330ff93d6b07258956f990b34` already has N64 release selectors for a dedicated big-endian texture block (ID 1, 1,648 entries) and a model-material-to-texture PNG exporter. The N64 USA model catalogue also names item 0087 `Pupp_Racer_Anakin_Skywalker` with a 68,284-byte payload; the owner-local Pupp candidate has the same decoded size and a successful structural parse, which is a strong candidate match but not yet a proven item-index mapping. The existing command-line exporter requires complete model- and texture-block files; locating/reconstructing the full N64 texture block from the owner-local ROM remains the actual blocker. Reuse the existing MIT decoder/exporter rather than writing a new PNG/palette path; do not copy the upstream embedded commercial resources or publish any extracted files. Full source review, commands, and compatibility gates: [N64 texture-block reuse audit](N64_TEXTURE_BLOCK_REUSE_AUDIT_2026-11-10.md).
