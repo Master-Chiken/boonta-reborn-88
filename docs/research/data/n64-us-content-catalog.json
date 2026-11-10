@@ -1442,5 +1442,75 @@
     "distinctN64RacerModelIndices": 123,
     "tracksExactNameResolved": 11,
     "tracksAliasUnresolved": 14
+  },
+  "regionalComparison": {
+    "note": "Counts and names are derived from Release.csv, Block.csv and BlockItem.csv at the pinned metadata revision. A physical-index name comparison uses the mapped ModelBlockItem/ SpriteBlockItem ValueId record.",
+    "modelBlocks": [
+      {
+        "region": "Nintendo 64 (USA)",
+        "releaseId": 3,
+        "blockId": 2,
+        "count": 307,
+        "name": "n64_us"
+      },
+      {
+        "region": "Nintendo 64 (Europe)",
+        "releaseId": 4,
+        "blockId": 1,
+        "count": 307,
+        "name": "n64_eu-jp"
+      },
+      {
+        "region": "Nintendo 64 (Japan)",
+        "releaseId": 5,
+        "blockId": 1,
+        "count": 307,
+        "name": "n64_eu-jp"
+      }
+    ],
+    "modelMappingComparison": {
+      "usaVsEurope": {
+        "physicalEntries": 307,
+        "physicalIndexNameDifferences": 0
+      },
+      "usaVsJapan": {
+        "physicalEntries": 307,
+        "physicalIndexNameDifferences": 0
+      },
+      "all123RacerModelReferencesResolveByExactNameInAllThree": true,
+      "interpretation": "The public metadata maps the same model names to the same physical indices in the USA and shared Europe/Japan N64 model blocks. Do not create separate regional model catalogues unless a binary/runtime check contradicts this metadata."
+    },
+    "spriteBlocks": [
+      {
+        "region": "Nintendo 64 (USA)",
+        "releaseId": 3,
+        "blockId": 2,
+        "count": 173,
+        "name": "n64_us"
+      },
+      {
+        "region": "Nintendo 64 (Europe)",
+        "releaseId": 4,
+        "blockId": 0,
+        "count": 179,
+        "name": "_default"
+      },
+      {
+        "region": "Nintendo 64 (Japan)",
+        "releaseId": 5,
+        "blockId": 1,
+        "count": 182,
+        "name": "n64_jp"
+      }
+    ],
+    "spriteMappingComparison": {
+      "usaVsEuropeDefault": {
+        "physicalIndexNameDifferences": 8
+      },
+      "usaVsJapan": {
+        "physicalIndexNameDifferences": 11
+      },
+      "interpretation": "Sprite indices/content differ by region. The Europe release points to the shared _default sprite block in Release.csv; it is not labeled as a dedicated N64 Europe sprite block."
+    }
   }
 }
