@@ -55,6 +55,10 @@ jobs:
       pull-requests: read
     outputs:
       task_ready: ${{ steps.check.outputs.task_ready }}
+      queue_state: ${{ steps.check.outputs.queue_state }}
+      queued_count: ${{ steps.check.outputs.queued_count }}
+      active_count: ${{ steps.check.outputs.active_count }}
+      blocked_count: ${{ steps.check.outputs.blocked_count }}
       task_id: ${{ steps.check.outputs.task_id }}
       task_title: ${{ steps.check.outputs.task_title }}
       task_context: ${{ steps.check.outputs.task_context }}
@@ -203,6 +207,25 @@ jobs:
               taskReason = 'no eligible active task or approved post-cooldown activation task exists';
             }
             const taskReady = Boolean(selectedTask);
+            const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
+            const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');
+            let queueState = 'EMPTY_QUEUE';
+            if (taskReady) {
+              queueState = 'READY';
+            } else if (activeTasks.length > 0) {
+              queueState = 'ACTIVE_TASK_REQUIRES_RECONCILIATION';
+            } else if (
+              activationTask && activationTask.status === 'blocked' &&
+              taskBlockedActive && !ownerReevaluationAllowed
+            ) {
+              queueState = 'TASK_BACKOFF';
+            } else if (activationTaskOpenPr) {
+              queueState = 'WAITING_FOR_OPEN_TASK_PR';
+            } else if (queuedTasks.length > 0) {
+              queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';
+            } else if (blockedTasks.length > 0) {
+              queueState = 'BLOCKED_TASKS_ONLY';
+            }
             const taskContext = taskReady ? [
               'Task ID: ' + selectedTask.task_id,
               'Title: ' + selectedTask.title,
@@ -219,6 +242,10 @@ jobs:
             }
 
             core.setOutput('task_ready', String(taskReady));
+            core.setOutput('queue_state', queueState);
+            core.setOutput('queued_count', String(queuedTasks.length));
+            core.setOutput('active_count', String(activeTasks.length));
+            core.setOutput('blocked_count', String(blockedTasks.length));
             core.setOutput('task_id', selectedTask?.task_id || '');
             core.setOutput('task_title', selectedTask?.title || '');
             core.setOutput('task_context', taskContext);
@@ -251,10 +278,12 @@ jobs:
                 ['OpenRouter Free', results.openrouter],
                 ['Groq Free', results.groq],
                 ['Single task queue', taskBlockedActive ? 'BLOCKED (scheduled backoff)' : 'clear'],
+                ['Queue state', queueState],
+                ['Queued / active / blocked', queuedTasks.length + ' / ' + activeTasks.length + ' / ' + blockedTasks.length],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
               ])
-              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
+              .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, active-task reconciliation and READY. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
               .write();
 
   autonomous-cycle:
@@ -370,6 +399,10 @@ jobs:
           COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}
           TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
           TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
+          QUEUE_STATE: ${{ needs.provider-cooldowns.outputs.queue_state }}
+          QUEUED_COUNT: ${{ needs.provider-cooldowns.outputs.queued_count }}
+          ACTIVE_COUNT: ${{ needs.provider-cooldowns.outputs.active_count }}
+          BLOCKED_COUNT: ${{ needs.provider-cooldowns.outputs.blocked_count }}
           TASK_ID: ${{ needs.provider-cooldowns.outputs.task_id }}
           TASK_TITLE: ${{ needs.provider-cooldowns.outputs.task_title }}
           TASK_TARGET_BRANCH: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
@@ -445,6 +478,26 @@ jobs:
             echo "- Readiness: **${READINESS_RESULT:-unknown}**"
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
+            echo "- Queue state: **${QUEUE_STATE:-NOT_EVALUATED}** (queued=${QUEUED_COUNT:-unknown}, active=${ACTIVE_COUNT:-unknown}, blocked=${BLOCKED_COUNT:-unknown})"
+            case "${QUEUE_STATE:-NOT_EVALUATED}" in
+              EMPTY_QUEUE)
+                echo
+                echo "### EMPTY_QUEUE — WAITING_FOR_OWNER_APPROVAL"
+                echo "No active or queued task is available. No AI provider was invoked, no provider cooldown was written, and no branch or PR was created. Add an owner-approved task to the canonical ledger before expecting further project work."
+                ;;
+              QUEUED_TASKS_WAITING_FOR_PROMOTION)
+                echo "- Queued work exists but has not been promoted to the single active slot; no provider was invoked."
+                ;;
+              BLOCKED_TASKS_ONLY)
+                echo "- Only blocked tasks are present; the loop will not unblock owner-controlled prerequisites automatically."
+                ;;
+              TASK_BACKOFF)
+                echo "- The activation task is paused by its same-day UTC backoff; scheduled inference is intentionally skipped."
+                ;;
+              WAITING_FOR_OPEN_TASK_PR|ACTIVE_TASK_REQUIRES_RECONCILIATION)
+                echo "- Existing task work must be reconciled before another provider invocation."
+                ;;
+            esac
             echo "- Eligible task: **${TASK_READY:-unknown}** (${TASK_ID:-none}: ${TASK_TITLE:-untitled}; target ${TASK_TARGET_BRANCH:-unknown})"
             if [[ "${TASK_READY:-false}" != "true" ]]; then
               echo "- Provider calls skipped before inference: ${TASK_REASON:-canonical queue eligibility was not confirmed}."
