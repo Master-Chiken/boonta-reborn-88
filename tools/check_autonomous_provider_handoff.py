@@ -505,6 +505,16 @@ groq_limits = (
 )
 if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
     errors.append("Groq must remain capped at 1152 context / 384 output tokens so four write/PR/report steps stay below the observed 8k TPM refusal")
+groq_model_config = (
+    groq_config.get("provider", {})
+    .get("groq", {})
+    .get("models", {})
+    .get("openai/gpt-oss-20b", {})
+)
+if groq_model_config.get("temperature") is not True:
+    errors.append("Groq model must explicitly declare temperature support so OpenCode does not silently drop the build-agent setting")
+if groq_config.get("agent", {}).get("build", {}).get("temperature") != 0.2:
+    errors.append("Groq build agent must use temperature 0.2 for more deterministic structured tool-call generation")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
