@@ -316,6 +316,10 @@ jobs:
               const nextAction = lines.filter((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')).join(' ');
               const blockedText = blocker + ' ' + nextAction;
               const contradictions = [];
+              const { findBlockedReportContradictions } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+              contradictions.push(...findBlockedReportContradictions(blockedText, {
+                githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'
+              }));
               if (process.env.GEMINI_PREFLIGHT_ALLOWED === 'true') {
                 if (/\b(?:enable|enabling|turn on|set)\b.{0,80}\bGEMINI_AUTONOMOUS_ENABLED\b/i.test(blockedText) ||
                     /\bGEMINI_AUTONOMOUS_ENABLED\b.{0,80}\b(?:missing|disabled|false|unset)\b/i.test(blockedText)) {

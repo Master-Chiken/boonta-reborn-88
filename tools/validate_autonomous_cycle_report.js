@@ -28,6 +28,55 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function findBlockedReportContradictions(blockedText, evidence = {}) {
+  const text = typeof blockedText === 'string' ? blockedText : '';
+  const contradictions = [];
+
+  if (evidence.openRouterAuthSucceeded === true) {
+    const providerKeyUnavailable =
+      /\b(?:no|without|missing|absent|unavailable|not available)\b.{0,100}\b(?:OpenRouter\s+)?(?:provider\s+)?(?:API\s+)?key\b/i.test(text) ||
+      /\b(?:OpenRouter\s+)?(?:provider\s+)?(?:API\s+)?key\b.{0,100}\b(?:missing|absent|unavailable|not available|not configured|invalid)\b/i.test(text);
+    const explicitAuthFailure =
+      /(OPENROUTER_API_KEY|HTTP\s*401|OpenRouter.{0,80}(missing|invalid|unauthori[sz]ed|authentication failure|Free[- ]tier.{0,40}(missing|invalid|not verified)))/i.test(text);
+    if (providerKeyUnavailable || explicitAuthFailure) {
+      contradictions.push('claims OpenRouter credentials or Free-tier authentication are unavailable although same-run authentication succeeded');
+    }
+  }
+
+  if (evidence.githubAppTokenMinted === true) {
+    const tokenUnavailable =
+      /\b(?:no|without|missing|absent|unavailable|not available|not verified)\b.{0,120}\b(?:verified\s+)?(?:live\s+)?GitHub App(?: installation)? token\b/i.test(text) ||
+      /\bGitHub App(?: installation)? token\b.{0,100}\b(?:missing|absent|unavailable|not available|not minted|not verified)\b/i.test(text);
+    const appCredentialsMissing =
+      /\b(?:APP_ID|APP_PRIVATE_KEY)\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(text);
+    if (tokenUnavailable || appCredentialsMissing) {
+      contradictions.push('claims the GitHub App token or its credentials are unavailable although same-run token creation succeeded');
+    }
+  }
+
+  return contradictions;
+}
+
+
+function findNextActionBranchContradictions(nextAction, expectedBase) {
+  const text = typeof nextAction === 'string' ? nextAction : '';
+  const mentionedBranches = new Set();
+  const patterns = [
+    /\bbranch\s+(?:named\s+)?[`'"]?(main|development|dev)\b/gi,
+    /\b(main|development|dev)\s+branch\b/gi,
+    /\b(?:use|work(?:ing)?\s+on|target(?:ing)?|push(?:ing)?\s+to|base(?:d)?\s+on|create(?:d)?\s+from|switch(?:ing)?\s+to|continue(?:d)?\s+on)\s+(?:the\s+)?[`'"]?(main|development|dev)\b/gi
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      mentionedBranches.add(match[1].toLowerCase() === 'development' ? 'dev' : match[1].toLowerCase());
+    }
+  }
+  return [...mentionedBranches]
+    .filter((branch) => branch !== expectedBase)
+    .map((branch) => 'directs the next action to ' + branch + ' although the selected task target is ' + expectedBase);
+}
+
 async function validateAutonomousCycleReport(options) {
   const {
     github, context, core, summary, baseline, snapshotAt,
@@ -66,6 +115,10 @@ async function validateAutonomousCycleReport(options) {
     }
     const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER');
     const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION');
+    const branchContradictions = findNextActionBranchContradictions(nextAction, expectedBase);
+    if (branchContradictions.length > 0) {
+      return fail(core, 'BLOCKED next action contradicts selected target branch: ' + branchContradictions.join('; ') + '.');
+    }
     const fingerprint = require('crypto').createHash('sha256')
       .update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
     core.setOutput('blocked_fingerprint', fingerprint);
@@ -214,4 +267,4 @@ async function validateAutonomousCycleReport(options) {
   };
 }
 
-module.exports = { REQUIRED_CHECKS, validateAutonomousCycleReport };
+module.exports = { REQUIRED_CHECKS, findBlockedReportContradictions, validateAutonomousCycleReport };

@@ -1,7 +1,9 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { validateAutonomousCycleReport, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
 const repo = 'boonta-reborn-88';
@@ -10,13 +12,36 @@ const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
 const context = { repo: { owner, repo } };
 
-function report(status = 'PROGRESS', base = 'main', task = taskId) {
+const missingOpenRouterKeyClaim = 'The provider blocker says no provider key was available in this invocation.';
+assert.equal(
+  findBlockedReportContradictions(missingOpenRouterKeyClaim, { openRouterAuthSucceeded: true }).length,
+  1,
+  'same-run successful OpenRouter authentication must reject a natural-language missing-key claim'
+);
+const missingGitHubTokenClaim = 'There is no verified live GitHub App token to drive the request.';
+assert.equal(
+  findBlockedReportContradictions(missingGitHubTokenClaim, { githubAppTokenMinted: true }).length,
+  1,
+  'same-run successful GitHub App token creation must reject a natural-language missing-token claim'
+);
+assert.equal(
+  findBlockedReportContradictions('The provider key is intentionally not exposed to the model.', { openRouterAuthSucceeded: true }).length,
+  0,
+  'do not confuse credential isolation from the model with missing workflow authentication'
+);
+assert.equal(
+  findBlockedReportContradictions(missingOpenRouterKeyClaim, { openRouterAuthSucceeded: false }).length,
+  0,
+  'do not reject the same claim when successful authentication evidence is absent'
+);
+
+function report(status = 'PROGRESS', base = 'main', task = taskId, nextAction = 'Record the verified owner result in the task ledger.') {
   if (status === 'BLOCKED') {
     return [
       'BOONTA_CYCLE_TASK_ID: ' + task,
       'BOONTA_CYCLE_STATUS: BLOCKED',
       'BOONTA_CYCLE_BLOCKER: Owner must verify the external toolchain account.',
-      'BOONTA_CYCLE_NEXT_ACTION: Record the verified owner result in the task ledger.'
+      'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
     ].join('\n');
   }
   return [
@@ -37,6 +62,128 @@ function makeCore() {
     setFailed: (message) => { failure = String(message); },
     info: () => {}
   };
+}
+
+async function executeEmbeddedBlockedStep({
+  workflowPath,
+  stepName,
+  nextStepName,
+  summaryEnv,
+  blocker,
+  nextAction,
+  envOverrides = {}
+}) {
+  const workflow = fs.readFileSync(workflowPath, 'utf8');
+  const stepStart = workflow.indexOf('      - name: ' + stepName + '\n');
+  const stepEnd = workflow.indexOf('      - name: ' + nextStepName + '\n', stepStart);
+  assert.ok(stepStart >= 0 && stepEnd > stepStart, stepName + ' step must exist');
+  const step = workflow.slice(stepStart, stepEnd);
+  const marker = '          script: |\n';
+  const markerIndex = step.indexOf(marker);
+  assert.ok(markerIndex >= 0, stepName + ' step must contain an embedded script');
+
+  const scriptLines = step.slice(markerIndex + marker.length).split(/\r?\n/);
+  const script = [];
+  for (const line of scriptLines) {
+    if (line.trim() === '') {
+      script.push('');
+      continue;
+    }
+    if (!line.startsWith('            ')) break;
+    script.push(line.slice(12));
+  }
+  assert.ok(script.some((line) => line.includes('findBlockedReportContradictions')),
+    stepName + ' must exercise the shared contradiction guard');
+
+  const machineReport = [
+    'BOONTA_CYCLE_TASK_ID: ' + taskId,
+    'BOONTA_CYCLE_STATUS: BLOCKED',
+    'BOONTA_CYCLE_BLOCKER: ' + blocker,
+    'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
+  ].join('\n');
+  const env = {
+    REPORT_PATH: 'report.txt',
+    GEMINI_SUMMARY: machineReport,
+    PRE_CYCLE_PR_HEADS: '{}',
+    PRE_CYCLE_PR_SNAPSHOT_AT: new Date(Date.now() - 1000).toISOString(),
+    SELECTED_TASK_ID: taskId,
+    SELECTED_TASK_TARGET_BRANCH: 'main',
+    GITHUB_WORKSPACE: 'repo-root',
+    ...envOverrides
+  };
+  const fakeFs = {
+    readFileSync: (path, encoding) => {
+      assert.equal(path, env.REPORT_PATH);
+      assert.equal(encoding, 'utf8');
+      return machineReport;
+    }
+  };
+  const testCore = makeCore();
+  const runtime = {
+    require: (id) => {
+      if (id === 'fs') return fakeFs;
+      if (id === env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js') {
+        return require('./validate_autonomous_cycle_report');
+      }
+      throw new Error('Unexpected module requested by ' + stepName + ': ' + id);
+    },
+    process: { env },
+    core: testCore,
+    github: {},
+    context
+  };
+  const wrapped = '(async function () {\n' + script.join('\n') + '\n})()';
+  await new vm.Script(wrapped, { filename: stepName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.js' })
+    .runInNewContext(runtime, { timeout: 1000 });
+  return testCore;
+}
+
+async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/openrouter-plan-execute.yml',
+    stepName: 'Validate OpenRouter autonomous cycle report',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'REPORT_PATH',
+    blocker,
+    nextAction,
+    envOverrides: {
+      OPENROUTER_PREFLIGHT_ALLOWED: 'true',
+      OPENROUTER_AUTH_OUTCOME: 'success',
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
+}
+
+async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/gemini-plan-execute.yml',
+    stepName: 'Validate autonomous cycle report contract',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'GEMINI_SUMMARY',
+    blocker,
+    nextAction,
+    envOverrides: {
+      GEMINI_PREFLIGHT_ALLOWED: 'true',
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
+}
+
+async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/groq-plan-execute.yml',
+    stepName: 'Validate Groq autonomous cycle report',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'REPORT_PATH',
+    blocker,
+    nextAction,
+    envOverrides: {
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
 }
 
 function makeGithub(options = {}) {
@@ -114,7 +261,7 @@ async function run(name, options = {}) {
     github: fixture.github,
     context,
     core,
-    summary: options.summary || report(options.status || 'PROGRESS', options.reportBase || options.base || 'main', options.reportTaskId || taskId),
+    summary: options.summary || report(options.status || 'PROGRESS', options.reportBase || options.base || 'main', options.reportTaskId || taskId, options.reportNextAction),
     baseline: options.baseline || {},
     snapshotAt: options.snapshotAt || snapshotAt,
     expectedTaskId: options.expectedTaskId || taskId,
@@ -133,6 +280,72 @@ async function run(name, options = {}) {
 }
 
 (async () => {
+  const openRouterMissingKey = await executeOpenRouterBlockedStep(
+    'No provider key was available in this invocation.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(openRouterMissingKey.failure.includes('contradicts same-run preflight evidence'),
+    'the actual embedded OpenRouter BLOCKED script must reject a missing-key claim after successful authentication');
+
+  const openRouterMissingToken = await executeOpenRouterBlockedStep(
+    'There is no verified live GitHub App token.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(openRouterMissingToken.failure.includes('contradicts same-run preflight evidence'),
+    'the actual embedded OpenRouter BLOCKED script must reject a missing-token claim after successful App token creation');
+
+  const openRouterCredentialIsolation = await executeOpenRouterBlockedStep(
+    'The provider key is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(openRouterCredentialIsolation.failure, '',
+    'the actual embedded OpenRouter BLOCKED script must not confuse model credential isolation with missing workflow authentication');
+  assert.equal(openRouterCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const geminiMissingApiKey = await executeGeminiBlockedStep(
+    'GEMINI_API_KEY is missing from this invocation.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiMissingApiKey.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a missing-key claim after successful preflight');
+
+  const geminiDisabledOwnerGate = await executeGeminiBlockedStep(
+    'GEMINI_AUTONOMOUS_ENABLED is disabled.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiDisabledOwnerGate.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a disabled owner-gate claim after successful preflight');
+
+  const geminiMissingFreeAttestation = await executeGeminiBlockedStep(
+    'GEMINI_FREE_TIER_CONFIRMED is unset.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiMissingFreeAttestation.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a missing Free-tier attestation after successful preflight');
+
+  const geminiCredentialIsolation = await executeGeminiBlockedStep(
+    'The Gemini credential is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(geminiCredentialIsolation.failure, '',
+    'the actual Gemini BLOCKED script must not confuse credential isolation with missing preflight configuration');
+  assert.equal(geminiCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const groqMissingAppToken = await executeGroqBlockedStep(
+    'There is no verified live GitHub App token.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(groqMissingAppToken.failure.includes('same-run GitHub App evidence'),
+    'the actual embedded Groq BLOCKED script must reject a missing-token claim after successful App token creation');
+
+  const groqCredentialIsolation = await executeGroqBlockedStep(
+    'The Groq credential is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(groqCredentialIsolation.failure, '',
+    'the actual Groq BLOCKED script must accept a blocker unrelated to GitHub App authentication');
+  assert.equal(groqCredentialIsolation.outputs.cycle_status, 'blocked');
+
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
   assert.equal(valid.core.outputs.evidence_pr_number, '501');
@@ -268,6 +481,36 @@ async function run(name, options = {}) {
   const blocked = await run('named task blocker', { status: 'BLOCKED' });
   assert.equal(blocked.core.outputs.cycle_status, 'blocked');
   assert.equal(blocked.core.outputs.blocked_fingerprint.length, 16);
+  await run('BLOCKED next action cannot direct a main task to dev', {
+    status: 'BLOCKED',
+    reportNextAction: 'Use branch dev for the next code change.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
+  await run('BLOCKED next action cannot direct a dev task to main', {
+    status: 'BLOCKED',
+    base: 'dev',
+    expectedBase: 'dev',
+    reportNextAction: 'Continue on the main branch.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
+  await run('BLOCKED next action recognizes development as the dev branch', {
+    status: 'BLOCKED',
+    reportNextAction: 'Continue on the development branch.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
+  await run('BLOCKED next action without an explicit branch remains valid', {
+    status: 'BLOCKED',
+    reportNextAction: 'Record the verified owner result in the task ledger.'
+  });
+  await run('BLOCKED next action may explicitly use its selected branch', {
+    status: 'BLOCKED',
+    reportNextAction: 'Use branch main for the next documentation change.'
+  });
+  await run('BLOCKED next action rejects conflicting branches in the same sentence', {
+    status: 'BLOCKED',
+    reportNextAction: 'Keep main as the base, but push to dev.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
 
   const devChecks = REQUIRED_CHECKS.dev.map((name) => ({
     name, head_sha: head, status: 'completed', conclusion: 'success',

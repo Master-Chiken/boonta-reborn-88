@@ -102,6 +102,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           governance = Path(".github/workflows/branch-governance.yml").read_text(encoding="utf-8")
           intake = Path(".github/workflows/branch-intake-queue.yml").read_text(encoding="utf-8")
@@ -116,6 +117,10 @@ jobs:
           yaml_validation = selftest.split("      - name: Validate workflow YAML syntax", 1)[1].split("      - name: Compile embedded Python", 1)[0]
           intake_header = intake.split("permissions:", 1)[0]
           openrouter = Path(".github/workflows/openrouter-plan-execute.yml").read_text(encoding="utf-8")
+          openrouter_validator = openrouter.split("      - name: Validate OpenRouter autonomous cycle report", 1)[1].split("      - name: Sync the single-task daily backoff marker", 1)[0]
+          openrouter_validator_require = openrouter_validator.find("const { findBlockedReportContradictions, validateAutonomousCycleReport } =")
+          openrouter_validator_require_call = openrouter_validator.find("require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');")
+          openrouter_validator_call = openrouter_validator.find("findBlockedReportContradictions(blockedText")
           autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
           readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
           checks = {
@@ -134,13 +139,17 @@ jobs:
               "Provider fallback advances only on a later cycle after pre-existing cooldown": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.openrouter-fallback.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.autonomous-cycle.result == 'failure'" not in autonomous_loop and "needs.openrouter-fallback.result == 'failure'" not in autonomous_loop,
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
               "Groq fallback exposes a minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in groq,
-              "Groq prompt uses OpenCode-prefixed direct GitHub tools": "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request." in groq and "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" in groq,
+              "Groq prompt uses OpenCode-prefixed direct GitHub tools": "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request." in groq and "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" in groq,
               "OpenRouter exposes the minimal GitHub MCP tool allowlist": '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"' in openrouter,
+              "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require >= 0 and openrouter_validator_require_call > openrouter_validator_require and openrouter_validator_call > openrouter_validator_require_call,
               "OpenRouter prompt uses OpenCode-prefixed direct GitHub tools": "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request." in openrouter,
               "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
-              "Groq prompt explicitly stops on provider quota errors": "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry." in groq,
+              "Groq prompt explicitly stops on provider quota errors": "Stop after the first quota, TPM, rate-limit, context or auth error; never retry." in groq,
+              "OpenRouter and Groq deny Task subagents to preserve direct execution": all(re.search(r'"task"\s*:\s*\{\s*"\*"\s*:\s*"deny"\s*\}', workflow) for workflow in (openrouter, groq)),
+              "OpenRouter and Groq inject the reserved task ID into final reports": all("BOONTA_CYCLE_TASK_ID: " in workflow and "TASK_ID}" in workflow for workflow in (openrouter, groq)),
+              "Groq preserves the complete activation-task handoff under a bounded TPM-safe prompt": '"context": 1536' in groq and '"output": 96' in groq and "--max-chars 1500 --max-task-context 1400" in groq and "if (( ${#PROMPT} > 3600 )); then" in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
               "branch intake is manual-only": "workflow_dispatch:" in intake_header and "schedule:" not in intake_header and "push:" not in intake_header,

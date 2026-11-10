@@ -912,13 +912,22 @@ dynamic_task_prompts = (
     ("Groq", groq_fallback),
 )
 for label, prompt in dynamic_task_prompts:
-    for required in (
-        "AUTHORITATIVE SELECTED TASK",
-        "task-ledger-summary.json",
-        "acceptance_criteria_excerpt",
-        "Do not substitute another task",
-        "€0",
-    ):
+    required_task_safeguards = (
+        (
+            "preloaded schema-v2 context is authoritative",
+            "exact BOONTA_TASK_ID across all PR states",
+            "€0 only",
+        )
+        if label == "Groq"
+        else (
+            "AUTHORITATIVE SELECTED TASK",
+            "task-ledger-summary.json",
+            "acceptance_criteria_excerpt",
+            "Do not substitute another task",
+            "€0",
+        )
+    )
+    for required in required_task_safeguards:
         if required not in prompt:
             errors.append(f"{label} autonomous prompt is missing dynamic selected-task safeguard {required!r}")
     if label == "Gemini":
@@ -931,12 +940,12 @@ for label, prompt in dynamic_task_prompts:
                 errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
-# Provider handoff budgets must match the tested schema-v2 activation context.
-# The old 1,200-character task cap truncated mandatory criteria/next-action excerpts
-# and prevented both free providers from reaching inference.
+# Provider handoff budgets must match their tested schema-v2 activation context.
+# Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
+# reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
     ("OpenRouter", openrouter_fallback, "2400", "2200"),
-    ("Groq", groq_fallback, "1400", "1200"),
+    ("Groq", groq_fallback, "1500", "1400"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -957,15 +966,28 @@ for label, workflow in (
     ("OpenRouter", openrouter_fallback),
     ("Groq", groq_fallback),
 ):
-    for required in (
-        "task_id:",
-        "task_title:",
-        "task_target_branch:",
-        "TASK_ID: ${{ inputs.task_id }}",
-        "TASK_TITLE: ${{ inputs.task_title }}",
-        "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
-        "Use exactly this task from docs/automation/task-ledger-summary.json",
-    ):
+    required_task_bindings = (
+        (
+            "task_id:",
+            "task_title:",
+            "task_target_branch:",
+            "TASK_ID: ${{ inputs.task_id }}",
+            "TASK_TITLE: ${{ inputs.task_title }}",
+            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+            "preloaded schema-v2 context is authoritative",
+        )
+        if label == "Groq"
+        else (
+            "task_id:",
+            "task_title:",
+            "task_target_branch:",
+            "TASK_ID: ${{ inputs.task_id }}",
+            "TASK_TITLE: ${{ inputs.task_title }}",
+            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+            "Use exactly this task from docs/automation/task-ledger-summary.json",
+        )
+    )
+    for required in required_task_bindings:
         if required not in workflow:
             errors.append(f"{label} reusable workflow is missing selected-task binding {required!r}")
 
@@ -1386,8 +1408,8 @@ if "The check runs must be from the GitHub Actions app" not in cycle_validator a
     errors.append("Autonomous exact-head checks must reject same-named runs from untrusted apps")
 if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
-if "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in openrouter_fallback:
-    errors.append("OpenRouter fallback prompt must require the reported main/dev PR target")
+if "BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}" not in openrouter_fallback:
+    errors.append("OpenRouter fallback prompt must append the exact main/dev target reserved by task preflight")
 for required in (
     '"$RUNNER_TEMP/opencode-cycle-report.txt"',
     'with open(report_path, "w", encoding="utf-8") as report:',
@@ -1408,6 +1430,8 @@ for required in (
     "process.env.GEMINI_PREFLIGHT_ALLOWED === 'true'",
     "BLOCKED report contradicts successful Gemini preflight",
     "GITHUB_APP_TOKEN_OUTCOME === 'success'",
+    "findBlockedReportContradictions(blockedText",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
     "GEMINI_AUTONOMOUS_ENABLED",
     "GEMINI_FREE_TIER_CONFIRMED",
     "GEMINI_API_KEY",
@@ -1415,21 +1439,41 @@ for required in (
     if required not in execute:
         errors.append(f"Gemini report validator is missing its preflight-consistency guard: {required!r}")
 
-# OpenRouter BLOCKED reports must agree with the successful same-run preflight.
-# Its prompt receives workflow outcomes, and the report validator rejects false
-# API-key/Free-tier blockers after a successful GET /api/v1/key check.
+# OpenRouter BLOCKED reports must agree with successful same-run preflight evidence.
+# The shared validator catches both explicit auth errors and natural-language
+# missing-key/token claims that would otherwise evade narrow string matching.
 for required in (
     "OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}",
     "OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}",
     "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
-    "process.env.OPENROUTER_PREFLIGHT_ALLOWED === 'true'",
-    "process.env.OPENROUTER_AUTH_OUTCOME === 'success'",
-    "BLOCKED report contradicts same-run successful OpenRouter Free preflight/auth evidence",
+    "findBlockedReportContradictions",
+    "openRouterAuthSucceeded:",
+    "githubAppTokenMinted:",
     "SAME-RUN VERIFIED EXECUTION FACTS",
     "Never ask the owner to replace the key.",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter report consistency guard is missing {required!r}")
+
+for required in (
+    "providerKeyUnavailable",
+    "explicitAuthFailure",
+    "tokenUnavailable",
+    "appCredentialsMissing",
+    "openRouterAuthSucceeded === true",
+    "githubAppTokenMinted === true",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared cycle validator is missing its preflight contradiction rule {required!r}")
+
+for required in (
+    "no provider key was available",
+    "no verified live GitHub App token",
+    "intentionally not exposed to the model",
+    "successful authentication evidence is absent",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Cycle validator tests are missing credential-contradiction coverage {required!r}")
 
 # The Groq Free fallback must remain useful under its observed 8k TPM limit.
 # OpenCode supports per-model context/output limits; cap this agent well below TPM.
@@ -1450,9 +1494,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1792 or groq_limits.get("output") != 128:
+        if groq_limits.get("context") != 1536 or groq_limits.get("output") != 96:
             errors.append(
-                "Groq GPT-OSS 20B must retain 1792 context / 128 output limits to leave margin below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1536 context / 96 output tokens to leave margin below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1461,23 +1505,23 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,792/128 limits; max 3 steps.",
-    "No full issue bodies/comments or issue_read for #156/#226/#279; new retrieved text below 300 tokens.",
+    "1,536/96 limits; max 3 steps.",
+    "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
-    "Only these GitHub tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
-    "Stop on first quota, TPM, rate-limit, context or auth refusal; never retry.",
+    "Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
+    "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3500 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,500-character TPM prompt ceiling before inference")
-if "€0 only: no billing, paid routes, credits, alternate providers or secret/settings changes." not in groq_fallback:
+if 'if (( ${#PROMPT} > 3600 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 3,600-character TPM prompt ceiling before inference")
+if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Call only top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
+    "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
