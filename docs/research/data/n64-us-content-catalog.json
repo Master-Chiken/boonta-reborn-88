@@ -1188,7 +1188,15 @@
       "modelCatalogRef": 132,
       "modelCatalogName": "Trak_AndoPrime_AndobiMountainRun",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 132,
+        "valueId": 1132,
+        "aliasName": "N64__132__Trak_AndoPrime",
+        "sizeSignatureErrorPct": 0.007,
+        "planetGroup": "Ando Prime",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 5,
@@ -1214,7 +1222,15 @@
       "modelCatalogRef": 133,
       "modelCatalogName": "Trak_Aquilaris_AquilarisClassic",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 133,
+        "valueId": 1133,
+        "aliasName": "N64__133__Trak_Aquilaris",
+        "sizeSignatureErrorPct": 0.269,
+        "planetGroup": "Aquilaris",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 7,
@@ -1225,7 +1241,15 @@
       "modelCatalogRef": 134,
       "modelCatalogName": "Trak_Aquilaris_SunkenCity",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 134,
+        "valueId": 1134,
+        "aliasName": "N64__134__Trak_Aquilaris",
+        "sizeSignatureErrorPct": 0.277,
+        "planetGroup": "Aquilaris",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 8,
@@ -1236,7 +1260,15 @@
       "modelCatalogRef": 135,
       "modelCatalogName": "Trak_Aquilaris_BumbysBreakers",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 135,
+        "valueId": 1135,
+        "aliasName": "N64__135__Trak_Aquilaris",
+        "sizeSignatureErrorPct": 0.206,
+        "planetGroup": "Aquilaris",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 9,
@@ -1247,7 +1279,15 @@
       "modelCatalogRef": 136,
       "modelCatalogName": "Trak_OrdIbanna_ScrappersRun",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 136,
+        "valueId": 1136,
+        "aliasName": "N64__136__Trak_OrdIbanna",
+        "sizeSignatureErrorPct": 0.082,
+        "planetGroup": "Ord Ibanna",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 10,
@@ -1258,7 +1298,15 @@
       "modelCatalogRef": 137,
       "modelCatalogName": "Trak_OrdIbanna_DethrosRevenge",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 137,
+        "valueId": 1137,
+        "aliasName": "N64__137__Trak_OrdIbanna",
+        "sizeSignatureErrorPct": 0.057,
+        "planetGroup": "Ord Ibanna",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 11,
@@ -1269,7 +1317,15 @@
       "modelCatalogRef": 138,
       "modelCatalogName": "Trak_OrdIbanna_Abyss",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 138,
+        "valueId": 1138,
+        "aliasName": "N64__138__Trak_OrdIbanna",
+        "sizeSignatureErrorPct": 0.051,
+        "planetGroup": "Ord Ibanna",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 12,
@@ -1280,7 +1336,15 @@
       "modelCatalogRef": 139,
       "modelCatalogName": "Trak_Baroonda_BarooCoast",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 139,
+        "valueId": 1139,
+        "aliasName": "N64__139__Trak_Baroonda",
+        "sizeSignatureErrorPct": 3.407,
+        "planetGroup": "Baroonda",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 13,
@@ -1291,7 +1355,15 @@
       "modelCatalogRef": 140,
       "modelCatalogName": "Trak_Baroonda_GrabvineGateway",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 140,
+        "valueId": 1140,
+        "aliasName": "N64__140__Trak_Baroonda",
+        "sizeSignatureErrorPct": 1.797,
+        "planetGroup": "Baroonda",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 14,
@@ -1302,7 +1374,15 @@
       "modelCatalogRef": 141,
       "modelCatalogName": "Trak_Baroonda_FireMountainRally",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 141,
+        "valueId": 1141,
+        "aliasName": "N64__141__Trak_Baroonda",
+        "sizeSignatureErrorPct": 3.374,
+        "planetGroup": "Baroonda",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 15,
@@ -1373,7 +1453,15 @@
       "modelCatalogRef": 145,
       "modelCatalogName": "Trak_OovoIv_Vengeance",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 145,
+        "valueId": 1145,
+        "aliasName": "N64__145__Trak__UNITYNULLREF",
+        "sizeSignatureErrorPct": 0.032,
+        "planetGroup": "Oovo IV",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 20,
@@ -1384,7 +1472,15 @@
       "modelCatalogRef": 148,
       "modelCatalogName": "Trak_OovoIv_Executioner",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 148,
+        "valueId": 1148,
+        "aliasName": "N64__148__Trak__UNITYNULLREF",
+        "sizeSignatureErrorPct": 0.025,
+        "planetGroup": "Oovo IV",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 21,
@@ -1395,7 +1491,15 @@
       "modelCatalogRef": 231,
       "modelCatalogName": "Trak_OovoIv_TheGauntlet",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 226,
+        "valueId": 1226,
+        "aliasName": "N64__226__Trak__UNITYNULLREF",
+        "sizeSignatureErrorPct": 0.027,
+        "planetGroup": "Oovo IV",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 22,
@@ -1406,7 +1510,15 @@
       "modelCatalogRef": 232,
       "modelCatalogName": "Trak_Malastare_Malastare100",
       "n64UsExactNameMatch": null,
-      "n64UsResolution": "unresolved_alias_or_mapping"
+      "n64UsResolution": "supported_alias_size_signature",
+      "n64UsSupportedAlias": {
+        "physicalIndex": 227,
+        "valueId": 1227,
+        "aliasName": "N64__227__Trak_Malastare",
+        "sizeSignatureErrorPct": 0.105,
+        "planetGroup": "Malastare",
+        "confidence": "SUPPORTED"
+      }
     },
     {
       "id": 23,
@@ -1447,7 +1559,8 @@
     "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation.",
     "The N64 USA model block contains 14 N64-prefixed alias records, while 14 Track.Model references remain unresolved by exact-name matching. The matching counts are a research lead only; no one-to-one track assignment is assumed without stronger evidence.",
     "The 14 unresolved track references can be grouped by planet against 14 N64-prefixed Trak alias records (six groups). These are hypothesis-level candidate sets only; do not assign a specific alias to a specific circuit without a validated name/hash/source/runtime link.",
-    "For exact-name track matches, the canonical Track.Model value and the N64 physical block entry's ValueId can have different metadata hashes. An exact name match is therefore not evidence of identical model content; the inventory exposes a boolean metadata-hash comparison without storing hash strings."
+    "For exact-name track matches, the canonical Track.Model value and the N64 physical block entry's ValueId can have different metadata hashes. An exact name match is therefore not evidence of identical model content; the inventory exposes a boolean metadata-hash comparison without storing hash strings.",
+    "The 14 name-unresolved tracks now have a SUPPORTED metadata candidate mapping: within each planet group, a unique one-to-one assignment minimises relative differences in the two model-part size fields. Candidate mapping is strengthened by the exact 25/25 TrackGround name joins and N64 alias planet labels. It remains metadata evidence, not byte-identity or runtime proof."
   ],
   "audit": {
     "n64ModelPhysicalEntries": 307,
@@ -1457,7 +1570,10 @@
     "tracksExactNameResolved": 11,
     "tracksAliasUnresolved": 14,
     "trackExactNameButValueVariant": 7,
-    "trackExactNameAndHashMatched": 4
+    "trackExactNameAndHashMatched": 4,
+    "trackAliasesSupportedBySizeSignature": 14,
+    "trackMappingsExactOrSupported": 25,
+    "trackMappingsWithoutAnyCandidate": 0
   },
   "regionalComparison": {
     "note": "Counts and names are derived from Release.csv, Block.csv and BlockItem.csv at the pinned metadata revision. A physical-index name comparison uses the mapped ModelBlockItem/ SpriteBlockItem ValueId record.",
@@ -15222,21 +15338,36 @@
   "trackAliasCandidateGroups": [
     {
       "planet": "Ando Prime",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         4
       ],
       "candidatePhysicalIndices": [
         132
       ],
-      "candidateAliasNames": [
-        "N64__132__Trak_AndoPrime"
+      "assignments": [
+        {
+          "trackId": 4,
+          "trackName": "Andobi Mountain Run",
+          "logicalModelId": 132,
+          "physicalIndex": 132,
+          "valueId": 1132,
+          "aliasName": "N64__132__Trak_AndoPrime",
+          "sizeSignatureErrorPct": 0.007,
+          "nextClosestCandidateErrorPct": null,
+          "planet": "Ando Prime",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "One unresolved Ando Prime track and one N64 alias labeled AndoPrime; no exact track-name match."
+      "assignmentMeanErrorPct": 0.007,
+      "secondBestMeanErrorPct": null,
+      "meanMarginPct": null,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     },
     {
       "planet": "Aquilaris",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         6,
         7,
         8
@@ -15246,17 +15377,53 @@
         134,
         135
       ],
-      "candidateAliasNames": [
-        "N64__133__Trak_Aquilaris",
-        "N64__134__Trak_Aquilaris",
-        "N64__135__Trak_Aquilaris"
+      "assignments": [
+        {
+          "trackId": 6,
+          "trackName": "Aquilaris Classic",
+          "logicalModelId": 133,
+          "physicalIndex": 133,
+          "valueId": 1133,
+          "aliasName": "N64__133__Trak_Aquilaris",
+          "sizeSignatureErrorPct": 0.269,
+          "nextClosestCandidateErrorPct": 18.893,
+          "planet": "Aquilaris",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 7,
+          "trackName": "Sunken City",
+          "logicalModelId": 134,
+          "physicalIndex": 134,
+          "valueId": 1134,
+          "aliasName": "N64__134__Trak_Aquilaris",
+          "sizeSignatureErrorPct": 0.277,
+          "nextClosestCandidateErrorPct": 15.431,
+          "planet": "Aquilaris",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 8,
+          "trackName": "Bumpy's Breakers",
+          "logicalModelId": 135,
+          "physicalIndex": 135,
+          "valueId": 1135,
+          "aliasName": "N64__135__Trak_Aquilaris",
+          "sizeSignatureErrorPct": 0.206,
+          "nextClosestCandidateErrorPct": 15.903,
+          "planet": "Aquilaris",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "Three unresolved Aquilaris tracks and three N64 aliases carrying the Aquilaris label; per-track order is not proven."
+      "assignmentMeanErrorPct": 0.25,
+      "secondBestMeanErrorPct": 11.51,
+      "meanMarginPct": 11.259,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     },
     {
       "planet": "Ord Ibanna",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         9,
         10,
         11
@@ -15266,17 +15433,53 @@
         137,
         138
       ],
-      "candidateAliasNames": [
-        "N64__136__Trak_OrdIbanna",
-        "N64__137__Trak_OrdIbanna",
-        "N64__138__Trak_OrdIbanna"
+      "assignments": [
+        {
+          "trackId": 9,
+          "trackName": "Scrapper's Run",
+          "logicalModelId": 136,
+          "physicalIndex": 136,
+          "valueId": 1136,
+          "aliasName": "N64__136__Trak_OrdIbanna",
+          "sizeSignatureErrorPct": 0.082,
+          "nextClosestCandidateErrorPct": 45.323,
+          "planet": "Ord Ibanna",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 10,
+          "trackName": "Dethro's Revenge",
+          "logicalModelId": 137,
+          "physicalIndex": 137,
+          "valueId": 1137,
+          "aliasName": "N64__137__Trak_OrdIbanna",
+          "sizeSignatureErrorPct": 0.057,
+          "nextClosestCandidateErrorPct": 10.604,
+          "planet": "Ord Ibanna",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 11,
+          "trackName": "Abyss",
+          "logicalModelId": 138,
+          "physicalIndex": 138,
+          "valueId": 1138,
+          "aliasName": "N64__138__Trak_OrdIbanna",
+          "sizeSignatureErrorPct": 0.051,
+          "nextClosestCandidateErrorPct": 9.49,
+          "planet": "Ord Ibanna",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "Three unresolved Ord Ibanna tracks and three N64 aliases carrying the OrdIbanna label; per-track order is not proven."
+      "assignmentMeanErrorPct": 0.063,
+      "secondBestMeanErrorPct": 6.725,
+      "meanMarginPct": 6.662,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     },
     {
       "planet": "Baroonda",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         12,
         13,
         14
@@ -15286,17 +15489,53 @@
         140,
         141
       ],
-      "candidateAliasNames": [
-        "N64__139__Trak_Baroonda",
-        "N64__140__Trak_Baroonda",
-        "N64__141__Trak_Baroonda"
+      "assignments": [
+        {
+          "trackId": 12,
+          "trackName": "Baroo Coast",
+          "logicalModelId": 139,
+          "physicalIndex": 139,
+          "valueId": 1139,
+          "aliasName": "N64__139__Trak_Baroonda",
+          "sizeSignatureErrorPct": 3.407,
+          "nextClosestCandidateErrorPct": 22.966,
+          "planet": "Baroonda",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 13,
+          "trackName": "Grabvine Gateway",
+          "logicalModelId": 140,
+          "physicalIndex": 140,
+          "valueId": 1140,
+          "aliasName": "N64__140__Trak_Baroonda",
+          "sizeSignatureErrorPct": 1.797,
+          "nextClosestCandidateErrorPct": 8.921,
+          "planet": "Baroonda",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 14,
+          "trackName": "Fire Mountain Rally",
+          "logicalModelId": 141,
+          "physicalIndex": 141,
+          "valueId": 1141,
+          "aliasName": "N64__141__Trak_Baroonda",
+          "sizeSignatureErrorPct": 3.374,
+          "nextClosestCandidateErrorPct": 4.184,
+          "planet": "Baroonda",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "Three unresolved Baroonda tracks and three N64 aliases carrying the Baroonda label; per-track order is not proven."
+      "assignmentMeanErrorPct": 2.859,
+      "secondBestMeanErrorPct": 5.504,
+      "meanMarginPct": 2.645,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     },
     {
       "planet": "Oovo IV",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         19,
         20,
         21
@@ -15306,27 +15545,76 @@
         148,
         226
       ],
-      "candidateAliasNames": [
-        "N64__145__Trak__UNITYNULLREF",
-        "N64__148__Trak__UNITYNULLREF",
-        "N64__226__Trak__UNITYNULLREF"
+      "assignments": [
+        {
+          "trackId": 19,
+          "trackName": "Vengeance",
+          "logicalModelId": 145,
+          "physicalIndex": 145,
+          "valueId": 1145,
+          "aliasName": "N64__145__Trak__UNITYNULLREF",
+          "sizeSignatureErrorPct": 0.032,
+          "nextClosestCandidateErrorPct": 22.433,
+          "planet": "Oovo IV",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 20,
+          "trackName": "Executioner",
+          "logicalModelId": 148,
+          "physicalIndex": 148,
+          "valueId": 1148,
+          "aliasName": "N64__148__Trak__UNITYNULLREF",
+          "sizeSignatureErrorPct": 0.025,
+          "nextClosestCandidateErrorPct": 5.877,
+          "planet": "Oovo IV",
+          "confidence": "SUPPORTED"
+        },
+        {
+          "trackId": 21,
+          "trackName": "The Gauntlet",
+          "logicalModelId": 231,
+          "physicalIndex": 226,
+          "valueId": 1226,
+          "aliasName": "N64__226__Trak__UNITYNULLREF",
+          "sizeSignatureErrorPct": 0.027,
+          "nextClosestCandidateErrorPct": 6.299,
+          "planet": "Oovo IV",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "Three unresolved Oovo IV tracks and three N64 track-like null-reference aliases; there is no reliable per-track identity in these labels."
+      "assignmentMeanErrorPct": 0.028,
+      "secondBestMeanErrorPct": 4.069,
+      "meanMarginPct": 4.041,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     },
     {
       "planet": "Malastare",
-      "unresolvedTrackIds": [
+      "confidence": "SUPPORTED",
+      "trackIds": [
         22
       ],
       "candidatePhysicalIndices": [
         227
       ],
-      "candidateAliasNames": [
-        "N64__227__Trak_Malastare"
+      "assignments": [
+        {
+          "trackId": 22,
+          "trackName": "Malastare 100",
+          "logicalModelId": 232,
+          "physicalIndex": 227,
+          "valueId": 1227,
+          "aliasName": "N64__227__Trak_Malastare",
+          "sizeSignatureErrorPct": 0.105,
+          "nextClosestCandidateErrorPct": null,
+          "planet": "Malastare",
+          "confidence": "SUPPORTED"
+        }
       ],
-      "confidence": "HYPOTHESIS",
-      "reason": "One unresolved Malastare track and one generic N64 Malastare track alias; the exact name is unavailable."
+      "assignmentMeanErrorPct": 0.105,
+      "secondBestMeanErrorPct": null,
+      "meanMarginPct": null,
+      "rationale": "A unique minimum-cost one-to-one assignment within this planet group using the two-part model metadata size signature, reinforced by planet-labelled N64 alias names and the exact-name TrackGround auxiliary-part catalogue. This is metadata-level support, not a binary or runtime proof."
     }
   ],
   "contentSubsystemGroups": [
@@ -17640,5 +17928,13 @@
       }
     },
     "note": "This is status from an upstream generated model-item listing after the original-resource loader has had an opportunity to decompress items. It is not a copy of the compressed bytes and does not identify any ROM offsets."
+  },
+  "trackAliasMappingSummary": {
+    "supportedAssignments": 14,
+    "confidence": "SUPPORTED",
+    "exactNameMappings": 11,
+    "nameUnresolvedButSupported": 14,
+    "anyTrackWithoutExactNameOrSupportedAlias": 0,
+    "caveat": "These metadata signatures identify strong candidates for all 14 name-unresolved tracks but do not substitute for direct binary identity or runtime load testing."
   }
 }
