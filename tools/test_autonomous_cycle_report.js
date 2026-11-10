@@ -33,13 +33,13 @@ assert.equal(
   'do not reject the same claim when successful authentication evidence is absent'
 );
 
-function report(status = 'PROGRESS', base = 'main', task = taskId) {
+function report(status = 'PROGRESS', base = 'main', task = taskId, nextAction = 'Record the verified owner result in the task ledger.') {
   if (status === 'BLOCKED') {
     return [
       'BOONTA_CYCLE_TASK_ID: ' + task,
       'BOONTA_CYCLE_STATUS: BLOCKED',
       'BOONTA_CYCLE_BLOCKER: Owner must verify the external toolchain account.',
-      'BOONTA_CYCLE_NEXT_ACTION: Record the verified owner result in the task ledger.'
+      'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
     ].join('\n');
   }
   return [
@@ -137,7 +137,7 @@ async function run(name, options = {}) {
     github: fixture.github,
     context,
     core,
-    summary: options.summary || report(options.status || 'PROGRESS', options.reportBase || options.base || 'main', options.reportTaskId || taskId),
+    summary: options.summary || report(options.status || 'PROGRESS', options.reportBase || options.base || 'main', options.reportTaskId || taskId, options.reportNextAction),
     baseline: options.baseline || {},
     snapshotAt: options.snapshotAt || snapshotAt,
     expectedTaskId: options.expectedTaskId || taskId,
@@ -291,6 +291,31 @@ async function run(name, options = {}) {
   const blocked = await run('named task blocker', { status: 'BLOCKED' });
   assert.equal(blocked.core.outputs.cycle_status, 'blocked');
   assert.equal(blocked.core.outputs.blocked_fingerprint.length, 16);
+  await run('BLOCKED next action cannot direct a main task to dev', {
+    status: 'BLOCKED',
+    reportNextAction: 'Use branch dev for the next code change.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
+  await run('BLOCKED next action cannot direct a dev task to main', {
+    status: 'BLOCKED',
+    base: 'dev',
+    expectedBase: 'dev',
+    reportNextAction: 'Continue on the main branch.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
+  await run('BLOCKED next action without an explicit branch remains valid', {
+    status: 'BLOCKED',
+    reportNextAction: 'Record the verified owner result in the task ledger.'
+  });
+  await run('BLOCKED next action may explicitly use its selected branch', {
+    status: 'BLOCKED',
+    reportNextAction: 'Use branch main for the next documentation change.'
+  });
+  await run('BLOCKED next action rejects conflicting branches in the same sentence', {
+    status: 'BLOCKED',
+    reportNextAction: 'Keep main as the base, but push to dev.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
 
   const devChecks = REQUIRED_CHECKS.dev.map((name) => ({
     name, head_sha: head, status: 'completed', conclusion: 'success',
