@@ -62,14 +62,14 @@ function findNextActionBranchContradictions(nextAction, expectedBase) {
   const text = typeof nextAction === 'string' ? nextAction : '';
   const mentionedBranches = new Set();
   const patterns = [
-    /\bbranch\s+(?:named\s+)?[`'"]?(main|dev)\b/gi,
-    /\b(main|dev)\s+branch\b/gi,
-    /\b(?:use|work(?:ing)?\s+on|target(?:ing)?|push(?:ing)?\s+to|base(?:d)?\s+on|create(?:d)?\s+from|switch(?:ing)?\s+to|continue(?:d)?\s+on)\s+(?:the\s+)?[`'"]?(main|dev)\b/gi
+    /\bbranch\s+(?:named\s+)?[`'"]?(main|development|dev)\b/gi,
+    /\b(main|development|dev)\s+branch\b/gi,
+    /\b(?:use|work(?:ing)?\s+on|target(?:ing)?|push(?:ing)?\s+to|base(?:d)?\s+on|create(?:d)?\s+from|switch(?:ing)?\s+to|continue(?:d)?\s+on)\s+(?:the\s+)?[`'"]?(main|development|dev)\b/gi
   ];
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.exec(text)) !== null) {
-      mentionedBranches.add(match[1].toLowerCase());
+      mentionedBranches.add(match[1].toLowerCase() === 'development' ? 'dev' : match[1].toLowerCase());
     }
   }
   return [...mentionedBranches]
