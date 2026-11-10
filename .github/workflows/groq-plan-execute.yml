@@ -239,7 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,536/96 limits; max 3 steps. Leave margin below the observed 8k TPM ceiling.
+          # 1,536/96 limits; max 4 steps (6,528 nominal tokens). Leave margin below the observed 8k TPM ceiling.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -249,7 +249,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 3,
+                "steps": 4,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -280,7 +280,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -303,18 +303,19 @@ jobs:
           PROMPT="$(cat <<'PROMPT'
           Groq Free. €0 only; execute the preflight-selected task.
           TASK
-          - The preloaded schema-v2 context is authoritative. Match exact BOONTA_TASK_ID across all PR states; read at most one task row.
-          - Complete only on a merged PR with matching repository, base and exact HEAD. Closed-unmerged is incomplete. If already complete, reconcile the ledger with the original PR URL and task SHA, regenerate the summary, and use the next queued task; never cite a ledger-update SHA.
+          - The preloaded schema-v2 context and global preflight are authoritative. The selected activation task has empty `pr_url` and `head_sha`; preflight also checked all open PR bodies for its exact task marker.
+          - Do not search PR history or treat older merged automation PRs carrying the same marker as evidence for this current cycle. Do not reread the compact summary, task ledger or context-budget document.
           - PR #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           SAFETY
           - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
           - No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.
           - One task/writer/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
           TOOLS
-          - Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
+          - Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.
           - Direct MCP only; no shell, execute wrapper, filesystem tools or subagents.
           DELIVERY
-          - Exact-task PR search; max one row read, one branch, one push_files patch, one non-draft PR, exact HEAD readback.
+          - At most four direct steps: optionally read one directly relevant implementation/test file; create one branch from the selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
+          - Do not search or separately read back a PR. Use the create_pull_request result's PR URL and head_sha; the shared validator performs authoritative live PR and exact-head CI verification.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           - Machine report only; copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
           PROMPT
