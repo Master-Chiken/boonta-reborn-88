@@ -71,6 +71,13 @@ PROTECTED_EXACT = {
     ".gitignore",
     ".gitattributes",
     ".gitmodules",
+    "tools/autonomous_patch_proposal.py",
+    "tools/run_autonomous_patch_tests.py",
+    "tools/test_autonomous_patch_proposal.py",
+    "tools/test_autonomous_patch_test_runner.py",
+    "tools/test_autonomous_task_preflight.py",
+    "tools/check_autonomous_provider_handoff.py",
+    "tools/check_task_ledger.py",
 }
 PROTECTED_PREFIXES = (
     ".github/",
