@@ -68,6 +68,34 @@ def _remove_worktree(root: Path, worktree: Path) -> None:
     _git(root, ["worktree", "prune", "--expire", "now"])
 
 
+def _snapshot_verified_paths(worktree: Path, paths: list[str]) -> dict[str, tuple[str, str]]:
+    """Capture exact contents and regular-file mode before/after tests."""
+    snapshot: dict[str, tuple[str, str]] = {}
+    for path in sorted(paths):
+        target = worktree / path
+        if target.is_symlink():
+            raise PipelineError(f"Verification target became a symlink: {path}")
+        try:
+            info = target.lstat()
+        except OSError as exc:
+            raise PipelineError(f"Verification target cannot be inspected: {path}") from exc
+        if not stat.S_ISREG(info.st_mode):
+            raise PipelineError(f"Verification target is not a regular file: {path}")
+        parent = target.parent
+        while parent != worktree:
+            if parent.is_symlink():
+                raise PipelineError(f"Verification target has a symlink parent: {path}")
+            parent = parent.parent
+        try:
+            data = target.read_bytes()
+            data.decode("utf-8", errors="strict")
+        except (OSError, UnicodeError) as exc:
+            raise PipelineError(f"Verification target is not readable UTF-8 text: {path}") from exc
+        mode = "100755" if info.st_mode & 0o111 else "100644"
+        snapshot[path] = (hashlib.sha256(data).hexdigest(), mode)
+    return snapshot
+
+
 def _build_delivery_bundle(
     source_root: Path,
     worktree: Path,
@@ -192,6 +220,7 @@ def verify_in_isolated_worktree(
                 allowed_paths=allowed_paths,
                 apply=True,
             )
+            applied_snapshot = _snapshot_verified_paths(worktree, list(changed_paths))
 
             test_report = run_autonomous_patch_tests.run_test_ids(
                 worktree,
@@ -223,6 +252,12 @@ def verify_in_isolated_worktree(
             expected = sorted(changed_paths)
             if sorted(working_paths) != expected or staged_paths or untracked_paths:
                 raise PipelineError("Verification changed files outside the exact validated patch")
+            # Tests may inspect files but must not rewrite even an already
+            # authorized target. Compare byte digests and executable modes.
+            post_test_snapshot = _snapshot_verified_paths(worktree, expected)
+            if post_test_snapshot != applied_snapshot:
+                raise PipelineError("Verification tests modified a validated patch file or its mode")
+
             # Revalidate targets after test execution, then export exact UTF-8
             # file contents and Git blob identities for a future deterministic
             # writer. The bundle is bounded and contains only approved files.
