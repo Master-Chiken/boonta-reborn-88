@@ -153,12 +153,18 @@ def _api_request(
         value = json.loads(raw.decode("utf-8"))
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise DeliveryExecutionError("GitHub API returned invalid UTF-8 JSON") from exc
-    if not isinstance(value, dict):
+    if not isinstance(value, (dict, list)):
         raise DeliveryExecutionError("GitHub API returned an unexpected response shape")
     return value
 
 
-def _find_open_task_pr(token: str, repository: str, task_id: str) -> dict[str, Any] | None:
+def _find_open_task_pr(
+    token: str,
+    repository: str,
+    task_id: str,
+    *,
+    request=_api_request,
+) -> dict[str, Any] | None:
     marker = f"BOONTA_TASK_ID: {task_id}"
     page = 1
     matches: list[dict[str, Any]] = []
@@ -201,8 +207,6 @@ def execute_delivery(
     base_sha = plan["base_sha"]
     branch_name = plan["branch_name"]
     task_id = plan["task_id"]
-    owner, name = repository.split("/", 1)
-
     base_ref = request(
         token, "GET",
         f"/repos/{repository}/git/ref/heads/{urllib.parse.quote(target_branch, safe='/')}",
@@ -222,9 +226,14 @@ def execute_delivery(
     if existing_pr is not None:
         raise DeliveryExecutionError("An open PR already exists for this task; reconcile it instead of duplicating it")
 
+    create_tree_plan = write_plan["create_tree"]
+    tree_payload = {
+        "base_tree": create_tree_plan["base_tree_sha"],
+        "tree": create_tree_plan["tree_elements"],
+    }
     tree = request(
         token, "POST", f"/repos/{repository}/git/trees",
-        payload=write_plan["create_tree"],
+        payload=tree_payload,
     )
     tree_sha = tree.get("sha") if isinstance(tree, dict) else None
     if not isinstance(tree_sha, str) or not SHA_RE.fullmatch(tree_sha):
