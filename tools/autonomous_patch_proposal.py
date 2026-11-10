@@ -70,6 +70,9 @@ PROTECTED_EXACT = {
     ".github/CODEOWNERS",
     "docs/automation/task-ledger.json",
     "docs/automation/task-ledger-summary.json",
+    ".gitignore",
+    ".gitattributes",
+    ".gitmodules",
 }
 PROTECTED_PREFIXES = (
     ".github/",
@@ -170,8 +173,14 @@ def _safe_path(path: str) -> str:
     components = path.split("/")
     if any(part in {"", ".", ".."} for part in components):
         raise ProposalError("Diff contains path traversal or ambiguous path components")
-    if path in PROTECTED_EXACT or any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES):
-        raise ProposalError("Diff attempts to change a protected repository path")
+    if (
+        path in PROTECTED_EXACT
+        or any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES)
+        or path.startswith(".env")
+        or path.endswith((".pem", ".key", ".p12", ".pfx"))
+        or any(part.lower() in {"secrets", "credentials"} for part in components)
+    ):
+        raise ProposalError("Diff attempts to change a protected or credential-bearing repository path")
     return path
 
 
@@ -278,6 +287,12 @@ def validate_tracked_targets(root: Path, paths: tuple[str, ...]) -> None:
         mode = entries[0].split(None, 1)[0]
         if mode not in {"100644", "100755"}:
             raise ProposalError(f"Patch target is not a regular tracked file: {path}")
+        candidate = root / path
+        parent = candidate.parent
+        while parent != root:
+            if parent.is_symlink():
+                raise ProposalError(f"Patch target has a symlink parent directory: {path}")
+            parent = parent.parent
 
 
 def validate_or_apply(
