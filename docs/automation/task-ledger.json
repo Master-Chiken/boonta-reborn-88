@@ -831,7 +831,7 @@
         "Nintendo 64",
         "GameCube"
       ],
-      "status": "blocked",
+      "status": "in_review",
       "question": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
       "acceptance_criteria": [
         "Retain sorted Pupp index 10 as a candidate only: 68,284 decoded bytes match the public catalogue size associated with N64 model ID 0087, but identity is not established until structural parsing succeeds",
@@ -846,11 +846,14 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710857468",
         "https://github.com/OpenSWE1R/swe1r-tools/commit/922ef535f6598a1330ff93d6b07258956f990b34",
         "https://github.com/Master-Chiken/boonta-reborn-88/issues/226#issuecomment-6710922112",
-        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570"
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/381"
       ],
-      "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
-      "updated_at": "2026-11-07",
-      "target_branch": "main"
+      "next_action": "PR #381 documents the owner-local structural parse and the existing N64 texture-export route; review it before merging. The local parser probe is already complete: 9 root nodes, 244 total nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 visible triangles, 26 materials and 26 texture references; all reported structural checks passed (zero invalid triangle indices, command-list errors, vertex-buffer rule errors, or animation-count inconsistencies). Do not ask the owner to install .NET or rerun this probe. The decoded candidate remains a strong Anakin/0087 candidate, not a proven item-index mapping. Next separate research task is reconstructing/locating the complete local N64 model and texture blocks required by the existing exporter; audit package and dependency provenance before any integration. No ROM-derived payloads are to be uploaded or committed.",
+      "updated_at": "2026-11-10",
+      "target_branch": "main",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/381",
+      "head_sha": "9168939626883a3d8f6cfad26299575ddf71db45"
     }
   ]
 }
