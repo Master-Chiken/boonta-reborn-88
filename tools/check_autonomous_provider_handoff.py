@@ -100,7 +100,6 @@ for required in (
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
 model_visible_github_tools = (
     "github_get_file_contents",
-    "github_search_pull_requests",
     "github_create_branch",
     "github_push_files",
     "github_create_pull_request",
@@ -112,16 +111,15 @@ for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
 
-# OpenRouter's eight-step budget must be spent on the reserved task, not discovery.
+# OpenRouter's eight-step ceiling is a hard safety bound, not a discovery budget.
+# The preflight performs task reservation and open-PR duplicate detection before inference.
 for required in (
     "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
-    "Do not list the repository root or reread the compact summary.",
-    "Do not list the repository root or reread the compact summary.",
-    "read docs/automation/task-ledger.json once and inspect only the exact selected task row",
-    "create one branch from the current selected base ref",
-    "push one logical patch with one push_files call",
-    "create one PR to the selected base",
-    "search/read back that PR and its exact current head SHA",
+    "The global preflight already completed the exact task reservation and open-PR duplicate check.",
+    "Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.",
+    "optionally read one directly relevant implementation/test file",
+    "call push_files exactly once with one coherent patch",
+    "the shared report validator re-fetches the live PR",
     "NO PROSE OR MARKDOWN FENCES",
 ):
     if required not in openrouter:
@@ -317,8 +315,10 @@ openrouter_config = load_opencode_config("OpenRouter", openrouter)
 groq_config = load_opencode_config("Groq", groq)
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
-if groq_config.get("agent", {}).get("build", {}).get("steps") != 3:
-    errors.append("Groq must remain limited to three OpenCode build steps")
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
+    errors.append("Groq must have four bounded direct-delivery steps")
+elif 4 * (1536 + 96) >= 8000:
+    errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
     if task_permissions.get("*") != "deny":
@@ -416,9 +416,12 @@ required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
+required_free_writer_tools = {
+    "get_file_contents", "create_branch", "push_files", "create_pull_request",
+}
 for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
-    if toolset != required_writer_tools:
-        errors.append(f"{label} must expose exactly the reviewed five-tool read/search/branch/PR contract")
+    if toolset != required_free_writer_tools:
+        errors.append(f"{label} must expose exactly four direct read/branch/push/PR tools; PR history search is preflight-owned")
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
@@ -515,8 +518,8 @@ for content, needle, message in (
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
 
 ):
     if needle not in content:
@@ -574,30 +577,30 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if required_reopen_rule not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
 
-# A blocked task with no ledger PR/head must reconcile exact matching historic PRs
-# before any provider creates more work. Keep all three agent prompts in sync.
-for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
-    required_rules = (
-        (
-            "Match exact BOONTA_TASK_ID across all PR states; read at most one task row.",
-            "Complete only on a merged PR with matching repository, base and exact HEAD. Closed-unmerged is incomplete.",
-            "If already complete, reconcile the ledger with the original PR URL and task SHA, regenerate the summary, and use the next queued task",
-            "never cite a ledger-update SHA",
-        )
-        if label == "Groq" else (
-            "Post-merge reconciliation",
-            "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
-            "including merged/closed results",
-            "closed-unmerged is not completion",
-            "verify live `merged_at`",
-            "final `head.sha`",
-            "record that original PR URL and exact head SHA as evidence",
-            "Never use the ledger-update PR's own SHA as task evidence",
-        )
-    )
-    for required in required_rules:
+# Free-agent preflight has already reserved the exact ledger row and rejected a
+# matching open task PR. Do not spend scarce inference steps repeating that lookup.
+for label, prompt in (("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "Global preflight is authoritative",
+        "Do not search PR history",
+        "pr_url",
+        "head_sha",
+        "older merged automation PRs",
+    ):
         if required not in prompt:
-            errors.append(f"{label} prompt is missing the post-merge task reconciliation rule {required!r}")
+            errors.append(f"{label} prompt is missing preflight-owned task-state rule {required!r}")
+for required in (
+    "Post-merge reconciliation",
+    "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
+    "including merged/closed results",
+    "closed-unmerged is not completion",
+    "verify live `merged_at`",
+    "final `head.sha`",
+    "record that original PR URL and exact head SHA as evidence",
+    "Never use the ledger-update PR's own SHA as task evidence",
+):
+    if required not in gemini_prompt:
+        errors.append(f"Gemini prompt is missing the post-merge task reconciliation rule {required!r}")
 
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
