@@ -37,19 +37,20 @@
         "Nintendo 64",
         "GameCube"
       ],
-      "status": "in_review",
+      "status": "blocked",
       "target_branch": "main",
       "question_excerpt": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
       "acceptance_criteria_total": 6,
       "acceptance_criteria_excerpt": [
-        "The 68,284-byte local candidate parsed successfully as PuppModel; retain it as a strong Anakin/0087 candidate only because the local record-to-catalogue index mapping is not proven",
-        "The isolated .NET 10.0.403 parser probe has run locally; 9 roots, 244 nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 triangles, 26 materials and 26 texture references",
-        "Zero invalid triangle indices, graphics-command errors, vertex-buffer rule errors, or animation-count inconsistencies were reported",
-        "Complete N64 model/texture block reconstruction and dependency provenance remain separate gates before exporter integration or GX conversion"
+        "The 68,284-byte decoded local candidate matches the public size for N64 USA model item 0087 and successfully deserializes as…",
+        "Use only the already-prepared owner-local decoded candidate; no model bytes, decoded payloads, ROM offsets, dumps, images or extracted…",
+        "The .NET 10.0.403 ARM64 parser-only probe has been run locally in an isolated workspace outside upstream clones",
+        "The pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 probe parsed the decoded Pupp payload; this does not yet prove the complete N64 model-block…",
+        "Aggregate-only result recorded: 9 roots, 244 total nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 visible triangles, 26 materials…"
       ],
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/381",
-      "head_sha": "9168939626883a3d8f6cfad26299575ddf71db45",
-      "next_action_excerpt": "Review PR #381, which records the successful owner-local Pupp structural parse and the existing N64 texture-export pipeline. Do not ask the owner to reinstall .NET or repeat the parse. Candidate item 0087 mapping is still unproven. The next separate task is to reconstruct/locate complete N64 model and texture block inputs for the existing exporter, then audit dependency provenance before integration; keep all extracted data local."
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "The owner-local structural parse is complete and its aggregate result is documented in PR #381; do not ask the owner to install .NET or repeat the probe. The decoded candidate remains a strong Anakin/0087 candidate, not a proven item-index mapping, and the test does not prove complete N64 model/texture block reconstruction. PR #381 records the reuse path from the pinned MIT swe1r-assets source: N64 texture block…"
     }
   ]
 }
