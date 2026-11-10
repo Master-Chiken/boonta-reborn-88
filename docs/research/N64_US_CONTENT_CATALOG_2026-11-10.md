@@ -84,6 +84,22 @@ Each model reference is stored as a logical catalogue ID and, when resolvable, i
 | 23 | Dug Derby | Malastare | 233 | index 228 |
 | 24 | Sebulba's Legacy | Malastare | 315 | index 299 |
 
+## Regional comparison — USA, Europe and Japan
+
+A separate comparison of `Release.csv`, `Block.csv` and `BlockItem.csv` at the same pinned source revision found:
+
+| Release | Model block | Model entries | Sprite block | Sprite entries |
+|---|---|---:|---|---:|
+| N64 USA | `n64_us` (ID 2) | 307 | `n64_us` (ID 2) | 173 |
+| N64 Europe | `n64_eu-jp` (ID 1) | 307 | `_default` (ID 0) | 179 |
+| N64 Japan | `n64_eu-jp` (ID 1) | 307 | `n64_jp` (ID 1) | 182 |
+
+- **Models:** USA vs Europe and USA vs Japan each show zero physical-index name differences across all 307 entries. The same 123 racer model references also resolve by exact name in all three selected N64 model blocks. This supports one shared N64 model inventory across the three regional metadata variants; it is still metadata evidence, not a byte-for-byte runtime test.
+- **Sprites:** USA vs Europe/default differ at 8 physical indices; USA vs Japan differ at 11. Do not share a single regional sprite index map blindly. The Europe release points to the shared `_default` block in `Release.csv`; it is not labeled as a dedicated N64 Europe sprite block.
+- **Splines and textures:** all three N64 release rows select the same spline block ID 1 and texture block ID 1 in `Release.csv`.
+
+These differences suggest a practical content-pipeline split: shared N64 model/spline/texture metadata, but separately resolved regional sprite catalogues. No sprite payload or image is included.
+
 ## Critical mapping rule
 
 Three different identifiers occur in the source metadata:
