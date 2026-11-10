@@ -16797,5 +16797,466 @@
     "podVehicleModels": 25,
     "alternateRacerModels": 25,
     "racerPuppModels": 25
+  },
+  "trackSplineAssociations": {
+    "exactNamedSplineRows": 26,
+    "trackIdsWithAtLeastOneExactSpline": [
+      2,
+      3,
+      4,
+      6,
+      7,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "tracksWithNoExplicitlyNamedSpline": [
+      {
+        "trackId": 0,
+        "name": "The Boonta Training Course"
+      },
+      {
+        "trackId": 1,
+        "name": "The Boonta Classic"
+      },
+      {
+        "trackId": 5,
+        "name": "Andobi Prime Centrum"
+      },
+      {
+        "trackId": 8,
+        "name": "Bumpy's Breakers"
+      },
+      {
+        "trackId": 18,
+        "name": "Zugga Challenge"
+      }
+    ],
+    "unresolvedNamedSplineRows": [
+      {
+        "physicalIndex": 19,
+        "valueId": 19,
+        "name": "Trak_Aquilaris_Partial",
+        "trackId": null,
+        "trackName": null,
+        "resolution": "unresolved_track_alias",
+        "planetCandidate": "Aquilaris",
+        "candidateTrackIds": [
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "physicalIndex": 55,
+        "valueId": 55,
+        "name": "Trak_37",
+        "trackId": null,
+        "trackName": null,
+        "resolution": "unresolved_track_alias",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      }
+    ],
+    "links": [
+      {
+        "physicalIndex": 0,
+        "valueId": 0,
+        "name": "Trak_Baroonda_Baroo_Coast_1",
+        "trackId": 12,
+        "trackName": "Baroo Coast",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 1,
+        "valueId": 1,
+        "name": "Trak_Baroonda_Grabvine_Gateway_1",
+        "trackId": 13,
+        "trackName": "Grabvine Gateway",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 2,
+        "valueId": 2,
+        "name": "Trak_Mon_Gaza_Speedway_1",
+        "trackId": 16,
+        "trackName": "Mon Gazza Speedway",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 3,
+        "valueId": 3,
+        "name": "Trak_Oovo_IV_Vengeance_1",
+        "trackId": 19,
+        "trackName": "Vengeance",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 4,
+        "valueId": 4,
+        "name": "Trak_Oovo_IV_Executioner_1",
+        "trackId": 20,
+        "trackName": "Executioner",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 5,
+        "valueId": 5,
+        "name": "Trak_Oovo_IV_The_Gauntlet_1",
+        "trackId": 21,
+        "trackName": "The Gauntlet",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 7,
+        "valueId": 7,
+        "name": "Trak_Malastare_Malastare_100_1",
+        "trackId": 22,
+        "trackName": "Malastare 100",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 8,
+        "valueId": 8,
+        "name": "Trak_Malastare_Dug_Derby_1",
+        "trackId": 23,
+        "trackName": "Dug Derby",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 9,
+        "valueId": 9,
+        "name": "Trak_Malastare_Sebulbas_Legacy_1",
+        "trackId": 24,
+        "trackName": "Sebulba's Legacy",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 11,
+        "valueId": 11,
+        "name": "Trak_Ando_Prime_Beedos_Wild_Ride_1",
+        "trackId": 2,
+        "trackName": "Beedo's Wild Ride",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 12,
+        "valueId": 12,
+        "name": "Trak_Ando_Prime_Beedos_Wild_Ride_2",
+        "trackId": 2,
+        "trackName": "Beedo's Wild Ride",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 13,
+        "valueId": 13,
+        "name": "Trak_Ando_Prime_Howler_Gorge_1",
+        "trackId": 3,
+        "trackName": "Howler Gorge",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 14,
+        "valueId": 14,
+        "name": "Trak_Ando_Prime_Andobi_Mountain_Run_1",
+        "trackId": 4,
+        "trackName": "Andobi Mountain Run",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 16,
+        "valueId": 16,
+        "name": "Trak_Aquilaris_Aquilaris_Classic_1",
+        "trackId": 6,
+        "trackName": "Aquilaris Classic",
+        "resolution": "exact_track_name",
+        "planetCandidate": "Aquilaris",
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 18,
+        "valueId": 18,
+        "name": "Trak_Aquilaris_Sunken_City_1",
+        "trackId": 7,
+        "trackName": "Sunken City",
+        "resolution": "exact_track_name",
+        "planetCandidate": "Aquilaris",
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 19,
+        "valueId": 19,
+        "name": "Trak_Aquilaris_Partial",
+        "trackId": null,
+        "trackName": null,
+        "resolution": "unresolved_track_alias",
+        "planetCandidate": "Aquilaris",
+        "candidateTrackIds": [
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "physicalIndex": 21,
+        "valueId": 21,
+        "name": "Trak_Ando_Prime_Howler_Gorge_2",
+        "trackId": 3,
+        "trackName": "Howler Gorge",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 50,
+        "valueId": 50,
+        "name": "Trak_Baroonda_Inferno",
+        "trackId": 15,
+        "trackName": "Inferno",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 53,
+        "valueId": 53,
+        "name": "Trak_Mon_Gaza_Spice_Mine_Run",
+        "trackId": 17,
+        "trackName": "Spice Mine Run",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 55,
+        "valueId": 55,
+        "name": "Trak_37",
+        "trackId": null,
+        "trackName": null,
+        "resolution": "unresolved_track_alias",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 58,
+        "valueId": 58,
+        "name": "Trak_Malastare_Dug_Derby_2",
+        "trackId": 23,
+        "trackName": "Dug Derby",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 60,
+        "valueId": 60,
+        "name": "Trak_Malastare_Sebulbas_Legacy_2",
+        "trackId": 24,
+        "trackName": "Sebulba's Legacy",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 61,
+        "valueId": 61,
+        "name": "Trak_Ord_Ibanna_Scrappers_Run_2",
+        "trackId": 9,
+        "trackName": "Scrapper's Run",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 63,
+        "valueId": 63,
+        "name": "Trak_Ord_Ibanna_Dethros_Revenge_2",
+        "trackId": 10,
+        "trackName": "Dethro's Revenge",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 64,
+        "valueId": 64,
+        "name": "Trak_Ord_Ibanna_Abyss_2",
+        "trackId": 11,
+        "trackName": "Abyss",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 68,
+        "valueId": 68,
+        "name": "Trak_Malastare_Malastare_100_2",
+        "trackId": 22,
+        "trackName": "Malastare 100",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 85,
+        "valueId": 85,
+        "name": "Trak_Baroonda_Baroo_Coast_3",
+        "trackId": 12,
+        "trackName": "Baroo Coast",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      },
+      {
+        "physicalIndex": 86,
+        "valueId": 86,
+        "name": "Trak_Baroonda_Fire_Mountain_Rally_2",
+        "trackId": 14,
+        "trackName": "Fire Mountain Rally",
+        "resolution": "exact_track_name",
+        "planetCandidate": null,
+        "candidateTrackIds": null
+      }
+    ],
+    "exactSplineCountsByTrack": [
+      {
+        "trackId": 2,
+        "trackName": "Beedo's Wild Ride",
+        "count": 2
+      },
+      {
+        "trackId": 3,
+        "trackName": "Howler Gorge",
+        "count": 2
+      },
+      {
+        "trackId": 4,
+        "trackName": "Andobi Mountain Run",
+        "count": 1
+      },
+      {
+        "trackId": 6,
+        "trackName": "Aquilaris Classic",
+        "count": 1
+      },
+      {
+        "trackId": 7,
+        "trackName": "Sunken City",
+        "count": 1
+      },
+      {
+        "trackId": 9,
+        "trackName": "Scrapper's Run",
+        "count": 1
+      },
+      {
+        "trackId": 10,
+        "trackName": "Dethro's Revenge",
+        "count": 1
+      },
+      {
+        "trackId": 11,
+        "trackName": "Abyss",
+        "count": 1
+      },
+      {
+        "trackId": 12,
+        "trackName": "Baroo Coast",
+        "count": 2
+      },
+      {
+        "trackId": 13,
+        "trackName": "Grabvine Gateway",
+        "count": 1
+      },
+      {
+        "trackId": 14,
+        "trackName": "Fire Mountain Rally",
+        "count": 1
+      },
+      {
+        "trackId": 15,
+        "trackName": "Inferno",
+        "count": 1
+      },
+      {
+        "trackId": 16,
+        "trackName": "Mon Gazza Speedway",
+        "count": 1
+      },
+      {
+        "trackId": 17,
+        "trackName": "Spice Mine Run",
+        "count": 1
+      },
+      {
+        "trackId": 19,
+        "trackName": "Vengeance",
+        "count": 1
+      },
+      {
+        "trackId": 20,
+        "trackName": "Executioner",
+        "count": 1
+      },
+      {
+        "trackId": 21,
+        "trackName": "The Gauntlet",
+        "count": 1
+      },
+      {
+        "trackId": 22,
+        "trackName": "Malastare 100",
+        "count": 2
+      },
+      {
+        "trackId": 23,
+        "trackName": "Dug Derby",
+        "count": 2
+      },
+      {
+        "trackId": 24,
+        "trackName": "Sebulba's Legacy",
+        "count": 2
+      }
+    ]
   }
 }
