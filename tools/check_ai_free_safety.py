@@ -1493,9 +1493,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1536 or groq_limits.get("output") != 96:
+        if groq_limits.get("context") != 1344 or groq_limits.get("output") != 96:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1536 context / 96 output tokens to leave margin below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1344 context / 96 output tokens so five steps stay below the observed TPM refusal"
             )
         if groq_config.get("model") != "groq/openai/gpt-oss-20b":
             errors.append("Groq fallback must keep its fixed free-tier model")
@@ -1504,7 +1504,7 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,536/96 limits; max 4 steps (6,528 nominal tokens).",
+    "1,344/96 limits; max 5 steps (7,200 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
     "Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request.",
