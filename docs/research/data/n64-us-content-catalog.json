@@ -1434,7 +1434,8 @@
     "Track.Model is a logical model catalogue reference. This pass resolves a physical N64 index only when the N64 block's item-value name exactly matches the canonical catalogue name; unresolved aliases are retained as unresolved, not treated as missing tracks.",
     "BlockItem.Index is the physical item index within the selected block; BlockItem.ValueId is a metadata value ID. Neither is interchangeable with a ModelBlockItem logical reference.",
     "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation.",
-    "The N64 USA model block contains 14 N64-prefixed alias records, while 14 Track.Model references remain unresolved by exact-name matching. The matching counts are a research lead only; no one-to-one track assignment is assumed without stronger evidence."
+    "The N64 USA model block contains 14 N64-prefixed alias records, while 14 Track.Model references remain unresolved by exact-name matching. The matching counts are a research lead only; no one-to-one track assignment is assumed without stronger evidence.",
+    "The 14 unresolved track references can be grouped by planet against 14 N64-prefixed Trak alias records (six groups). These are hypothesis-level candidate sets only; do not assign a specific alias to a specific circuit without a validated name/hash/source/runtime link."
   ],
   "audit": {
     "n64ModelPhysicalEntries": 307,
@@ -14892,5 +14893,115 @@
         "unnamed": 1648
       }
     }
-  }
+  },
+  "trackAliasCandidateGroups": [
+    {
+      "planet": "Ando Prime",
+      "unresolvedTrackIds": [
+        4
+      ],
+      "candidatePhysicalIndices": [
+        132
+      ],
+      "candidateAliasNames": [
+        "N64__132__Trak_AndoPrime"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "One unresolved Ando Prime track and one N64 alias labeled AndoPrime; no exact track-name match."
+    },
+    {
+      "planet": "Aquilaris",
+      "unresolvedTrackIds": [
+        6,
+        7,
+        8
+      ],
+      "candidatePhysicalIndices": [
+        133,
+        134,
+        135
+      ],
+      "candidateAliasNames": [
+        "N64__133__Trak_Aquilaris",
+        "N64__134__Trak_Aquilaris",
+        "N64__135__Trak_Aquilaris"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "Three unresolved Aquilaris tracks and three N64 aliases carrying the Aquilaris label; per-track order is not proven."
+    },
+    {
+      "planet": "Ord Ibanna",
+      "unresolvedTrackIds": [
+        9,
+        10,
+        11
+      ],
+      "candidatePhysicalIndices": [
+        136,
+        137,
+        138
+      ],
+      "candidateAliasNames": [
+        "N64__136__Trak_OrdIbanna",
+        "N64__137__Trak_OrdIbanna",
+        "N64__138__Trak_OrdIbanna"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "Three unresolved Ord Ibanna tracks and three N64 aliases carrying the OrdIbanna label; per-track order is not proven."
+    },
+    {
+      "planet": "Baroonda",
+      "unresolvedTrackIds": [
+        12,
+        13,
+        14
+      ],
+      "candidatePhysicalIndices": [
+        139,
+        140,
+        141
+      ],
+      "candidateAliasNames": [
+        "N64__139__Trak_Baroonda",
+        "N64__140__Trak_Baroonda",
+        "N64__141__Trak_Baroonda"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "Three unresolved Baroonda tracks and three N64 aliases carrying the Baroonda label; per-track order is not proven."
+    },
+    {
+      "planet": "Oovo IV",
+      "unresolvedTrackIds": [
+        19,
+        20,
+        21
+      ],
+      "candidatePhysicalIndices": [
+        145,
+        148,
+        226
+      ],
+      "candidateAliasNames": [
+        "N64__145__Trak__UNITYNULLREF",
+        "N64__148__Trak__UNITYNULLREF",
+        "N64__226__Trak__UNITYNULLREF"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "Three unresolved Oovo IV tracks and three N64 track-like null-reference aliases; there is no reliable per-track identity in these labels."
+    },
+    {
+      "planet": "Malastare",
+      "unresolvedTrackIds": [
+        22
+      ],
+      "candidatePhysicalIndices": [
+        227
+      ],
+      "candidateAliasNames": [
+        "N64__227__Trak_Malastare"
+      ],
+      "confidence": "HYPOTHESIS",
+      "reason": "One unresolved Malastare track and one generic N64 Malastare track alias; the exact name is unavailable."
+    }
+  ]
 }
