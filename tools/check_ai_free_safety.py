@@ -734,7 +734,10 @@ for label, workflow, mint_marker, invocation_marker in fresh_guard_providers:
     ):
         if required not in workflow:
             errors.append(f"{label} post-queue task guard is missing {required!r}")
-if "steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'" not in openrouter_fallback.split("id: fresh_task_guard", 1)[0][-500:]:
+openrouter_fresh_guard_start = openrouter_fallback.find("      - name: Revalidate selected task after acquiring the shared writer slot")
+openrouter_fresh_guard_end = openrouter_fallback.find("\\n      - name:", openrouter_fresh_guard_start + 1)
+openrouter_fresh_guard = openrouter_fallback[openrouter_fresh_guard_start:openrouter_fresh_guard_end]
+if "steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'" not in openrouter_fresh_guard:
     errors.append("OpenRouter fresh task guard must run only after its GET-only Free quota/authentication preflight passes")
 if "test_autonomous_fresh_task_guard.py" not in selftest or "python3 tools/test_autonomous_fresh_task_guard.py" not in selftest:
     errors.append("Branch automation self-test must execute post-queue task guard regressions")
