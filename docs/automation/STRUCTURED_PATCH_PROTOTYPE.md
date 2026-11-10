@@ -132,7 +132,9 @@ python3 tools/build_autonomous_delivery_plan.py \
   --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
 \`\`\`
 
-The output is DELIVERY_PLAN_READY only. It creates no commit, local/remote branch, push, pull request or merge. Human review and normal branch protections remain mandatory. The planner itself and its tests are protected from model-authored patches.
+The verified report now also carries a bounded file bundle for the future GitHub writer: each exact path includes its base Git blob SHA, resulting Git blob SHA, SHA-256 digest, file mode and base64-encoded UTF-8 contents. The verifier enforces a 128 KiB per-file limit and a 256 KiB aggregate limit. The planner rechecks both blob identities and the base checkout before including those bytes in its deterministic plan. This prevents a future writer from asking the model to reconstruct or reformat source files.
+
+The output is DELIVERY_PLAN_READY only. It creates no commit, local/remote branch, push, pull request or merge. Human review and normal branch protections remain mandatory. The planner itself and its tests are protected from model-authored patches. The actual GitHub writer is still a separate future component and is not connected to providers or scheduled workflows.
 
 ## Owner-reviewed path generation
 
@@ -155,7 +157,7 @@ The owner-reviewed path policy is separate from the canonical task ledger. A pol
 - No structured-output provider request or model route is configured.
 - The fixed dispatcher runs only the three verified offline automation checks. GameCube build/test commands are not in the registry because no stable, bounded host-test command has yet been confirmed.
 - The isolated patch-to-tests verifier is an offline prototype only; no production provider or scheduled loop invokes it yet.
-- The deterministic delivery planner prepares commit/PR metadata but does not create a commit, branch, push or PR. A separately reviewed GitHub writer and lock are still not connected.
+- The deterministic delivery planner prepares commit/PR metadata and checksummed file contents but does not create a commit, branch, push or PR. A separately reviewed GitHub writer and lock are still not connected.
 - No cross-runtime lock is implemented.
 
 ## Promotion criteria
