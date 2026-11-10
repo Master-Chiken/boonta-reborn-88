@@ -62,9 +62,9 @@ function findNextActionBranchContradictions(nextAction, expectedBase) {
   const text = typeof nextAction === 'string' ? nextAction : '';
   const mentionedBranches = new Set();
   const patterns = [
-    /\\bbranch\\s+(?:named\\s+)?[`'"]?(main|dev)\\b/gi,
-    /\\b(main|dev)\\s+branch\\b/gi,
-    /\\b(?:use|work(?:ing)?\\s+on|target(?:ing)?|push(?:ing)?\\s+to|base(?:d)?\\s+on|create(?:d)?\\s+from|switch(?:ing)?\\s+to|continue(?:d)?\\s+on)\\s+(?:the\\s+)?[`'"]?(main|dev)\\b/gi
+    /\bbranch\s+(?:named\s+)?[`'"]?(main|dev)\b/gi,
+    /\b(main|dev)\s+branch\b/gi,
+    /\b(?:use|work(?:ing)?\s+on|target(?:ing)?|push(?:ing)?\s+to|base(?:d)?\s+on|create(?:d)?\s+from|switch(?:ing)?\s+to|continue(?:d)?\s+on)\s+(?:the\s+)?[`'"]?(main|dev)\b/gi
   ];
   for (const pattern of patterns) {
     let match;
