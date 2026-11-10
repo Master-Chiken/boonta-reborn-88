@@ -177,7 +177,7 @@ def _safe_path(path: str) -> str:
         path in PROTECTED_EXACT
         or any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES)
         or path.startswith(".env")
-        or path.endswith((".pem", ".key", ".p12", ".pfx"))
+        or path.lower().endswith((".pem", ".key", ".p12", ".pfx"))
         or any(part.lower() in {"secrets", "credentials"} for part in components)
     ):
         raise ProposalError("Diff attempts to change a protected or credential-bearing repository path")
@@ -239,8 +239,6 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
         raise ProposalError("Each diff file section must contain at least one text hunk")
     if len(paths) > MAX_FILES:
         raise ProposalError("Diff exceeds the five-file safety limit")
-    if not saw_hunk:
-        raise ProposalError("Unified diff contains no text hunks")
     return tuple(paths)
 
 
