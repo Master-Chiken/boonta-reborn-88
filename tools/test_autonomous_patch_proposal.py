@@ -188,6 +188,40 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaisesRegex(ProposalError, "32768 characters"):
             self.check(proposal)
 
+    def test_utf8_byte_limit_is_enforced_separately_from_character_limit(self):
+        proposal = dict(self.proposal, unified_diff=self.diff + "\n" + ("é" * 17000))
+        with self.assertRaisesRegex(ProposalError, "32 KiB byte limit"):
+            self.check(proposal)
+
+    def test_more_than_100_hunks_are_rejected(self):
+        path = "gamecube-demo/source/main.c"
+        sections = [
+            "diff --git a/" + path + " b/" + path,
+            "--- a/" + path,
+            "+++ b/" + path,
+        ]
+        for _ in range(101):
+            sections.extend(["@@ -1 +1 @@", "-before", "+after"])
+        with self.assertRaisesRegex(ProposalError, "100-hunk safety limit"):
+            validate_diff_paths("\n".join(sections) + "\n", {path})
+
+    def test_more_than_five_files_are_rejected(self):
+        sections = []
+        allowed = set()
+        for index in range(6):
+            path = "gamecube-demo/source/file" + str(index) + ".c"
+            allowed.add(path)
+            sections.extend([
+                "diff --git a/" + path + " b/" + path,
+                "--- a/" + path,
+                "+++ b/" + path,
+                "@@ -1 +1 @@",
+                "-before",
+                "+after",
+            ])
+        with self.assertRaisesRegex(ProposalError, "five-file safety limit"):
+            validate_diff_paths("\n".join(sections) + "\n", allowed)
+
     def test_duplicate_json_properties_are_rejected(self):
         file = self.root / "proposal.json"
         file.write_text('{"schema_version":1,"schema_version":1}', encoding="utf-8")
