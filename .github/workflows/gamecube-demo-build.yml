@@ -332,7 +332,7 @@ jobs:
         env:
           # Run the three-lap finish and post-finish Start-restart checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
-          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017' || github.head_ref == 'recovery/all-branch-heads-20261102')) }}
+          RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017' || github.head_ref == 'recovery/all-branch-heads-20261102' || github.head_ref == 'fix/rival-ai-order-independent-avoidance-20261109')) }}
           RUN_FINISH_RESTART_DIAGNOSTIC: ${{ github.event_name == 'pull_request' && github.head_ref == 'jules-13405833958059564976-aeac2b04' }}
           CHECK_FINISH_LABEL: ${{ github.event_name == 'pull_request' && (github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017') }}
         shell: bash
