@@ -37,20 +37,19 @@
         "Nintendo 64",
         "GameCube"
       ],
-      "status": "blocked",
+      "status": "in_review",
       "target_branch": "main",
       "question_excerpt": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
       "acceptance_criteria_total": 6,
       "acceptance_criteria_excerpt": [
-        "Retain sorted Pupp index 10 as a candidate only: 68,284 decoded bytes match the public catalogue size associated with N64 model ID 0087,…",
-        "Use only the already-prepared owner-local decoded candidate; do not upload model bytes, decoded payloads, ROM offsets, dumps, images or…",
-        "Install .NET 10.0.403 SDK Arm64 only after verifying the current macOS 26.6.2 arm64 environment, then run an isolated parser-only console…",
-        "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC…",
-        "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type"
+        "The 68,284-byte local candidate parsed successfully as PuppModel; retain it as a strong Anakin/0087 candidate only because the local record-to-catalogue index mapping is not proven",
+        "The isolated .NET 10.0.403 parser probe has run locally; 9 roots, 244 nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 triangles, 26 materials and 26 texture references",
+        "Zero invalid triangle indices, graphics-command errors, vertex-buffer rule errors, or animation-count inconsistencies were reported",
+        "Complete N64 model/texture block reconstruction and dependency provenance remain separate gates before exporter integration or GX conversion"
       ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/381",
+      "head_sha": "9168939626883a3d8f6cfad26299575ddf71db45",
+      "next_action_excerpt": "Review PR #381, which records the successful owner-local Pupp structural parse and the existing N64 texture-export pipeline. Do not ask the owner to reinstall .NET or repeat the parse. Candidate item 0087 mapping is still unproven. The next separate task is to reconstruct/locate complete N64 model and texture block inputs for the existing exporter, then audit dependency provenance before integration; keep all extracted data local."
     }
   ]
 }
