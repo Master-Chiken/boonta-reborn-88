@@ -1430,6 +1430,8 @@ for required in (
     "process.env.GEMINI_PREFLIGHT_ALLOWED === 'true'",
     "BLOCKED report contradicts successful Gemini preflight",
     "GITHUB_APP_TOKEN_OUTCOME === 'success'",
+    "findBlockedReportContradictions(blockedText",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
     "GEMINI_AUTONOMOUS_ENABLED",
     "GEMINI_FREE_TIER_CONFIRMED",
     "GEMINI_API_KEY",
