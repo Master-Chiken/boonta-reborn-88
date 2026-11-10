@@ -7,7 +7,10 @@ branches/commits, pushes, opens PRs, or executes model-supplied commands.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
+import stat
 import subprocess
 import sys
 import tempfile
@@ -28,6 +31,8 @@ MANDATORY_TEST_IDS = (
     "automation.provider_handoff",
     "automation.task_ledger",
 )
+MAX_BUNDLE_FILE_BYTES = 128 * 1024
+MAX_BUNDLE_TOTAL_BYTES = 256 * 1024
 
 
 class PipelineError(ValueError):
@@ -61,6 +66,65 @@ def _remove_worktree(root: Path, worktree: Path) -> None:
     if result.returncode != 0:
         raise PipelineError("Could not remove the disposable verification worktree")
     _git(root, ["worktree", "prune", "--expire", "now"])
+
+
+def _build_delivery_bundle(
+    source_root: Path,
+    worktree: Path,
+    *,
+    base_sha: str,
+    changed_paths: list[str],
+) -> list[dict[str, Any]]:
+    bundle: list[dict[str, Any]] = []
+    total_bytes = 0
+    for path in sorted(changed_paths):
+        target = worktree / path
+        if target.is_symlink():
+            raise PipelineError(f"Verified output is a symlink: {path}")
+        try:
+            file_stat = target.lstat()
+        except OSError as exc:
+            raise PipelineError(f"Verified output file cannot be inspected: {path}") from exc
+        if not stat.S_ISREG(file_stat.st_mode):
+            raise PipelineError(f"Verified output is not a regular file: {path}")
+        parent = target.parent
+        while parent != worktree:
+            if parent.is_symlink():
+                raise PipelineError(f"Verified output has a symlink parent: {path}")
+            parent = parent.parent
+
+        try:
+            data = target.read_bytes()
+            data.decode("utf-8", errors="strict")
+        except (OSError, UnicodeError) as exc:
+            raise PipelineError(f"Verified output must be readable UTF-8 text: {path}") from exc
+        if len(data) > MAX_BUNDLE_FILE_BYTES:
+            raise PipelineError(f"Verified output exceeds the 128 KiB per-file export limit: {path}")
+        total_bytes += len(data)
+        if total_bytes > MAX_BUNDLE_TOTAL_BYTES:
+            raise PipelineError("Verified output exceeds the 256 KiB total export limit")
+
+        indexed = _git(source_root, ["ls-files", "-s", "--", path])
+        if indexed.returncode != 0:
+            raise PipelineError("Could not re-read the base Git index")
+        entries = [line for line in indexed.stdout.splitlines() if line.strip()]
+        if len(entries) != 1:
+            raise PipelineError(f"Base path is not one tracked file: {path}")
+        fields = entries[0].split()
+        mode = fields[0]
+        if mode not in {"100644", "100755"}:
+            raise PipelineError(f"Base path is not a regular tracked file: {path}")
+        base_blob_sha = _git_output(source_root, ["rev-parse", f"{base_sha}:{path}"])
+        result_blob_sha = _git_output(worktree, ["hash-object", "--", path])
+        bundle.append({
+            "path": path,
+            "mode": mode,
+            "base_blob_sha": base_blob_sha,
+            "result_blob_sha": result_blob_sha,
+            "content_sha256": hashlib.sha256(data).hexdigest(),
+            "content_base64": base64.b64encode(data).decode("ascii"),
+        })
+    return bundle
 
 
 def verify_in_isolated_worktree(
@@ -159,6 +223,17 @@ def verify_in_isolated_worktree(
             expected = sorted(changed_paths)
             if sorted(working_paths) != expected or staged_paths or untracked_paths:
                 raise PipelineError("Verification changed files outside the exact validated patch")
+            # Revalidate targets after test execution, then export exact UTF-8
+            # file contents and Git blob identities for a future deterministic
+            # writer. The bundle is bounded and contains only approved files.
+            from autonomous_patch_proposal import validate_tracked_targets
+            validate_tracked_targets(worktree, tuple(expected))
+            delivery_bundle = _build_delivery_bundle(
+                root,
+                worktree,
+                base_sha=expected_base_sha,
+                changed_paths=expected,
+            )
             return {
                 "status": "VERIFIED",
                 "task_id": expected_task_id,
@@ -168,6 +243,7 @@ def verify_in_isolated_worktree(
                 "requested_test_ids": requested_tests,
                 "executed_test_ids": executed_tests,
                 "test_report": test_report,
+                "delivery_bundle": delivery_bundle,
                 "isolated_worktree": True,
                 "source_checkout_modified": False,
                 "commit_created": False,
