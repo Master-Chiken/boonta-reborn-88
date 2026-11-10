@@ -303,6 +303,20 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaisesRegex(ProposalError, "Duplicate JSON property"):
             load_proposal(file)
 
+    def test_proposal_file_symlink_is_rejected(self):
+        target = self.root / "actual-proposal.json"
+        target.write_text("{}", encoding="utf-8")
+        link = self.root / "linked-proposal.json"
+        link.symlink_to(target)
+        with self.assertRaisesRegex(ProposalError, "must not be a symlink"):
+            load_proposal(link)
+
+    def test_oversized_json_proposal_is_rejected_before_parse(self):
+        file = self.root / "large-proposal.json"
+        file.write_text(" " * (96 * 1024 + 1), encoding="utf-8")
+        with self.assertRaisesRegex(ProposalError, "96 KiB"):
+            load_proposal(file)
+
     def test_dirty_checkout_is_rejected_before_apply(self):
         (self.root / "untracked.txt").write_text("keep me", encoding="utf-8")
         with self.assertRaisesRegex(ProposalError, "not clean"):
