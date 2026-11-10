@@ -77,6 +77,26 @@ Regression tests use temporary Git repositories and synthetic source files:
 python3 tools/test_autonomous_patch_proposal.py
 \`\`\`
 
+## Fixed test dispatcher
+
+The repository-owned registry is listed with:
+
+```bash
+python3 tools/run_autonomous_patch_tests.py --list
+```
+
+Run the three approved offline checks together:
+
+```bash
+python3 tools/run_autonomous_patch_tests.py \
+  --repo-root "$PWD" \
+  --test-id automation.task_preflight \
+  --test-id automation.provider_handoff \
+  --test-id automation.task_ledger
+```
+
+The model may choose only IDs present in the registry. It cannot pass test arguments or commands.
+
 ## Not implemented yet
 
 - No structured-output provider request or model route is configured.
