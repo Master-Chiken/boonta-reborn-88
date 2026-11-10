@@ -1,97 +1,78 @@
-# Paperclip control plane for Boonta Reborn
+# Paperclip — optional free local control panel for Boonta Reborn
 
-Optional self-hosted Paperclip deployment for agent coordination. It does not replace the game repository, GitHub Actions CI, branch protection or the canonical task ledger.
+**No paid hosting, no VPS, no bank card, no Paperclip Cloud account.**
 
-## What it adds — and what it does not
+Paperclip is an optional local control panel for organizing coding agents. It does not replace the GitHub repository, GitHub Actions CI, branch protection, or the canonical task ledger.
 
-The existing GitHub Actions system already provides cloud execution, provider preflights, free-tier gates, task selection, exact-head PR validation and CI. The gap is the agent-control layer: durable roles, persistent work threads, heartbeat/session continuity, atomic task checkout, delegation, run history and a central dashboard.
+## The free architecture
 
-Paperclip is a control plane, not a model or agent intelligence provider. It can orchestrate Gemini CLI and OpenCode agents, but does not provide free inference, quota or game content.
+- **Automatic cloud work:** the existing GitHub Actions workflows remain the only scheduled writers. This repository is public, so standard GitHub-hosted Actions runners are free under GitHub's published policy.
+- **Paperclip:** runs locally on the Mac you already own. It uses an embedded database; no separate database service, cloud server, subscription, or payment card is required.
+- **AI:** use only an already-authorized Gemini CLI login with its confirmed Free-tier allowance. Do not add a paid API key, enable billing, or configure paid fallbacks. If the free quota is unavailable, the agent must stop and report BLOCKED.
+- **GitHub:** use the existing local `gh` login for a first local smoke test, or a fine-grained token scoped only to `Master-Chiken/boonta-reborn-88` if a separate credential becomes necessary. Never paste credentials into the repository or agent prompts.
 
-## Deployment status and cost
+Paperclip brings the control-plane features the current workflow lacks: agent roles, persistent task threads, session continuity, atomic task checkout, delegation, run history and a shared dashboard. It does not supply a model, free inference quota or 24/7 compute.
 
-This folder is configuration only. Paperclip is **not installed or running**, no host is provisioned, and no provider/GitHub credentials are stored here.
+## The availability limit — no hidden promise
 
-Continuous availability requires an always-on host. The current official VPS guide quotes roughly US$5–10/month for a small VPS; model usage and any external services may be additional. Running it on the Mac can avoid a VPS fee, but Paperclip stops when the Mac is off. The existing GitHub Actions loop remains cloud-hosted and does not need the Mac running.
+Paperclip runs only while the Mac is awake and its local service is running. When the Mac is shut down or asleep, Paperclip agents and its routines stop. This is the honest zero-cost tradeoff.
 
-The Compose stack pins the official image to upstream commit `353945c86daedc13de0f23bdf8baf1e35f718e71`, uses PostgreSQL 17 and persistent volumes, requires authentication, sets private exposure, disables telemetry and binds the UI to localhost only. Put a private HTTPS reverse proxy such as Tailscale Serve in front of port 3100. Do not expose port 3100 or PostgreSQL directly to the public internet.
+GitHub Actions continues to run in GitHub's cloud on the public repository without the Mac. Keep its existing four-times-daily schedule active. Do **not** enable the Paperclip routine as a second scheduler.
 
-## Optional €0 compute experiment
+## 1. Install Paperclip locally
 
-See [ORACLE-ALWAYS-FREE.md](ORACLE-ALWAYS-FREE.md) for Oracle's Always Free A1 allowance, account-verification requirement, limited regional capacity and seven-day idle-instance reclamation. This is a possible low-cost experiment, **not** a guaranteed always-on host. Never upgrade to Pay As You Go to solve a capacity shortage; keep the existing GitHub Actions schedule as the reliable cloud fallback.
+Follow [LOCAL-QUICKSTART.md](LOCAL-QUICKSTART.md). The official local installer requires Node.js 24.11 or newer and starts Paperclip with an embedded PostgreSQL database. It does not require Docker, a VPS, an external database, a Paperclip account or a bank card.
 
-## 1. Prepare the host and secrets
+No paid hosting is configured by this PR. The optional Compose/VPS deployment has deliberately been removed to keep the setup simple and free.
 
-On an always-on Linux host with Docker Compose, from this directory:
+## 2. Prepare the Boonta company
 
-```bash
-cp .env.example .env
-chmod 600 .env
-openssl rand -hex 32
-```
+After Paperclip opens at `http://localhost:3100`, create:
+- Company: **Boonta Reborn 88**
+- Project: **GameCube/Wii clean-room game**
 
-Generate **four independent** values and paste one into each of `PAPERCLIP_DB_PASSWORD`, `BETTER_AUTH_SECRET`, `PAPERCLIP_TOOL_ACTION_SIGNING_SECRET` and `PAPERCLIP_AGENT_JWT_SECRET`. Set `PAPERCLIP_PUBLIC_URL` to the exact private HTTPS URL used to access Paperclip.
+Attach `BOONTA-AGENT-SKILL.md` as a shared company skill.
 
-Keep `.env` private. Never put API keys or passwords in GitHub, this repository, issues or agent prompts. Keep the Paperclip image pinned to the full-SHA tag in `.env.example`; update it only through a reviewed dependency update.
+Start with three roles:
+- **Coordinator (read-only):** reads the canonical ledger and live GitHub state, selects one eligible task, records blockers and assigns it.
+- **Game engineer (single writer):** one active task, one branch, relevant tests and one PR; no merge permission.
+- **QA/provenance reviewer (read-only):** checks exact-head CI, task identity, licences, platform evidence and clean-room boundaries.
 
-## 2. Start and verify
+Set the engineer's maximum concurrent runs to **1**. Mirror the exact task ID from the GitHub ledger. Do not create a second, conflicting queue.
 
-```bash
-docker compose --env-file .env -f compose.yml config --quiet
-docker compose --env-file .env -f compose.yml up -d
-docker compose --env-file .env -f compose.yml ps
-docker compose --env-file .env -f compose.yml logs -f paperclip
-```
+## 3. Connect the existing free tools
 
-Open the private HTTPS URL and complete authenticated onboarding. Create a company **Boonta Reborn 88** and a project **GameCube/Wii clean-room game**.
+- Use the Gemini CLI adapter only after its local environment test confirms the already-authorized Free-tier login and usable quota. Do not add API billing or paid fallbacks.
+- For local Git operations, Paperclip can use a GitHub CLI login already authenticated on the same Mac. Run `gh auth status` to inspect the current local state. Do not create a broad token just to get past a failure.
+- If Paperclip asks for a repository token, use a fine-grained PAT limited to this one repository and only the specific permissions required for the planned action. This does not cost money, but it is an additional credential, so do not create one until needed.
 
-Data lives in the `paperclip-postgres` and `paperclip-data` Docker volumes. Back up both: a database dump alone does not preserve uploads, secret storage and agent workspace data. Encrypt backups and test restore before relying on the service.
+The managed Paperclip GitHub App connection is only offered to instances enrolled with Paperclip Cloud. We are not using that route or paying for Cloud enrollment.
 
-## 3. Connect GitHub with least privilege
-
-For a self-hosted instance, Paperclip's managed GitHub App path is generally available only to instances enrolled with Paperclip Cloud. Use a fine-grained PAT scoped to **only** `Master-Chiken/boonta-reborn-88`, with an expiry date.
-
-Start with Metadata read, Contents read/write (for branch commits), Issues read/write, Pull requests read/write, and Checks read. Do not grant Actions write, workflow editing, administration, secrets or repository-wide access. Restrict the connection to the Boonta agent(s).
-
-Important: Paperclip's current connector docs distinguish the two credential paths: the managed GitHub App connection (available only when the instance is enrolled with Paperclip Cloud) can provide a durable identity for shell `git` and `gh`; the fine-grained PAT path is auditable but does not provide that durable shell identity. Where shell GitHub operations are available, connector action switches do not limit them. Do not assume an action toggle is a security boundary. Enforce repository scope on the credential, keep `main` protected, require PRs, independent human review and required CI checks, and do not permit agent merges.
-
-## 4. Add a Free-tier provider
-
-Start with one agent and one owner-confirmed Free-tier provider. Paperclip supports `gemini_local` and `opencode_local`. Store credentials through Paperclip's secret/connection UI, not Compose or the repository. Do not add paid fallbacks.
-
-Paperclip's cost dashboard and budgets are useful monitoring and pause controls, but they are not a guarantee of €0: usage can be reported late or be unpriced. The €0 boundary must come from a confirmed Free-tier credential/model route and refusing execution whenever the free-tier preflight is uncertain.
-
-## 5. Create the initial team
-
-Attach `BOONTA-AGENT-SKILL.md` as a shared company skill. Start with:
-- **Coordinator (read-only):** reads the ledger and live GitHub state, selects one eligible task, records blockers and assigns it.
-- **Game engineer (single writer):** one active task, unique branch, synthetic tests and one PR; no merge permission.
-- **QA/provenance reviewer (read-only):** checks exact-head CI, task identity, licences, platform evidence and clean-room rules.
-
-Set the engineer's maximum concurrent runs to **1**. Do not start parallel coding agents until a complete one-writer cycle has passed. Mirror the exact ledger `task_id` into Paperclip; do not create a second, conflicting queue.
-
-## 6. Keep the routine disabled until cutover
+## 4. Keep Paperclip scheduling disabled
 
 The current GitHub Actions writer schedule is `17 0,6,12,18 * * *` UTC. `routine.example.json` mirrors those times but has `enabled: false`.
 
-Do not enable both as autonomous writers. First pass a read-only GitHub test, one manually started owner-approved Free-tier agent run, one fresh task PR with the exact `BOONTA_TASK_ID` marker, exact-head GitHub Actions checks, ledger reconciliation and a successful recovery/resume test.
+Do not enable both as autonomous writers. First verify one manually started local agent run, one fresh task PR with the exact `BOONTA_TASK_ID` marker, all required GitHub checks on the exact PR head, ledger reconciliation and a successful recovery/resume test.
 
-Only then make a separate reviewed cutover: disable the GitHub Actions writer schedule and enable the Paperclip routine with `skip_if_active` and `skip_missed`. Keep GitHub build/test workflows, exact-head validation, branch rules and human review.
+Because the Mac is not guaranteed to stay awake, retain GitHub Actions as the only recurring cloud scheduler. The Paperclip routine is only a future optional local convenience; it is not required for the automatic cloud loop.
 
-## 7. Backups, updates and rollback
+## 5. Zero-cost and authority rules
 
-- Back up both Compose volumes before updating.
-- Update only to a reviewed immutable `sha-<commit>` image tag; never use `latest`.
-- Inspect release notes and migration requirements before changing the pin.
-- On failure, restore the previous image pin with matching database/data backups.
-- If Paperclip is unavailable, retain GitHub Actions as the temporary execution path. Never enable two schedulers simultaneously.
+- Use only a provider login already confirmed as Free-tier. Never enable billing, buy credits, upgrade plans or use paid fallback models.
+- Paperclip's budgets are monitoring and pause controls, not proof of €0 inference. The provider login and model route must themselves be confirmed free.
+- One active coding task, one writing agent and one provider call per heartbeat.
+- Agents may research, edit a task branch, run approved tests and open PRs. They may not merge, modify repository secrets, billing, branch protection, GitHub App settings or workflow permissions.
+- An open PR remains `in_review`, never `completed`. Completion requires a merged PR and a reconciled canonical ledger.
+- Never upload ROMs, disc images, proprietary executables, extracted commercial assets or private analysis databases to GitHub, CI or hosted AI tools.
+
+## 6. Rollback and fallback
+
+If Paperclip fails or is unavailable, stop using it and keep the existing GitHub Actions cloud schedule. Paperclip's local data lives under `~/.paperclip/`; back it up before reinstalling or changing versions. No GitHub automation or game source files depend on a running Paperclip instance.
 
 ## References
 
-- Upstream: https://github.com/paperclipai/paperclip
-- Docker guide: https://github.com/paperclipai/paperclip/blob/master/doc/DOCKER.md
-- VPS guide: https://docs.paperclip.ing/how-to/deploy-to-vps-or-fly/
-- GitHub connector: https://docs.paperclip.ing/connectors/github-setup/
+- Paperclip upstream: https://github.com/paperclipai/paperclip
+- Paperclip local installation: https://docs.paperclip.ing/guides/getting-started/installation/
 - Gemini CLI adapter: https://docs.paperclip.ing/reference/adapters/gemini-cli/
-- OpenCode adapter: https://docs.paperclip.ing/reference/adapters/opencode/
-- Routines: https://docs.paperclip.ing/guides/projects-workflow/routines/
+- GitHub connector: https://docs.paperclip.ing/connectors/github-setup/
+- GitHub Actions billing: https://docs.github.com/en/actions/concepts/billing-and-usage
