@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 import run_autonomous_patch_tests
+from autonomous_patch_proposal import ProposalError
 from verify_autonomous_patch import (
     MANDATORY_TEST_IDS,
     PipelineError,
@@ -163,13 +164,13 @@ class IsolatedPatchPipelineTests(PipelineFixture):
 
     def test_non_ready_allowlist_is_rejected_before_worktree_creation(self):
         self.write_allowlist(status="NO_ACTIVE_TASK")
-        with self.assertRaisesRegex(Exception, "not READY"):
+        with self.assertRaisesRegex(ProposalError, "not READY"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
 
     def test_allowlist_task_mismatch_is_rejected_before_worktree_creation(self):
         self.write_allowlist(task_id="AUTOMATION-ANOTHER-TASK")
-        with self.assertRaisesRegex(Exception, "task ID"):
+        with self.assertRaisesRegex(ProposalError, "task ID"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
 
@@ -178,13 +179,13 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         diff = self.diff.replace(SOURCE_PATH, other)
         self.write_proposal(diff=diff)
         self.write_allowlist(paths=[SOURCE_PATH])
-        with self.assertRaisesRegex(Exception, "outside the trusted task allowlist"):
+        with self.assertRaisesRegex(ProposalError, "outside the trusted task allowlist"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
 
     def test_dirty_source_checkout_is_rejected(self):
         (self.root / "dirty.txt").write_text("unexpected", encoding="utf-8")
-        with self.assertRaisesRegex(Exception, "not clean"):
+        with self.assertRaisesRegex(ProposalError, "not clean"):
             self.run_pipeline()
 
 
