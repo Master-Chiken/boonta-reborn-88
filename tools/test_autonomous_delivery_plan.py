@@ -2,6 +2,8 @@
 """Offline tests for deterministic delivery planning."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -27,6 +29,16 @@ def git(root: Path, *args: str) -> str:
     if result.returncode:
         raise AssertionError(result.stderr)
     return result.stdout.strip()
+
+
+def git_input(root: Path, data: bytes, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args], cwd=root, input=data,
+        capture_output=True, check=False,
+    )
+    if result.returncode:
+        raise AssertionError(result.stderr.decode("utf-8", errors="replace"))
+    return result.stdout.decode("ascii").strip()
 
 
 class DeliveryPlanFixture(unittest.TestCase):
@@ -98,6 +110,18 @@ class DeliveryPlanFixture(unittest.TestCase):
         self.allowlist_path.write_text(json.dumps(report), encoding="utf-8")
 
     def write_verified(self, **overrides):
+        bundle_data = b"int boonta(void) { return 7; }\n"
+        base_blob_sha = git(self.root, "rev-parse", f"{self.base_sha}:{SOURCE_PATH}")
+        result_blob_sha = git_input(self.root, bundle_data, "hash-object", "--stdin")
+        mode = git(self.root, "ls-files", "-s", "--", SOURCE_PATH).split()[0]
+        delivery_bundle = [{
+            "path": SOURCE_PATH,
+            "mode": mode,
+            "base_blob_sha": base_blob_sha,
+            "result_blob_sha": result_blob_sha,
+            "content_sha256": hashlib.sha256(bundle_data).hexdigest(),
+            "content_base64": base64.b64encode(bundle_data).decode("ascii"),
+        }]
         results = [
             {
                 "test_id": test_id,
@@ -122,6 +146,7 @@ class DeliveryPlanFixture(unittest.TestCase):
                 "results": results,
                 "stopped_after_first_failure": False,
             },
+            "delivery_bundle": delivery_bundle,
             "isolated_worktree": True,
             "source_checkout_modified": False,
             "commit_created": False,
@@ -220,6 +245,38 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
     def test_paths_must_be_subset_of_owner_approved_scope(self):
         self.write_verified(changed_paths=["src/unauthorized.c"])
         with self.assertRaisesRegex(DeliveryPlanError, "exceed the owner-approved"):
+            self.plan()
+
+    def test_delivery_bundle_content_and_hashes_are_preserved(self):
+        plan = self.plan()
+        self.assertEqual(plan["delivery_bundle"][0]["path"], SOURCE_PATH)
+        self.assertEqual(
+            base64.b64decode(plan["delivery_bundle"][0]["content_base64"], validate=True),
+            b"int boonta(void) { return 7; }\n",
+        )
+        self.assertEqual(
+            plan["delivery_bundle"][0]["result_blob_sha"],
+            git_input(
+                self.root,
+                b"int boonta(void) { return 7; }\n",
+                "hash-object", "--stdin",
+            ),
+        )
+
+    def test_delivery_bundle_tampered_content_is_rejected(self):
+        report = json.loads(self.verified_path.read_text(encoding="utf-8"))
+        report["delivery_bundle"][0]["content_base64"] = base64.b64encode(
+            b"int boonta(void) { return 99; }\n"
+        ).decode("ascii")
+        self.verified_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(DeliveryPlanError, "SHA-256 does not match"):
+            self.plan()
+
+    def test_delivery_bundle_paths_must_exactly_match_verified_paths(self):
+        report = json.loads(self.verified_path.read_text(encoding="utf-8"))
+        report["delivery_bundle"][0]["path"] = "src/other.c"
+        self.verified_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(DeliveryPlanError, "exact-path scope"):
             self.plan()
 
     def test_empty_queue_cannot_produce_delivery_plan(self):
