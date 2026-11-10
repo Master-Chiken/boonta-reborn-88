@@ -171,6 +171,20 @@ All **25/25** `Part_TrackGround_*` records name-match one row in the 25-track ca
 
 These are named ground/support parts associated with the tracks. This does not establish that they contain the full road/terrain geometry or all environment objects for the corresponding track.
 
+### Pilot and vehicle model families
+
+The 25-row racer table references three distinct model families, in addition to the LOD parts:
+
+| Model family | Entries | Intended association in metadata |
+|---|---:|---|
+| `Podd_*` | 25 | Pod / vehicle model reference per racer |
+| `MAlt_*` | 25 | Alternate racer model reference per racer |
+| `Pupp_Racer_*` | 25 | Racer/driver Pupp model reference per racer |
+| `Part_Racer_Lod1_*` | 25 | Racer LOD1 part |
+| `Part_Racer_Lod2_*` | 23 | Racer LOD2 part; absent for Jinn Reeso and Cy Yunga in this metadata snapshot |
+
+This is a metadata association table. It does not establish how the game assembles the pod from submeshes or how the models animate at runtime.
+
 ## Racer roster — 25 entries
 
 Each model reference is stored as a logical catalogue ID and, when resolvable, its physical N64 USA block index. Joining by exact model name produced **123/123** unique matches across **123** distinct model indices. The last two roster entries have no LOD2 reference in this metadata snapshot.
