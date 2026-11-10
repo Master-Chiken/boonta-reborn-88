@@ -16,6 +16,7 @@ from typing import Any
 
 from autonomous_patch_proposal import ProposalError, load_allowlist_report, validate_checkout
 from build_autonomous_path_allowlist import AllowlistError, build_allowlist
+from run_autonomous_patch_tests import TEST_REGISTRY
 from verify_autonomous_patch import MANDATORY_TEST_IDS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,7 +71,12 @@ def _load_canonical_task(root: Path, task_id: str) -> dict[str, Any]:
     if indexed.stdout.split()[0] not in {"100644", "100755"}:
         raise DeliveryPlanError("Canonical task summary must be a regular tracked file")
     try:
-        ledger = json.loads(path.read_text(encoding="utf-8"))
+        if path.stat().st_size > MAX_REPORT_BYTES:
+            raise DeliveryPlanError("Canonical task summary exceeds the 32 KiB input limit")
+        raw = path.read_text(encoding="utf-8")
+        ledger = json.loads(raw, object_pairs_hook=_unique_object)
+    except DeliveryPlanError:
+        raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise DeliveryPlanError("Canonical task summary cannot be read") from exc
     if (
@@ -173,12 +179,16 @@ def build_delivery_plan(
         raise DeliveryPlanError("Verified requested_test_ids are invalid")
     if (
         not isinstance(executed, list)
+        or not 1 <= len(executed) <= 6
         or any(not isinstance(x, str) for x in executed)
         or len(set(executed)) != len(executed)
+        or any(x not in TEST_REGISTRY for x in executed)
     ):
-        raise DeliveryPlanError("Verified executed_test_ids are invalid")
+        raise DeliveryPlanError("Verified executed_test_ids are invalid or outside the fixed registry")
     if not set(MANDATORY_TEST_IDS).issubset(set(executed)):
         raise DeliveryPlanError("Verified report does not include all mandatory test IDs")
+    if any(x not in TEST_REGISTRY for x in requested):
+        raise DeliveryPlanError("Verified requested_test_ids are outside the fixed registry")
     if not set(requested).issubset(set(executed)):
         raise DeliveryPlanError("One or more requested test IDs were not executed")
 
