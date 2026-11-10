@@ -118,7 +118,7 @@ def _api_request(
     payload: dict[str, Any] | None = None,
     allowed_404: bool = False,
     timeout: int = 20,
-) -> dict[str, Any] | None:
+) -> dict[str, Any] | list[Any] | None:
     url = API_ROOT + path
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(
@@ -169,7 +169,7 @@ def _find_open_task_pr(
     page = 1
     matches: list[dict[str, Any]] = []
     while page <= 10:
-        result = _api_request(
+        result = request(
             token,
             "GET",
             f"/repos/{repository}/pulls?state=open&per_page=100&page={page}",
