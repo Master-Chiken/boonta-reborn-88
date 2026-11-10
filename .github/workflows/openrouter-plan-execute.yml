@@ -364,7 +364,7 @@ jobs:
           - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           
           FINAL REPORT
-          - Output only machine-readable lines, no prose or code fences. Copy exact reserved task ID and evidence base appended below.
+          - NO PROSE OR MARKDOWN FENCES. Output only machine-readable lines; copy the exact reserved task ID and evidence base appended below.
           - Choose one status. BLOCKED omits evidence and includes one BOONTA_CYCLE_BLOCKER plus one BOONTA_CYCLE_NEXT_ACTION.
           - PROGRESS uses the new same-repository PR URL and exact head_sha from create_pull_request. Never guess or report planned work.
           PROMPT
