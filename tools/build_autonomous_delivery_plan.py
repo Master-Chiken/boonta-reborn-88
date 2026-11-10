@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from autonomous_patch_proposal import ProposalError, load_allowlist_report, validate_checkout
+from build_autonomous_path_allowlist import AllowlistError, build_allowlist
 from verify_autonomous_patch import MANDATORY_TEST_IDS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,8 +113,19 @@ def build_delivery_plan(
             expected_task_id=expected_task_id,
             expected_base_sha=expected_base_sha,
         )
-    except ProposalError as exc:
+        current_scope = build_allowlist(
+            root,
+            expected_base_sha=expected_base_sha,
+            requested_task_id=expected_task_id,
+        )
+    except (ProposalError, AllowlistError) as exc:
         raise DeliveryPlanError(str(exc)) from exc
+    if current_scope.get("status") != "READY":
+        raise DeliveryPlanError("Current canonical task/path policy is not READY")
+    if set(current_scope.get("allowed_paths", [])) != allowed_paths:
+        raise DeliveryPlanError("Supplied allowlist report differs from the current owner-reviewed policy")
+    if current_scope.get("approval_ref") != _load_report(allowlist_report_path).get("approval_ref"):
+        raise DeliveryPlanError("Supplied allowlist evidence differs from the current owner-reviewed policy")
 
     report = _load_report(verified_report_path)
     expected_fields = {
@@ -152,9 +164,18 @@ def build_delivery_plan(
 
     requested = report.get("requested_test_ids")
     executed = report.get("executed_test_ids")
-    if not isinstance(requested, list) or not requested or any(not isinstance(x, str) for x in requested):
+    if (
+        not isinstance(requested, list)
+        or not requested
+        or any(not isinstance(x, str) for x in requested)
+        or len(set(requested)) != len(requested)
+    ):
         raise DeliveryPlanError("Verified requested_test_ids are invalid")
-    if not isinstance(executed, list) or len(set(executed)) != len(executed):
+    if (
+        not isinstance(executed, list)
+        or any(not isinstance(x, str) for x in executed)
+        or len(set(executed)) != len(executed)
+    ):
         raise DeliveryPlanError("Verified executed_test_ids are invalid")
     if not set(MANDATORY_TEST_IDS).issubset(set(executed)):
         raise DeliveryPlanError("Verified report does not include all mandatory test IDs")
