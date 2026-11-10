@@ -164,7 +164,7 @@ def build_allowlist(
     policy = load_json(policy_file)
     if not isinstance(ledger, dict) or type(ledger.get("schema_version")) is not int or ledger["schema_version"] != 2:
         raise AllowlistError("Canonical task summary must use integer schema version 2")
-    if ledger.get("source") != "docs/automation/task-ledger-summary.json":
+    if ledger.get("source") != "docs/automation/task-ledger.json":
         raise AllowlistError("Canonical task summary source path is unexpected")
     if not isinstance(ledger.get("tasks"), list):
         raise AllowlistError("Canonical task summary tasks must be an array")
