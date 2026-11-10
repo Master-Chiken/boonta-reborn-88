@@ -98,14 +98,21 @@ for required in (
 
 # OpenCode 1.19.5 exposes MCP tools as top-level names prefixed with the
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
-model_visible_github_tools = (
-    "github_get_file_contents",
-    "github_create_branch",
-    "github_push_files",
-    "github_create_pull_request",
+provider_model_visible_tools = (
+    ("OpenRouter", openrouter, (
+        "github_get_file_contents",
+        "github_create_branch",
+        "github_push_files",
+        "github_create_pull_request",
+    )),
+    ("Groq", groq, (
+        "github_create_branch",
+        "github_push_files",
+        "github_create_pull_request",
+    )),
 )
-for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    missing = [name for name in model_visible_github_tools if name not in content]
+for label, content, tool_names in provider_model_visible_tools:
+    missing = [name for name in tool_names if name not in content]
     if missing:
         errors.append(f"{label} prompt is missing OpenCode model-visible GitHub tools: {missing!r}")
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
@@ -315,9 +322,9 @@ openrouter_config = load_opencode_config("OpenRouter", openrouter)
 groq_config = load_opencode_config("Groq", groq)
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
-if groq_config.get("agent", {}).get("build", {}).get("steps") != 5:
-    errors.append("Groq must have five bounded delivery/report steps")
-elif 5 * (1344 + 96) >= 8000:
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
+    errors.append("Groq must have four bounded write/PR/report steps")
+elif 4 * (1152 + 384) >= 8000:
     errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
@@ -352,7 +359,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,344 context tokens and 96 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
+if "1,152 context tokens and 384 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
     errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -412,16 +419,22 @@ openrouter_tools = set(
 groq_tools = set(
     groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
+required_openrouter_tools = {
+    "get_file_contents", "create_branch", "push_files", "create_pull_request",
+}
+required_groq_tools = {
+    "create_branch", "push_files", "create_pull_request",
+}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
-required_free_writer_tools = {
-    "get_file_contents", "create_branch", "push_files", "create_pull_request",
-}
+if openrouter_tools != required_openrouter_tools:
+    errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
+if groq_tools != required_groq_tools:
+    errors.append("Groq must expose exactly three direct branch/push/PR tools; all reads and PR searches are preflight-owned")
+
 for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
-    if toolset != required_free_writer_tools:
-        errors.append(f"{label} must expose exactly four direct read/branch/push/PR tools; PR history search is preflight-owned")
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
@@ -490,8 +503,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1344 or groq_limits.get("output") != 96:
-    errors.append("Groq must remain capped at 1344 context / 96 output tokens so five bounded steps stay below the observed 8k TPM refusal")
+if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
+    errors.append("Groq must remain capped at 1152 context / 384 output tokens so four write/PR/report steps stay below the observed 8k TPM refusal")
 for required in (
     "start_new_session=True",
     "tokens per minute\\s*\\(TPM\\)",
@@ -519,7 +532,7 @@ for content, needle, message in (
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
 
 ):
     if needle not in content:
