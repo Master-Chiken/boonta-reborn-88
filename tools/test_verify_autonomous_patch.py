@@ -155,10 +155,10 @@ class IsolatedPatchPipelineTests(PipelineFixture):
 
     def test_unexpected_test_artifact_rejects_verification_and_cleans_worktree(self):
         run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[0]] = ("tools/test_untracked.py",)
-        report = self.run_pipeline()
-        self.assertEqual(report["status"], "FAILED") if report["status"] == "FAILED" else self.fail("unexpected files should reject pipeline")
         # A successful test command is not enough: only the proposal's exact
         # tracked changes may remain in the disposable checkout.
+        with self.assertRaisesRegex(PipelineError, "outside the exact validated patch"):
+            self.run_pipeline()
         self.assert_source_checkout_untouched()
 
     def test_non_ready_allowlist_is_rejected_before_worktree_creation(self):
