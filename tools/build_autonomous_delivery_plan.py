@@ -338,6 +338,24 @@ def build_delivery_plan(
         "Verified-Tests: " + ", ".join(executed),
     ])
     pr_title = f"Boonta automation: {expected_task_id}"
+    base_tree_result = subprocess.run(
+        ["git", "rev-parse", f"{expected_base_sha}^{{tree}}"],
+        cwd=root, stdin=subprocess.DEVNULL, text=True,
+        capture_output=True, check=False,
+    )
+    if base_tree_result.returncode != 0 or not SHA_RE.fullmatch(base_tree_result.stdout.strip()):
+        raise DeliveryPlanError("Could not resolve the exact base commit tree")
+    base_tree_sha = base_tree_result.stdout.strip()
+    tree_elements = [
+        {
+            "path": entry["path"],
+            "mode": entry["mode"],
+            "type": "blob",
+            "content": base64.b64decode(entry["content_base64"], validate=True).decode("utf-8"),
+        }
+        for entry in normalized_bundle
+    ]
+    commit_message = commit_subject + "\n\n" + commit_body
     pr_body = "\n".join([
         "## Verified autonomous change",
         "",
@@ -369,6 +387,35 @@ def build_delivery_plan(
         "pr_body": pr_body,
         "changed_paths": sorted(changed_paths),
         "delivery_bundle": normalized_bundle,
+        "github_write_plan": {
+            "step_order": ["create_tree", "create_commit", "create_ref", "create_pull_request"],
+            "preconditions": {
+                "target_branch_head_must_equal": expected_base_sha,
+                "branch_must_not_exist": True,
+                "open_pr_for_task_must_not_exist": True,
+                "independent_review_required": True,
+            },
+            "create_tree": {
+                "base_tree_sha": base_tree_sha,
+                "tree_elements": tree_elements,
+            },
+            "create_commit": {
+                "message": commit_message,
+                "parent_sha": expected_base_sha,
+            },
+            "create_ref": {
+                "ref": "refs/heads/" + branch_name,
+                "sha": "COMMIT_SHA_FROM_CREATE_COMMIT",
+            },
+            "create_pull_request": {
+                "title": pr_title,
+                "head": branch_name,
+                "base": target_branch,
+                "body": pr_body,
+                "draft": True,
+            },
+            "auto_merge": False,
+        },
         "executed_test_ids": executed,
         "remote_write_performed": False,
         "commit_created": False,
