@@ -1,0 +1,43 @@
+name: Paperclip deployment configuration
+
+on:
+  pull_request:
+    paths:
+      - "infra/paperclip/**"
+      - ".github/workflows/paperclip-compose-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-paperclip-compose:
+    name: Validate Paperclip Compose configuration (no secrets, no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Render Compose with disposable validation values
+        env:
+          PAPERCLIP_IMAGE: ghcr.io/paperclipai/paperclip:sha-353945c86daedc13de0f23bdf8baf1e35f718e71
+          PAPERCLIP_PORT: "3100"
+          PAPERCLIP_PUBLIC_URL: https://paperclip.example.invalid
+          PAPERCLIP_DB_PASSWORD: ci-placeholder-only-not-a-secret
+          BETTER_AUTH_SECRET: ci-placeholder-only-not-a-secret
+          PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: ci-placeholder-only-not-a-secret
+          PAPERCLIP_AGENT_JWT_SECRET: ci-placeholder-only-not-a-secret
+        run: docker compose -f infra/paperclip/compose.yml config --quiet
+
+      - name: Ensure local deployment secrets are not tracked
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files --error-unmatch infra/paperclip/.env >/dev/null 2>&1; then
+            echo "::error::infra/paperclip/.env must never be tracked."
+            exit 1
+          fi
+          grep -q '^PAPERCLIP_IMAGE=ghcr.io/paperclipai/paperclip:sha-[0-9a-f]\{40\}$' infra/paperclip/.env.example
+          echo "Paperclip Compose is valid and the local secret file is not tracked."
