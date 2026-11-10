@@ -295,6 +295,20 @@ def execute_delivery(
     }
 
 
+def require_execution_gates(repository: str) -> str:
+    if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_ENABLED") != "true":
+        raise DeliveryExecutionError("BOONTA_DETERMINISTIC_DELIVERY_ENABLED must equal exact string true")
+    if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED") != "true":
+        raise DeliveryExecutionError("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED must equal exact string true")
+    expected_repo = os.environ.get("GITHUB_REPOSITORY")
+    if expected_repo and expected_repo != repository:
+        raise DeliveryExecutionError("GITHUB_REPOSITORY does not match the requested repository")
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if len(token) < 20:
+        raise DeliveryExecutionError("A GitHub token with the required repository permissions is required")
+    return token
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, required=True)
@@ -330,14 +344,7 @@ def main() -> int:
             }, sort_keys=True))
             return 0
 
-        if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_ENABLED") != "true":
-            raise DeliveryExecutionError("BOONTA_DETERMINISTIC_DELIVERY_ENABLED must equal exact string true")
-        if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED") != "true":
-            raise DeliveryExecutionError("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED must equal exact string true")
-        expected_repo = os.environ.get("GITHUB_REPOSITORY")
-        if expected_repo and expected_repo != args.repository:
-            raise DeliveryExecutionError("GITHUB_REPOSITORY does not match the requested repository")
-        token = os.environ.get("GITHUB_TOKEN", "")
+        token = require_execution_gates(args.repository)
         outcome = execute_delivery(plan, repository=args.repository, token=token)
     except (DeliveryExecutionError, DeliveryPlanError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
