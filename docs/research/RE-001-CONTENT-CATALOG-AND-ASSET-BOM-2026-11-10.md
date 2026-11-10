@@ -379,3 +379,7 @@ Use `CLEARED` only when the exact asset file and all relevant dependencies have 
 - No runtime, native build, Dolphin or physical hardware test was performed for this documentation-only update.
 
 **Bottom line:** Boonta needs a real course/pod/world/audio/UI asset pipeline and a lawful content library, not another isolated procedural oval. This bill of materials makes the scope explicit while keeping the actual proprietary commercial assets outside the public repository.
+
+## Machine-readable catalogue
+
+The same reference names are available as a versioned, non-runtime JSON dataset at [`docs/research/data/SWE1R-CONTENT-REFERENCE-CATALOG-2026-11-10.json`](data/SWE1R-CONTENT-REFERENCE-CATALOG-2026-11-10.json). It contains 25 track records, eight world IDs, four championship records, 23 standard pilot identities, two N64 cheat replacements, 25 pilot/pod model-name references, seven upgrade categories, named high-tier part examples, provenance sources and an explicit current-Boonta content snapshot. It contains names and metadata only; no commercial game asset data.
