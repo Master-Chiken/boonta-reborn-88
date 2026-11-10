@@ -71,7 +71,11 @@ If Paperclip fails or is unavailable, stop using it and keep the existing GitHub
 
 ## 7. Other free and open-source options
 
-A short comparison of Goose, Aider, LangGraph, Kestra and n8n—and why the current design keeps GitHub Actions as the only cloud scheduler—is in [ALTERNATIVES-AND-RECOMMENDATION.md](ALTERNATIVES-AND-RECOMMENDATION.md). The recommended optional local worker to test first is Goose or Aider with Ollama, but only on the existing Mac, only after checking hardware capacity, and only under the same exclusive one-writer rule. This is not required for the cloud workflow and does not bypass provider Free-tier gates.
+The expanded comparison in [ALTERNATIVES-AND-RECOMMENDATION.md](ALTERNATIVES-AND-RECOMMENDATION.md) covers Goose/GDK, Aider, OpenCode SDK, OpenHands SDK, Ollama, llama.cpp, Dagger, LangGraph, Kestra, Restate/Temporal and n8n.
+
+The lowest-disruption technical experiment is **OpenCode SDK session/result capture**, because OpenCode is already used in the provider path. Goose GDK remains a candidate for a local Mac-side agent that can resume persisted state; Aider is a focused local coding tool; Dagger is a possible deterministic build/test layer. None supplies a guaranteed free model quota.
+
+**Important current blockers:** the canonical task ledger currently has 9 completed tasks, 2 blocked tasks and no queued/active task. Also, GitHub Actions concurrency does not lock a separate local Mac process. Therefore keep the Paperclip routine disabled and local agents read-only or local-patch-only until (1) the owner approves a replenished task backlog and (2) a tested shared lease serializes local and cloud writers. Do not register this public repository's Mac as a persistent self-hosted runner.
 
 ## References
 
