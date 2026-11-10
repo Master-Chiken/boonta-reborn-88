@@ -202,3 +202,27 @@ This is a **small isolated prototype**, not an immediate replacement of the curr
 Official references:
 - OpenRouter's structured-output guide (published 2026-11-10) explains strict JSON Schema, endpoint-specific support, `require_parameters: true`, tool-schema forcing, response healing limitations and local validation: https://openrouter.ai/blog/tutorials/structured-output-llm/
 - OpenCode SDK v2 documents `session.prompt` JSON Schema output, `StructuredOutputError` and default `retryCount: 2`: https://docs.opencode.ai/docs/sdk/
+
+
+## Cross-runtime lock without a paid lock service: Git ref compare-and-swap
+
+The current Actions concurrency group only serializes Actions runs. The lease prototype in draft PR #349 uses bot-owned issue comments and an Actions-level serialized acquisition. It is useful prior work, but it is not a lock that an independent Mac process automatically honors. PR #349 is also currently a very large, non-mergeable draft (435 changed files, 251 commits); do not merge it as a bundle.
+
+A possible zero-hosting extension is a dedicated Git ref used only for a small public lease record, for example `refs/heads/boonta-automation-lock`. Every cloud or local worker must use the exact same acquire/renew/release helper:
+
+1. Fetch the current lock-ref SHA and its small lease record. The record contains only schema version, task ID, base SHA, owner/run nonce, issued/expiry timestamps and heartbeat—never credentials or private data.
+2. If the lease is live, refuse to start a writer. If expired, prepare a new lock commit whose parent is the exact fetched lock SHA.
+3. Publish with Git's compare-and-swap semantics using `git push --force-with-lease=refs/heads/boonta-automation-lock:<observed-sha>`. For first creation, require the ref to be absent. A competing worker based on a stale SHA must lose the race and must not call a model.
+4. Renew and release only if the current record still contains the caller's exact nonce/task ID; a stale worker must never release a newer owner's lease.
+5. Add adversarial tests for simultaneous acquisition, stale heartbeat, owner crash/expiry, run cancellation, retry, wrong-task release and ref-moved-during-renewal.
+6. Restrict the dedicated lock ref with a repository ruleset so only the intended owner/GitHub App can update it. This is a required owner-reviewed security setting; do not silently create or weaken a ruleset.
+
+This is a **design candidate, not yet implemented or validated**. The repository's GitHub App and local `gh` identity would need suitable narrowly scoped access to the lock ref. It does not justify enabling local write agents today. Until the helper, ruleset and contention tests exist, keep local Paperclip/Goose/Aider/OpenCode agents read-only or patch-only.
+
+Why this is preferable to adding Redis/Cloud SQL/Temporal: the lease record and compare-and-swap live in the existing GitHub repository, so no always-on paid service or second scheduler is needed. The trade-off is that a force-with-lease update is a deliberate ref mutation and must be confined to this disposable lock ref—not `main`, `dev` or a source branch. If repository rules cannot safely isolate the ref, do not use this design.
+
+## How to handle the oversized lease PR #349
+
+PR #349 is valuable as a source of implementation ideas: it contains an issue-comment lease with a task fingerprint, workflow run/attempt identity, expiry and exact release; it also has offline tests for foreign leases, same-run retry and expiry. But the PR is draft, GitHub marks it non-mergeable, and it changes hundreds of files. Its workflow still chooses an already-active task or the special activation bootstrap; it does not seed or promote an owner-approved `queued` backlog. Treat it as a reference implementation to mine selectively, not as a ready-to-merge fix.
+
+A safe extraction should be a new small PR containing only: the lock helper, pure state-transition tests, workflow acquire/release integration, and cancellation/expiry recovery. Exclude unrelated PC reverse-engineering files, asset research, game changes and broad ledger rewrites. First compare the PR #349 lease semantics with the CAS-ref candidate above; implement one lock design only, never both concurrently.
