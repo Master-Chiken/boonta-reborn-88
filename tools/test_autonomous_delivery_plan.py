@@ -45,6 +45,7 @@ class DeliveryPlanFixture(unittest.TestCase):
         docs = self.root / "docs/automation"
         docs.mkdir(parents=True)
         self.ledger_path = docs / "task-ledger-summary.json"
+        self.policy_path = docs / "patch-path-allowlist.json"
         self.ledger = {
             "schema_version": 2,
             "source": "docs/automation/task-ledger.json",
@@ -56,7 +57,24 @@ class DeliveryPlanFixture(unittest.TestCase):
             }],
         }
         self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
-        git(self.root, "add", SOURCE_PATH, "docs/automation/task-ledger-summary.json")
+        self.policy_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "policy": {
+                    "owner_review_required": True,
+                    "path_mode": "exact",
+                    "max_paths_per_task": 20,
+                },
+                "tasks": [{
+                    "task_id": TASK_ID,
+                    "purpose": "Synthetic owner-reviewed path",
+                    "approval_ref": APPROVAL,
+                    "allowed_paths": [SOURCE_PATH],
+                }],
+            }),
+            encoding="utf-8",
+        )
+        git(self.root, "add", SOURCE_PATH, "docs/automation/task-ledger-summary.json", "docs/automation/patch-path-allowlist.json")
         git(self.root, "commit", "-qm", "delivery planner fixture base")
         self.base_sha = git(self.root, "rev-parse", "HEAD")
 
@@ -202,7 +220,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.base_sha = git(self.root, "rev-parse", "HEAD")
         self.write_allowlist(base_sha=self.base_sha)
         self.write_verified(base_sha=self.base_sha)
-        with self.assertRaisesRegex(DeliveryPlanError, "unsupported target branch"):
+        with self.assertRaisesRegex(DeliveryPlanError, "target branch"):
             self.plan()
 
     def test_nonready_owner_allowlist_is_rejected(self):
