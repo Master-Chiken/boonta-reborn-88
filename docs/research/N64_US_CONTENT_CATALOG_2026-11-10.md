@@ -120,6 +120,30 @@ Two named spline rows remain unresolved:
 
 The machine-readable catalogue records each exact spline-row-to-track link and keeps those two rows unresolved.
 
+### Model-block compression profile
+
+The pinned upstream N64 USA model-item listing exposes a `C?` column. The [item-lister implementation](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Utils/ItemListers/ModelBlockItemLister.cs) defines its meaning:
+
+- `C`: `WasCompressed` — the item had a `CompWolf` wrapper and the upstream load event has already decompressed it.
+- `C!`: `IsCompressed` — a `Comp` prefix is still present when the item is listed.
+- Blank: no `Comp` prefix was detected.
+
+For the N64 USA model block, the listing reports **92/307** items as originally compressed, **215** with no compression marker and **0** still compressed at listing time.
+
+| Model family | Entries | Originally compressed | No marker |
+|---|---:|---:|---:|
+| MAlt | 25 | 0 | 25 |
+| Podd | 25 | 0 | 25 |
+| Pupp | 38 | 27 | 11 |
+| Trak | 25 | 19 | 6 |
+| TrackGround | 25 | 21 | 4 |
+| RacerLOD1 | 25 | 23 | 2 |
+| RacerLOD2 | 23 | 0 | 23 |
+| Upgrade | 54 | 0 | 54 |
+| N64Aliases | 14 | 12 | 2 |
+
+The machine-readable catalogue records the status per physical model index. This is useful to plan and test the CompWolf decode path; it does not copy the payloads or grant rights to any game-derived data.
+
 ### Non-racer Pupp models — 13 entries
 
 The N64 model block includes 38 `Pupp_*` records in total. **25** are the 25 pilots' pod-racer driver models; the other **13** are supporting characters, creatures, droids and a prop:
