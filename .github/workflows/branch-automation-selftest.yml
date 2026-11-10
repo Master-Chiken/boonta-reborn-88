@@ -96,6 +96,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_path_allowlist.py
 
+      - name: Verify patch application and mandatory tests in disposable worktrees (offline)
+        shell: bash
+        run: python3 tools/test_verify_autonomous_patch.py
+
       - name: Confirm canonical empty queue grants no model write paths
         shell: bash
         run: |
