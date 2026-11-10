@@ -425,10 +425,16 @@ required_openrouter_tools = {
 required_groq_tools = {
     "create_branch", "push_files", "create_pull_request",
 }
+required_writer_tools = {
+    "get_file_contents", "search_pull_requests", "create_branch",
+    "push_files", "create_pull_request",
+}
 if openrouter_tools != required_openrouter_tools:
     errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
 if groq_tools != required_groq_tools:
     errors.append("Groq must expose exactly three direct branch/push/PR tools; all reads and PR searches are preflight-owned")
+
+for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
