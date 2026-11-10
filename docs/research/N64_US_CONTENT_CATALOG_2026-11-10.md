@@ -43,12 +43,12 @@ All 307 model entries have a metadata name; there are 306 unique names (one dupl
 
 | Category | Entries |
 |---|---:|
-|  | 36 |
+| generic-spline | 36 |
 | track | 28 |
 | camera | 14 |
 | part | 13 |
 
-Generic `__SPLINE__` records and `Part_` entries are retained as-is rather than assigned a guessed circuit role.
+The 36 generic `__SPLINE__` records and 13 `Part_` entries are retained as-is rather than assigned a guessed circuit role.
 
 ### Sprite block — 173 entries
 
