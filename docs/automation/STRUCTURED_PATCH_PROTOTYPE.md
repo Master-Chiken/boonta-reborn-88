@@ -77,6 +77,7 @@ Regression tests use temporary Git repositories and synthetic source files:
 python3 tools/test_autonomous_patch_proposal.py
 python3 tools/test_autonomous_patch_test_runner.py
 python3 tools/test_autonomous_path_allowlist.py
+python3 tools/test_verify_autonomous_patch.py
 ```
 
 ## Fixed test dispatcher
@@ -97,7 +98,24 @@ python3 tools/run_autonomous_patch_tests.py \
   --test-id automation.task_ledger
 ```
 
-The model may choose only IDs present in the registry. It cannot pass test arguments or commands. The runner uses argv execution without a shell, strips GitHub/provider secret variables from child environments, caps each test at 120 seconds, and stops after the first failure. Registered scripts and the validator/dispatcher themselves are protected from model-authored patches. No GameCube test ID is offered until a stable, bounded host-test command is confirmed.
+The model may choose only IDs present in the registry. It cannot pass test arguments or commands. The runner uses argv execution without a shell, strips GitHub/provider secret variables from child environments, caps each test at 120 seconds, and stops after the first failure. The isolated orchestrator always runs all three current mandatory automation checks, even when the proposal requests fewer. Registered scripts and the validator/dispatcher/orchestrator themselves are protected from model-authored patches. No GameCube test ID is offered until a stable, bounded host-test command is confirmed.
+
+## Isolated patch-to-tests pipeline
+
+The end-to-end offline verifier is `tools/verify_autonomous_patch.py`. It checks the source checkout is clean and at the trusted base SHA, creates a detached temporary Git worktree, applies the strict patch there, runs all three mandatory tests plus any additional allowed test IDs, verifies that only the validated paths changed and that no commit or branch was created, then removes the worktree. The source checkout remains untouched on both success and test failure. Test-created untracked artifacts or unexpected file changes reject the result.
+
+Run it after generating the owner-approved path report:
+
+```bash
+python3 tools/verify_autonomous_patch.py \
+  --repo-root "$PWD" \
+  --proposal /tmp/boonta-proposal.json \
+  --allowlist-report /tmp/boonta-allowlist.json \
+  --expected-task-id "$TASK_ID_FROM_PREFLIGHT" \
+  --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
+```
+
+It outputs `VERIFIED` only after all mandatory tests pass. `FAILED` means tests failed; `REJECTED` means the proposal, trusted scope, checkout or isolation check failed. It performs no provider call, branch creation, commit, push or PR creation.
 
 ## Owner-reviewed path generation
 
@@ -119,7 +137,7 @@ The owner-reviewed path policy is separate from the canonical task ledger. A pol
 
 - No structured-output provider request or model route is configured.
 - The fixed dispatcher runs only the three verified offline automation checks. GameCube build/test commands are not in the registry because no stable, bounded host-test command has yet been confirmed.
-- No build/test stage is wired between patch validation and GitHub writing.
+- The isolated patch-to-tests verifier is an offline prototype only; no production provider or scheduled loop invokes it yet.
 - No deterministic writer, branch lease, PR creator or exact-head report is connected.
 - No cross-runtime lock is implemented.
 
