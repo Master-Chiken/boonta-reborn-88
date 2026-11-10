@@ -36,6 +36,8 @@ PROTECTED_EXACT = {
     "docs/automation/patch-path-allowlist.json",
     "tools/autonomous_patch_proposal.py",
     "tools/build_autonomous_path_allowlist.py",
+    "tools/build_autonomous_delivery_plan.py",
+    "tools/test_autonomous_delivery_plan.py",
     "tools/run_autonomous_patch_tests.py",
     "tools/test_autonomous_patch_proposal.py",
     "tools/test_autonomous_patch_test_runner.py",
