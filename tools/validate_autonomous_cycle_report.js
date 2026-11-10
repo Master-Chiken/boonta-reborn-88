@@ -57,6 +57,26 @@ function findBlockedReportContradictions(blockedText, evidence = {}) {
   return contradictions;
 }
 
+
+function findNextActionBranchContradictions(nextAction, expectedBase) {
+  const text = typeof nextAction === 'string' ? nextAction : '';
+  const mentionedBranches = new Set();
+  const patterns = [
+    /\\bbranch\\s+(?:named\\s+)?[`'"]?(main|dev)\\b/gi,
+    /\\b(main|dev)\\s+branch\\b/gi,
+    /\\b(?:use|work(?:ing)?\\s+on|target(?:ing)?|push(?:ing)?\\s+to|base(?:d)?\\s+on|create(?:d)?\\s+from|switch(?:ing)?\\s+to|continue(?:d)?\\s+on)\\s+(?:the\\s+)?[`'"]?(main|dev)\\b/gi
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      mentionedBranches.add(match[1].toLowerCase());
+    }
+  }
+  return [...mentionedBranches]
+    .filter((branch) => branch !== expectedBase)
+    .map((branch) => 'directs the next action to ' + branch + ' although the selected task target is ' + expectedBase);
+}
+
 async function validateAutonomousCycleReport(options) {
   const {
     github, context, core, summary, baseline, snapshotAt,
@@ -95,6 +115,10 @@ async function validateAutonomousCycleReport(options) {
     }
     const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER');
     const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION');
+    const branchContradictions = findNextActionBranchContradictions(nextAction, expectedBase);
+    if (branchContradictions.length > 0) {
+      return fail(core, 'BLOCKED next action contradicts selected target branch: ' + branchContradictions.join('; ') + '.');
+    }
     const fingerprint = require('crypto').createHash('sha256')
       .update(blocker + '\n' + nextAction, 'utf8').digest('hex').slice(0, 16);
     core.setOutput('blocked_fingerprint', fingerprint);
