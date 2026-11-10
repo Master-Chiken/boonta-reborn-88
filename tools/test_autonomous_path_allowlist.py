@@ -166,9 +166,11 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
 
     def test_untracked_file_cannot_be_approved(self):
         extra = "src/untracked.c"
-        (self.root / extra).write_text("int unsafe;\n", encoding="utf-8")
         self.policy["tasks"][0]["allowed_paths"] = [extra]
         self.commit_inputs()
+        exclude = self.root / ".git/info/exclude"
+        exclude.write_text("\\n" + extra + "\\n", encoding="utf-8")
+        (self.root / extra).write_text("int unsafe;\\n", encoding="utf-8")
         with self.assertRaisesRegex(AllowlistError, "exactly one tracked file"):
             self.call_allowlist()
 
