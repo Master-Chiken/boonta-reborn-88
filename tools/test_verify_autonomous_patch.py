@@ -2,6 +2,8 @@
 """Offline end-to-end tests for isolated autonomous patch verification."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import subprocess
 import tempfile
@@ -144,6 +146,17 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         self.assertFalse(report["commit_created"])
         self.assertFalse(report["branch_created"])
         self.assertFalse(report["network_accessed"])
+        bundle = report["delivery_bundle"]
+        self.assertEqual(len(bundle), 1)
+        file_entry = bundle[0]
+        self.assertEqual(file_entry["path"], SOURCE_PATH)
+        self.assertEqual(file_entry["base_blob_sha"], git(self.root, "rev-parse", f"{self.base_sha}:{SOURCE_PATH}"))
+        data = base64.b64decode(file_entry["content_base64"], validate=True)
+        self.assertEqual(data.decode("utf-8"), "int boonta(void) {\n    return 7;\n}\n")
+        self.assertEqual(hashlib.sha256(data).hexdigest(), file_entry["content_sha256"])
+        expected_git_blob = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\\0" + data).hexdigest()
+        self.assertEqual(expected_git_blob, file_entry["result_blob_sha"])
+        self.assertIn(file_entry["mode"], {"100644", "100755"})
         self.assert_source_checkout_untouched()
 
     def test_test_failure_stops_pipeline_and_removes_worktree(self):
