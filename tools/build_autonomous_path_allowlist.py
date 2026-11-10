@@ -235,6 +235,8 @@ def build_allowlist(
     selected = active[0]
     if selected.get("task_id") != requested_task_id:
         raise AllowlistError("Requested task ID does not match the unique canonical active task")
+    if selected.get("target_branch") not in {"main", "dev"}:
+        raise AllowlistError("Active task target branch must be main or dev")
 
     owner_entry = policy_map.get(requested_task_id)
     if owner_entry is None:
