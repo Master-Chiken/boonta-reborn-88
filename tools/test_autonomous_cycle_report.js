@@ -64,15 +64,23 @@ function makeCore() {
   };
 }
 
-async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = {}) {
-  const workflow = fs.readFileSync('.github/workflows/openrouter-plan-execute.yml', 'utf8');
-  const stepStart = workflow.indexOf('      - name: Validate OpenRouter autonomous cycle report\n');
-  const stepEnd = workflow.indexOf('      - name: Sync the single-task daily backoff marker\n', stepStart);
-  assert.ok(stepStart >= 0 && stepEnd > stepStart, 'OpenRouter validation step must exist');
+async function executeEmbeddedBlockedStep({
+  workflowPath,
+  stepName,
+  nextStepName,
+  summaryEnv,
+  blocker,
+  nextAction,
+  envOverrides = {}
+}) {
+  const workflow = fs.readFileSync(workflowPath, 'utf8');
+  const stepStart = workflow.indexOf('      - name: ' + stepName + '\n');
+  const stepEnd = workflow.indexOf('      - name: ' + nextStepName + '\n', stepStart);
+  assert.ok(stepStart >= 0 && stepEnd > stepStart, stepName + ' step must exist');
   const step = workflow.slice(stepStart, stepEnd);
   const marker = '          script: |\n';
   const markerIndex = step.indexOf(marker);
-  assert.ok(markerIndex >= 0, 'OpenRouter validation step must contain an embedded script');
+  assert.ok(markerIndex >= 0, stepName + ' step must contain an embedded script');
 
   const scriptLines = step.slice(markerIndex + marker.length).split(/\r?\n/);
   const script = [];
@@ -85,26 +93,24 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
     script.push(line.slice(12));
   }
   assert.ok(script.some((line) => line.includes('findBlockedReportContradictions')),
-    'embedded OpenRouter script must exercise the shared contradiction guard');
+    stepName + ' must exercise the shared contradiction guard');
 
-  const env = {
-    REPORT_PATH: 'report.txt',
-    PRE_CYCLE_PR_HEADS: '{}',
-    PRE_CYCLE_PR_SNAPSHOT_AT: new Date(Date.now() - 1000).toISOString(),
-    OPENROUTER_PREFLIGHT_ALLOWED: 'true',
-    OPENROUTER_AUTH_OUTCOME: 'success',
-    GITHUB_APP_TOKEN_OUTCOME: 'success',
-    SELECTED_TASK_ID: taskId,
-    SELECTED_TASK_TARGET_BRANCH: 'main',
-    GITHUB_WORKSPACE: 'repo-root',
-    ...envOverrides
-  };
   const machineReport = [
     'BOONTA_CYCLE_TASK_ID: ' + taskId,
     'BOONTA_CYCLE_STATUS: BLOCKED',
     'BOONTA_CYCLE_BLOCKER: ' + blocker,
     'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
   ].join('\n');
+  const env = {
+    REPORT_PATH: 'report.txt',
+    GEMINI_SUMMARY: machineReport,
+    PRE_CYCLE_PR_HEADS: '{}',
+    PRE_CYCLE_PR_SNAPSHOT_AT: new Date(Date.now() - 1000).toISOString(),
+    SELECTED_TASK_ID: taskId,
+    SELECTED_TASK_TARGET_BRANCH: 'main',
+    GITHUB_WORKSPACE: 'repo-root',
+    ...envOverrides
+  };
   const fakeFs = {
     readFileSync: (path, encoding) => {
       assert.equal(path, env.REPORT_PATH);
@@ -119,7 +125,7 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
       if (id === env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js') {
         return require('./validate_autonomous_cycle_report');
       }
-      throw new Error('Unexpected module requested by embedded OpenRouter validator: ' + id);
+      throw new Error('Unexpected module requested by ' + stepName + ': ' + id);
     },
     process: { env },
     core: testCore,
@@ -127,9 +133,57 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
     context
   };
   const wrapped = '(async function () {\n' + script.join('\n') + '\n})()';
-  await new vm.Script(wrapped, { filename: 'openrouter-blocked-validator.js' })
+  await new vm.Script(wrapped, { filename: stepName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.js' })
     .runInNewContext(runtime, { timeout: 1000 });
   return testCore;
+}
+
+async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/openrouter-plan-execute.yml',
+    stepName: 'Validate OpenRouter autonomous cycle report',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'REPORT_PATH',
+    blocker,
+    nextAction,
+    envOverrides: {
+      OPENROUTER_PREFLIGHT_ALLOWED: 'true',
+      OPENROUTER_AUTH_OUTCOME: 'success',
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
+}
+
+async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/gemini-plan-execute.yml',
+    stepName: 'Validate Gemini autonomous cycle report',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'GEMINI_SUMMARY',
+    blocker,
+    nextAction,
+    envOverrides: {
+      GEMINI_PREFLIGHT_ALLOWED: 'true',
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
+}
+
+async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
+  return executeEmbeddedBlockedStep({
+    workflowPath: '.github/workflows/groq-plan-execute.yml',
+    stepName: 'Validate Groq autonomous cycle report',
+    nextStepName: 'Sync the single-task daily backoff marker',
+    summaryEnv: 'REPORT_PATH',
+    blocker,
+    nextAction,
+    envOverrides: {
+      GITHUB_APP_TOKEN_OUTCOME: 'success',
+      ...envOverrides
+    }
+  });
 }
 
 function makeGithub(options = {}) {
@@ -247,6 +301,50 @@ async function run(name, options = {}) {
   assert.equal(openRouterCredentialIsolation.failure, '',
     'the actual embedded OpenRouter BLOCKED script must not confuse model credential isolation with missing workflow authentication');
   assert.equal(openRouterCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const geminiMissingApiKey = await executeGeminiBlockedStep(
+    'GEMINI_API_KEY is missing from this invocation.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiMissingApiKey.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a missing-key claim after successful preflight');
+
+  const geminiDisabledOwnerGate = await executeGeminiBlockedStep(
+    'GEMINI_AUTONOMOUS_ENABLED is disabled.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiDisabledOwnerGate.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a disabled owner-gate claim after successful preflight');
+
+  const geminiMissingFreeAttestation = await executeGeminiBlockedStep(
+    'GEMINI_FREE_TIER_CONFIRMED is unset.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(geminiMissingFreeAttestation.failure.includes('contradicts successful Gemini preflight'),
+    'the actual embedded Gemini BLOCKED script must reject a missing Free-tier attestation after successful preflight');
+
+  const geminiCredentialIsolation = await executeGeminiBlockedStep(
+    'The Gemini credential is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(geminiCredentialIsolation.failure, '',
+    'the actual Gemini BLOCKED script must not confuse credential isolation with missing preflight configuration');
+  assert.equal(geminiCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const groqMissingAppToken = await executeGroqBlockedStep(
+    'There is no verified live GitHub App token.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(groqMissingAppToken.failure.includes('same-run GitHub App evidence'),
+    'the actual embedded Groq BLOCKED script must reject a missing-token claim after successful App token creation');
+
+  const groqCredentialIsolation = await executeGroqBlockedStep(
+    'The Groq credential is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(groqCredentialIsolation.failure, '',
+    'the actual Groq BLOCKED script must accept a blocker unrelated to GitHub App authentication');
+  assert.equal(groqCredentialIsolation.outputs.cycle_status, 'blocked');
 
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
