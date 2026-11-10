@@ -23,7 +23,7 @@ The shortcut is **not** to copy the commercial game. It is to recover privately 
 
 ## 2. Reference course catalogue — 25 tracks / eight worlds
 
-The following table merges the published tournament grouping with the published track-to-world catalogue. The world mapping is community-documented and should be treated as a **reference-version lead** until confirmed against a lawful local copy or primary documentation. [Track/world catalogue](https://www.igcd.net/game.php?id=1000017265&type=circuits) · [Tournament structure and course count](https://starwars.fandom.com/wiki/Star_Wars:_Episode_I_Racer) · [Course walkthrough](https://www.neoseeker.com/episode1racer/faqs/84525-racer-e.html)
+The following table merges the published tournament grouping with the published track-to-world catalogue. The machine-readable JSON also records each tournament's featured/favourite racer. The world and favourite-racer mappings are community-documented and should be treated as **reference-version leads** until confirmed against a lawful local copy or primary documentation. [Track/world catalogue](https://www.igcd.net/game.php?id=1000017265&type=circuits) · [Tournament track order and featured racers](https://starwars.fandom.com/wiki/Star_Wars:_Episode_I_Racer) · [Course walkthrough](https://www.neoseeker.com/episode1racer/faqs/84525-racer-e.html)
 
 | # | Championship | Track | World / environment family | Production note |
 |---:|---|---|---|---|
@@ -217,7 +217,7 @@ Its progression involves default/replacement parts, part condition/damage, pit d
 - Save/profile data for ownership, money, unlocks, selected vehicle, part inventory and records.
 - Deterministic tests for purchases, insufficient funds, unlock gates, damage rolls, repair, reset and save/load.
 
-The original part names and numbers should stay as research labels until the exact data source has been lawfully inspected. For a clean-room enhanced game, use new original part names and descriptions rather than presenting copied commercial naming as new original content.
+The Neoseeker FAQ lists six names in each of the seven categories (42 reference part entries total); those names are now represented in the structured JSON. Two naming discrepancies are explicitly recorded: Dual 33-PCX vs Dual 32 PCX, and Block6 Thrust Coil vs Block6 Thrust Coil2. Its guide uses a dollar sign for prices while other sources describe Truguts, so prices are not normalized in the dataset. Treat all part labels and unlock details as reference-version metadata until the exact target version is verified. For a clean-room enhanced game, use new original part names and descriptions rather than presenting copied commercial naming as new original content.
 
 ## 6. Complete game content bill of materials
 
@@ -383,3 +383,8 @@ Use `CLEARED` only when the exact asset file and all relevant dependencies have 
 ## Machine-readable catalogue
 
 The same reference names are available as a versioned, non-runtime JSON dataset at [`docs/research/data/SWE1R-CONTENT-REFERENCE-CATALOG-2026-11-10.json`](data/SWE1R-CONTENT-REFERENCE-CATALOG-2026-11-10.json). It contains 25 track records, eight world IDs, four championship records, 23 standard pilot identities, two N64 cheat replacements, 25 pilot/pod model-name references, seven upgrade categories, named high-tier part examples, provenance sources and an explicit current-Boonta content snapshot. It contains names and metadata only; no commercial game asset data.
+
+
+### Structured catalogue coverage update
+
+The JSON reference dataset now includes the tournament's featured racer for every course and the 42 published upgrade-part names (six entries in each of seven categories), alongside explicit spelling/name discrepancies. These fields are research metadata only; they do not contain the original models, track geometry, source code or part-value tuning.
