@@ -13,6 +13,7 @@ from autonomous_patch_proposal import (
     load_proposal,
     validate_diff_paths,
     validate_or_apply,
+    validate_tracked_targets,
 )
 
 TASK_ID = "AUTOMATION-PATCH-PROTOTYPE"
@@ -202,9 +203,8 @@ class ProposalValidationTests(PatchFixture):
         diff = git(self.root, "diff", "--", "gamecube-demo/source/link.c")
         link.unlink()
         link.symlink_to("main.c")
-        proposal = dict(self.proposal, base_sha=self.base_sha, unified_diff=diff)
         with self.assertRaisesRegex(ProposalError, "not a regular tracked file"):
-            self.check(proposal, allowed={"gamecube-demo/source/link.c"})
+            validate_tracked_targets(self.root, ("gamecube-demo/source/link.c",))
 
     def test_empty_test_list_is_rejected(self):
         with self.assertRaisesRegex(ProposalError, "test_ids"):
