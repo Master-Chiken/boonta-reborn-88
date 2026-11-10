@@ -663,6 +663,17 @@ Pinned source links:
 - [RT64 context / display-list dispatch](https://github.com/sp00nznet/racer/blob/694c5663b3a7c30e2862fc240344f34683f99a9c/frontend/src/rt64_context.cpp)
 - [symbols.toml](https://github.com/sp00nznet/racer/blob/694c5663b3a7c30e2862fc240344f34683f99a9c/symbols.toml)
 
+## 2026-11-10 — N64 USA content roster and track catalogue inventory
+
+A metadata-only pass over the pinned `swe1r-assets` catalogue gives a concrete completeness checklist for the N64 USA release:
+
+- Release ID 3 selects model block 2 (307 entries), spline block 1 (91), sprite block 2 (173), and texture block 1 (1,648).
+- The cross-release metadata catalogue lists 25 racers and 25 tracks; the wider catalogue contains 433 model-value rows across MAlt, Podd, Pupp, Trak, Part, Modl, Scen and N64 alias groups.
+- All **123/123** non-null racer model references (Podd, MAlt, Pupp, LOD1 and LOD2 where supplied) resolve to a unique N64 USA physical model index when joined by exact model name through `ModelBlockItem` and `BlockItem` metadata. The last two roster rows, Jinn Reeso and Cy Yunga, have no LOD2 reference.
+- Track metadata contains 25 entries across the eight planet IDs. Only **11/25** track references received an exact-name N64 block match in this bounded pass; the other 14 include release-specific/placeholder aliases and remain unresolved. This is not evidence that those tracks or their geometry are absent. The upstream `TrakModelFormatTester` itself labels the track-to-model lookup a TODO for alias values such as 1001.
+
+The important technical distinction is that `ModelBlockItem.Id` and `Track.Model` are logical catalogue references, `BlockItem.ValueId` is a value ID attached to a block entry, and `BlockItem.Index` is the physical position in that selected block. They must not be mixed. The new [human-readable content inventory](N64_US_CONTENT_CATALOG_2026-11-10.md) and [machine-readable JSON catalogue](data/n64-us-content-catalog.json) preserve the references without any geometry, textures, hashes, ROM bytes or extracted assets.
+
 ## 2026-11-10 — N64 texture-block reuse path
 
 A pinned source audit found that `swe1r-assets@922ef535f6598a1330ff93d6b07258956f990b34` already has N64 release selectors for a dedicated big-endian texture block (ID 1, 1,648 entries) and a model-material-to-texture PNG exporter. The upstream `SWE1R.Assets.Blocks.Original` project also embeds a full N64 texture-block reference resource at `Resources/out_textureblock.bin/n64.bin` (2,741,112 bytes; SHA-1 `9130090c3ceafff6ed05609045909f54f666e54f`) and a full N64 USA model-block reference resource at `Resources/out_modelblock.bin/n64_us.bin` (12,406,512 bytes). These are game-derived resource fixtures, not covered by the parser library's MIT code licence; do not copy them into Boonta or CI.
