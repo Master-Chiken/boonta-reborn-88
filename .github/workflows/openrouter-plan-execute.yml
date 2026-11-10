@@ -351,8 +351,8 @@ jobs:
           TASK
           - The preloaded question, criteria and next action are authoritative. Never switch tasks.
           - Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence.
-          - No subagents, planning or repo-wide discovery. Do not list root or reread summary, ledger or budget.
-          - Keep new reads below 700 tokens; at most one directly relevant source/test file. No route dossier, attachments, media or binaries.
+          - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
+          - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. At most one directly relevant source/test file.
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           
           TOOLS / DELIVERY
