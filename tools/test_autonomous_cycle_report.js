@@ -303,6 +303,11 @@ async function run(name, options = {}) {
     reportNextAction: 'Continue on the main branch.',
     expectFailure: 'BLOCKED next action contradicts selected target branch'
   });
+  await run('BLOCKED next action recognizes development as the dev branch', {
+    status: 'BLOCKED',
+    reportNextAction: 'Continue on the development branch.',
+    expectFailure: 'BLOCKED next action contradicts selected target branch'
+  });
   await run('BLOCKED next action without an explicit branch remains valid', {
     status: 'BLOCKED',
     reportNextAction: 'Record the verified owner result in the task ledger.'
