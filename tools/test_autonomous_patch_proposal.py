@@ -112,7 +112,7 @@ class ProposalValidationTests(PatchFixture):
             self.check(proposal)
 
     def test_empty_trusted_path_allowlist_is_rejected(self):
-        with self.assertRaisesRegex(ProposalError, "allow-path list is empty"):
+        with self.assertRaisesRegex(ProposalError, "allowed-path list is empty"):
             self.check(allowed=set())
 
     def test_path_outside_allowlist_is_rejected(self):
@@ -158,7 +158,7 @@ class ProposalValidationTests(PatchFixture):
 
     def test_oversized_patch_is_rejected(self):
         proposal = dict(self.proposal, unified_diff=self.diff + ("\n# padding" * 4000))
-        with self.assertRaisesRegex(ProposalError, "32 KiB"):
+        with self.assertRaisesRegex(ProposalError, "32768 characters"):
             self.check(proposal)
 
     def test_duplicate_json_properties_are_rejected(self):
@@ -178,6 +178,33 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaises(ProposalError):
             self.check(proposal, apply=True)
         self.assertEqual(self.target.read_text(encoding="utf-8"), "int main(void) {\n    return 0;\n}\n")
+
+    def test_hunk_content_starting_with_patch_header_prefix_is_safe(self):
+        self.target.write_text("-- original\n", encoding="utf-8")
+        git(self.root, "add", "gamecube-demo/source/main.c")
+        git(self.root, "commit", "-qm", "replace fixture source")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.target.write_text("-- changed\n", encoding="utf-8")
+        diff = git(self.root, "diff", "--", "gamecube-demo/source/main.c")
+        self.target.write_text("-- original\n", encoding="utf-8")
+        proposal = dict(self.proposal, base_sha=self.base_sha, unified_diff=diff)
+        report = self.check(proposal)
+        self.assertEqual(report["status"], "VALID")
+
+    def test_symlink_targets_are_rejected(self):
+        link = self.root / "gamecube-demo/source/link.c"
+        link.symlink_to("main.c")
+        git(self.root, "add", "gamecube-demo/source/link.c")
+        git(self.root, "commit", "-qm", "add fixture symlink")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        link.unlink()
+        link.write_text("int linked = 2;\n", encoding="utf-8")
+        diff = git(self.root, "diff", "--", "gamecube-demo/source/link.c")
+        link.unlink()
+        link.symlink_to("main.c")
+        proposal = dict(self.proposal, base_sha=self.base_sha, unified_diff=diff)
+        with self.assertRaisesRegex(ProposalError, "not a regular tracked file"):
+            self.check(proposal, allowed={"gamecube-demo/source/link.c"})
 
     def test_empty_test_list_is_rejected(self):
         with self.assertRaisesRegex(ProposalError, "test_ids"):
