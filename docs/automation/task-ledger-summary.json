@@ -27,7 +27,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "#358/#359 fixed prompt/cooldowns; #364 OpenRouter 8 steps/reports; #365/#367 Groq TPM/MCP; #366 schedules four UTC cycles. Next: require a real €0 provider call, MCP branch/PR and exact-task/exact-head validation. Then select the owner-directed Phase 1 cross-platform reuse/compatibility decision in #226 (PROJECT_OPERATING_RULES.md); defer #307 until the playable race slice is coherent (GEMINI.md)."
+      "next_action_excerpt": "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; #377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; #373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider…"
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
