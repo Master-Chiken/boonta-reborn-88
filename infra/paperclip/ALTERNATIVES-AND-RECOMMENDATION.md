@@ -171,3 +171,34 @@ This is a model-adapter improvement, not a replacement for the queue-liveness an
 ## A provider option that is no longer available
 
 Do not build a new fallback around **GitHub Models**. GitHub announced that the service was fully retired on **2026-07-30**, including its playground, catalogue and inference API. It is not a current free model endpoint for this project.
+
+
+## Highest-value next experiment: structured patch proposal + deterministic GitHub delivery
+
+The current OpenRouter path asks OpenCode to coordinate reasoning, native GitHub MCP tool calls, and the final report in one short run. The observed failure modes include malformed native tool-call arguments (Groq) and a missing machine-readable completion report after the model consumed its step budget (OpenRouter).
+
+A lower-coupling alternative is to make the model return **one typed patch proposal** and let ordinary code own every side effect:
+
+1. The preflight supplies one exact task ID, base branch/SHA, acceptance criteria and a bounded source context. If it cannot provide enough source context, stop as BLOCKED; do not make the model browse the repository.
+2. The model returns one JSON object matching a strict schema, for example: `task_id`, `base_sha`, `summary`, `unified_diff`, `tests_to_run` and `limitations`. All fields are required; unknown properties are rejected.
+3. A deterministic validator checks the exact task/base identity, JSON schema, diff syntax, allowed paths, protected-path policy, patch size and expected base blob/HEAD SHA. It rejects path traversal, symlinks, binary changes, secrets, generated artifacts and files outside the task allowlist.
+4. Apply the diff only in an isolated temporary checkout with `git apply --check`; then run the repository's existing targeted tests, safety/provenance checks and diff review.
+5. Only after all local checks pass does a deterministic GitHub writer create one unique task branch, push the already validated patch, open a PR with the exact task marker and capture the actual PR number/head SHA from GitHub.
+6. A separate live validator checks the PR, exact head/base, changed files and required CI. It—not the model—produces the final PROGRESS/BLOCKED report.
+
+This removes branch creation, file-write and PR-creation MCP tool calls from the model's reasoning budget. It also makes malformed model tool-call JSON a proposal-validation failure rather than a partially completed repository operation. It does **not** eliminate model mistakes: an invalid or unsafe diff is rejected, never repaired by blindly retrying an inference request.
+
+### Structured-output contract
+
+- Prefer a strict JSON Schema `response_format` only when the selected model **and exact provider endpoint** declare structured-output support.
+- For OpenRouter, set `provider.require_parameters: true` so the router rejects an endpoint that cannot honor the requested parameters. Read the selected endpoint metadata and fail closed when support is absent.
+- Keep the schema intentionally small: one patch, bounded number of files/bytes, no arbitrary shell commands, no model-supplied GitHub API operations.
+- Check both `finish_reason` and JSON Schema validation. Reject output truncated by `max_tokens`, a refusal, missing diff, unexpected file paths or mismatched task/base SHA.
+- If using OpenCode SDK v2 `session.prompt({ format: { type: "json_schema", schema, retryCount: 0 } })`, explicitly set `retryCount: 0` for a strict one-provider-request budget. The SDK's documented default is two structured-output retries; leaving that default could use more than one request. Any retry policy must be explicit and budgeted.
+- Run a synthetic no-write canary before introducing this path. The canary should verify schema conformance, patch rejection, and deterministic writer behavior using a temporary fixture repo; it must not create a real branch or call a provider during ordinary CI.
+
+This is a **small isolated prototype**, not an immediate replacement of the current provider route. The current main workflows remain unchanged until the prototype proves: one request, valid schema, rejection of hostile/malformed patches, successful synthetic test execution, and an exact-head mock PR delivery.
+
+Official references:
+- OpenRouter's structured-output guide (published 2026-11-10) explains strict JSON Schema, endpoint-specific support, `require_parameters: true`, tool-schema forcing, response healing limitations and local validation: https://openrouter.ai/blog/tutorials/structured-output-llm/
+- OpenCode SDK v2 documents `session.prompt` JSON Schema output, `StructuredOutputError` and default `retryCount: 2`: https://docs.opencode.ai/docs/sdk/
