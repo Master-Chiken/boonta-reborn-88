@@ -1,0 +1,935 @@
+{
+  "schema_version": 1,
+  "catalogue_id": "SWE1R-REFERENCE-CONTENT-CATALOG",
+  "created_at": "2026-11-10",
+  "purpose": "Reference metadata for planning Boonta Reborn content. Not a runtime asset pack and not evidence of GameCube/Wii version parity.",
+  "source_scope": {
+    "reference_game": "Star Wars: Episode I – Racer (1999)",
+    "standard_racer_count": 23,
+    "n64_cheat_replacement_count": 2,
+    "track_count": 25,
+    "world_count": 8,
+    "championship_count": 4,
+    "platform_note": "Community reference lists cover multiple versions. The exact target GameCube/Wii roster, data layout, course order and asset set remain unverified. No original retail GameCube/Wii Racer executable has been identified.",
+    "redistribution_note": "Names and catalogue metadata only. No commercial game models, textures, audio, binaries, coordinates, ROM-derived structures or extracted assets are included."
+  },
+  "sources": [
+    {
+      "id": "SRC-WOOKIEPEDIA",
+      "url": "https://starwars.fandom.com/wiki/Star_Wars:_Episode_I_Racer",
+      "kind": "community_reference",
+      "supports": [
+        "standard racer roster",
+        "starting racers",
+        "unlockable racers",
+        "N64 cheat replacements",
+        "championship grouping",
+        "track count",
+        "world count"
+      ],
+      "confidence": "reference_only"
+    },
+    {
+      "id": "SRC-IGCD-COURSES",
+      "url": "https://www.igcd.net/game.php?id=1000017265&type=circuits",
+      "kind": "community_vehicle_database",
+      "supports": [
+        "track_to_world_mapping"
+      ],
+      "confidence": "reference_only"
+    },
+    {
+      "id": "SRC-IGCD-PODS",
+      "url": "https://www.igcd.net/game.php?id=1000017265",
+      "kind": "community_vehicle_database",
+      "supports": [
+        "pilot_to_pod_model_labels"
+      ],
+      "confidence": "reference_only"
+    },
+    {
+      "id": "SRC-SPEEDRUN-UPGRADES",
+      "url": "https://www.speedrun.com/swe1r/guides/498gh",
+      "kind": "community_gameplay_guide",
+      "supports": [
+        "seven_upgrade_statistics",
+        "part_condition",
+        "pit_droids",
+        "shop",
+        "junkyard",
+        "unlock_thresholds"
+      ],
+      "confidence": "reference_only"
+    },
+    {
+      "id": "SRC-NEOSEEKER",
+      "url": "https://www.neoseeker.com/episode1racer/faqs/27446-racer-a.html",
+      "kind": "community_walkthrough",
+      "supports": [
+        "upgrade_categories",
+        "parts_and_condition"
+      ],
+      "confidence": "reference_only"
+    }
+  ],
+  "worlds": [
+    {
+      "id": "WORLD-TATOOINE",
+      "name": "Tatooine"
+    },
+    {
+      "id": "WORLD-ANDO-PRIME",
+      "name": "Ando Prime"
+    },
+    {
+      "id": "WORLD-BAROONDA",
+      "name": "Baroonda"
+    },
+    {
+      "id": "WORLD-MON-GAZZA",
+      "name": "Mon Gazza"
+    },
+    {
+      "id": "WORLD-MALASTARE",
+      "name": "Malastare"
+    },
+    {
+      "id": "WORLD-OOVO-IV",
+      "name": "Oovo IV"
+    },
+    {
+      "id": "WORLD-ORD-IBANNA",
+      "name": "Ord Ibanna"
+    },
+    {
+      "id": "WORLD-AQUILARIS",
+      "name": "Aquilaris"
+    }
+  ],
+  "championships": [
+    {
+      "id": "CIRCUIT-AMATEUR",
+      "name": "Amateur",
+      "order": 1,
+      "track_count": 7
+    },
+    {
+      "id": "CIRCUIT-SEMI-PRO",
+      "name": "Semi-Pro",
+      "order": 2,
+      "track_count": 7
+    },
+    {
+      "id": "CIRCUIT-GALACTIC",
+      "name": "Galactic",
+      "order": 3,
+      "track_count": 7
+    },
+    {
+      "id": "CIRCUIT-INVITATIONAL",
+      "name": "Invitational",
+      "order": 4,
+      "track_count": 4
+    }
+  ],
+  "tracks": [
+    {
+      "id": "TRK-BOONTA-TRAINING",
+      "name": "Boonta Training Course",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-TATOOINE",
+      "order": 1,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-MON-GAZZA-SPEEDWAY",
+      "name": "Mon Gazza Speedway",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-MON-GAZZA",
+      "order": 2,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-BEEDOS-WILD-RIDE",
+      "name": "Beedo's Wild Ride",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-ANDO-PRIME",
+      "order": 3,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-AQUILARIS-CLASSIC",
+      "name": "Aquilaris Classic",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-AQUILARIS",
+      "order": 4,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-MALASTARE-100",
+      "name": "Malastare 100",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-MALASTARE",
+      "order": 5,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-VENGEANCE",
+      "name": "Vengeance",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-OOVO-IV",
+      "order": 6,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-SPICE-MINE-RUN",
+      "name": "Spice Mine Run",
+      "championship_id": "CIRCUIT-AMATEUR",
+      "world_id": "WORLD-MON-GAZZA",
+      "order": 7,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-SUNKEN-CITY",
+      "name": "Sunken City",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-AQUILARIS",
+      "order": 1,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-HOWLER-GORGE",
+      "name": "Howler Gorge",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-ANDO-PRIME",
+      "order": 2,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-DUG-DERBY",
+      "name": "Dug Derby",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-MALASTARE",
+      "order": 3,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-SCRAPPERS-RUN",
+      "name": "Scrapper's Run",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-ORD-IBANNA",
+      "order": 4,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-ZUGGA-CHALLENGE",
+      "name": "Zugga Challenge",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-MON-GAZZA",
+      "order": 5,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-BAROO-COAST",
+      "name": "Baroo Coast",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-BAROONDA",
+      "order": 6,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-BUMPYS-BREAKERS",
+      "name": "Bumpy's Breakers",
+      "championship_id": "CIRCUIT-SEMI-PRO",
+      "world_id": "WORLD-AQUILARIS",
+      "order": 7,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-EXECUTIONER",
+      "name": "Executioner",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-OOVO-IV",
+      "order": 1,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-SEBULBAS-LEGACY",
+      "name": "Sebulba's Legacy",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-MALASTARE",
+      "order": 2,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-GRABVINE-GATEWAY",
+      "name": "Grabvine Gateway",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-BAROONDA",
+      "order": 3,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-ANDOBI-MOUNTAIN-RUN",
+      "name": "Andobi Mountain Run",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-ANDO-PRIME",
+      "order": 4,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-DETHROS-REVENGE",
+      "name": "Dethro's Revenge",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-ORD-IBANNA",
+      "order": 5,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-FIRE-MOUNTAIN-RALLY",
+      "name": "Fire Mountain Rally",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-BAROONDA",
+      "order": 6,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-BOONTA-CLASSIC",
+      "name": "The Boonta Classic",
+      "championship_id": "CIRCUIT-GALACTIC",
+      "world_id": "WORLD-TATOOINE",
+      "order": 7,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-ANDO-PRIME-CENTRUM",
+      "name": "Ando Prime Centrum",
+      "championship_id": "CIRCUIT-INVITATIONAL",
+      "world_id": "WORLD-ANDO-PRIME",
+      "order": 1,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-ABYSS",
+      "name": "Abyss",
+      "championship_id": "CIRCUIT-INVITATIONAL",
+      "world_id": "WORLD-ORD-IBANNA",
+      "order": 2,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-THE-GAUNTLET",
+      "name": "The Gauntlet",
+      "championship_id": "CIRCUIT-INVITATIONAL",
+      "world_id": "WORLD-OOVO-IV",
+      "order": 3,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    },
+    {
+      "id": "TRK-INFERNO",
+      "name": "Inferno",
+      "championship_id": "CIRCUIT-INVITATIONAL",
+      "world_id": "WORLD-BAROONDA",
+      "order": 4,
+      "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
+      "asset_status": "metadata_only",
+      "route_graph_status": "not_created"
+    }
+  ],
+  "racers": [
+    {
+      "id": "PILOT-ANAKIN",
+      "name": "Anakin Skywalker",
+      "availability": "starting",
+      "vehicle_id": "POD-ANAKIN",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-DUD-BOLT",
+      "name": "Dud Bolt",
+      "availability": "starting",
+      "vehicle_id": "POD-DUD-BOLT",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-EBE-ENDOCOTT",
+      "name": "Ebe Endocott",
+      "availability": "starting",
+      "vehicle_id": "POD-EBE-ENDOCOTT",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-ELAN-MAK",
+      "name": "Elan Mak",
+      "availability": "starting",
+      "vehicle_id": "POD-ELAN-MAK",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-GASGANO",
+      "name": "Gasgano",
+      "availability": "starting",
+      "vehicle_id": "POD-GASGANO",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-ODY-MANDRELL",
+      "name": "Ody Mandrell",
+      "availability": "starting",
+      "vehicle_id": "POD-ODY-MANDRELL",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-ALDAR-BEEDO",
+      "name": "Aldar Beedo",
+      "availability": "unlockable",
+      "vehicle_id": "POD-ALDAR-BEEDO",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-ARK-ROOSE",
+      "name": "Ark \"Bumpy\" Roose",
+      "availability": "unlockable",
+      "vehicle_id": "POD-ARK-ROOSE",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-BEN-QUADINAROS",
+      "name": "Ben Quadinaros",
+      "availability": "unlockable",
+      "vehicle_id": "POD-BEN-QUADINAROS",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-BOLES-ROOR",
+      "name": "Boles Roor",
+      "availability": "unlockable",
+      "vehicle_id": "POD-BOLES-ROOR",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-BOZZIE-BARANTA",
+      "name": "Bozzie Baranta",
+      "availability": "unlockable",
+      "vehicle_id": "POD-BOZZIE-BARANTA",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-BULLSEYE-NAVIOR",
+      "name": "\"Bullseye\" Navior",
+      "availability": "unlockable",
+      "vehicle_id": "POD-BULLSEYE-NAVIOR",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-CLEGG-HOLDFAST",
+      "name": "Clegg Holdfast",
+      "availability": "unlockable",
+      "vehicle_id": "POD-CLEGG-HOLDFAST",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-FUD-SANG",
+      "name": "Fud Sang",
+      "availability": "unlockable",
+      "vehicle_id": "POD-FUD-SANG",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-MARS-GUO",
+      "name": "Mars Guo",
+      "availability": "unlockable",
+      "vehicle_id": "POD-MARS-GUO",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-MAWHONIC",
+      "name": "Mawhonic",
+      "availability": "unlockable",
+      "vehicle_id": "POD-MAWHONIC",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-NEVA-KEE",
+      "name": "Neva Kee",
+      "availability": "unlockable",
+      "vehicle_id": "POD-NEVA-KEE",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-RATTS-TYERELL",
+      "name": "Ratts Tyerell",
+      "availability": "unlockable",
+      "vehicle_id": "POD-RATTS-TYERELL",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-SEBULBA",
+      "name": "Sebulba",
+      "availability": "unlockable",
+      "vehicle_id": "POD-SEBULBA",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-SLIDE-PARAMITA",
+      "name": "Slide Paramita",
+      "availability": "unlockable",
+      "vehicle_id": "POD-SLIDE-PARAMITA",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-TEEMTO-PAGALIES",
+      "name": "Teemto Pagalies",
+      "availability": "unlockable",
+      "vehicle_id": "POD-TEEMTO-PAGALIES",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-TOY-DAMPNER",
+      "name": "Toy Dampner",
+      "availability": "unlockable",
+      "vehicle_id": "POD-TOY-DAMPNER",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-WAN-SANDAGE",
+      "name": "Wan Sandage",
+      "availability": "unlockable",
+      "vehicle_id": "POD-WAN-SANDAGE",
+      "reference_scope": "standard multi-platform roster reference",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-CY-YUNGA",
+      "name": "Cy Yunga",
+      "availability": "n64_cheat_replacement",
+      "vehicle_id": "POD-CY-YUNGA",
+      "reference_scope": "Nintendo 64 cheat replacement only",
+      "asset_status": "metadata_only"
+    },
+    {
+      "id": "PILOT-JINN-REESO",
+      "name": "Jinn Reeso",
+      "availability": "n64_cheat_replacement",
+      "vehicle_id": "POD-JINN-REESO",
+      "reference_scope": "Nintendo 64 cheat replacement only",
+      "asset_status": "metadata_only"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "POD-ALDAR-BEEDO",
+      "pilot_id": "PILOT-ALDAR-BEEDO",
+      "reference_model_name": "Mk IV Flat Twin Turbojet Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-ANAKIN",
+      "pilot_id": "PILOT-ANAKIN",
+      "reference_model_name": "Anakin Skywalker's Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-ARK-ROOSE",
+      "pilot_id": "PILOT-ARK-ROOSE",
+      "reference_model_name": "Plug-8G 927 Cluster Array Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-BEN-QUADINAROS",
+      "pilot_id": "PILOT-BEN-QUADINAROS",
+      "reference_model_name": "BT310 Quadra Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-BOLES-ROOR",
+      "pilot_id": "PILOT-BOLES-ROOR",
+      "reference_model_name": "Quadrijet 4-Barrel 904E Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-BOZZIE-BARANTA",
+      "pilot_id": "PILOT-BOZZIE-BARANTA",
+      "reference_model_name": "Shelba 730 Razor Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-BULLSEYE-NAVIOR",
+      "pilot_id": "PILOT-BULLSEYE-NAVIOR",
+      "reference_model_name": "RQ 550C Dart Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-CLEGG-HOLDFAST",
+      "pilot_id": "PILOT-CLEGG-HOLDFAST",
+      "reference_model_name": "9T9-B Wasp Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-CY-YUNGA",
+      "pilot_id": "PILOT-CY-YUNGA",
+      "reference_model_name": "V-71 Ridge Piranha Podracer",
+      "availability": "n64_cheat_replacement",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-DUD-BOLT",
+      "pilot_id": "PILOT-DUD-BOLT",
+      "reference_model_name": "Vulptereen 327 Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-EBE-ENDOCOTT",
+      "pilot_id": "PILOT-EBE-ENDOCOTT",
+      "reference_model_name": "J930 Dash-8 Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-ELAN-MAK",
+      "pilot_id": "PILOT-ELAN-MAK",
+      "reference_model_name": "KRT 410C Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-FUD-SANG",
+      "pilot_id": "PILOT-FUD-SANG",
+      "reference_model_name": "BRE Block6 Tri-Ram Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-GASGANO",
+      "pilot_id": "PILOT-GASGANO",
+      "reference_model_name": "Ord Pedrovia Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-JINN-REESO",
+      "pilot_id": "PILOT-JINN-REESO",
+      "reference_model_name": "Jinn Reeso's Podracer",
+      "availability": "n64_cheat_replacement",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-MARS-GUO",
+      "pilot_id": "PILOT-MARS-GUO",
+      "reference_model_name": "Plug-2 Behemoth Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-MAWHONIC",
+      "pilot_id": "PILOT-MAWHONIC",
+      "reference_model_name": "GPE-3130 Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-NEVA-KEE",
+      "pilot_id": "PILOT-NEVA-KEE",
+      "reference_model_name": "FG 8T8-Twin Block2 Special Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-ODY-MANDRELL",
+      "pilot_id": "PILOT-ODY-MANDRELL",
+      "reference_model_name": "XL 5115 Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-RATTS-TYERELL",
+      "pilot_id": "PILOT-RATTS-TYERELL",
+      "reference_model_name": "Scatalpen Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-SEBULBA",
+      "pilot_id": "PILOT-SEBULBA",
+      "reference_model_name": "Plug-F Mammoth Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-SLIDE-PARAMITA",
+      "pilot_id": "PILOT-SLIDE-PARAMITA",
+      "reference_model_name": "Stinger 627 S Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-TEEMTO-PAGALIES",
+      "pilot_id": "PILOT-TEEMTO-PAGALIES",
+      "reference_model_name": "IPG-X1131 LongTail Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-TOY-DAMPNER",
+      "pilot_id": "PILOT-TOY-DAMPNER",
+      "reference_model_name": "910 Special Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    },
+    {
+      "id": "POD-WAN-SANDAGE",
+      "pilot_id": "PILOT-WAN-SANDAGE",
+      "reference_model_name": "TurboDyne 99-U Podracer",
+      "availability": "standard",
+      "asset_status": "no model file included; name metadata only"
+    }
+  ],
+  "upgrade_stats": [
+    {
+      "id": "STAT-TRACTION",
+      "name": "Traction"
+    },
+    {
+      "id": "STAT-TURNING",
+      "name": "Turning"
+    },
+    {
+      "id": "STAT-ACCELERATION",
+      "name": "Acceleration"
+    },
+    {
+      "id": "STAT-TOP-SPEED",
+      "name": "Top Speed"
+    },
+    {
+      "id": "STAT-AIR-BRAKE",
+      "name": "Air Brake"
+    },
+    {
+      "id": "STAT-COOLING",
+      "name": "Cooling"
+    },
+    {
+      "id": "STAT-REPAIR",
+      "name": "Repair"
+    }
+  ],
+  "example_named_parts": [
+    {
+      "stat_id": "STAT-TRACTION",
+      "reference_name": "R-600 Repulsorgrip"
+    },
+    {
+      "stat_id": "STAT-TURNING",
+      "reference_name": "Control Stabilizer"
+    },
+    {
+      "stat_id": "STAT-ACCELERATION",
+      "reference_name": "MAG-6 Injector"
+    },
+    {
+      "stat_id": "STAT-TOP-SPEED",
+      "reference_name": "Block6 Thrust Coil"
+    },
+    {
+      "stat_id": "STAT-AIR-BRAKE",
+      "reference_name": "Quadrijet Air Brake"
+    },
+    {
+      "stat_id": "STAT-COOLING",
+      "reference_name": "Turbo Coolant Pump"
+    },
+    {
+      "stat_id": "STAT-REPAIR",
+      "reference_name": "Cluster2 Power Plug"
+    }
+  ],
+  "progression_systems": [
+    "Championship unlocking",
+    "Race results and podium classification",
+    "Credits / Truguts and reward settings",
+    "Watto's shop / parts inventory",
+    "Junkyard with condition-varying parts",
+    "Part damage and repair",
+    "Pit droid ownership and automatic repair",
+    "Vehicle selection and per-pod configuration",
+    "Profile/save data and race records"
+  ],
+  "content_requirements": [
+    "25 unique course packages with route graph, surfaces, collision, start/finish, props, hazards, spawn data and minimap",
+    "8 reusable but individually varied world/environment kits",
+    "23 standard pilot identities and 23 standard pod configurations; N64 cheat replacements separate",
+    "Pilot portraits/selection representation and licensed or original pilot visuals",
+    "Pod models, rigs, textures/materials, collision, animations, effects sockets and audio profiles",
+    "Per-pod physics configurations for the seven upgrade stat families",
+    "Rival AI, route decisions, passing, defending, recovery and race ordering",
+    "Seven-part-category upgrade system with condition, damage, repair, shop and junkyard logic",
+    "Front-end, course select, pod select, garage, shop, pause, results and progression menus",
+    "HUD, route map, fonts/localisation and menu assets",
+    "Music, engine/boost/impact/UI audio, ambience and announcer events",
+    "Course packaging, asset manifests, streaming/memory budgets and save compatibility"
+  ],
+  "known_discrepancies": [
+    {
+      "subject": "Bullseye racer spelling",
+      "values": [
+        "\"Bullseye\" Navior (roster source)",
+        "\"Bullseye\" Namor (one IGCD vehicle entry)"
+      ],
+      "status": "unresolved; keep Navior as roster ID and retain the alternative spelling in research"
+    },
+    {
+      "subject": "N64 cheat replacements",
+      "values": [
+        "Cy Yunga",
+        "Jinn Reeso"
+      ],
+      "status": "do not treat as standard roster or GameCube/Wii content"
+    }
+  ],
+  "license_and_asset_sources": [
+    {
+      "name": "Kenney Racing Kit",
+      "url": "https://kenney.nl/assets/racing-kit",
+      "license": "CC0",
+      "review": "pack page says 110 files; candidate only until exact selected files and source hash are recorded"
+    },
+    {
+      "name": "Kenney Space Kit",
+      "url": "https://kenney.nl/assets/space-kit",
+      "license": "CC0",
+      "review": "pack page says 150 files; candidate only"
+    },
+    {
+      "name": "Kenney Modular Space Kit",
+      "url": "https://kenney.nl/assets/modular-space-kit",
+      "license": "CC0",
+      "review": "pack page says 40 files; candidate only"
+    },
+    {
+      "name": "Kenney Nature Kit",
+      "url": "https://kenney.nl/assets/nature-kit",
+      "license": "CC0",
+      "review": "pack page says 330 files; candidate only"
+    },
+    {
+      "name": "Kenney City Kit Roads",
+      "url": "https://kenney.nl/assets/city-kit-roads",
+      "license": "CC0",
+      "review": "pack page says 90 files; candidate only"
+    },
+    {
+      "name": "Kenney UI Audio",
+      "url": "https://kenney.nl/assets/ui-audio",
+      "license": "CC0",
+      "review": "pack page says 50 files; candidate only"
+    },
+    {
+      "name": "Poly Haven",
+      "url": "https://polyhaven.com/license",
+      "license": "CC0",
+      "review": "site license applies to HDRIs, textures and 3D models; select assets individually"
+    }
+  ],
+  "boonta_current_content_snapshot": {
+    "ref": "main@730a49bd288db9bf749bbc7241d7a133cce891f9",
+    "known_route_assets": [
+      "gamecube-demo/data/original-test-oval-route-graph.json",
+      "gamecube-demo/data/original-test-oval-surface-widths.json"
+    ],
+    "known_mesh_assets": [
+      "gamecube-demo/data/meshes/original_twin_engine_racer.json",
+      "gamecube-demo/data/meshes/original_synthetic_diamond.json",
+      "gamecube-demo/data/meshes/original_synthetic_triangle.json"
+    ],
+    "known_texture_sources": [
+      "gamecube-demo/data/textures/original_twin_engine_panel.json"
+    ],
+    "limitations": [
+      "one synthetic closed-loop route only",
+      "one source-authored test pod mesh",
+      "one small source-authored texture",
+      "procedural environment and three simple rivals",
+      "no full course catalogue, pilot roster, pod fleet, menus, garage, upgrade system, save system or integrated audio"
+    ]
+  }
+}
