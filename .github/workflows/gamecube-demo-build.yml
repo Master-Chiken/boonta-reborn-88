@@ -471,7 +471,13 @@ jobs:
                 echo "Capturing $capture from Dolphin window id=$window title=$(xdotool getwindowname "$window")"
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
                 sleep 1
-                import -window "$window" "$capture"
+                if ! timeout --signal=TERM --kill-after=1s 8s import -window "$window" "$capture"; then
+                  echo "Dolphin window screenshot capture timed out or failed."
+                  timeout --signal=TERM --kill-after=1s 5s flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                  kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                  wait "$emu_pid" >/dev/null 2>&1 || true
+                  return 1
+                fi
                 test -s "$capture"
                 identify "$capture"
                 colors=$(convert "$capture" -resize 160x90 -format %k info:)
@@ -543,7 +549,13 @@ jobs:
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
                 # Wait for the finish banner, then the first clean HUD after Start alone restarts.
                 for attempt in $(seq 1 220); do
-                  import -window "$window" "$capture"
+                  if ! timeout --signal=TERM --kill-after=1s 8s import -window "$window" "$capture"; then
+                    echo "Dolphin finish/restart screenshot capture timed out or failed."
+                    timeout --signal=TERM --kill-after=1s 5s flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
+                    kill -KILL "$emu_pid" >/dev/null 2>&1 || true
+                    wait "$emu_pid" >/dev/null 2>&1 || true
+                    return 1
+                  fi
                   test -s "$capture"
                   if [[ "$saw_finish" -eq 0 ]]; then
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log" 2>&1; then
