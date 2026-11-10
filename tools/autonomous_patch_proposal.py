@@ -184,6 +184,8 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
     in_hunk = False
     for line in lines:
         if line.startswith("diff --git "):
+            if current is not None and not saw_hunk:
+                raise ProposalError("Each diff file section must contain at least one text hunk")
             match = re.fullmatch(r"diff --git a/([^ ]+) b/([^ ]+)", line)
             if not match:
                 raise ProposalError("Diff header is malformed or uses unsupported quoting")
@@ -206,6 +208,8 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
             "GIT binary patch", "Binary files ", "Subproject commit ",
         )):
             raise ProposalError("Binary, mode, rename, copy and submodule changes are not allowed")
+        if in_hunk:
+            continue
         if line.startswith("--- "):
             if current is None or line != "--- a/" + current:
                 raise ProposalError("Old-file patch header does not match its diff path")
@@ -222,6 +226,8 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
                 raise ProposalError("Diff exceeds the 100-hunk safety limit")
     if not paths:
         raise ProposalError("Unified diff contains no file sections")
+    if not saw_hunk:
+        raise ProposalError("Each diff file section must contain at least one text hunk")
     if len(paths) > MAX_FILES:
         raise ProposalError("Diff exceeds the five-file safety limit")
     if not saw_hunk:
@@ -259,6 +265,21 @@ def validate_checkout(root: Path, expected_base_sha: str) -> None:
         raise ProposalError("Checkout is not clean; refusing to mix proposal changes with existing work")
 
 
+
+def validate_tracked_targets(root: Path, paths: tuple[str, ...]) -> None:
+    """Reject new files, symlinks, submodules and non-regular tracked targets."""
+    for path in paths:
+        result = _git(root, ["ls-files", "-s", "--", path])
+        if result.returncode != 0:
+            raise ProposalError("Could not inspect the Git index for a proposed target")
+        entries = [line for line in result.stdout.splitlines() if line.strip()]
+        if len(entries) != 1:
+            raise ProposalError(f"Patch target must be one existing tracked file: {path}")
+        mode = entries[0].split(None, 1)[0]
+        if mode not in {"100644", "100755"}:
+            raise ProposalError(f"Patch target is not a regular tracked file: {path}")
+
+
 def validate_or_apply(
     root: Path,
     proposal: dict[str, Any],
@@ -275,6 +296,7 @@ def validate_or_apply(
         allowed_paths=allowed_paths,
     )
     validate_checkout(root, expected_base_sha)
+    validate_tracked_targets(root, paths)
     diff = proposal["unified_diff"]
     check = _git(root, ["apply", "--check", "--whitespace=error"], input_text=diff)
     if check.returncode != 0:
