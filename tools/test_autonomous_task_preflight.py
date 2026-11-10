@@ -129,6 +129,59 @@ cases = [
         "expected_blocked": True,
     },
     {
+        "name": "same-day blocked marker allows owner manual re-evaluation",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "event_name": "workflow_dispatch",
+        "actor": "Master-Chiken",
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_blocked": True,
+    },
+    {
+        "name": "same-day blocked marker allows qualifying owner main push",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "event_name": "push",
+        "actor": "Master-Chiken",
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_blocked": True,
+    },
+    {
+        "name": "same-day blocked marker rejects non-owner manual re-evaluation",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "event_name": "workflow_dispatch",
+        "actor": "untrusted-contributor",
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": True,
+        "reason_contains": "same-day UTC backoff",
+    },
+    {
+        "name": "same-day blocked marker rejects non-owner main push",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "event_name": "push",
+        "actor": "untrusted-contributor",
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": True,
+        "reason_contains": "same-day UTC backoff",
+    },
+    {
+        "name": "same-day blocked marker rejects unrelated pull request event",
+        "tasks": [activation],
+        "marker_day_offset": 0,
+        "event_name": "pull_request",
+        "actor": "Master-Chiken",
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": True,
+        "reason_contains": "same-day UTC backoff",
+    },
+    {
         "name": "yesterday marker expires at UTC reset",
         "tasks": [activation],
         "marker_day_offset": -1,
@@ -296,7 +349,11 @@ async function runCase(testCase) {{
       async write() {{ return this; }}
     }}
   }};
-  const context = {{ repo: {{ owner: "Master-Chiken", repo: "boonta-reborn-88" }} }};
+  const context = {{
+    repo: {{ owner: "Master-Chiken", repo: "boonta-reborn-88" }},
+    eventName: testCase.event_name || "schedule",
+    actor: testCase.actor || "github-actions[bot]"
+  }};
   let error = "";
   try {{
     await new AsyncFunction("github", "context", "core", script)(github, context, core);
