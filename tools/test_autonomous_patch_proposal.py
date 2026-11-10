@@ -30,6 +30,16 @@ def git(root: Path, *args: str, input_text: str | None = None) -> str:
     return result.stdout.strip()
 
 
+def git_raw(root: Path, *args: str) -> str:
+    """Preserve patch bytes/newlines; never use strip() on unified diff text."""
+    result = subprocess.run(
+        ["git", *args], cwd=root, text=True, capture_output=True, check=False,
+    )
+    if result.returncode:
+        raise AssertionError(result.stderr)
+    return result.stdout
+
+
 class PatchFixture(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -44,7 +54,9 @@ class PatchFixture(unittest.TestCase):
         git(self.root, "commit", "-qm", "fixture base")
         self.base_sha = git(self.root, "rev-parse", "HEAD")
         self.target.write_text("int main(void) {\n    return 7;\n}\n", encoding="utf-8")
-        self.diff = git(self.root, "diff", "--", "gamecube-demo/source/main.c")
+        self.diff = git_raw(self.root, "diff", "--", "gamecube-demo/source/main.c")
+        if not self.diff.endswith("\n"):
+            raise AssertionError("Git diff fixture must preserve its trailing newline")
         self.target.write_text("int main(void) {\n    return 0;\n}\n", encoding="utf-8")
         self.proposal = {
             "schema_version": 1,
@@ -186,7 +198,9 @@ class ProposalValidationTests(PatchFixture):
         git(self.root, "commit", "-qm", "replace fixture source")
         self.base_sha = git(self.root, "rev-parse", "HEAD")
         self.target.write_text("-- changed\n", encoding="utf-8")
-        diff = git(self.root, "diff", "--", "gamecube-demo/source/main.c")
+        diff = git_raw(self.root, "diff", "--", "gamecube-demo/source/main.c")
+        if not diff.endswith("\n"):
+            raise AssertionError("Git diff fixture must preserve its trailing newline")
         self.target.write_text("-- original\n", encoding="utf-8")
         proposal = dict(self.proposal, base_sha=self.base_sha, unified_diff=diff)
         report = self.check(proposal)
