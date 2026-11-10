@@ -140,3 +140,34 @@ Official references:
 - llama.cpp HTTP server: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
 - OpenCode local model support: https://opencode.ai/docs/models/
 - Ollama tool calling: https://github.com/ollama/ollama/blob/main/docs/capabilities/tool-calling.mdx
+
+
+## Free-model routing: a more targeted OpenRouter improvement
+
+The current mainline `.github/workflows/openrouter-plan-execute.yml` configures the generic `openrouter/free` route. That preserves a zero-price route, but the selected model can change as OpenRouter's free pool changes. For a workflow whose success depends on native function/tool calls, a **pinned model with a tested tool-call contract** is more reproducible.
+
+OpenRouter's live free catalogue now lists several newer candidates:
+
+| Candidate | Published capability | Important caveat | Current decision |
+|---|---|---|---|
+| `thinkingmachines/inkling-2-small:free` | Released 2026-11-09; described as trained on long-horizon coding/agent workflows; supports tool calls. | Its model page says it does not support `response_format`, and currently warns it is unavailable through EU in-region routing. | High-priority canary candidate only if the account's routing policy allows it; structured report still needs local validation. |
+| `xingchen-agi/xing4.0-29b-a4b:free` | Described as tuned for complex engineering, tool calls and multi-step planning; supports tool calls and JSON-schema structured output. | Its model page currently warns it is unavailable through EU in-region routing. Provider availability and quota remain variable. | Strong capability candidate, but do not select until the routing-region check passes. |
+| `google/gemma-4-26b-a4b-it:free` | Native function calling and structured output support; free model variant. | Its model page currently warns it is unavailable through EU in-region routing. | Keep as a backup canary candidate subject to the same regional check. |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | Supports `tools` and `tool_choice`; designed for reasoning/orchestration. | Large model; free rate limits and observed availability are not equivalent to reliable coding-agent success. | Do not choose based on headline context size or agentic marketing alone. |
+
+The OpenRouter Free endpoints are rate-limited. Its current documentation states 20 requests/minute and 50 requests/day for `:free` model variants without buying credits; failed attempts also count toward the free request cap. The existing workflow's quota preflight should remain authoritative and no quota purchase or paid route is allowed.
+
+### Recommended model-qualification sequence
+
+1. Read the current model catalogue and model endpoint metadata before each qualification; do not assume yesterday's free model or provider is still available.
+2. Check region/routing compatibility. The model pages above currently show an EU in-region routing warning; if the account enforces EU in-region routing, reject those candidates without sending an inference request.
+3. Run one owner-authorized synthetic canary against the exact OpenCode MCP tool schemas used by Boonta. The canary must call one harmless mock/read-only tool, return correctly typed arguments, preserve a tool result and emit the exact machine-readable completion envelope.
+4. Validate function-call parsing, argument schema, model response termination, latency and final report shape. Record the exact model slug, provider, date and pass/fail outcome.
+5. Pin only a passing `:free` model in the OpenRouter workflow. Keep the generic `openrouter/free` route disabled as an autonomous writing route if it cannot guarantee a tested tool-call profile.
+6. Requalify after model/provider changes. On a failed canary, keep the existing cooldown and skip that model; never cascade to a paid route or retry an ambiguous inference POST.
+
+This is a model-adapter improvement, not a replacement for the queue-liveness and cross-runtime lease work above.
+
+## A provider option that is no longer available
+
+Do not build a new fallback around **GitHub Models**. GitHub announced that the service was fully retired on **2026-07-30**, including its playground, catalogue and inference API. It is not a current free model endpoint for this project.
