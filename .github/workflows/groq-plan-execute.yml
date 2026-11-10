@@ -436,10 +436,25 @@ jobs:
           PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
           SELECTED_TASK_ID: ${{ inputs.task_id }}
           SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
         with:
           script: |
             const fs = require('fs');
             const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const lines = summary.split(/\\r?\\n/);
+            const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
+            if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {
+              const blocker = lines.filter((line) => line.startsWith('BOONTA_CYCLE_BLOCKER: ')).join(' ');
+              const nextAction = lines.filter((line) => line.startsWith('BOONTA_CYCLE_NEXT_ACTION: ')).join(' ');
+              const { findBlockedReportContradictions } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+              const contradictions = findBlockedReportContradictions(blocker + ' ' + nextAction, {
+                githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'
+              });
+              if (contradictions.length > 0) {
+                core.setFailed('BLOCKED report contradicts same-run GitHub App evidence: ' + contradictions.join('; '));
+                return;
+              }
+            }
             const { validateAutonomousCycleReport } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             await validateAutonomousCycleReport({
               github,
