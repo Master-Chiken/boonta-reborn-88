@@ -40,6 +40,8 @@ PROTECTED_EXACT = {
     "tools/test_autonomous_patch_proposal.py",
     "tools/test_autonomous_patch_test_runner.py",
     "tools/test_autonomous_path_allowlist.py",
+    "tools/verify_autonomous_patch.py",
+    "tools/test_verify_autonomous_patch.py",
     "tools/test_autonomous_task_preflight.py",
     "tools/check_autonomous_provider_handoff.py",
     "tools/check_task_ledger.py",
