@@ -345,11 +345,12 @@ jobs:
           SAFETY
           - No paid model/provider fallback is available. €0 only; no billing/credits, key, secret, provider or settings changes.
           - One task/writer/branch/PR. Never write main/dev, merge, auto-merge, force-push or delete refs.
-          - Stop on the first context, TPM, rate-limit, quota or authentication error. Never retry.
+          - Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Never upload commercial ROMs, discs, binaries or extracted game data. Preserve clean-room provenance.
           
           TASK
-          - The preloaded question, criteria and next action are authoritative. Never switch tasks.
+          AUTHORITATIVE SELECTED TASK
+          - Use exactly this task from docs/automation/task-ledger-summary.json. The preloaded question, acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
           - Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence.
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. At most one directly relevant source/test file.
