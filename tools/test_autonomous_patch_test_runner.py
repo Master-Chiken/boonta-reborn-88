@@ -53,6 +53,10 @@ class DispatcherTests(unittest.TestCase):
         with self.assertRaisesRegex(dispatcher.TestDispatchError, "Duplicate"):
             dispatcher.run_test_ids(self.root, ["test.ok", "test.ok"])
 
+    def test_non_string_identifiers_are_rejected(self):
+        with self.assertRaisesRegex(dispatcher.TestDispatchError, "must be a string"):
+            dispatcher.run_test_ids(self.root, [{"command": "echo unsafe"}])
+
     def test_exact_checkout_root_is_required(self):
         dispatcher.TEST_REGISTRY["test.ok"] = ("tools/ok.py",)
         with self.assertRaisesRegex(dispatcher.TestDispatchError, "exact Git checkout root"):
