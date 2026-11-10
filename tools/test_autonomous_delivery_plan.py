@@ -194,6 +194,35 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.assertFalse(first["pull_request_created"])
         self.assertFalse(first["auto_merge_enabled"])
         self.assertFalse(first["network_accessed"])
+        write_plan = first["github_write_plan"]
+        self.assertEqual(
+            write_plan["step_order"],
+            ["create_tree", "create_commit", "create_ref", "create_pull_request"],
+        )
+        self.assertEqual(
+            write_plan["preconditions"]["target_branch_head_must_equal"],
+            self.base_sha,
+        )
+        self.assertTrue(write_plan["preconditions"]["branch_must_not_exist"])
+        self.assertTrue(write_plan["preconditions"]["open_pr_for_task_must_not_exist"])
+        self.assertTrue(write_plan["preconditions"]["independent_review_required"])
+        self.assertEqual(
+            write_plan["create_tree"]["base_tree_sha"],
+            git(self.root, "rev-parse", f"{self.base_sha}^{{tree}}"),
+        )
+        tree_elements = write_plan["create_tree"]["tree_elements"]
+        self.assertEqual(len(tree_elements), 1)
+        self.assertEqual(tree_elements[0]["path"], SOURCE_PATH)
+        self.assertEqual(tree_elements[0]["type"], "blob")
+        self.assertEqual(tree_elements[0]["content"], "int boonta(void) { return 7; }\n")
+        self.assertEqual(write_plan["create_commit"]["parent_sha"], self.base_sha)
+        self.assertEqual(write_plan["create_ref"]["ref"], "refs/heads/" + first["branch_name"])
+        self.assertEqual(
+            write_plan["create_ref"]["sha"],
+            "COMMIT_SHA_FROM_CREATE_COMMIT",
+        )
+        self.assertTrue(write_plan["create_pull_request"]["draft"])
+        self.assertFalse(write_plan["auto_merge"])
         self.assert_source_clean()
 
     def test_only_verified_status_can_create_delivery_plan(self):
