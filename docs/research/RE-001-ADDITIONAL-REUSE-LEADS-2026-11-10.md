@@ -148,3 +148,95 @@ This source is a contemporary design benchmark. It is **not** a reverse-engineer
 - PC, N64, Dreamcast, GameCube and Wii findings remain separate. No original retail GameCube/Wii Racer executable is established by these references.
 
 This note supplements, rather than replaces, the existing [GameCube/Wii toolchain reuse audit](GC-WII-RE-TOOLCHAIN-REUSE-AUDIT-2026-11-03.md), [N64 texture-block reuse audit](N64_TEXTURE_BLOCK_REUSE_AUDIT_2026-11-10.md), [PC/N64/Dreamcast source matrix](RE-002-platform-source-matrix.md), and [reverse-engineering-first policy](../REVERSE_ENGINEERING_FIRST.md).
+
+## 5. `LagoLunatic/GCFT` + `gclib` — practical GameCube container and asset inspection
+
+- GUI repository: [LagoLunatic/GCFT](https://github.com/LagoLunatic/GCFT)
+- Exact inspected revision: [`22f36948909fb50580711463eff4b8ee33922841`](https://github.com/LagoLunatic/GCFT/tree/22f36948909fb50580711463eff4b8ee33922841)
+- Library repository: [LagoLunatic/gclib](https://github.com/LagoLunatic/gclib)
+- Exact library submodule revision used by that GCFT tree: [`4e8f48000b757defc05179e341c3a2b06dfaadee`](https://github.com/LagoLunatic/gclib/tree/4e8f48000b757defc05179e341c3a2b06dfaadee)
+- GitHub repository metadata reports **MIT** for both repositories. The pinned GCFT revision's submodule entry resolves to the exact gclib commit above.
+- GCFT was pushed on 2026-10-22 and its metadata reports ongoing repository updates in November 2026.
+
+### What its documented format coverage actually includes
+
+GCFT's README lists support for:
+- GCM images, RARC archives and DOL section inspection;
+- BTI textures and image conversion to/from PNG;
+- many J3D model formats (including BMD/BDL) and their embedded textures;
+- BMT material tables;
+- JPC particle archives (versions 1-00 and 2-10);
+- Yaz0 and Yay0 compression;
+- BMG messages (with the README explicitly limiting its current BMG support to Wind Waker).
+
+It can inspect/extract/replace individual files and folders in GCM/RARC, dump BTI images, replace textures embedded in BMD/BDL/BMT/JPC, view model previews, and compress/decompress Yaz0/Yay0.
+
+The separate `gclib` README describes the underlying Python format implementations and distinguishes full from partial support:
+- GCM and DOL: read/edit, no create;
+- REL and RARC: read/edit/create;
+- Yaz0/Yay0 and BTI: read/edit/create;
+- J3D, JPC and BMG: partial read/edit support;
+- BFN: read only.
+
+### Why this is useful
+
+This is a much more concrete *local inspection workbench* than a generic reverse-engineering list. If a legally obtained target disc contains any of these common Nintendo container formats, GCFT/gclib may help enumerate its structure, inspect DOL sections, unpack archives and understand standard BTI/J3D resources without building another parser from scratch.
+
+It can also help us create and validate our **own** BTI/J3D-oriented test assets if those formats are selected for the clean-room engine. The library's MIT terms make it a better candidate for future dependency evaluation than GPL-only converters, subject to reviewing the exact source and dependency licenses before adoption.
+
+### Strict limits
+
+- The README does **not** claim support for Star Wars: Episode I – Racer's proprietary model, track, spline, sprite or texture blocks. A `.bin`, `.arc` or similar extension is not enough to establish that a file is GCM/RARC/BTI/J3D/Yaz0/Yay0.
+- It is focused on common GameCube formats; do not assume that every Wii-specific format, REL variant, game-specific compression or Racer resource is supported.
+- The `J3D` coverage in gclib is explicitly partial. GCFT's GUI features do not turn that partial coverage into a guarantee of correct round-trip preservation.
+- GCFT uses Python 3.12 and several GUI/image dependencies. This audit inspected the dependency manifest but did not install or execute them.
+- No local disc, game file or extracted resource was supplied or processed during this research pass.
+
+**Recommendation:** keep GCFT/gclib as the first *candidate* local inspector when a specific GC/Wii input is identified as GCM/RARC/DOL/BTI/J3D/Yaz0/Yay0. Before relying on it for a Racer file, first test a tiny user-owned sample locally and retain only aggregate outcomes; for any format not explicitly supported, report UNKNOWN and return to the exact file signature/format investigation. Do not add a new parser or make gclib a Boonta runtime dependency until an actual target file demonstrates the need.
+
+Primary references:
+- [GCFT pinned README](https://github.com/LagoLunatic/GCFT/blob/22f36948909fb50580711463eff4b8ee33922841/README.md)
+- [GCFT pinned dependencies](https://github.com/LagoLunatic/GCFT/blob/22f36948909fb50580711463eff4b8ee33922841/requirements.txt)
+- [gclib format coverage](https://github.com/LagoLunatic/gclib/blob/4e8f48000b757defc05179e341c3a2b06dfaadee/README.md)
+- [Exact GCFT gclib submodule entry](https://github.com/LagoLunatic/GCFT/tree/22f36948909fb50580711463eff4b8ee33922841/gclib)
+
+## 6. `zeldaret/tp` — additional GameCube **and Wii** SDK/runtime reference
+
+- Repository: [zeldaret/tp](https://github.com/zeldaret/tp)
+- Exact inspected revision: [`c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0`](https://github.com/zeldaret/tp/tree/c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0)
+- GitHub metadata reports **CC0-1.0**.
+- The README identifies this as a work-in-progress decompilation of The Legend of Zelda: Twilight Princess. It explicitly lists several GameCube releases and Wii releases, including North America Rev 0/Rev 2, PAL and Japan. It states that the GC versions are completely matching while Wii matching work is continuing, and that multiple versions are built from one codebase using conditional compilation.
+- The project says its repository does not contain game assets or assembly and requires a local copy of the game to build.
+
+### Why it is useful
+
+Unlike the Wind Waker reference above, this project explicitly covers **both GameCube and Wii** build variants. It can provide another target-specific comparison for:
+- version/region configuration and conditional build separation;
+- Dolphin OS interfaces and Wii/GameCube platform deltas;
+- disc/resource loading, GX, DVD, controller and system libraries, where the exact relevant source files and provenance are checked;
+- how a mature decompilation keeps multiple retail executable identities separate while using shared source.
+
+This may help us make Boonta's native GameCube and Wii variants less error-prone. It is not a substitute for official devkitPro/libogc documentation and does not by itself mean a single binary or one platform's behavior is valid on the other.
+
+### Limits and reuse decision
+
+- Twilight Princess is not Racer. Its game code, assets, symbols, data layouts and resource IDs are not evidence for Racer.
+- Its documented matching status applies to the relevant Twilight Princess binary versions, not to our game.
+- Treat CC0 as a repository-level licence signal only; still inspect file-level provenance, generated files and any vendored dependency before copying an implementation. No original game data is licensed by CC0.
+- Keep its original assets/assembly and private analysis inputs out of Boonta.
+
+**Recommendation:** when a concrete Wii/GameCube platform difference arises in Boonta, compare the exact relevant source path in this pinned repository and libogc. Do not bulk-import Twilight Princess source or replace our engine architecture with a game's decompilation.
+
+Primary references:
+- [Pinned README and target-version table](https://github.com/zeldaret/tp/blob/c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0/README.md)
+- [Pinned repository tree](https://github.com/zeldaret/tp/tree/c8fa8c9e2aab72cf4e5db0e5d1c84a9ea6ee6eb0)
+
+## 7. Candidates deliberately held back — licence or evidence not established
+
+Two further repositories appeared relevant in broad search, but were **not** added to the reuse recommendation:
+
+- [quatric/nintoolbox](https://github.com/quatric/nintoolbox) advertises many GameCube/Wii archive, texture, model and audio formats and was pushed on 2026-11-10. The repository metadata returned no detected SPDX licence and the root `LICENSE` file was not present at the inspected location. It is a discovery lead only: do not install, vendor, copy or depend on it until a clear licence, dependency provenance, exact format tests and project applicability are established.
+- [RenolY2/SuperBMD](https://github.com/RenolY2/SuperBMD) documents BMD/BDL import/export and material/texture handling, but the repository metadata did not establish a licence and the inspected root `LICENSE` path returned not found. Do not copy or integrate it until the maintainers provide a clear licence and dependencies have been reviewed.
+
+These are intentionally recorded as **HOLD**, not ranked as reusable software. A plausible feature list is not a licence grant or evidence that a tool works on Racer files.
+
