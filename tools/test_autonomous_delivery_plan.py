@@ -189,6 +189,27 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         with self.assertRaisesRegex(DeliveryPlanError, "all mandatory"):
             self.plan()
 
+    def test_unregistered_test_ids_are_rejected(self):
+        self.write_verified(executed_test_ids=[*MANDATORY_TEST_IDS, "shell:curl unsafe"])
+        with self.assertRaisesRegex(DeliveryPlanError, "fixed registry"):
+            self.plan()
+        self.write_verified(requested_test_ids=["shell:curl unsafe"])
+        with self.assertRaisesRegex(DeliveryPlanError, "outside the fixed registry"):
+            self.plan()
+
+    def test_duplicate_json_keys_in_canonical_summary_are_rejected(self):
+        self.ledger_path.write_text(
+            '{"schema_version":2,"schema_version":2,"source":"docs/automation/task-ledger.json","tasks":[]}',
+            encoding="utf-8",
+        )
+        git(self.root, "add", "docs/automation/task-ledger-summary.json")
+        git(self.root, "commit", "-qm", "duplicate canonical summary key")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.write_allowlist(base_sha=self.base_sha)
+        self.write_verified(base_sha=self.base_sha)
+        with self.assertRaisesRegex(DeliveryPlanError, "Duplicate JSON property"):
+            self.plan()
+
     def test_every_test_result_must_be_successful_and_exact(self):
         report = json.loads(self.verified_path.read_text(encoding="utf-8"))
         report["test_report"]["results"][1]["status"] = "FAILED"
