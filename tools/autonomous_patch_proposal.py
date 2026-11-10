@@ -54,7 +54,7 @@ SCHEMA: dict[str, Any] = {
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 APPROVAL_RE = re.compile(
-    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+    r"^https://github\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
 )
 DIFF_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 ALLOWED_TEST_IDS = {
