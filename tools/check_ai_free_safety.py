@@ -914,13 +914,14 @@ for label, prompt in dynamic_task_prompts:
     required_task_safeguards = (
         (
             "preloaded schema-v2 context is authoritative",
-            "exact BOONTA_TASK_ID across all PR states",
+            "Global preflight is authoritative",
+            "Do not search PR history",
             "€0 only",
         )
         if label == "Groq"
         else (
             "AUTHORITATIVE SELECTED TASK",
-            "task-ledger-summary.json",
+            "Use exactly this task from docs/automation/task-ledger-summary.json",
             "acceptance_criteria_excerpt",
             "Do not substitute another task",
             "€0",
