@@ -30,6 +30,17 @@ All source references below are pinned to `akopetsch/swe1r-assets@922ef535f6598a
 
 These are format-catalogue facts, not proof that a locally reconstructed block has been extracted correctly.
 
+### Complete N64 block binaries already exist in upstream test resources
+
+The pinned repository does not merely publish metadata: its separate `SWE1R.Assets.Blocks.Original` project embeds both relevant N64 binaries as original-resource fixtures:
+
+- `Resources/out_textureblock.bin/n64.bin` is explicitly included as an embedded resource by `SWE1R.Assets.Blocks.Original.csproj`.
+- Its `Block.csv` row identifies N64 texture block ID **1**, **BigEndian**, **1,648 items**, **2,741,112 bytes**, SHA-1 `9130090c3ceafff6ed05609045909f54f666e54f`.
+- `Release.csv` selects texture block ID 1 for N64 USA, Europe and Japan.
+- The same Original project also embeds `Resources/out_modelblock.bin/n64_us.bin`; its `Block.csv` row identifies the N64 USA model block ID **2**, **BigEndian**, **307 items**, **12,406,512 bytes**.
+
+So the full N64 blocks are already publicly present in the upstream source tree as game-derived test/reference resources. Reconstructing them from the user's ROM is not the only technical route. However, the `Original` project is distinct from the MIT parser library: the MIT source-code licence does **not** establish redistribution rights for these commercial-game binary resources. Do not copy them into Boonta, package them as Boonta assets, or publish them in CI. Treat their published hashes and catalogue metadata as reference evidence; use owner-controlled lawful local inputs for any actual export and keep the resulting files local.
+
 ### Anakin model catalogue cross-check
 
 The N64 USA model catalogue `src/SWE1R.Assets.Blocks.Original/Resources/out_modelblock.bin/n64_us.md` identifies model item **0087** as `Pupp_Racer_Anakin_Skywalker`. The corresponding `ModelBlockItem.csv` metadata row records **68,284 bytes** for that item.
@@ -109,7 +120,7 @@ This makes it a possible cross-check for generic texture-block layout and index/
 
 Before integration, resolve these gates:
 
-1. Locate and reconstruct the complete N64 texture block from the owner-controlled local ROM, or establish a lawful local source for it; do not publish the block or extracted images.
+1. Use an owner-controlled local N64 texture block. The upstream Original-resource fixture proves a complete N64 block is available for format comparison (ID 1, 1,648 entries, 2,741,112 bytes, SHA-1 recorded above), but its commercial-data licence is not cleared for redistribution; do not import it into Boonta.
 2. Build a tiny local adapter that reuses the already-decoded Pupp graph and `MeshMaterialExporter`; a complete outer model block is not required for this lower-level route. Do not infer item index 0087 solely from the sorted Pupp candidate list.
 3. Run the adapter locally against only owner-controlled inputs and report aggregate results (referenced textures decoded, unsupported formats, missing indices, duplicate texture indices and export success). Keep PNGs and model files local.
 4. Audit exact package/dependency notices before shipping the parser or exporter in Boonta. The library's MIT source licence does not grant rights to redistribute embedded commercial game resources or extracted assets.
