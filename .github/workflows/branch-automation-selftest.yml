@@ -84,6 +84,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
 
+      - name: Validate structured patch proposals with isolated Git fixtures (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_patch_proposal.py
+
       - name: Validate schema-v2 autonomous context builder with offline fixtures
         shell: bash
         run: python3 tools/test_autonomous_context.py
