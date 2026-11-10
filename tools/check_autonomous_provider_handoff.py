@@ -734,6 +734,14 @@ for required in (
     if required not in groq:
         errors.append(f"Groq report consistency guard is missing {required!r}")
 
+groq_report_start = groq.find("name: Validate Groq autonomous cycle report")
+groq_report_end = groq.find("name: Sync the single-task daily backoff marker", groq_report_start)
+groq_report_block = groq[groq_report_start:groq_report_end] if groq_report_start >= 0 and groq_report_end > groq_report_start else ""
+if r"const lines = summary.split(/\\r?\\n/);" in groq_report_block:
+    errors.append("Groq report validator contains a double-escaped line-splitting regex")
+if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
+    errors.append("Groq report validator must split machine-readable reports on actual line endings")
+
 for required in (
     "BOONTA_CYCLE_TASK_ID",
     "taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId",
