@@ -304,7 +304,7 @@ jobs:
           Groq Free. €0 only; execute the preflight-selected task.
           
           TASK
-          - Global preflight is authoritative: activation pr_url/head_sha are empty; no matching open PR exists.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: activation pr_url/head_sha are empty; no matching open PR exists.
           - Do not search PR history: ignore older merged automation PRs. Do not reread summary, ledger or budget.
           - #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           
