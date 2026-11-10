@@ -16163,6 +16163,405 @@
         }
       ],
       "note": "Metadata name-based planning category only; no visual/runtime role is asserted beyond the name."
+    },
+    {
+      "key": "podd-vehicles",
+      "label": "Pod / vehicle models",
+      "count": 25,
+      "items": [
+        {
+          "index": 2,
+          "valueId": 2,
+          "name": "Podd_Anakin_Skywalker"
+        },
+        {
+          "index": 4,
+          "valueId": 4,
+          "name": "Podd_Teemto_Pagalies"
+        },
+        {
+          "index": 6,
+          "valueId": 6,
+          "name": "Podd_Sebulba"
+        },
+        {
+          "index": 8,
+          "valueId": 8,
+          "name": "Podd_Ratts_Tyerell"
+        },
+        {
+          "index": 9,
+          "valueId": 9,
+          "name": "Podd_Aldar_Beedo"
+        },
+        {
+          "index": 12,
+          "valueId": 12,
+          "name": "Podd_Mawhonic"
+        },
+        {
+          "index": 14,
+          "valueId": 14,
+          "name": "Podd_Ark_Roose"
+        },
+        {
+          "index": 16,
+          "valueId": 16,
+          "name": "Podd_Mars_Guo"
+        },
+        {
+          "index": 17,
+          "valueId": 17,
+          "name": "Podd_Wan_Sandage"
+        },
+        {
+          "index": 20,
+          "valueId": 20,
+          "name": "Podd_Ebe_E_Endocott"
+        },
+        {
+          "index": 22,
+          "valueId": 22,
+          "name": "Podd_Dud_Bolt"
+        },
+        {
+          "index": 24,
+          "valueId": 24,
+          "name": "Podd_Gasgano"
+        },
+        {
+          "index": 26,
+          "valueId": 26,
+          "name": "Podd_Clegg_Holdfast"
+        },
+        {
+          "index": 28,
+          "valueId": 28,
+          "name": "Podd_Elan_Mak"
+        },
+        {
+          "index": 30,
+          "valueId": 30,
+          "name": "Podd_Neva_Kee"
+        },
+        {
+          "index": 32,
+          "valueId": 32,
+          "name": "Podd_Bozzie_Baranta"
+        },
+        {
+          "index": 34,
+          "valueId": 34,
+          "name": "Podd_Boles_Roor"
+        },
+        {
+          "index": 36,
+          "valueId": 36,
+          "name": "Podd_Ody_Mandrell"
+        },
+        {
+          "index": 38,
+          "valueId": 38,
+          "name": "Podd_Fud_Sang"
+        },
+        {
+          "index": 40,
+          "valueId": 40,
+          "name": "Podd_Ben_Quadinaros"
+        },
+        {
+          "index": 42,
+          "valueId": 42,
+          "name": "Podd_Slide_Paramita"
+        },
+        {
+          "index": 44,
+          "valueId": 44,
+          "name": "Podd_Toy_Dampner"
+        },
+        {
+          "index": 46,
+          "valueId": 46,
+          "name": "Podd_Navior"
+        },
+        {
+          "index": 283,
+          "valueId": 1283,
+          "name": "Podd_Jinn_Reeso"
+        },
+        {
+          "index": 285,
+          "valueId": 1285,
+          "name": "Podd_Cy_Yunga"
+        }
+      ],
+      "note": "25 metadata entries referenced by the 25-racer table; model names indicate pod/vehicle records, not a validated vehicle component assembly."
+    },
+    {
+      "key": "malt-racer-alternates",
+      "label": "Alternate racer models",
+      "count": 25,
+      "items": [
+        {
+          "index": 0,
+          "valueId": 0,
+          "name": "MAlt_Anakin_Skywalker"
+        },
+        {
+          "index": 3,
+          "valueId": 3,
+          "name": "MAlt_Teemto_Pagalies"
+        },
+        {
+          "index": 5,
+          "valueId": 5,
+          "name": "MAlt_Sebulba"
+        },
+        {
+          "index": 7,
+          "valueId": 7,
+          "name": "MAlt_Ratts_Tyerell"
+        },
+        {
+          "index": 10,
+          "valueId": 10,
+          "name": "MAlt_Aldar_Beedo"
+        },
+        {
+          "index": 11,
+          "valueId": 11,
+          "name": "MAlt_Mawhonic"
+        },
+        {
+          "index": 13,
+          "valueId": 13,
+          "name": "MAlt_Ark_Roose"
+        },
+        {
+          "index": 15,
+          "valueId": 15,
+          "name": "MAlt_Wan_Sandage"
+        },
+        {
+          "index": 18,
+          "valueId": 18,
+          "name": "MAlt_Mars_Guo"
+        },
+        {
+          "index": 19,
+          "valueId": 19,
+          "name": "MAlt_Ebe_E_Endocott"
+        },
+        {
+          "index": 21,
+          "valueId": 21,
+          "name": "MAlt_Dud_Bolt"
+        },
+        {
+          "index": 23,
+          "valueId": 23,
+          "name": "MAlt_Gasgano"
+        },
+        {
+          "index": 25,
+          "valueId": 25,
+          "name": "MAlt_Clegg_Holdfast"
+        },
+        {
+          "index": 27,
+          "valueId": 27,
+          "name": "MAlt_Elan_Mak"
+        },
+        {
+          "index": 29,
+          "valueId": 29,
+          "name": "MAlt_Neva_Kee"
+        },
+        {
+          "index": 31,
+          "valueId": 31,
+          "name": "MAlt_Bozzie_Baranta"
+        },
+        {
+          "index": 33,
+          "valueId": 33,
+          "name": "MAlt_Boles_Roor"
+        },
+        {
+          "index": 35,
+          "valueId": 35,
+          "name": "MAlt_Ody_Mandrell"
+        },
+        {
+          "index": 37,
+          "valueId": 37,
+          "name": "MAlt_Fud_Sang"
+        },
+        {
+          "index": 39,
+          "valueId": 39,
+          "name": "MAlt_Ben_Quadinaros"
+        },
+        {
+          "index": 41,
+          "valueId": 41,
+          "name": "MAlt_Slide_Paramita"
+        },
+        {
+          "index": 43,
+          "valueId": 43,
+          "name": "MAlt_Toy_Dampner"
+        },
+        {
+          "index": 45,
+          "valueId": 45,
+          "name": "MAlt_Navior"
+        },
+        {
+          "index": 282,
+          "valueId": 1282,
+          "name": "MAlt_Jinn_Reeso"
+        },
+        {
+          "index": 284,
+          "valueId": 1284,
+          "name": "MAlt_Cy_Yunga"
+        }
+      ],
+      "note": "25 metadata entries linked to the 25-racer table."
+    },
+    {
+      "key": "pupp-racer-models",
+      "label": "Racer Pupp driver models",
+      "count": 25,
+      "items": [
+        {
+          "index": 86,
+          "valueId": 86,
+          "name": "Pupp_Racer_Teemto_Pagalies"
+        },
+        {
+          "index": 87,
+          "valueId": 87,
+          "name": "Pupp_Racer_Anakin_Skywalker"
+        },
+        {
+          "index": 88,
+          "valueId": 88,
+          "name": "Pupp_Racer_Gasgano"
+        },
+        {
+          "index": 89,
+          "valueId": 89,
+          "name": "Pupp_Racer_Mawhonic"
+        },
+        {
+          "index": 90,
+          "valueId": 90,
+          "name": "Pupp_Racer_Ody_Mandrell"
+        },
+        {
+          "index": 91,
+          "valueId": 91,
+          "name": "Pupp_Racer_Sebulba"
+        },
+        {
+          "index": 92,
+          "valueId": 92,
+          "name": "Pupp_Racer_Mars_Guo"
+        },
+        {
+          "index": 93,
+          "valueId": 93,
+          "name": "Pupp_Racer_Ratts_Tyerell"
+        },
+        {
+          "index": 94,
+          "valueId": 94,
+          "name": "Pupp_Racer_Ben_Quadinaros"
+        },
+        {
+          "index": 95,
+          "valueId": 95,
+          "name": "Pupp_Racer_Ebe_E_Endocott"
+        },
+        {
+          "index": 96,
+          "valueId": 96,
+          "name": "Pupp_Racer_Ark_Roose"
+        },
+        {
+          "index": 97,
+          "valueId": 97,
+          "name": "Pupp_Racer_Clegg_Holdfast"
+        },
+        {
+          "index": 98,
+          "valueId": 98,
+          "name": "Pupp_Racer_Dud_Bolt"
+        },
+        {
+          "index": 99,
+          "valueId": 99,
+          "name": "Pupp_Racer_Wan_Sandage"
+        },
+        {
+          "index": 100,
+          "valueId": 100,
+          "name": "Pupp_Racer_Elan_Mak"
+        },
+        {
+          "index": 101,
+          "valueId": 101,
+          "name": "Pupp_Racer_Toy_Dampner"
+        },
+        {
+          "index": 102,
+          "valueId": 102,
+          "name": "Pupp_Racer_Fud_Sang"
+        },
+        {
+          "index": 103,
+          "valueId": 103,
+          "name": "Pupp_Racer_Neva_Kee"
+        },
+        {
+          "index": 104,
+          "valueId": 104,
+          "name": "Pupp_Racer_Slide_Paramita"
+        },
+        {
+          "index": 105,
+          "valueId": 105,
+          "name": "Pupp_Racer_Aldar_Beedo"
+        },
+        {
+          "index": 106,
+          "valueId": 106,
+          "name": "Pupp_Racer_Bozzie_Baranta"
+        },
+        {
+          "index": 107,
+          "valueId": 107,
+          "name": "Pupp_Racer_Boles_Roor"
+        },
+        {
+          "index": 108,
+          "valueId": 108,
+          "name": "Pupp_Racer_Navior"
+        },
+        {
+          "index": 288,
+          "valueId": 1288,
+          "name": "Pupp_Racer_Jinn_Reeso"
+        },
+        {
+          "index": 289,
+          "valueId": 1289,
+          "name": "Pupp_Racer_Cy_Yunga"
+        }
+      ],
+      "note": "25 metadata entries linked to racers. Two bonus roster entries do not carry LOD2 references in the metadata."
     }
   ],
   "trackGroundAssociations": [
@@ -16394,6 +16793,9 @@
       "creature-models": 3,
       "character-models": 6,
       "environment-props": 1
-    }
+    },
+    "podVehicleModels": 25,
+    "alternateRacerModels": 25,
+    "racerPuppModels": 25
   }
 }
