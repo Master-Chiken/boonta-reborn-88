@@ -41,12 +41,15 @@ The locally prepared candidate also has 68,284 decoded bytes and was successfull
 Relevant MIT source files:
 
 - `src/SWE1R.Assets.Blocks/TextureBlock/TextureBlockItem.cs`: exposes pixel and palette parts; `Load()` decodes its palette as RGBA5551.
+- `src/SWE1R.Assets.Blocks/ModelBlock/ModelBlockItemDataPart.cs` and `src/SWE1R.Assets.Blocks/ModelBlock/Compression/Compressor.cs`: automatically recognize and decompress the N64 `CompWolf` model payload on part load; compression is not implemented.
 - `src/SWE1R.Assets.Blocks/ModelBlock/Materials/Export/MaterialTextureExporter.cs`: resolves a model material's `TextureIndex` into the texture block, decodes the pixels and palette, then applies child-level double-width/double-height mirroring.
 - `src/SWE1R.Assets.Blocks/Textures/Export/TextureExporter.cs`: implements PNG-ready RGBA output for indexed RGBA5551 I4/I8, four-bit grayscale/alpha, eight-bit grayscale, and RGBA32 material formats.
 - `src/SWE1R.Assets.Blocks.CommandLine/Exporters/ModelTexturesBlockExporter.cs`: walks a model's mesh materials and writes effective images as PNG files.
 - `src/SWE1R.Assets.Blocks.CommandLine/Options/ExportModelTexturesOptions.cs`: exposes the `export-models-textures` verb and requires `--texture-block`; the inherited options accept model indices.
 
 The existing command-line exporter expects a **complete model block file** and a **complete texture block file**. The locally prepared 68,284-byte candidate is an individual decoded model payload, not by itself the complete model block expected by that command. The library's `Block<T>` reader expects a big-endian count, per-part offset table, total size, and item parts.
+
+Importantly, the pinned source already handles the N64 model compression wrapper inside a model block: `ModelBlockItemDataPart` subscribes to its part-loaded event, recognizes the `CompWolf` signature, reads the big-endian decompressed size, and calls `Compressor.Decompress()`. The compressor source implements the read/decompression path, while its `Compress()` path still throws `NotImplementedException`. This means a complete local N64 model block can be loaded through the existing parser without writing another CompWolf decoder, assuming its outer block table and offsets have first been reconstructed correctly. It does **not** mean that the standalone local candidate or the full ROM-to-block extraction was tested through that path.
 
 The original-resource test project contains N64-labelled model and texture block resources and an original material/texture catalog, and its catalog generator iterates release metadata to associate model materials with the selected texture-block metadata. The tests demonstrate the export path in the source tree; this audit does not claim that an N64-specific test suite was run against a locally reconstructed ROM block.
 
@@ -77,6 +80,8 @@ Before integration, resolve these gates:
 - [N64 USA model catalogue](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.Original/Resources/out_modelblock.bin/n64_us.md)
 - [Model item metadata](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Resources/Metadata/ModelBlockItem.csv)
 - [Texture block item](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/TextureBlock/TextureBlockItem.cs)
+- [CompWolf model part reader](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/ModelBlockItemDataPart.cs)
+- [CompWolf decompressor](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Compression/Compressor.cs)
 - [Material texture exporter](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/ModelBlock/Materials/Export/MaterialTextureExporter.cs)
 - [Texture exporter](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks/Textures/Export/TextureExporter.cs)
 - [Model texture block exporter](https://github.com/akopetsch/swe1r-assets/blob/922ef535f6598a1330ff93d6b07258956f990b34/src/SWE1R.Assets.Blocks.CommandLine/Exporters/ModelTexturesBlockExporter.cs)
