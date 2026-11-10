@@ -84,3 +84,9 @@ The highest-value low-disruption experiment is a **structured patch proposal wit
 - Gemini CLI adapter: https://docs.paperclip.ing/reference/adapters/gemini-cli/
 - GitHub connector: https://docs.paperclip.ing/connectors/github-setup/
 - GitHub Actions billing: https://docs.github.com/en/actions/concepts/billing-and-usage
+
+## 8. Queue liveness and owner-approved next work
+
+The canonical main ledger was audited at `4fdfd6292e5379977b0ca240c47d9c15e2b320eb`: 9 completed tasks, 2 blocked, and no queued, active or in-review task. The proposed next tasks and their acceptance criteria are in [OWNER-REVIEW-BACKLOG.md](OWNER-REVIEW-BACKLOG.md). They are **not approved or executable** until the owner adds the selected row to the canonical task ledger and regenerates the compact summary.
+
+When the queue is empty, a healthy autonomous loop must report `EMPTY_QUEUE` / `WAITING_FOR_OWNER_APPROVAL` without calling a model, changing a task, creating a branch or consuming free quota. It must never invent a task or automatically unblock the owner-local N64 parser probe.
