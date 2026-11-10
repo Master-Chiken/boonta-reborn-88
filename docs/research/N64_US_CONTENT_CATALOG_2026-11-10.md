@@ -301,20 +301,33 @@ A separate comparison of `Release.csv`, `Block.csv` and `BlockItem.csv` at the s
 
 These differences suggest a practical content-pipeline split: shared N64 model/spline/texture metadata, but separately resolved regional sprite catalogues. No sprite payload or image is included.
 
-### Group-level candidates for the 14 unresolved tracks
+### Supported per-track candidates for the 14 formerly unresolved aliases
 
-The 14 unresolved `Track.Model` rows can be narrowed to six candidate groups by planet label in the N64 model block:
+A second pass compared the two model-part size fields in the logical `Track.Model` metadata row against the candidate N64 alias ValueId row, within each planet group. For each multi-track group, the one-to-one assignment with the smallest combined relative size difference is unique. The 25/25 exact-name `Part_TrackGround_*` matches and the planet labels reinforce these pairings. The two single-candidate groups (Ando Prime and Malastare) have no alternative assignment within the group.
 
-| Planet | Unresolved track IDs | Candidate physical indices | Confidence |
-|---|---|---|---|
-| Ando Prime | 4 | 132 | HYPOTHESIS |
-| Aquilaris | 6, 7, 8 | 133, 134, 135 | HYPOTHESIS |
-| Ord Ibanna | 9, 10, 11 | 136, 137, 138 | HYPOTHESIS |
-| Baroonda | 12, 13, 14 | 139, 140, 141 | HYPOTHESIS |
-| Oovo IV | 19, 20, 21 | 145, 148, 226 | HYPOTHESIS; all three aliases are marked UNITYNULLREF |
-| Malastare | 22 | 227 | HYPOTHESIS |
+This upgrades the earlier group-only candidates to **SUPPORTED** per-track metadata mappings, while keeping them below CONFIRMED because no direct decoded-model identity or runtime load check has been performed.
 
-The candidate counts and planet labels line up, but they do not establish individual track-to-index identity. In particular, do not map same-planet tracks by order alone. The full alias names and per-track group membership are included in the JSON as `trackAliasCandidateGroups`.
+| Track ID | Track | N64 physical model index | N64 ValueId | N64 alias name | Two-part size-signature error | Planet group |
+|---:|---|---:|---:|---|---:|---|
+| 4 | Andobi Mountain Run | 132 | 1132 | N64__132__Trak_AndoPrime | 0.007% | Ando Prime |
+| 6 | Aquilaris Classic | 133 | 1133 | N64__133__Trak_Aquilaris | 0.269% | Aquilaris |
+| 7 | Sunken City | 134 | 1134 | N64__134__Trak_Aquilaris | 0.277% | Aquilaris |
+| 8 | Bumpy's Breakers | 135 | 1135 | N64__135__Trak_Aquilaris | 0.206% | Aquilaris |
+| 9 | Scrapper's Run | 136 | 1136 | N64__136__Trak_OrdIbanna | 0.082% | Ord Ibanna |
+| 10 | Dethro's Revenge | 137 | 1137 | N64__137__Trak_OrdIbanna | 0.057% | Ord Ibanna |
+| 11 | Abyss | 138 | 1138 | N64__138__Trak_OrdIbanna | 0.051% | Ord Ibanna |
+| 12 | Baroo Coast | 139 | 1139 | N64__139__Trak_Baroonda | 3.407% | Baroonda |
+| 13 | Grabvine Gateway | 140 | 1140 | N64__140__Trak_Baroonda | 1.797% | Baroonda |
+| 14 | Fire Mountain Rally | 141 | 1141 | N64__141__Trak_Baroonda | 3.374% | Baroonda |
+| 19 | Vengeance | 145 | 1145 | N64__145__Trak__UNITYNULLREF | 0.032% | Oovo IV |
+| 20 | Executioner | 148 | 1148 | N64__148__Trak__UNITYNULLREF | 0.025% | Oovo IV |
+| 21 | The Gauntlet | 226 | 1226 | N64__226__Trak__UNITYNULLREF | 0.027% | Oovo IV |
+| 22 | Malastare 100 | 227 | 1227 | N64__227__Trak_Malastare | 0.105% | Malastare |
+
+The combined size-signature error ranges from 0.007% to 3.407%. For multi-track groups, the second-best whole-group assignment is worse by at least 2.645 percentage points per track. The JSON records each group margin and each track's next-closest candidate error.
+
+**Interpretation:** all 25 tracks now have either an exact-name physical model index (11) or a supported alias-to-index candidate (14). This is a strong content-planning map, not proof that each candidate loads or renders correctly. Keep the 14 aliases as `SUPPORTED`, not `CONFIRMED`, until local model-level/runtime validation.
+
 
 ## Critical mapping rule
 
