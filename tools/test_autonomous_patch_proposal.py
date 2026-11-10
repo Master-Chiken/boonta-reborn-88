@@ -155,6 +155,20 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaisesRegex(ProposalError, "Renames"):
             self.check(dict(self.proposal, unified_diff=rename))
 
+    def test_validator_and_test_dispatcher_files_are_protected(self):
+        protected = "tools/autonomous_patch_proposal.py"
+        diff = self.diff.replace("gamecube-demo/source/main.c", protected)
+        proposal = dict(self.proposal, unified_diff=diff)
+        with self.assertRaisesRegex(ProposalError, "protected"):
+            self.check(proposal, allowed={protected})
+
+    def test_credential_paths_are_protected(self):
+        for protected in (".env.production", "config/private.key", "certs/signing.PEM"):
+            diff = self.diff.replace("gamecube-demo/source/main.c", protected)
+            proposal = dict(self.proposal, unified_diff=diff)
+            with self.subTest(path=protected), self.assertRaisesRegex(ProposalError, "protected"):
+                self.check(proposal, allowed={protected})
+
     def test_mode_changes_are_rejected(self):
         diff = self.diff.replace(
             "index ",
