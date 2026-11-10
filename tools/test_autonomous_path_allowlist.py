@@ -14,6 +14,7 @@ TASK_ID = "AUTOMATION-ALLOWLIST-TASK"
 BASE_TASK = {
     "task_id": TASK_ID,
     "status": "active",
+    "target_branch": "main",
     "title": "Offline fixture task",
 }
 PATH = "src/main.c"
@@ -130,9 +131,16 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         self.ledger["tasks"].append({
             "task_id": "AUTOMATION-SECOND-ACTIVE",
             "status": "active",
+            "target_branch": "main",
         })
         self.commit_inputs()
         with self.assertRaisesRegex(AllowlistError, "one-active-task"):
+            self.call_allowlist()
+
+    def test_noncanonical_target_branch_is_rejected(self):
+        self.ledger["tasks"][0]["target_branch"] = "feature/unapproved"
+        self.commit_inputs()
+        with self.assertRaisesRegex(AllowlistError, "target branch"):
             self.call_allowlist()
 
     def test_stale_base_sha_is_rejected(self):
