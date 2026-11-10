@@ -117,6 +117,23 @@ python3 tools/verify_autonomous_patch.py \
 
 It outputs `VERIFIED` only after all mandatory tests pass. `FAILED` means tests failed; `REJECTED` means the proposal, trusted scope, checkout or isolation check failed. It performs no provider call, branch creation, commit, push or PR creation.
 
+## Deterministic delivery planning
+
+After the isolated verifier returns VERIFIED, tools/build_autonomous_delivery_plan.py can create a read-only delivery plan. It rechecks the source checkout SHA, current canonical active task, current owner-maintained path policy, exact allowlist paths and the complete fixed-test evidence. It rejects stale or mismatched task/base reports, unregistered test IDs, any failed/missing test, a blocked/empty task queue, or paths that have since been removed from the owner-approved scope.
+
+The planner deterministically supplies the target branch, branch name, commit subject/body, PR title/body and the canonical BOONTA_TASK_ID marker. These values are derived from the trusted task ID/base SHA and the verified patch report; the model does not choose them.
+
+\`\`\`bash
+python3 tools/build_autonomous_delivery_plan.py \
+  --repo-root "$PWD" \
+  --verified-report /tmp/boonta-verified.json \
+  --allowlist-report /tmp/boonta-allowlist.json \
+  --expected-task-id "$TASK_ID_FROM_PREFLIGHT" \
+  --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
+\`\`\`
+
+The output is DELIVERY_PLAN_READY only. It creates no commit, local/remote branch, push, pull request or merge. Human review and normal branch protections remain mandatory. The planner itself and its tests are protected from model-authored patches.
+
 ## Owner-reviewed path generation
 
 The owner-maintained policy starts empty. For an active task, the trusted runner generates its allowlist report before any model call:
@@ -138,7 +155,7 @@ The owner-reviewed path policy is separate from the canonical task ledger. A pol
 - No structured-output provider request or model route is configured.
 - The fixed dispatcher runs only the three verified offline automation checks. GameCube build/test commands are not in the registry because no stable, bounded host-test command has yet been confirmed.
 - The isolated patch-to-tests verifier is an offline prototype only; no production provider or scheduled loop invokes it yet.
-- No deterministic writer, branch lease, PR creator or exact-head report is connected.
+- The deterministic delivery planner prepares commit/PR metadata but does not create a commit, branch, push or PR. A separately reviewed GitHub writer and lock are still not connected.
 - No cross-runtime lock is implemented.
 
 ## Promotion criteria
