@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
 const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
@@ -60,6 +62,74 @@ function makeCore() {
     setFailed: (message) => { failure = String(message); },
     info: () => {}
   };
+}
+
+async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const workflow = fs.readFileSync('.github/workflows/openrouter-plan-execute.yml', 'utf8');
+  const stepStart = workflow.indexOf('      - name: Validate OpenRouter autonomous cycle report\n');
+  const stepEnd = workflow.indexOf('      - name: Sync the single-task daily backoff marker\n', stepStart);
+  assert.ok(stepStart >= 0 && stepEnd > stepStart, 'OpenRouter validation step must exist');
+  const step = workflow.slice(stepStart, stepEnd);
+  const marker = '          script: |\n';
+  const markerIndex = step.indexOf(marker);
+  assert.ok(markerIndex >= 0, 'OpenRouter validation step must contain an embedded script');
+
+  const scriptLines = step.slice(markerIndex + marker.length).split(/\r?\n/);
+  const script = [];
+  for (const line of scriptLines) {
+    if (line.trim() === '') {
+      script.push('');
+      continue;
+    }
+    if (!line.startsWith('            ')) break;
+    script.push(line.slice(12));
+  }
+  assert.ok(script.some((line) => line.includes('findBlockedReportContradictions')),
+    'embedded OpenRouter script must exercise the shared contradiction guard');
+
+  const env = {
+    REPORT_PATH: 'report.txt',
+    PRE_CYCLE_PR_HEADS: '{}',
+    PRE_CYCLE_PR_SNAPSHOT_AT: new Date(Date.now() - 1000).toISOString(),
+    OPENROUTER_PREFLIGHT_ALLOWED: 'true',
+    OPENROUTER_AUTH_OUTCOME: 'success',
+    GITHUB_APP_TOKEN_OUTCOME: 'success',
+    SELECTED_TASK_ID: taskId,
+    SELECTED_TASK_TARGET_BRANCH: 'main',
+    GITHUB_WORKSPACE: 'repo-root',
+    ...envOverrides
+  };
+  const machineReport = [
+    'BOONTA_CYCLE_TASK_ID: ' + taskId,
+    'BOONTA_CYCLE_STATUS: BLOCKED',
+    'BOONTA_CYCLE_BLOCKER: ' + blocker,
+    'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
+  ].join('\n');
+  const fakeFs = {
+    readFileSync: (path, encoding) => {
+      assert.equal(path, env.REPORT_PATH);
+      assert.equal(encoding, 'utf8');
+      return machineReport;
+    }
+  };
+  const testCore = makeCore();
+  const runtime = {
+    require: (id) => {
+      if (id === 'fs') return fakeFs;
+      if (id === env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js') {
+        return require('./validate_autonomous_cycle_report');
+      }
+      throw new Error('Unexpected module requested by embedded OpenRouter validator: ' + id);
+    },
+    process: { env },
+    core: testCore,
+    github: {},
+    context
+  };
+  const wrapped = '(async function () {\n' + script.join('\n') + '\n})()';
+  await new vm.Script(wrapped, { filename: 'openrouter-blocked-validator.js' })
+    .runInNewContext(runtime, { timeout: 1000 });
+  return testCore;
 }
 
 function makeGithub(options = {}) {
@@ -156,6 +226,28 @@ async function run(name, options = {}) {
 }
 
 (async () => {
+  const openRouterMissingKey = await executeOpenRouterBlockedStep(
+    'No provider key was available in this invocation.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(openRouterMissingKey.failure.includes('contradicts same-run preflight evidence'),
+    'the actual embedded OpenRouter BLOCKED script must reject a missing-key claim after successful authentication');
+
+  const openRouterMissingToken = await executeOpenRouterBlockedStep(
+    'There is no verified live GitHub App token.',
+    'Record the verified dependency and next step.'
+  );
+  assert.ok(openRouterMissingToken.failure.includes('contradicts same-run preflight evidence'),
+    'the actual embedded OpenRouter BLOCKED script must reject a missing-token claim after successful App token creation');
+
+  const openRouterCredentialIsolation = await executeOpenRouterBlockedStep(
+    'The provider key is intentionally not exposed to the model.',
+    'Record the verified owner result in the task ledger.'
+  );
+  assert.equal(openRouterCredentialIsolation.failure, '',
+    'the actual embedded OpenRouter BLOCKED script must not confuse model credential isolation with missing workflow authentication');
+  assert.equal(openRouterCredentialIsolation.outputs.cycle_status, 'blocked');
+
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
   assert.equal(valid.core.outputs.evidence_pr_number, '501');
