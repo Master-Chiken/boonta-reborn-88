@@ -16,6 +16,10 @@ Continuous availability requires an always-on host. The current official VPS gui
 
 The Compose stack pins the official image to upstream commit `353945c86daedc13de0f23bdf8baf1e35f718e71`, uses PostgreSQL 17 and persistent volumes, requires authentication, sets private exposure, disables telemetry and binds the UI to localhost only. Put a private HTTPS reverse proxy such as Tailscale Serve in front of port 3100. Do not expose port 3100 or PostgreSQL directly to the public internet.
 
+## Optional €0 compute experiment
+
+See [ORACLE-ALWAYS-FREE.md](ORACLE-ALWAYS-FREE.md) for Oracle's Always Free A1 allowance, account-verification requirement, limited regional capacity and seven-day idle-instance reclamation. This is a possible low-cost experiment, **not** a guaranteed always-on host. Never upgrade to Pay As You Go to solve a capacity shortage; keep the existing GitHub Actions schedule as the reliable cloud fallback.
+
 ## 1. Prepare the host and secrets
 
 On an always-on Linux host with Docker Compose, from this directory:
