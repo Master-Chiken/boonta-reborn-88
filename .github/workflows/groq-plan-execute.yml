@@ -239,7 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,536/96 limits; max 4 steps (6,528 nominal tokens). Leave margin below the observed 8k TPM ceiling.
+          # 1,344/96 limits; max 5 steps (7,200 nominal tokens). Reserve one final report step below the observed 8k TPM ceiling.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -249,7 +249,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 4,
+                "steps": 5,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -262,7 +262,7 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "limit": {
-                      "context": 1536,
+                      "context": 1344,
                       "output": 96
                     }
                   }
@@ -314,7 +314,7 @@ jobs:
           - Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.
           - Direct MCP only; no shell, execute wrapper, filesystem tools or subagents.
           DELIVERY
-          - At most four direct steps: optionally read one directly relevant implementation/test file; create one branch from the selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
+          - Use at most five model steps: optionally read one directly relevant implementation/test file; create one branch from the selected base; call push_files exactly once with one coherent patch; create one non-draft PR; emit the required machine-readable report.
           - Do not search or separately read back a PR. Use the create_pull_request result's PR URL and head_sha; the shared validator performs authoritative live PR and exact-head CI verification.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           - Machine report only; copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
