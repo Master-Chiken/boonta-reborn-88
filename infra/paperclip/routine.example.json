@@ -1,0 +1,19 @@
+{
+  "routine": {
+    "title": "Boonta Reborn — bounded engineering cycle",
+    "description": "Read the canonical ledger and issue #226. Select exactly one eligible task with no active writer or open task PR. Keep its exact task_id, acceptance criteria and target branch. Run one approved Free-tier provider invocation. Open one PR with the exact BOONTA_TASK_ID marker and wait for exact-head GitHub Actions checks. If any provider, quota, identity, lock or validation gate is uncertain, report BLOCKED and stop. Do not merge.",
+    "assigneeAgentId": "<GAME_ENGINEER_AGENT_ID>",
+    "projectId": "<BOONTA_PROJECT_ID>",
+    "priority": "medium",
+    "concurrencyPolicy": "skip_if_active",
+    "catchUpPolicy": "skip_missed",
+    "activityGatePolicy": "always"
+  },
+  "trigger": {
+    "kind": "schedule",
+    "label": "Four times daily (UTC) — disabled pending owner cutover",
+    "enabled": false,
+    "cronExpression": "17 0,6,12,18 * * *",
+    "timezone": "UTC"
+  }
+}
