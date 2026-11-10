@@ -358,7 +358,7 @@ jobs:
           TOOLS / DELIVERY
           - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
           - OpenCode 1.19.5 prefixes raw MCP names with github_. Direct MCP only; no Code Mode, shell or filesystem.
-          - The global preflight already completed the exact task reservation and open-PR duplicate check. Do not search PR history or reread ledger/budget.
+          - The global preflight already completed the exact task reservation and open-PR duplicate check. Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.
           - Use at most four tool calls: optionally read one directly relevant implementation/test file; create one branch from selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
           - No PR search/readback. Use create_pull_request result URL/head_sha; the shared report validator re-fetches the live PR and checks markers, base, current head and CI.
           - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
