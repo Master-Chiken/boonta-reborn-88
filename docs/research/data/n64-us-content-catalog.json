@@ -1535,1843 +1535,2150 @@
         "index": 0,
         "valueId": 0,
         "name": "MAlt_Anakin_Skywalker",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 1,
         "valueId": 1001,
         "name": "Trak_Tatooine_BoontaClassic",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 2,
         "valueId": 2,
         "name": "Podd_Anakin_Skywalker",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 3,
         "valueId": 3,
         "name": "MAlt_Teemto_Pagalies",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 4,
         "valueId": 4,
         "name": "Podd_Teemto_Pagalies",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 5,
         "valueId": 5,
         "name": "MAlt_Sebulba",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 6,
         "valueId": 6,
         "name": "Podd_Sebulba",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 7,
         "valueId": 7,
         "name": "MAlt_Ratts_Tyerell",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 8,
         "valueId": 8,
         "name": "Podd_Ratts_Tyerell",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 9,
         "valueId": 9,
         "name": "Podd_Aldar_Beedo",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 10,
         "valueId": 10,
         "name": "MAlt_Aldar_Beedo",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 11,
         "valueId": 11,
         "name": "MAlt_Mawhonic",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 12,
         "valueId": 12,
         "name": "Podd_Mawhonic",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 13,
         "valueId": 13,
         "name": "MAlt_Ark_Roose",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 14,
         "valueId": 14,
         "name": "Podd_Ark_Roose",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 15,
         "valueId": 15,
         "name": "MAlt_Wan_Sandage",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 16,
         "valueId": 16,
         "name": "Podd_Mars_Guo",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 17,
         "valueId": 17,
         "name": "Podd_Wan_Sandage",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 18,
         "valueId": 18,
         "name": "MAlt_Mars_Guo",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 19,
         "valueId": 19,
         "name": "MAlt_Ebe_E_Endocott",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 20,
         "valueId": 20,
         "name": "Podd_Ebe_E_Endocott",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 21,
         "valueId": 21,
         "name": "MAlt_Dud_Bolt",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 22,
         "valueId": 22,
         "name": "Podd_Dud_Bolt",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 23,
         "valueId": 23,
         "name": "MAlt_Gasgano",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 24,
         "valueId": 24,
         "name": "Podd_Gasgano",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 25,
         "valueId": 25,
         "name": "MAlt_Clegg_Holdfast",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 26,
         "valueId": 26,
         "name": "Podd_Clegg_Holdfast",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 27,
         "valueId": 27,
         "name": "MAlt_Elan_Mak",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 28,
         "valueId": 28,
         "name": "Podd_Elan_Mak",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 29,
         "valueId": 29,
         "name": "MAlt_Neva_Kee",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 30,
         "valueId": 30,
         "name": "Podd_Neva_Kee",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 31,
         "valueId": 31,
         "name": "MAlt_Bozzie_Baranta",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 32,
         "valueId": 32,
         "name": "Podd_Bozzie_Baranta",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 33,
         "valueId": 33,
         "name": "MAlt_Boles_Roor",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 34,
         "valueId": 34,
         "name": "Podd_Boles_Roor",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 35,
         "valueId": 35,
         "name": "MAlt_Ody_Mandrell",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 36,
         "valueId": 36,
         "name": "Podd_Ody_Mandrell",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 37,
         "valueId": 37,
         "name": "MAlt_Fud_Sang",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 38,
         "valueId": 38,
         "name": "Podd_Fud_Sang",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 39,
         "valueId": 39,
         "name": "MAlt_Ben_Quadinaros",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 40,
         "valueId": 40,
         "name": "Podd_Ben_Quadinaros",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 41,
         "valueId": 41,
         "name": "MAlt_Slide_Paramita",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 42,
         "valueId": 42,
         "name": "Podd_Slide_Paramita",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 43,
         "valueId": 43,
         "name": "MAlt_Toy_Dampner",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 44,
         "valueId": 44,
         "name": "Podd_Toy_Dampner",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 45,
         "valueId": 45,
         "name": "MAlt_Navior",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 46,
         "valueId": 46,
         "name": "Podd_Navior",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 47,
         "valueId": 47,
         "name": "Part_Aquilaris_Vehicle",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 48,
         "valueId": 48,
         "name": "Part_Select_AnakinFlag",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 49,
         "valueId": 49,
         "name": "Part_EnergyBinderVertical_49",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 50,
         "valueId": 50,
         "name": "Part_Upgrade_Turning_ControlLinkage",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 51,
         "valueId": 51,
         "name": "Part_Upgrade_Turning_ControlShiftPlate",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 52,
         "valueId": 52,
         "name": "Part_Upgrade_Turning_ControlVectroJet",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 53,
         "valueId": 53,
         "name": "Part_Upgrade_Turning_ControlCoupling",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 54,
         "valueId": 54,
         "name": "Part_Upgrade_Turning_ControlNozzle",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 55,
         "valueId": 55,
         "name": "Part_Upgrade_55",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 56,
         "valueId": 56,
         "name": "Part_Upgrade_56",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 57,
         "valueId": 57,
         "name": "Part_Upgrade_57",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 58,
         "valueId": 58,
         "name": "Part_Upgrade_58",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 59,
         "valueId": 59,
         "name": "Part_Upgrade_59",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 60,
         "valueId": 60,
         "name": "Part_Hangar_Box_1x",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 61,
         "valueId": 61,
         "name": "Part_Upgrade_61",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 62,
         "valueId": 62,
         "name": "Part_Upgrade_62",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 63,
         "valueId": 63,
         "name": "Part_Upgrade_63",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 64,
         "valueId": 64,
         "name": "Part_Upgrade_64",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 65,
         "valueId": 65,
         "name": "Part_Upgrade_65",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 66,
         "valueId": 66,
         "name": "Part_Upgrade_66",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 67,
         "valueId": 67,
         "name": "Part_Upgrade_67",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 68,
         "valueId": 68,
         "name": "Part_Hangar_Box_2x",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 69,
         "valueId": 69,
         "name": "Part_Hangar_Box_8x",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 70,
         "valueId": 70,
         "name": "Part_Hangar_PitDroidPlatform",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 71,
         "valueId": 71,
         "name": "Part_OrientationArrow",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 72,
         "valueId": 72,
         "name": "Part_Hud_72",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 73,
         "valueId": 73,
         "name": "Part_Hud_73",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 74,
         "valueId": 74,
         "name": "Part_Hud_74",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 75,
         "valueId": 75,
         "name": "Part_Hud_75",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 76,
         "valueId": 76,
         "name": "Part_Select_Planet_black_76",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 77,
         "valueId": 77,
         "name": "Part_Select_Planet_black_77",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 78,
         "valueId": 78,
         "name": "Part_Select_Planet_78",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 79,
         "valueId": 79,
         "name": "Part_Select_Planet_Tatooine",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 80,
         "valueId": 80,
         "name": "Part_Select_Planet_80",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 81,
         "valueId": 81,
         "name": "Part_Select_Planet_Moon",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 82,
         "valueId": 82,
         "name": "Part_Select_Planet_OovoIv",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 83,
         "valueId": 83,
         "name": "Part_Hangar",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 84,
         "valueId": 84,
         "name": "Part_Hangar_Shop",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 85,
         "valueId": 85,
         "name": "Part_Hangar_Junkyard",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 86,
         "valueId": 86,
         "name": "Pupp_Racer_Teemto_Pagalies",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 87,
         "valueId": 87,
         "name": "Pupp_Racer_Anakin_Skywalker",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 88,
         "valueId": 88,
         "name": "Pupp_Racer_Gasgano",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 89,
         "valueId": 89,
         "name": "Pupp_Racer_Mawhonic",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 90,
         "valueId": 90,
         "name": "Pupp_Racer_Ody_Mandrell",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 91,
         "valueId": 91,
         "name": "Pupp_Racer_Sebulba",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 92,
         "valueId": 92,
         "name": "Pupp_Racer_Mars_Guo",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 93,
         "valueId": 93,
         "name": "Pupp_Racer_Ratts_Tyerell",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 94,
         "valueId": 94,
         "name": "Pupp_Racer_Ben_Quadinaros",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 95,
         "valueId": 95,
         "name": "Pupp_Racer_Ebe_E_Endocott",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 96,
         "valueId": 96,
         "name": "Pupp_Racer_Ark_Roose",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 97,
         "valueId": 97,
         "name": "Pupp_Racer_Clegg_Holdfast",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 98,
         "valueId": 98,
         "name": "Pupp_Racer_Dud_Bolt",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 99,
         "valueId": 99,
         "name": "Pupp_Racer_Wan_Sandage",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 100,
         "valueId": 100,
         "name": "Pupp_Racer_Elan_Mak",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 101,
         "valueId": 101,
         "name": "Pupp_Racer_Toy_Dampner",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 102,
         "valueId": 102,
         "name": "Pupp_Racer_Fud_Sang",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 103,
         "valueId": 103,
         "name": "Pupp_Racer_Neva_Kee",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 104,
         "valueId": 104,
         "name": "Pupp_Racer_Slide_Paramita",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 105,
         "valueId": 105,
         "name": "Pupp_Racer_Aldar_Beedo",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 106,
         "valueId": 106,
         "name": "Pupp_Racer_Bozzie_Baranta",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 107,
         "valueId": 107,
         "name": "Pupp_Racer_Boles_Roor",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 108,
         "valueId": 108,
         "name": "Pupp_Racer_Navior",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 109,
         "valueId": 109,
         "name": "Pupp_Pit_Droid",
-        "category": "droid-model"
+        "category": "droid-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 110,
         "valueId": 110,
         "name": "Pupp_Watto",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 111,
         "valueId": 111,
         "name": "Pupp_Dewback",
-        "category": "creature-model"
+        "category": "creature-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 112,
         "valueId": 112,
         "name": "Pupp_Ronto",
-        "category": "creature-model"
+        "category": "creature-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 113,
         "valueId": 113,
         "name": "Pupp_Jabba",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 114,
         "valueId": 114,
         "name": "Modl_RhombusLike",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 115,
         "valueId": 1115,
         "name": "Trak_Tatooine_BoontaTrainingCourse",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 116,
         "valueId": 116,
         "name": "Part_Select_Planet_MonGazza",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 117,
         "valueId": 117,
         "name": "Part_Select_Planet_AndoPrime",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 118,
         "valueId": 118,
         "name": "Part_Select_Planet_Aquilaris",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 119,
         "valueId": 119,
         "name": "Part_Select_Planet_Baroonda",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 120,
         "valueId": 120,
         "name": "Part_Trugut",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 121,
         "valueId": 121,
         "name": "Part_Select_Planet_Malastare",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 122,
         "valueId": 122,
         "name": "Part_TrackGround_AndoPrime_AndoPrimeCentrum",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 123,
         "valueId": 123,
         "name": "Part_Podiums_Flag_Blue",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 124,
         "valueId": 124,
         "name": "Part_Podiums_Platform",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 125,
         "valueId": 125,
         "name": "Part_Podiums_Flag_Red",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 126,
         "valueId": 126,
         "name": "Part_Podiums_Flag_White",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 127,
         "valueId": 127,
         "name": "Part_Podiums_Arena",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 128,
         "valueId": 1128,
         "name": "Trak_AndoPrime_AndoPrimeCentrum",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 129,
         "valueId": 129,
         "name": "Trak_Baroonda_Inferno",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 130,
         "valueId": 130,
         "name": "Trak_AndoPrime_BeedosWildRide",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 131,
         "valueId": 131,
         "name": "Trak_AndoPrime_HowlerGorge",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 132,
         "valueId": 1132,
         "name": "N64__132__Trak_AndoPrime",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 133,
         "valueId": 1133,
         "name": "N64__133__Trak_Aquilaris",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 134,
         "valueId": 1134,
         "name": "N64__134__Trak_Aquilaris",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 135,
         "valueId": 1135,
         "name": "N64__135__Trak_Aquilaris",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 136,
         "valueId": 1136,
         "name": "N64__136__Trak_OrdIbanna",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 137,
         "valueId": 1137,
         "name": "N64__137__Trak_OrdIbanna",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 138,
         "valueId": 1138,
         "name": "N64__138__Trak_OrdIbanna",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 139,
         "valueId": 1139,
         "name": "N64__139__Trak_Baroonda",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 140,
         "valueId": 1140,
         "name": "N64__140__Trak_Baroonda",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 141,
         "valueId": 1141,
         "name": "N64__141__Trak_Baroonda",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 142,
         "valueId": 1142,
         "name": "Trak_MonGazza_Speedway",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 143,
         "valueId": 143,
         "name": "Trak_MonGazza_SpiceMineRun",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 144,
         "valueId": 1144,
         "name": "Trak_MonGazza_ZuggaChallenge",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 145,
         "valueId": 1145,
         "name": "N64__145__Trak__UNITYNULLREF",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 146,
         "valueId": 146,
         "name": "Modl_EnergyBinderHorizontal",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 147,
         "valueId": 147,
         "name": "Part_Explosion",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 148,
         "valueId": 1148,
         "name": "N64__148__Trak__UNITYNULLREF",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 149,
         "valueId": 151,
         "name": "Modl_HugeQuareLike",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 150,
         "valueId": 154,
         "name": "Part_Cantina",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 151,
         "valueId": 155,
         "name": "Pupp_OpeeSeaKiller",
-        "category": "creature-model"
+        "category": "creature-model",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 152,
         "valueId": 157,
         "name": "Part_Upgrade_AirBrake_MarkIIAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 153,
         "valueId": 158,
         "name": "Part_Upgrade_AirBrake_MarkIIIAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 154,
         "valueId": 159,
         "name": "Part_Upgrade_AirBrake_MarkIVAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 155,
         "valueId": 160,
         "name": "Part_Upgrade_AirBrake_MarkVAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 156,
         "valueId": 161,
         "name": "Part_Upgrade_AirBrake_TriJetAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 157,
         "valueId": 162,
         "name": "Part_Upgrade_AirBrake_QuadrijetAirBrake",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 158,
         "valueId": 163,
         "name": "Part_Upgrade_Cooling_CoolantRadiator",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 159,
         "valueId": 164,
         "name": "Part_Upgrade_Cooling_Stack3Radiator",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 160,
         "valueId": 165,
         "name": "Part_Upgrade_Cooling_Stack6Radiator",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 161,
         "valueId": 166,
         "name": "Part_Upgrade_Cooling_RodCoolantPump",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 162,
         "valueId": 167,
         "name": "Part_Upgrade_Cooling_DualCoolantPump",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 163,
         "valueId": 168,
         "name": "Part_Upgrade_Cooling_TurboCoolantPump",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 164,
         "valueId": 169,
         "name": "Part_Upgrade_TopSpeed_Plug2ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 165,
         "valueId": 170,
         "name": "Part_Upgrade_TopSpeed_Plug3ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 166,
         "valueId": 171,
         "name": "Part_Upgrade_TopSpeed_Plug5ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 167,
         "valueId": 172,
         "name": "Part_Upgrade_TopSpeed_Plug8ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 168,
         "valueId": 173,
         "name": "Part_Upgrade_TopSpeed_Block5ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 169,
         "valueId": 174,
         "name": "Part_Upgrade_TopSpeed_Block6ThrustCoil",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 170,
         "valueId": 175,
         "name": "Pupp_Cantina_Holo_Machine",
-        "category": "environment-prop-model"
+        "category": "environment-prop-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 171,
         "valueId": 176,
         "name": "Modl_AndoPrime_IceStub",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 172,
         "valueId": 177,
         "name": "Part_TrackGround_AndoPrime_BeedosWildRide",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 173,
         "valueId": 178,
         "name": "Part_TrackGround_AndoPrime_HowlerGorge",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 174,
         "valueId": 179,
         "name": "Part_TrackGround_AndoPrime_AndobiMountainRun",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 175,
         "valueId": 180,
         "name": "Part_TrackGround_Aquilaris_AquilarisClassic",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 176,
         "valueId": 181,
         "name": "Part_TrackGround_Aquilaris_SunkenCity",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 177,
         "valueId": 182,
         "name": "Part_TrackGround_Malastare_Malastare100",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 178,
         "valueId": 183,
         "name": "Part_TrackGround_Malastare_DugDerby",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 179,
         "valueId": 184,
         "name": "Part_TrackGround_Malastare_SebulbasLegacy",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 180,
         "valueId": 185,
         "name": "Part_TrackGround_Aquilaris_BumbysBreakers",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 181,
         "valueId": 186,
         "name": "Part_TrackGround_OrdIbanna_ScrappersRun",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 182,
         "valueId": 187,
         "name": "Part_TrackGround_OrdIbanna_DethrosRevenge",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 183,
         "valueId": 188,
         "name": "Part_TrackGround_OrdIbanna_Abyss",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 184,
         "valueId": 189,
         "name": "Part_TrackGround_MonGazza_Speedway",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 185,
         "valueId": 190,
         "name": "Part_TrackGround_MonGazza_SpiceMineRun",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 186,
         "valueId": 191,
         "name": "Part_TrackGround_Baroonda_Inferno",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 187,
         "valueId": 192,
         "name": "Part_TrackGround_MonGazza_ZuggaChallenge",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 188,
         "valueId": 193,
         "name": "Part_TrackGround_OovoIv_Vengeance",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 189,
         "valueId": 194,
         "name": "Part_TrackGround_OovoIv_Executioner",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 190,
         "valueId": 195,
         "name": "Part_TrackGround_OovoIv_TheGauntlet",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 191,
         "valueId": 196,
         "name": "Part_Track_Flag",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 192,
         "valueId": 197,
         "name": "Modl_Track_Flag",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 193,
         "valueId": 198,
         "name": "Part_Upgrade_Acceleration_Dual20PcxInjector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 194,
         "valueId": 199,
         "name": "Part_Upgrade_Acceleration_44PcxInjector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 195,
         "valueId": 200,
         "name": "Part_Upgrade_Acceleration_Dual32PcxInjector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 196,
         "valueId": 201,
         "name": "Part_Upgrade_Acceleration_Quad32PcxInjector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 197,
         "valueId": 202,
         "name": "Part_Upgrade_Acceleration_Quad44PcxInjector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 198,
         "valueId": 203,
         "name": "Part_Upgrade_Acceleration_Mag6Injector",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 199,
         "valueId": 204,
         "name": "Part_Upgrade_Traction_R20R60Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 200,
         "valueId": 204,
         "name": "Part_Upgrade_Traction_R20R60Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 201,
         "valueId": 206,
         "name": "Part_Upgrade_Traction_R80Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 202,
         "valueId": 207,
         "name": "Part_Racer_Lod2_Aldar_Beedo",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 203,
         "valueId": 208,
         "name": "Part_Racer_Lod2_Anakin_Skywalker",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 204,
         "valueId": 209,
         "name": "Part_Racer_Lod2_Ben_Quadinaros",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 205,
         "valueId": 210,
         "name": "Part_Racer_Lod2_Boles_Roor",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 206,
         "valueId": 211,
         "name": "Part_Racer_Lod2_Bozzie_Baranta",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 207,
         "valueId": 212,
         "name": "Part_Racer_Lod2_Navior",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 208,
         "valueId": 213,
         "name": "Part_Racer_Lod2_Ark_Roose",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 209,
         "valueId": 214,
         "name": "Part_Racer_Lod2_Clegg_Holdfast",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 210,
         "valueId": 215,
         "name": "Part_Racer_Lod2_Dud_Bolt",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 211,
         "valueId": 216,
         "name": "Part_Racer_Lod2_Ebe_E_Endocott",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 212,
         "valueId": 217,
         "name": "Part_Racer_Lod2_Elan_Mak",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 213,
         "valueId": 218,
         "name": "Part_Racer_Lod2_Fud_Sang",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 214,
         "valueId": 219,
         "name": "Part_Racer_Lod2_Gasgano",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 215,
         "valueId": 220,
         "name": "Part_Racer_Lod2_Ratts_Tyerell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 216,
         "valueId": 221,
         "name": "Part_Racer_Lod2_Mars_Guo",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 217,
         "valueId": 222,
         "name": "Part_Racer_Lod2_Mawhonic",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 218,
         "valueId": 223,
         "name": "Part_Racer_Lod2_Neva_Kee",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 219,
         "valueId": 224,
         "name": "Part_Racer_Lod2_Ody_Mandrell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 220,
         "valueId": 225,
         "name": "Part_Racer_Lod2_Sebulba",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 221,
         "valueId": 226,
         "name": "Part_Racer_Lod2_Slide_Paramita",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 222,
         "valueId": 227,
         "name": "Part_Racer_Lod2_Teemto_Pagalies",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 223,
         "valueId": 228,
         "name": "Part_Racer_Lod2_Toy_Dampner",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 224,
         "valueId": 229,
         "name": "Part_Racer_Lod2_Wan_Sandage",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 225,
         "valueId": 230,
         "name": "Part_Upgrade_Traction_R100Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 226,
         "valueId": 1226,
         "name": "N64__226__Trak__UNITYNULLREF",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 227,
         "valueId": 1227,
         "name": "N64__227__Trak_Malastare",
-        "category": "N64-alias"
+        "category": "N64-alias",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 228,
         "valueId": 1228,
         "name": "Trak_Malastare_DugDerby",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 229,
         "valueId": 234,
         "name": "Part_Upgrade_Repair_SinglePowerCell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 230,
         "valueId": 235,
         "name": "Part_Upgrade_Repair_DualPowerCell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 231,
         "valueId": 236,
         "name": "Part_TrackGround_Baroonda_BarooCoast",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 232,
         "valueId": 237,
         "name": "Part_Upgrade_Repair_QuadPowerCell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 233,
         "valueId": 238,
         "name": "Part_Upgrade_Repair_ClusterPowerPlug",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 234,
         "valueId": 239,
         "name": "Part_Upgrade_Repair_RotaryPowerPlug",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 235,
         "valueId": 240,
         "name": "Part_Upgrade_240",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 236,
         "valueId": 241,
         "name": "Part_Upgrade_Traction_R300Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 237,
         "valueId": 242,
         "name": "Part_Upgrade_Traction_R600Repulsorgrip",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 238,
         "valueId": 243,
         "name": "Part_Upgrade_Repair_Cluster2PowerPlug",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 239,
         "valueId": 244,
         "name": "Pupp_Cantina_Hammerhead",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 240,
         "valueId": 245,
         "name": "Pupp_Droid_C3PO",
-        "category": "droid-model"
+        "category": "droid-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 241,
         "valueId": 246,
         "name": "Pupp_JarJar",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 242,
         "valueId": 247,
         "name": "Pupp_Java",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 243,
         "valueId": 1243,
         "name": "Pupp_Droid_R2D2",
-        "category": "droid-model"
+        "category": "droid-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 244,
         "valueId": 249,
         "name": "Part_TrackGround_Baroonda_GrabvineGateway",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 245,
         "valueId": 250,
         "name": "Part_TrackGround_Baroonda_FireMountainRally",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 246,
         "valueId": 251,
         "name": "Part_Shatter_Tatooine_Rocks_251",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 247,
         "valueId": 252,
         "name": "Part_Shatter_Tatooine_Rocks_252",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 248,
         "valueId": 253,
         "name": "Part_Select_Planet_OrdIbanna",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 249,
         "valueId": 254,
         "name": "Part_Shatter_Ice",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 250,
         "valueId": 255,
         "name": "Part_Racer_Lod1_Sebulba",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 251,
         "valueId": 256,
         "name": "Part_Racer_Lod1_Anakin_Skywalker",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 252,
         "valueId": 257,
         "name": "Part_Racer_Lod1_Teemto_Pagalies",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 253,
         "valueId": 258,
         "name": "Part_Racer_Lod1_Ratts_Tyerell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 254,
         "valueId": 259,
         "name": "Part_Racer_Lod1_Aldar_Beedo",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 255,
         "valueId": 260,
         "name": "Part_Racer_Lod1_Mawhonic",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 256,
         "valueId": 261,
         "name": "Part_Racer_Lod1_Ark_Roose",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 257,
         "valueId": 262,
         "name": "Part_Racer_Lod1_Wan_Sandage",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 258,
         "valueId": 263,
         "name": "Part_Racer_Lod1_Mars_Guo",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 259,
         "valueId": 264,
         "name": "Part_Racer_Lod1_Ebe_E_Endocott",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 260,
         "valueId": 265,
         "name": "Part_Racer_Lod1_Dud_Bolt",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 261,
         "valueId": 266,
         "name": "Part_Racer_Lod1_Gasgano",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 262,
         "valueId": 267,
         "name": "Part_Racer_Lod1_Clegg_Holdfast",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 263,
         "valueId": 268,
         "name": "Part_Racer_Lod1_Elan_Mak",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 264,
         "valueId": 269,
         "name": "Part_Racer_Lod1_Neva_Kee",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 265,
         "valueId": 270,
         "name": "Part_Racer_Lod1_Bozzie_Baranta",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 266,
         "valueId": 271,
         "name": "Part_Racer_Lod1_Boles_Roor",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 267,
         "valueId": 272,
         "name": "Part_Racer_Lod1_Ody_Mandrell",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 268,
         "valueId": 273,
         "name": "Part_Racer_Lod1_Fud_Sang",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 269,
         "valueId": 274,
         "name": "Part_Racer_Lod1_Ben_Quadinaros",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 270,
         "valueId": 275,
         "name": "Part_Racer_Lod1_Slide_Paramita",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 271,
         "valueId": 276,
         "name": "Part_Racer_Lod1_Toy_Dampner",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 272,
         "valueId": 277,
         "name": "Part_Racer_Lod1_Navior",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 273,
         "valueId": 278,
         "name": "Part_Tatooine_Arena_Bridge",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 274,
         "valueId": 279,
         "name": "Part_TrackGround_Tatooine_Training",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 275,
         "valueId": 280,
         "name": "Part_TrackGround_Tatooine_Classic",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 276,
         "valueId": 292,
         "name": "Scen_Gasgano_Sebulba_RattsTyerell__SCEN",
-        "category": "scene"
+        "category": "scene",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 277,
         "valueId": 293,
         "name": "Scen_Anakin_Torso_Anim28",
-        "category": "scene"
+        "category": "scene",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 278,
         "valueId": 1278,
         "name": "Modl_CrossedRectanglesLike",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 279,
         "valueId": 295,
         "name": "Part_Shatter_Gray",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 280,
         "valueId": 296,
         "name": "Part_Shatter_Baroonda_Brushwood",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 281,
         "valueId": 1281,
         "name": "Modl_Baroonda_Beach",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 282,
         "valueId": 1282,
         "name": "MAlt_Jinn_Reeso",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 283,
         "valueId": 1283,
         "name": "Podd_Jinn_Reeso",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 284,
         "valueId": 1284,
         "name": "MAlt_Cy_Yunga",
-        "category": "alternate-pod"
+        "category": "alternate-pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 285,
         "valueId": 1285,
         "name": "Podd_Cy_Yunga",
-        "category": "pod"
+        "category": "pod",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 286,
         "valueId": 1286,
         "name": "Part_Racer_Lod1_Jinn_Reeso",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 287,
         "valueId": 1287,
         "name": "Part_Racer_Lod1_Cy_Yunga",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 288,
         "valueId": 1288,
         "name": "Pupp_Racer_Jinn_Reeso",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 289,
         "valueId": 1289,
         "name": "Pupp_Racer_Cy_Yunga",
-        "category": "racer-pupp-model"
+        "category": "racer-pupp-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 290,
         "valueId": 306,
         "name": "Part_Shatter_Brown",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 291,
         "valueId": 307,
         "name": "Part_Shatter_Black",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 292,
         "valueId": 308,
         "name": "Part_Tatooine_Balloon",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 293,
         "valueId": 309,
         "name": "Part_Shatter_DiamondFormed",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 294,
         "valueId": 1294,
         "name": "Part_StartLineMachine",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 295,
         "valueId": 311,
         "name": "Part_Shatter_Explosion",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 296,
         "valueId": 312,
         "name": "Part_MonGazza_Bagger",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 297,
         "valueId": 313,
         "name": "Part_313",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 298,
         "valueId": 314,
         "name": "Modl_RampLike",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 299,
         "valueId": 1299,
         "name": "Trak_Malastare_SebulbasLegacy",
-        "category": "track"
+        "category": "track",
+        "compressionStatus": "was_compressed"
       },
       {
         "index": 300,
         "valueId": 316,
         "name": "Modl_TinySquareLike",
-        "category": "model"
+        "category": "model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 301,
         "valueId": 1301,
         "name": "Part_CrossedRectanglesLike",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 302,
         "valueId": 318,
         "name": "Part_Shatter_Racer_Anakin_Skywalker",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 303,
         "valueId": 1303,
         "name": "Pupp_QuiGon_Jinn",
-        "category": "character-model"
+        "category": "character-model",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 304,
         "valueId": 1304,
         "name": "Part_BlackHoleLike",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 305,
         "valueId": 1305,
         "name": "Part_FlatShadedRectanglesLike",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       },
       {
         "index": 306,
         "valueId": 1306,
         "name": "Part_ExpansionPak",
-        "category": "part"
+        "category": "part",
+        "compressionStatus": "not_marked_compressed"
       }
     ],
     "spline": [
@@ -17258,5 +17565,80 @@
         "count": 2
       }
     ]
+  },
+  "modelCompressionAudit": {
+    "source": {
+      "repository": "akopetsch/swe1r-assets",
+      "commit": "922ef535f6598a1330ff93d6b07258956f990b34",
+      "path": "src/SWE1R.Assets.Blocks.Original/Resources/out_modelblock.bin/n64_us.md"
+    },
+    "semantics": {
+      "C": "Was compressed in the original block and has since been decompressed by the upstream loader (ModelBlockItemDataPart.WasCompressed).",
+      "C!": "Still has a Comp signature when the model item lister inspects it (ModelBlockItemDataPart.IsCompressed).",
+      "blank": "No Comp prefix was detected by the upstream listing."
+    },
+    "blockTotals": {
+      "total": 307,
+      "originallyCompressed": 92,
+      "notMarked": 215,
+      "stillCompressed": 0
+    },
+    "categoryStats": {
+      "MAlt": {
+        "total": 25,
+        "originallyCompressed": 0,
+        "notMarked": 25,
+        "stillCompressed": 0
+      },
+      "Podd": {
+        "total": 25,
+        "originallyCompressed": 0,
+        "notMarked": 25,
+        "stillCompressed": 0
+      },
+      "Pupp": {
+        "total": 38,
+        "originallyCompressed": 27,
+        "notMarked": 11,
+        "stillCompressed": 0
+      },
+      "Trak": {
+        "total": 25,
+        "originallyCompressed": 19,
+        "notMarked": 6,
+        "stillCompressed": 0
+      },
+      "TrackGround": {
+        "total": 25,
+        "originallyCompressed": 21,
+        "notMarked": 4,
+        "stillCompressed": 0
+      },
+      "RacerLOD1": {
+        "total": 25,
+        "originallyCompressed": 23,
+        "notMarked": 2,
+        "stillCompressed": 0
+      },
+      "RacerLOD2": {
+        "total": 23,
+        "originallyCompressed": 0,
+        "notMarked": 23,
+        "stillCompressed": 0
+      },
+      "Upgrade": {
+        "total": 54,
+        "originallyCompressed": 0,
+        "notMarked": 54,
+        "stillCompressed": 0
+      },
+      "N64Aliases": {
+        "total": 14,
+        "originallyCompressed": 12,
+        "notMarked": 2,
+        "stillCompressed": 0
+      }
+    },
+    "note": "This is status from an upstream generated model-item listing after the original-resource loader has had an opportunity to decompress items. It is not a copy of the compressed bytes and does not identify any ROM offsets."
   }
 }
