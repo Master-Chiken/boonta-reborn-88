@@ -92,6 +92,41 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_patch_test_runner.py
 
+      - name: Validate owner-approved task path allowlists with isolated Git fixtures (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_path_allowlist.py
+
+      - name: Confirm canonical empty queue grants no model write paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+          root = Path.cwd()
+          base_sha = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], cwd=root, text=True,
+              stdin=subprocess.DEVNULL,
+          ).strip()
+          result = subprocess.run(
+              [
+                  sys.executable, "tools/build_autonomous_path_allowlist.py",
+                  "--repo-root", str(root),
+                  "--expected-base-sha", base_sha,
+                  "--task-id", "AUTOMATION-LEDGER-ACTIVATION",
+              ],
+              cwd=root, text=True, capture_output=True, check=False,
+          )
+          if result.returncode != 3:
+              raise SystemExit(f"Expected fail-closed no-active-task exit 3, got {result.returncode}: {result.stdout} {result.stderr}")
+          report = json.loads(result.stdout)
+          if report.get("status") != "NO_ACTIVE_TASK" or report.get("allowed_paths") != []:
+              raise SystemExit("Canonical empty queue unexpectedly granted model write paths")
+          print("PASS: canonical empty queue grants zero model write paths")
+          PY
+
       - name: Run only repository-owned patch verification tests
         shell: bash
         run: |
