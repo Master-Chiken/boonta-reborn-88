@@ -250,7 +250,6 @@ jobs:
             "agent": {
               "build": {
                 "steps": 5,
-                # Groq recommends low temperatures for structured tool calls.
                 "temperature": 0.2,
                 "permission": {
                   "task": {
@@ -267,7 +266,6 @@ jobs:
                       "context": 1344,
                       "output": 96
                     },
-                    # Explicit model capability prevents OpenCode from dropping agent temperature.
                     "temperature": true
                   }
                 }
