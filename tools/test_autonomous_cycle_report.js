@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { validateAutonomousCycleReport, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
+const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
 const repo = 'boonta-reborn-88';
@@ -9,6 +9,29 @@ const taskId = 'AUTOMATION-LEDGER-ACTIVATION';
 const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
 const context = { repo: { owner, repo } };
+
+const missingOpenRouterKeyClaim = 'The provider blocker says no provider key was available in this invocation.';
+assert.equal(
+  findBlockedReportContradictions(missingOpenRouterKeyClaim, { openRouterAuthSucceeded: true }).length,
+  1,
+  'same-run successful OpenRouter authentication must reject a natural-language missing-key claim'
+);
+const missingGitHubTokenClaim = 'There is no verified live GitHub App token to drive the request.';
+assert.equal(
+  findBlockedReportContradictions(missingGitHubTokenClaim, { githubAppTokenMinted: true }).length,
+  1,
+  'same-run successful GitHub App token creation must reject a natural-language missing-token claim'
+);
+assert.equal(
+  findBlockedReportContradictions('The provider key is intentionally not exposed to the model.', { openRouterAuthSucceeded: true }).length,
+  0,
+  'do not confuse credential isolation from the model with missing workflow authentication'
+);
+assert.equal(
+  findBlockedReportContradictions(missingOpenRouterKeyClaim, { openRouterAuthSucceeded: false }).length,
+  0,
+  'do not reject the same claim when successful authentication evidence is absent'
+);
 
 function report(status = 'PROGRESS', base = 'main', task = taskId) {
   if (status === 'BLOCKED') {
