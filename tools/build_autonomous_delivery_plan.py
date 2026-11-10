@@ -62,6 +62,29 @@ def _load_report(path: Path) -> dict[str, Any]:
     return value
 
 
+def _git_blob_sha(root: Path, data: bytes) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "hash-object", "--stdin"],
+            cwd=root,
+            input=data,
+            capture_output=True,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise DeliveryPlanError("Could not verify Git blob content identity") from exc
+    if result.returncode != 0:
+        raise DeliveryPlanError("Git could not calculate the delivery bundle blob identity")
+    try:
+        value = result.stdout.decode("ascii").strip()
+    except UnicodeError as exc:
+        raise DeliveryPlanError("Git returned a malformed blob identity") from exc
+    if not SHA_RE.fullmatch(value):
+        raise DeliveryPlanError("Git returned an invalid blob identity")
+    return value
+
+
 def _load_canonical_task(root: Path, task_id: str) -> dict[str, Any]:
     path = root / LEDGER_SUMMARY
     if path.is_symlink():
@@ -271,9 +294,7 @@ def build_delivery_plan(
             raise DeliveryPlanError("Delivery bundle exceeds the 256 KiB aggregate limit")
         if hashlib.sha256(data).hexdigest() != sha256:
             raise DeliveryPlanError(f"Delivery bundle SHA-256 does not match its file content: {path}")
-        git_blob_sha = hashlib.sha1(
-            b"blob " + str(len(data)).encode("ascii") + b"\\0" + data
-        ).hexdigest()
+        git_blob_sha = _git_blob_sha(root, data)
         if git_blob_sha != result_blob_sha:
             raise DeliveryPlanError(f"Delivery bundle Git blob SHA does not match its file content: {path}")
         tracked = subprocess.run(
