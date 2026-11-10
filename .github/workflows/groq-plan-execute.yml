@@ -239,7 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,344/96 limits; max 5 steps (7,200 nominal tokens). Reserve one final report step below the observed 8k TPM ceiling.
+          # 1,152/384 limits; max 4 steps (6,144 nominal tokens). Skip optional reads; reserve one final report step below the observed 8k TPM ceiling.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -249,7 +249,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 5,
+                "steps": 4,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -262,8 +262,8 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "limit": {
-                      "context": 1344,
-                      "output": 96
+                      "context": 1152,
+                      "output": 384
                     }
                   }
                 }
@@ -280,7 +280,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -315,7 +315,7 @@ jobs:
           - One task/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
           
           TOOLS
-          - Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.
+          - Only MCP tools: create_branch, push_files, create_pull_request. Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
           - Direct MCP only; no Task/subagents, shell or filesystem.
           
           DELIVERY
