@@ -239,7 +239,7 @@ jobs:
           set +x
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,536/96 limits; max 3 steps. Leave margin below the observed 8k TPM ceiling.
+          # 1,344/96 limits; max 5 steps (7,200 nominal tokens). Reserve one final report step below the observed 8k TPM ceiling.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -249,7 +249,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 3,
+                "steps": 5,
                 "permission": {
                   "task": {
                     "*": "deny"
@@ -262,7 +262,7 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "limit": {
-                      "context": 1536,
+                      "context": 1344,
                       "output": 96
                     }
                   }
@@ -280,7 +280,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -302,21 +302,30 @@ jobs:
 
           PROMPT="$(cat <<'PROMPT'
           Groq Free. €0 only; execute the preflight-selected task.
+          
           TASK
-          - The preloaded schema-v2 context is authoritative. Match exact BOONTA_TASK_ID across all PR states; read at most one task row.
-          - Complete only on a merged PR with matching repository, base and exact HEAD. Closed-unmerged is incomplete. If already complete, reconcile the ledger with the original PR URL and task SHA, regenerate the summary, and use the next queued task; never cite a ledger-update SHA.
-          - PR #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: activation pr_url/head_sha are empty; no matching open PR exists.
+          - Do not search PR history: ignore older merged automation PRs. Do not reread summary, ledger or budget.
+          - #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
+          
           SAFETY
-          - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
+          - No paid routes, billing, credits, or provider/secret/settings changes.
+          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
           - No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.
-          - One task/writer/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
+          - One task/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
+          
           TOOLS
-          - Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.
-          - Direct MCP only; no shell, execute wrapper, filesystem tools or subagents.
+          - Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request. Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.
+          - Direct MCP only; no Task/subagents, shell or filesystem.
+          
           DELIVERY
-          - Exact-task PR search; max one row read, one branch, one push_files patch, one non-draft PR, exact HEAD readback.
+          - Five model steps: optional read, branch, push, PR, final report.
+          - Use create_pull_request result URL/head_sha; shared validator re-fetches PR and checks exact-head CI.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
-          - Machine report only; copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
+          
+          REPORT
+          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim.
+          - Output only machine-readable lines. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
           PROMPT
           )"
 
