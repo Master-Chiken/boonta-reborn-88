@@ -1433,7 +1433,8 @@
     "Racer model physical indices were resolved by joining each canonical ModelBlockItem name to exactly one item in the N64 USA model block map. All non-null racer model references have a unique exact-name match in this snapshot.",
     "Track.Model is a logical model catalogue reference. This pass resolves a physical N64 index only when the N64 block's item-value name exactly matches the canonical catalogue name; unresolved aliases are retained as unresolved, not treated as missing tracks.",
     "BlockItem.Index is the physical item index within the selected block; BlockItem.ValueId is a metadata value ID. Neither is interchangeable with a ModelBlockItem logical reference.",
-    "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation."
+    "The upstream TrakModelFormatTester.cs explicitly marks its Track lookup as a TODO because lookup by model metadata ID fails for values such as 1001. This is a known alias/mapping limitation.",
+    "The N64 USA model block contains 14 N64-prefixed alias records, while 14 Track.Model references remain unresolved by exact-name matching. The matching counts are a research lead only; no one-to-one track assignment is assumed without stronger evidence."
   ],
   "audit": {
     "n64ModelPhysicalEntries": 307,
