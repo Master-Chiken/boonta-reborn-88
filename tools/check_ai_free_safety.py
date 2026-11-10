@@ -920,11 +920,21 @@ for label, prompt in dynamic_task_prompts:
         )
         if label == "Groq"
         else (
-            "AUTHORITATIVE SELECTED TASK",
-            "Use exactly this task from docs/automation/task-ledger-summary.json",
-            "acceptance_criteria_excerpt",
-            "Do not substitute another task",
-            "€0",
+            (
+                "AUTHORITATIVE SELECTED TASK",
+                "Use exactly this task from docs/automation/task-ledger-summary.json",
+                "acceptance_criteria_excerpt",
+                "Do not substitute another task",
+                "€0",
+            )
+            if label == "OpenRouter"
+            else (
+                "AUTHORITATIVE SELECTED TASK",
+                "task-ledger-summary.json",
+                "acceptance_criteria_excerpt",
+                "Do not substitute another task",
+                "€0",
+            )
         )
     )
     for required in required_task_safeguards:
