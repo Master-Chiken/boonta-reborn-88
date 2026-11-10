@@ -303,7 +303,7 @@ jobs:
           PROMPT="$(cat <<'PROMPT'
           Groq Free. €0 only; execute the preflight-selected task.
           TASK
-          - The preloaded schema-v2 context and global preflight are authoritative. The selected activation task has empty `pr_url` and `head_sha`; preflight also checked all open PR bodies for its exact task marker.
+          - Global preflight is authoritative: the preloaded schema-v2 context identifies the selected task, its `pr_url` and `head_sha` are empty, and all open PR bodies were checked for its exact task marker.
           - Do not search PR history or treat older merged automation PRs carrying the same marker as evidence for this current cycle. Do not reread the compact summary, task ledger or context-budget document.
           - PR #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
           SAFETY
