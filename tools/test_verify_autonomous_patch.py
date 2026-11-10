@@ -177,8 +177,8 @@ class IsolatedPatchPipelineTests(PipelineFixture):
 
     def test_test_mutating_a_validated_file_is_rejected(self):
         (self.root / "tools/test_mutate.py").write_text(
-            "from pathlib import Path\\n"
-            "Path('src/main.c').write_text('int boonta(void) { return 99; }\\n', encoding='utf-8')\\n",
+            "from pathlib import Path\n"
+            "Path('src/main.c').write_text('int boonta(void) { return 99; }\n', encoding='utf-8')\n",
             encoding="utf-8",
         )
         run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[0]] = ("tools/test_mutate.py",)
