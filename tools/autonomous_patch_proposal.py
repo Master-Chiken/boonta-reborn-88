@@ -222,6 +222,15 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
             "GIT binary patch", "Binary files ", "Subproject commit ",
         )):
             raise ProposalError("Binary, mode, rename, copy and submodule changes are not allowed")
+        if line.startswith("@@ "):
+            if current is None:
+                raise ProposalError("Hunk appears before a file header")
+            hunks += 1
+            saw_hunk = True
+            in_hunk = True
+            if hunks > MAX_HUNKS:
+                raise ProposalError("Diff exceeds the 100-hunk safety limit")
+            continue
         if in_hunk:
             continue
         if line.startswith("--- "):
@@ -230,14 +239,6 @@ def validate_diff_paths(diff: str, allowed_paths: set[str]) -> tuple[str, ...]:
         elif line.startswith("+++ "):
             if current is None or line != "+++ b/" + current:
                 raise ProposalError("New-file patch header does not match its diff path")
-        elif line.startswith("@@ "):
-            if current is None:
-                raise ProposalError("Hunk appears before a file header")
-            hunks += 1
-            saw_hunk = True
-            in_hunk = True
-            if hunks > MAX_HUNKS:
-                raise ProposalError("Diff exceeds the 100-hunk safety limit")
     if not paths:
         raise ProposalError("Unified diff contains no file sections")
     if not saw_hunk:
