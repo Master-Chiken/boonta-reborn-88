@@ -40,7 +40,6 @@ SCHEMA: dict[str, Any] = {
                     "automation.task_preflight",
                     "automation.provider_handoff",
                     "automation.task_ledger",
-                    "gamecube.host_tests",
                 ],
             },
         },
@@ -59,7 +58,6 @@ ALLOWED_TEST_IDS = {
     "automation.task_preflight",
     "automation.provider_handoff",
     "automation.task_ledger",
-    "gamecube.host_tests",
 }
 MAX_DIFF_BYTES = 32 * 1024
 MAX_FILES = 5
