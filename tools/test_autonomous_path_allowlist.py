@@ -45,7 +45,7 @@ class AllowlistFixture(unittest.TestCase):
         self.policy_path = Path("fixture-policy.json")
         self.ledger = {
             "schema_version": 2,
-            "source": "docs/automation/task-ledger-summary.json",
+            "source": "docs/automation/task-ledger.json",
             "tasks": [dict(BASE_TASK)],
         }
         self.policy = {
