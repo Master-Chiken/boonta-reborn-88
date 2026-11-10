@@ -156,10 +156,14 @@ static inline float boonta_rival_ai_target_lateral(
         const float pressure = boonta_rival_ai_avoidance_pressure(
             longitudinal_gap, lateral_gap, 5.5f,
             BOONTA_RIVAL_AI_PLAYER_GAP);
-        if (player_lateral <= current_lateral) {
+        if (player_lateral < current_lateral - 0.001f) {
             avoid_right_pressure += pressure;
-        } else {
+        } else if (player_lateral > current_lateral + 0.001f) {
             avoid_left_pressure += pressure;
+        } else {
+            /* An almost exact lateral overlap can escape to either side. */
+            avoid_left_pressure += pressure;
+            avoid_right_pressure += pressure;
         }
     }
 
@@ -175,9 +179,13 @@ static inline float boonta_rival_ai_target_lateral(
             pressure = boonta_rival_ai_avoidance_pressure(
                 longitudinal_gap, lateral_gap, 3.5f,
                 BOONTA_RIVAL_AI_TRAFFIC_GAP);
-            if (other_lateral[i] > current_lateral) {
+            if (other_lateral[i] > current_lateral + 0.001f) {
                 avoid_left_pressure += pressure;
+            } else if (other_lateral[i] < current_lateral - 0.001f) {
+                avoid_right_pressure += pressure;
             } else {
+                /* A car directly alongside this racer blocks both escape directions. */
+                avoid_left_pressure += pressure;
                 avoid_right_pressure += pressure;
             }
         }
