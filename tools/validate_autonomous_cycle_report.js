@@ -28,6 +28,35 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function findBlockedReportContradictions(blockedText, evidence = {}) {
+  const text = typeof blockedText === 'string' ? blockedText : '';
+  const contradictions = [];
+
+  if (evidence.openRouterAuthSucceeded === true) {
+    const providerKeyUnavailable =
+      /\b(?:no|without|missing|absent|unavailable|not available)\b.{0,100}\b(?:OpenRouter\s+)?(?:provider\s+)?(?:API\s+)?key\b/i.test(text) ||
+      /\b(?:OpenRouter\s+)?(?:provider\s+)?(?:API\s+)?key\b.{0,100}\b(?:missing|absent|unavailable|not available|not configured|invalid)\b/i.test(text);
+    const explicitAuthFailure =
+      /(OPENROUTER_API_KEY|HTTP\s*401|OpenRouter.{0,80}(missing|invalid|unauthori[sz]ed|authentication failure|Free[- ]tier.{0,40}(missing|invalid|not verified)))/i.test(text);
+    if (providerKeyUnavailable || explicitAuthFailure) {
+      contradictions.push('claims OpenRouter credentials or Free-tier authentication are unavailable although same-run authentication succeeded');
+    }
+  }
+
+  if (evidence.githubAppTokenMinted === true) {
+    const tokenUnavailable =
+      /\b(?:no|without|missing|absent|unavailable|not available|not verified)\b.{0,120}\b(?:verified\s+)?(?:live\s+)?GitHub App(?: installation)? token\b/i.test(text) ||
+      /\bGitHub App(?: installation)? token\b.{0,100}\b(?:missing|absent|unavailable|not available|not minted|not verified)\b/i.test(text);
+    const appCredentialsMissing =
+      /\b(?:APP_ID|APP_PRIVATE_KEY)\b.{0,80}\b(?:missing|absent|not configured|unset)\b/i.test(text);
+    if (tokenUnavailable || appCredentialsMissing) {
+      contradictions.push('claims the GitHub App token or its credentials are unavailable although same-run token creation succeeded');
+    }
+  }
+
+  return contradictions;
+}
+
 async function validateAutonomousCycleReport(options) {
   const {
     github, context, core, summary, baseline, snapshotAt,
@@ -214,4 +243,4 @@ async function validateAutonomousCycleReport(options) {
   };
 }
 
-module.exports = { REQUIRED_CHECKS, validateAutonomousCycleReport };
+module.exports = { REQUIRED_CHECKS, findBlockedReportContradictions, validateAutonomousCycleReport };
