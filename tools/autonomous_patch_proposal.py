@@ -53,6 +53,9 @@ SCHEMA: dict[str, Any] = {
 
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+APPROVAL_RE = re.compile(
+    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+)
 DIFF_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 ALLOWED_TEST_IDS = {
     "automation.task_preflight",
@@ -309,10 +312,10 @@ def load_allowlist_report(
         raise ProposalError("Allowlist report base SHA does not match the trusted checkout")
     if (
         not isinstance(report.get("approval_ref"), str)
-        or not report["approval_ref"].startswith("https://github.com/Master-Chiken/boonta-reborn-88/")
+        or not APPROVAL_RE.fullmatch(report["approval_ref"])
     ):
         raise ProposalError("Allowlist report lacks owner-review evidence")
-    if not isinstance(report.get("purpose"), str) or not report["purpose"].strip():
+    if not isinstance(report.get("purpose"), str) or not report["purpose"].strip() or len(report["purpose"]) > 240:
         raise ProposalError("Allowlist report purpose is missing")
     paths = report.get("allowed_paths")
     if not isinstance(paths, list) or not 1 <= len(paths) <= 20:
