@@ -102,7 +102,7 @@ The model may choose only IDs present in the registry. It cannot pass test argum
 
 ## Isolated patch-to-tests pipeline
 
-The end-to-end offline verifier is `tools/verify_autonomous_patch.py`. It checks the source checkout is clean and at the trusted base SHA, creates a detached temporary Git worktree, applies the strict patch there, runs all three mandatory tests plus any additional allowed test IDs, verifies that only the validated paths changed and that no commit or branch was created, then removes the worktree. The source checkout remains untouched on both success and test failure. Test-created untracked artifacts or unexpected file changes reject the result.
+The end-to-end offline verifier is `tools/verify_autonomous_patch.py`. It checks the source checkout is clean and at the trusted base SHA, creates a detached temporary Git worktree, applies the strict patch there, runs all three mandatory tests plus any additional allowed test IDs, verifies that only the validated paths changed and that no commit or branch was created, then removes the worktree. The source checkout remains untouched on both success and test failure. The verifier snapshots the content digests and executable modes of patched files before tests and rejects any test that alters one, even when the path is already authorized. Test-created untracked artifacts or unexpected file changes also reject the result.
 
 Run it after generating the owner-approved path report:
 
