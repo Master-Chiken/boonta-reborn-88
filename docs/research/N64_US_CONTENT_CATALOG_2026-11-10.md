@@ -77,6 +77,71 @@ There are 169 unique names; repeated names and generic `Sprite_` entries are pre
 
 The selected block maps 1648 physical indices, but the upstream `TextureBlockItem.csv` supplies **no descriptive names** for these rows. The JSON therefore records each `Index`/`ValueId` pair and leaves its name null. Materials and their texture references must provide the semantic association; no labels or image content are inferred.
 
+## Content subsystem breakdown
+
+The N64 USA model block contains named groups beyond the headline pilot and track models:
+
+| Group | Count |
+|---|---:|
+| Racer LOD1 parts | 25 |
+| Racer LOD2 parts | 23 |
+| Track-ground auxiliary parts | 25 |
+| Upgrade parts | 54 |
+| Planet-selection parts | 13 |
+| Hangar / pit-droid parts | 7 |
+| HUD parts | 4 |
+| Effects / shatter / energy-binder parts | 13 |
+| Scene records | 2 |
+
+### Upgrade subgroups
+
+| Metadata name group | Entries |
+|---|---:|
+| Turning control | 5 |
+| Air brake | 6 |
+| Cooling | 6 |
+| Top speed | 6 |
+| Acceleration | 6 |
+| Traction | 6 |
+| Repair | 6 |
+| Generic/unclassified upgrade names | 13 |
+
+Several upgrade records have only generic labels such as `Part_Upgrade_55`; their function remains unknown until the model/material graph or a runtime observation establishes it.
+
+### One auxiliary track-ground part per circuit
+
+All **25/25** `Part_TrackGround_*` records name-match one row in the 25-track catalogue:
+
+| N64 physical model index | Asset metadata name | Track ID | Track |
+|---:|---|---:|---|
+| 122 | Part_TrackGround_AndoPrime_AndoPrimeCentrum | 5 | Andobi Prime Centrum |
+| 172 | Part_TrackGround_AndoPrime_BeedosWildRide | 2 | Beedo's Wild Ride |
+| 173 | Part_TrackGround_AndoPrime_HowlerGorge | 3 | Howler Gorge |
+| 174 | Part_TrackGround_AndoPrime_AndobiMountainRun | 4 | Andobi Mountain Run |
+| 175 | Part_TrackGround_Aquilaris_AquilarisClassic | 6 | Aquilaris Classic |
+| 176 | Part_TrackGround_Aquilaris_SunkenCity | 7 | Sunken City |
+| 177 | Part_TrackGround_Malastare_Malastare100 | 22 | Malastare 100 |
+| 178 | Part_TrackGround_Malastare_DugDerby | 23 | Dug Derby |
+| 179 | Part_TrackGround_Malastare_SebulbasLegacy | 24 | Sebulba's Legacy |
+| 180 | Part_TrackGround_Aquilaris_BumbysBreakers | 8 | Bumpy's Breakers |
+| 181 | Part_TrackGround_OrdIbanna_ScrappersRun | 9 | Scrapper's Run |
+| 182 | Part_TrackGround_OrdIbanna_DethrosRevenge | 10 | Dethro's Revenge |
+| 183 | Part_TrackGround_OrdIbanna_Abyss | 11 | Abyss |
+| 184 | Part_TrackGround_MonGazza_Speedway | 16 | Mon Gazza Speedway |
+| 185 | Part_TrackGround_MonGazza_SpiceMineRun | 17 | Spice Mine Run |
+| 186 | Part_TrackGround_Baroonda_Inferno | 15 | Inferno |
+| 187 | Part_TrackGround_MonGazza_ZuggaChallenge | 18 | Zugga Challenge |
+| 188 | Part_TrackGround_OovoIv_Vengeance | 19 | Vengeance |
+| 189 | Part_TrackGround_OovoIv_Executioner | 20 | Executioner |
+| 190 | Part_TrackGround_OovoIv_TheGauntlet | 21 | The Gauntlet |
+| 231 | Part_TrackGround_Baroonda_BarooCoast | 12 | Baroo Coast |
+| 244 | Part_TrackGround_Baroonda_GrabvineGateway | 13 | Grabvine Gateway |
+| 245 | Part_TrackGround_Baroonda_FireMountainRally | 14 | Fire Mountain Rally |
+| 274 | Part_TrackGround_Tatooine_Training | 0 | The Boonta Training Course |
+| 275 | Part_TrackGround_Tatooine_Classic | 1 | The Boonta Classic |
+
+These are named ground/support parts associated with the tracks. This does not establish that they contain the full road/terrain geometry or all environment objects for the corresponding track.
+
 ## Racer roster — 25 entries
 
 Each model reference is stored as a logical catalogue ID and, when resolvable, its physical N64 USA block index. Joining by exact model name produced **123/123** unique matches across **123** distinct model indices. The last two roster entries have no LOD2 reference in this metadata snapshot.
