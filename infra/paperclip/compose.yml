@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: ${PAPERCLIP_DB_PASSWORD:?Set PAPERCLIP_DB_PASSWORD in .env}
+      POSTGRES_DB: paperclip
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - paperclip-postgres:/var/lib/postgresql/data
+
+  paperclip:
+    image: ${PAPERCLIP_IMAGE:?Set PAPERCLIP_IMAGE in .env}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3100"
+      SERVE_UI: "true"
+      PAPERCLIP_HOME: "/paperclip"
+      DATABASE_URL: "postgres://paperclip:${PAPERCLIP_DB_PASSWORD}@db:5432/paperclip"
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
+      PAPERCLIP_PUBLIC_URL: ${PAPERCLIP_PUBLIC_URL:?Set PAPERCLIP_PUBLIC_URL in .env}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: ${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET:?Set PAPERCLIP_TOOL_ACTION_SIGNING_SECRET in .env}
+      PAPERCLIP_AGENT_JWT_SECRET: ${PAPERCLIP_AGENT_JWT_SECRET:?Set PAPERCLIP_AGENT_JWT_SECRET in .env}
+      DO_NOT_TRACK: "1"
+    ports:
+      - "127.0.0.1:${PAPERCLIP_PORT:-3100}:3100"
+    volumes:
+      - paperclip-data:/paperclip
+
+volumes:
+  paperclip-postgres:
+  paperclip-data:
