@@ -20,7 +20,7 @@ DEFAULT_POLICY = Path("docs/automation/patch-path-allowlist.json")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TASK_REVIEW_RE = re.compile(
-    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+    r"^https://github\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
 )
 PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 MAX_PATHS = 20
