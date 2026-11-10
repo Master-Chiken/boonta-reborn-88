@@ -549,12 +549,14 @@ jobs:
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log" 2>&1; then
                       echo "Finish banner detected in live frame $attempt."
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log"
+                      cp "$capture" "$GITHUB_WORKSPACE/dolphin-finish-restart-finish.png"
                       saw_finish=1
                     fi
                   else
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" 2>&1; then
                       echo "Clean reset HUD detected after Start restarted the finished race at live frame $attempt."
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
+                      cp "$capture" "$GITHUB_WORKSPACE/dolphin-finish-restart-reset.png"
                       saw_restart=1
                       break
                     fi
@@ -717,6 +719,8 @@ jobs:
             dolphin-finish-restart.log
             dolphin-finish-restart-finish-detector.log
             dolphin-finish-restart-reset-detector.log
+            dolphin-finish-restart-finish.png
+            dolphin-finish-restart-reset.png
             dolphin-finish-restart-user/Logs/**
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
