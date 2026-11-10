@@ -243,6 +243,20 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaisesRegex(ProposalError, "base SHA"):
             load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha="0" * 40)
 
+    def test_allowlist_report_requires_a_pull_request_review_reference(self):
+        report_path = self.root / "allowlist-report.json"
+        report = {
+            "status": "READY",
+            "task_id": TASK_ID,
+            "base_sha": self.base_sha,
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/issues/999",
+            "purpose": "Fixture approved path",
+            "allowed_paths": ["gamecube-demo/source/main.c"],
+        }
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(ProposalError, "owner-review evidence"):
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha=self.base_sha)
+
     def test_non_ready_allowlist_report_never_authorizes_paths(self):
         report_path = self.root / "allowlist-report.json"
         report = {
