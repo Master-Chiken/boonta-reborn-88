@@ -19,6 +19,9 @@ DEFAULT_LEDGER = Path("docs/automation/task-ledger-summary.json")
 DEFAULT_POLICY = Path("docs/automation/patch-path-allowlist.json")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+TASK_REVIEW_RE = re.compile(
+    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+)
 PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 MAX_PATHS = 20
 PROTECTED_EXACT = {
@@ -155,10 +158,14 @@ def build_allowlist(
     if ledger_file.is_symlink() or policy_file.is_symlink():
         raise AllowlistError("Ledger and path policy must not be symlinks")
 
+    _validate_tracked_regular_file(root, ledger_path.as_posix())
+    _validate_tracked_regular_file(root, policy_path.as_posix())
     ledger = load_json(ledger_file)
     policy = load_json(policy_file)
-    if not isinstance(ledger, dict) or ledger.get("schema_version") != 2:
-        raise AllowlistError("Canonical task summary must use schema version 2")
+    if not isinstance(ledger, dict) or type(ledger.get("schema_version")) is not int or ledger["schema_version"] != 2:
+        raise AllowlistError("Canonical task summary must use integer schema version 2")
+    if ledger.get("source") != "docs/automation/task-ledger-summary.json":
+        raise AllowlistError("Canonical task summary source path is unexpected")
     if not isinstance(ledger.get("tasks"), list):
         raise AllowlistError("Canonical task summary tasks must be an array")
     if not isinstance(policy, dict) or set(policy) != {"schema_version", "policy", "tasks"}:
@@ -203,7 +210,7 @@ def build_allowlist(
             raise AllowlistError(f"Path policy purpose must be a short explanation: {task_id}")
         if (
             not isinstance(approval_ref, str)
-            or not approval_ref.startswith("https://github.com/Master-Chiken/boonta-reborn-88/")
+            or not TASK_REVIEW_RE.fullmatch(approval_ref)
         ):
             raise AllowlistError(f"Path policy requires an owner-review evidence URL: {task_id}")
         paths = entry["allowed_paths"]
@@ -256,16 +263,12 @@ def main() -> int:
     parser.add_argument("--repo-root", type=Path, default=ROOT)
     parser.add_argument("--expected-base-sha", required=True)
     parser.add_argument("--task-id", required=True)
-    parser.add_argument("--ledger", type=Path, default=DEFAULT_LEDGER)
-    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     args = parser.parse_args()
     try:
         report = build_allowlist(
             args.repo_root,
             expected_base_sha=args.expected_base_sha,
             requested_task_id=args.task_id,
-            ledger_path=args.ledger,
-            policy_path=args.policy,
         )
     except AllowlistError as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
