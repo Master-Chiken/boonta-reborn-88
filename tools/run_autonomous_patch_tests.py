@@ -62,13 +62,15 @@ def run_test_ids(
 ) -> dict[str, Any]:
     if not isinstance(test_ids, list) or not 1 <= len(test_ids) <= MAX_TESTS:
         raise TestDispatchError("test_ids must contain between one and six identifiers")
+    if any(not isinstance(item, str) for item in test_ids):
+        raise TestDispatchError("Every test identifier must be a string")
     if len(set(test_ids)) != len(test_ids):
         raise TestDispatchError("Duplicate test identifiers are not allowed")
-    unknown = [item for item in test_ids if not isinstance(item, str) or item not in TEST_REGISTRY]
+    unknown = [item for item in test_ids if item not in TEST_REGISTRY]
     if unknown:
         raise TestDispatchError("Unknown test identifier(s): " + ", ".join(map(str, unknown)))
-    if not 1 <= timeout_seconds <= MAX_TEST_TIMEOUT_SECONDS:
-        raise TestDispatchError("Test timeout must be between one and 120 seconds")
+    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_TEST_TIMEOUT_SECONDS:
+        raise TestDispatchError("Test timeout must be an integer between one and 120 seconds")
 
     root = resolve_checkout(root)
     env = _test_environment()
@@ -77,8 +79,20 @@ def run_test_ids(
     for test_id in test_ids:
         script = TEST_REGISTRY[test_id][0]
         script_path = root / script
-        if not script_path.is_file():
+        if script_path.is_symlink():
+            raise TestDispatchError(f"Registered test script must not be a symlink: {script}")
+        resolved_script = script_path.resolve()
+        try:
+            resolved_script.relative_to(root)
+        except ValueError as exc:
+            raise TestDispatchError(f"Registered test script escapes the checkout: {script}") from exc
+        if not resolved_script.is_file():
             raise TestDispatchError(f"Registered test script is missing: {script}")
+        parent = script_path.parent
+        while parent != root:
+            if parent.is_symlink():
+                raise TestDispatchError(f"Registered test script has a symlink parent: {script}")
+            parent = parent.parent
         started = time.monotonic()
         try:
             completed = subprocess.run(
