@@ -95,7 +95,7 @@ python3 tools/run_autonomous_patch_tests.py \
   --test-id automation.task_ledger
 ```
 
-The model may choose only IDs present in the registry. It cannot pass test arguments or commands.
+The model may choose only IDs present in the registry. It cannot pass test arguments or commands. The runner uses argv execution without a shell, strips GitHub/provider secret variables from child environments, caps each test at 120 seconds, and stops after the first failure. Registered scripts and the validator/dispatcher themselves are protected from model-authored patches. No GameCube test ID is offered until a stable, bounded host-test command is confirmed.
 
 ## Not implemented yet
 
