@@ -10,6 +10,7 @@ from pathlib import Path
 
 from autonomous_patch_proposal import (
     ProposalError,
+    load_allowlist_report,
     load_proposal,
     validate_diff_paths,
     validate_or_apply,
@@ -221,6 +222,66 @@ class ProposalValidationTests(PatchFixture):
             ])
         with self.assertRaisesRegex(ProposalError, "five-file safety limit"):
             validate_diff_paths("\n".join(sections) + "\n", allowed)
+
+    def test_allowlist_report_must_match_task_and_base(self):
+        report_path = self.root / "allowlist-report.json"
+        report = {
+            "status": "READY",
+            "task_id": TASK_ID,
+            "base_sha": self.base_sha,
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+            "purpose": "Fixture approved path",
+            "allowed_paths": ["gamecube-demo/source/main.c"],
+        }
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        self.assertEqual(
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha=self.base_sha),
+            {"gamecube-demo/source/main.c"},
+        )
+        with self.assertRaisesRegex(ProposalError, "task ID"):
+            load_allowlist_report(report_path, expected_task_id="AUTOMATION-OTHER-TASK", expected_base_sha=self.base_sha)
+        with self.assertRaisesRegex(ProposalError, "base SHA"):
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha="0" * 40)
+
+    def test_non_ready_allowlist_report_never_authorizes_paths(self):
+        report_path = self.root / "allowlist-report.json"
+        report = {
+            "status": "NO_ACTIVE_TASK",
+            "task_id": TASK_ID,
+            "base_sha": self.base_sha,
+            "approval_ref": "",
+            "purpose": "No task active",
+            "allowed_paths": [],
+        }
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(ProposalError, "not READY"):
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha=self.base_sha)
+
+    def test_allowlist_report_rejects_protected_and_duplicate_paths(self):
+        report_path = self.root / "allowlist-report.json"
+        report = {
+            "status": "READY",
+            "task_id": TASK_ID,
+            "base_sha": self.base_sha,
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+            "purpose": "Fixture approved path",
+            "allowed_paths": [".github/workflows/unsafe.yml"],
+        }
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(ProposalError, "protected"):
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha=self.base_sha)
+        report["allowed_paths"] = ["gamecube-demo/source/main.c"] * 2
+        report_path.write_text(json.dumps(report), encoding="utf-8")
+        with self.assertRaisesRegex(ProposalError, "duplicate"):
+            load_allowlist_report(report_path, expected_task_id=TASK_ID, expected_base_sha=self.base_sha)
+
+    def test_allowlist_report_rejects_symlink(self):
+        target = self.root / "real-report.json"
+        target.write_text("{}", encoding="utf-8")
+        link = self.root / "linked-report.json"
+        link.symlink_to(target)
+        with self.assertRaisesRegex(ProposalError, "must not be a symlink"):
+            load_allowlist_report(link, expected_task_id=TASK_ID, expected_base_sha=self.base_sha)
 
     def test_duplicate_json_properties_are_rejected(self):
         file = self.root / "proposal.json"
