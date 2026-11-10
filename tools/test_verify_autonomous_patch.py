@@ -154,7 +154,7 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         data = base64.b64decode(file_entry["content_base64"], validate=True)
         self.assertEqual(data.decode("utf-8"), "int boonta(void) {\n    return 7;\n}\n")
         self.assertEqual(hashlib.sha256(data).hexdigest(), file_entry["content_sha256"])
-        expected_git_blob = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\\0" + data).hexdigest()
+        expected_git_blob = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
         self.assertEqual(expected_git_blob, file_entry["result_blob_sha"])
         self.assertIn(file_entry["mode"], {"100644", "100755"})
         self.assert_source_checkout_untouched()
