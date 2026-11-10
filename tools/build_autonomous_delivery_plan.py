@@ -7,6 +7,8 @@ access, push, call GitHub APIs, or merge pull requests.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import re
 import subprocess
@@ -23,7 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 LEDGER_SUMMARY = Path("docs/automation/task-ledger-summary.json")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
-MAX_REPORT_BYTES = 32 * 1024
+MAX_REPORT_BYTES = 512 * 1024
+MAX_BUNDLE_FILE_BYTES = 128 * 1024
+MAX_BUNDLE_TOTAL_BYTES = 256 * 1024
 
 
 class DeliveryPlanError(ValueError):
@@ -140,7 +144,7 @@ def build_delivery_plan(
     report = _load_report(verified_report_path)
     expected_fields = {
         "status", "task_id", "base_sha", "summary", "changed_paths",
-        "requested_test_ids", "executed_test_ids", "test_report",
+        "requested_test_ids", "executed_test_ids", "test_report", "delivery_bundle",
         "isolated_worktree", "source_checkout_modified", "commit_created",
         "branch_created", "network_accessed",
     }
@@ -217,6 +221,90 @@ def build_delivery_plan(
     if result_ids != executed:
         raise DeliveryPlanError("Test results do not match the exact executed test-ID list")
 
+    delivery_bundle = report.get("delivery_bundle")
+    if (
+        not isinstance(delivery_bundle, list)
+        or len(delivery_bundle) != len(changed_paths)
+        or not delivery_bundle
+        or len(delivery_bundle) > 5
+    ):
+        raise DeliveryPlanError("Verified delivery bundle must contain exactly one entry per changed path")
+    bundle_paths: list[str] = []
+    normalized_bundle: list[dict[str, Any]] = []
+    total_bundle_bytes = 0
+    for entry in delivery_bundle:
+        required_bundle_fields = {
+            "path", "mode", "base_blob_sha", "result_blob_sha",
+            "content_sha256", "content_base64",
+        }
+        if not isinstance(entry, dict) or set(entry) != required_bundle_fields:
+            raise DeliveryPlanError("Delivery bundle entry does not match the exact file contract")
+        path = entry["path"]
+        if not isinstance(path, str) or path not in allowed_paths:
+            raise DeliveryPlanError("Delivery bundle path exceeds the owner-approved exact-path scope")
+        bundle_paths.append(path)
+        mode = entry["mode"]
+        if mode not in {"100644", "100755"}:
+            raise DeliveryPlanError(f"Delivery bundle mode is not a regular file mode: {path}")
+        base_blob_sha = entry["base_blob_sha"]
+        result_blob_sha = entry["result_blob_sha"]
+        if (
+            not isinstance(base_blob_sha, str) or not SHA_RE.fullmatch(base_blob_sha)
+            or not isinstance(result_blob_sha, str) or not SHA_RE.fullmatch(result_blob_sha)
+        ):
+            raise DeliveryPlanError(f"Delivery bundle Git blob SHA is invalid: {path}")
+        sha256 = entry["content_sha256"]
+        if not isinstance(sha256, str) or not re.fullmatch(r"^[0-9a-f]{64}$", sha256):
+            raise DeliveryPlanError(f"Delivery bundle SHA-256 is invalid: {path}")
+        encoded = entry["content_base64"]
+        if not isinstance(encoded, str) or len(encoded) > ((MAX_BUNDLE_FILE_BYTES + 2) // 3) * 4:
+            raise DeliveryPlanError(f"Delivery bundle content is missing or oversized: {path}")
+        try:
+            data = base64.b64decode(encoded, validate=True)
+            data.decode("utf-8", errors="strict")
+        except (ValueError, UnicodeError) as exc:
+            raise DeliveryPlanError(f"Delivery bundle content is not valid base64 UTF-8: {path}") from exc
+        if len(data) > MAX_BUNDLE_FILE_BYTES:
+            raise DeliveryPlanError(f"Delivery bundle file exceeds 128 KiB: {path}")
+        total_bundle_bytes += len(data)
+        if total_bundle_bytes > MAX_BUNDLE_TOTAL_BYTES:
+            raise DeliveryPlanError("Delivery bundle exceeds the 256 KiB aggregate limit")
+        if hashlib.sha256(data).hexdigest() != sha256:
+            raise DeliveryPlanError(f"Delivery bundle SHA-256 does not match its file content: {path}")
+        git_blob_sha = hashlib.sha1(
+            b"blob " + str(len(data)).encode("ascii") + b"\\0" + data
+        ).hexdigest()
+        if git_blob_sha != result_blob_sha:
+            raise DeliveryPlanError(f"Delivery bundle Git blob SHA does not match its file content: {path}")
+        tracked = subprocess.run(
+            ["git", "ls-files", "-s", "--", path],
+            cwd=root, stdin=subprocess.DEVNULL, text=True,
+            capture_output=True, check=False,
+        )
+        entries = [line for line in tracked.stdout.splitlines() if line.strip()]
+        if tracked.returncode != 0 or len(entries) != 1:
+            raise DeliveryPlanError(f"Delivery bundle base path is not one tracked file: {path}")
+        indexed_fields = entries[0].split()
+        if indexed_fields[0] != mode:
+            raise DeliveryPlanError(f"Delivery bundle mode differs from the base Git index: {path}")
+        actual_base_blob = subprocess.run(
+            ["git", "rev-parse", f"{expected_base_sha}:{path}"],
+            cwd=root, stdin=subprocess.DEVNULL, text=True,
+            capture_output=True, check=False,
+        )
+        if actual_base_blob.returncode != 0 or actual_base_blob.stdout.strip() != base_blob_sha:
+            raise DeliveryPlanError(f"Delivery bundle base blob SHA is stale or incorrect: {path}")
+        normalized_bundle.append({
+            "path": path,
+            "mode": mode,
+            "base_blob_sha": base_blob_sha,
+            "result_blob_sha": result_blob_sha,
+            "content_sha256": sha256,
+            "content_base64": encoded,
+        })
+    if bundle_paths != sorted(changed_paths) or len(set(bundle_paths)) != len(bundle_paths):
+        raise DeliveryPlanError("Delivery bundle paths do not exactly match the sorted changed_paths list")
+
     task = _load_canonical_task(root, expected_task_id)
     target_branch = task["target_branch"]
     branch_name = f"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}"
@@ -259,6 +347,7 @@ def build_delivery_plan(
         "pr_title": pr_title,
         "pr_body": pr_body,
         "changed_paths": sorted(changed_paths),
+        "delivery_bundle": normalized_bundle,
         "executed_test_ids": executed,
         "remote_write_performed": False,
         "commit_created": False,
