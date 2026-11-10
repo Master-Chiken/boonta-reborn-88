@@ -362,10 +362,10 @@ jobs:
           - The global preflight already completed the exact task reservation and open-PR duplicate check. Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.
           - Use at most four tool calls: optionally read one directly relevant implementation/test file; create one branch from selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
           - No PR search/readback. Use create_pull_request result URL/head_sha; the shared report validator re-fetches the live PR and checks markers, base, current head and CI.
-          - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
+          - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone lines BOONTA_TASK_ID: <exact selected task ID> and BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           
           FINAL REPORT
-          - NO PROSE OR MARKDOWN FENCES. Output only machine-readable lines; copy the exact reserved task ID and evidence base appended below.
+          - The shell appends the exact reserved task ID and target branch below. NO PROSE OR MARKDOWN FENCES. Output only machine-readable lines; copy the exact reserved task ID and evidence base appended below.
           - Choose one status. BLOCKED omits evidence and includes one BOONTA_CYCLE_BLOCKER plus one BOONTA_CYCLE_NEXT_ACTION.
           - PROGRESS uses the new same-repository PR URL and exact head_sha from create_pull_request. Never guess or report planned work.
           PROMPT
