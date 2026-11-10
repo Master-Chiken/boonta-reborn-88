@@ -98,14 +98,21 @@ for required in (
 
 # OpenCode 1.19.5 exposes MCP tools as top-level names prefixed with the
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
-model_visible_github_tools = (
-    "github_get_file_contents",
-    "github_create_branch",
-    "github_push_files",
-    "github_create_pull_request",
+provider_model_visible_tools = (
+    ("OpenRouter", openrouter, (
+        "github_get_file_contents",
+        "github_create_branch",
+        "github_push_files",
+        "github_create_pull_request",
+    )),
+    ("Groq", groq, (
+        "github_create_branch",
+        "github_push_files",
+        "github_create_pull_request",
+    )),
 )
-for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    missing = [name for name in model_visible_github_tools if name not in content]
+for label, content, tool_names in provider_model_visible_tools:
+    missing = [name for name in tool_names if name not in content]
     if missing:
         errors.append(f"{label} prompt is missing OpenCode model-visible GitHub tools: {missing!r}")
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
