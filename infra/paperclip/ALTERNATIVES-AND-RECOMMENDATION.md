@@ -1,6 +1,6 @@
 # Open-source automation alternatives — Boonta Reborn
 
-**Research date:** 2026-11-10  
+**Research date:** 2026-11-11  
 **Decision:** keep GitHub Actions as the only cloud scheduler, keep Paperclip optional and local, and evaluate Goose or Aider only as optional Mac-side workers. Do not add a second scheduler or a new server stack.
 
 This review is about the orchestration and coding-agent layer. These projects do not provide a guaranteed free inference quota. A local agent can avoid per-request API charges only when it is configured with a local model (for example Ollama); that moves the cost to the Mac's hardware, electricity and execution time, and model quality depends on the available hardware.
@@ -53,3 +53,78 @@ The open PR [#384](https://github.com/Master-Chiken/boonta-reborn-88/pull/384) a
 - LangGraph durable execution and checkpointing: https://github.com/langchain-ai/langgraph
 - Kestra orchestration capabilities: https://github.com/kestra-io/kestra
 - n8n licence FAQ: https://support.n8n.io/article/can-i-use-your-license-for-my-use-case
+
+
+## Additional candidates checked — 2026-11-11
+
+The first comparison focused on Paperclip, Goose and Aider. These additional tools solve different parts of the failure chain; they should not all be installed.
+
+| Project | Newly verified capability | What it could solve | Decision |
+|---|---|---|---|
+| [OpenCode SDK](https://docs.opencode.ai/docs/sdk/) | Typed JavaScript/TypeScript client for the OpenCode server. Its API exposes sessions, child sessions, status, diffs, abort and permission operations. OpenCode also supports primary agents, subagents and per-agent tool permissions. | Better programmatic control and observability around the OpenCode runtime already used by the OpenRouter/Groq path. A controller could inspect the session and capture diffs rather than depending on free-form final prose. | **Best low-disruption technical spike.** Do not replace the existing CLI workflow until a small fixture proves the SDK provides reliable completion and failure semantics. It does not fix a model that emits malformed tool-call arguments and does not provide inference quota. |
+| [OpenHands Software Agent SDK](https://github.com/OpenHands/software-agent-sdk) | Python, TypeScript and REST APIs for coding agents; supports local workspaces or ephemeral Docker/Kubernetes workspaces and publishes GitHub workflow examples. | Could replace part of the custom agent execution layer with a purpose-built coding-agent SDK and isolated workspaces. | Keep as a comparison candidate, not a new dependency. It still needs a model/provider and introduces another runtime and sandbox to maintain. |
+| [Dagger](https://github.com/dagger/dagger) | Sandboxed, incremental execution with content-based caching, typed artifacts and detailed traces; can run locally or in CI when a container runtime is available. | More actionable build/test feedback and less repeated test work after agent edits. | Useful as a future **verification layer**, not an agent or scheduler. First compare its value against the existing Make/Python/GitHub Actions checks; do not add Docker/Dagger just for decoration. |
+| [Restate](https://github.com/restatedev/restate) / [Temporal](https://docs.temporal.io/) | Durable execution, persisted workflow state, timers and targeted retry of failed activities. | Long-running orchestration that resumes after worker or process failure without replaying completed steps. | Technically relevant but operationally disproportionate here: it adds a service/worker deployment while GitHub Actions already provides scheduling, run history and serialized jobs. Revisit only if the repository outgrows Actions. |
+| [Ollama structured outputs](https://github.com/ollama/ollama/blob/main/docs/api.md) | Local inference API supports JSON-schema-constrained structured responses. | Can make a locally generated final report conform to a schema, instead of relying on prose. | Useful in a local model experiment. **Do not confuse structured final output with valid native tool calls**; tool-call compatibility still needs its own tests. |
+
+## Newly identified repository-level blockers
+
+A fresh read of `docs/automation/task-ledger.json` on `main` (updated 2026-11-10) found 11 total task records:
+
+- 9 `completed`
+- 2 `blocked`
+- 0 `queued`
+- 0 `active`
+- 0 `in_review`
+
+The two blocked tasks are `AUTOMATION-LEDGER-ACTIVATION` and `N64-COMPWOLF-PUPP-T2-PARSE-PROBE`. Consequently, **a successful provider invocation alone will not create a continuing game-development queue**. After the activation task is closed, the scheduler has no pre-approved queued task to select unless the canonical ledger is deliberately replenished.
+
+Required queue-liveness improvement:
+
+1. Keep task selection deterministic and fail closed when no task is eligible; never ask a model to invent a task ID or silently activate a blocked task.
+2. Prepare a small, ranked backlog from already-approved project roadmap/research evidence, with a task ID, one bounded question, platform scope, acceptance criteria, test plan and exact source links for each candidate.
+3. Have the repository owner approve those candidates before adding them as `queued` records to the canonical ledger. Do not mark a candidate active merely to make a provider run.
+4. Add a queue-health test that fails or emits a clear `EMPTY_QUEUE` state when there are no queued/active tasks and the activation bootstrap is no longer eligible.
+5. After each merged PR, reconcile the exact task and automatically promote at most one already-approved queued task. Completion still requires a merged PR and exact-head evidence.
+
+## Cross-runtime locking — a non-negotiable gap
+
+The Actions concurrency group serializes GitHub Actions jobs; it is not a distributed lock shared with a local Paperclip, Goose, Aider or OpenCode process on the Mac. A local agent cannot assume that the cloud writer is idle just because its own local process is the only local agent.
+
+Until a real cross-runtime lease protocol is implemented and tested:
+
+- Keep Paperclip routines disabled.
+- Keep any local coding agent read-only, or let it prepare a local patch without pushing it.
+- Let GitHub Actions remain the only process that writes branches and opens PRs.
+- Do not register the Mac as a persistent self-hosted runner for this public repository. GitHub explicitly warns that self-hosted runners can be compromised by untrusted pull-request code.
+- A future lease must have atomic acquisition, a task ID, base SHA, owner/run identity, expiry/heartbeat, stale-lease recovery and compare-and-swap release tests. A plain issue comment or local file lock is not an atomic repository-wide lease.
+
+## Failure-specific improvements (not just another agent framework)
+
+| Observed failure | Practical fix | Guardrail |
+|---|---|---|
+| Gemini `TypeError: fetch failed sending request` | Separate provider reachability/credential preflight from inference; capture sanitized transport phase, HTTP status and request ID where available. | Never blindly replay an inference POST after an ambiguous network failure: the provider may have received it and charged/consumed free quota. Keep the provider cooldown until the next eligible UTC day. |
+| OpenRouter agent exhausted its tool-step budget without a valid task report | Keep direct task context preloaded and deterministic branch/patch/PR operations bounded. Capture branch, commit, PR number and exact head SHA from tool/API results, then assemble the machine report from those facts. | Do not let the model self-certify progress with prose. |
+| Groq/OpenCode tool-call arguments were malformed | Qualify each provider/model combination with a tiny synthetic tool-call contract test before allowing it into the autonomous allowlist. Record model ID and result; disable only the failing model route until requalified. | A model being labelled Free does not prove reliable function calling. No fallback to a paid model. |
+| Model invocation succeeds but there is no next task | Add the owner-approved queue-seeding process above and an explicit `EMPTY_QUEUE` state. | Never invent backlog or turn blocked owner-only work into active work. |
+| Local and cloud agents could write at the same time | Keep local agents read-only until a shared lease is proven; retain GitHub Actions as sole writer. | A GitHub Actions concurrency key does not lock an external Mac process. |
+
+## Updated recommendation
+
+1. **Keep the current architecture for now:** GitHub Actions is the single cloud scheduler; GitHub task ledger is the source of truth; Paperclip remains an optional local dashboard.
+2. **Do not install every candidate.** The next worthwhile engineering spike is OpenCode SDK session/result capture because OpenCode is already in the provider path. Build it in a throwaway fixture or isolated branch first.
+3. **Do not add a self-hosted runner.** It adds public-repository security exposure and is unnecessary for the current workflow.
+4. **Do not add Temporal/Restate/Kestra yet.** The observed problems are provider transport/tool-call reliability and an empty task queue, not a lack of a general-purpose scheduler.
+5. **Prepare approved game tasks before claiming ongoing autonomy.** A stable scheduler with no queued work is healthy but idle; it is not a continuously productive game-development system.
+
+## Additional official references
+
+- OpenCode agents and subagent permissions: https://opencode.ai/docs/agents/
+- OpenCode SDK and typed session APIs: https://docs.opencode.ai/docs/sdk/
+- OpenHands Software Agent SDK and GitHub workflow examples: https://github.com/OpenHands/software-agent-sdk
+- Dagger execution, cache and tracing: https://docs.dagger.io/getting-started/introduction/
+- Goose Development Kit persisted-state resume: https://goose-docs.ai/docs/gdk/
+- Ollama structured outputs and API: https://github.com/ollama/ollama/blob/main/docs/api.md
+- GitHub guidance on self-hosted-runner security: https://docs.github.com/en/actions/reference/security/secure-use
+- Temporal retry policies: https://docs.temporal.io/encyclopedia/retry-policies
+- Restate durable execution: https://github.com/restatedev/restate
