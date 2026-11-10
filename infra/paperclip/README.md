@@ -69,6 +69,10 @@ Because the Mac is not guaranteed to stay awake, retain GitHub Actions as the on
 
 If Paperclip fails or is unavailable, stop using it and keep the existing GitHub Actions cloud schedule. Paperclip's local data lives under `~/.paperclip/`; back it up before reinstalling or changing versions. No GitHub automation or game source files depend on a running Paperclip instance.
 
+## 7. Other free and open-source options
+
+A short comparison of Goose, Aider, LangGraph, Kestra and n8n—and why the current design keeps GitHub Actions as the only cloud scheduler—is in [ALTERNATIVES-AND-RECOMMENDATION.md](ALTERNATIVES-AND-RECOMMENDATION.md). The recommended optional local worker to test first is Goose or Aider with Ollama, but only on the existing Mac, only after checking hardware capacity, and only under the same exclusive one-writer rule. This is not required for the cloud workflow and does not bypass provider Free-tier gates.
+
 ## References
 
 - Paperclip upstream: https://github.com/paperclipai/paperclip
