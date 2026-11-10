@@ -75,3 +75,7 @@ A compatible N64 ROM must remain a local user-provided test input. Do not place 
 - [PC technical map](PC_TECHNICAL_MAP.md) and [PC-first research plan](PC_FIRST_RESEARCH_PLAN.md) — subsystem map, external tooling, and a research-before-port workflow.
 - [Version comparison matrix](VERSION_COMPARISON_MATRIX.md) and [cross-platform reference matrix](CROSS_PLATFORM_REFERENCE_MATRIX.md) — keep PC, Dreamcast, N64, and GameCube/Wii assumptions separate and testable.
 - [Step 102 archive audit](STEP102_IMPORT_AUDIT.md) and [handoff/access boundaries](STEP102_HANDOFF_AND_ACCESS.md) — audit of the larger 359-file archive, distinct from the separate 123-file source-only bundle; both remain subject to provenance and redistribution review.
+
+## Additional external reuse leads — 2026-11-10
+
+- [Additional reuse leads: Wind Waker GameCube SDK/JSystem reference, devkitPro GX texture conversion, OpenSWE1R scope, and Galactic Racer design benchmark](research/RE-001-ADDITIONAL-REUSE-LEADS-2026-11-10.md) — exact revisions, licence/provenance boundaries, target-platform limits and ranked follow-up actions. No code or game assets imported.
