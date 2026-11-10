@@ -70,6 +70,17 @@
         "parts_and_condition"
       ],
       "confidence": "reference_only"
+    },
+    {
+      "id": "SRC-NEOSEEKER-PART-CATALOG",
+      "url": "https://www.neoseeker.com/episode1racer/faqs/84525-racer-e.html",
+      "kind": "community_gameplay_faq",
+      "supports": [
+        "six_part_names_per_upgrade_category",
+        "example_part_prices",
+        "racer_stat_bar_descriptions"
+      ],
+      "confidence": "reference_only"
     }
   ],
   "worlds": [
@@ -141,7 +152,9 @@
       "order": 1,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-SEBULBA",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-MON-GAZZA-SPEEDWAY",
@@ -151,7 +164,9 @@
       "order": 2,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-TEEMTO-PAGALIES",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-BEEDOS-WILD-RIDE",
@@ -161,7 +176,9 @@
       "order": 3,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-ALDAR-BEEDO",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-AQUILARIS-CLASSIC",
@@ -171,7 +188,9 @@
       "order": 4,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-CLEGG-HOLDFAST",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-MALASTARE-100",
@@ -181,7 +200,9 @@
       "order": 5,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-DUD-BOLT",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-VENGEANCE",
@@ -191,7 +212,9 @@
       "order": 6,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-FUD-SANG",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-SPICE-MINE-RUN",
@@ -201,7 +224,9 @@
       "order": 7,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-MARS-GUO",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-SUNKEN-CITY",
@@ -211,7 +236,9 @@
       "order": 1,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-BULLSEYE-NAVIOR",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-HOWLER-GORGE",
@@ -221,7 +248,9 @@
       "order": 2,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-RATTS-TYERELL",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-DUG-DERBY",
@@ -231,7 +260,9 @@
       "order": 3,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-ELAN-MAK",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-SCRAPPERS-RUN",
@@ -241,7 +272,9 @@
       "order": 4,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-WAN-SANDAGE",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-ZUGGA-CHALLENGE",
@@ -251,7 +284,9 @@
       "order": 5,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-BOLES-ROOR",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-BAROO-COAST",
@@ -261,7 +296,9 @@
       "order": 6,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-NEVA-KEE",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-BUMPYS-BREAKERS",
@@ -271,7 +308,9 @@
       "order": 7,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-ARK-ROOSE",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-EXECUTIONER",
@@ -281,7 +320,9 @@
       "order": 1,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-TOY-DAMPNER",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-SEBULBAS-LEGACY",
@@ -291,7 +332,9 @@
       "order": 2,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-SEBULBA",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-GRABVINE-GATEWAY",
@@ -301,7 +344,9 @@
       "order": 3,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-ANAKIN",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-ANDOBI-MOUNTAIN-RUN",
@@ -311,7 +356,9 @@
       "order": 4,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-MAWHONIC",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-DETHROS-REVENGE",
@@ -321,7 +368,9 @@
       "order": 5,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-ODY-MANDRELL",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-FIRE-MOUNTAIN-RALLY",
@@ -331,7 +380,9 @@
       "order": 6,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-EBE-ENDOCOTT",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-BOONTA-CLASSIC",
@@ -341,7 +392,9 @@
       "order": 7,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-SEBULBA",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-ANDO-PRIME-CENTRUM",
@@ -351,7 +404,9 @@
       "order": 1,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-SLIDE-PARAMITA",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-ABYSS",
@@ -361,7 +416,9 @@
       "order": 2,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-BOZZIE-BARANTA",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-THE-GAUNTLET",
@@ -371,7 +428,9 @@
       "order": 3,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-GASGANO",
+      "featured_racer_reference": "community tournament listing; reference only"
     },
     {
       "id": "TRK-INFERNO",
@@ -381,7 +440,9 @@
       "order": 4,
       "reference_scope": "multi-platform community catalogue; target GameCube/Wii verification pending",
       "asset_status": "metadata_only",
-      "route_graph_status": "not_created"
+      "route_graph_status": "not_created",
+      "featured_racer_id": "PILOT-BEN-QUADINAROS",
+      "featured_racer_reference": "community tournament listing; reference only"
     }
   ],
   "racers": [
@@ -930,6 +991,161 @@
       "one small source-authored texture",
       "procedural environment and three simple rivals",
       "no full course catalogue, pilot roster, pod fleet, menus, garage, upgrade system, save system or integrated audio"
+    ]
+  },
+  "parts_catalogue_by_stat": [
+    {
+      "stat_id": "STAT-TRACTION",
+      "parts": [
+        "R-20 Repulsorgrip",
+        "R-60 Repulsorgrip",
+        "R-80 Repulsorgrip",
+        "R-100 Repulsorgrip",
+        "R-300 Repulsorgrip",
+        "R-600 Repulsorgrip"
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-TURNING",
+      "parts": [
+        "Control Linkage",
+        "Control Shiftplate",
+        "Control Vectrojet",
+        "Control Coupling",
+        "Control Nozzle",
+        "Control Stabilizer"
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-ACCELERATION",
+      "parts": [
+        "Dual 20-PCX Injector",
+        "44-PCX Injector",
+        "Dual 33-PCX Injector",
+        "Quad 32 PCX Injector",
+        "Quad 44 PCX Injector",
+        "MAG-6 Injector"
+      ],
+      "name_variants": [
+        {
+          "part": "Dual 33-PCX Injector",
+          "variant": "Dual 32 PCX Injector",
+          "source": "Wookieepedia list",
+          "status": "unresolved source discrepancy"
+        }
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-TOP-SPEED",
+      "parts": [
+        "Plug2 Thrust Coil",
+        "Plug3 Thrust Coil 50",
+        "Plug5 Thrust Coil 100",
+        "Plug8 Thrust Coil 300",
+        "Block5 Thrust Coil",
+        "Block6 Thrust Coil2"
+      ],
+      "name_variants": [
+        {
+          "part": "Block6 Thrust Coil2",
+          "variant": "Block6 Thrust Coil",
+          "source": "Wookieepedia / upgrade guides",
+          "status": "unresolved naming variant"
+        }
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-AIR-BRAKE",
+      "parts": [
+        "Mark II Air Brake",
+        "Mark III Air Brake",
+        "Mark IV Air Brake",
+        "Mark V Air Brake",
+        "Tri-jet Air Brake",
+        "Quad-jet Air Brake"
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-COOLING",
+      "parts": [
+        "Coolant Radiator",
+        "Stack3 Radiator",
+        "Stack6 Radiator",
+        "Rod Coolant Pump",
+        "Dual Coolant Pump",
+        "Turbo Coolant Pump"
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    },
+    {
+      "stat_id": "STAT-REPAIR",
+      "parts": [
+        "Single Powercell",
+        "Dual Powercell",
+        "Quad Powercell",
+        "Cluster Power Plug",
+        "Rotary Power Plug",
+        "Cluster2 Power Plug"
+      ],
+      "name_variants": [
+        {
+          "part": "Single Powercell",
+          "variant": "Single Power Cell",
+          "source": "Wookieepedia list",
+          "status": "capitalisation/spacing variant"
+        }
+      ],
+      "source_ids": [
+        "SRC-NEOSEEKER-PART-CATALOG",
+        "SRC-WOOKIEPEDIA"
+      ],
+      "version_scope": "reference version not pinned; verify against exact local platform/revision"
+    }
+  ],
+  "parts_catalogue_note": "The public FAQ lists six items for each of the seven upgrade categories. Names are transcribed as reference metadata only; prices are not normalized because some guides display a dollar sign while other material refers to Truguts. Do not treat those prices as canonical target-version values.",
+  "racer_stat_reference": {
+    "stat_ids": [
+      "STAT-TRACTION",
+      "STAT-TURNING",
+      "STAT-ACCELERATION",
+      "STAT-TOP-SPEED",
+      "STAT-AIR-BRAKE",
+      "STAT-COOLING",
+      "STAT-REPAIR"
+    ],
+    "note": "Public guides contain racer stat bars/figures, but they are version/community reference data and have not been normalized into gameplay tuning values. Keep the original clean-room Boonta physics profiles separate until exact version and semantics are verified.",
+    "source_ids": [
+      "SRC-NEOSEEKER-PART-CATALOG",
+      "SRC-SPEEDRUN-UPGRADES"
     ]
   }
 }
