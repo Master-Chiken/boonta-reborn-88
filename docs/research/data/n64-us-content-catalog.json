@@ -15003,5 +15003,1189 @@
       "confidence": "HYPOTHESIS",
       "reason": "One unresolved Malastare track and one generic N64 Malastare track alias; the exact name is unavailable."
     }
-  ]
+  ],
+  "contentSubsystemGroups": [
+    {
+      "key": "racer-lod1",
+      "label": "Racer level-of-detail 1",
+      "count": 25,
+      "items": [
+        {
+          "index": 250,
+          "valueId": 255,
+          "name": "Part_Racer_Lod1_Sebulba"
+        },
+        {
+          "index": 251,
+          "valueId": 256,
+          "name": "Part_Racer_Lod1_Anakin_Skywalker"
+        },
+        {
+          "index": 252,
+          "valueId": 257,
+          "name": "Part_Racer_Lod1_Teemto_Pagalies"
+        },
+        {
+          "index": 253,
+          "valueId": 258,
+          "name": "Part_Racer_Lod1_Ratts_Tyerell"
+        },
+        {
+          "index": 254,
+          "valueId": 259,
+          "name": "Part_Racer_Lod1_Aldar_Beedo"
+        },
+        {
+          "index": 255,
+          "valueId": 260,
+          "name": "Part_Racer_Lod1_Mawhonic"
+        },
+        {
+          "index": 256,
+          "valueId": 261,
+          "name": "Part_Racer_Lod1_Ark_Roose"
+        },
+        {
+          "index": 257,
+          "valueId": 262,
+          "name": "Part_Racer_Lod1_Wan_Sandage"
+        },
+        {
+          "index": 258,
+          "valueId": 263,
+          "name": "Part_Racer_Lod1_Mars_Guo"
+        },
+        {
+          "index": 259,
+          "valueId": 264,
+          "name": "Part_Racer_Lod1_Ebe_E_Endocott"
+        },
+        {
+          "index": 260,
+          "valueId": 265,
+          "name": "Part_Racer_Lod1_Dud_Bolt"
+        },
+        {
+          "index": 261,
+          "valueId": 266,
+          "name": "Part_Racer_Lod1_Gasgano"
+        },
+        {
+          "index": 262,
+          "valueId": 267,
+          "name": "Part_Racer_Lod1_Clegg_Holdfast"
+        },
+        {
+          "index": 263,
+          "valueId": 268,
+          "name": "Part_Racer_Lod1_Elan_Mak"
+        },
+        {
+          "index": 264,
+          "valueId": 269,
+          "name": "Part_Racer_Lod1_Neva_Kee"
+        },
+        {
+          "index": 265,
+          "valueId": 270,
+          "name": "Part_Racer_Lod1_Bozzie_Baranta"
+        },
+        {
+          "index": 266,
+          "valueId": 271,
+          "name": "Part_Racer_Lod1_Boles_Roor"
+        },
+        {
+          "index": 267,
+          "valueId": 272,
+          "name": "Part_Racer_Lod1_Ody_Mandrell"
+        },
+        {
+          "index": 268,
+          "valueId": 273,
+          "name": "Part_Racer_Lod1_Fud_Sang"
+        },
+        {
+          "index": 269,
+          "valueId": 274,
+          "name": "Part_Racer_Lod1_Ben_Quadinaros"
+        },
+        {
+          "index": 270,
+          "valueId": 275,
+          "name": "Part_Racer_Lod1_Slide_Paramita"
+        },
+        {
+          "index": 271,
+          "valueId": 276,
+          "name": "Part_Racer_Lod1_Toy_Dampner"
+        },
+        {
+          "index": 272,
+          "valueId": 277,
+          "name": "Part_Racer_Lod1_Navior"
+        },
+        {
+          "index": 286,
+          "valueId": 1286,
+          "name": "Part_Racer_Lod1_Jinn_Reeso"
+        },
+        {
+          "index": 287,
+          "valueId": 1287,
+          "name": "Part_Racer_Lod1_Cy_Yunga"
+        }
+      ],
+      "note": "One metadata entry per racer including bonus racers."
+    },
+    {
+      "key": "racer-lod2",
+      "label": "Racer level-of-detail 2",
+      "count": 23,
+      "items": [
+        {
+          "index": 202,
+          "valueId": 207,
+          "name": "Part_Racer_Lod2_Aldar_Beedo"
+        },
+        {
+          "index": 203,
+          "valueId": 208,
+          "name": "Part_Racer_Lod2_Anakin_Skywalker"
+        },
+        {
+          "index": 204,
+          "valueId": 209,
+          "name": "Part_Racer_Lod2_Ben_Quadinaros"
+        },
+        {
+          "index": 205,
+          "valueId": 210,
+          "name": "Part_Racer_Lod2_Boles_Roor"
+        },
+        {
+          "index": 206,
+          "valueId": 211,
+          "name": "Part_Racer_Lod2_Bozzie_Baranta"
+        },
+        {
+          "index": 207,
+          "valueId": 212,
+          "name": "Part_Racer_Lod2_Navior"
+        },
+        {
+          "index": 208,
+          "valueId": 213,
+          "name": "Part_Racer_Lod2_Ark_Roose"
+        },
+        {
+          "index": 209,
+          "valueId": 214,
+          "name": "Part_Racer_Lod2_Clegg_Holdfast"
+        },
+        {
+          "index": 210,
+          "valueId": 215,
+          "name": "Part_Racer_Lod2_Dud_Bolt"
+        },
+        {
+          "index": 211,
+          "valueId": 216,
+          "name": "Part_Racer_Lod2_Ebe_E_Endocott"
+        },
+        {
+          "index": 212,
+          "valueId": 217,
+          "name": "Part_Racer_Lod2_Elan_Mak"
+        },
+        {
+          "index": 213,
+          "valueId": 218,
+          "name": "Part_Racer_Lod2_Fud_Sang"
+        },
+        {
+          "index": 214,
+          "valueId": 219,
+          "name": "Part_Racer_Lod2_Gasgano"
+        },
+        {
+          "index": 215,
+          "valueId": 220,
+          "name": "Part_Racer_Lod2_Ratts_Tyerell"
+        },
+        {
+          "index": 216,
+          "valueId": 221,
+          "name": "Part_Racer_Lod2_Mars_Guo"
+        },
+        {
+          "index": 217,
+          "valueId": 222,
+          "name": "Part_Racer_Lod2_Mawhonic"
+        },
+        {
+          "index": 218,
+          "valueId": 223,
+          "name": "Part_Racer_Lod2_Neva_Kee"
+        },
+        {
+          "index": 219,
+          "valueId": 224,
+          "name": "Part_Racer_Lod2_Ody_Mandrell"
+        },
+        {
+          "index": 220,
+          "valueId": 225,
+          "name": "Part_Racer_Lod2_Sebulba"
+        },
+        {
+          "index": 221,
+          "valueId": 226,
+          "name": "Part_Racer_Lod2_Slide_Paramita"
+        },
+        {
+          "index": 222,
+          "valueId": 227,
+          "name": "Part_Racer_Lod2_Teemto_Pagalies"
+        },
+        {
+          "index": 223,
+          "valueId": 228,
+          "name": "Part_Racer_Lod2_Toy_Dampner"
+        },
+        {
+          "index": 224,
+          "valueId": 229,
+          "name": "Part_Racer_Lod2_Wan_Sandage"
+        }
+      ],
+      "note": "LOD2 is absent from the Racer metadata for Jinn Reeso and Cy Yunga."
+    },
+    {
+      "key": "track-ground",
+      "label": "Track-ground parts",
+      "count": 25,
+      "items": [
+        {
+          "index": 122,
+          "valueId": 122,
+          "name": "Part_TrackGround_AndoPrime_AndoPrimeCentrum"
+        },
+        {
+          "index": 172,
+          "valueId": 177,
+          "name": "Part_TrackGround_AndoPrime_BeedosWildRide"
+        },
+        {
+          "index": 173,
+          "valueId": 178,
+          "name": "Part_TrackGround_AndoPrime_HowlerGorge"
+        },
+        {
+          "index": 174,
+          "valueId": 179,
+          "name": "Part_TrackGround_AndoPrime_AndobiMountainRun"
+        },
+        {
+          "index": 175,
+          "valueId": 180,
+          "name": "Part_TrackGround_Aquilaris_AquilarisClassic"
+        },
+        {
+          "index": 176,
+          "valueId": 181,
+          "name": "Part_TrackGround_Aquilaris_SunkenCity"
+        },
+        {
+          "index": 177,
+          "valueId": 182,
+          "name": "Part_TrackGround_Malastare_Malastare100"
+        },
+        {
+          "index": 178,
+          "valueId": 183,
+          "name": "Part_TrackGround_Malastare_DugDerby"
+        },
+        {
+          "index": 179,
+          "valueId": 184,
+          "name": "Part_TrackGround_Malastare_SebulbasLegacy"
+        },
+        {
+          "index": 180,
+          "valueId": 185,
+          "name": "Part_TrackGround_Aquilaris_BumbysBreakers"
+        },
+        {
+          "index": 181,
+          "valueId": 186,
+          "name": "Part_TrackGround_OrdIbanna_ScrappersRun"
+        },
+        {
+          "index": 182,
+          "valueId": 187,
+          "name": "Part_TrackGround_OrdIbanna_DethrosRevenge"
+        },
+        {
+          "index": 183,
+          "valueId": 188,
+          "name": "Part_TrackGround_OrdIbanna_Abyss"
+        },
+        {
+          "index": 184,
+          "valueId": 189,
+          "name": "Part_TrackGround_MonGazza_Speedway"
+        },
+        {
+          "index": 185,
+          "valueId": 190,
+          "name": "Part_TrackGround_MonGazza_SpiceMineRun"
+        },
+        {
+          "index": 186,
+          "valueId": 191,
+          "name": "Part_TrackGround_Baroonda_Inferno"
+        },
+        {
+          "index": 187,
+          "valueId": 192,
+          "name": "Part_TrackGround_MonGazza_ZuggaChallenge"
+        },
+        {
+          "index": 188,
+          "valueId": 193,
+          "name": "Part_TrackGround_OovoIv_Vengeance"
+        },
+        {
+          "index": 189,
+          "valueId": 194,
+          "name": "Part_TrackGround_OovoIv_Executioner"
+        },
+        {
+          "index": 190,
+          "valueId": 195,
+          "name": "Part_TrackGround_OovoIv_TheGauntlet"
+        },
+        {
+          "index": 231,
+          "valueId": 236,
+          "name": "Part_TrackGround_Baroonda_BarooCoast"
+        },
+        {
+          "index": 244,
+          "valueId": 249,
+          "name": "Part_TrackGround_Baroonda_GrabvineGateway"
+        },
+        {
+          "index": 245,
+          "valueId": 250,
+          "name": "Part_TrackGround_Baroonda_FireMountainRally"
+        },
+        {
+          "index": 274,
+          "valueId": 279,
+          "name": "Part_TrackGround_Tatooine_Training"
+        },
+        {
+          "index": 275,
+          "valueId": 280,
+          "name": "Part_TrackGround_Tatooine_Classic"
+        }
+      ],
+      "note": "One name-matched Part_TrackGround_* record exists for each of the 25 tracks. These are auxiliary parts, not proof that the complete track mesh is contained in this record."
+    },
+    {
+      "key": "upgrade-turning-control",
+      "label": "Turning control",
+      "count": 5,
+      "items": [
+        {
+          "index": 50,
+          "valueId": 50,
+          "name": "Part_Upgrade_Turning_ControlLinkage"
+        },
+        {
+          "index": 51,
+          "valueId": 51,
+          "name": "Part_Upgrade_Turning_ControlShiftPlate"
+        },
+        {
+          "index": 52,
+          "valueId": 52,
+          "name": "Part_Upgrade_Turning_ControlVectroJet"
+        },
+        {
+          "index": 53,
+          "valueId": 53,
+          "name": "Part_Upgrade_Turning_ControlCoupling"
+        },
+        {
+          "index": 54,
+          "valueId": 54,
+          "name": "Part_Upgrade_Turning_ControlNozzle"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-air-brake",
+      "label": "Air brake",
+      "count": 6,
+      "items": [
+        {
+          "index": 152,
+          "valueId": 157,
+          "name": "Part_Upgrade_AirBrake_MarkIIAirBrake"
+        },
+        {
+          "index": 153,
+          "valueId": 158,
+          "name": "Part_Upgrade_AirBrake_MarkIIIAirBrake"
+        },
+        {
+          "index": 154,
+          "valueId": 159,
+          "name": "Part_Upgrade_AirBrake_MarkIVAirBrake"
+        },
+        {
+          "index": 155,
+          "valueId": 160,
+          "name": "Part_Upgrade_AirBrake_MarkVAirBrake"
+        },
+        {
+          "index": 156,
+          "valueId": 161,
+          "name": "Part_Upgrade_AirBrake_TriJetAirBrake"
+        },
+        {
+          "index": 157,
+          "valueId": 162,
+          "name": "Part_Upgrade_AirBrake_QuadrijetAirBrake"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-cooling",
+      "label": "Cooling",
+      "count": 6,
+      "items": [
+        {
+          "index": 158,
+          "valueId": 163,
+          "name": "Part_Upgrade_Cooling_CoolantRadiator"
+        },
+        {
+          "index": 159,
+          "valueId": 164,
+          "name": "Part_Upgrade_Cooling_Stack3Radiator"
+        },
+        {
+          "index": 160,
+          "valueId": 165,
+          "name": "Part_Upgrade_Cooling_Stack6Radiator"
+        },
+        {
+          "index": 161,
+          "valueId": 166,
+          "name": "Part_Upgrade_Cooling_RodCoolantPump"
+        },
+        {
+          "index": 162,
+          "valueId": 167,
+          "name": "Part_Upgrade_Cooling_DualCoolantPump"
+        },
+        {
+          "index": 163,
+          "valueId": 168,
+          "name": "Part_Upgrade_Cooling_TurboCoolantPump"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-top-speed",
+      "label": "Top speed",
+      "count": 6,
+      "items": [
+        {
+          "index": 164,
+          "valueId": 169,
+          "name": "Part_Upgrade_TopSpeed_Plug2ThrustCoil"
+        },
+        {
+          "index": 165,
+          "valueId": 170,
+          "name": "Part_Upgrade_TopSpeed_Plug3ThrustCoil"
+        },
+        {
+          "index": 166,
+          "valueId": 171,
+          "name": "Part_Upgrade_TopSpeed_Plug5ThrustCoil"
+        },
+        {
+          "index": 167,
+          "valueId": 172,
+          "name": "Part_Upgrade_TopSpeed_Plug8ThrustCoil"
+        },
+        {
+          "index": 168,
+          "valueId": 173,
+          "name": "Part_Upgrade_TopSpeed_Block5ThrustCoil"
+        },
+        {
+          "index": 169,
+          "valueId": 174,
+          "name": "Part_Upgrade_TopSpeed_Block6ThrustCoil"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-acceleration",
+      "label": "Acceleration",
+      "count": 6,
+      "items": [
+        {
+          "index": 193,
+          "valueId": 198,
+          "name": "Part_Upgrade_Acceleration_Dual20PcxInjector"
+        },
+        {
+          "index": 194,
+          "valueId": 199,
+          "name": "Part_Upgrade_Acceleration_44PcxInjector"
+        },
+        {
+          "index": 195,
+          "valueId": 200,
+          "name": "Part_Upgrade_Acceleration_Dual32PcxInjector"
+        },
+        {
+          "index": 196,
+          "valueId": 201,
+          "name": "Part_Upgrade_Acceleration_Quad32PcxInjector"
+        },
+        {
+          "index": 197,
+          "valueId": 202,
+          "name": "Part_Upgrade_Acceleration_Quad44PcxInjector"
+        },
+        {
+          "index": 198,
+          "valueId": 203,
+          "name": "Part_Upgrade_Acceleration_Mag6Injector"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-traction",
+      "label": "Traction",
+      "count": 6,
+      "items": [
+        {
+          "index": 199,
+          "valueId": 204,
+          "name": "Part_Upgrade_Traction_R20R60Repulsorgrip"
+        },
+        {
+          "index": 200,
+          "valueId": 204,
+          "name": "Part_Upgrade_Traction_R20R60Repulsorgrip"
+        },
+        {
+          "index": 201,
+          "valueId": 206,
+          "name": "Part_Upgrade_Traction_R80Repulsorgrip"
+        },
+        {
+          "index": 225,
+          "valueId": 230,
+          "name": "Part_Upgrade_Traction_R100Repulsorgrip"
+        },
+        {
+          "index": 236,
+          "valueId": 241,
+          "name": "Part_Upgrade_Traction_R300Repulsorgrip"
+        },
+        {
+          "index": 237,
+          "valueId": 242,
+          "name": "Part_Upgrade_Traction_R600Repulsorgrip"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-repair",
+      "label": "Repair",
+      "count": 6,
+      "items": [
+        {
+          "index": 229,
+          "valueId": 234,
+          "name": "Part_Upgrade_Repair_SinglePowerCell"
+        },
+        {
+          "index": 230,
+          "valueId": 235,
+          "name": "Part_Upgrade_Repair_DualPowerCell"
+        },
+        {
+          "index": 232,
+          "valueId": 237,
+          "name": "Part_Upgrade_Repair_QuadPowerCell"
+        },
+        {
+          "index": 233,
+          "valueId": 238,
+          "name": "Part_Upgrade_Repair_ClusterPowerPlug"
+        },
+        {
+          "index": 234,
+          "valueId": 239,
+          "name": "Part_Upgrade_Repair_RotaryPowerPlug"
+        },
+        {
+          "index": 238,
+          "valueId": 243,
+          "name": "Part_Upgrade_Repair_Cluster2PowerPlug"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "upgrade-unclassified",
+      "label": "Upgrade parts with generic names",
+      "count": 13,
+      "items": [
+        {
+          "index": 55,
+          "valueId": 55,
+          "name": "Part_Upgrade_55"
+        },
+        {
+          "index": 56,
+          "valueId": 56,
+          "name": "Part_Upgrade_56"
+        },
+        {
+          "index": 57,
+          "valueId": 57,
+          "name": "Part_Upgrade_57"
+        },
+        {
+          "index": 58,
+          "valueId": 58,
+          "name": "Part_Upgrade_58"
+        },
+        {
+          "index": 59,
+          "valueId": 59,
+          "name": "Part_Upgrade_59"
+        },
+        {
+          "index": 61,
+          "valueId": 61,
+          "name": "Part_Upgrade_61"
+        },
+        {
+          "index": 62,
+          "valueId": 62,
+          "name": "Part_Upgrade_62"
+        },
+        {
+          "index": 63,
+          "valueId": 63,
+          "name": "Part_Upgrade_63"
+        },
+        {
+          "index": 64,
+          "valueId": 64,
+          "name": "Part_Upgrade_64"
+        },
+        {
+          "index": 65,
+          "valueId": 65,
+          "name": "Part_Upgrade_65"
+        },
+        {
+          "index": 66,
+          "valueId": 66,
+          "name": "Part_Upgrade_66"
+        },
+        {
+          "index": 67,
+          "valueId": 67,
+          "name": "Part_Upgrade_67"
+        },
+        {
+          "index": 235,
+          "valueId": 240,
+          "name": "Part_Upgrade_240"
+        }
+      ],
+      "note": "Names do not expose a specific upgrade category; do not guess their function."
+    },
+    {
+      "key": "planet-selection",
+      "label": "Planet-selection parts",
+      "count": 13,
+      "items": [
+        {
+          "index": 76,
+          "valueId": 76,
+          "name": "Part_Select_Planet_black_76"
+        },
+        {
+          "index": 77,
+          "valueId": 77,
+          "name": "Part_Select_Planet_black_77"
+        },
+        {
+          "index": 78,
+          "valueId": 78,
+          "name": "Part_Select_Planet_78"
+        },
+        {
+          "index": 79,
+          "valueId": 79,
+          "name": "Part_Select_Planet_Tatooine"
+        },
+        {
+          "index": 80,
+          "valueId": 80,
+          "name": "Part_Select_Planet_80"
+        },
+        {
+          "index": 81,
+          "valueId": 81,
+          "name": "Part_Select_Planet_Moon"
+        },
+        {
+          "index": 82,
+          "valueId": 82,
+          "name": "Part_Select_Planet_OovoIv"
+        },
+        {
+          "index": 116,
+          "valueId": 116,
+          "name": "Part_Select_Planet_MonGazza"
+        },
+        {
+          "index": 117,
+          "valueId": 117,
+          "name": "Part_Select_Planet_AndoPrime"
+        },
+        {
+          "index": 118,
+          "valueId": 118,
+          "name": "Part_Select_Planet_Aquilaris"
+        },
+        {
+          "index": 119,
+          "valueId": 119,
+          "name": "Part_Select_Planet_Baroonda"
+        },
+        {
+          "index": 121,
+          "valueId": 121,
+          "name": "Part_Select_Planet_Malastare"
+        },
+        {
+          "index": 248,
+          "valueId": 253,
+          "name": "Part_Select_Planet_OrdIbanna"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "hangar",
+      "label": "Hangar and pit-droid parts",
+      "count": 7,
+      "items": [
+        {
+          "index": 60,
+          "valueId": 60,
+          "name": "Part_Hangar_Box_1x"
+        },
+        {
+          "index": 68,
+          "valueId": 68,
+          "name": "Part_Hangar_Box_2x"
+        },
+        {
+          "index": 69,
+          "valueId": 69,
+          "name": "Part_Hangar_Box_8x"
+        },
+        {
+          "index": 70,
+          "valueId": 70,
+          "name": "Part_Hangar_PitDroidPlatform"
+        },
+        {
+          "index": 83,
+          "valueId": 83,
+          "name": "Part_Hangar"
+        },
+        {
+          "index": 84,
+          "valueId": 84,
+          "name": "Part_Hangar_Shop"
+        },
+        {
+          "index": 85,
+          "valueId": 85,
+          "name": "Part_Hangar_Junkyard"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "hud",
+      "label": "HUD parts",
+      "count": 4,
+      "items": [
+        {
+          "index": 72,
+          "valueId": 72,
+          "name": "Part_Hud_72"
+        },
+        {
+          "index": 73,
+          "valueId": 73,
+          "name": "Part_Hud_73"
+        },
+        {
+          "index": 74,
+          "valueId": 74,
+          "name": "Part_Hud_74"
+        },
+        {
+          "index": 75,
+          "valueId": 75,
+          "name": "Part_Hud_75"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "effects",
+      "label": "Effects, shatter and energy-binder parts",
+      "count": 13,
+      "items": [
+        {
+          "index": 49,
+          "valueId": 49,
+          "name": "Part_EnergyBinderVertical_49"
+        },
+        {
+          "index": 146,
+          "valueId": 146,
+          "name": "Modl_EnergyBinderHorizontal"
+        },
+        {
+          "index": 147,
+          "valueId": 147,
+          "name": "Part_Explosion"
+        },
+        {
+          "index": 246,
+          "valueId": 251,
+          "name": "Part_Shatter_Tatooine_Rocks_251"
+        },
+        {
+          "index": 247,
+          "valueId": 252,
+          "name": "Part_Shatter_Tatooine_Rocks_252"
+        },
+        {
+          "index": 249,
+          "valueId": 254,
+          "name": "Part_Shatter_Ice"
+        },
+        {
+          "index": 279,
+          "valueId": 295,
+          "name": "Part_Shatter_Gray"
+        },
+        {
+          "index": 280,
+          "valueId": 296,
+          "name": "Part_Shatter_Baroonda_Brushwood"
+        },
+        {
+          "index": 290,
+          "valueId": 306,
+          "name": "Part_Shatter_Brown"
+        },
+        {
+          "index": 291,
+          "valueId": 307,
+          "name": "Part_Shatter_Black"
+        },
+        {
+          "index": 293,
+          "valueId": 309,
+          "name": "Part_Shatter_DiamondFormed"
+        },
+        {
+          "index": 295,
+          "valueId": 311,
+          "name": "Part_Shatter_Explosion"
+        },
+        {
+          "index": 302,
+          "valueId": 318,
+          "name": "Part_Shatter_Racer_Anakin_Skywalker"
+        }
+      ],
+      "note": ""
+    },
+    {
+      "key": "scenes",
+      "label": "Scene records",
+      "count": 2,
+      "items": [
+        {
+          "index": 276,
+          "valueId": 292,
+          "name": "Scen_Gasgano_Sebulba_RattsTyerell__SCEN"
+        },
+        {
+          "index": 277,
+          "valueId": 293,
+          "name": "Scen_Anakin_Torso_Anim28"
+        }
+      ],
+      "note": ""
+    }
+  ],
+  "trackGroundAssociations": [
+    {
+      "physicalIndex": 122,
+      "valueId": 122,
+      "assetName": "Part_TrackGround_AndoPrime_AndoPrimeCentrum",
+      "trackId": 5,
+      "trackName": "Andobi Prime Centrum",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 172,
+      "valueId": 177,
+      "assetName": "Part_TrackGround_AndoPrime_BeedosWildRide",
+      "trackId": 2,
+      "trackName": "Beedo's Wild Ride",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 173,
+      "valueId": 178,
+      "assetName": "Part_TrackGround_AndoPrime_HowlerGorge",
+      "trackId": 3,
+      "trackName": "Howler Gorge",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 174,
+      "valueId": 179,
+      "assetName": "Part_TrackGround_AndoPrime_AndobiMountainRun",
+      "trackId": 4,
+      "trackName": "Andobi Mountain Run",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 175,
+      "valueId": 180,
+      "assetName": "Part_TrackGround_Aquilaris_AquilarisClassic",
+      "trackId": 6,
+      "trackName": "Aquilaris Classic",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 176,
+      "valueId": 181,
+      "assetName": "Part_TrackGround_Aquilaris_SunkenCity",
+      "trackId": 7,
+      "trackName": "Sunken City",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 177,
+      "valueId": 182,
+      "assetName": "Part_TrackGround_Malastare_Malastare100",
+      "trackId": 22,
+      "trackName": "Malastare 100",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 178,
+      "valueId": 183,
+      "assetName": "Part_TrackGround_Malastare_DugDerby",
+      "trackId": 23,
+      "trackName": "Dug Derby",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 179,
+      "valueId": 184,
+      "assetName": "Part_TrackGround_Malastare_SebulbasLegacy",
+      "trackId": 24,
+      "trackName": "Sebulba's Legacy",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 180,
+      "valueId": 185,
+      "assetName": "Part_TrackGround_Aquilaris_BumbysBreakers",
+      "trackId": 8,
+      "trackName": "Bumpy's Breakers",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 181,
+      "valueId": 186,
+      "assetName": "Part_TrackGround_OrdIbanna_ScrappersRun",
+      "trackId": 9,
+      "trackName": "Scrapper's Run",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 182,
+      "valueId": 187,
+      "assetName": "Part_TrackGround_OrdIbanna_DethrosRevenge",
+      "trackId": 10,
+      "trackName": "Dethro's Revenge",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 183,
+      "valueId": 188,
+      "assetName": "Part_TrackGround_OrdIbanna_Abyss",
+      "trackId": 11,
+      "trackName": "Abyss",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 184,
+      "valueId": 189,
+      "assetName": "Part_TrackGround_MonGazza_Speedway",
+      "trackId": 16,
+      "trackName": "Mon Gazza Speedway",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 185,
+      "valueId": 190,
+      "assetName": "Part_TrackGround_MonGazza_SpiceMineRun",
+      "trackId": 17,
+      "trackName": "Spice Mine Run",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 186,
+      "valueId": 191,
+      "assetName": "Part_TrackGround_Baroonda_Inferno",
+      "trackId": 15,
+      "trackName": "Inferno",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 187,
+      "valueId": 192,
+      "assetName": "Part_TrackGround_MonGazza_ZuggaChallenge",
+      "trackId": 18,
+      "trackName": "Zugga Challenge",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 188,
+      "valueId": 193,
+      "assetName": "Part_TrackGround_OovoIv_Vengeance",
+      "trackId": 19,
+      "trackName": "Vengeance",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 189,
+      "valueId": 194,
+      "assetName": "Part_TrackGround_OovoIv_Executioner",
+      "trackId": 20,
+      "trackName": "Executioner",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 190,
+      "valueId": 195,
+      "assetName": "Part_TrackGround_OovoIv_TheGauntlet",
+      "trackId": 21,
+      "trackName": "The Gauntlet",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 231,
+      "valueId": 236,
+      "assetName": "Part_TrackGround_Baroonda_BarooCoast",
+      "trackId": 12,
+      "trackName": "Baroo Coast",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 244,
+      "valueId": 249,
+      "assetName": "Part_TrackGround_Baroonda_GrabvineGateway",
+      "trackId": 13,
+      "trackName": "Grabvine Gateway",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 245,
+      "valueId": 250,
+      "assetName": "Part_TrackGround_Baroonda_FireMountainRally",
+      "trackId": 14,
+      "trackName": "Fire Mountain Rally",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 274,
+      "valueId": 279,
+      "assetName": "Part_TrackGround_Tatooine_Training",
+      "trackId": 0,
+      "trackName": "The Boonta Training Course",
+      "resolution": "name_exact_after_prefix_removal"
+    },
+    {
+      "physicalIndex": 275,
+      "valueId": 280,
+      "assetName": "Part_TrackGround_Tatooine_Classic",
+      "trackId": 1,
+      "trackName": "The Boonta Classic",
+      "resolution": "name_exact_after_prefix_removal"
+    }
+  ],
+  "contentSubsystemGroupTotals": {
+    "racerLod1": 25,
+    "racerLod2": 23,
+    "trackGround": 25,
+    "trackGroundMatched": 25,
+    "upgrades": 54,
+    "upgradeSubgroups": {
+      "turning-control": 5,
+      "air-brake": 6,
+      "cooling": 6,
+      "top-speed": 6,
+      "acceleration": 6,
+      "traction": 6,
+      "repair": 6
+    },
+    "upgradeUnclassified": 13,
+    "planetSelection": 13,
+    "hangar": 7,
+    "hud": 4,
+    "effects": 13,
+    "scenes": 2
+  }
 }
