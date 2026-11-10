@@ -478,7 +478,7 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    '"GITHUB_TOOLS": "get_file_contents,search_pull_requests,create_branch,push_files,create_pull_request"',
+    '"GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"',
     "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
     "Keep newly retrieved text below 1,000 tokens total; target below 700 tokens",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
@@ -499,14 +499,13 @@ else:
         errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
     expected_github_tools = [
         "get_file_contents",
-        "search_pull_requests",
         "create_branch",
         "push_files",
         "create_pull_request",
     ]
     if github_tools != expected_github_tools:
         errors.append(
-            "OpenRouter GitHub MCP allow-list must match the minimal five-tool execution contract exactly"
+            "OpenRouter GitHub MCP allow-list must match the minimal four-tool direct-delivery contract exactly"
         )
     if any(tool not in expected_github_tools for tool in github_tools):
         errors.append("OpenRouter GitHub MCP allow-list exposes tools outside the reviewed minimal contract")
@@ -1505,10 +1504,10 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,536/96 limits; max 3 steps.",
+    "1,536/96 limits; max 4 steps (6,528 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
     "new retrieved text below 300 tokens.",
-    "Only MCP tools: get_file_contents, search_pull_requests, create_branch, push_files, create_pull_request.",
+    "Only MCP tools: get_file_contents, create_branch, push_files, create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
@@ -1521,13 +1520,13 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or pro
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Use FQNs: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files, github_create_pull_request.",
+    "Use FQNs: github_get_file_contents, github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Model-visible top-level tools: github_get_file_contents, github_search_pull_requests, github_create_branch, github_push_files and github_create_pull_request.",
+    "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter direct MCP tool contract is missing {required!r}")
