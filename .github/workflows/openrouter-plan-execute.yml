@@ -503,6 +503,8 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const { findBlockedReportContradictions, validateAutonomousCycleReport } =
+              require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
@@ -521,7 +523,6 @@ jobs:
                 return;
               }
             }
-            const { findBlockedReportContradictions, validateAutonomousCycleReport } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             await validateAutonomousCycleReport({
               github,
               context,
