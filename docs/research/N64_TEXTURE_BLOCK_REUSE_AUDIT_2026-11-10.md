@@ -34,7 +34,7 @@ These are format-catalogue facts, not proof that a locally reconstructed block h
 
 The N64 USA model catalogue `src/SWE1R.Assets.Blocks.Original/Resources/out_modelblock.bin/n64_us.md` identifies model item **0087** as `Pupp_Racer_Anakin_Skywalker`. The corresponding `ModelBlockItem.csv` metadata row records **68,284 bytes** for that item.
 
-The locally prepared candidate also has 68,284 decoded bytes and was successfully deserialized as a `PuppModel`. This is a strong catalogue-size and structural match for the Anakin candidate, but the local extraction's item-order-to-catalogue-index mapping has not yet been independently proven. Keep the identity confidence at **strong candidate**, not byte-identity confirmed.
+The locally prepared candidate also has 68,284 decoded bytes and was successfully deserialized as a `PuppModel`. The local structural probe reported 9 roots, 244 total nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 visible command-list triangles, 26 materials and 26 texture references; all reported structural checks passed. This is a strong catalogue-size and structural match for the Anakin candidate, but the local extraction's item-order-to-catalogue-index mapping has not yet been independently proven. Keep the identity confidence at **strong candidate**, not byte-identity confirmed.
 
 ### Existing texture decoding and PNG export code
 
@@ -47,21 +47,32 @@ Relevant MIT source files:
 - `src/SWE1R.Assets.Blocks.CommandLine/Exporters/ModelTexturesBlockExporter.cs`: walks a model's mesh materials and writes effective images as PNG files.
 - `src/SWE1R.Assets.Blocks.CommandLine/Options/ExportModelTexturesOptions.cs`: exposes the `export-models-textures` verb and requires `--texture-block`; the inherited options accept model indices.
 
-The existing command-line exporter expects a **complete model block file** and a **complete texture block file**. The locally prepared 68,284-byte candidate is an individual decoded model payload, not by itself the complete model block expected by that command. The library's `Block<T>` reader expects a big-endian count, per-part offset table, total size, and item parts.
+The existing command-line verb `export-models-textures` expects a **complete model block file** and a **complete texture block file**. The locally prepared 68,284-byte candidate is an individual decoded model payload, not by itself the complete model block expected by that command. The library's `Block<T>` reader expects a big-endian count, per-part offset table, total size, and item parts. However, the full model block is a CLI convenience, not necessarily a technical requirement for the PNG conversion API: `ModelBlockItem.Load(out ByteSerializerContext)` yields a serializer graph, and the existing exporter itself obtains `MeshMaterial` objects with `byteSerializerContext.Graph.GetValues<MeshMaterial>()`.
 
 Importantly, the pinned source already handles the N64 model compression wrapper inside a model block: `ModelBlockItemDataPart` subscribes to its part-loaded event, recognizes the `CompWolf` signature, reads the big-endian decompressed size, and calls `Compressor.Decompress()`. The compressor source implements the read/decompression path, while its `Compress()` path still throws `NotImplementedException`. This means a complete local N64 model block can be loaded through the existing parser without writing another CompWolf decoder, assuming its outer block table and offsets have first been reconstructed correctly. It does **not** mean that the standalone local candidate or the full ROM-to-block extraction was tested through that path.
 
 The original-resource test project contains N64-labelled model and texture block resources and an original material/texture catalog, and its catalog generator iterates release metadata to associate model materials with the selected texture-block metadata. The tests demonstrate the export path in the source tree; this audit does not claim that an N64-specific test suite was run against a locally reconstructed ROM block.
 
+### Lower-level export API avoids rebuilding the full model block
+
+The pinned source exposes a shorter path for the already-decoded candidate:
+
+1. Parse the candidate to a `PuppModel` and retain its `ByteSerializerContext`/graph (or reparse it in the isolated adapter).
+2. Enumerate `MeshMaterial` references from `context.Graph.GetValues<MeshMaterial>()`, as `ModelTexturesBlockExporter` does internally.
+3. Load the complete N64 `Block<TextureBlockItem>` once.
+4. For each material, call `new MeshMaterialExporter(meshMaterial, textureBlock).Export()` and save its `EffectiveImage` as PNG.
+
+`MeshMaterialExporter` is constructed from a single `MeshMaterial` plus a texture block; it does not take a `ModelBlock` or `Block<ModelBlockItem>`. The lower-level `MaterialTextureExporter` is narrower still: it takes a `MaterialTexture`, its selected child and the texture block. Therefore a small local adapter can likely use the already-decoded Pupp graph without reconstructing the full outer model block. This is **source-level API evidence only**; the adapter has not yet been run against the user's local candidate and a complete N64 texture block. Preserve the selected material texture indices, child selection, effective-image mirroring and alpha handling. The API's first-child choice is explicitly marked as a `HACK` upstream, so verify it for this model rather than assuming every material has only one child.
+
 ## Technical decision
 
-**Reuse the pinned MIT parser/exporter as a read-only extraction dependency or reference; do not write a second texture conversion implementation.** A narrowly scoped local adapter may still be needed to supply a full N64 model block, the N64 texture block, or the model record in the form expected by the existing exporter.
+**Reuse the pinned MIT parser/exporter as a read-only extraction dependency or reference; do not write a second texture conversion implementation.** A narrowly scoped local adapter is still needed to feed the already-decoded Pupp material graph and the complete N64 texture block into the existing lower-level exporter; it should not need to rebuild the full outer model block.
 
 Before integration, resolve these gates:
 
-1. Locate and reconstruct the N64 texture block from the owner-controlled local ROM without publishing any game data.
-2. Reconstruct or adapt the full N64 model block so its item index and `CompWolf` payload boundaries are preserved; do not infer index 87 solely from the sorted Pupp candidate list.
-3. Run the existing exporter locally against only the user-owned files and report aggregate results (number of referenced textures decoded, unsupported formats, missing indices, and export success). Keep PNGs and model files local.
+1. Locate and reconstruct the complete N64 texture block from the owner-controlled local ROM, or establish a lawful local source for it; do not publish the block or extracted images.
+2. Build a tiny local adapter that reuses the already-decoded Pupp graph and `MeshMaterialExporter`; a complete outer model block is not required for this lower-level route. Do not infer item index 0087 solely from the sorted Pupp candidate list.
+3. Run the adapter locally against only owner-controlled inputs and report aggregate results (referenced textures decoded, unsupported formats, missing indices, duplicate texture indices and export success). Keep PNGs and model files local.
 4. Audit exact package/dependency notices before shipping the parser or exporter in Boonta. The library's MIT source licence does not grant rights to redistribute embedded commercial game resources or extracted assets.
 5. Treat exported PNGs as an intermediate format only. The native GameCube/Wii renderer still needs an independently validated GX texture upload/conversion path; N64 rendering and texture encodings are not automatically GameCube/Wii-compatible.
 
