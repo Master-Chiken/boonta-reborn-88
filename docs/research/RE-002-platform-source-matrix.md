@@ -650,6 +650,19 @@ A current source-and-release review strengthens the N64 reference set without ch
 
 **Use in RE-002:** treat this as an N64 runtime/bring-up case study. It may provide testable hypotheses about N64 execution, libultra, PI DMA, RSP task routing, display-list flow, controller and audio. Each hypothesis still needs an exact source/function or reproducible observation, and none transfers automatically to the GameCube/Wii target. Do not create a competing N64 implementation in Boonta.
 
+### Concrete runtime fixes visible in the pinned source
+
+These are useful as platform-specific failure patterns, not code to transplant:
+
+1. **PI DMA deadlock / duplicate libultra symbol.** `tools/post_recomp_patches.py` documents that the game has an `osPiStartDma` copy at `0x80087D70`, while another copy already owns the symbol name at `0x80095820`. The project redirects the former to `osPiStartDma_recomp` because the original PI-manager thread is stubbed and the game's DMA reply queue otherwise blocks forever. This is a specific N64 static-recomp workaround; it does not establish that Boonta's GameCube/Wii file loader has the same issue.
+2. **RSP/display-list dispatch ordering.** `frontend/src/rt64_context.cpp` reads the task's `ucode`, `ucode_data` and display-list pointer, masks MIPS virtual addresses with `0x03FFFFFF` to obtain RT64 RDRAM offsets, calls `loadUCodeGBI(...)`, then calls `processDisplayLists(...)`. The comment states that the interpreter crashes if the GBI/microcode mapping is not loaded before parsing the display list. This documents a specific RT64 N64 HLE requirement, not the GameCube GX display-list format or command stream.
+3. **Separate audio path.** The README describes early no-op handling of audio RSP tasks as a temporary route to graphics bring-up, followed by the later recompiled `aspMain` audio path. Do not treat an early graphics-only milestone as proof of finished audio.
+
+Pinned source links:
+- [post-recomp redirects](https://github.com/sp00nznet/racer/blob/694c5663b3a7c30e2862fc240344f34683f99a9c/tools/post_recomp_patches.py)
+- [RT64 context / display-list dispatch](https://github.com/sp00nznet/racer/blob/694c5663b3a7c30e2862fc240344f34683f99a9c/frontend/src/rt64_context.cpp)
+- [symbols.toml](https://github.com/sp00nznet/racer/blob/694c5663b3a7c30e2862fc240344f34683f99a9c/symbols.toml)
+
 ## 2026-11-10 — N64 texture-block reuse path
 
 A pinned source audit found that `swe1r-assets@922ef535f6598a1330ff93d6b07258956f990b34` already has N64 release selectors for a dedicated big-endian texture block (ID 1, 1,648 entries) and a model-material-to-texture PNG exporter. The upstream `SWE1R.Assets.Blocks.Original` project also embeds a full N64 texture-block reference resource at `Resources/out_textureblock.bin/n64.bin` (2,741,112 bytes; SHA-1 `9130090c3ceafff6ed05609045909f54f666e54f`) and a full N64 USA model-block reference resource at `Resources/out_modelblock.bin/n64_us.bin` (12,406,512 bytes). These are game-derived resource fixtures, not covered by the parser library's MIT code licence; do not copy them into Boonta or CI.
