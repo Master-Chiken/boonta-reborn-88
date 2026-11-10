@@ -831,15 +831,15 @@
         "Nintendo 64",
         "GameCube"
       ],
-      "status": "in_review",
+      "status": "blocked",
       "question": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
       "acceptance_criteria": [
-        "Retain sorted Pupp index 10 as a candidate only: 68,284 decoded bytes match the public catalogue size associated with N64 model ID 0087, but identity is not established until structural parsing succeeds",
-        "Use only the already-prepared owner-local decoded candidate; do not upload model bytes, decoded payloads, ROM offsets, dumps, images or assets",
-        "Install .NET 10.0.403 SDK Arm64 only after verifying the current macOS 26.6.2 arm64 environment, then run an isolated parser-only console probe under ~/racer-work outside the upstream clone",
-        "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC out_modelblock input",
-        "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type",
-        "Audit dependency and transitive-dependency licenses and provenance before any parser integration or GX conversion"
+        "The 68,284-byte decoded local candidate matches the public size for N64 USA model item 0087 and successfully deserializes as SWE1R.Assets.Blocks.ModelBlock.Types.PuppModel; the local ROM-record-to-catalogue index mapping is still unproven",
+        "Use only the already-prepared owner-local decoded candidate; no model bytes, decoded payloads, ROM offsets, dumps, images or extracted assets are uploaded or committed",
+        "The .NET 10.0.403 ARM64 parser-only probe has been run locally in an isolated workspace outside upstream clones",
+        "The pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 probe parsed the decoded Pupp payload; this does not yet prove the complete N64 model-block or CompWolf container path can be reconstructed end-to-end",
+        "Aggregate-only result recorded: 9 roots, 244 total nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 visible triangles, 26 materials and 26 texture references; all structural checks passed with zero reported errors",
+        "Audit package and transitive-dependency licences and provenance before any parser integration or GX conversion"
       ],
       "evidence": [
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
@@ -849,11 +849,11 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/335#issuecomment-6710922570",
         "https://github.com/Master-Chiken/boonta-reborn-88/pull/381"
       ],
-      "next_action": "PR #381 documents the owner-local structural parse and the existing N64 texture-export route; review it before merging. The local parser probe is already complete: 9 root nodes, 244 total nodes, 22 animations, 94 meshes, 2,888 vertices, 1,762 visible triangles, 26 materials and 26 texture references; all reported structural checks passed (zero invalid triangle indices, command-list errors, vertex-buffer rule errors, or animation-count inconsistencies). Do not ask the owner to install .NET or rerun this probe. The decoded candidate remains a strong Anakin/0087 candidate, not a proven item-index mapping. Next separate research task is reconstructing/locating the complete local N64 model and texture blocks required by the existing exporter; audit package and dependency provenance before any integration. No ROM-derived payloads are to be uploaded or committed.",
+      "next_action": "The owner-local structural parse is complete and its aggregate result is documented in PR #381; do not ask the owner to install .NET or repeat the probe. The decoded candidate remains a strong Anakin/0087 candidate, not a proven item-index mapping, and the test does not prove complete N64 model/texture block reconstruction. PR #381 records the reuse path from the pinned MIT swe1r-assets source: N64 texture block metadata and an existing material-to-texture PNG exporter. After that documentation PR is reviewed/merged, the next separate task is to reconstruct or locate complete local N64 model and texture block inputs for the exporter, then review package/transitive dependency provenance. Keep all ROM-derived data local and do not infer GameCube/Wii compatibility.",
       "updated_at": "2026-11-10",
       "target_branch": "main",
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/381",
-      "head_sha": "9168939626883a3d8f6cfad26299575ddf71db45"
+      "pr_url": null,
+      "head_sha": null
     }
   ]
 }
