@@ -354,7 +354,7 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list the repository root or reread the compact summary.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
           - If essential, read docs/automation/task-ledger.json once and inspect only the exact selected task row.
-          - Global preflight is authoritative: it validated this selected task row, confirmed `pr_url` and `head_sha` are empty, and checked every open PR body for the exact task marker. Do not search PR history or treat older automation PRs as this cycle's evidence.
+          - Global preflight is authoritative: it validated this selected task row, confirmed `pr_url` and `head_sha` are empty, and checked every open PR body for the exact task marker. Do not search PR history or treat older merged automation PRs as this cycle's evidence.
           - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           
           EXECUTION
