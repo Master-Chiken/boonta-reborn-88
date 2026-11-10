@@ -93,6 +93,17 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASSED")
         self.assertEqual(report["results"][0]["stdout"], "fixed test ran\n")
 
+    def test_registered_script_symlink_is_rejected(self):
+        outside = Path(self.temp.name).parent / (Path(self.temp.name).name + "-outside.py")
+        outside.write_text("print('outside')\n", encoding="utf-8")
+        try:
+            (self.root / "tools/external.py").symlink_to(outside)
+            dispatcher.TEST_REGISTRY["test.external"] = ("tools/external.py",)
+            with self.assertRaisesRegex(dispatcher.TestDispatchError, "must not be a symlink"):
+                dispatcher.run_test_ids(self.root, ["test.external"])
+        finally:
+            outside.unlink(missing_ok=True)
+
     def test_timeout_is_bounded_and_stops_sequence(self):
         (self.root / "tools/sleep.py").write_text(
             "import time\ntime.sleep(3)\n", encoding="utf-8",
