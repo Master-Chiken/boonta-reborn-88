@@ -319,8 +319,8 @@ def results_view_visible(image: Image.Image) -> bool:
     center_y = viewport_top + viewport_height / 2.0
     x0 = max(0, int(center_x - 33.0 * scale_x))
     x1 = min(width, int(center_x + 33.0 * scale_x))
-    y0 = max(0, int(center_y - 65.0 * scale_y))
-    y1 = min(height, int(center_y - 50.0 * scale_y))
+    y0 = max(0, int(center_y - 81.0 * scale_y))
+    y1 = min(height, int(center_y - 66.0 * scale_y))
     pixels = image.load()
     orange_pixels = 0
     for y in range(y0, y1):
