@@ -44,6 +44,7 @@ try:
     from PIL import Image, ImageDraw
     from check_dolphin_frame import (
         finish_banner_visible,
+        results_view_visible,
         finish_label_visible,
         player_pod_bounds,
         reset_state_visible,
@@ -55,6 +56,7 @@ except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
+    results_view_visible = None
     finish_label_visible = None
     player_pod_bounds = None
     reset_state_visible = None
@@ -453,6 +455,49 @@ class DolphinDtmTests(unittest.TestCase):
         clipped_draw.rectangle((0, 350, 40, 400), fill=cyan)
         with self.assertRaises(ValueError):
             player_pod_bounds(clipped)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or results_view_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_results_detector_accepts_centered_results_title(self) -> None:
+        color = (255, 157, 61)
+        glyphs = {
+            "R": (30, 17, 17, 30, 20, 18, 17),
+            "E": (31, 16, 16, 30, 16, 16, 31),
+            "S": (15, 16, 16, 14, 1, 1, 30),
+            "U": (17, 17, 17, 17, 17, 17, 14),
+            "L": (16, 16, 16, 16, 16, 16, 31),
+            "T": (31, 4, 4, 4, 4, 4, 4),
+        }
+
+        def draw_results(image, viewport_top: int) -> None:
+            draw = ImageDraw.Draw(image)
+            x = 400.0 - 26.0
+            y = viewport_top + 240.0 - 62.0
+            for char in "RESULTS":
+                for row, bits in enumerate(glyphs[char]):
+                    for col in range(5):
+                        if bits & (1 << (4 - col)):
+                            left = round(x + col * 1.2)
+                            top = round(y + row * 1.2)
+                            draw.rectangle((left, top, left + 1, top + 1), fill=color)
+                x += 6.0 * 1.2
+
+        direct = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw_results(direct, 0)
+        self.assertTrue(results_view_visible(direct))
+        self.assertTrue(finish_banner_visible(direct))
+
+        window = Image.new("RGB", (800, 564), (239, 239, 239))
+        ImageDraw.Draw(window).rectangle((0, 84, 799, 563), fill=(105, 170, 225))
+        draw_results(window, 84)
+        self.assertTrue(results_view_visible(window))
+        self.assertTrue(finish_banner_visible(window))
+
+        empty = Image.new("RGB", (800, 480), (105, 170, 225))
+        self.assertFalse(results_view_visible(empty))
+        self.assertFalse(finish_banner_visible(empty))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or finish_banner_visible is None,
