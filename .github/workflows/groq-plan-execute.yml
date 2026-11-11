@@ -665,7 +665,7 @@ jobs:
           - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
           
           REPORT
-          - Copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output only machine-readable lines. PROGRESS needs same-repo PR URL, exact 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
+          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output only machine-readable lines. PROGRESS needs same-repo PR URL, exact 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
           PROMPT
           )"
 
