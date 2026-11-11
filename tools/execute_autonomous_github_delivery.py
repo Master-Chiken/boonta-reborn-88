@@ -307,8 +307,10 @@ def execute_delivery(
         or pr_number < 1
         or not isinstance(pr, dict)
         or pr.get("draft") is not True
-        or (isinstance(pr_head, dict) and pr_head.get("ref") != branch_name)
-        or (isinstance(pr_base, dict) and pr_base.get("ref") != target_branch)
+        or not isinstance(pr_head, dict)
+        or pr_head.get("ref") != branch_name
+        or not isinstance(pr_base, dict)
+        or pr_base.get("ref") != target_branch
     ):
         raise DeliveryExecutionError("GitHub did not confirm the exact draft pull request")
 
