@@ -25,6 +25,7 @@ from autonomous_patch_proposal import (
     validate_or_apply,
     validate_checkout,
 )
+from build_autonomous_path_allowlist import AllowlistError, build_allowlist, load_json
 
 MANDATORY_TEST_IDS = (
     "automation.task_preflight",
@@ -173,6 +174,19 @@ def verify_in_isolated_worktree(
         expected_task_id=expected_task_id,
         expected_base_sha=expected_base_sha,
     )
+    try:
+        current_scope = build_allowlist(
+            root,
+            expected_base_sha=expected_base_sha,
+            requested_task_id=expected_task_id,
+        )
+        supplied_scope = load_json(allowlist_report_path)
+    except AllowlistError as exc:
+        raise PipelineError(f"Current canonical owner path policy cannot be verified: {exc}") from exc
+    if current_scope.get("status") != "READY" or supplied_scope != current_scope:
+        raise PipelineError(
+            "Allowlist report differs from the current canonical owner-reviewed path policy"
+        )
     proposal = load_proposal(proposal_path)
 
     # Validate the model proposal before allocating a worktree. The validator
