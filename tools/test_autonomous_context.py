@@ -213,7 +213,7 @@ with tempfile.TemporaryDirectory() as temp:
     for index, path in enumerate(paths):
         target = source_root / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("\\n".join(
+        target.write_text("\n".join(
             f"/* {path} line {line} */" for line in range(1, 31)
         ), encoding="utf-8")
     ranges = [
