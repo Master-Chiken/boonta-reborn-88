@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Complete a verified provider cycle." in long_rendered
 
     # Regression for the real activation handoff budget: preserve every
-    # required excerpt when the preflight context is about 1.35k characters.
+    # required excerpt when the preflight context is about 1.5k characters.
     summary_path = root / "docs/automation/task-ledger-summary.json"
     payload = json.loads(summary_path.read_text(encoding="utf-8"))
     task = payload["tasks"][0]
@@ -102,9 +102,9 @@ with tempfile.TemporaryDirectory() as temp:
         "If criteria exceed these excerpts, read only this task record in the canonical ledger before coding.",
         "PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.",
     ])
-    assert len(full_handoff) <= 1400
-    full_handoff += "X" * (1400 - len(full_handoff))
-    assert len(full_handoff) == 1400
+    assert len(full_handoff) <= 1500
+    full_handoff += "X" * (1500 - len(full_handoff))
+    assert len(full_handoff) == 1500
     bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
