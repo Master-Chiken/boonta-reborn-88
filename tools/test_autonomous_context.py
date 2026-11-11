@@ -298,8 +298,8 @@ with tempfile.TemporaryDirectory() as temp:
         max_source_chars=1400,
     )
     assert "SOURCE EXCERPTS" in context
-    assert "[source/main.c:" in context
-    assert "[tests/test_gameplay_state.c:" in context
+    assert "[tools/check_task_ledger.py:" in context
+    assert "[tools/test_check_task_ledger.py:" in context
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
 
