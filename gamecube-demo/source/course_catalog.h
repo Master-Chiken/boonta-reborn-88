@@ -9,9 +9,14 @@ typedef struct BoontaCourseDefinition {
     float road_half_width;
     unsigned int node_count;
     unsigned int edge_count;
+    int has_branches;
     int (*reset)(void *runtime_context);
-    void (*sample)(void *runtime_context, float travelled, float fallback_half_width,
+    int (*advance)(void *runtime_context, float distance_delta, float steering);
+    void (*sample)(void *runtime_context, float player_distance, float travelled,
+                   float fallback_half_width,
                    float *x, float *y, float *z, float *width);
+    int (*get_lap_state)(void *runtime_context,
+                         unsigned int *completed_laps, float *lap_progress);
     int (*distance_to_next_finish)(void *runtime_context, float player_distance,
                                    float *distance);
     void *runtime_context;

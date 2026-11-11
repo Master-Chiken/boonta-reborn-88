@@ -173,6 +173,14 @@ static int reset_runtime_route_cursor(void)
     return g_course_ready;
 }
 
+static int advance_runtime_route_cursor(float distance_delta, float steering)
+{
+    if (!g_course_ready || g_current_course == NULL ||
+        g_current_course->advance == NULL) return 0;
+    return g_current_course->advance(
+        g_current_course->runtime_context, distance_delta, steering);
+}
+
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
@@ -185,7 +193,7 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
             ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
         return;
     }
-    g_current_course->sample(g_current_course->runtime_context, travelled,
+    g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
         g_current_course->road_half_width, x_out, y_out, z_out, width_out);
 }
 
@@ -824,9 +832,18 @@ static float current_lap_progress(void)
 {
     float progress;
     if (g_race_finished) return 1.0f;
-    if (g_current_course == NULL || !isfinite(g_current_course->lap_distance) ||
-        g_current_course->lap_distance <= 0.001f ||
-        !isfinite(g_distance) || g_distance < 0.0f) return 0.0f;
+    if (g_current_course == NULL) return 0.0f;
+    if (g_current_course->has_branches) {
+        unsigned int completed_laps = 0U;
+        if (g_course_ready && g_current_course->get_lap_state != NULL &&
+            g_current_course->get_lap_state(
+                g_current_course->runtime_context, &completed_laps, &progress)) {
+            return progress;
+        }
+        return 0.0f;
+    }
+    if (!isfinite(g_distance) || !isfinite(g_current_course->lap_distance) ||
+        g_current_course->lap_distance <= 0.001f) return 0.0f;
     progress = fmodf(g_distance, g_current_course->lap_distance) /
                g_current_course->lap_distance;
     if (!isfinite(progress)) return 0.0f;
@@ -1397,8 +1414,23 @@ int main(int argc, char **argv)
             const unsigned int previous_laps = g_lap_count;
             g_distance = boonta_distance_after_pitch_scaled(
                 g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
-            g_lap_count = boonta_lap_count_after_frame(
-                g_lap_count, previous_distance, g_distance, g_current_course->lap_distance);
+            if (g_course_ready && !advance_runtime_route_cursor(
+                    g_distance - previous_distance, steering)) {
+                /* Cursor move is atomic; do not commit distance with invalid route history. */
+                g_distance = previous_distance;
+            }
+            if (g_current_course->has_branches) {
+                unsigned int completed_laps = g_lap_count;
+                float progress = 0.0f;
+                if (g_course_ready && g_current_course->get_lap_state != NULL &&
+                    g_current_course->get_lap_state(
+                        g_current_course->runtime_context, &completed_laps, &progress)) {
+                    g_lap_count = completed_laps;
+                }
+            } else {
+                g_lap_count = boonta_lap_count_after_frame(
+                    g_lap_count, previous_distance, g_distance, g_current_course->lap_distance);
+            }
             if (g_lap_count > previous_laps) {
                 g_last_lap_seconds = g_lap_seconds;
                 (void)boonta_race_record_lap_time(&g_race_state, g_last_lap_seconds);
