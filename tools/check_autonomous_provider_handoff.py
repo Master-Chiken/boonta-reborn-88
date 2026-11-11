@@ -35,11 +35,7 @@ openrouter = read("openrouter")
 groq = read("groq")
 loop = read("loop")
 
-# Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
-# repeated validation/comment side effects. Keep this workflow single-pass.
 groq_step_ids = re.findall(r"(?m)^        id:\\s*([A-Za-z0-9_-]+)\\s*$", groq)
-if len(groq_step_ids) != len(set(groq_step_ids)):
-    errors.append("Groq workflow must not contain duplicate step IDs")
 
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
@@ -49,6 +45,11 @@ context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
+# Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
+# repeated validation/comment side effects. Keep this workflow single-pass.
+if len(groq_step_ids) != len(set(groq_step_ids)):
+    errors.append("Groq workflow must not contain duplicate step IDs")
+
 
 # Every provider needs checks:read for the shared exact-head validator, with no
 # broader permissions than its existing contents/issues/PR write operations.
