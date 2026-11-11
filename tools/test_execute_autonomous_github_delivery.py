@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -18,6 +20,7 @@ from verify_autonomous_patch import MANDATORY_TEST_IDS
 from execute_autonomous_github_delivery import (
     DeliveryExecutionError,
     execute_delivery,
+    main as writer_main,
     require_execution_gates,
     validate_plan_against_sources,
 )
@@ -245,13 +248,64 @@ class WriterFixture(unittest.TestCase):
     def execute_with_fake(self, request):
         return execute_delivery(
             self.plan,
+            repo_root=self.root,
+            verified_report_path=self.verified_path,
+            allowlist_report_path=self.allowlist_path,
+            expected_task_id=TASK_ID,
+            expected_base_sha=self.base_sha,
             repository=REPOSITORY,
             token=TOKEN,
             request=request,
         )
 
+    def cli_args(self, *, execute=False):
+        values = [
+            "--repo-root", str(self.root),
+            "--repository", REPOSITORY,
+            "--plan", str(self.plan_path),
+            "--verified-report", str(self.verified_path),
+            "--allowlist-report", str(self.allowlist_path),
+            "--expected-task-id", TASK_ID,
+            "--expected-base-sha", self.base_sha,
+        ]
+        if execute:
+            values.append("--execute")
+        return ["execute_autonomous_github_delivery.py", *values]
+
 
 class DeterministicGitHubWriterTests(WriterFixture):
+    def test_cli_defaults_to_dry_run_without_any_network_request(self):
+        output = io.StringIO()
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("execute_autonomous_github_delivery.urllib.request.urlopen", side_effect=AssertionError("network must stay unused")) as urlopen,
+            patch("sys.argv", self.cli_args()),
+            redirect_stdout(output),
+        ):
+            exit_code = writer_main()
+        self.assertEqual(exit_code, 0)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["status"], "DRY_RUN_VALIDATED")
+        self.assertFalse(report["remote_write_performed"])
+        urlopen.assert_not_called()
+        self.assert_repo_clean()
+
+    def test_cli_execute_without_both_explicit_gates_fails_before_network(self):
+        output = io.StringIO()
+        with (
+            patch.dict(os.environ, {"GITHUB_TOKEN": TOKEN, "GITHUB_REPOSITORY": REPOSITORY}, clear=True),
+            patch("execute_autonomous_github_delivery.urllib.request.urlopen", side_effect=AssertionError("network must stay unused")) as urlopen,
+            patch("sys.argv", self.cli_args(execute=True)),
+            redirect_stdout(output),
+        ):
+            exit_code = writer_main()
+        self.assertEqual(exit_code, 2)
+        report = json.loads(output.getvalue())
+        self.assertEqual(report["status"], "REJECTED")
+        self.assertIn("BOONTA_DETERMINISTIC_DELIVERY_ENABLED", report["reason"])
+        urlopen.assert_not_called()
+        self.assert_repo_clean()
+
     def test_plan_is_revalidated_against_canonical_sources(self):
         self.validate_plan()
         self.assert_repo_clean()
