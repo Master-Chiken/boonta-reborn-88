@@ -164,6 +164,18 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         with self.assertRaisesRegex(AllowlistError, "protected"):
             self.call_allowlist()
 
+    def test_automation_writer_and_policy_scripts_are_protected(self):
+        for path in (
+            "tools/execute_autonomous_github_delivery.py",
+            "tools/test_execute_autonomous_github_delivery.py",
+            "tools/build_autonomous_delivery_plan.py",
+        ):
+            with self.subTest(path=path):
+                self.policy["tasks"][0]["allowed_paths"] = [path]
+                self.commit_inputs("test protected automation path")
+                with self.assertRaisesRegex(AllowlistError, "protected"):
+                    self.call_allowlist()
+
     def test_secret_and_credential_paths_are_rejected(self):
         for path in (".env.production", "secrets/provider.json", "certs/signing.PEM"):
             with self.subTest(path=path):
