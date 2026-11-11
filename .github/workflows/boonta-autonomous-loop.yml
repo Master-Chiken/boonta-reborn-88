@@ -425,7 +425,6 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
-      (needs.provider-cooldowns.outputs.task_ready == 'true' || needs.provider-cooldowns.outputs.resume_ready == 'true') &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -457,11 +456,15 @@ jobs:
       autonomous_mode: true
       issue_number: 226
       task_blocked_active: ${{ needs.provider-cooldowns.outputs.task_blocked_active == 'true' }}
-      task_id: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' && needs.provider-cooldowns.outputs.resume_task_id || needs.provider-cooldowns.outputs.task_id }}
-      task_title: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' && needs.provider-cooldowns.outputs.resume_task_title || needs.provider-cooldowns.outputs.task_title }}
-      task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' && needs.provider-cooldowns.outputs.resume_target_branch || needs.provider-cooldowns.outputs.task_target_branch }}
-      task_description: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' && needs.provider-cooldowns.outputs.resume_task_context || needs.provider-cooldowns.outputs.task_context }}
+      task_id: ${{ needs.provider-cooldowns.outputs.task_id }}
+      task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
+      task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
+      task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
       resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
+      resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
+      resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
+      resume_task_description: ${{ needs.provider-cooldowns.outputs.resume_task_context }}
       resume_pr_number: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
       resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
       resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
