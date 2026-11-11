@@ -637,7 +637,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const { findBlockedReportContradictions, validateAutonomousCycleReport, bindCycleReportToReservedTask } =
+            const { findBlockedReportContradictions, validateAutonomousCycleReport } =
+              require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            const { bindCycleReportToReservedTask } =
               require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             let summary;
             try {
