@@ -150,12 +150,12 @@ OpenRouter's live free catalogue now lists several newer candidates:
 
 | Candidate | Published capability | Important caveat | Current decision |
 |---|---|---|---|
-| `thinkingmachines/inkling-2-small:free` | Released 2026-11-09; described as trained on long-horizon coding/agent workflows; supports tool calls. | Its model page says it does not support `response_format`, and currently warns it is unavailable through EU in-region routing. | High-priority canary candidate only if the account's routing policy allows it; structured report still needs local validation. |
+| `thinkingmachines/inkling-2-small:free` | Released 2026-11-09; 1M-token context; supports tool calls and is positioned for long-horizon agentic coding. | The provider's free endpoint is restricted to agentic harnesses, logs prompts and outputs for model improvement, forbids confidential/personal data, and is unavailable through EU in-region routing. Its published API surface lists tool calling but not `response_format`. | Do not send Boonta source or private data to this endpoint. Keep it off the autonomous allowlist; at most consider a synthetic public-fixture canary after terms/privacy/routing review. |
 | `xingchen-agi/xing4.0-29b-a4b:free` | Described as tuned for complex engineering, tool calls and multi-step planning; supports tool calls and JSON-schema structured output. | Its model page currently warns it is unavailable through EU in-region routing. Provider availability and quota remain variable. | Strong capability candidate, but do not select until the routing-region check passes. |
 | `google/gemma-4-26b-a4b-it:free` | Native function calling and structured output support; free model variant. | Its model page currently warns it is unavailable through EU in-region routing. | Keep as a backup canary candidate subject to the same regional check. |
 | `nvidia/nemotron-3-ultra-550b-a55b:free` | Supports `tools` and `tool_choice`; designed for reasoning/orchestration. | Large model; free rate limits and observed availability are not equivalent to reliable coding-agent success. | Do not choose based on headline context size or agentic marketing alone. |
 
-The OpenRouter Free endpoints are rate-limited. Its current documentation states 20 requests/minute and 50 requests/day for `:free` model variants without buying credits; failed attempts also count toward the free request cap. The existing workflow's quota preflight should remain authoritative and no quota purchase or paid route is allowed.
+The OpenRouter Free `:free` variants are currently rate-limited to 20 requests/minute and 50 requests/day without a credit purchase; failed attempts also count toward the daily cap. The higher 1,000/day allowance requires purchasing $10 of credits and is explicitly outside Boonta's €0 policy. These limits and the current model availability were rechecked on 2026-11-11 against OpenRouter's [free-model collection](https://openrouter.ai/collections/free-models/). The existing workflow's quota preflight remains authoritative; never buy credits or enable a paid route.
 
 ### Recommended model-qualification sequence
 
@@ -175,7 +175,7 @@ Do not build a new fallback around **GitHub Models**. GitHub announced that the 
 
 ## Implemented offline prototype: structured patch proposal + deterministic GitHub delivery
 
-The current OpenRouter path asks OpenCode to coordinate reasoning, native GitHub MCP tool calls, and the final report in one short run. The observed failure modes include malformed native tool-call arguments (Groq) and a missing machine-readable completion report after the model consumed its step budget (OpenRouter).
+The current OpenRouter path asks OpenCode to coordinate reasoning, native GitHub MCP tool calls, and the final report in one short run. The observed failure modes include malformed native tool-call arguments (Groq) and a missing machine-readable completion report after the model consumed its step budget (OpenRouter). PR #386 has now implemented the deterministic alternative described below as an offline prototype; it is deliberately not yet a provider adapter.
 
 A lower-coupling alternative is to make the model return **one typed patch proposal** and let ordinary code own every side effect:
 
