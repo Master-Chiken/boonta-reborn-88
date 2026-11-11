@@ -266,7 +266,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
         self.assertFalse(result["auto_merge"])
         self.assertFalse(result["merge_performed"])
         self.assertEqual(
-            [(method, path.rsplit("/", 1)[-1]) for method, path, _, _ in calls],
+            [(method, path.split("/heads/", 1)[-1] if "/heads/" in path else path.rsplit("/", 1)[-1]) for method, path, _, _ in calls],
             [
                 ("GET", "main"),
                 ("GET", self.plan["branch_name"]),
