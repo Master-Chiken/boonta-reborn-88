@@ -254,4 +254,44 @@ with tempfile.TemporaryDirectory() as temp:
     else:
         raise AssertionError("Expected oversized source ranges to fail closed")
 
+
+# End-to-end context assembly reads the selected target checkout, not the
+# policy/ledger checkout, and carries all approved path excerpts into the prompt.
+with tempfile.TemporaryDirectory() as temp:
+    root = Path(temp) / "policy"
+    source_root = Path(temp) / "target"
+    root.mkdir()
+    task_context = fixture(root)
+    summary_path = root / "docs/automation/task-ledger-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    task = summary["tasks"][0]
+    paths = task["read_paths"]
+    task["read_ranges"] = [
+        {"path": paths[0], "start_line": 3, "end_line": 6},
+        {"path": paths[1], "start_line": 8, "end_line": 11},
+    ]
+    summary_path.write_text(json.dumps(summary, indent=2) + "\\n", encoding="utf-8")
+    for index, path in enumerate(paths):
+        target = source_root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\\n".join(
+            f"# {path} line {line}" for line in range(1, 20)
+        ), encoding="utf-8")
+    context = MODULE.build_context(
+        root,
+        "AUTOMATION-LEDGER-ACTIVATION",
+        "Activate and validate persistent autonomous task tracking",
+        "main",
+        task_context,
+        max_chars=2800,
+        max_task_context=1100,
+        max_criteria=2,
+        max_next_action=100,
+        source_root=source_root,
+        max_source_chars=1400,
+    )
+    assert "SOURCE EXCERPTS" in context
+    assert all(path in context for path in paths)
+    assert "line 3" in context and "line 11" in context
+
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
