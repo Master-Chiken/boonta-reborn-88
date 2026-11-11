@@ -97,7 +97,7 @@ class DolphinDtmTests(unittest.TestCase):
 
         session_start = record(blob, SESSION_START_PRESS_FRAME)
         self.assertEqual(session_start[0], A | X | START)
-        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)[0], A)
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)[0], A | X)
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
