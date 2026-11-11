@@ -19,6 +19,8 @@ STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to a
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
+SESSION_START_PRESS_FRAME = 1
+SESSION_START_HOLD_FRAMES = 6  # Start the new READY session with a realistic emulated press.
 FINISH_RESET_PRESS_FRAME = 14000
 FINISH_RESET_HOLD_FRAMES = 6
 FINISH_RESTART_PRESS_FRAME = 14000
@@ -109,6 +111,11 @@ def _controller_state(frame: int, steering: str = "right",
             buttons |= Y  # Reset to a deterministic starting position.
         if 1 <= frame < 80:
             buttons |= X  # Boost near the start.
+    # Every deterministic gameplay scenario now starts from READY: tap Start
+    # after the frame-zero reset/input baseline before expecting simulation.
+    if SESSION_START_PRESS_FRAME <= frame < SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES:
+        buttons |= START
+
     if scenario == "control-smoke":
         if 100 <= frame < 140:
             buttons |= B  # Exercise a short brake pulse.
