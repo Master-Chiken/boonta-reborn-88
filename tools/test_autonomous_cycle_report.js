@@ -18,7 +18,7 @@ assert.equal(
     'main'
   ),
   'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
-  'the workflow must bind both omitted task ID and evidence base from its trusted reservation'
+  'the workflow must bind the omitted task ID from its trusted reservation and supply the omitted evidence base from its trusted reservation'
 );
 assert.equal(
   bindCycleReportToReservedTask(

@@ -217,10 +217,17 @@ for required in (
 for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
     if "bindCycleReportToReservedTask" not in workflow:
         errors.append(f"{label} report must bind to the workflow-reserved task ID before validation")
-if "function bindCycleReportToReservedTask(report, expectedTaskId)" not in cycle_validator:
-    errors.append("Shared cycle validator must provide the deterministic task-identity binder")
+    if "process.env.SELECTED_TASK_TARGET_BRANCH" not in workflow:
+        errors.append(f"{label} report binder must receive the trusted target branch")
+if "function bindCycleReportToReservedTask(report, expectedTaskId, expectedBase)" not in cycle_validator:
+    errors.append("Shared cycle validator must provide the deterministic task-and-base metadata binder")
+if "Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)" not in cycle_validator or "marker: 'BOONTA_CYCLE_EVIDENCE_BASE:'" not in cycle_validator:
+    errors.append("Shared cycle validator must validate and bind the reserved evidence base")
 if "omitted task ID from its trusted reservation" not in cycle_validator_tests:
     errors.append("Cycle-report tests must cover automatic binding of an omitted task ID")
+for required in ("conflicting model evidence base must be rejected", "duplicate evidence base markers must be rejected"):
+    if required not in cycle_validator_tests:
+        errors.append(f"Cycle-report tests must cover {required}")
 
 # A provider that failed in this run must not immediately launch another model.
 # The next provider is eligible only when its predecessor's persistent UTC
