@@ -133,6 +133,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      checks: read
     with:
       additional_context: ${{ needs.dispatch.outputs.additional_context }}
     secrets: inherit
