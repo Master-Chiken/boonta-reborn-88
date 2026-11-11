@@ -243,9 +243,18 @@ class WriterFixture(unittest.TestCase):
                     "number": 456,
                     "html_url": f"https://github.com/{REPOSITORY}/pull/456",
                     "title": self.plan["pr_title"],
+                    "state": "open",
                     "draft": not wrong_draft_response,
-                    "head": {"ref": self.plan["branch_name"]},
-                    "base": {"ref": self.plan["target_branch"]},
+                    "head": {
+                        "ref": self.plan["branch_name"],
+                        "sha": ("c" if wrong_pr_head_sha else "b") * 40,
+                        "repo": {"full_name": REPOSITORY},
+                    },
+                    "base": {
+                        "ref": self.plan["target_branch"],
+                        "sha": ("d" if wrong_pr_base_sha else self.base_sha),
+                        "repo": {"full_name": REPOSITORY},
+                    },
                 }
             raise AssertionError(f"Unexpected API call: {method} {path}")
 
@@ -348,6 +357,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
                 ("POST", "commits"),
                 ("POST", "refs"),
                 ("GET", "main"),
+                ("GET", self.plan["branch_name"]),
                 ("GET", "pulls?state=open&per_page=100&page=1"),
                 ("POST", "pulls"),
             ],
@@ -416,9 +426,33 @@ class DeterministicGitHubWriterTests(WriterFixture):
     def test_writer_rejects_non_draft_api_confirmation(self):
         request, calls = self.fake_api(wrong_draft_response=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft pull request"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
+        self.assert_repo_clean()
+
+    def test_writer_rejects_pr_response_with_wrong_head_sha(self):
+        request, calls = self.fake_api(wrong_pr_head_sha=True)
+        with patch.dict(os.environ, self.env, clear=False):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
+                self.execute_with_fake(request)
+        self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
+        self.assert_repo_clean()
+
+    def test_writer_rejects_pr_response_with_wrong_base_sha(self):
+        request, calls = self.fake_api(wrong_pr_base_sha=True)
+        with patch.dict(os.environ, self.env, clear=False):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
+                self.execute_with_fake(request)
+        self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
+        self.assert_repo_clean()
+
+    def test_writer_stops_if_source_branch_moves_before_pr_creation(self):
+        request, calls = self.fake_api(branch_moved_on_recheck=True)
+        with patch.dict(os.environ, self.env, clear=False):
+            with self.assertRaisesRegex(DeliveryExecutionError, "branch moved after creation"):
+                self.execute_with_fake(request)
+        self.assertFalse(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
 
     def test_execution_gates_require_exact_true_and_a_token(self):
