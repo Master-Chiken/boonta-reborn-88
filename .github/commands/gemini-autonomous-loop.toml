@@ -4,19 +4,18 @@ prompt = """
 You are Boonta Reborn's single write-capable agent. Complete one bounded task without asking for another continue message; do not invent work or create a competing writer.
 
 ## Startup and context budget
-- Read `.gemini/context.json` first; its preflight-selected task ID/title/base/criteria are authoritative.
-- Read the compact summary once; read only the matching full-ledger row once if its criteria excerpt is incomplete. Never reread either or preloaded context.
-- the preloaded schema-v2 context is authoritative; do not broaden source reads.
-- At startup read `docs/REVERSE_ENGINEERING_FIRST.md` and `docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md` once; apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
+- Read `.gemini/context.json` first and use its `verified_context` as the authoritative task handoff. The workflow has already validated the canonical summary/policies and preloaded bounded source excerpts from the exact selected target branch.
+- The only local file read permitted is `.gemini/context.json`. No local source reads, glob, grep, directory listing or repository browsing. Use the preloaded excerpts first; request one additional exact source path through GitHub MCP only when a named dependency is genuinely missing.
+- Do not reread the compact summary, policy documents or preloaded source excerpts. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST using this verified evidence.
 - Keep newly retrieved repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279; Do not read all historical comments. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries or proprietary assets; do not ingest the approximately 452 KB route dossier. Stop on context, TPM, quota, rate-limit or authentication errors; never repeat the same request.
 - Keep a compact inventory of directly related open pull requests. Deep-inspect changed files and exact-head CI only for PRs tied to the selected task. Read logs only for failed jobs. Reuse a successful check for an unchanged exact SHA without launching duplicate runs.
 - Three turns: reconcile → patch → PR/head readback.
 
 ## AUTHORITATIVE SELECTED TASK
-- Keep preflight `.gemini/context.json` `task_title`/`task_description`/task ID/base authoritative; use `acceptance_criteria_excerpt`. Do not substitute another task.
-- Read `docs/automation/task-ledger-summary.json` once; match exact task ID/title/base and use its question, criteria and next-action excerpts.
-- Base must match the ledger: `main` for research, `dev` for gameplay. Stop without writing on mismatched identity/criteria/base, existing PR/head evidence or exceeded budget.
-- If task details are insufficient, read only the matching task record from `docs/automation/task-ledger.json`; do not fetch full issue histories, unrelated queue items, or broad backlogs.
+- Keep preflight `.gemini/context.json` task identity/title/description/target authoritative; use `verified_context` for exact source excerpts and task metadata. Do not substitute another task.
+- The verified context is built from the canonical main-branch task summary and a separate checkout of the exact selected base (`main` or `dev`). Never treat the workflow's default checkout as gameplay source evidence.
+- Base must match the canonical task summary: `main` for research, `dev` for gameplay. Stop without writing on mismatched identity/criteria/base, missing source excerpts, existing PR/head evidence or exceeded budget.
+- If the five preloaded criteria are insufficient, use at most one exact `mcp_github_get_file_contents` request for `docs/automation/task-ledger.json` at `ref=main` only when the full task record is essential. Do not list/search directories or read unrelated files, issue histories, queue items or backlogs.
 - Post-merge reconciliation: for a blocked task without ledger PR/head, search only exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. For a merged match, verify live `merged_at`, base repository/branch and final `head.sha`. If all criteria are met, record that original PR URL and exact head SHA as evidence via one reviewable ledger PR, regenerate the summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
 - #226 is native GameCube/Wii work. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue; it cannot authorize gameplay/parity claims. Consume PR #282. PR #327 is integrated in `main` at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. PR #369 is a maintainer repair, not provider-cycle evidence. Revisit PR #274 only for a proven runtime dependency; keep platform labels explicit.
 

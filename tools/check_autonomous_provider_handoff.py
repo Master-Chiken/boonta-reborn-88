@@ -92,6 +92,30 @@ else:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
         if "Gemini CLI model-facing MCP names are FQNs" not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
+
+        core_tools = gemini_settings.get("tools", {}).get("core", [])
+        if core_tools != ["read_file"]:
+            errors.append("Gemini autonomous local tools must be limited to read_file for the injected context file")
+
+        for required in (
+            "name: 'Checkout selected task target for bounded source context'",
+            "ref: ${{ inputs.task_target_branch }}",
+            "path: .boonta-target-source",
+            "tools/build_autonomous_context.py",
+            "--source-root \"$TARGET_ROOT\"",
+            "--max-source-chars 1600",
+            "--arg verified_context",
+            "verified_context: $verified_context",
+        ):
+            if required not in gemini:
+                errors.append(f"Gemini must preload bounded excerpts from the exact task target: missing {required!r}")
+        for required in (
+            "use its `verified_context` as the authoritative task handoff",
+            "The only local file read permitted is `.gemini/context.json`",
+            "Never treat the workflow's default checkout as gameplay source evidence",
+        ):
+            if required not in gemini_prompt:
+                errors.append(f"Gemini target-branch context rule is missing {required!r}")
     except (json.JSONDecodeError, StopIteration, AttributeError, TypeError) as exc:
         errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
 
