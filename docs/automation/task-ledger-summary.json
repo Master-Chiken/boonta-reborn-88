@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-11",
+  "updated_at": "2026-11-12",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true
@@ -95,7 +95,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "active",
+      "status": "in_review",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
@@ -149,9 +149,9 @@
         "Show a read-only results view using only measured prototype data, including completed laps, total race time, available last/best lap data…",
         "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
       ],
-      "pr_url": null,
-      "head_sha": null,
-      "next_action_excerpt": "Owner-approved 2026-11-11. Start on the current dev branch by tracing existing lifecycle transitions and PR #327 rival integration; implement only the missing results/session transition with production-helper host tests, then open one PR to dev. Preserve all platform/provenance and exact-head CI limits."
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
+      "head_sha": "1073e2a19ac754492044df44a0b42b233ecb7563",
+      "next_action_excerpt": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main."
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
