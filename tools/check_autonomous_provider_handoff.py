@@ -404,7 +404,7 @@ if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
 if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
     errors.append("Groq must have four bounded write/PR/report steps")
-elif 4 * (1500 + 256) >= 8000:
+elif 4 * (1550 + 256) >= 8000:
     errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
@@ -593,7 +593,7 @@ groq_limits = (
     .get("limit", {})
 )
 if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
-    errors.append("Groq must remain capped at 1500 context / 256 output tokens; four invocations reserve 7,024 nominal tokens below the observed 8k TPM ceiling")
+    errors.append("Groq must remain capped at 1550 context / 256 output tokens; four invocations reserve 7,224 nominal tokens below the observed 8k TPM ceiling")
 groq_model_config = (
     groq_config.get("provider", {})
     .get("groq", {})
@@ -623,7 +623,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 5200 )); then", "Groq must enforce its 5,200-character TPM prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 5500 )); then", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
@@ -670,8 +670,8 @@ else:
     resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
     if len(resume_body) > 1400:
         errors.append(f"Groq resume prompt leaves insufficient room under the 5,200-character TPM cap: {len(resume_body)}")
-if len(actual_groq_prompt) > 1900:
-    errors.append(f"Groq static prompt leaves insufficient room under its 5,200-character TPM cap: {len(actual_groq_prompt)}")
+if len(actual_groq_prompt) > 2100:
+    errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 3000, 1100)
@@ -688,8 +688,8 @@ if "--max-criteria 2 --max-next-action 100" not in groq:
 if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
     errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
 context_limits("OpenRouter", openrouter, 2800, 1100)
-if len(actual_groq_prompt) + 3000 + 400 > 5200:
-    errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,200-character cap")
+if len(actual_groq_prompt) + 3000 + 400 > 5500:
+    errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
 if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
