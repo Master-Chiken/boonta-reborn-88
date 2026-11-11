@@ -112,35 +112,79 @@ jobs:
         shell: bash
         run: python3 tools/test_execute_autonomous_github_delivery.py
 
-      - name: Confirm canonical empty queue grants no model write paths
+      - name: Confirm an empty queue grants no model write paths
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
+          import shutil
           import subprocess
           import sys
+          import tempfile
           from pathlib import Path
-          root = Path.cwd()
-          base_sha = subprocess.check_output(
-              ["git", "rev-parse", "HEAD"], cwd=root, text=True,
-              stdin=subprocess.DEVNULL,
-          ).strip()
-          result = subprocess.run(
-              [
-                  sys.executable, "tools/build_autonomous_path_allowlist.py",
-                  "--repo-root", str(root),
-                  "--expected-base-sha", base_sha,
-                  "--task-id", "AUTOMATION-LEDGER-ACTIVATION",
-              ],
-              cwd=root, text=True, capture_output=True, check=False,
-          )
-          if result.returncode != 3:
-              raise SystemExit(f"Expected fail-closed no-active-task exit 3, got {result.returncode}: {result.stdout} {result.stderr}")
-          report = json.loads(result.stdout)
-          if report.get("status") != "NO_ACTIVE_TASK" or report.get("allowed_paths") != []:
-              raise SystemExit("Canonical empty queue unexpectedly granted model write paths")
-          print("PASS: canonical empty queue grants zero model write paths")
+
+          root = Path(tempfile.mkdtemp(prefix="boonta-empty-queue-"))
+          try:
+              automation = root / "docs" / "automation"
+              automation.mkdir(parents=True)
+              fixture_summary = {
+                  "schema_version": 2,
+                  "source": "docs/automation/task-ledger.json",
+                  "updated_at": "2026-11-11",
+                  "policy": {
+                      "max_active_tasks": 1,
+                      "completed_requires_merged_pr": True,
+                  },
+                  "tasks": [],
+              }
+              fixture_policy = {
+                  "schema_version": 1,
+                  "policy": {
+                      "owner_review_required": True,
+                      "path_mode": "exact",
+                      "max_paths_per_task": 20,
+                  },
+                  "tasks": [],
+              }
+              (automation / "task-ledger-summary.json").write_text(
+                  json.dumps(fixture_summary, indent=2) + "\n", encoding="utf-8"
+              )
+              (automation / "patch-path-allowlist.json").write_text(
+                  json.dumps(fixture_policy, indent=2) + "\n", encoding="utf-8"
+              )
+
+              subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+              subprocess.run(["git", "config", "user.name", "Boonta Offline Test"], cwd=root, check=True)
+              subprocess.run(["git", "config", "user.email", "boonta-offline-test@example.invalid"], cwd=root, check=True)
+              subprocess.run(["git", "add", "docs/automation"], cwd=root, check=True)
+              subprocess.run(["git", "commit", "--quiet", "-m", "empty queue fixture"], cwd=root, check=True)
+              base_sha = subprocess.check_output(
+                  ["git", "rev-parse", "HEAD"], cwd=root, text=True,
+                  stdin=subprocess.DEVNULL,
+              ).strip()
+
+              builder = Path.cwd() / "tools" / "build_autonomous_path_allowlist.py"
+              result = subprocess.run(
+                  [
+                      sys.executable, str(builder),
+                      "--repo-root", str(root),
+                      "--expected-base-sha", base_sha,
+                      "--task-id", "GC-RACE-PROGRESSION",
+                  ],
+                  cwd=root, text=True, capture_output=True, check=False,
+              )
+              if result.returncode != 3:
+                  raise SystemExit(
+                      f"Expected fail-closed empty-queue exit 3, got {result.returncode}: "
+                      f"{result.stdout} {result.stderr}"
+                  )
+              report = json.loads(result.stdout)
+              if report.get("status") != "NO_ACTIVE_TASK" or report.get("allowed_paths") != []:
+                  raise SystemExit("Synthetic empty queue unexpectedly granted model write paths")
+              print("PASS: synthetic empty queue grants zero model write paths")
+          finally:
+              shutil.rmtree(root, ignore_errors=True)
           PY
 
       - name: Run only repository-owned patch verification tests
