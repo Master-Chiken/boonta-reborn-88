@@ -32,7 +32,8 @@
       "head_sha": "a0116b2c033e37735f08be0b600c67c3c87c5ffe",
       "updated_at": "2026-11-04",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "RE001-SYSTEM-MATRIX",
@@ -232,7 +233,8 @@
       "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
       "updated_at": "2026-11-07",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
@@ -443,7 +445,8 @@
         }
       ],
       "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING"
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
@@ -654,7 +657,8 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -690,7 +694,8 @@
       "head_sha": "649f869c00e92eae12b3fb93fc11c61e6ab465fc",
       "updated_at": "2026-11-05",
       "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING"
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
@@ -731,7 +736,8 @@
       "head_sha": "a14d4546330414335ca30bfcbc815984dc24c480",
       "updated_at": "2026-11-05",
       "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING"
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
@@ -765,7 +771,8 @@
       "head_sha": "32c256eb511ba75982f1503ea63aa14976a4b506",
       "updated_at": "2026-11-07",
       "owner_role_id": "platform",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -798,7 +805,8 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
       "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
@@ -829,7 +837,8 @@
       "head_sha": "9d87f894d81da6f1f5edc4a66da24ccca7847717",
       "updated_at": "2026-11-05",
       "owner_role_id": "chief-of-staff",
-      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING"
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "N64-COMPWOLF-INVENTORY",
@@ -874,7 +883,8 @@
       "next_action": "Completed: PR #334 was squash-merged into main at merge commit f704140970dcf75dbfa8062f3494a07de4c23550 from exact branch head 4a6b00540d0eea6acbdfea1d88289a2068962d0d. Owner-local exact PR #334 scan confirmed 92 validated / 0 rejected / 0 undefined initial-history reads, 20/20 synthetic tests, and matching aggregate counts. T2 is tracked separately as N64-COMPWOLF-PUPP-T2-PARSE-PROBE (blocked). The owner-local 68,284-byte candidate has been prepared locally; the machine is macOS 26.6.2 arm64 with no .NET installed. Next install .NET 10.0.403 SDK Arm64 and run an isolated parser-only console probe under ~/racer-work using the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; report only parser status, runtime type and aggregate counts. No model bytes, offsets, dumps, images or extracted assets are uploaded. Audit package licenses and N64 compatibility before integration.",
       "updated_at": "2026-11-07",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
@@ -905,7 +915,8 @@
       "updated_at": "2026-11-07",
       "target_branch": "main",
       "owner_role_id": "research",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "GC-RACE-PROGRESSION",
@@ -986,7 +997,8 @@
         }
       ],
       "owner_role_id": "gameplay",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
@@ -1014,7 +1026,10 @@
       "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
       "updated_at": "2026-11-11",
       "owner_role_id": "gameplay",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION"
+      ]
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
@@ -1042,7 +1057,10 @@
       "next_action": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently available course/pod only; add content selection only when multiple lawful native options exist.",
       "updated_at": "2026-11-11",
       "owner_role_id": "gameplay",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RIVAL-ROUTE-PROGRESSION"
+      ]
     },
     {
       "task_id": "GC-RACE-PERFORMANCE-PROFILE",
@@ -1070,7 +1088,12 @@
       "next_action": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route sampler. Optimize one demonstrated bottleneck with before/after measurements; never trade away correctness for speculative speed.",
       "updated_at": "2026-11-11",
       "owner_role_id": "platform",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME"
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION",
+        "GC-RIVAL-ROUTE-PROGRESSION",
+        "GC-RACE-FRONTEND-FLOW"
+      ]
     }
   ]
 }
