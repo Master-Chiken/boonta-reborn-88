@@ -431,7 +431,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,500 context tokens and 256 output tokens" not in budget or "3,200-character verified-context ceiling; 1,100-character task handoff" not in budget:
+if "1,500 context tokens and 256 output tokens" not in budget or "caps verified context at 3,200 characters and task handoff at 1,100 characters" not in budget:
     errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
