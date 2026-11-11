@@ -18,7 +18,7 @@ At main commit `4fdfd6292e5379977b0ca240c47d9c15e2b320eb` (ledger updated 2026-1
 
 The blocked tasks are `AUTOMATION-LEDGER-ACTIVATION` and `N64-COMPWOLF-PUPP-T2-PARSE-PROBE`. Do not automatically activate the N64 T2 task: it requires an owner-local SDK/probe and licence/provenance checks.
 
-There is also documentation drift: `docs/NEXT_MILESTONE.md` and `docs/PROJECT_OPERATING_RULES.md` still describe PR #274 as open and PR #269 as a draft, while live GitHub reports both PRs closed and merged on 2026-11-07. The current PR state, merge commit and current `main` files must outrank copied historical prose. A future status-sync check should flag any documentation claim that a linked PR is open/draft when GitHub reports it merged/closed.
+The documentation drift identified in the earlier backlog draft has now been corrected on the current documentation branch: PR #274 and PR #269 are recorded as merged with their exact merge SHAs in `docs/NEXT_MILESTONE.md` and `docs/PROJECT_OPERATING_RULES.md`. The current PR state, merge commit and current `main` files must continue to outrank copied historical prose. A future status-sync check should flag any documentation claim that a linked PR is open/draft when GitHub reports it merged/closed.
 
 ## Candidate sequence — require explicit owner approval before adding to the ledger
 
