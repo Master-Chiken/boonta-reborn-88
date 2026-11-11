@@ -89,6 +89,12 @@ jobs:
           python3 tools/check_task_read_paths.py
           python3 tools/test_task_read_paths.py
 
+      - name: Validate schema-v2 multi-file source excerpts (offline)
+        shell: bash
+        run: |
+          python3 tools/check_task_ledger_summary.py
+          python3 tools/test_autonomous_context.py
+
       - name: Revalidate queued autonomous tasks with mocked GitHub data (offline)
         shell: bash
         run: python3 tools/test_autonomous_fresh_task_guard.py
