@@ -6,6 +6,7 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 ## Startup and context budget
 - Read `.gemini/context.json` first; its preflight-selected task ID/title/base/criteria are authoritative.
 - Read the compact summary once; read only the matching full-ledger row once if its criteria excerpt is incomplete. Never reread either or preloaded context.
+- The preloaded schema-v2 context is authoritative for providers using bounded source excerpts; do not broaden repository reads.
 - At startup read `docs/REVERSE_ENGINEERING_FIRST.md` and `docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md` once; apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
 - Keep newly retrieved repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279; Do not read all historical comments. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries or proprietary assets; do not ingest the approximately 452 KB route dossier. Stop on context, TPM, quota, rate-limit or authentication errors; never repeat the same request.
 - Keep a compact inventory of directly related open pull requests. Deep-inspect changed files and exact-head CI only for PRs tied to the selected task. Read logs only for failed jobs. Reuse a successful check for an unchanged exact SHA without launching duplicate runs.
