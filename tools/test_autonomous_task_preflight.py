@@ -480,7 +480,7 @@ async function runCase(testCase) {{
         }}
       }}
       if (testCase.expected_date_branch === true) {{
-        const expectedBranch = "automation-ledger-activation-" + todayUtc.replace(/-/g, "");
+        const expectedBranch = "automation-ledger-activation-" + new Date().toISOString().slice(0, 10).replace(/-/g, "");
         if (!String(outputs.task_context).includes(expectedBranch)) {{
           throw new Error(testCase.name + ": task context omitted the fresh UTC-date branch " + expectedBranch);
         }}
