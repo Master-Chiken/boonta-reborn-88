@@ -669,6 +669,20 @@ static inline float boonta_rival_initial_progress(unsigned int rival_index)
     return 4.0f - boonta_rival_initial_z(rival_index);
 }
 
+/* Race target preserves each opponent's staggered start-grid offset. */
+static inline float boonta_rival_finish_distance(unsigned int rival_index,
+                                                  float lap_distance,
+                                                  unsigned int lap_limit)
+{
+    float finish_distance;
+    if (rival_index >= BOONTA_RIVAL_COUNT || !isfinite(lap_distance) ||
+        lap_distance <= 0.0f || lap_limit == 0U) return 0.0f;
+    finish_distance = boonta_rival_initial_progress(rival_index) +
+                      lap_distance * (float)lap_limit;
+    return isfinite(finish_distance) && finish_distance > 0.0f
+        ? finish_distance : 0.0f;
+}
+
 static inline float boonta_rival_progress_after_frame(float progress,
                                                         float speed,
                                                         float frame_scale)

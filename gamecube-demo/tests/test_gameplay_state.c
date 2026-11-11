@@ -926,6 +926,12 @@ static void race_order_and_finish_tests(void) {
  state.rival_progress[1] = 70.0f;
  state.rival_progress[2] = 80.0f;
  assert(boonta_race_current_position(&state) == 3U);
+ assert(nearf(boonta_rival_finish_distance(0U, 100.0f, 3U), 322.0f));
+ assert(nearf(boonta_rival_finish_distance(1U, 100.0f, 3U), 338.0f));
+ assert(nearf(boonta_rival_finish_distance(2U, 100.0f, 3U), 354.0f));
+ assert(nearf(boonta_rival_finish_distance(0U, NAN, 3U), 0.0f));
+ assert(nearf(boonta_rival_finish_distance(3U, 100.0f, 3U), 0.0f));
+ assert(nearf(boonta_rival_finish_distance(0U, 100.0f, 0U), 0.0f));
 
  /* Finish is rejected until a rival crosses the configured race goal. */
  assert(!boonta_rival_record_finish(&state, 0U, 100.0f, 39.0f));

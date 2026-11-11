@@ -951,11 +951,16 @@ static void draw_hud(void)
                               g_race_state.lap_times[split_index]);
     }
     (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
-    current_position = g_race_finished
-        ? g_race_state.finish_position
-        : boonta_race_current_position(&g_race_state);
-    (void)snprintf(position_text, sizeof(position_text), "%u/%u",
-                   current_position, (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
+    if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
+        (void)snprintf(position_text, sizeof(position_text), "--/%u",
+                       (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
+    } else {
+        current_position = g_race_finished
+            ? g_race_state.finish_position
+            : boonta_race_current_position(&g_race_state);
+        (void)snprintf(position_text, sizeof(position_text), "%u/%u",
+                       current_position, (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
+    }
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
     {
         char lap_time[20];
@@ -1508,7 +1513,9 @@ int main(int argc, char **argv)
                     g_distance, g_rival_progress[rival_index]);
                 (void)boonta_rival_record_finish(
                     &g_race_state, rival_index,
-                    RACE_LAP_DISTANCE * (float)RACE_LAP_LIMIT, g_race_seconds);
+                    boonta_rival_finish_distance(
+                        rival_index, RACE_LAP_DISTANCE, RACE_LAP_LIMIT),
+                    g_race_seconds);
                 rival_event = boonta_rival_event_after_frame(
                     previous_rival_z, g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
