@@ -80,6 +80,8 @@ PROTECTED_EXACT = {
     "tools/autonomous_patch_proposal.py",
     "tools/build_autonomous_path_allowlist.py",
     "tools/build_autonomous_delivery_plan.py",
+    "tools/execute_autonomous_github_delivery.py",
+    "tools/test_execute_autonomous_github_delivery.py",
     "tools/test_autonomous_delivery_plan.py",
     "tools/test_autonomous_path_allowlist.py",
     "tools/verify_autonomous_patch.py",
