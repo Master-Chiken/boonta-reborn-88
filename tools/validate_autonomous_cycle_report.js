@@ -28,6 +28,23 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+
+function attachReservedCycleMetadata(summary, expectedTaskId, expectedBase) {
+  if (typeof summary !== 'string' || typeof expectedTaskId !== 'string' ||
+      !expectedTaskId.trim() || !Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)) {
+    throw new Error('Cannot attach incomplete or invalid reserved cycle metadata.');
+  }
+  const lines = summary.trim().split(/\\r?\\n/).filter((line) =>
+    !line.startsWith('BOONTA_CYCLE_TASK_ID:') &&
+    !line.startsWith('BOONTA_CYCLE_EVIDENCE_BASE:')
+  );
+  return [
+    'BOONTA_CYCLE_TASK_ID: ' + expectedTaskId,
+    ...lines,
+    'BOONTA_CYCLE_EVIDENCE_BASE: ' + expectedBase
+  ].join('\\n');
+}
+
 function findBlockedReportContradictions(blockedText, evidence = {}) {
   const text = typeof blockedText === 'string' ? blockedText : '';
   const contradictions = [];
@@ -267,4 +284,4 @@ async function validateAutonomousCycleReport(options) {
   };
 }
 
-module.exports = { REQUIRED_CHECKS, findBlockedReportContradictions, validateAutonomousCycleReport };
+module.exports = { REQUIRED_CHECKS, attachReservedCycleMetadata, findBlockedReportContradictions, validateAutonomousCycleReport };
