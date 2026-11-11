@@ -221,7 +221,7 @@ def build_context(
     source_excerpt = _build_source_excerpt(
         source_root or root, read_paths, task.get("read_ranges", []), max_source_chars
     )
-    rendered_paths_line = "Exact read-only source paths: " + ", ".join(read_paths)
+    rendered_paths_line = "Read-only source excerpts: four exact task paths are shown below"
     prefix_lines = [
         "VERIFIED CONTEXT:",
         "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
@@ -244,7 +244,7 @@ def build_context(
         rendered_paths_line,
         "Question: " + _short(task["question_excerpt"], 150),
         f"Acceptance criteria ({criteria_total} total; first {len(selected_criteria)}):",
-        *("- " + _short(item, 100) for item in selected_criteria),
+        *("- " + _short(item, 140) for item in selected_criteria),
         "Next: " + _short(task["next_action_excerpt"], max_next_action),
     ]
     bounded_task_context = "\n".join(compact_lines)
