@@ -34,7 +34,9 @@ class CourseRuntimeSourceTests(unittest.TestCase):
         self.assertIn("context->sampler.total_length", finish)
         self.assertIn("floorf(player_distance", finish)
         self.assertIn("!isfinite(player_distance)", finish)
-        self.assertIn("player_distance<0.0f", finish)
+        self.assertIn("player_distance < 0.0f", finish)
+        self.assertIn("BOONTA_RUNTIME_ROUTE_HAS_BRANCHES", finish)
+        self.assertIn("boonta_route_cursor_distance_to_next_lap", finish)
 
     def test_course_selection_and_reset_reinitialize_runtime_context(self):
         start = self.main.index("static void select_course(")
@@ -45,9 +47,12 @@ class CourseRuntimeSourceTests(unittest.TestCase):
         self.assertIn("reset_runtime_route_cursor", selection)
         self.assertGreaterEqual(self.main.count("reset_runtime_route_cursor();"), 2)
 
-    def test_legacy_branch_cursor_contract_is_not_claimed_by_current_runtime(self):
-        self.assertNotIn("static BoontaRouteCursor g_route_cursor;", self.main)
-        self.assertNotIn("advance_runtime_route_cursor(", self.main)
+    def test_branch_cursor_is_wired_through_the_selected_course_adapter(self):
+        self.assertIn("static int advance_runtime_route_cursor(", self.main)
+        self.assertIn("g_current_course->advance", self.main)
+        self.assertIn("g_current_course->has_branches", self.main)
+        self.assertIn("boonta_route_cursor_move(", self.runtime)
+        self.assertIn("boonta_route_graph_sampler_prime_lookahead(", self.runtime)
         self.assertIn("g_current_course->distance_to_next_finish", self.main)
 
 
