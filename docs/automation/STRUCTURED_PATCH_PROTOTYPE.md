@@ -1,167 +1,89 @@
-# Structured patch proposal prototype
+# Structured patch and deterministic delivery pipeline
 
-**Status: isolated offline prototype; not connected to a live AI provider or production workflow.**
+**Status:** the offline proposal validator, fixed test runner, isolated verifier and deterministic delivery planner are implemented. A separate GitHub writer is present but opt-in and draft-only. No AI provider or scheduled production workflow invokes this pipeline.
 
-## Purpose
+The canonical task ledger currently has no active task (two blocked tasks remain), and the owner-reviewed path policy is empty. Therefore the current repository state grants **zero model write paths** and cannot produce a deliverable plan.
 
-Reduce fragile model-controlled GitHub MCP sequences. The future model contract is one strict JSON patch proposal. Deterministic code validates and applies it in an isolated, clean checkout; ordinary repository tooling—not the model—would later own commits and PR creation.
+## Architecture
 
-This prototype performs no network access, inference, branch creation, commit, push, PR creation, merge, arbitrary shell execution, or test execution from model-supplied text.
+1. **Trusted task and path scope.** \`tools/build_autonomous_path_allowlist.py\` reads the canonical schema-v2 task summary and \`docs/automation/patch-path-allowlist.json\`. It grants exact paths only to the unique active task when an explicit owner-reviewed policy entry exists. Paths must be existing regular tracked files. No globs, prefixes or model-selected paths are accepted.
+2. **Strict proposal.** \`tools/autonomous_patch_proposal.py\` accepts a bounded JSON contract containing task ID, exact base SHA, summary, unified diff, fixed test IDs and limitations. Duplicate/unknown fields, stale identities, unsafe paths, credentials, symlinks, binary changes, oversized patches and unapproved tests are rejected.
+3. **Isolated verification.** \`tools/verify_autonomous_patch.py\` creates a detached temporary Git worktree, applies the patch there and runs all mandatory checks plus requested registered tests. It verifies that tests did not alter approved output files, stage files, create commits, or leave unexpected files. The original source checkout remains unchanged.
+4. **Deterministic plan.** \`tools/build_autonomous_delivery_plan.py\` revalidates canonical task and path policy, every test result, and the exact file bundle. It derives the branch name, commit message, PR title/body and task marker without asking the model to choose them.
+5. **Guarded GitHub writer.** \`tools/execute_autonomous_github_delivery.py\` revalidates the plan and its source evidence again, then—only in explicit execution mode—creates a Git tree, one-parent commit, new branch ref and **draft PR**. It never force-updates a branch, merges a PR or enables auto-merge.
 
-## Contract
+## Fixed test registry
 
-The authoritative schema is emitted by:
+The model can request only identifiers from this repository-owned registry:
 
-```bash
-python3 tools/autonomous_patch_proposal.py --print-schema
-```
+- \`automation.task_preflight\`
+- \`automation.provider_handoff\`
+- \`automation.task_ledger\`
 
-Required properties:
+The isolated verifier always runs all three mandatory checks. The dispatcher uses argv execution without a shell, does not pass GitHub/provider secrets to child processes, uses non-interactive stdin, has a 120-second per-test timeout, and stops on first failure. No GameCube test ID is offered until a stable, bounded host-test command is verified.
 
-- `schema_version`: integer 1.
-- `task_id`: exact ID independently supplied by the trusted task preflight.
-- `base_sha`: exact 40-character base commit SHA independently supplied by preflight.
-- `summary`: bounded human-readable summary.
-- `unified_diff`: one bounded UTF-8 unified Git diff.
-- `test_ids`: identifiers from a fixed allowlist; no command strings, scripts or shell arguments.
-- `limitations`: up to eight short caveats.
+List available test IDs:
 
-Unknown and duplicate JSON properties are rejected. The model cannot choose or widen the path allowlist. `tools/build_autonomous_path_allowlist.py` reads the canonical schema-v2 task summary and the separate owner-reviewed `docs/automation/patch-path-allowlist.json`. It issues exact paths only for the unique active task, only when an owner-review evidence URL exists, and only for pre-existing regular tracked files. No glob, directory prefix or model-selected path is supported. The policy file is empty initially because the canonical task ledger currently has no active task.
+\`\`\`bash
+python3 tools/run_autonomous_patch_tests.py --list
+\`\`\`
 
-## Guardrails
+## Offline verification commands
 
-The validator rejects:
+Run the relevant synthetic regression suites:
 
-- wrong task ID or stale base SHA;
-- malformed JSON, duplicate keys, unknown fields and unknown test identifiers;
-- empty task path allowlist, paths outside that allowlist, path traversal and unsupported/quoted paths;
-- changes to `.github/`, Git metadata, task-ledger source/summary, agent policy, code owners, credential paths, environment files or key/certificate files;
-- binary, mode, rename, copy, submodule, new-file and delete-file changes;
-- more than five files, 100 text hunks or 32 KiB of diff;
-- untracked files, dirty worktrees, wrong checkout root or checkout HEAD that differs from the trusted base;
-- symlink and non-regular tracked targets;
-- patches rejected by `git apply --check --whitespace=error`.
-
-Only pre-existing regular tracked files can be changed in this first prototype. This is deliberately conservative; support for new files is not allowed until a separate threat-model and test review.
-
-The optional `--apply` flag applies the already validated patch to the disposable checkout. It does not stage files or create a commit.
-
-## Offline use
-
-Validation only:
-
-```bash
-python3 tools/autonomous_patch_proposal.py \
-  --repo-root "$PWD" \
-  --proposal /tmp/boonta-proposal.json \
-  --expected-task-id "TASK-ID-FROM-PREFLIGHT" \
-  --expected-base-sha "40_CHAR_SHA_FROM_PREFLIGHT" \
-  --allowlist-report /tmp/boonta-allowlist.json
-```
-
-Apply to a disposable clean checkout only:
-
-```bash
-python3 tools/autonomous_patch_proposal.py \
-  --repo-root "$PWD" \
-  --proposal /tmp/boonta-proposal.json \
-  --expected-task-id "TASK-ID-FROM-PREFLIGHT" \
-  --expected-base-sha "40_CHAR_SHA_FROM_PREFLIGHT" \
-  --allowlist-report /tmp/boonta-allowlist.json \
-  --apply
-```
-
-Regression tests use temporary Git repositories and synthetic source files:
-
-```bash
+\`\`\`bash
 python3 tools/test_autonomous_patch_proposal.py
 python3 tools/test_autonomous_patch_test_runner.py
 python3 tools/test_autonomous_path_allowlist.py
 python3 tools/test_verify_autonomous_patch.py
-```
+python3 tools/test_autonomous_delivery_plan.py
+python3 tools/test_execute_autonomous_github_delivery.py
+\`\`\`
 
-## Fixed test dispatcher
+The GitHub writer tests use a mocked API. They do not create remote refs, commits or PRs.
 
-The repository-owned registry is listed with:
+## Deterministic GitHub writer
 
-```bash
-python3 tools/run_autonomous_patch_tests.py --list
-```
+The writer is **dry-run by default**. Without \`--execute\`, it revalidates the plan and prints \`DRY_RUN_VALIDATED\`; it does not call the GitHub API.
 
-Run the three approved offline checks together:
+Live draft-PR creation additionally requires all of the following:
 
-```bash
-python3 tools/run_autonomous_patch_tests.py \
-  --repo-root "$PWD" \
-  --test-id automation.task_preflight \
-  --test-id automation.provider_handoff \
-  --test-id automation.task_ledger
-```
+- the explicit \`--execute\` argument;
+- \`BOONTA_DETERMINISTIC_DELIVERY_ENABLED=true\`;
+- \`BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED=true\`;
+- a \`GITHUB_TOKEN\` with the repository permissions needed to create Git trees, commits, refs and draft PRs;
+- the exact task/base/path policy and verified report still passing revalidation.
 
-The model may choose only IDs present in the registry. It cannot pass test arguments or commands. The runner uses argv execution without a shell, strips GitHub/provider secret variables from child environments, caps each test at 120 seconds, and stops after the first failure. The isolated orchestrator always runs all three current mandatory automation checks, even when the proposal requests fewer. Registered scripts and the validator/dispatcher/orchestrator themselves are protected from model-authored patches. No GameCube test ID is offered until a stable, bounded host-test command is confirmed.
-
-## Isolated patch-to-tests pipeline
-
-The end-to-end offline verifier is `tools/verify_autonomous_patch.py`. It checks the source checkout is clean and at the trusted base SHA, creates a detached temporary Git worktree, applies the strict patch there, runs all three mandatory tests plus any additional allowed test IDs, verifies that only the validated paths changed and that no commit or branch was created, then removes the worktree. The source checkout remains untouched on both success and test failure. The verifier snapshots the content digests and executable modes of patched files before tests and rejects any test that alters one, even when the path is already authorized. Test-created untracked artifacts or unexpected file changes also reject the result.
-
-Run it after generating the owner-approved path report:
-
-```bash
-python3 tools/verify_autonomous_patch.py \
-  --repo-root "$PWD" \
-  --proposal /tmp/boonta-proposal.json \
-  --allowlist-report /tmp/boonta-allowlist.json \
-  --expected-task-id "$TASK_ID_FROM_PREFLIGHT" \
-  --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
-```
-
-It outputs `VERIFIED` only after all mandatory tests pass. `FAILED` means tests failed; `REJECTED` means the proposal, trusted scope, checkout or isolation check failed. It performs no provider call, branch creation, commit, push or PR creation.
-
-## Deterministic delivery planning
-
-After the isolated verifier returns VERIFIED, tools/build_autonomous_delivery_plan.py can create a read-only delivery plan. It rechecks the source checkout SHA, current canonical active task, current owner-maintained path policy, exact allowlist paths and the complete fixed-test evidence. It rejects stale or mismatched task/base reports, unregistered test IDs, any failed/missing test, a blocked/empty task queue, or paths that have since been removed from the owner-approved scope.
-
-The planner deterministically supplies the target branch, branch name, commit subject/body, PR title/body and the canonical BOONTA_TASK_ID marker. These values are derived from the trusted task ID/base SHA and the verified patch report; the model does not choose them.
+A typical dry-run invocation is:
 
 \`\`\`bash
-python3 tools/build_autonomous_delivery_plan.py \
+python3 tools/execute_autonomous_github_delivery.py \
   --repo-root "$PWD" \
+  --repository "Master-Chiken/boonta-reborn-88" \
+  --plan /tmp/boonta-delivery-plan.json \
   --verified-report /tmp/boonta-verified.json \
   --allowlist-report /tmp/boonta-allowlist.json \
   --expected-task-id "$TASK_ID_FROM_PREFLIGHT" \
   --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
 \`\`\`
 
-The verified report now also carries a bounded file bundle for the future GitHub writer: each exact path includes its base Git blob SHA, resulting Git blob SHA, SHA-256 digest, file mode and base64-encoded UTF-8 contents. The verifier enforces a 128 KiB per-file limit and a 256 KiB aggregate limit. The planner rechecks both blob identities and the base checkout before including those bytes in its deterministic plan. This prevents a future writer from asking the model to reconstruct or reformat source files.
+Adding \`--execute\` without both exact-true gates fails closed before any GitHub request. Successful execution creates only a draft PR. The writer checks that the target branch still equals the verified base SHA, the deterministic branch does not already exist, and no open PR already carries the task marker. It rechecks the base branch and open task PR immediately before opening the draft. A partial failure after ref creation leaves the branch for human reconciliation; the writer does not overwrite or delete it.
 
-The plan now includes the exact Git Data API request sequence: create a tree from the verified base tree and exported file contents, create a single-parent commit, create a new ref only if that branch does not exist, then open a draft PR. Preconditions require the target branch to remain at the exact verified base SHA, no existing branch for the deterministic name, no open PR for the task and independent human review. The payload is declarative only; no API request is executed.\n\nThe output is DELIVERY_PLAN_READY only. It creates no commit, local/remote branch, push, pull request or merge. Human review and normal branch protections remain mandatory. The planner itself and its tests are protected from model-authored patches. The actual GitHub writer is still a separate future component and is not connected to providers or scheduled workflows.
+The writer is a separately callable tool. It is **not** invoked by Gemini, OpenRouter, Groq, Paperclip or the scheduled autonomous loop. No live writer execution has been performed as part of this prototype.
 
-## Owner-reviewed path generation
+## Current operating constraints
 
-The owner-maintained policy starts empty. For an active task, the trusted runner generates its allowlist report before any model call:
+- The canonical task ledger has 11 records: 9 completed and 2 blocked, with no active task.
+- \`docs/automation/patch-path-allowlist.json\` has an empty \`tasks\` array.
+- The workflow self-test explicitly asserts that an empty canonical queue returns \`NO_ACTIVE_TASK\` with an empty allowed-path list.
+- No task has been activated and no owner-reviewed path scope has been added by this PR.
+- No provider route, secret, billing option, GitHub App permission, branch protection rule or production schedule is changed.
+- No auto-merge is enabled. Normal independent PR review and branch rules remain mandatory.
+- A cross-runtime lease/lock and production provider integration are not implemented.
 
-```bash
-python3 tools/build_autonomous_path_allowlist.py \
-  --repo-root "$PWD" \
-  --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT" \
-  --task-id "$TASK_ID_FROM_PREFLIGHT" \
-  > /tmp/boonta-allowlist.json
-```
+## Promotion requirements
 
-The proposal validator then consumes that exact report via `--allowlist-report`. A non-READY report (empty queue, blocked task or missing owner-reviewed paths) produces no authorized paths and the validator refuses the proposal. The registry, generator and tests are themselves protected from model-authored patches. CI verifies that the current empty canonical queue yields `NO_ACTIVE_TASK` with an empty path list.
+Before any production integration, a separately reviewed change must provide a concrete active task and exact approved file list, and the full provider-independent path must prove: strict proposal → scope validation → disposable patch application → mandatory tests → integrity-checked bundle → revalidated delivery plan → mocked draft-PR write. Only after that should a separate owner-authorized change connect a provider and the scheduled loop. The two writer execution gates must remain disabled until that decision is made.
 
-The owner-reviewed path policy is separate from the canonical task ledger. A policy entry contains exactly a task ID, short purpose, GitHub PR review-evidence URL and 1–20 exact file paths. Additions to that file require a normal human-reviewed PR; no automation writes policy entries.
-
-## Not implemented yet
-
-- No structured-output provider request or model route is configured.
-- The fixed dispatcher runs only the three verified offline automation checks. GameCube build/test commands are not in the registry because no stable, bounded host-test command has yet been confirmed.
-- The isolated patch-to-tests verifier is an offline prototype only; no production provider or scheduled loop invokes it yet.
-- The deterministic delivery planner prepares commit/PR metadata and checksummed file contents but does not create a commit, branch, push or PR. A separately reviewed GitHub writer and lock are still not connected.
-- No cross-runtime lock is implemented.
-
-## Promotion criteria
-
-Keep this prototype isolated until all offline tests pass on the exact PR head, reviewers inspect the threat model and path policy, and a provider-independent end-to-end fixture proves: strict JSON response → invalid patch rejection → valid patch application in a disposable checkout → fixed test-ID dispatch → deterministic mock branch/PR metadata. Only then consider a separately reviewed production integration. A failed schema or patch check must never be repaired with an automatic second provider request unless the quota budget explicitly permits it.
-
-No provider invocation, new runtime dependency, secret, billing change or external service is required for the prototype.
+No paid service or new runtime package is required by this implementation.
