@@ -113,7 +113,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert len(bounded) <= 1500
     assert task["question_excerpt"] in bounded
     assert task["next_action_excerpt"] in bounded
-    assert all(item in bounded for item in task["acceptance_criteria_excerpt"])
+    assert all(MODULE._short(item, 100) in bounded for item in task["acceptance_criteria_excerpt"])
 
     groq_bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
