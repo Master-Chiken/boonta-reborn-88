@@ -439,7 +439,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,500 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
+if "1,550 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
     errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -669,7 +669,7 @@ else:
     resume_body = groq[resume_start + len(resume_start_marker):resume_end]
     resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
     if len(resume_body) > 1400:
-        errors.append(f"Groq resume prompt leaves insufficient room under the 5,200-character TPM cap: {len(resume_body)}")
+        errors.append(f"Groq resume prompt leaves insufficient room under the 5,500-character TPM cap: {len(resume_body)}")
 if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
