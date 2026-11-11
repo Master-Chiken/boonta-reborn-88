@@ -42,6 +42,18 @@ on:
         type: boolean
         required: false
         default: false
+      resume_task_id:
+        type: string
+        required: false
+      resume_task_title:
+        type: string
+        required: false
+      resume_task_target_branch:
+        type: string
+        required: false
+      resume_task_description:
+        type: string
+        required: false
       resume_pr_number:
         type: number
         required: false
@@ -168,19 +180,21 @@ jobs:
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
+          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
           RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
           RESUME_PR_URL: ${{ inputs.resume_pr_url }}
           RESUME_BRANCH: ${{ inputs.resume_branch }}
           RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
         with:
           script: |
-            const taskId = process.env.TASK_ID || '';
             const resumeMode = process.env.RESUME_MODE === 'true';
+            const taskId = (resumeMode ? process.env.RESUME_TASK_ID : process.env.TASK_ID) || '';
             const resumePrNumber = Number(process.env.RESUME_PR_NUMBER || '0');
             const resumePrUrl = process.env.RESUME_PR_URL || '';
             const resumeBranch = process.env.RESUME_BRANCH || '';
             const resumeHeadSha = process.env.RESUME_HEAD_SHA || '';
-            const targetBranch = process.env.TASK_TARGET_BRANCH || '';
+            const targetBranch = (resumeMode ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.TASK_TARGET_BRANCH) || '';
             const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
             const failClosed = (reason) => {
               core.setOutput('allowed', 'false');
@@ -293,11 +307,11 @@ jobs:
               return;
             }
             const markerLine = 'BOONTA_TASK_ID: ' + taskId;
-            const targetMarkerLine = 'BOONTA_TASK_TARGET_BRANCH: ' + targetBranch;
-            const matching = openPullRequests.filter((pull) =>
-              (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
-            );
             if (resumeMode) {
+              const targetMarkerLine = 'BOONTA_TASK_TARGET_BRANCH: ' + targetBranch;
+              const matching = openPullRequests.filter((pull) =>
+                (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
+              );
               if (
                 !Number.isSafeInteger(resumePrNumber) || resumePrNumber < 1 ||
                 !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(resumePrUrl) ||
@@ -326,13 +340,18 @@ jobs:
                 bodyLines.filter((line) => line === markerLine).length !== 1 ||
                 bodyLines.filter((line) => line === targetMarkerLine).length !== 1
               ) {
-                failClosed('existing PR changed or failed owner, repository, task marker, target, branch, URL or exact-head revalidation');
+                failClosed('existing PR changed or failed owner, same-repository, state, task marker, target, branch, URL or exact-head revalidation');
                 return;
               }
               core.info('Existing task PR #' + resumePrNumber + ' revalidated at exact head ' + resumeHeadSha + ' for owner-dispatched Groq Free resume.');
-            } else if (matching.length > 0) {
-              failClosed('open PR #' + matching[0].number + ' already represents this exact task');
-              return;
+            } else {
+              const duplicate = openPullRequests.find((pull) =>
+                (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
+              );
+              if (duplicate) {
+                failClosed('open PR #' + duplicate.number + ' already represents this exact task');
+                return;
+              }
             }
             
             core.setOutput('allowed', 'true');
@@ -395,8 +414,19 @@ jobs:
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           TASK_DESCRIPTION: ${{ inputs.task_description }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
+          RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
+          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
+          RESUME_TASK_DESCRIPTION: ${{ inputs.resume_task_description }}
         run: |
           set -euo pipefail
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            TASK_ID="${RESUME_TASK_ID}"
+            TASK_TITLE="${RESUME_TASK_TITLE}"
+            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
+            TASK_DESCRIPTION="${RESUME_TASK_DESCRIPTION}"
+          fi
           repo_root=''
           for candidate in "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/boonta-reborn-88"; do
             [[ -d "$candidate" ]] || continue
@@ -428,6 +458,9 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
+          RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
+          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
           RESUME_MODE: ${{ inputs.resume_mode }}
@@ -440,6 +473,9 @@ jobs:
           set +x
 
           if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            TASK_ID="${RESUME_TASK_ID}"
+            TASK_TITLE="${RESUME_TASK_TITLE}"
+            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
             export GITHUB_TOOLS="push_files"
           else
             export GITHUB_TOOLS="create_branch,push_files,create_pull_request"
