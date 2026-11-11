@@ -128,18 +128,19 @@ class GXColorPipelineTests(unittest.TestCase):
             quad,
         )
 
-    def test_finish_banner_has_readable_label_and_required_glyphs(self) -> None:
-        self.assertRegex(SOURCE, r"\['F'\]\s*=\s*\{31,16,16,30,16,16,16\}")
-        self.assertRegex(SOURCE, r"\['N'\]\s*=\s*\{17,25,21,19,17,17,17\}")
-        finish = SOURCE.split("/* Finish banner:", 1)[1].split(
-            "} else if (g_paused)", 1
+    def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
+        for glyph in ("K", "O", "R", "U", "V", "Y"):
+            self.assertRegex(SOURCE, rf"\['{glyph}'\]\s*=\s*\{{[0-9,]+\}}")
+        results = SOURCE.split("/* Read-only results use only values measured", 1)[1].split(
+            "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)", 1
         )[0]
-        self.assertIn(
-            'append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);',
-            finish,
-        )
-        self.assertIn("for (row = 0; row < 3U; ++row)", finish)
-        self.assertIn("for (col = 0; col < 4U; ++col)", finish)
+        for label in ("RESULTS", "LAPS", "TOTAL", "LAST", "BEST", "OVERTAKES", "START TO RESTART"):
+            with self.subTest(label=label):
+                self.assertIn(f'append_text("{label}"', results)
+        self.assertIn("append_text(time_text", results)
+        self.assertIn("append_text(last_text", results)
+        self.assertIn("append_text(best_text", results)
+        self.assertIn("append_text(overtakes_text", results)
 
 
 
