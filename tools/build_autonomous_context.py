@@ -242,7 +242,7 @@ def build_context(
         f"Target branch: {target_branch}",
         "Platform scope: " + ", ".join(scope),
         rendered_paths_line,
-        "Question: " + _short(task["question_excerpt"], 160),
+        "Question: " + _short(task["question_excerpt"], 150),
         f"Acceptance criteria ({criteria_total} total; first {len(selected_criteria)}):",
         *("- " + _short(item, 100) for item in selected_criteria),
         "Next: " + _short(task["next_action_excerpt"], max_next_action),
