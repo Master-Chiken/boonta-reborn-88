@@ -155,6 +155,8 @@ cases = [
             {"filename": "docs/automation/task-ledger.json", "status": "modified"},
             {"filename": "assets/reference.bin", "status": "modified"},
             {"filename": "../unsafe.py", "status": "modified"},
+            {"filename": "roms/synthetic_probe.c", "status": "modified"},
+            {"filename": "private/owner-notes.md", "status": "modified"},
         ],
         "expected_ready": False,
         "expected_task_id": "",
@@ -188,7 +190,7 @@ cases = [
         "expected_resume_candidate": True,
         "expected_resume_ready": False,
         "expected_resume_file_paths": [],
-        "reason_contains": "no eligible non-generated text file",
+        "reason_contains": "no eligible safe text file",
     },
     {
         "name": "duplicate exact task markers fail closed for resume discovery",
