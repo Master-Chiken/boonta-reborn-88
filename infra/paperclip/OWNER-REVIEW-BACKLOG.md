@@ -26,7 +26,7 @@ These candidates are proposals, not instructions to the autonomous scheduler. Ke
 
 ### Candidate A — Phase 1 reuse / compatibility decision
 
-**Source of priority:** the current owner-directed next task in `docs/PROJECT_OPERATING_RULES.md` and the activation task's `next_action`: consume the existing read-only PC/N64/Dreamcast evidence in issue #279 and decide what can be reused, converted, adapted, independently reimplemented or must remain on hold for the native GameCube/Wii target.
+**Historical roadmap origin, not an active task assignment:** the 2026-11-06 direction in `docs/PROJECT_OPERATING_RULES.md` and the activation task's historical `next_action` identify a useful question: consume the existing read-only PC/N64/Dreamcast evidence in issue #279 and decide what can be reused, converted, adapted, independently reimplemented or must remain on hold for the native GameCube/Wii target. As of 2026-11-11 this candidate is not in the canonical ledger and is not authorized for autonomous execution.
 
 **Bounded deliverable:** one concise system-by-system decision matrix for the Phase 1 baseline. Do not recreate PR #282's complete-game matrix or repeat #279's source inventory.
 
