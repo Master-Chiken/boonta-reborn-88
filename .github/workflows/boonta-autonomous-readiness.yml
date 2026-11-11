@@ -32,9 +32,7 @@ jobs:
     name: Verify autonomous configuration without running Gemini
     outputs:
       writer_state: ${{ steps.owner_gates.outputs.writer_state }}
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (inputs.allow_scheduled == true || github.actor == github.repository_owner)
+    if: github.ref == 'refs/heads/main' && (inputs.allow_scheduled == true || github.actor == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
