@@ -10,6 +10,8 @@
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
       "title": "Activate and validate persistent autonomous task tracking",
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
       "queue": "#226",
       "platform_scope": [
         "automation"
@@ -65,6 +67,8 @@
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "Nintendo 64",
@@ -90,6 +94,8 @@
     {
       "task_id": "GC-RACE-PROGRESSION",
       "title": "Complete the native single-race lifecycle through results and restart",
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -156,6 +162,8 @@
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
       "title": "Make rival racers progress through the native route and complete the race",
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -167,7 +175,13 @@
       "read_ranges": [],
       "question_excerpt": "",
       "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "acceptance_criteria_excerpt": [
+        "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are…",
+        "Implement the smallest deterministic native rival-progress model that can represent route distance, lap completion and finished state…",
+        "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
+        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
+        "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset."
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap…"
@@ -175,6 +189,8 @@
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
       "title": "Add a native title and pre-race flow around the playable race",
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -186,7 +202,13 @@
       "read_ranges": [],
       "question_excerpt": "",
       "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "acceptance_criteria_excerpt": [
+        "Trace the current boot, input, draw, pause, finish, results and reset paths; reuse existing input and HUD/rendering helpers before…",
+        "Introduce an explicit, testable front-end/session state machine for title, pre-race, active race, pause, results and restart; no state may…",
+        "Provide a usable GameCube controller path from boot to starting the existing native race and from results back to a clean new race.",
+        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…",
+        "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions."
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently…"
@@ -194,6 +216,8 @@
     {
       "task_id": "GC-RACE-PERFORMANCE-PROFILE",
       "title": "Measure and optimize the native race frame on GameCube/Wii",
+      "owner_role_id": "platform",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -205,7 +229,13 @@
       "read_ranges": [],
       "question_excerpt": "",
       "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "acceptance_criteria_excerpt": [
+        "Do not start until the race lifecycle, rival progression and front-end flow have passing functional regression tests.",
+        "Establish a repeatable baseline for frame time, route sampling, GX submission and memory use on available Dolphin diagnostics and/or real…",
+        "Identify one measured bottleneck with reproducible evidence before changing implementation; do not optimize based only on intuition or…",
+        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…",
+        "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject…"
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route…"
