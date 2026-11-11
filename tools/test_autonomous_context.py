@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory() as temp:
         max_criteria=3, max_next_action=140,
     )
     assert len(groq_bounded) <= 1500
-    assert "Read-only source excerpts: exact task path/range excerpts are included below" in groq_bounded
+    assert "Read-only source excerpts: disabled for this context build" in groq_bounded
     assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
     assert "Next: " + "N" * 139 + "…" in groq_bounded
