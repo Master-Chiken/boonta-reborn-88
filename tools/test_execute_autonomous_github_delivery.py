@@ -13,8 +13,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from autonomous_patch_proposal import ProposalError
-from build_autonomous_delivery_plan import MANDATORY_TEST_IDS if False else DeliveryPlanError
 from build_autonomous_delivery_plan import build_delivery_plan
+from verify_autonomous_patch import MANDATORY_TEST_IDS
 from execute_autonomous_github_delivery import (
     DeliveryExecutionError,
     execute_delivery,
