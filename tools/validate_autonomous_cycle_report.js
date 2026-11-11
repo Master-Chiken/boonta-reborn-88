@@ -42,7 +42,7 @@ function attachReservedCycleMetadata(summary, expectedTaskId, expectedBase) {
     'BOONTA_CYCLE_TASK_ID: ' + expectedTaskId,
     ...lines,
     'BOONTA_CYCLE_EVIDENCE_BASE: ' + expectedBase
-  ].join('\\n');
+  ].join('\n');
 }
 
 function findBlockedReportContradictions(blockedText, evidence = {}) {
