@@ -10,6 +10,8 @@
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
       "title": "Activate and validate persistent autonomous task tracking",
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
       "queue": "#226",
       "platform_scope": [
         "automation"
@@ -32,6 +34,8 @@
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "queue": "#226",
       "platform_scope": [
         "Nintendo 64",
