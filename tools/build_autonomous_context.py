@@ -85,18 +85,22 @@ def _build_source_excerpt(
         raise ContextBuildError("Every exact task read path must have at least one bounded source range")
 
     source_root = source_root.resolve()
-    per_path_budget = max_source_chars // len(read_paths)
+    source_header = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\\n"
+    per_path_budget = max(80, (max_source_chars - len(source_header)) // len(read_paths))
     rendered: list[str] = []
     for path in read_paths:
         path_ranges = [(start, end) for item_path, start, end in checked if item_path == path]
         if not path_ranges:
             raise ContextBuildError(f"No bounded source range is configured for {path}")
+        candidate = source_root / path
+        if candidate.is_symlink():
+            raise ContextBuildError(f"Exact source path must not be a symlink: {path}")
         try:
-            source_file = (source_root / path).resolve(strict=True)
+            source_file = candidate.resolve(strict=True)
             source_file.relative_to(source_root)
         except (OSError, ValueError) as exc:
             raise ContextBuildError(f"Exact source path is missing or escapes the selected target checkout: {path}") from exc
-        if not source_file.is_file() or source_file.is_symlink():
+        if not source_file.is_file():
             raise ContextBuildError(f"Exact source path is not a regular file: {path}")
         try:
             payload = source_file.read_bytes()
