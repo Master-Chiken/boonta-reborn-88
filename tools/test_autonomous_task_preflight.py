@@ -145,8 +145,10 @@ cases = [
             "Full canonical task record: docs/automation/task-ledger.json",
             "Known relevant ledger files: tools/check_task_ledger.py",
             "Do not read repository root, list directories, or guess file paths.",
-            "A clean branch AUTOMATION-LEDGER-ACTIVATION already exists at main base cd863989d509e52af9bab663936e3e52bfc7de51",
+            "For 2026-11-11 only, reuse clean branch AUTOMATION-LEDGER-ACTIVATION",
+            "on any later UTC date, create a fresh branch named automation-ledger-activation-",
         ],
+        "expected_date_branch": True,
     },
     {
         "name": "open PR with exact task marker blocks duplicate activation",
@@ -475,6 +477,12 @@ async function runCase(testCase) {{
       for (const expectedText of testCase.expected_context_contains || []) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted activation guidance " + expectedText);
+        }}
+      }}
+      if (testCase.expected_date_branch === true) {{
+        const expectedBranch = "automation-ledger-activation-" + todayUtc.replace(/-/g, "");
+        if (!String(outputs.task_context).includes(expectedBranch)) {{
+          throw new Error(testCase.name + ": task context omitted the fresh UTC-date branch " + expectedBranch);
         }}
       }}
     }} else if (outputs.task_title !== "" || outputs.task_target_branch !== "" || outputs.task_context !== "") {{
