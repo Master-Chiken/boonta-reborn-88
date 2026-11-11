@@ -3,13 +3,24 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
+const { validateAutonomousCycleReport, attachReservedCycleMetadata, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
 const repo = 'boonta-reborn-88';
 const taskId = 'AUTOMATION-LEDGER-ACTIVATION';
 const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
+
+assert.equal(
+  attachReservedCycleMetadata('BOONTA_CYCLE_STATUS: BLOCKED\\nBOONTA_CYCLE_TASK_ID: WRONG\\nBOONTA_CYCLE_EVIDENCE_BASE: dev', taskId, 'main'),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\\nBOONTA_CYCLE_STATUS: BLOCKED\\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'the trusted workflow reservation must replace omitted or model-supplied task/base metadata without changing the substantive report'
+);
+assert.throws(
+  () => attachReservedCycleMetadata('report', '', 'main'),
+  /incomplete or invalid reserved cycle metadata/,
+  'reserved metadata must fail closed when the workflow reservation is missing'
+);
 const context = { repo: { owner, repo } };
 
 const missingOpenRouterKeyClaim = 'The provider blocker says no provider key was available in this invocation.';
