@@ -1577,9 +1577,6 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1400" not in openrouter_fallback:
-    errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
-
 if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
             errors.append(
                 "Groq GPT-OSS 20B must remain capped at 1500 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
@@ -1594,6 +1591,8 @@ if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
             errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
+if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1400" not in openrouter_fallback:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,500/256 limits; max 4 steps (7,024 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.",
