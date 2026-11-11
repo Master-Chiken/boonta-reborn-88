@@ -166,7 +166,7 @@ def build_context(
     summary_text = _read(root, "docs/automation/task-ledger-summary.json")
     if not all(term in reverse_policy for term in ("DISCOVER", "VERIFY", "REUSE", "GameCube/Wii")):
         raise ContextBuildError("Reverse-engineering policy is incomplete or unexpected")
-    if not all(term in budget_policy for term in ("One model provider invocation at most", "€0", "1,500 tokens")):
+    if not all(term in budget_policy for term in ("One model provider invocation at most", "€0", "1,550 context tokens")):
         raise ContextBuildError("Provider context-budget policy is incomplete or unexpected")
     try:
         summary = json.loads(summary_text)
