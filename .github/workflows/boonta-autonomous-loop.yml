@@ -181,7 +181,14 @@ jobs:
             ) {
               throw new Error('Canonical compact task ledger contains missing or duplicate task IDs.');
             }
+            if (!Array.isArray(ledgerSummary.completed_task_ids) ||
+                ledgerSummary.completed_task_ids.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
+                new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length) {
+              throw new Error('Canonical compact task ledger completed_task_ids is missing, malformed or duplicated.');
+            }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
@@ -211,6 +218,20 @@ jobs:
               ? resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' && resumeCandidateTask?.status === 'blocked'
               : activeTasks.length === 1 && activeTasks[0].task_id === resumeCandidateTask?.task_id && resumeCandidateTask?.status === 'active';
             const resumeCandidateReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            // Promote only the first explicitly owner-approved queued task whose complete dependency set
+            // is already completed in the canonical ledger. An open/in-review PR never satisfies a dependency.
+            const eligibleQueuedTask = activeTasks.length === 0
+              ? queuedTasks.find((task) =>
+                  task.owner_approved === true &&
+                  Array.isArray(task.depends_on) &&
+                  task.depends_on.every((dependencyId) =>
+                    typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+                  ) &&
+                  !task.pr_url && !task.head_sha &&
+                  !openTaskPullRequest(task) &&
+                  usableTask(task)
+                )
+              : null;
             let resumeFilePaths = [];
             let resumeReady = false;
             let resumeUnavailableReason = '';
@@ -289,6 +310,11 @@ jobs:
               activationTaskOpenPr
             ) {
               taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
+            } else if (activeTasks.length === 0 && eligibleQueuedTask) {
+              selectedTask = eligibleQueuedTask;
+              taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
+            } else if (activeTasks.length === 0 && queuedTasks.length > 0) {
+              taskReason = 'queued tasks are waiting for completed dependencies, explicit owner approval, bounded read paths, or PR reconciliation';
             } else if (activeTasks.length > 1) {
               taskReason = 'multiple active tasks violate the one-active-task policy';
             } else if (activeTasks.length === 1 && !usableTask(activeTasks[0])) {
@@ -314,7 +340,6 @@ jobs:
               taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' cannot be resumed safely: ' + resumeUnavailableReason;
             }
             const taskReady = Boolean(selectedTask);
-            const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');
             let queueState = 'EMPTY_QUEUE';
             if (taskReady) {
