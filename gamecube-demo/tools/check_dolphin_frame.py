@@ -307,13 +307,40 @@ def resumed_state_visible(image: Image.Image) -> bool:
     )
 
 
+def results_view_visible(image: Image.Image) -> bool:
+    """Detect the orange RESULTS title in the centered post-race results panel."""
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    scale_x = width / 800.0
+    scale_y = viewport_height / 480.0
+    center_x = width / 2.0
+    center_y = viewport_top + viewport_height / 2.0
+    x0 = max(0, int(center_x - 33.0 * scale_x))
+    x1 = min(width, int(center_x + 33.0 * scale_x))
+    y0 = max(0, int(center_y - 65.0 * scale_y))
+    y1 = min(height, int(center_y - 50.0 * scale_y))
+    pixels = image.load()
+    orange_pixels = 0
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            r, g, b = pixels[x, y]
+            if r >= 220 and 120 <= g <= 190 and b <= 100:
+                orange_pixels += 1
+    return orange_pixels >= 12
+
+
 def finish_banner_visible(image: Image.Image) -> bool:
-    """Detect the demo's centered 4x3 finish-flag checkerboard.
+    """Detect the results title or the legacy centered 4x3 finish-flag checkerboard.
 
     Dolphin-window captures may include a toolbar, while direct framebuffer
     captures do not. Search both likely vertical centers and small scale/offset
     ranges; the alternating pattern distinguishes the finish banner from pause.
     """
+    if results_view_visible(image):
+        return True
+
     image = image.convert("RGB")
     width, height = image.size
     pixels = image.load()
@@ -400,7 +427,7 @@ def main() -> int:
     parser.add_argument("--baseline", type=Path,
                         help="matching frame rendered with --steering none")
     parser.add_argument("--expect-finish", action="store_true",
-                        help="check for the three-lap finish flag instead of comparing steering frames")
+                        help="check for the three-lap results overlay (or legacy finish flag) instead of comparing steering frames")
     parser.add_argument("--expect-finish-label", action="store_true",
                         help="check for the orange FINISH label above the centered finish checkerboard")
     parser.add_argument("--expect-reset", action="store_true",
