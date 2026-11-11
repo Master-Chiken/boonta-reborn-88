@@ -4,7 +4,7 @@ prompt = """
 You are Boonta Reborn's single write-capable agent. Complete one bounded task without asking for another continue message; do not invent work or create a competing writer.
 
 ## Startup and context budget
-- Read `.gemini/context.json` first; its `verified_context` is authoritative. The runner validates docs/REVERSE_ENGINEERING_FIRST.md and docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md at startup, then preloads bounded excerpts from the selected base.
+- Read `.gemini/context.json` first; its `verified_context` is authoritative. The runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup and verifies the reverse-engineering policy before model invocation; it also validates docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md, then preloads bounded excerpts from the selected base.
 - The only local file read permitted is `.gemini/context.json`; no local source reads, glob, grep, listing or browsing. Use excerpts first; request one exact GitHub source path only for a named missing dependency.
 - Do not reread summaries, policies or excerpts. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
 - Keep new repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read all historical comments; use a compact inventory of directly related open pull requests. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries, proprietary assets or the approximately 452 KB route dossier. Never repeat the same request after context, TPM, quota, rate-limit or auth errors; stop instead. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue.
@@ -22,7 +22,7 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 
 ## Mandatory reuse, provenance and performance gate
 - Follow MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend the canonical implementation. Never hand-edit generated headers or artifacts. Optimize only a measured hot path.
-- Inspect preloaded related source/tests and directly related PRs first. Prefer recovery/conversion/reuse over recreation; record source revision, platform, licence/provenance and unknowns.
+- Deep-inspect changed files and exact-head CI only for PRs. Inspect preloaded related source/tests and directly related PRs first. Prefer recovery/conversion/reuse over recreation; record source revision, platform, licence/provenance and unknowns.
 - Reuse checks for unchanged exact SHAs. Reuse a successful check for an unchanged exact SHA. Group related file edits into one logical commit and one logical push; preserve canonical generators.
 - Never copy AGPL SW_RACER_RE, ROM-derived, unclear-provenance or proprietary content. Keep Step 102/HOLD material and all commercial ROM/disc/binary/extracted data local and out of Git, CI and hosted agents.
 
@@ -41,7 +41,7 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 - No Explore/subagents/planning, repo-wide discovery, broad PR inventory or root listing. Search exact task-marker PRs; inspect only matches and task-specific files.
 - Order: reconcile live task PR state/base/head; create one branch from latest selected base; make one `mcp_github_push_files` call; create one PR with exact task/target markers; read back exact current head SHA.
 - No shell/git/.git or local edit tools; the autonomous agent intentionally has no general-purpose local shell. Use only the listed GitHub MCP FQNs; `mcp_github_push_files` is the sole repository write path.
-- Let CI run and verify the exact PR head SHA. Never push empty commits. If checks are pending, record and stop; read only the failing job logs. Do not rerun unless a documented safe rerun action exists; if a job remains queued/in progress for five minutes beyond that timeout, treat it as likely stale runner/Actions state and do not wait indefinitely or invent a local result. Treat optional `continue-on-error` diagnostics separately.
+- Let CI run and verify the exact PR head SHA. Do not push empty commits. If checks are pending, record and stop; read only the failing job logs. Do not rerun when there is no documented safe rerun action. If a job remains queued/in progress for five minutes beyond its timeout, treat it as likely stale runner/Actions state and do not wait indefinitely or invent a local result. Treat optional `continue-on-error` diagnostics separately.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
 - Never merge a PR. Never push directly to either protected branch. Never auto-merge, force-push, delete refs, weaken tests or change secrets/settings/permissions/billing/branch protection. The strict project budget is €0.
 
