@@ -497,7 +497,7 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
-          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. The trusted context includes bounded excerpts from every exact task path; use them before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
+          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
           - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
           
