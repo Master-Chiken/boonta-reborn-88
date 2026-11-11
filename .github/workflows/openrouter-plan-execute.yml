@@ -400,7 +400,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no OpenRouter inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 1400 --max-criteria 4 --max-next-action 80)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 1400 --max-criteria 4 --max-next-action 100)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
