@@ -922,7 +922,9 @@ static void draw_hud(void)
     char last_text[20];
     char laps_text[16];
     char overtakes_text[16];
+    char lap_split_text[BOONTA_RACE_LAP_CAPACITY][20];
     unsigned int lap_display;
+    unsigned int split_index;
     const float w = (float)g_video_mode->fbWidth;
     const float h = (float)g_video_mode->efbHeight;
     const GXColor dark = { 8, 18, 30, 235 };
@@ -943,6 +945,11 @@ static void draw_hud(void)
     append_formatted_time(time_text, sizeof(time_text), g_race_seconds);
     append_formatted_time(best_text, sizeof(best_text), g_best_lap_seconds);
     append_formatted_time(last_text, sizeof(last_text), g_last_lap_seconds);
+    for (split_index = 0U; split_index < BOONTA_RACE_LAP_CAPACITY; ++split_index) {
+        append_formatted_time(lap_split_text[split_index],
+                              sizeof(lap_split_text[split_index]),
+                              g_race_state.lap_times[split_index]);
+    }
     (void)snprintf(laps_text, sizeof(laps_text), "%u", g_lap_count);
     (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
@@ -1091,20 +1098,22 @@ static void draw_hud(void)
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
         const GXColor results_panel = { 8, 18, 30, 248 };
-        append_screen_quad(cx - 132.0f, cy - 76.0f, cx + 132.0f, cy + 76.0f,
+        append_screen_quad(cx - 132.0f, cy - 92.0f, cx + 132.0f, cy + 92.0f,
                            0.6f, results_panel);
-        append_text("RESULTS", cx - 26.0f, cy - 62.0f, 1.2f, boost_fill);
-        append_text("LAPS", cx - 108.0f, cy - 34.0f, 1.0f, white);
-        append_text(laps_text, cx - 68.0f, cy - 34.0f, 1.0f, white);
-        append_text("TOTAL", cx - 8.0f, cy - 34.0f, 1.0f, white);
-        append_text(time_text, cx + 34.0f, cy - 34.0f, 1.0f, white);
-        append_text("LAST", cx - 108.0f, cy - 10.0f, 1.0f, heat_cool);
-        append_text(last_text, cx - 68.0f, cy - 10.0f, 1.0f, heat_cool);
-        append_text("BEST", cx - 8.0f, cy - 10.0f, 1.0f, heat_cool);
-        append_text(best_text, cx + 34.0f, cy - 10.0f, 1.0f, heat_cool);
-        append_text("OVERTAKES", cx - 108.0f, cy + 14.0f, 1.0f, rival_mark);
-        append_text(overtakes_text, cx + 4.0f, cy + 14.0f, 1.0f, rival_mark);
-        append_text("START TO RESTART", cx - 46.0f, cy + 49.0f, 1.0f, white);
+        append_text("RESULTS", cx - 26.0f, cy - 78.0f, 1.2f, boost_fill);
+        append_text("LAP 1", cx - 104.0f, cy - 48.0f, 1.0f, white);
+        append_text(lap_split_text[0], cx - 58.0f, cy - 48.0f, 1.0f, white);
+        append_text("LAP 2", cx - 104.0f, cy - 27.0f, 1.0f, white);
+        append_text(lap_split_text[1], cx - 58.0f, cy - 27.0f, 1.0f, white);
+        append_text("LAP 3", cx - 104.0f, cy - 6.0f, 1.0f, white);
+        append_text(lap_split_text[2], cx - 58.0f, cy - 6.0f, 1.0f, white);
+        append_text("TOTAL", cx - 104.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text(time_text, cx - 64.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text("BEST", cx + 12.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text(best_text, cx + 48.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text("OVERTAKES", cx - 104.0f, cy + 49.0f, 1.0f, rival_mark);
+        append_text(overtakes_text, cx - 46.0f, cy + 49.0f, 1.0f, rival_mark);
+        append_text("START TO RESTART", cx - 46.0f, cy + 75.0f, 1.0f, white);
     } else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
@@ -1444,6 +1453,7 @@ int main(int argc, char **argv)
             }
             if (g_lap_count > previous_laps) {
                 g_last_lap_seconds = g_lap_seconds;
+                (void)boonta_race_record_lap_time(&g_race_state, g_last_lap_seconds);
                 g_best_lap_seconds = boonta_best_lap_after_finish(
                     g_best_lap_seconds, g_last_lap_seconds);
                 g_lap_seconds = 0.0f;
