@@ -17,9 +17,38 @@
       "status": "blocked",
       "target_branch": "main",
       "read_paths": [
-        "tools/check_task_ledger_summary.py"
+        "tools/check_task_ledger.py",
+        "tools/test_check_task_ledger.py",
+        "tools/check_task_ledger_summary.py",
+        ".github/workflows/boonta-autonomous-loop.yml"
       ],
-      "read_ranges": [],
+      "read_ranges": [
+        {
+          "path": "tools/check_task_ledger.py",
+          "start_line": 48,
+          "end_line": 94
+        },
+        {
+          "path": "tools/test_check_task_ledger.py",
+          "start_line": 46,
+          "end_line": 82
+        },
+        {
+          "path": "tools/check_task_ledger_summary.py",
+          "start_line": 20,
+          "end_line": 62
+        },
+        {
+          "path": ".github/workflows/boonta-autonomous-loop.yml",
+          "start_line": 156,
+          "end_line": 199
+        },
+        {
+          "path": ".github/workflows/boonta-autonomous-loop.yml",
+          "start_line": 217,
+          "end_line": 246
+        }
+      ],
       "question_excerpt": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria_total": 15,
       "acceptance_criteria_excerpt": [

@@ -21,6 +21,10 @@ def ledger_with_paths(paths: list[str]) -> dict:
         "status": "active",
         "target_branch": "main",
         "read_paths": paths,
+        "read_ranges": [
+            {"path": path, "start_line": 1, "end_line": 1}
+            for path in paths
+        ],
         "question": "Can these exact sources be read safely?",
         "acceptance_criteria": ["Use only exact UTF-8 source paths"],
         "evidence": [],
@@ -36,7 +40,7 @@ def ledger_with_paths(paths: list[str]) -> dict:
 
 
 class TaskReadPathTests(unittest.TestCase):
-    def test_accepts_existing_bounded_utf8_source(self):
+    def test_accepts_existing_bounded_utf8_source_with_exact_range(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "tools").mkdir()
@@ -53,6 +57,65 @@ class TaskReadPathTests(unittest.TestCase):
                 (root / path).write_text("x" * size, encoding="utf-8")
                 paths.append(path)
             self.assertEqual(validate_read_paths(ledger_with_paths(paths), root), [])
+
+    def test_rejects_paths_without_bounded_ranges(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("print('ok')\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = []
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("read_ranges must contain" in error for error in errors))
+
+    def test_rejects_range_outside_exact_path_allowlist(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("print('ok')\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/other.py", "start_line": 1, "end_line": 1}
+            ]
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("outside the exact read_paths allow-list" in error for error in errors))
+
+    def test_rejects_uncovered_path(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/a.py").write_text("print('a')\n", encoding="utf-8")
+            (root / "tools/b.py").write_text("print('b')\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/a.py", "tools/b.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/a.py", "start_line": 1, "end_line": 1}
+            ]
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("cover every exact read_paths entry" in error for error in errors))
+
+    def test_rejects_range_past_end_of_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("line one\nline two\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/example.py", "start_line": 1, "end_line": 3}
+            ]
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("beyond tools/example.py's 2 lines" in error for error in errors))
+
+    def test_rejects_range_over_line_limit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("\n".join(["x"] * 81) + "\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/example.py", "start_line": 1, "end_line": 81}
+            ]
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("per-range limit is 80" in error for error in errors))
 
     def test_rejects_missing_source(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -99,7 +162,7 @@ class TaskReadPathTests(unittest.TestCase):
             target.write_text("not inside repository", encoding="utf-8")
             (root / "tools/linked.py").symlink_to(target)
             errors = validate_read_paths(ledger_with_paths(["tools/linked.py"]), root)
-            self.assertTrue(any("outside the repository" in error for error in errors))
+            self.assertTrue(any("must not be a symlink" in error for error in errors))
 
     def test_rejects_invalid_utf8(self):
         with tempfile.TemporaryDirectory() as temp:

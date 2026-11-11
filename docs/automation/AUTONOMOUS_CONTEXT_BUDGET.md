@@ -41,7 +41,7 @@ Before implementation, inspect existing Boonta source, generated outputs, export
 
 ## Task-scoped source reads
 
-Each executable task has 1-4 exact repository-relative text paths in the canonical ledger. Global preflight validates the allow-list and any owner-defined line ranges. Both Groq and OpenRouter use a trusted checkout of the selected target branch to preload bounded excerpts from all listed paths; Groq has no model-side file reads in normal mode, while OpenRouter may make at most one additional exact-path read after using the excerpts. No provider may enumerate directories, guess paths, or reread the protected canonical ledger/summary.
+Each executable task has 1-4 exact repository-relative text paths and 1-8 exact line ranges in the canonical ledger. Every listed path must be covered by at least one valid range; each range is at most 80 lines and the aggregate is at most 240 lines. CI validates that files exist, are safe UTF-8 text, fit the byte budget and contain every configured line. The context builder fails closed when source excerpts are enabled but ranges are missing, malformed, out of bounds or empty; it never labels an empty excerpt as ready. Both Groq and OpenRouter use a trusted checkout of the selected target branch to preload bounded excerpts from all listed paths; Groq has no model-side file reads in normal mode, while OpenRouter may make at most one additional exact-path read after using the excerpts. No provider may enumerate directories, guess paths, or reread the protected canonical ledger/summary.
 
 ## Source of truth
 

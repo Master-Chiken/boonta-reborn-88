@@ -122,7 +122,7 @@ with tempfile.TemporaryDirectory() as temp:
         max_criteria=3, max_next_action=140,
     )
     assert len(groq_bounded) <= 1500
-    assert "Read-only source excerpts: four exact task paths are shown below" in groq_bounded
+    assert "Read-only source excerpts: exact task path/range excerpts are included below" in groq_bounded
     assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
     assert "Next: " + "N" * 139 + "…" in groq_bounded
@@ -228,6 +228,13 @@ with tempfile.TemporaryDirectory() as temp:
     assert len(excerpt) <= 1800
 
     try:
+        MODULE._build_source_excerpt(source_root, paths, [], 1800)
+    except MODULE.ContextBuildError as exc:
+        assert "non-empty exact source-range allow-list" in str(exc)
+    else:
+        raise AssertionError("Empty source ranges must fail closed instead of producing an empty excerpt")
+
+    try:
         MODULE._build_source_excerpt(
             source_root, paths, [dict(ranges[0], path="../outside.c"), *ranges[1:]], 1800
         )
@@ -291,6 +298,8 @@ with tempfile.TemporaryDirectory() as temp:
         max_source_chars=1400,
     )
     assert "SOURCE EXCERPTS" in context
+    assert "[source/main.c:" in context
+    assert "[tests/test_gameplay_state.c:" in context
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
 

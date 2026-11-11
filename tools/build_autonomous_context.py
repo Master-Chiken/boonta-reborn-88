@@ -58,8 +58,10 @@ def _build_source_excerpt(
     read_ranges: Any,
     max_source_chars: int,
 ) -> str:
-    if not read_ranges:
-        return ""
+    if not isinstance(read_ranges, list) or not read_ranges:
+        raise ContextBuildError(
+            "A non-empty exact source-range allow-list is required when source excerpts are enabled"
+        )
     if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_SOURCE_RANGES:
         raise ContextBuildError("Selected task source ranges must contain 1-8 exact ranges")
     checked: list[tuple[str, int, int]] = []
@@ -218,10 +220,18 @@ def build_context(
     if not all(item in task_context for item in required_handoff_text):
         raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts/read paths")
 
-    source_excerpt = _build_source_excerpt(
-        source_root or root, read_paths, task.get("read_ranges", []), max_source_chars
+    source_excerpt = ""
+    if max_source_chars > 0:
+        source_excerpt = _build_source_excerpt(
+            source_root or root, read_paths, task.get("read_ranges", []), max_source_chars
+        )
+        if not source_excerpt.strip():
+            raise ContextBuildError("Configured source excerpts are empty; refusing an ungrounded provider handoff")
+    rendered_paths_line = (
+        "Read-only source excerpts: exact task path/range excerpts are included below"
+        if source_excerpt else
+        "Read-only source excerpts: disabled for this context build"
     )
-    rendered_paths_line = "Read-only source excerpts: four exact task paths are shown below"
     prefix_lines = [
         "VERIFIED CONTEXT:",
         "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
