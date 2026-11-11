@@ -148,9 +148,9 @@ cases = [
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
             "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
         }],
-        "expected_ready": false,
+        "expected_ready": False,
         "expected_task_id": "",
-        "expected_blocked": false,
+        "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": True,
         "expected_resume_pr_number": "388",
@@ -169,9 +169,9 @@ cases = [
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/389",
             "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
         }],
-        "expected_ready": false,
+        "expected_ready": False,
         "expected_task_id": "",
-        "expected_blocked": false,
+        "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": False,
     },
