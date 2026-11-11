@@ -152,6 +152,169 @@
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11. Start on the current dev branch by tracing existing lifecycle transitions and PR #327 rival integration; implement only the missing results/session transition with production-helper host tests, then open one PR to dev. Preserve all platform/provenance and exact-head CI limits."
+    },
+    {
+      "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+      "title": "Make rival racers progress through the native route and complete the race",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "read_paths": [
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/tests/test_rival_ai.c"
+      ],
+      "read_ranges": [
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1453,
+          "end_line": 1500
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 482,
+          "end_line": 540
+        },
+        {
+          "path": "gamecube-demo/source/rival_ai.h",
+          "start_line": 70,
+          "end_line": 149
+        },
+        {
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 1,
+          "end_line": 53
+        }
+      ],
+      "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are…",
+        "Implement the smallest deterministic native rival-progress model that can represent route distance, lap completion and finished state…",
+        "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
+        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
+        "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset."
+      ],
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results."
+    },
+    {
+      "task_id": "GC-RACE-FRONTEND-FLOW",
+      "title": "Add a native title and pre-race flow around the playable race",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "read_paths": [
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/pause_state.h",
+        "gamecube-demo/tests/test_gameplay_state.c"
+      ],
+      "read_ranges": [
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1192,
+          "end_line": 1260
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1300,
+          "end_line": 1350
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 1,
+          "end_line": 45
+        },
+        {
+          "path": "gamecube-demo/source/pause_state.h",
+          "start_line": 1,
+          "end_line": 35
+        },
+        {
+          "path": "gamecube-demo/tests/test_gameplay_state.c",
+          "start_line": 431,
+          "end_line": 448
+        }
+      ],
+      "question_excerpt": "Can the immediate-boot single-race loop become a coherent native game flow with title/start, pre-race transition, active race, results and restart while keeping all transitions testable?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Trace the current boot, input, draw, pause, finish, results and reset paths; reuse existing input and HUD/rendering helpers before…",
+        "Introduce an explicit, testable front-end/session state machine for title, pre-race, active race, pause, results and restart; no state may…",
+        "Provide a usable GameCube controller path from boot to starting the existing native race and from results back to a clean new race.",
+        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…",
+        "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions."
+      ],
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently available course/pod only; add content selection only when multiple lawful native options exist."
+    },
+    {
+      "task_id": "GC-RACE-PERFORMANCE-PROFILE",
+      "title": "Measure and optimize the native race frame on GameCube/Wii",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "read_paths": [
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/source/route_graph_sampling.h",
+        "gamecube-demo/tests/test_route_graph_sampling.c",
+        "gamecube-demo/tests/test_gameplay_state.c"
+      ],
+      "read_ranges": [
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1192,
+          "end_line": 1260
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1270,
+          "end_line": 1288
+        },
+        {
+          "path": "gamecube-demo/source/route_graph_sampling.h",
+          "start_line": 1,
+          "end_line": 60
+        },
+        {
+          "path": "gamecube-demo/tests/test_route_graph_sampling.c",
+          "start_line": 1,
+          "end_line": 55
+        },
+        {
+          "path": "gamecube-demo/tests/test_gameplay_state.c",
+          "start_line": 1,
+          "end_line": 35
+        }
+      ],
+      "question_excerpt": "Which native race-frame CPU, route-sampling, GX submission or memory costs are actually limiting performance, and what smallest measured optimization improves them without changing gameplay?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Do not start until the race lifecycle, rival progression and front-end flow have passing functional regression tests.",
+        "Establish a repeatable baseline for frame time, route sampling, GX submission and memory use on available Dolphin diagnostics and/or real…",
+        "Identify one measured bottleneck with reproducible evidence before changing implementation; do not optimize based only on intuition or…",
+        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…",
+        "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject…"
+      ],
+      "pr_url": null,
+      "head_sha": null,
+      "next_action_excerpt": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route sampler. Optimize one demonstrated bottleneck with before/after measurements; never trade away correctness for speculative speed."
     }
   ]
 }
