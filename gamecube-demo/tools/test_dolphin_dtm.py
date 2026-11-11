@@ -91,13 +91,16 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[0] & A)
         self.assertTrue(first[0] & Y)
         self.assertTrue(first[1] & IS_CONNECTED)
-        self.assertTrue(first[1] & DPAD_RIGHT)
+        self.assertFalse(first[1] & DPAD_RIGHT)  # Do not let READY course selection consume Start.
         self.assertEqual(NEUTRAL_AXIS, 128)  # raw DTM analog axes use unsigned center
         self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
 
         session_start = record(blob, SESSION_START_PRESS_FRAME)
         self.assertEqual(session_start[0], A | X | START)
-        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)[0], A | X)
+        self.assertFalse(session_start[1] & (DPAD_LEFT | DPAD_RIGHT))
+        steering_after_start = record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)
+        self.assertEqual(steering_after_start[0], A | X)
+        self.assertTrue(steering_after_start[1] & DPAD_RIGHT)
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
@@ -210,6 +213,7 @@ class DolphinDtmTests(unittest.TestCase):
         blob = build_dtm(3600, steering="right", scenario="pause-check")
         start_session = record(blob, SESSION_START_PRESS_FRAME)
         self.assertEqual(start_session[0], A | X | START)
+        self.assertFalse(start_session[1] & (DPAD_LEFT | DPAD_RIGHT))
         before = record(blob, PAUSE_PRESS_FRAME - 1)
         self.assertTrue(before[0] & A)
         self.assertFalse(before[0] & START)
