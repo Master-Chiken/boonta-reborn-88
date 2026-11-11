@@ -20,6 +20,7 @@ A vague instruction such as “improve the game” is not an executable mission.
 ## Dependency and queue discipline
 
 - Every task carries an explicit `depends_on` array; an empty array means no task dependency.
+- A queued task must carry `owner_approved: true`; the Chief of Staff may promote only the first owner-approved queued task whose dependencies are all `completed` and whose task scope contains 1–4 safe source paths and complete acceptance criteria.
 - Dependencies must reference existing task IDs, be unique, and form an acyclic graph.
 - A task cannot enter `active`, `in_review`, or `completed` until every dependency is `completed`.
 - Queued tasks remain queued while any dependency is not completed. A PR being open or a task being `in_review` does not satisfy a dependency.
