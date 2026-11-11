@@ -493,7 +493,7 @@ required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
-    "create_branch", "push_files", "create_pull_request",
+    "create_branch", "create_pull_request", "get_file_contents", "push_files",
 }
 required_groq_resume_tools = {"get_file_contents", "push_files"}
 required_writer_tools = {
@@ -507,7 +507,7 @@ if groq_config_tools != "{env:GITHUB_TOOLS}":
 else:
     groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
     expected_groq_modes = {
-        "create_branch,push_files,create_pull_request",
+        ",".join(sorted(required_groq_tools)),
         ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
@@ -667,6 +667,10 @@ if len(actual_groq_prompt) > 1820:
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 1500, 1400)
+if "--max-criteria 3 --max-next-action 140" not in groq:
+    errors.append("Groq must use the reviewed compact three-criteria/140-character next-action handoff")
+if "read at most one exact path from its read-only list" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must require one exact task-scoped source read")
 context_limits("OpenRouter", openrouter, 2400, 2200)
 if len(actual_groq_prompt) + 1500 + 400 > 3600:
     errors.append("Groq worst-case prompt plus task context and report exceeds its 3,600-character TPM cap")

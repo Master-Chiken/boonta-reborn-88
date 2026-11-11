@@ -33,6 +33,7 @@ def fixture(root: Path) -> str:
             "status": "blocked",
             "target_branch": "main",
             "platform_scope": ["automation"],
+            "read_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
             "question_excerpt": "Does the loop reconcile the task ledger?",
             "acceptance_criteria_total": 2,
             "acceptance_criteria_excerpt": ["One active task maximum", "Exact PR state is recorded"],
@@ -48,7 +49,7 @@ def fixture(root: Path) -> str:
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
         "Target branch: main\n"
-        "Platform scope: automation\nQuestion: Does the loop reconcile the task ledger?\nAcceptance criteria (2 total; compact index shows up to five):\n- One active task maximum\n- Exact PR state is recorded\nNext action: Complete a verified provider cycle."
+        "Platform scope: automation\nQuestion: Does the loop reconcile the task ledger?\nAcceptance criteria (2 total; compact index shows up to five):\n- One active task maximum\n- Exact PR state is recorded\nNext action: Complete a verified provider cycle.\nRead-only source paths (select at most one): tools/check_task_ledger.py, tools/test_check_task_ledger.py"
     )
 
 
@@ -97,6 +98,7 @@ with tempfile.TemporaryDirectory() as temp:
         "Acceptance criteria (5; first 5):",
         *["- " + item for item in task["acceptance_criteria_excerpt"]],
         "Next: " + task["next_action_excerpt"],
+        "Read-only source paths (select at most one): " + ", ".join(task["read_paths"]),
         "If criteria exceed these excerpts, read only this task record in the canonical ledger before coding.",
         "PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.",
     ])
@@ -112,6 +114,18 @@ with tempfile.TemporaryDirectory() as temp:
     assert task["question_excerpt"] in bounded
     assert task["next_action_excerpt"] in bounded
     assert all(item in bounded for item in task["acceptance_criteria_excerpt"])
+
+    groq_bounded = MODULE.build_context(
+        root, "AUTOMATION-LEDGER-ACTIVATION",
+        "Activate and validate persistent autonomous task tracking",
+        "main", full_handoff, max_chars=1500, max_task_context=1400,
+        max_criteria=3, max_next_action=140,
+    )
+    assert len(groq_bounded) <= 1500
+    assert "Read-only source paths (select at most one): tools/check_task_ledger.py, tools/test_check_task_ledger.py" in groq_bounded
+    assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
+    assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
+    assert "Next: " + "N" * 140 in groq_bounded
 
     # Restore the initial fixture before the independent truncation test below.
     task["question_excerpt"] = "Does the loop reconcile the task ledger?"
@@ -129,7 +143,7 @@ with tempfile.TemporaryDirectory() as temp:
             "main", context, max_task_context=250,
         )
     except MODULE.ContextBuildError as exc:
-        assert "truncates required" in str(exc)
+        assert "budget" in str(exc) or "exceed" in str(exc)
     else:
         raise AssertionError("Expected a tight context budget to reject truncated required task excerpts")
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,8 @@ def build_context(
     task_context: str,
     max_chars: int = 3500,
     max_task_context: int = 2500,
+    max_criteria: int = 5,
+    max_next_action: int = 420,
 ) -> str:
     """Validate the selected v2 ledger row and emit compact, preloaded context."""
     root = root.resolve()
@@ -46,6 +49,8 @@ def build_context(
             raise ContextBuildError(f"Global preflight context does not contain {expected!r}")
     if max_chars < 900 or max_task_context < 250:
         raise ContextBuildError("Context ceilings are below safe minimums")
+    if not 1 <= max_criteria <= 5 or not 80 <= max_next_action <= 420:
+        raise ContextBuildError("Provider-specific criteria/action limits are outside safe bounds")
 
     reverse_policy = _read(root, "docs/REVERSE_ENGINEERING_FIRST.md")
     budget_policy = _read(root, "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md")
@@ -92,9 +97,25 @@ def build_context(
         raise ContextBuildError("Selected task has no acceptance-criteria excerpts")
     if not isinstance(criteria_total, int) or criteria_total < len(criteria):
         raise ContextBuildError("Selected task acceptance-criteria count is inconsistent")
-    required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5]]
+    read_paths = task.get("read_paths")
+    if not (
+        isinstance(read_paths, list) and 1 <= len(read_paths) <= 4
+        and all(
+            isinstance(path, str) and re.fullmatch(r"[A-Za-z0-9._/-]{1,120}", path)
+            and not path.startswith("/")
+            and all(part and part not in {".", ".."} for part in path.split("/"))
+            and Path(path).suffix.lower() in {".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md", ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh"}
+            and path not in {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
+            and not any(part.lower() in {"generated", "roms", "private"} for part in path.split("/"))
+            for path in read_paths
+        )
+        and len(set(read_paths)) == len(read_paths)
+    ):
+        raise ContextBuildError("Selected task has no valid 1-4 path read allow-list")
+    read_paths_line = "Read-only source paths (select at most one): " + ", ".join(read_paths)
+    required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5], read_paths_line]
     if not all(item in task_context for item in required_handoff_text):
-        raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts")
+        raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts/read paths")
 
     prefix_lines = [
         "VERIFIED CONTEXT:",
@@ -102,16 +123,29 @@ def build_context(
         "Canonical ledger v2 verified.",
         "Task:",
     ]
-    # The total provider ceiling includes the fixed prefix and its newline.
-    # Fit the task handoff to the remaining budget; required ledger excerpts
-    # must still survive or the context fails closed.
-    available_task_chars = max_chars - len("\n".join(prefix_lines)) - 1
+    # Render from verified task fields instead of blindly truncating the global
+    # handoff. Providers may choose a smaller excerpt budget to reserve room for
+    # one targeted source read.
+    available_task_chars = min(max_task_context, max_chars - len("\n".join(prefix_lines)) - 1)
     if available_task_chars < 250:
         raise ContextBuildError("Verified-context ceiling leaves too little room for a safe task handoff")
-    bounded_task_context = _short(task_context, min(max_task_context, available_task_chars))
-    if not all(item in bounded_task_context for item in required_handoff_text):
+    selected_criteria = criteria[:max_criteria]
+    compact_lines = [
+        f"Task ID: {task_id}",
+        f"Title: {task_title}",
+        f"Target branch: {target_branch}",
+        "Platform scope: " + ", ".join(scope),
+        read_paths_line,
+        "Question: " + task["question_excerpt"],
+        f"Acceptance criteria ({criteria_total} total; first {len(selected_criteria)}):",
+        *("- " + item for item in selected_criteria),
+        "Next: " + _short(task["next_action_excerpt"], max_next_action),
+    ]
+    bounded_task_context = "\n".join(compact_lines)
+    if len(bounded_task_context) > available_task_chars:
         raise ContextBuildError(
-            "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
+            f"Verified task excerpts exceed the configured {available_task_chars}-character budget "
+            f"({len(bounded_task_context)} chars); reduce the task excerpt or provider limits"
         )
     lines = [*prefix_lines, bounded_task_context]
     output = "\n".join(lines)
@@ -131,11 +165,14 @@ def main() -> int:
     parser.add_argument("--task-context", required=True)
     parser.add_argument("--max-chars", type=int, default=3500)
     parser.add_argument("--max-task-context", type=int, default=2500)
+    parser.add_argument("--max-criteria", type=int, default=5)
+    parser.add_argument("--max-next-action", type=int, default=420)
     args = parser.parse_args()
     try:
         print(build_context(
             args.root, args.task_id, args.task_title, args.target_branch,
             args.task_context, args.max_chars, args.max_task_context,
+            args.max_criteria, args.max_next_action,
         ))
     except ContextBuildError as exc:
         parser.error(str(exc))

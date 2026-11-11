@@ -39,6 +39,10 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 
 Before implementation, inspect existing Boonta source, generated outputs, exporters, parsers, fixtures, tests, docs and directly related PRs. Prefer DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST. Record exact source revision, platform/version, license/provenance, recovery decision and unknowns. Keep PC, N64, Dreamcast and GameCube/Wii behavior separate. Never send commercial game data or unclear-provenance material to hosted agents or public GitHub.
 
+## Task-scoped source reads
+
+Each executable task has 1-4 exact repository-relative text paths in the canonical ledger. Global preflight validates and passes this allow-list unchanged. A provider may read at most one listed file from the selected target branch; it may not enumerate directories, guess paths, or reread the protected canonical ledger/summary. This enables source-grounded work without widening the model tool surface or adding provider calls.
+
 ## Source of truth
 
 The owner-approved workflow brief and compact task summary identify the bounded task. GitHub is authoritative for live PR state, exact head SHAs and CI evidence. If the task cannot proceed safely within this budget, stop with a specific BLOCKED report and one concrete next action; do not create empty branches/PRs or invent work.
