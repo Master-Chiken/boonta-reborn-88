@@ -7,6 +7,7 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - Native GameCube GX initialization and 3D colored-vertex rendering.
 - A genuinely scrolling procedural desert course:  curved asphalt segments, lane markers, and faceted canyon walls advance continuously with race distance; the start/finish stripe approaches once per lap instead of receding. The environment uses a warm desert floor, daylight sky, and original low-poly canyon geometry.
 - A spline-aligned desert canyon with a deterministic staggered rock-ridge silhouette and faceted outcrops, avoiding uniform wall tops.
+- Three selectable clean-room course routes: Canyon Run, Red Dune Circuit and Basalt Spiral. Each has its own authored eight-edge Bezier route, road width and measured lap length; D-pad left/right selects a course before Start launches.
 - An original low-poly twin-engine racer authored in `boonta-mesh-v1` JSON, exported to a validated C mesh and textured through the native GX RGB565 path; its exhaust plumes still lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle, brake, pitch, and slide. Pitching nose-down increases forward progress at the cost of steering authority; pitching nose-up slows progress but improves steering. Holding L initiates a low-grip slide: it increases turn impulse while retaining sideways drift, so releasing it early is part of cornering. Pitch/slide state is exposed in the HUD and covered by deterministic host tests.
 - Three clean-room procedural rival craft start at staggered route-distance positions and keep persistent progress. Each must cover the full configured race distance from its own grid offset before finishing. They adjust lanes and pace for upcoming corners and can collide with the player. The HUD shows live race position; final results rank finishers by recorded finish time.
@@ -39,9 +40,11 @@ The separate `source/route_cursor.h` adds a distance-based topology cursor with 
 
 The dense native C regression measures the current runtime Bezier curve at **184.563965 m** against the generated lap coordinate **184.563477 m** (**0.00026% difference**). Tests compare direct edge samples at every one of the 128 lookup boundaries and every interval midpoint on all eight edges, as well as authored-node joins, legacy bake samples, negative and multi-lap wrap, seam continuity, and non-finite inputs. The separate older Catmull–Rom compatibility test still reports its own 0.01692% difference against the legacy track-v1 lap period; that is not the current runtime curve measurement.
 
-The runtime currently supports one unbranched closed oval. The neutral route-graph format and host-side cursor can represent branch metadata, but runtime branch selection/history, split/rejoin traversal, and B-spline playback are not connected to vehicle movement, collision or lap state. Branched graphs remain data/tooling capability, not a claim of playable runtime support.
+The runtime now includes three selectable unbranched closed-loop routes, each with a separate clean-room route-graph source and generated runtime header. Runtime branching remains a separate capability and is not connected to these current catalogue entries. The neutral route-graph format and host-side cursor can represent branch metadata, but runtime branch selection/history, split/rejoin traversal, and B-spline playback are not connected to vehicle movement, collision or lap state. Branched graphs remain data/tooling capability, not a claim of playable runtime support.
 
 ## Controls
+
+- READY course-selection screen: D-pad left/right switches between Canyon Run, Red Dune Circuit and Basalt Spiral; Start launches the selected circuit.
 
 - Control Stick left/right (or D-pad): steer.
 - Control Stick up/forward: pitch down for more forward progress but weaker steering; down/back: pitch up for slower progress and tighter control.

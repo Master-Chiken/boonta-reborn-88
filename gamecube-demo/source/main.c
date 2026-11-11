@@ -15,14 +15,9 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "rival_ai.h"
-#include "generated_route_graph.h"
-#include "route_graph_sampling.h"
+#include "course_catalog.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
-
-#if BOONTA_RUNTIME_ROUTE_EDGE_COUNT < 1U
-#error "The native route-graph runtime requires at least one closed-loop edge."
-#endif
 
 #include <math.h>
 #include <malloc.h>
@@ -39,8 +34,6 @@
 #define ROUTE_BRANCH_SELECTION_DISTANCE (6.0f * ROUTE_SEGMENT_LENGTH)
 /* Ground mesh reaches 42 segments ahead of the player (44 total, 2 behind). */
 #define ROUTE_RENDER_LOOKAHEAD_DISTANCE (42.0f * ROUTE_SEGMENT_LENGTH)
-#define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
-#define RACE_LAP_DISTANCE   BOONTA_RUNTIME_ROUTE_LENGTH
 #define RACE_LAP_LIMIT       3U
 #define PLAYER_ANCHOR_LOCAL_Z 1.0f
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
@@ -76,16 +69,9 @@ static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 static BoontaCameraState g_camera_state;
-static BoontaRouteGraphSampler g_route_sampler;
-static BoontaRouteCursor g_route_cursor;
-static int g_route_cursor_ready;
-static const BoontaRouteCursorGraph g_runtime_route_cursor_graph = {
-    boonta_runtime_route_topology_edges,
-    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
-    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
-    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
-    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
-};
+static const BoontaCourseDefinition *g_current_course;
+static unsigned int g_selected_course_index;
+static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
@@ -179,77 +165,43 @@ static const u8 g_font5x7[128][7] = {
  */
 static int reset_runtime_route_cursor(void)
 {
-    if (!boonta_route_graph_sampler_prepare(&g_route_sampler)) {
-        g_route_cursor_ready = 0;
+    if (g_current_course == NULL || g_current_course->reset == NULL) {
+        g_course_ready = 0;
         return 0;
     }
-    g_route_cursor_ready =
-        boonta_route_cursor_init(
-            &g_route_cursor, &g_runtime_route_cursor_graph,
-            g_route_sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK;
-    if (g_route_cursor_ready && BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        /* Default to the straightest route until the player approaches a split. */
-        if (boonta_route_graph_sampler_prime_lookahead(
-                &g_route_sampler, &g_route_cursor, 0,
-                ROUTE_BRANCH_SELECTION_DISTANCE,
-                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-            g_route_cursor_ready = 0;
-        }
-    }
-    return g_route_cursor_ready;
-}
-
-static int advance_runtime_route_cursor(float distance_delta, float steering)
-{
-    if (!g_route_cursor_ready) return 0;
-
-    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        const int branch_direction =
-            steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
-            steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
-        if (boonta_route_graph_sampler_prime_lookahead(
-                &g_route_sampler, &g_route_cursor, branch_direction,
-                ROUTE_BRANCH_SELECTION_DISTANCE,
-                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-            return 0;
-        }
-    }
-
-    return boonta_route_cursor_move(
-        &g_route_cursor, distance_delta, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK;
+    g_course_ready = g_current_course->reset(g_current_course->runtime_context);
+    return g_course_ready;
 }
 
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
-#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
-    /*
-     * g_distance and the live cursor are advanced/reset atomically together.
-     * For this compiled unbranched loop, the scalar sampler is equivalent to
-     * cursor-relative sampling but avoids two full cursor/history copies and
-     * cursor traversal for every road, wall, camera and vehicle sample.
-     */
-    boonta_route_graph_sampler_sample_at(
-        &g_route_sampler, travelled, ROAD_HALF_WIDTH,
-        x_out, y_out, z_out, width_out);
-#else
-    if (g_route_cursor_ready &&
-        boonta_route_graph_sampler_sample_relative_to_cursor(
-            &g_route_sampler, &g_route_cursor, g_distance, travelled,
-            ROAD_HALF_WIDTH, x_out, y_out, z_out, width_out) ==
-            BOONTA_ROUTE_CURSOR_OK) {
+    if (g_current_course == NULL || !g_course_ready ||
+        g_current_course->sample == NULL) {
+        if (x_out != NULL) *x_out = 0.0f;
+        if (y_out != NULL) *y_out = 0.0f;
+        if (z_out != NULL) *z_out = 0.0f;
+        if (width_out != NULL) *width_out = g_current_course != NULL
+            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
         return;
     }
+    g_current_course->sample(g_current_course->runtime_context, travelled,
+        g_current_course->road_half_width, x_out, y_out, z_out, width_out);
+}
 
-    /*
-     * A branched edge catalogue has no flattened fallback route. Keep the
-     * last valid cursor edge visible rather than wrapping across unrelated
-     * edges while an explicit branch decision is still unavailable.
-     */
-    boonta_route_graph_sampler_sample_cursor_at(
-        &g_route_sampler, &g_route_cursor, ROAD_HALF_WIDTH,
-        x_out, y_out, z_out, width_out);
-#endif
+static void select_course(int direction)
+{
+    if (direction == 0 || g_current_course == NULL) return;
+    if (direction < 0) {
+        g_selected_course_index =
+            (g_selected_course_index + BOONTA_COURSE_COUNT - 1U) % BOONTA_COURSE_COUNT;
+    } else {
+        g_selected_course_index = (g_selected_course_index + 1U) % BOONTA_COURSE_COUNT;
+    }
+    g_current_course = boonta_course_catalog[g_selected_course_index];
+    boonta_race_state_reset(&g_race_state);
+    boonta_camera_state_reset(&g_camera_state);
+    (void)reset_runtime_route_cursor();
 }
 
 /*
@@ -278,12 +230,15 @@ static float track_center_x_at(float travelled)
 {
     float x = 0.0f;
     track_sample_at(travelled, &x, NULL, NULL, NULL);
-    return x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
+    const float course_half_width = g_current_course != NULL
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    return x * (course_half_width * 0.78f / 22.0f);
 }
 
 static float track_half_width_at(float travelled)
 {
-    float width = ROAD_HALF_WIDTH;
+    float width = g_current_course != NULL
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
     track_sample_at(travelled, NULL, NULL, NULL, &width);
     return width;
 }
@@ -578,17 +533,10 @@ static void add_road(void)
     {
         float remaining = 0.0f;
         int has_next_finish = 0;
-        if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-            has_next_finish = g_route_cursor_ready &&
-                boonta_route_cursor_distance_to_next_lap(
-                    &g_route_cursor, &remaining) == BOONTA_ROUTE_CURSOR_OK;
-        } else {
-            const float next_finish =
-                (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) *
-                RACE_LAP_DISTANCE;
-            remaining = next_finish - g_distance;
-            has_next_finish = 1;
-        }
+        has_next_finish = g_current_course != NULL && g_course_ready &&
+            g_current_course->distance_to_next_finish != NULL &&
+            g_current_course->distance_to_next_finish(
+                g_current_course->runtime_context, g_distance, &remaining);
 
         if (has_next_finish && remaining >= 0.0f &&
             remaining < (float)ROAD_SEGMENTS * segment_length) {
@@ -875,28 +823,12 @@ static void append_text(const char *text, float x, float y, float scale,
 static float current_lap_progress(void)
 {
     float progress;
-
     if (g_race_finished) return 1.0f;
-
-    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        /*
-         * Branch paths can have different physical lengths. Use the active
-         * edge's authored normalized progress span rather than fmodf over a
-         * single oval-length constant.
-         */
-        if (g_route_cursor_ready &&
-            boonta_route_cursor_lap_progress(&g_route_cursor, &progress) ==
-                BOONTA_ROUTE_CURSOR_OK) {
-            return progress;
-        }
-        return 0.0f;
-    }
-
-    if (!isfinite(g_distance) || !isfinite(RACE_LAP_DISTANCE) ||
-        RACE_LAP_DISTANCE <= 0.001f) {
-        return 0.0f;
-    }
-    progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
+    if (g_current_course == NULL || !isfinite(g_current_course->lap_distance) ||
+        g_current_course->lap_distance <= 0.001f ||
+        !isfinite(g_distance) || g_distance < 0.0f) return 0.0f;
+    progress = fmodf(g_distance, g_current_course->lap_distance) /
+               g_current_course->lap_distance;
     if (!isfinite(progress)) return 0.0f;
     if (progress < 0.0f) return 0.0f;
     if (progress > 1.0f) return 1.0f;
@@ -1130,11 +1062,18 @@ static void draw_hud(void)
     } else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
-        const GXColor ready_panel = { 8, 18, 30, 240 };
-        append_screen_quad(cx - 92.0f, cy - 38.0f, cx + 92.0f, cy + 38.0f,
+        const GXColor ready_panel = { 8, 18, 30, 242 };
+        const char *course_name = g_current_course != NULL ? g_current_course->display_name : "NO COURSE";
+        const char *course_region = g_current_course != NULL ? g_current_course->region : "";
+        const float name_x = cx - (float)strlen(course_name) * 3.0f;
+        const float region_x = cx - (float)strlen(course_region) * 2.4f;
+        append_screen_quad(cx - 140.0f, cy - 56.0f, cx + 140.0f, cy + 56.0f,
                            0.6f, ready_panel);
-        append_text("READY", cx - 15.0f, cy - 20.0f, 1.2f, boost_fill);
-        append_text("PRESS START", cx - 32.0f, cy + 4.0f, 1.0f, white);
+        append_text("COURSE SELECT", cx - 43.0f, cy - 40.0f, 1.0f, boost_fill);
+        append_text(course_name, name_x, cy - 13.0f, 1.0f, white);
+        append_text(course_region, region_x, cy + 7.0f, 0.8f, heat_cool);
+        append_text("LEFT RIGHT", cx - 31.0f, cy + 27.0f, 0.8f, white);
+        append_text("PRESS START", cx - 34.0f, cy + 43.0f, 0.8f, boost_fill);
     } else if (g_paused) {
         /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
@@ -1329,6 +1268,8 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
+    g_selected_course_index = 0U;
+    g_current_course = boonta_course_catalog[g_selected_course_index];
     boonta_race_state_reset(&g_race_state);
     boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
@@ -1366,6 +1307,15 @@ int main(int argc, char **argv)
             draw_frame(frame_delta_seconds);
             continue;
         }
+        if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY &&
+            (buttons_down & (BOONTA_BUTTON_LEFT | BOONTA_BUTTON_RIGHT)) != 0U) {
+            const int left_pressed = (buttons_down & BOONTA_BUTTON_LEFT) != 0U;
+            const int right_pressed = (buttons_down & BOONTA_BUTTON_RIGHT) != 0U;
+            if (left_pressed != right_pressed) select_course(left_pressed ? -1 : 1);
+            draw_frame(frame_delta_seconds);
+            continue;
+        }
+
         if ((buttons_down & BOONTA_BUTTON_START) != 0U) {
             boonta_race_session_start_press(&g_race_state);
         }
@@ -1447,23 +1397,8 @@ int main(int argc, char **argv)
             const unsigned int previous_laps = g_lap_count;
             g_distance = boonta_distance_after_pitch_scaled(
                 g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
-            if (g_route_cursor_ready &&
-                !advance_runtime_route_cursor(
-                    g_distance - previous_distance, steering)) {
-                /* Cursor movement is atomic; pause distance and retry next frame. */
-                g_distance = previous_distance;
-            }
-            if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-                BoontaRouteCursorState route_state;
-                if (g_route_cursor_ready &&
-                    boonta_route_cursor_get_state(
-                        &g_route_cursor, &route_state) == BOONTA_ROUTE_CURSOR_OK) {
-                    g_lap_count = route_state.completed_laps;
-                }
-            } else {
-                g_lap_count = boonta_lap_count_after_frame(
-                    g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
-            }
+            g_lap_count = boonta_lap_count_after_frame(
+                g_lap_count, previous_distance, g_distance, g_current_course->lap_distance);
             if (g_lap_count > previous_laps) {
                 g_last_lap_seconds = g_lap_seconds;
                 (void)boonta_race_record_lap_time(&g_race_state, g_last_lap_seconds);
@@ -1514,7 +1449,7 @@ int main(int argc, char **argv)
                 (void)boonta_rival_record_finish(
                     &g_race_state, rival_index,
                     boonta_rival_finish_distance(
-                        rival_index, RACE_LAP_DISTANCE, RACE_LAP_LIMIT),
+                        rival_index, g_current_course->lap_distance, RACE_LAP_LIMIT),
                     g_race_seconds);
                 rival_event = boonta_rival_event_after_frame(
                     previous_rival_z, g_rival_z[rival_index], g_player_lateral,

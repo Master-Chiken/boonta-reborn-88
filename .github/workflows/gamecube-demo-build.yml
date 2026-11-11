@@ -93,6 +93,17 @@ jobs:
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_graph_sampling.c -lm -o /tmp/test_route_graph_sampling
           /tmp/test_route_graph_sampling
 
+      - name: Compile and run selectable course catalog tests
+        run: |
+          cc -std=c99 -Wall -Wextra -Werror -pedantic \
+            gamecube-demo/tests/test_course_catalog.c \
+            gamecube-demo/source/course_catalog.c \
+            gamecube-demo/source/course_canyon_run.c \
+            gamecube-demo/source/course_red_dunes.c \
+            gamecube-demo/source/course_basalt_spiral.c \
+            -lm -o /tmp/test_course_catalog
+          /tmp/test_course_catalog
+
       - name: Compile and run native route cursor tests
         run: |
           cc -std=c99 -Wall -Wextra -Werror -pedantic gamecube-demo/tests/test_route_cursor.c -lm -o /tmp/test_route_cursor
