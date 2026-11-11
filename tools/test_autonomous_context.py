@@ -270,11 +270,11 @@ with tempfile.TemporaryDirectory() as temp:
         {"path": paths[0], "start_line": 3, "end_line": 6},
         {"path": paths[1], "start_line": 8, "end_line": 11},
     ]
-    summary_path.write_text(json.dumps(summary, indent=2) + "\\n", encoding="utf-8")
+    summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     for index, path in enumerate(paths):
         target = source_root / path
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text("\\n".join(
+        target.write_text("\n".join(
             f"# {path} line {line}" for line in range(1, 20)
         ), encoding="utf-8")
     context = MODULE.build_context(
