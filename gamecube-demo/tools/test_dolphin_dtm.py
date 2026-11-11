@@ -15,6 +15,8 @@ from make_dolphin_dtm import (
     RESET_PRESS_FRAME,
     RESET_HOLD_FRAMES,
     RESET_BOOST_END_FRAME,
+    SESSION_START_PRESS_FRAME,
+    SESSION_START_HOLD_FRAMES,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     FINISH_RESET_PRESS_FRAME,
@@ -90,6 +92,10 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[1] & DPAD_RIGHT)
         self.assertEqual(NEUTRAL_AXIS, 128)  # raw DTM analog axes use unsigned center
         self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        session_start = record(blob, SESSION_START_PRESS_FRAME)
+        self.assertEqual(session_start[0], A | X | START)
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)[0], A)
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
@@ -170,7 +176,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(initial[5], NEUTRAL_AXIS)
 
         boosted = record(blob, 1)
-        self.assertEqual(boosted[0], A | X)
+        self.assertEqual(boosted[0], A | X | START)
         self.assertEqual(boosted[4], 255)
         before_reset = record(blob, RESET_PRESS_FRAME - 1)
         self.assertEqual(before_reset[0], A)
@@ -200,6 +206,8 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_pause_check_profile_presses_start_once_then_stays_neutral(self) -> None:
         blob = build_dtm(3600, steering="right", scenario="pause-check")
+        start_session = record(blob, SESSION_START_PRESS_FRAME)
+        self.assertEqual(start_session[0], A | X | START)
         before = record(blob, PAUSE_PRESS_FRAME - 1)
         self.assertTrue(before[0] & A)
         self.assertFalse(before[0] & START)
@@ -231,6 +239,7 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_resume_check_profile_pauses_then_resumes_with_throttle(self) -> None:
         blob = build_dtm(3600, steering="none", scenario="resume-check")
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         before_pause = record(blob, PAUSE_PRESS_FRAME - 1)
         self.assertEqual(before_pause[0], A)
 
@@ -270,7 +279,8 @@ class DolphinDtmTests(unittest.TestCase):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
                 self.assertTrue(state[0] & A)
-                self.assertFalse(state[0] & (B | START))
+                self.assertFalse(state[0] & B)
+                self.assertEqual(bool(state[0] & START), SESSION_START_PRESS_FRAME <= frame < SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
@@ -291,6 +301,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         early_boost = record(blob, 20)
         self.assertEqual(early_boost[0], A | X)
         before_reset = record(blob, FINISH_RESET_PRESS_FRAME - 1)
