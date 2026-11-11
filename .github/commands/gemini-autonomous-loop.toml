@@ -13,6 +13,7 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 
 ## AUTHORITATIVE SELECTED TASK
 - Keep preflight `.gemini/context.json` task identity/title/description/target authoritative; use `verified_context` for exact source excerpts and task metadata. Do not substitute another task.
+- Use exactly this task from `docs/automation/task-ledger-summary.json`; the runner has already read and validated it once and generated `verified_context` with the selected `task_id`, `task_title`, `task_description`, `task_target_branch` and `acceptance_criteria_excerpt`. Do not reread the summary.
 - The verified context is built from the canonical main-branch task summary and a separate checkout of the exact selected base (`main` or `dev`). Never treat the workflow's default checkout as gameplay source evidence.
 - Base must match the canonical task summary: `main` for research, `dev` for gameplay. Stop without writing on mismatched identity/criteria/base, missing source excerpts, existing PR/head evidence or exceeded budget.
 - If the five preloaded criteria are insufficient, use at most one exact `mcp_github_get_file_contents` request for `docs/automation/task-ledger.json` at `ref=main` only when the full task record is essential. Do not list/search directories or read unrelated files, issue histories, queue items or backlogs.
