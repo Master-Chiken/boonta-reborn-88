@@ -241,7 +241,7 @@ jobs:
                   .map((file) => file.filename))].sort().slice(0, 4);
                 resumeReady = resumeFilePaths.length > 0;
                 if (!resumeReady) {
-                  resumeUnavailableReason = 'the existing PR has no eligible non-generated text file to read safely';
+                  resumeUnavailableReason = 'the existing PR has no eligible safe text file to read';
                 }
               }
             }
