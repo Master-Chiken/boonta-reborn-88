@@ -194,6 +194,7 @@ class WriterFixture(unittest.TestCase):
         duplicate_pr=False,
         duplicate_pr_after_create=False,
         moved_on_recheck=False,
+        branch_moved_on_recheck=False,
         wrong_draft_response=False,
         wrong_pr_head_sha=False,
         wrong_pr_base_sha=False,
@@ -216,7 +217,8 @@ class WriterFixture(unittest.TestCase):
                 if branch_exists:
                     return {"object": {"sha": "d" * 40}}
                 if branch_created:
-                    return {"object": {"sha": "b" * 40}}
+                    sha = "c" * 40 if branch_moved_on_recheck else "b" * 40
+                    return {"object": {"sha": sha}}
                 return None
             if path == f"/repos/{REPOSITORY}/pulls?state=open&per_page=100&page=1":
                 pr_list_calls += 1
