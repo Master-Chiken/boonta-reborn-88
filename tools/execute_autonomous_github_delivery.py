@@ -193,10 +193,27 @@ def _find_open_task_pr(
 def execute_delivery(
     plan: dict[str, Any],
     *,
+    repo_root: Path,
+    verified_report_path: Path,
+    allowlist_report_path: Path,
+    expected_task_id: str,
+    expected_base_sha: str,
     repository: str,
     token: str,
     request=_api_request,
 ) -> dict[str, Any]:
+    # Rebuild the plan from canonical task/path policy plus exact verified
+    # evidence here as well as in the CLI dry-run. Importers must not be able
+    # to bypass source validation by calling this function directly.
+    validate_plan_against_sources(
+        plan,
+        repo_root=repo_root,
+        verified_report_path=verified_report_path,
+        allowlist_report_path=allowlist_report_path,
+        expected_task_id=expected_task_id,
+        expected_base_sha=expected_base_sha,
+        repository=repository,
+    )
     approved_token = require_execution_gates(repository)
     if token != approved_token:
         raise DeliveryExecutionError("The supplied token does not match the explicitly gated execution token")
@@ -381,7 +398,16 @@ def main() -> int:
             return 0
 
         token = require_execution_gates(args.repository)
-        outcome = execute_delivery(plan, repository=args.repository, token=token)
+        outcome = execute_delivery(
+            plan,
+            repo_root=args.repo_root,
+            verified_report_path=args.verified_report,
+            allowlist_report_path=args.allowlist_report,
+            expected_task_id=args.expected_task_id,
+            expected_base_sha=args.expected_base_sha,
+            repository=args.repository,
+            token=token,
+        )
     except (DeliveryExecutionError, DeliveryPlanError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
         return 2
