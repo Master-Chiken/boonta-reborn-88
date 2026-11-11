@@ -1642,8 +1642,8 @@ for required in (
 ):
     if required not in reverse_engineering_policy:
         errors.append(f"Reverse-engineering-first policy is missing required decision-gate language: {required!r}")
-if "REVERSE_ENGINEERING_FIRST.md" not in autonomous_prompt:
-    errors.append("Gemini autonomous startup must read the reverse-engineering-first policy")
+if "runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup" not in autonomous_prompt:
+    errors.append("Gemini prompt must state that the runner verifies reverse-engineering policy before model invocation")
 if "REVERSE_ENGINEERING_FIRST.md" not in openrouter_fallback:
     errors.append("OpenRouter autonomous prompt must read the reverse-engineering-first policy")
 if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:
