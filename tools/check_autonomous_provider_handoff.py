@@ -35,7 +35,7 @@ openrouter = read("openrouter")
 groq = read("groq")
 loop = read("loop")
 
-groq_step_ids = re.findall(r"(?m)^        id:\\s*([A-Za-z0-9_-]+)\\s*$", groq)
+groq_step_ids = re.findall(r"(?m)^        id:\s*([A-Za-z0-9_-]+)\s*$", groq)
 
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
