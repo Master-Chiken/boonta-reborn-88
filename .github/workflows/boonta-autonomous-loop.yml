@@ -80,6 +80,7 @@ jobs:
       resume_pr_url: ${{ steps.check.outputs.resume_pr_url }}
       resume_branch: ${{ steps.check.outputs.resume_branch }}
       resume_head_sha: ${{ steps.check.outputs.resume_head_sha }}
+      resume_file_paths: ${{ steps.check.outputs.resume_file_paths }}
     steps:
       - name: Read the three persistent UTC cooldown markers
         id: check
@@ -200,7 +201,41 @@ jobs:
             const resumeSlotValid = activeTasks.length === 0
               ? resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' && resumeCandidateTask?.status === 'blocked'
               : activeTasks.length === 1 && activeTasks[0].task_id === resumeCandidateTask?.task_id && resumeCandidateTask?.status === 'active';
-            const resumeReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            const resumeCandidateReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            let resumeFilePaths = [];
+            let resumeReady = false;
+            let resumeUnavailableReason = '';
+            if (resumeCandidateReady) {
+              const { data: changedFiles } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: resumeCandidatePr.number,
+                per_page: 100,
+                page: 1,
+              });
+              if (!Array.isArray(changedFiles) || changedFiles.length === 0 || changedFiles.length >= 100) {
+                resumeUnavailableReason = 'the existing PR changed-file inventory is empty or reached the 100-file safety ceiling';
+              } else {
+                const textFilePattern = /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i;
+                const safePath = (value) => {
+                  if (typeof value !== 'string' || !value || value.length > 120 || /[\\\u0000-\u001f\u007f]/.test(value)) return false;
+                  const parts = value.split('/');
+                  return !value.startsWith('/') &&
+                    parts.every((part) => part && part !== '.' && part !== '..') &&
+                    textFilePattern.test(value) &&
+                    value !== 'docs/automation/task-ledger.json' &&
+                    value !== 'docs/automation/task-ledger-summary.json' &&
+                    !parts.some((part) => part.toLowerCase() === 'generated');
+                };
+                resumeFilePaths = [...new Set(changedFiles
+                  .filter((file) => file && file.status !== 'removed' && safePath(file.filename))
+                  .map((file) => file.filename))].sort().slice(0, 4);
+                resumeReady = resumeFilePaths.length > 0;
+                if (!resumeReady) {
+                  resumeUnavailableReason = 'the existing PR has no eligible non-generated text file to read safely';
+                }
+              }
+            }
             const resumeTaskContext = resumeReady ? [
               'Task ID: ' + resumeCandidateTask.task_id,
               'Title: ' + resumeCandidateTask.title,
@@ -265,6 +300,8 @@ jobs:
             }
             if (resumeReady) {
               taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' is eligible for owner-dispatched Groq Free resume';
+            } else if (resumeCandidateReady && resumeUnavailableReason) {
+              taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' cannot be resumed safely: ' + resumeUnavailableReason;
             }
             const taskReady = Boolean(selectedTask);
             const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
@@ -323,6 +360,7 @@ jobs:
             core.setOutput('resume_pr_url', resumeCandidateTrusted ? resumeCandidatePr.html_url : '');
             core.setOutput('resume_branch', resumeCandidateTrusted ? resumeCandidatePr.head.ref : '');
             core.setOutput('resume_head_sha', resumeCandidateTrusted ? resumeCandidatePr.head.sha : '');
+            core.setOutput('resume_file_paths', JSON.stringify(resumeReady ? resumeFilePaths : []));
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
             const definitions = {
@@ -478,6 +516,7 @@ jobs:
       resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
       resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
       resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
+      resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
     secrets: inherit
 
   cycle-summary:
