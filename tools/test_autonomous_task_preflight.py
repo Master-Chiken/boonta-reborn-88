@@ -156,6 +156,58 @@ cases = [
         "expected_resume_pr_number": "388",
     },
     {
+        "name": "duplicate exact task markers fail closed for resume discovery",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [
+            {
+                "number": 388,
+                "state": "open",
+                "draft": False,
+                "user": {"login": "Master-Chiken"},
+                "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "task-one", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+                "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+                "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+                "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+            },
+            {
+                "number": 391,
+                "state": "open",
+                "draft": False,
+                "user": {"login": "Master-Chiken"},
+                "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "task-two", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+                "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+                "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/391",
+                "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+            }
+        ],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+    },
+    {
+        "name": "fork-authored task PR is never marked resumable",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 392,
+            "state": "open",
+            "draft": False,
+            "user": {"login": "Master-Chiken"},
+            "head": {"repo": {"full_name": "external-contributor/boonta-reborn-88"}, "ref": "task-branch", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+            "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/392",
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+        }],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+    },
+    {
         "name": "non-owner task PR is never marked resumable",
         "tasks": [activation],
         "marker_day_offset": None,
