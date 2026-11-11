@@ -895,6 +895,15 @@
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/pause_state.h",
         "gamecube-demo/tests/test_gameplay_state.c"
+      ],
+      "read_ranges": [
+        {"path": "gamecube-demo/source/main.c", "start_line": 1325, "end_line": 1349},
+        {"path": "gamecube-demo/source/main.c", "start_line": 1433, "end_line": 1445},
+        {"path": "gamecube-demo/source/gameplay_state.h", "start_line": 482, "end_line": 484},
+        {"path": "gamecube-demo/source/gameplay_state.h", "start_line": 511, "end_line": 540},
+        {"path": "gamecube-demo/source/pause_state.h", "start_line": 8, "end_line": 30},
+        {"path": "gamecube-demo/tests/test_gameplay_state.c", "start_line": 431, "end_line": 448},
+        {"path": "gamecube-demo/tests/test_gameplay_state.c", "start_line": 756, "end_line": 805}
       ]
     }
   ]
