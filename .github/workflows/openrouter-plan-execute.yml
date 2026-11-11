@@ -341,6 +341,15 @@ jobs:
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
 
+      - name: Checkout selected task target for bounded source context
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ inputs.task_target_branch }}
+          path: .boonta-target-source
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: false
+
       - name: Install pinned OpenCode CLI
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         shell: bash
@@ -391,7 +400,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no OpenRouter inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2400 --max-task-context 2200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 1400)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -488,7 +497,7 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
-          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Only those paths may be read; if none is usable, stop with a specific blocker.
+          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. The trusted context includes bounded excerpts from every exact task path; use them before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
           - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
           
