@@ -176,7 +176,29 @@ for needle in groq_gates:
         errors.append(f"Groq next-cycle gate missing: {needle}")
 if "needs.openrouter-fallback.result == 'failure'" in groq_job:
     errors.append("Groq must not launch after an OpenRouter failure in the same run")
-
+for required in (
+    "needs.provider-cooldowns.outputs.task_ready == 'true' || needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
+    "github.event_name == 'workflow_dispatch'",
+    "github.actor == github.repository_owner",
+):
+    if required not in groq_job:
+        errors.append(f"Groq owner-dispatched resume route is missing {required!r}")
+for required in (
+    "resume_mode:",
+    "resume_pr_number:",
+    "resume_pr_url:",
+    "resume_branch:",
+    "resume_head_sha:",
+    "pull.head?.sha !== resumeHeadSha",
+    "bodyLines.filter((line) => line === targetMarkerLine).length !== 1",
+    'export GITHUB_TOOLS="push_files"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    "Groq Free, €0 only. Resume exactly one existing task PR.",
+):
+    if required not in groq:
+        errors.append(f"Groq exact-PR resume guard is missing {required!r}")
 # The cooldown read path must use GitHub's updated-since filter so every
 # six-hour run does not paginate the full append-only #226 comment history.
 cooldown_readers = (
@@ -570,6 +592,17 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
+resume_start_marker = "          PROMPT=\"$(cat <<'RESUME_PROMPT'\n"
+resume_end_marker = "\n          RESUME_PROMPT\n          )\""
+resume_start = groq.find(resume_start_marker)
+resume_end = groq.find(resume_end_marker, resume_start + len(resume_start_marker)) if resume_start >= 0 else -1
+if resume_start < 0 or resume_end < 0:
+    errors.append("Groq compact resume-only prompt is missing")
+else:
+    resume_body = groq[resume_start + len(resume_start_marker):resume_end]
+    resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
+    if len(resume_body) > 1400:
+        errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
 if len(actual_groq_prompt) > 1820:
     errors.append(f"Groq static prompt leaves insufficient room under its 3,600-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
