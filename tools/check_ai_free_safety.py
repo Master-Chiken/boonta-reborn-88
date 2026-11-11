@@ -1057,7 +1057,7 @@ if "WRITER_STATE: ${{ steps.owner_gates.outputs.writer_state }}" not in readines
     errors.append("Readiness must explicitly pass the owner-gate output to later steps")
 if 'echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"' not in readiness:
     errors.append("Readiness must export a non-boolean writer_state for reusable callers")
-readiness_job_guard = re.search(r"(?ms)^  readiness:\n.*?^    if: >-\n(.*?)(?=^    runs-on:)", readiness)
+readiness_job_guard = re.search(r"(?ms)^  readiness:\n.*?^    if:\s*(?:>-\n)?(.*?)(?=^    runs-on:)", readiness)
 if (
     "allow_scheduled:" not in readiness
     or "default: false" not in readiness
