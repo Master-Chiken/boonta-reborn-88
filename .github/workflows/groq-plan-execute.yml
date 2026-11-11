@@ -661,10 +661,11 @@ jobs:
           Groq Free, €0 only. Execute the one globally selected task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative. Use the preloaded excerpts for every exact task path, taken from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence. Use the preloaded excerpts for every exact task path from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
           - No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.
+- The preloaded source excerpt budget is capped at 1,800 characters total.
           - Model-side file reads and repo-wide discovery are disabled.
-          - Do not search PR history. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
+          - Do not reopen, replay or recreate that chain. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
           SAFETY
           - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
@@ -673,6 +674,7 @@ jobs:
           TOOLS / DELIVERY
           - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.
           - Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
+- PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           - Four steps: create TASK_BRANCH_NAME from TASK_TARGET_BRANCH; push_files once with one coherent patch; create one non-draft PR; report.
           - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
           
