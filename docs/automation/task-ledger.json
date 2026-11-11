@@ -1098,23 +1098,23 @@
         },
         {
           "path": "gamecube-demo/source/main.c",
-          "start_line": 1261,
+          "start_line": 1270,
           "end_line": 1288
         },
         {
           "path": "gamecube-demo/source/route_graph_sampling.h",
           "start_line": 1,
-          "end_line": 70
+          "end_line": 60
         },
         {
           "path": "gamecube-demo/tests/test_route_graph_sampling.c",
           "start_line": 1,
-          "end_line": 70
+          "end_line": 55
         },
         {
           "path": "gamecube-demo/tests/test_gameplay_state.c",
           "start_line": 1,
-          "end_line": 45
+          "end_line": 35
         }
       ],
       "acceptance_criteria": [
