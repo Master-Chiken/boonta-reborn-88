@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #define BOONTA_RIVAL_COUNT 3U
+#define BOONTA_RACE_LAP_CAPACITY 3U
 #define BOONTA_MAX_FRAME_SCALE 3.0f
 #define BOONTA_MAX_LATERAL_VELOCITY 0.085f
 
@@ -26,6 +27,8 @@ typedef struct {
     float lap_seconds;
     float last_lap_seconds;
     float best_lap_seconds;
+    float lap_times[BOONTA_RACE_LAP_CAPACITY];
+    unsigned int lap_times_recorded_mask;
     float speed;
     float pitch_down;
     float player_lateral;
@@ -265,6 +268,33 @@ static inline float boonta_best_lap_after_finish(float best_seconds,
         return completed_lap_seconds;
     }
     return best_seconds;
+}
+
+/*
+ * Store one completed split for the current one-based lap number. A split is
+ * immutable once recorded, and invalid/duplicate calls cannot corrupt results.
+ */
+static inline int boonta_race_record_lap_time(BoontaRaceState *state,
+                                              float lap_seconds)
+{
+    unsigned int lap_index;
+    unsigned int lap_bit;
+
+    if (state == NULL ||
+        state->session_phase != BOONTA_RACE_SESSION_ACTIVE ||
+        state->lap_count == 0U ||
+        state->lap_count > BOONTA_RACE_LAP_CAPACITY ||
+        !isfinite(lap_seconds) || lap_seconds <= 0.0f) {
+        return 0;
+    }
+
+    lap_index = state->lap_count - 1U;
+    lap_bit = 1U << lap_index;
+    if ((state->lap_times_recorded_mask & lap_bit) != 0U) return 0;
+
+    state->lap_times[lap_index] = lap_seconds;
+    state->lap_times_recorded_mask |= lap_bit;
+    return 1;
 }
 
 /* Normalize steering; filter analog noise in [-16, 16] and rescale smoothly. */
@@ -571,6 +601,10 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     state->lap_seconds = 0.0f;
     state->last_lap_seconds = 0.0f;
     state->best_lap_seconds = 0.0f;
+    state->lap_times_recorded_mask = 0U;
+    for (i = 0U; i < BOONTA_RACE_LAP_CAPACITY; ++i) {
+        state->lap_times[i] = 0.0f;
+    }
     state->speed = 0.0f;
     state->pitch_down = 0.0f;
     state->player_lateral = 0.0f;
