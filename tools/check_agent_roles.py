@@ -47,6 +47,25 @@ def validate_registry(data: Any) -> list[str]:
     for key, expected in REQUIRED_POLICY.items():
         if policy.get(key) != expected:
             errors.append(f"policy.{key} must equal {expected!r}")
+    objectives = data.get("objectives")
+    if not isinstance(objectives, list) or not objectives:
+        errors.append("objectives must be a non-empty array")
+    else:
+        objective_ids = []
+        for index, objective in enumerate(objectives):
+            if not isinstance(objective, dict):
+                errors.append(f"objectives[{index}] must be an object")
+                continue
+            objective_id = objective.get("id")
+            if not isinstance(objective_id, str) or not objective_id.startswith("BOONTA-"):
+                errors.append(f"objectives[{index}].id must be a stable BOONTA identifier")
+            else:
+                objective_ids.append(objective_id)
+            for field in ("title", "description"):
+                if not isinstance(objective.get(field), str) or not objective[field].strip():
+                    errors.append(f"objectives[{index}].{field} is required")
+        if len(objective_ids) != len(set(objective_ids)):
+            errors.append("objective IDs must be unique")
     roles = data.get("roles")
     if not isinstance(roles, list) or not roles:
         return errors + ["roles must be a non-empty array"]
