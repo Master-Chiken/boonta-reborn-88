@@ -1594,7 +1594,7 @@ else:
 for required in (
     "1,500/256 limits; max 4 steps (7,024 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.",
-    "model-side file reads and repo-wide discovery are disabled.",
+    "Model-side file reads and repo-wide discovery are disabled.",
     "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
