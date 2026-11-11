@@ -8,6 +8,13 @@
 #define BOONTA_MAX_FRAME_SCALE 3.0f
 #define BOONTA_MAX_LATERAL_VELOCITY 0.085f
 
+typedef enum {
+    BOONTA_RACE_SESSION_READY = 0,
+    BOONTA_RACE_SESSION_ACTIVE = 1,
+    BOONTA_RACE_SESSION_PAUSED = 2,
+    BOONTA_RACE_SESSION_RESULTS = 3
+} BoontaRaceSessionPhase;
+
 /*
  * Resettable live race state. Kept separate from renderer/camera bookkeeping so
  * the exact Y-button restart transition can be exercised by host tests.
@@ -32,8 +39,7 @@ typedef struct {
     float rival_lateral[BOONTA_RIVAL_COUNT];
     float rival_speed[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
-    int paused;
-    int race_finished;
+    BoontaRaceSessionPhase session_phase;
 } BoontaRaceState;
 
 /* Renderer-owned chase-camera state, kept deterministic for host regression tests. */
@@ -484,6 +490,52 @@ static inline int boonta_race_is_finished(unsigned int lap_count, unsigned int l
     return lap_limit > 0U && lap_count >= lap_limit;
 }
 
+/* Start transitions ready -> active and active <-> paused; results are immutable. */
+static inline void boonta_race_session_start_press(BoontaRaceState *state)
+{
+    if (state == NULL) return;
+
+    switch (state->session_phase) {
+    case BOONTA_RACE_SESSION_READY:
+        state->session_phase = BOONTA_RACE_SESSION_ACTIVE;
+        break;
+    case BOONTA_RACE_SESSION_ACTIVE:
+        state->session_phase = BOONTA_RACE_SESSION_PAUSED;
+        break;
+    case BOONTA_RACE_SESSION_PAUSED:
+        state->session_phase = BOONTA_RACE_SESSION_ACTIVE;
+        break;
+    case BOONTA_RACE_SESSION_RESULTS:
+        /* Results remain stable; the input loop routes Start through full reset. */
+        break;
+    default:
+        state->session_phase = BOONTA_RACE_SESSION_READY;
+        break;
+    }
+}
+
+/* Only an active session may finish; reaching the lap limit freezes run state. */
+static inline void boonta_race_session_finish_if_complete(BoontaRaceState *state,
+                                                          unsigned int lap_limit)
+{
+    if (state == NULL || state->session_phase != BOONTA_RACE_SESSION_ACTIVE ||
+        !boonta_race_is_finished(state->lap_count, lap_limit)) {
+        return;
+    }
+
+    state->session_phase = BOONTA_RACE_SESSION_RESULTS;
+    state->speed = 0.0f;
+    state->boost_active = 0;
+    state->slide_active = 0;
+    state->lap_seconds = state->last_lap_seconds;
+}
+
+/* Main-loop simulation and clocks advance only while a race is active. */
+static inline int boonta_race_session_should_advance(const BoontaRaceState *state)
+{
+    return state != NULL && state->session_phase == BOONTA_RACE_SESSION_ACTIVE;
+}
+
 
 enum {
     BOONTA_RIVAL_EVENT_NONE = 0,
@@ -529,8 +581,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     state->boost_active = 0;
     state->slide_active = 0;
     state->overtake_count = 0U;
-    state->paused = 0;
-    state->race_finished = 0;
+    state->session_phase = BOONTA_RACE_SESSION_READY;
     for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
         state->rival_z[i] = boonta_rival_initial_z(i);
         state->rival_lateral[i] = 0.0f;
