@@ -300,6 +300,7 @@ class DolphinDtmTests(unittest.TestCase):
 
         start = record(blob, 0)
         self.assertEqual(start[0], A | Y)  # Establish a clean initial state.
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
 
@@ -335,6 +336,7 @@ class DolphinDtmTests(unittest.TestCase):
 
         start = record(blob, 0)
         self.assertEqual(start[0], A | Y)  # Begin from a clean deterministic state.
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
 
