@@ -33,17 +33,17 @@ def build_summary(ledger: dict) -> dict:
                 "platform_scope": task.get("platform_scope", []),
                 "status": task["status"],
                 "target_branch": task.get("target_branch"),
-                "read_paths": task.get("read_paths", []),
-                "read_ranges": task.get("read_ranges", []),
-                "question_excerpt": excerpt(task.get("question"), 240),
-                "acceptance_criteria_total": len(task.get("acceptance_criteria") or []),
+                "read_paths": task.get("read_paths", []) if task["status"] != "queued" else [],
+                "read_ranges": task.get("read_ranges", []) if task["status"] != "queued" else [],
+                "question_excerpt": excerpt(task.get("question"), 240) if task["status"] != "queued" else "",
+                "acceptance_criteria_total": len(task.get("acceptance_criteria") or []) if task["status"] != "queued" else 0,
                 "acceptance_criteria_excerpt": [
                     excerpt(item, 140)
                     for item in (task.get("acceptance_criteria") or [])[:5]
-                ],
+                ] if task["status"] != "queued" else [],
                 "pr_url": task.get("pr_url"),
                 "head_sha": task.get("head_sha"),
-                "next_action_excerpt": excerpt(task.get("next_action"), 420),
+                "next_action_excerpt": excerpt(task.get("next_action"), 180 if task["status"] == "queued" else 420),
             }
             for task in ledger.get("tasks", [])
             if task.get("status") in {"queued", "active", "blocked", "in_review"}
