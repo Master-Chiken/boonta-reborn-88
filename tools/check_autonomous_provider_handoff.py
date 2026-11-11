@@ -592,7 +592,7 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
+if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
     errors.append("Groq must remain capped at 1550 context / 256 output tokens; four invocations reserve 7,224 nominal tokens below the observed 8k TPM ceiling")
 groq_model_config = (
     groq_config.get("provider", {})
