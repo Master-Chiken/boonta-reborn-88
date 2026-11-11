@@ -307,6 +307,16 @@ def execute_delivery(
     if not isinstance(latest_base_object, dict) or latest_base_object.get("sha") != base_sha:
         raise DeliveryExecutionError("Target branch moved after branch creation; no PR was opened")
 
+    # Recheck the source ref immediately before creating the PR. A concurrent
+    # ref update must not turn the verified commit into an unverified draft.
+    latest_branch = request(
+        token, "GET",
+        f"/repos/{repository}/git/ref/heads/{urllib.parse.quote(branch_name, safe='/')}",
+    )
+    latest_branch_object = latest_branch.get("object") if isinstance(latest_branch, dict) else None
+    if not isinstance(latest_branch_object, dict) or latest_branch_object.get("sha") != commit_sha:
+        raise DeliveryExecutionError("Delivery branch moved after creation; no PR was opened")
+
     # Recheck for a concurrently opened PR for this task just before create.
     if _find_open_task_pr(token, repository, task_id, request=request) is not None:
         raise DeliveryExecutionError("An open PR appeared for this task during delivery; no duplicate PR was opened")
@@ -320,19 +330,31 @@ def execute_delivery(
     pr_number = pr.get("number") if isinstance(pr, dict) else None
     pr_head = pr.get("head") if isinstance(pr, dict) else None
     pr_base = pr.get("base") if isinstance(pr, dict) else None
+    expected_pr_url = (
+        f"https://github.com/{repository}/pull/{pr_number}"
+        if type(pr_number) is int and pr_number > 0 else ""
+    )
     if (
-        not isinstance(pr_url, str)
-        or not pr_url.startswith(f"https://github.com/{repository}/pull/")
+        not isinstance(pr, dict)
         or type(pr_number) is not int
         or pr_number < 1
-        or not isinstance(pr, dict)
+        or pr_url != expected_pr_url
         or pr.get("draft") is not True
+        or pr.get("state") != "open"
         or not isinstance(pr_head, dict)
         or pr_head.get("ref") != branch_name
+        or pr_head.get("sha") != commit_sha
+        or not isinstance(pr_head.get("repo"), dict)
+        or pr_head["repo"].get("full_name") != repository
         or not isinstance(pr_base, dict)
         or pr_base.get("ref") != target_branch
+        or pr_base.get("sha") != base_sha
+        or not isinstance(pr_base.get("repo"), dict)
+        or pr_base["repo"].get("full_name") != repository
     ):
-        raise DeliveryExecutionError("GitHub did not confirm the exact draft pull request")
+        raise DeliveryExecutionError(
+            "GitHub did not confirm the exact draft PR head, base, repository and state"
+        )
 
     return {
         "status": "DRAFT_PR_CREATED",
