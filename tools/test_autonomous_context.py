@@ -199,4 +199,59 @@ with tempfile.TemporaryDirectory() as temp:
     else:
         raise AssertionError("Expected a legacy schema to fail closed")
 
-print("PASS: schema-v2 identity, target branch, required excerpts and truncation fail-closed cases")
+
+# Exact multi-file source excerpts are loaded from the selected target checkout,
+# never by asking the model to browse the repository.
+with tempfile.TemporaryDirectory() as temp:
+    source_root = Path(temp)
+    paths = [
+        "source/main.c",
+        "source/gameplay_state.h",
+        "source/pause_state.h",
+        "tests/test_gameplay_state.c",
+    ]
+    for index, path in enumerate(paths):
+        target = source_root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\\n".join(
+            f"/* {path} line {line} */" for line in range(1, 31)
+        ), encoding="utf-8")
+    ranges = [
+        {"path": paths[0], "start_line": 4, "end_line": 8},
+        {"path": paths[1], "start_line": 10, "end_line": 14},
+        {"path": paths[2], "start_line": 16, "end_line": 20},
+        {"path": paths[3], "start_line": 22, "end_line": 26},
+    ]
+    excerpt = MODULE._build_source_excerpt(source_root, paths, ranges, 1800)
+    assert all(path in excerpt for path in paths)
+    assert "line 4" in excerpt and "line 26" in excerpt
+    assert len(excerpt) <= 1800
+
+    try:
+        MODULE._build_source_excerpt(
+            source_root, paths, [dict(ranges[0], path="../outside.c")], 1800
+        )
+    except MODULE.ContextBuildError:
+        pass
+    else:
+        raise AssertionError("Expected source ranges outside the exact allow-list to fail")
+
+    try:
+        MODULE._build_source_excerpt(
+            source_root, paths, [dict(ranges[0], end_line=100)], 1800
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "exceeds the 30-line file" in str(exc)
+    else:
+        raise AssertionError("Expected source ranges beyond EOF to fail")
+
+    try:
+        MODULE._build_source_excerpt(
+            source_root, paths, [dict(ranges[0], end_line=1000)], 1800
+        )
+    except MODULE.ContextBuildError:
+        pass
+    else:
+        raise AssertionError("Expected oversized source ranges to fail closed")
+
+print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
