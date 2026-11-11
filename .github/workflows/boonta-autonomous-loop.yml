@@ -218,7 +218,7 @@ jobs:
               } else {
                 const textFilePattern = /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i;
                 const safePath = (value) => {
-                  if (typeof value !== 'string' || !value || value.length > 120 || /[\\\u0000-\u001f\u007f]/.test(value)) return false;
+                  if (typeof value !== 'string' || !value || value.length > 120 || !/^[A-Za-z0-9._/-]+$/.test(value) || /[\\\u0000-\u001f\u007f]/.test(value)) return false;
                   const parts = value.split('/');
                   return !value.startsWith('/') &&
                     parts.every((part) => part && part !== '.' && part !== '..') &&
