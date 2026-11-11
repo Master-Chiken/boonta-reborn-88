@@ -480,6 +480,15 @@ jobs:
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
 
+      - name: Checkout selected task target for bounded source context
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          path: .boonta-target-source
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: false
+
       - name: Install pinned OpenCode CLI
         if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: bash
@@ -541,7 +550,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1500 --max-task-context 1400 --max-criteria 3 --max-next-action 140)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3200 --max-task-context 1100 --max-criteria 2 --max-next-action 100 --max-source-chars 1600)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -581,11 +590,11 @@ jobs:
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"
+            export GITHUB_TOOLS="create_branch,create_pull_request,push_files"
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,152/384 limits; max 4 steps (6,144 nominal tokens). Skip optional reads; reserve one final report step below the observed 8k TPM ceiling.
+          # 1,500/256 limits; max 4 steps (7,024 nominal tokens). Exact task source excerpts are preloaded; no model file-read step.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -610,8 +619,8 @@ jobs:
                   "openai/gpt-oss-20b": {
                     "temperature": true,
                     "limit": {
-                      "context": 1152,
-                      "output": 384
+                      "context": 1500,
+                      "output": 256
                     }
                   }
                 }
@@ -652,7 +661,7 @@ jobs:
           Groq Free, €0 only. Execute the one globally selected task.
           
           TASK
-          - Global preflight is authoritative. Use the compact context and read at most one exact path from its read-only list on TASK_TARGET_BRANCH. Never search, list, read other files or reread the ledger.
+          - Global preflight is authoritative. Use the preloaded excerpts for every exact task path, taken from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
           - Do not search PR history. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
           SAFETY
@@ -660,8 +669,8 @@ jobs:
           - Preserve clean-room provenance; never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs.
           
           TOOLS / DELIVERY
-          - Only github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request. No shell, filesystem or subagents.
-          - Four steps: read one listed file on TASK_TARGET_BRANCH and create TASK_BRANCH_NAME from that base in parallel; push_files once with one coherent patch; create one non-draft PR; report.
+          - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.
+          - Four steps: create TASK_BRANCH_NAME from TASK_TARGET_BRANCH; push_files once with one coherent patch; create one non-draft PR; report.
           - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
           
           REPORT
@@ -733,8 +742,8 @@ jobs:
           fi
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 3600 )); then
-            echo "::error::Groq prompt exceeds the 3,600-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 5200 )); then
+            echo "::error::Groq prompt exceeds the 5,200-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
