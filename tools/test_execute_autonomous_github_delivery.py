@@ -199,9 +199,10 @@ class WriterFixture(unittest.TestCase):
         calls = []
         base_calls = 0
         pr_list_calls = 0
+        branch_created = False
 
         def request(token, method, path, *, payload=None, allowed_404=False, timeout=20):
-            nonlocal base_calls, pr_list_calls
+            nonlocal base_calls, pr_list_calls, branch_created
             calls.append((method, path, payload, allowed_404))
             if path == f"/repos/{REPOSITORY}/git/ref/heads/main":
                 base_calls += 1
@@ -210,7 +211,11 @@ class WriterFixture(unittest.TestCase):
                     sha = "c" * 40
                 return {"object": {"sha": sha}}
             if path == f"/repos/{REPOSITORY}/git/ref/heads/{self.plan['branch_name']}":
-                return {"object": {"sha": "d" * 40}} if branch_exists else None
+                if branch_exists:
+                    return {"object": {"sha": "d" * 40}}
+                if branch_created:
+                    return {"object": {"sha": "b" * 40}}
+                return None
             if path == f"/repos/{REPOSITORY}/pulls?state=open&per_page=100&page=1":
                 pr_list_calls += 1
                 if duplicate_pr or (duplicate_pr_after_create and pr_list_calls >= 2):
@@ -228,6 +233,7 @@ class WriterFixture(unittest.TestCase):
                     "parents": [{"sha": self.base_sha}],
                 }
             if path == f"/repos/{REPOSITORY}/git/refs":
+                branch_created = True
                 return {
                     "ref": self.plan["github_write_plan"]["create_ref"]["ref"],
                     "object": {"sha": "b" * 40},
