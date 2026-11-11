@@ -248,16 +248,33 @@ def execute_delivery(
         payload=commit_payload,
     )
     commit_sha = commit.get("sha") if isinstance(commit, dict) else None
+    commit_tree = commit.get("tree") if isinstance(commit, dict) else None
+    commit_parents = commit.get("parents") if isinstance(commit, dict) else None
     if not isinstance(commit_sha, str) or not SHA_RE.fullmatch(commit_sha):
         raise DeliveryExecutionError("GitHub did not return a valid commit SHA")
+    if not isinstance(commit_tree, dict) or commit_tree.get("sha") != tree_sha:
+        raise DeliveryExecutionError("GitHub commit response does not reference the exact verified tree")
+    if (
+        not isinstance(commit_parents, list)
+        or len(commit_parents) != 1
+        or not isinstance(commit_parents[0], dict)
+        or commit_parents[0].get("sha") != base_sha
+    ):
+        raise DeliveryExecutionError("GitHub commit response does not contain the exact single verified parent")
 
     # Create-ref is atomic. Do not force-update or overwrite an existing ref.
+    expected_ref = write_plan["create_ref"]["ref"]
     ref = request(
         token, "POST", f"/repos/{repository}/git/refs",
-        payload={"ref": write_plan["create_ref"]["ref"], "sha": commit_sha},
+        payload={"ref": expected_ref, "sha": commit_sha},
     )
     ref_object = ref.get("object") if isinstance(ref, dict) else None
-    if not isinstance(ref_object, dict) or ref_object.get("sha") != commit_sha:
+    if (
+        not isinstance(ref, dict)
+        or ref.get("ref") != expected_ref
+        or not isinstance(ref_object, dict)
+        or ref_object.get("sha") != commit_sha
+    ):
         raise DeliveryExecutionError("GitHub did not confirm the exact new branch ref")
 
     # Recheck the target immediately before opening the PR. If it moved after
@@ -270,6 +287,10 @@ def execute_delivery(
     if not isinstance(latest_base_object, dict) or latest_base_object.get("sha") != base_sha:
         raise DeliveryExecutionError("Target branch moved after branch creation; no PR was opened")
 
+    # Recheck for a concurrently opened PR for this task just before create.
+    if _find_open_task_pr(token, repository, task_id, request=request) is not None:
+        raise DeliveryExecutionError("An open PR appeared for this task during delivery; no duplicate PR was opened")
+
     pr_payload = write_plan["create_pull_request"]
     pr = request(
         token, "POST", f"/repos/{repository}/pulls",
@@ -277,8 +298,19 @@ def execute_delivery(
     )
     pr_url = pr.get("html_url") if isinstance(pr, dict) else None
     pr_number = pr.get("number") if isinstance(pr, dict) else None
-    if not isinstance(pr_url, str) or not isinstance(pr_number, int):
-        raise DeliveryExecutionError("GitHub did not return a valid draft pull request")
+    pr_head = pr.get("head") if isinstance(pr, dict) else None
+    pr_base = pr.get("base") if isinstance(pr, dict) else None
+    if (
+        not isinstance(pr_url, str)
+        or not pr_url.startswith(f"https://github.com/{repository}/pull/")
+        or type(pr_number) is not int
+        or pr_number < 1
+        or not isinstance(pr, dict)
+        or pr.get("draft") is not True
+        or (isinstance(pr_head, dict) and pr_head.get("ref") != branch_name)
+        or (isinstance(pr_base, dict) and pr_base.get("ref") != target_branch)
+    ):
+        raise DeliveryExecutionError("GitHub did not confirm the exact draft pull request")
 
     return {
         "status": "DRAFT_PR_CREATED",
