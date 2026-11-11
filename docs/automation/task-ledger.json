@@ -1011,7 +1011,12 @@
       "status": "queued",
       "target_branch": "dev",
       "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
-      "read_paths": [],
+      "read_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
+      ],
       "read_ranges": [],
       "acceptance_criteria": [
         "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are camera-relative versus route-relative.",
@@ -1029,7 +1034,8 @@
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
         "GC-RACE-PROGRESSION"
-      ]
+      ],
+      "owner_approved": true
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
@@ -1060,7 +1066,8 @@
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
         "GC-RIVAL-ROUTE-PROGRESSION"
-      ]
+      ],
+      "owner_approved": true
     },
     {
       "task_id": "GC-RACE-PERFORMANCE-PROFILE",
@@ -1093,7 +1100,8 @@
         "GC-RACE-PROGRESSION",
         "GC-RIVAL-ROUTE-PROGRESSION",
         "GC-RACE-FRONTEND-FLOW"
-      ]
+      ],
+      "owner_approved": true
     }
   ]
 }
