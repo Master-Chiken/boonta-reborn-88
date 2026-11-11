@@ -94,6 +94,10 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
         status = task.get("status")
         if not isinstance(status, str) or status not in STATUSES:
             errors.append(f"{prefix}.status must be one of {sorted(STATUSES)}")
+        if status == "queued" and task.get("owner_approved") is not True:
+            errors.append(f"{prefix}.owner_approved must be true before queue promotion")
+        elif "owner_approved" in task and not isinstance(task.get("owner_approved"), bool):
+            errors.append(f"{prefix}.owner_approved must be a boolean")
         dependencies = task.get("depends_on")
         if not isinstance(dependencies, list) or not all(
             isinstance(value, str) and TASK_ID_RE.fullmatch(value) for value in dependencies
