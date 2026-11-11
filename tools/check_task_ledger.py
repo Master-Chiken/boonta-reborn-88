@@ -94,6 +94,13 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
         status = task.get("status")
         if not isinstance(status, str) or status not in STATUSES:
             errors.append(f"{prefix}.status must be one of {sorted(STATUSES)}")
+        dependencies = task.get("depends_on")
+        if not isinstance(dependencies, list) or not all(
+            isinstance(value, str) and TASK_ID_RE.fullmatch(value) for value in dependencies
+        ):
+            errors.append(f"{prefix}.depends_on must be an array of stable task IDs")
+        elif len(dependencies) != len(set(dependencies)) or task_id in dependencies:
+            errors.append(f"{prefix}.depends_on must be unique and cannot include itself")
         if status == "active":
             active += 1
         read_paths = task.get("read_paths")
@@ -135,6 +142,47 @@ def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: 
             errors.append(f"{prefix} completed task requires evidence")
     if active > 1:
         errors.append("at most one task may have status=active")
+
+    task_by_id = {
+        task["task_id"]: task for task in tasks
+        if isinstance(task, dict) and isinstance(task.get("task_id"), str)
+    }
+    for task_id, task in task_by_id.items():
+        dependencies = task.get("depends_on", [])
+        if not isinstance(dependencies, list):
+            continue
+        for dependency_id in dependencies:
+            dependency = task_by_id.get(dependency_id)
+            if dependency is None:
+                errors.append(f"{task_id} depends_on unknown task {dependency_id}")
+            elif task.get("status") in {"active", "in_review", "completed"} and dependency.get("status") != "completed":
+                errors.append(
+                    f"{task_id} cannot be {task.get('status')} until dependency "
+                    f"{dependency_id} is completed"
+                )
+
+    # Dependency graph must be acyclic; queued tasks may wait, but never form a loop.
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(task_id: str) -> None:
+        if task_id in visiting:
+            errors.append(f"task dependency cycle detected at {task_id}")
+            return
+        if task_id in visited:
+            return
+        visiting.add(task_id)
+        task = task_by_id.get(task_id, {})
+        dependencies = task.get("depends_on", [])
+        if isinstance(dependencies, list):
+            for dependency_id in dependencies:
+                if dependency_id in task_by_id:
+                    visit(dependency_id)
+        visiting.remove(task_id)
+        visited.add(task_id)
+
+    for task_id in task_by_id:
+        visit(task_id)
     return errors
 
 
