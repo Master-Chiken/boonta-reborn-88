@@ -59,6 +59,16 @@ class AgentRoleRegistryTests(unittest.TestCase):
         next(role for role in data["roles"] if role["id"] == "gameplay")["forbidden_actions"].remove("merge")
         self.assertTrue(any("missing forbidden actions" in error for error in roles.validate_registry(data)))
 
+    def test_requires_unique_parent_objectives(self):
+        data = copy.deepcopy(self.valid)
+        data["objectives"].append(copy.deepcopy(data["objectives"][0]))
+        self.assertTrue(any("objective IDs must be unique" in error for error in roles.validate_registry(data)))
+
+    def test_requires_objective_descriptions(self):
+        data = copy.deepcopy(self.valid)
+        data["objectives"][0]["description"] = ""
+        self.assertTrue(any("description is required" in error for error in roles.validate_registry(data)))
+
 
 if __name__ == "__main__":
     unittest.main()
