@@ -125,7 +125,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Read-only source paths (select at most one): tools/check_task_ledger.py, tools/test_check_task_ledger.py" in groq_bounded
     assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
-    assert "Next: " + "N" * 140 in groq_bounded
+    assert "Next: " + "N" * 139 + "…" in groq_bounded
 
     # Unsafe paths are rejected before any model receives the context.
     unsafe_summary = json.loads(summary_path.read_text(encoding="utf-8"))

@@ -656,7 +656,7 @@ jobs:
           - Do not search PR history. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
           SAFETY
-          - No paid routes, billing/credits, keys, secrets or settings changes. Stop at first quota, TPM, rate, context or auth error; never retry.
+          - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
           - Preserve clean-room provenance; never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs.
           
           TOOLS / DELIVERY
