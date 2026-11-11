@@ -762,6 +762,17 @@ static void race_session_transition_tests(void) {
  assert(state.session_phase == BOONTA_RACE_SESSION_READY);
  assert(!boonta_race_session_should_advance(&state));
 
+ /* A completed lap counter cannot finish a READY or PAUSED session. */
+ state.lap_count = 3U;
+ boonta_race_session_finish_if_complete(&state, 3U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ boonta_race_session_finish_if_complete(&state, 0U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ state.session_phase = BOONTA_RACE_SESSION_PAUSED;
+ boonta_race_session_finish_if_complete(&state, 3U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_PAUSED);
+ boonta_race_state_reset(&state);
+
  boonta_race_session_start_press(&state);
  assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
  assert(boonta_race_session_should_advance(&state));
