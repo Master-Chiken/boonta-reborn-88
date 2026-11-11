@@ -369,7 +369,7 @@ if "task context exceeds the 2,500-character provider handoff budget" not in tas
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
     ("OpenRouter", openrouter, "1,000 tokens"),
-    ("Groq", groq, "300 tokens"),
+    ("Groq", groq, "1,800 characters"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
@@ -439,7 +439,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,500 context tokens and 256 output tokens" not in budget or "caps verified context at 3,200 characters and task handoff at 1,100 characters" not in budget:
+if "1,500 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
     errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -501,7 +501,7 @@ required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
-    "create_branch", "create_pull_request", "get_file_contents", "push_files",
+    "create_branch", "create_pull_request", "push_files",
 }
 required_groq_resume_tools = {"get_file_contents", "push_files"}
 required_writer_tools = {
@@ -519,7 +519,7 @@ else:
         ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly four bounded tools normally and one targeted read plus push only for existing-PR resume")
+        errors.append("Groq must expose exactly three normal delivery tools and only targeted read plus push for existing-PR resume")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
     errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
@@ -706,7 +706,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "#317/#318/#319 are superseded. Do not recreate them."
+        "Do not reopen, replay or recreate that chain."
         if label == "Groq" else "Do not reopen, replay or recreate that chain"
     )
     if required_reopen_rule not in content:
