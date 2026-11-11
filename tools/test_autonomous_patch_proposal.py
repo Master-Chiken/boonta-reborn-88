@@ -161,6 +161,8 @@ class ProposalValidationTests(PatchFixture):
             "tools/autonomous_patch_proposal.py",
             "tools/build_autonomous_path_allowlist.py",
             "tools/build_autonomous_delivery_plan.py",
+            "tools/execute_autonomous_github_delivery.py",
+            "tools/test_execute_autonomous_github_delivery.py",
             "tools/verify_autonomous_patch.py",
             "tools/run_autonomous_patch_tests.py",
             "tools/test_autonomous_delivery_plan.py",
