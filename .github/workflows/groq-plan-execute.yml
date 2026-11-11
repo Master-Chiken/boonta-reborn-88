@@ -550,7 +550,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3000 --max-task-context 1100 --max-criteria 4 --max-next-action 80 --max-source-chars 1800)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3000 --max-task-context 1100 --max-criteria 4 --max-next-action 100 --max-source-chars 1800)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
