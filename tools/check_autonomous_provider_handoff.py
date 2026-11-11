@@ -177,7 +177,9 @@ for needle in groq_gates:
 if "needs.openrouter-fallback.result == 'failure'" in groq_job:
     errors.append("Groq must not launch after an OpenRouter failure in the same run")
 for required in (
-    "needs.provider-cooldowns.outputs.task_ready == 'true' || needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "needs.provider-cooldowns.outputs.task_ready == 'true'",
+    "needs.provider-cooldowns.outputs.task_ready != 'true'",
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
     "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "github.event_name == 'workflow_dispatch'",
@@ -438,25 +440,34 @@ else:
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
-groq_tools = set(
-    groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
-)
+groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
     "create_branch", "push_files", "create_pull_request",
 }
+required_groq_resume_tools = {"push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
 if openrouter_tools != required_openrouter_tools:
     errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
-if groq_tools != required_groq_tools:
-    errors.append("Groq must expose exactly three direct branch/push/PR tools; all reads and PR searches are preflight-owned")
+if groq_config_tools != "{env:GITHUB_TOOLS}":
+    errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
+else:
+    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
+    expected_groq_modes = {
+        "create_branch,push_files,create_pull_request",
+        "push_files",
+    }
+    if groq_modes != expected_groq_modes:
+        errors.append("Groq must expose exactly three branch/push/PR tools normally and push_files only for existing-PR resume")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
+    errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
+for label, toolset in (("OpenRouter", openrouter_tools),):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
