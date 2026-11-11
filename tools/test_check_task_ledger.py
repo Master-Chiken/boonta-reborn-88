@@ -28,6 +28,7 @@ def valid_task(task_id="TASK-001", status="queued"):
         "owner_role_id": "research",
         "parent_objective_id": "BOONTA-COMPLETE-GAME",
         "depends_on": [],
+        "owner_approved": status == "queued",
         "status": status,
         "question": "What does the pinned evidence establish?",
         "acceptance_criteria": ["Record exact source revision", "Separate facts from unknowns"],
@@ -94,6 +95,11 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"][0]["parent_objective_id"] = "UNKNOWN-OBJECTIVE"
         errors = ledger.validate_ledger(data, {"research"}, {"BOONTA-COMPLETE-GAME"})
         self.assertTrue(any("unknown objective" in error for error in errors))
+
+    def test_rejects_queued_task_without_explicit_owner_approval(self):
+        data = valid_ledger()
+        data["tasks"][0].pop("owner_approved")
+        self.assertTrue(any("owner_approved must be true" in error for error in ledger.validate_ledger(data)))
 
     def test_rejects_unknown_task_dependency(self):
         data = valid_ledger()
