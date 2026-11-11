@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10",
+  "updated_at": "2026-11-11",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -851,6 +851,42 @@
       "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
       "updated_at": "2026-11-07",
       "target_branch": "main"
+    },
+    {
+      "task_id": "GC-RACE-PROGRESSION",
+      "title": "Complete the native single-race lifecycle through results and restart",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "active",
+      "question": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
+      "acceptance_criteria": [
+        "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in gamecube-demo/source/main.c, gamecube-demo/source/gameplay_state.h, gamecube-demo/source/pause_state.h and their host tests; distinguish existing behavior from the specific missing results/session transition.",
+        "Reuse the existing native lap counter, three-lap finish condition, race/lap timers, best-lap and overtake metrics, pause/restart helpers, route-cursor reset, and the rival implementation integrated by PR #327; do not recreate or replace those systems.",
+        "Implement only the smallest explicit, testable session/results state needed for initial start -> active race -> three-lap finish/results -> restart. Pause/resume must remain confined to an active race, and no simulation or timer may advance after the finish.",
+        "Show a read-only results view using only measured prototype data, including completed laps, total race time, available last/best lap data and overtake count. Do not invent finishing positions, championship standings, persistent saves or unsupported rival results.",
+        "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival placement/overtake state and route cursor; a second run must behave like a fresh first run.",
+        "Add host regression tests against the production transition helpers for valid and invalid transitions, the exact three-lap finish, pause/timer freeze, post-finish immutability, results stability and full restart reset; tests must cover relevant boundary cases.",
+        "The exact PR head must pass host tests, native GameCube and Wii DOL/ELF builds, artifact validation, and the existing bounded Dolphin checks. Label scripted emulator evidence as scripted; do not claim human-operated or physical-hardware acceptance.",
+        "Keep all new code/assets clean-room and source-authored. Do not import Step 102 content, commercial assets, ROM-derived data or PC/N64 code; keep this task limited to the single-race lifecycle."
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/327",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/69deb6778f9383887118803428e7014686865a83",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/README.md",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/main.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/gameplay_state.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
+      ],
+      "next_action": "Owner-approved 2026-11-11. Start on the current dev branch by tracing existing lifecycle transitions and PR #327 rival integration; implement only the missing results/session transition with production-helper host tests, then open one PR to dev. Preserve all platform/provenance and exact-head CI limits.",
+      "updated_at": "2026-11-11",
+      "pr_url": null,
+      "head_sha": null,
+      "target_branch": "dev"
     }
   ]
 }

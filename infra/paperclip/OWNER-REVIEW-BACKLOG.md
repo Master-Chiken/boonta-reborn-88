@@ -1,12 +1,12 @@
 # Owner-review backlog candidates and queue-liveness contract
 
-**Status: proposals only — NONE is queued, active, or approved for autonomous execution.**
+**Status: Candidate B is owner-approved and staged as the single active task `GC-RACE-PROGRESSION` in PR #393 (target branch `dev`). Candidate A and Candidate C remain proposals and are not approved.**
 
-This document exists to make the empty-queue condition visible and to prepare the next bounded work without allowing an agent to invent or activate tasks. The canonical task source remains `docs/automation/task-ledger.json` on `main`.
+This document records the owner-approved next task and preserves the queue-approval boundary. The canonical task source remains `docs/automation/task-ledger.json` on `main`; PR #393 stages the ledger and compact summary update together. The task becomes visible to the main-branch scheduler only after PR #393 is merged.
 
 ## Audited current state
 
-At main commit `4fdfd6292e5379977b0ca240c47d9c15e2b320eb` (ledger updated 2026-11-10), the canonical task ledger contains 11 records:
+Before PR #393, main commit `4fdfd6292e5379977b0ca240c47d9c15e2b320eb` (ledger updated 2026-11-10) contained 11 records. PR #393 stages the owner-approved `GC-RACE-PROGRESSION` row as the sole active task on `dev`; after it merges, the ledger will contain 12 records (9 completed, 2 blocked, 1 active):
 
 | State | Count |
 |---|---:|
@@ -40,16 +40,19 @@ These candidates are proposals, not instructions to the autonomous scheduler. Ke
 
 ### Candidate B — end-to-end race progression using existing mainline systems
 
-**Source of priority:** `docs/PROJECT_OPERATING_RULES.md` says to reuse the rival racing implementation already integrated by PR #327 and target the missing end-to-end race-progression integration. PR #307 remains explicitly deferred until the race slice is coherent.
+<escape>**Owner decision, 2026-11-11: APPROVED.**</escape> This is the next official engineering task, recorded as `GC-RACE-PROGRESSION` with status `active` and target branch `dev` in PR #393. It becomes eligible for the scheduled writer only after PR #393 is merged.
 
-**Bounded deliverable:** inspect the current `gamecube-demo/` race state machine and existing PR #327 implementation; document the remaining transitions from race start through laps, finish, results/reset/restart, then implement only the smallest missing transition(s) with host tests.
+**Source of priority:** reuse the rival racing implementation already integrated by PR #327; do not rebuild the rival subsystem. PR #307 remains explicitly deferred until the race slice is coherent.
+
+**Bounded deliverable:** inspect the current `dev`-branch race state machine and PR #327 implementation; record which start, lap, pause, finish and restart behaviors already exist; then implement only the missing single-race results/session transition and its production-helper host tests. Do not turn this into a title menu, championship, save system, multiple-track or branching-route project.
 
 **Acceptance criteria:**
-- Reuse current mainline race, rival and restart code; do not recreate the superseded PR #317/#318/#319 chain.
-- Tests cover each relevant transition, finish condition, reset and restart, including boundary/error cases.
-- Native GameCube DOL/ELF and relevant host checks pass on the exact PR head.
-- Scripted Dolphin assertions are labelled as scripted; live-controller playability and physical hardware remain unverified until a human tests them.
-- No new content/assets are imported; keep the existing clean-room and provenance rules.
+- Reuse the existing three-lap, timer, pause/restart, route-cursor and rival code; PR #327 at `69deb6778f9383887118803428e7014686865a83` is the rival baseline. Do not recreate PRs #317/#318/#319.
+- Add a minimal start -> active race -> three-lap finish/results -> restart state flow using production helpers; no simulation progresses after finish and results remain immutable until restart.
+- Display only measured values already available (completed laps, total time, last/best lap data and overtakes); do not fabricate rank, championship or persistent-save data.
+- Host tests exercise valid/invalid transitions, exact finish, pause/timer freeze, results stability and complete restart reset.
+- Native GameCube/Wii builds, artifact validation and exact-head host/Dolphin checks pass. Scripted Dolphin evidence remains scripted; live-controller and physical hardware acceptance remain unverified.
+- No proprietary or Step 102 assets/code are imported; preserve clean-room provenance boundaries.
 
 ### Candidate C — one synthetic branch-to-rejoin runtime slice
 
@@ -83,4 +86,4 @@ These candidates are proposals, not instructions to the autonomous scheduler. Ke
 
 ## Approval and activation boundary
 
-No proposal in this document changes the task ledger. To activate one, the repository owner must first add the approved task—with exact ID, scope, target branch, question, acceptance criteria, tests, provenance limits and next action—to the canonical full ledger, regenerate the compact summary, validate both files and then allow the scheduler to acquire the single writer lease. Until then the correct automatic result is `EMPTY_QUEUE`, not a fabricated task.
+Candidate B is the approved exception and is staged as the active `GC-RACE-PROGRESSION` row with a matching regenerated summary in PR #393. It must not be scheduled until that PR is merged. Candidate A and Candidate C remain proposals; any later activation still requires the owner to add the exact task, scope, target branch, acceptance criteria, tests and provenance limits to the canonical ledger before the scheduler can acquire the writer slot.

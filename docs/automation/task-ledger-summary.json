@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-10",
+  "updated_at": "2026-11-11",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true
@@ -48,9 +48,30 @@
         "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC…",
         "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type"
       ],
+      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
+    },
+    {
+      "task_id": "GC-RACE-PROGRESSION",
+      "title": "Complete the native single-race lifecycle through results and restart",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "active",
+      "target_branch": "dev",
+      "question_excerpt": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
+      "acceptance_criteria_total": 8,
+      "acceptance_criteria_excerpt": [
+        "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in…",
+        "Reuse the existing native lap counter, three-lap finish condition, race/lap timers, best-lap and overtake metrics, pause/restart helpers,…",
+        "Implement only the smallest explicit, testable session/results state needed for initial start -> active race -> three-lap finish/results…",
+        "Show a read-only results view using only measured prototype data, including completed laps, total race time, available last/best lap data…",
+        "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
+      ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
+      "next_action_excerpt": "Owner-approved 2026-11-11. Start on the current dev branch by tracing existing lifecycle transitions and PR #327 rival integration; implement only the missing results/session transition with production-helper host tests, then open one PR to dev. Preserve all platform/provenance and exact-head CI limits."
     }
   ]
 }
