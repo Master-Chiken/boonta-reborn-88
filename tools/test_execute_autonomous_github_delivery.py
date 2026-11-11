@@ -310,6 +310,19 @@ class DeterministicGitHubWriterTests(WriterFixture):
         self.validate_plan()
         self.assert_repo_clean()
 
+    def test_plan_cannot_be_retargeted_to_another_repository(self):
+        with self.assertRaisesRegex(DeliveryExecutionError, "restricted to the canonical repository"):
+            validate_plan_against_sources(
+                self.plan,
+                repo_root=self.root,
+                verified_report_path=self.verified_path,
+                allowlist_report_path=self.allowlist_path,
+                expected_task_id=TASK_ID,
+                expected_base_sha=self.base_sha,
+                repository="attacker/other-repo",
+            )
+        self.assert_repo_clean()
+
     def test_success_creates_only_draft_pr_and_never_merges(self):
         request, calls = self.fake_api()
         with patch.dict(os.environ, self.env, clear=False):
@@ -413,6 +426,11 @@ class DeterministicGitHubWriterTests(WriterFixture):
             with self.subTest(message=message), patch.dict(os.environ, environment, clear=True):
                 with self.assertRaisesRegex(DeliveryExecutionError, message):
                     require_execution_gates(REPOSITORY)
+
+    def test_execution_gates_reject_a_noncanonical_repository_argument(self):
+        with patch.dict(os.environ, self.env, clear=True):
+            with self.assertRaisesRegex(DeliveryExecutionError, "restricted to the canonical repository"):
+                require_execution_gates("attacker/other-repo")
 
     def test_execute_delivery_itself_enforces_gates(self):
         request, calls = self.fake_api()
