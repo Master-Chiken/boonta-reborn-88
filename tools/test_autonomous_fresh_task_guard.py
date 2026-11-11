@@ -21,31 +21,35 @@ def fail(message: str) -> None:
     raise SystemExit(f"Fresh task guard test failed: {message}")
 
 
-def extract_script(path: Path) -> str:
+def extract_script(path: Path, step_name: str = "Revalidate selected task after acquiring the shared writer slot") -> str:
     if not path.is_file():
         fail(f"provider workflow is missing: {path}")
     lines = path.read_text(encoding="utf-8").splitlines()
     try:
         step_index = next(
             index for index, line in enumerate(lines)
-            if line.strip() == "- name: Revalidate selected task after acquiring the shared writer slot"
+            if line.strip() == "- name: " + step_name
         )
         script_index = next(
             index for index in range(step_index, len(lines))
             if lines[index].strip() == "script: |"
         )
     except StopIteration:
-        fail(f"post-queue task guard is missing from {path}")
+        fail(f"guard step is missing from {path}: {step_name}")
     script_lines = []
     for line in lines[script_index + 1:]:
         if line.strip() and len(line) - len(line.lstrip()) < 12:
             break
         script_lines.append(line[12:] if line.startswith("            ") else "")
     script = "\n".join(script_lines).rstrip()
-    if not script or "Fresh task revalidation blocked" not in script:
+    if not script or not any(
+        marker in script for marker in (
+            "Fresh task revalidation blocked",
+            "Existing task PR resume blocked",
+        )
+    ):
         fail(f"could not extract the production guard from {path}")
     return script
-
 
 scripts = [extract_script(path) for path in WORKFLOWS]
 if len(set(scripts)) != 1:
@@ -295,3 +299,168 @@ if completed.returncode != 0:
         print(completed.stderr, file=sys.stderr, end="")
     fail("production post-queue guard did not satisfy the offline regression suite")
 print(f"Validated {len(cases)} post-queue guard scenarios across all three providers.")
+
+
+// The existing-PR resume gate is Groq-only and remains independent from the shared guard above.
+resume_script = extract_script(
+    ROOT / ".github/workflows/groq-plan-execute.yml",
+    "Revalidate existing task PR after acquiring the shared writer slot",
+)
+resume_task = {
+    **task("AUTOMATION-LEDGER-ACTIVATION", "blocked"),
+    "title": "Activate and validate persistent autonomous task tracking",
+}
+resume_sha = "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
+resume_pr = {
+    "number": 388,
+    "state": "open",
+    "draft": False,
+    "user": {"login": "Master-Chiken"},
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "AUTOMATION-LEDGER-ACTIVATION",
+        "sha": resume_sha,
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "main",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+    "body": (
+        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\\n"
+        "BOONTA_TASK_TARGET_BRANCH: main"
+    ),
+}
+resume_cases = [
+    {
+        "name": "trusted owner PR with exact task/target markers and head is accepted",
+        "ledger": summary([resume_task]),
+        "open_prs": [resume_pr],
+        "expected_allowed": True,
+    },
+    {
+        "name": "changed PR head after preflight is rejected",
+        "ledger": summary([resume_task]),
+        "open_prs": [{**resume_pr, "head": {**resume_pr["head"], "sha": "a" * 40}}],
+        "expected_allowed": False,
+    },
+    {
+        "name": "fork head repository is rejected",
+        "ledger": summary([resume_task]),
+        "open_prs": [{**resume_pr, "head": {**resume_pr["head"], "repo": {"full_name": "fork/boonta-reborn-88"}}}],
+        "expected_allowed": False,
+    },
+    {
+        "name": "draft PR is rejected",
+        "ledger": summary([resume_task]),
+        "open_prs": [{**resume_pr, "draft": True}],
+        "expected_allowed": False,
+    },
+    {
+        "name": "target marker missing is rejected",
+        "ledger": summary([resume_task]),
+        "open_prs": [{**resume_pr, "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"}],
+        "expected_allowed": False,
+    },
+    {
+        "name": "duplicate matching task PRs are rejected",
+        "ledger": summary([resume_task]),
+        "open_prs": [resume_pr, {**resume_pr, "number": 389, "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/389"}],
+        "expected_allowed": False,
+    },
+    {
+        "name": "ledger task with prior PR evidence is rejected",
+        "ledger": summary([{**resume_task, "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388"}]),
+        "open_prs": [resume_pr],
+        "expected_allowed": False,
+    },
+]
+
+resume_node_program = f"""
+const fs = require("node:fs");
+const script = {json.dumps(resume_script)};
+const cases = JSON.parse(fs.readFileSync(0, "utf8"));
+const AsyncFunction = Object.getPrototypeOf(async function() {{}}).constructor;
+
+async function runCase(testCase) {{
+  const outputs = {{}};
+  let failure = "";
+  const github = {{
+    rest: {{
+      repos: {{
+        getContent: async (options) => {{
+          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
+            throw new Error("unexpected canonical ledger request");
+          }}
+          return {{
+            data: {{
+              encoding: "base64",
+              content: Buffer.from(JSON.stringify(testCase.ledger), "utf8").toString("base64")
+            }}
+          }};
+        }}
+      }},
+      pulls: {{
+        list: async (options) => {{
+          if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected open PR inventory request");
+          }}
+          return {{ data: testCase.open_prs }};
+        }}
+      }}
+    }}
+  }};
+  const core = {{
+    setOutput: (key, value) => {{ outputs[key] = String(value); }},
+    setFailed: (message) => {{ failure = String(message); }},
+    info: () => {{}}
+  }};
+  const context = {{ repo: {{ owner: "Master-Chiken", repo: "boonta-reborn-88" }} }};
+  const process = {{ env: {{
+    RESUME_TASK_ID: "AUTOMATION-LEDGER-ACTIVATION",
+    RESUME_TASK_TITLE: "Activate and validate persistent autonomous task tracking",
+    RESUME_TASK_TARGET_BRANCH: "main",
+    ISSUE_NUMBER: "226",
+    RESUME_PR_NUMBER: "388",
+    RESUME_PR_URL: "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+    RESUME_BRANCH: "AUTOMATION-LEDGER-ACTIVATION",
+    RESUME_HEAD_SHA: "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
+  }}};
+  await new AsyncFunction("github", "context", "core", "process", script)(github, context, core, process);
+  return {{ outputs, failure }};
+}}
+
+(async () => {{
+  for (const testCase of cases) {{
+    const result = await runCase(testCase);
+    const allowed = result.outputs.allowed === "true" && !result.failure;
+    if (allowed !== testCase.expected_allowed) {{
+      throw new Error(testCase.name + ": expected allowed=" + testCase.expected_allowed +
+        ", got allowed=" + result.outputs.allowed + ", failure=" + result.failure);
+    }}
+    if (!testCase.expected_allowed && !result.failure.includes("Existing task PR resume blocked")) {{
+      throw new Error(testCase.name + ": rejection did not fail closed visibly");
+    }}
+    process.stdout.write("PASS: " + testCase.name + "\\n");
+  }}
+}})().catch((error) => {{
+  process.stderr.write(String(error.stack || error) + "\\n");
+  process.exitCode = 1;
+}});
+"""
+
+resume_completed = subprocess.run(
+    [node, "-e", resume_node_program],
+    input=json.dumps(resume_cases),
+    text=True,
+    capture_output=True,
+    check=False,
+    timeout=20,
+)
+if resume_completed.stdout:
+    print(resume_completed.stdout, end="")
+if resume_completed.returncode != 0:
+    if resume_completed.stderr:
+        print(resume_completed.stderr, file=sys.stderr, end="")
+    fail("production existing-PR resume guard failed its offline regression suite")
+print(f"Validated {len(resume_cases)} existing-PR resume guard scenarios.")
