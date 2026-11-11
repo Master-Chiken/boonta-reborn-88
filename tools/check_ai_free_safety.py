@@ -1061,7 +1061,7 @@ readiness_job_guard = re.search(r"(?ms)^  readiness:\n.*?^    if: >-\n(.*?)(?=^ 
 if (
     "allow_scheduled:" not in readiness
     or "default: false" not in readiness
-    or "value: boolean" not in readiness
+    or "type: boolean" not in readiness
     or not readiness_job_guard
     or "github.ref == 'refs/heads/main'" not in readiness_job_guard.group(1)
     or "inputs.allow_scheduled == true" not in readiness_job_guard.group(1)
