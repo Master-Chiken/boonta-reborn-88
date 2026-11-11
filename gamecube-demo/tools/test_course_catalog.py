@@ -3,7 +3,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "source"
+SOURCE = ROOT / "gamecube-demo" / "source"
 
 
 class CourseCatalogTests(unittest.TestCase):
