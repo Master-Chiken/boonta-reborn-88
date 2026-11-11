@@ -1057,8 +1057,17 @@ if "WRITER_STATE: ${{ steps.owner_gates.outputs.writer_state }}" not in readines
     errors.append("Readiness must explicitly pass the owner-gate output to later steps")
 if 'echo "writer_state=${writer_state}" >> "$GITHUB_OUTPUT"' not in readiness:
     errors.append("Readiness must export a non-boolean writer_state for reusable callers")
-if "if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner" not in readiness:
-    errors.append("Autonomous readiness must be owner-only and pinned to protected main")
+readiness_job_guard = re.search(r"(?ms)^  readiness:\\n.*?^    if: >-\\n(.*?)(?=^    runs-on:)", readiness)
+if (
+    "allow_scheduled:" not in readiness
+    or "default: false" not in readiness
+    or "value: boolean" not in readiness
+    or not readiness_job_guard
+    or "github.ref == 'refs/heads/main'" not in readiness_job_guard.group(1)
+    or "inputs.allow_scheduled == true" not in readiness_job_guard.group(1)
+    or "github.actor == github.repository_owner" not in readiness_job_guard.group(1)
+):
+    errors.append("Autonomous readiness must stay pinned to protected main, retain the owner guard, and allow only explicit scheduled-loop handoff")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
 readiness_permissions = dict(
     re.findall(
