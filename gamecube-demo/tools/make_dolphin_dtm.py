@@ -126,7 +126,9 @@ def _controller_state(frame: int, steering: str = "right",
     stick_x = NEUTRAL_AXIS
     # Control-smoke movies exercise exactly one steering source at a time. A full
     # race stays centered so it tests lap progression rather than steering response.
-    if ((scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
+    steering_session_started = frame >= SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES
+    if steering_session_started and (
+            (scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
             or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)
             or (scenario in ("pause-check", "resume-check") and frame < PAUSE_PRESS_FRAME)):
         if steering_source == "dpad":
