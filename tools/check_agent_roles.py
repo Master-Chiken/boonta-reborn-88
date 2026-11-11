@@ -66,10 +66,15 @@ def validate_registry(data: Any) -> list[str]:
         for field in ("title", "kind", "unit"):
             if not isinstance(role.get(field), str) or not role[field].strip():
                 errors.append(f"{prefix}.{field} is required")
-        for field in ("responsibilities", "allowed_capabilities", "forbidden_actions"):
+        for field in ("responsibilities", "allowed_capabilities"):
             values = role.get(field)
             if not isinstance(values, list) or not values or not all(isinstance(v, str) and v.strip() for v in values):
                 errors.append(f"{prefix}.{field} must be a non-empty string array")
+        forbidden = role.get("forbidden_actions")
+        if not isinstance(forbidden, list) or not all(isinstance(v, str) and v.strip() for v in forbidden):
+            errors.append(f"{prefix}.forbidden_actions must be a string array")
+        if role_id != "human-owner" and not forbidden:
+            errors.append(f"{prefix}.forbidden_actions must not be empty")
     if "human-owner" not in by_id:
         errors.append("human-owner root role is required")
         return errors
