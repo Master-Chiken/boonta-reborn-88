@@ -89,7 +89,7 @@ class TaskReadPathTests(unittest.TestCase):
                 (root / path).write_text("x", encoding="utf-8")
                 paths.append(path)
             errors = validate_read_paths(ledger_with_paths(paths), root)
-            self.assertTrue(any("4-file task limit" in error for error in errors))
+            self.assertTrue(any("1-4 unique safe repository text paths" in error for error in errors))
 
     def test_rejects_symlink_outside_repository(self):
         with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as outside:
