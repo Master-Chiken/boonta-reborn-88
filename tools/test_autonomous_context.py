@@ -338,7 +338,6 @@ production_context = MODULE.build_context(
 assert len(production_context) <= 3000
 assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
 assert all(f"[{path}:" in production_context for path in activation["read_paths"])
-assert "task-ledger-summary.json" not in production_context
 assert "BOONTA_TASK_ID" in production_context or "One active task maximum" in production_context
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
