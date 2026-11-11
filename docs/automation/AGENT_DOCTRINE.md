@@ -17,6 +17,15 @@ Every assigned mission must identify:
 
 A vague instruction such as “improve the game” is not an executable mission.
 
+## Dependency and queue discipline
+
+- Every task carries an explicit `depends_on` array; an empty array means no task dependency.
+- Dependencies must reference existing task IDs, be unique, and form an acyclic graph.
+- A task cannot enter `active`, `in_review`, or `completed` until every dependency is `completed`.
+- Queued tasks remain queued while any dependency is not completed. A PR being open or a task being `in_review` does not satisfy a dependency.
+- The Chief of Staff may promote only the first eligible owner-approved queued task after deterministic preflight confirms all dependencies completed, the single-writer slot is free, and bounded read/write scopes are present.
+- Human-controlled prerequisites remain blocked; dependency promotion must never silently resolve a blocked task or bypass owner action.
+
 ## Task lifecycle
 
 `STANDBY → ORDERS_ISSUED → RESERVED → EXECUTING → SUBMITTED → QA_REVIEW → ACCEPTED → MERGE_APPROVAL → MERGED`
