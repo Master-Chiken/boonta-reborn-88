@@ -109,13 +109,30 @@ jobs:
             if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
               throw new Error('Open PR inventory reached the 100-item safety ceiling; refusing provider invocation to avoid duplicate task work.');
             }
-            const openTaskPullRequest = (task) => {
-              if (!task) return null;
+            const matchingTaskPullRequests = (task) => {
+              if (!task) return [];
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
-              return openPullRequests.find((pull) =>
+              return openPullRequests.filter((pull) =>
                 (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
-              ) || null;
+              );
             };
+            const openTaskPullRequest = (task) => {
+              const matches = matchingTaskPullRequests(task);
+              return matches.length === 1 ? matches[0] : (matches.length > 1 ? { unsafe_duplicate_markers: true, number: matches[0].number } : null);
+            };
+            const isTrustedResumeCandidate = (task, pull) => Boolean(
+              task && pull && !pull.unsafe_duplicate_markers &&
+              pull.state === 'open' && pull.draft === false &&
+              pull.user?.login === context.repo.owner &&
+              pull.head?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
+              pull.base?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
+              pull.base?.ref === task.target_branch &&
+              typeof pull.head?.ref === 'string' && pull.head.ref &&
+              pull.head.ref !== pull.base.ref &&
+              /^[0-9a-f]{40}$/.test(pull.head?.sha || '') &&
+              typeof pull.html_url === 'string' &&
+              pull.html_url === 'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/pull/' + pull.number
+            );
 
             // Refuse a model call unless the compact canonical queue exposes one eligible task.
             const { data: ledgerFile } = await github.rest.repos.getContent({
@@ -148,6 +165,10 @@ jobs:
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
+            const resumeCandidateTask = activeTasks.length === 1 ? activeTasks[0] : activationTask;
+            const resumeCandidatePr = activeTasks.length === 1 ? activeTaskOpenPr : activationTaskOpenPr;
+            const resumeCandidateTrusted = isTrustedResumeCandidate(resumeCandidateTask, resumeCandidatePr) &&
+              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha;
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
@@ -251,6 +272,11 @@ jobs:
             core.setOutput('task_context', taskContext);
             core.setOutput('task_target_branch', selectedTask?.target_branch || '');
             core.setOutput('task_reason', taskReason);
+            core.setOutput('resume_pr_candidate', String(resumeCandidateTrusted));
+            core.setOutput('resume_pr_number', resumeCandidateTrusted ? String(resumeCandidatePr.number) : '');
+            core.setOutput('resume_pr_url', resumeCandidateTrusted ? resumeCandidatePr.html_url : '');
+            core.setOutput('resume_branch', resumeCandidateTrusted ? resumeCandidatePr.head.ref : '');
+            core.setOutput('resume_head_sha', resumeCandidateTrusted ? resumeCandidatePr.head.sha : '');
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
             const definitions = {
