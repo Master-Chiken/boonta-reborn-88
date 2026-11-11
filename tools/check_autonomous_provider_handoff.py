@@ -674,7 +674,7 @@ if "--max-criteria 2 --max-next-action 100" not in groq:
 if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
     errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 2800 + 400 > 5200:
+if len(actual_groq_prompt) + 3200 + 400 > 5200:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,200-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
