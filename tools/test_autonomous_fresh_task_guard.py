@@ -69,16 +69,20 @@ def task(task_id: str, status: str = "active", target_branch: str = "main") -> d
         "acceptance_criteria_excerpt": ["Use live task identity", "Check the exact target branch"],
         "next_action_excerpt": "Perform one bounded implementation step.",
         "platform_scope": ["automation"],
+        "owner_approved": status == "queued",
+        "depends_on": [],
+        "read_paths": ["gamecube-demo/source/rival_ai.h"],
         "pr_url": None,
         "head_sha": None,
     }
 
 
-def summary(tasks: list[dict]) -> dict:
+def summary(tasks: list[dict], completed_task_ids: list[str] | None = None) -> dict:
     return {
         "schema_version": 2,
         "source": "docs/automation/task-ledger.json",
         "updated_at": "2026-11-10",
+        "completed_task_ids": completed_task_ids or [],
         "policy": {"max_active_tasks": 1, "completed_requires_merged_pr": True},
         "tasks": tasks,
     }
@@ -86,7 +90,41 @@ def summary(tasks: list[dict]) -> dict:
 
 valid_active = task("AUTOMATION-TEST-ACTIVE")
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
+queued = task("AUTOMATION-TEST-QUEUED", "queued")
+queued["depends_on"] = ["TASK-PREREQUISITE"]
 cases = [
+    {
+        "name": "owner-approved queued task passes only when every dependency is completed",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([queued], ["TASK-PREREQUISITE"]),
+        "open_prs": [],
+        "expected_allowed": True,
+    },
+    {
+        "name": "queued task with an in-review dependency is rejected",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([queued], []),
+        "open_prs": [],
+        "expected_allowed": False,
+    },
+    {
+        "name": "queued task without owner approval is rejected",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([{**queued, "owner_approved": False}], ["TASK-PREREQUISITE"]),
+        "open_prs": [],
+        "expected_allowed": False,
+    },
+    {
+        "name": "queued task without bounded source paths is rejected",
+        "task_id": queued["task_id"],
+        "branch": "main",
+        "ledger": summary([{**queued, "read_paths": []}], ["TASK-PREREQUISITE"]),
+        "open_prs": [],
+        "expected_allowed": False,
+    },
     {
         "name": "valid active task passes after queue wait",
         "task_id": valid_active["task_id"],
