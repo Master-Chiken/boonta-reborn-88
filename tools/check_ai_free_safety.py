@@ -1577,7 +1577,7 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
+        if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
             errors.append(
                 "Groq GPT-OSS 20B must remain capped at 1500 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
             )
