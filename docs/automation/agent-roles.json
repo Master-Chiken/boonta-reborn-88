@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "status": "declarative_only",
+  "execution_plane": "github_actions",
+  "canonical_task_ledger": "docs/automation/task-ledger.json",
+  "provider_order": [
+    "gemini",
+    "openrouter_free",
+    "groq_free"
+  ],
+  "policy": {
+    "max_active_missions": 1,
+    "max_provider_invocations_per_run": 1,
+    "repository_writers": [
+      "github_actions"
+    ],
+    "model_agents_receive_write_credentials": false,
+    "paid_fallback": false,
+    "auto_merge": false,
+    "human_merge_approval_required": true,
+    "qa_must_be_independent": true
+  },
+  "roles": [
+    {
+      "id": "human-owner",
+      "title": "Human Owner / Board",
+      "kind": "human",
+      "manager_id": null,
+      "unit": "governance",
+      "responsibilities": [
+        "Set mission priorities and €0 ceiling",
+        "Approve governance, risk, provider and permission changes",
+        "Approve or reject every merge",
+        "Pause all operations"
+      ],
+      "allowed_capabilities": [
+        "approve_strategy",
+        "approve_merge",
+        "pause_operations"
+      ],
+      "forbidden_actions": []
+    },
+    {
+      "id": "ceo",
+      "title": "CEO / Mission Commander",
+      "kind": "model_role",
+      "manager_id": "human-owner",
+      "unit": "command",
+      "responsibilities": [
+        "Translate the approved mission into measurable objectives",
+        "Prioritize the canonical queue",
+        "Delegate bounded missions and report blockers"
+      ],
+      "allowed_capabilities": [
+        "read_project_state",
+        "decompose_objectives",
+        "delegate_missions",
+        "report_status"
+      ],
+      "forbidden_actions": [
+        "implement_production_changes",
+        "approve_own_work",
+        "merge",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "chief-of-staff",
+      "title": "Chief of Staff / Operations Controller",
+      "kind": "deterministic",
+      "manager_id": "ceo",
+      "unit": "operations",
+      "responsibilities": [
+        "Enforce reservations and single-writer concurrency",
+        "Enforce provider order, cooldowns and €0 gates",
+        "Validate task identity, branch, paths and exact PR head",
+        "Emit auditable after-action reports"
+      ],
+      "allowed_capabilities": [
+        "read_ledger",
+        "reserve_task",
+        "validate_handoff",
+        "enforce_cooldowns",
+        "write_audit_report"
+      ],
+      "forbidden_actions": [
+        "invoke_model",
+        "merge",
+        "change_secrets",
+        "change_permissions",
+        "change_billing"
+      ]
+    },
+    {
+      "id": "cto",
+      "title": "CTO / Engineering Commander",
+      "kind": "model_role",
+      "manager_id": "ceo",
+      "unit": "engineering",
+      "responsibilities": [
+        "Define engineering architecture and interfaces",
+        "Break approved objectives into bounded technical missions",
+        "Review integration readiness without waiving QA"
+      ],
+      "allowed_capabilities": [
+        "read_project_state",
+        "decompose_technical_tasks",
+        "review_design",
+        "delegate_to_specialists"
+      ],
+      "forbidden_actions": [
+        "merge",
+        "waive_qa",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Reverse Engineering & Asset Intelligence",
+      "kind": "model_role",
+      "manager_id": "cto",
+      "unit": "engineering",
+      "responsibilities": [
+        "Perform evidence-led clean-room research",
+        "Track exact source revisions and provenance",
+        "Keep platform-specific findings and unknowns separate"
+      ],
+      "allowed_capabilities": [
+        "read_public_sources",
+        "read_repository",
+        "write_research_branch"
+      ],
+      "forbidden_actions": [
+        "publish_rom_data",
+        "publish_proprietary_assets",
+        "merge",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "gameplay",
+      "title": "Engine & Gameplay",
+      "kind": "model_role",
+      "manager_id": "cto",
+      "unit": "engineering",
+      "responsibilities": [
+        "Implement bounded engine, physics, controls, AI and progression tasks",
+        "Add deterministic host regressions and native-target tests"
+      ],
+      "allowed_capabilities": [
+        "read_repository",
+        "write_assigned_task_branch",
+        "run_host_tests"
+      ],
+      "forbidden_actions": [
+        "merge",
+        "write_protected_branch",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "graphics",
+      "title": "Graphics & Asset Pipeline",
+      "kind": "model_role",
+      "manager_id": "cto",
+      "unit": "engineering",
+      "responsibilities": [
+        "Develop original rendering and asset-pipeline code",
+        "Validate conversion tools and performance",
+        "Preserve clean-room asset provenance"
+      ],
+      "allowed_capabilities": [
+        "read_repository",
+        "write_assigned_task_branch",
+        "run_asset_pipeline_tests"
+      ],
+      "forbidden_actions": [
+        "publish_proprietary_assets",
+        "merge",
+        "write_protected_branch",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "platform",
+      "title": "Platform & Build",
+      "kind": "model_role",
+      "manager_id": "cto",
+      "unit": "engineering",
+      "responsibilities": [
+        "Maintain GameCube/Wii toolchain and build targets",
+        "Keep builds reproducible and platform claims evidence-based"
+      ],
+      "allowed_capabilities": [
+        "read_repository",
+        "write_assigned_task_branch",
+        "run_native_builds"
+      ],
+      "forbidden_actions": [
+        "merge",
+        "write_protected_branch",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "qa",
+      "title": "QA / Verification",
+      "kind": "model_role",
+      "manager_id": "ceo",
+      "unit": "assurance",
+      "responsibilities": [
+        "Independently verify implementation and regressions",
+        "Return PASS, FAIL or BLOCKED with reproducible evidence",
+        "Check exact-head CI and manual acceptance criteria"
+      ],
+      "allowed_capabilities": [
+        "read_repository",
+        "run_tests",
+        "inspect_ci",
+        "report_verdict"
+      ],
+      "forbidden_actions": [
+        "implement_reviewed_change",
+        "merge",
+        "waive_required_ci",
+        "change_governance"
+      ]
+    },
+    {
+      "id": "release",
+      "title": "Release & Integration",
+      "kind": "model_role",
+      "manager_id": "ceo",
+      "unit": "release",
+      "responsibilities": [
+        "Verify provenance, exact-head CI and acceptance evidence",
+        "Prepare release notes and merge recommendation"
+      ],
+      "allowed_capabilities": [
+        "read_repository",
+        "inspect_ci",
+        "prepare_release_notes",
+        "recommend_merge"
+      ],
+      "forbidden_actions": [
+        "merge",
+        "auto_merge",
+        "force_push",
+        "write_protected_branch",
+        "change_governance"
+      ]
+    }
+  ]
+}
