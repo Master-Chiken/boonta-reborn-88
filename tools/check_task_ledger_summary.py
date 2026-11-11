@@ -46,7 +46,7 @@ def build_summary(ledger: dict) -> dict:
                 "next_action_excerpt": excerpt(task.get("next_action"), 420),
             }
             for task in ledger.get("tasks", [])
-            if task.get("status") in {"active", "blocked", "in_review"}
+            if task.get("status") in {"queued", "active", "blocked", "in_review"}
         ],
     }
 
