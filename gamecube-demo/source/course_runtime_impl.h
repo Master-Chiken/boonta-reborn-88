@@ -31,9 +31,12 @@ static void boonta_course_runtime_sample(void *runtime_context,float travelled,
     float fallback_half_width,float *x,float *y,float *z,float *width)
 {
     BoontaCourseRuntimeContext *context=(BoontaCourseRuntimeContext *)runtime_context;
-    if(context==NULL||!context->sampler.lengths_ready){
-        if(x!=NULL)*x=0.0f;if(y!=NULL)*y=0.0f;if(z!=NULL)*z=0.0f;
-        if(width!=NULL)*width=fallback_half_width;return;
+    if (context == NULL || !context->sampler.lengths_ready) {
+        if (x != NULL) *x = 0.0f;
+        if (y != NULL) *y = 0.0f;
+        if (z != NULL) *z = 0.0f;
+        if (width != NULL) *width = fallback_half_width;
+        return;
     }
     boonta_route_graph_sampler_sample_at(&context->sampler,travelled,
         fallback_half_width,x,y,z,width);
