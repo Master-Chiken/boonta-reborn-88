@@ -6,6 +6,7 @@
 
 #define BOONTA_RIVAL_COUNT 3U
 #define BOONTA_RACE_LAP_CAPACITY 3U
+#define BOONTA_RACE_PARTICIPANT_COUNT (BOONTA_RIVAL_COUNT + 1U)
 #define BOONTA_MAX_FRAME_SCALE 3.0f
 #define BOONTA_MAX_LATERAL_VELOCITY 0.085f
 
@@ -29,6 +30,8 @@ typedef struct {
     float best_lap_seconds;
     float lap_times[BOONTA_RACE_LAP_CAPACITY];
     unsigned int lap_times_recorded_mask;
+    float player_finish_seconds;
+    unsigned int finish_position;
     float speed;
     float pitch_down;
     float player_lateral;
@@ -40,6 +43,8 @@ typedef struct {
     int slide_active;
     float rival_z[BOONTA_RIVAL_COUNT];
     float rival_progress[BOONTA_RIVAL_COUNT];
+    float rival_finish_seconds[BOONTA_RIVAL_COUNT];
+    unsigned int rival_finished_mask;
     float rival_lateral[BOONTA_RIVAL_COUNT];
     float rival_speed[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
@@ -545,6 +550,76 @@ static inline void boonta_race_session_start_press(BoontaRaceState *state)
     }
 }
 
+/*
+ * Live race position comes from route progress, not the overtake counter.
+ * A finisher remains ahead of racers that have not crossed the finish line.
+ */
+static inline unsigned int boonta_race_current_position(const BoontaRaceState *state)
+{
+    unsigned int position = 1U;
+    unsigned int i;
+
+    if (state == NULL) return 0U;
+    for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+        const unsigned int bit = 1U << i;
+        if ((state->rival_finished_mask & bit) != 0U ||
+            (isfinite(state->rival_progress[i]) &&
+             isfinite(state->distance) &&
+             state->rival_progress[i] > state->distance)) {
+            ++position;
+        }
+    }
+    return position;
+}
+
+/* A rival records exactly one finish time after reaching the race-distance goal. */
+static inline int boonta_rival_record_finish(BoontaRaceState *state,
+                                              unsigned int rival_index,
+                                              float finish_distance,
+                                              float elapsed_seconds)
+{
+    unsigned int finish_bit;
+
+    if (state == NULL || state->session_phase != BOONTA_RACE_SESSION_ACTIVE ||
+        rival_index >= BOONTA_RIVAL_COUNT ||
+        !isfinite(finish_distance) || finish_distance <= 0.0f ||
+        !isfinite(elapsed_seconds) || elapsed_seconds <= 0.0f ||
+        !isfinite(state->rival_progress[rival_index]) ||
+        state->rival_progress[rival_index] < finish_distance) {
+        return 0;
+    }
+
+    finish_bit = 1U << rival_index;
+    if ((state->rival_finished_mask & finish_bit) != 0U) return 0;
+    state->rival_finish_seconds[rival_index] = elapsed_seconds;
+    state->rival_finished_mask |= finish_bit;
+    return 1;
+}
+
+/* Equal finish times tie; only strictly earlier finishers rank ahead. */
+static inline unsigned int boonta_race_finish_position_at(
+    const BoontaRaceState *state, float player_finish_seconds)
+{
+    unsigned int position = 1U;
+    unsigned int i;
+
+    if (state == NULL || !isfinite(player_finish_seconds) ||
+        player_finish_seconds <= 0.0f) {
+        return 0U;
+    }
+
+    for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+        const unsigned int bit = 1U << i;
+        const float rival_seconds = state->rival_finish_seconds[i];
+        if ((state->rival_finished_mask & bit) != 0U &&
+            isfinite(rival_seconds) && rival_seconds > 0.0f &&
+            rival_seconds < player_finish_seconds) {
+            ++position;
+        }
+    }
+    return position;
+}
+
 /* Only an active session may finish; reaching the lap limit freezes run state. */
 static inline void boonta_race_session_finish_if_complete(BoontaRaceState *state,
                                                           unsigned int lap_limit)
@@ -554,6 +629,9 @@ static inline void boonta_race_session_finish_if_complete(BoontaRaceState *state
         return;
     }
 
+    state->player_finish_seconds = state->race_seconds;
+    state->finish_position = boonta_race_finish_position_at(
+        state, state->player_finish_seconds);
     state->session_phase = BOONTA_RACE_SESSION_RESULTS;
     state->speed = 0.0f;
     state->boost_active = 0;
@@ -632,6 +710,9 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     state->last_lap_seconds = 0.0f;
     state->best_lap_seconds = 0.0f;
     state->lap_times_recorded_mask = 0U;
+    state->player_finish_seconds = 0.0f;
+    state->finish_position = 0U;
+    state->rival_finished_mask = 0U;
     for (i = 0U; i < BOONTA_RACE_LAP_CAPACITY; ++i) {
         state->lap_times[i] = 0.0f;
     }
@@ -649,6 +730,7 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
         state->rival_z[i] = boonta_rival_initial_z(i);
         state->rival_progress[i] = boonta_rival_initial_progress(i);
+        state->rival_finish_seconds[i] = 0.0f;
         state->rival_lateral[i] = 0.0f;
         state->rival_speed[i] = boonta_rival_initial_speed(i);
     }

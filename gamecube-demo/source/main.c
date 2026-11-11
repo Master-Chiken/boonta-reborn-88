@@ -921,8 +921,10 @@ static void draw_hud(void)
     char lap_text[40];
     char best_text[20];
     char overtakes_text[16];
+    char position_text[16];
     char lap_split_text[BOONTA_RACE_LAP_CAPACITY][20];
     unsigned int lap_display;
+    unsigned int current_position;
     unsigned int split_index;
     const float w = (float)g_video_mode->fbWidth;
     const float h = (float)g_video_mode->efbHeight;
@@ -949,6 +951,11 @@ static void draw_hud(void)
                               g_race_state.lap_times[split_index]);
     }
     (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
+    current_position = g_race_finished
+        ? g_race_state.finish_position
+        : boonta_race_current_position(&g_race_state);
+    (void)snprintf(position_text, sizeof(position_text), "%u/%u",
+                   current_position, (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
     {
         char lap_time[20];
@@ -1011,6 +1018,8 @@ static void draw_hud(void)
         append_screen_quad(cx - 100.0f, 10.0f, cx + 100.0f, 60.0f, 0.55f, dark);
         append_text("TIME", cx - 90.0f, 15.0f, 1.0f, white);
         append_text(time_text, cx - 55.0f, 15.0f, 1.0f, white);
+        append_text("POS", cx + 28.0f, 15.0f, 1.0f, heat_cool);
+        append_text(position_text, cx + 54.0f, 15.0f, 1.0f, heat_cool);
         append_text(lap_text, cx - 90.0f, 28.0f, 1.0f, white);
         if (g_best_lap_seconds > 0.0f) {
             append_text("BEST", cx - 90.0f, 41.0f, 1.0f, heat_cool);
@@ -1108,9 +1117,11 @@ static void draw_hud(void)
         append_text(time_text, cx - 64.0f, cy + 22.0f, 1.0f, heat_cool);
         append_text("BEST", cx + 12.0f, cy + 22.0f, 1.0f, heat_cool);
         append_text(best_text, cx + 48.0f, cy + 22.0f, 1.0f, heat_cool);
-        append_text("OVERTAKES", cx - 104.0f, cy + 49.0f, 1.0f, rival_mark);
-        append_text(overtakes_text, cx - 46.0f, cy + 49.0f, 1.0f, rival_mark);
-        append_text("START TO RESTART", cx - 46.0f, cy + 75.0f, 1.0f, white);
+        append_text("OVERTAKES", cx - 104.0f, cy + 45.0f, 1.0f, rival_mark);
+        append_text(overtakes_text, cx - 46.0f, cy + 45.0f, 1.0f, rival_mark);
+        append_text("POSITION", cx - 104.0f, cy + 65.0f, 1.0f, heat_cool);
+        append_text(position_text, cx - 38.0f, cy + 65.0f, 1.0f, heat_cool);
+        append_text("START TO RESTART", cx - 46.0f, cy + 80.0f, 1.0f, white);
     } else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
@@ -1455,7 +1466,6 @@ int main(int argc, char **argv)
                     g_best_lap_seconds, g_last_lap_seconds);
                 g_lap_seconds = 0.0f;
             }
-            boonta_race_session_finish_if_complete(&g_race_state, RACE_LAP_LIMIT);
         }
 
         /* Persistent opponents advance in route space and change lanes for upcoming corners. */
@@ -1482,6 +1492,11 @@ int main(int argc, char **argv)
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
                 const float previous_rival_z = g_rival_z[rival_index];
+                if ((g_race_state.rival_finished_mask & (1U << rival_index)) != 0U) {
+                    g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                        g_distance, g_rival_progress[rival_index]);
+                    continue;
+                }
                 g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
                     g_rival_lateral[rival_index],
                     rival_target_lateral[rival_index], frame_scale);
@@ -1491,6 +1506,9 @@ int main(int argc, char **argv)
                     g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                     g_distance, g_rival_progress[rival_index]);
+                (void)boonta_rival_record_finish(
+                    &g_race_state, rival_index,
+                    RACE_LAP_DISTANCE * (float)RACE_LAP_LIMIT, g_race_seconds);
                 rival_event = boonta_rival_event_after_frame(
                     previous_rival_z, g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
@@ -1506,7 +1524,8 @@ int main(int argc, char **argv)
             }
         }
 
+        /* Register rival crossings on this frame before ranking the player. */
+        boonta_race_session_finish_if_complete(&g_race_state, RACE_LAP_LIMIT);
         draw_frame(frame_delta_seconds);
     }
-    return 0;
-}
+    return 0;}

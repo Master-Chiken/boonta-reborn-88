@@ -134,7 +134,7 @@ class GXColorPipelineTests(unittest.TestCase):
         results = SOURCE.split("/* Read-only results use only values measured", 1)[1].split(
             "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)", 1
         )[0]
-        for label in ("RESULTS", "LAP 1", "LAP 2", "LAP 3", "TOTAL", "BEST", "OVERTAKES", "START TO RESTART"):
+        for label in ("RESULTS", "LAP 1", "LAP 2", "LAP 3", "TOTAL", "BEST", "OVERTAKES", "POSITION", "START TO RESTART"):
             with self.subTest(label=label):
                 self.assertIn(f'append_text("{label}"', results)
         self.assertIn("lap_split_text[0]", results)
