@@ -95,7 +95,7 @@ cases = [
         "expected_queue_state": "EMPTY_QUEUE",
     },
     {
-        "name": "queued task waits while its dependency is not completed",
+        "name": "queued task is visible but not silently promoted until its dependency is completed",
         "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
         "completed_task_ids": [],
         "marker_day_offset": None,
