@@ -141,7 +141,7 @@ cases = [
         "open_task_prs": [{
             "number": 388,
             "state": "open",
-            "draft": false,
+            "draft": False,
             "user": {"login": "Master-Chiken"},
             "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "AUTOMATION-LEDGER-ACTIVATION", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
             "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
@@ -162,7 +162,7 @@ cases = [
         "open_task_prs": [{
             "number": 389,
             "state": "open",
-            "draft": false,
+            "draft": False,
             "user": {"login": "external-contributor"},
             "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "task-branch", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
             "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
