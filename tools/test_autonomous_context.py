@@ -238,7 +238,7 @@ with tempfile.TemporaryDirectory() as temp:
 
     try:
         MODULE._build_source_excerpt(
-            source_root, paths, [dict(ranges[0], end_line=100)], 1800
+            source_root, paths, [dict(ranges[0], end_line=31)], 1800
         )
     except MODULE.ContextBuildError as exc:
         assert "exceeds the 30-line file" in str(exc)
