@@ -503,8 +503,6 @@ required_writer_tools = {
 }
 if openrouter_tools != required_openrouter_tools:
     errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
-if not required_groq_resume_tools.issubset(set("get_file_contents,push_files".split(","))):
-    errors.append("Groq resume toolset must include only targeted reading and branch writing")
 if groq_config_tools != "{env:GITHUB_TOOLS}":
     errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
 else:
@@ -997,7 +995,7 @@ print("- Provider limits, CI diagnostics, and €0-only restrictions are enforce
 , groq))
     expected_groq_modes = {
         "create_branch,push_files,create_pull_request",
-        "get_file_contents,push_files",
+        ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
         errors.append("Groq must expose exactly three branch/push/PR tools normally and one targeted read plus push only for existing-PR resume")
