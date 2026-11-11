@@ -127,6 +127,24 @@ with tempfile.TemporaryDirectory() as temp:
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
     assert "Next: " + "N" * 140 in groq_bounded
 
+    # Unsafe paths are rejected before any model receives the context.
+    unsafe_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    for unsafe_path in ("../outside.py", "/absolute/file.py", "docs/automation/task-ledger.json", "assets/model.bin"):
+        unsafe_summary["tasks"][0]["read_paths"] = [unsafe_path]
+        summary_path.write_text(json.dumps(unsafe_summary), encoding="utf-8")
+        try:
+            MODULE.build_context(
+                root, "AUTOMATION-LEDGER-ACTIVATION",
+                "Activate and validate persistent autonomous task tracking",
+                "main", context,
+            )
+        except MODULE.ContextBuildError as exc:
+            assert "read allow-list" in str(exc)
+        else:
+            raise AssertionError(f"Expected unsafe read path to fail closed: {unsafe_path}")
+    unsafe_summary["tasks"][0]["read_paths"] = ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"]
+    summary_path.write_text(json.dumps(unsafe_summary), encoding="utf-8")
+
     # Restore the initial fixture before the independent truncation test below.
     task["question_excerpt"] = "Does the loop reconcile the task ledger?"
     task["next_action_excerpt"] = "Complete a verified provider cycle."

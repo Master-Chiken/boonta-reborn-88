@@ -511,7 +511,7 @@ else:
         ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly three branch/push/PR tools normally and one targeted read plus push only for existing-PR resume")
+        errors.append("Groq must expose exactly four bounded tools normally and one targeted read plus push only for existing-PR resume")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
     errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
