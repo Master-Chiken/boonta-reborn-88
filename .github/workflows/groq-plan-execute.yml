@@ -38,6 +38,21 @@ on:
         type: boolean
         required: false
         default: false
+      resume_mode:
+        type: boolean
+        required: false
+        default: false
+      resume_pr_number:
+        type: number
+        required: false
+      resume_pr_url:
+        type: string
+        required: false
+      resume_branch:
+        type: string
+        required: false
+      resume_head_sha:
+        type: string
 
 concurrency:
   group: boonta-single-writer
@@ -152,9 +167,19 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           ISSUE_NUMBER: ${{ inputs.issue_number }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
+          RESUME_PR_URL: ${{ inputs.resume_pr_url }}
+          RESUME_BRANCH: ${{ inputs.resume_branch }}
+          RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
         with:
           script: |
             const taskId = process.env.TASK_ID || '';
+            const resumeMode = process.env.RESUME_MODE === 'true';
+            const resumePrNumber = Number(process.env.RESUME_PR_NUMBER || '0');
+            const resumePrUrl = process.env.RESUME_PR_URL || '';
+            const resumeBranch = process.env.RESUME_BRANCH || '';
+            const resumeHeadSha = process.env.RESUME_HEAD_SHA || '';
             const targetBranch = process.env.TASK_TARGET_BRANCH || '';
             const issueNumber = Number(process.env.ISSUE_NUMBER || '0');
             const failClosed = (reason) => {
@@ -248,7 +273,11 @@ jobs:
               return;
             }
             if (task.pr_url || task.head_sha) {
-              failClosed('the selected task already has PR or HEAD evidence and must be reconciled before another run');
+              failClosed('the canonical task record already contains PR or HEAD evidence; this resume path only accepts unrecorded task evidence');
+              return;
+            }
+            if (!resumeMode && [resumePrNumber, resumePrUrl, resumeBranch, resumeHeadSha].some((value) => value)) {
+              failClosed('resume metadata was supplied while resume_mode is false');
               return;
             }
             
@@ -264,11 +293,45 @@ jobs:
               return;
             }
             const markerLine = 'BOONTA_TASK_ID: ' + taskId;
-            const duplicate = openPullRequests.find((pull) =>
+            const targetMarkerLine = 'BOONTA_TASK_TARGET_BRANCH: ' + targetBranch;
+            const matching = openPullRequests.filter((pull) =>
               (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
             );
-            if (duplicate) {
-              failClosed('open PR #' + duplicate.number + ' already represents this exact task');
+            if (resumeMode) {
+              if (
+                !Number.isSafeInteger(resumePrNumber) || resumePrNumber < 1 ||
+                !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(resumePrUrl) ||
+                !resumeBranch || resumeBranch === targetBranch ||
+                !/^[0-9a-f]{40}$/.test(resumeHeadSha) ||
+                matching.length !== 1
+              ) {
+                failClosed('resume metadata is incomplete or the task marker is missing/duplicated');
+                return;
+              }
+              const pull = matching[0];
+              const bodyLines = (pull.body || '').split(/\r?\n/).map((line) => line.trim());
+              if (
+                pull.number !== resumePrNumber ||
+                pull.state !== 'open' ||
+                pull.draft !== false ||
+                pull.user?.login !== context.repo.owner ||
+                pull.head?.repo?.full_name !== context.repo.owner + '/' + context.repo.repo ||
+                pull.base?.repo?.full_name !== context.repo.owner + '/' + context.repo.repo ||
+                pull.base?.ref !== targetBranch ||
+                pull.head?.ref !== resumeBranch ||
+                pull.head?.ref === pull.base?.ref ||
+                pull.head?.sha !== resumeHeadSha ||
+                pull.html_url !== resumePrUrl ||
+                resumePrUrl !== 'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/pull/' + resumePrNumber ||
+                bodyLines.filter((line) => line === markerLine).length !== 1 ||
+                bodyLines.filter((line) => line === targetMarkerLine).length !== 1
+              ) {
+                failClosed('existing PR changed or failed owner, repository, task marker, target, branch, URL or exact-head revalidation');
+                return;
+              }
+              core.info('Existing task PR #' + resumePrNumber + ' revalidated at exact head ' + resumeHeadSha + ' for owner-dispatched Groq Free resume.');
+            } else if (matching.length > 0) {
+              failClosed('open PR #' + matching[0].number + ' already represents this exact task');
               return;
             }
             
@@ -367,9 +430,20 @@ jobs:
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
+          RESUME_PR_URL: ${{ inputs.resume_pr_url }}
+          RESUME_BRANCH: ${{ inputs.resume_branch }}
+          RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
         run: |
           set -euo pipefail
           set +x
+
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            export GITHUB_TOOLS="push_files"
+          else
+            export GITHUB_TOOLS="create_branch,push_files,create_pull_request"
+          fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
           # 1,152/384 limits; max 4 steps (6,144 nominal tokens). Skip optional reads; reserve one final report step below the observed 8k TPM ceiling.
@@ -415,7 +489,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "{env:GITHUB_TOOLS}"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -477,6 +551,45 @@ jobs:
           PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>'
           PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
           PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
+
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            if [[ ! "${RESUME_PR_NUMBER:-}" =~ ^[1-9][0-9]*$ || -z "${RESUME_PR_URL:-}" || -z "${RESUME_BRANCH:-}" || ! "${RESUME_HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Verified resume metadata is incomplete; no Groq request was sent."
+              exit 2
+            fi
+            PROMPT="$(cat <<'RESUME_PROMPT'
+          Groq Free, €0 only. Resume exactly one existing task PR.
+          
+          AUTHORITY
+          - The preloaded task context and exact existing-PR metadata are authoritative. The workflow revalidated owner, same repository, open/non-draft, task/target markers, branch, URL and prior head SHA.
+          - Do not search history, read files, use agents, or inspect unrelated PRs.
+          
+          WRITE
+          - Only github_push_files is exposed. Call it once on the supplied existing branch with one coherent task patch.
+          - Never create a branch or PR; never write main/dev, merge, force-push, delete refs, change secrets or edit the canonical ledger.
+          - Preserve provenance and licenses. Stop rather than guess.
+          
+          EVIDENCE
+          - PROGRESS requires the existing PR URL and exact new SHA returned by github_push_files. The shared validator checks freshness and exact-head CI.
+          - Otherwise report BLOCKED with one verified blocker and next action.
+          
+          REPORT
+          - Output only machine-readable lines; copy the task ID and target branch appended below. No prose or fences.
+          RESUME_PROMPT
+          )"
+            PROMPT="${PROMPT}"$'\n\n'
+            PROMPT+="${AUTONOMOUS_CONTEXT}"
+            PROMPT+=$'\nPR: '"${RESUME_PR_URL}"
+            PROMPT+=$'\nBranch: '"${RESUME_BRANCH}"
+            PROMPT+=$'\nPrior HEAD: '"${RESUME_HEAD_SHA}"
+            REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
+            REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
+            PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
+            PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
+            PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: '"${RESUME_PR_URL}"' @ <exact new 40-character SHA returned by github_push_files>'
+            PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
+            PROMPT+=$'\nFor BLOCKED omit evidence and include one BOONTA_CYCLE_BLOCKER and BOONTA_CYCLE_NEXT_ACTION.'
+          fi
 
           # Refuse accidental prompt growth before any provider request.
           if (( ${#PROMPT} > 3600 )); then
