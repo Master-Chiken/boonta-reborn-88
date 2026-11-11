@@ -125,6 +125,7 @@ static void initialise_pod_texture(void)
 #define g_boost_active      (g_race_state.boost_active)
 #define g_slide_active      (g_race_state.slide_active)
 #define g_rival_z           (g_race_state.rival_z)
+#define g_rival_progress    (g_race_state.rival_progress)
 #define g_rival_lateral     (g_race_state.rival_lateral)
 #define g_rival_speed       (g_race_state.rival_speed)
 #define g_overtake_count    (g_race_state.overtake_count)
@@ -1467,8 +1468,7 @@ int main(int argc, char **argv)
 
             /* Decide from one shared snapshot so rival update order cannot bias AI. */
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-                const float rival_progress = g_distance + (4.0f - g_rival_z[rival_index]);
-                const float lookahead_progress = rival_progress + 4.0f;
+                const float lookahead_progress = g_rival_progress[rival_index] + 4.0f;
                 const float lookahead_curvature = track_curvature_at(lookahead_progress);
                 const float signed_lookahead_curvature =
                     track_signed_curvature_at(lookahead_progress);
@@ -1484,27 +1484,27 @@ int main(int argc, char **argv)
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
+                const float previous_rival_z = g_rival_z[rival_index];
                 g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
                     g_rival_lateral[rival_index],
                     rival_target_lateral[rival_index], frame_scale);
                 g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
                     g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
-                g_rival_z[rival_index] = boonta_rival_relative_z_after_frame(
-                    g_rival_z[rival_index], player_speed_snapshot,
-                    player_boost_snapshot, player_pitch_snapshot,
-                    g_rival_speed[rival_index], frame_scale);
-                rival_event = boonta_rival_event(
-                    g_rival_z[rival_index], g_player_lateral,
+                g_rival_progress[rival_index] = boonta_rival_progress_after_frame(
+                    g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
+                g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                    g_distance, g_rival_progress[rival_index]);
+                rival_event = boonta_rival_event_after_frame(
+                    previous_rival_z, g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);
                     g_lateral_velocity = boonta_lateral_velocity_after_rival_contact(
                         g_lateral_velocity, g_player_lateral, g_rival_lateral[rival_index]);
-                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
+                    /* Opponent route progress is preserved; the player absorbs the contact penalty. */
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
                     g_overtake_count = boonta_overtake_count_after_event(g_overtake_count);
-                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 0);
                 }
             }
         }

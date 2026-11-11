@@ -479,17 +479,43 @@ static void multiple_rival_spacing_tests(void) {
  assert(nearf(boonta_rival_initial_z(1U), -34.0f));
  assert(nearf(boonta_rival_initial_z(2U), -50.0f));
 
- /* Collision respawns and overtakes preserve staggered spacing. */
- assert(nearf(boonta_rival_respawn_z(0U, 1), -20.0f));
- assert(nearf(boonta_rival_respawn_z(1U, 1), -32.0f));
- assert(nearf(boonta_rival_respawn_z(2U, 1), -44.0f));
- assert(nearf(boonta_rival_respawn_z(0U, 0), -22.0f));
- assert(nearf(boonta_rival_respawn_z(1U, 0), -34.0f));
- assert(nearf(boonta_rival_respawn_z(2U, 0), -46.0f));
+ /* Rivals start at stable absolute route-distance offsets. */
+ assert(nearf(boonta_rival_initial_progress(0U), 22.0f));
+ assert(nearf(boonta_rival_initial_progress(1U), 38.0f));
+ assert(nearf(boonta_rival_initial_progress(2U), 54.0f));
 
  assert(boonta_rival_event(boonta_rival_initial_z(0U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(boonta_rival_initial_z(1U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+}
+
+static void rival_absolute_progress_tests(void) {
+ float progress = boonta_rival_initial_progress(0U);
+ float relative_z = boonta_rival_relative_z_from_progress(0.0f, progress);
+ float next_progress;
+ float next_z;
+
+ assert(nearf(relative_z, -18.0f));
+ next_progress = boonta_rival_progress_after_frame(progress, 0.5f, 1.0f);
+ assert(nearf(next_progress, 22.07f));
+ assert(next_progress > progress);
+
+ /* Passing a rival leaves it behind at its own world position. */
+ next_z = boonta_rival_relative_z_from_progress(25.0f, next_progress);
+ assert(nearf(next_z, 6.93f));
+ assert(boonta_rival_event_after_frame(relative_z, next_z, 0.0f, 0.0f) ==
+        BOONTA_RIVAL_EVENT_OVERTAKE);
+
+ progress = next_progress;
+ next_progress = boonta_rival_progress_after_frame(progress, 0.5f, 1.0f);
+ next_z = boonta_rival_relative_z_from_progress(26.0f, next_progress);
+ assert(nearf(next_progress, 22.14f));
+ assert(boonta_rival_event_after_frame(6.93f, next_z, 0.0f, 0.0f) ==
+        BOONTA_RIVAL_EVENT_NONE);
+
+ assert(nearf(boonta_rival_progress_after_frame(10.0f, 0.5f, NAN), 10.0f));
+ assert(nearf(boonta_rival_progress_after_frame(NAN, 0.5f, 1.0f), 0.07f));
+ assert(nearf(boonta_rival_relative_z_from_progress(NAN, 10.0f), 0.0f));
 }
 
 static void rival_contact_velocity_tests(void) {
@@ -562,6 +588,12 @@ static void rival_event_tests(void) {
  assert(boonta_rival_event(0.0f, 0.92f, 0.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
  assert(boonta_rival_event(0.0f, 0.919f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
 
+  /* Transition events fire once on entry/crossing, not on every overlap frame. */
+  assert(boonta_rival_event_after_frame(-1.01f, -0.99f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
+  assert(boonta_rival_event_after_frame(-0.99f, -0.95f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+  assert(boonta_rival_event_after_frame(1.79f, 1.80f, 0.0f, 2.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+  assert(boonta_rival_event_after_frame(1.80f, 1.90f, 0.0f, 2.0f) == BOONTA_RIVAL_EVENT_NONE);
+  assert(boonta_rival_event_after_frame(2.0f, 1.7f, 0.1f, 0.2f) == BOONTA_RIVAL_EVENT_COLLISION);
  /* Contact penalty is bounded and the lateral response pushes away from the rival. */
  assert(nearf(boonta_speed_after_rival_contact(1.0f), 0.72f));
  assert(nearf(boonta_speed_after_rival_contact(0.1f), 0.0f));
@@ -732,7 +764,8 @@ static void non_finite_physics_state_tests(void) {
  assert(nearf(boonta_rival_z_after_frame(-18.0f, NAN, 1.0f),
               boonta_rival_z_after_frame(-18.0f, 0.0f, 1.0f)));
  assert(boonta_rival_event(NAN, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
- assert(boonta_rival_event(0.0f, NAN, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+
+  assert(boonta_rival_event_after_frame(NAN, 0.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE); assert(boonta_rival_event(0.0f, NAN, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(0.0f, 0.0f, INFINITY) == BOONTA_RIVAL_EVENT_NONE);
  assert(nearf(boonta_speed_after_rival_contact(NAN), 0.0f));
  assert(nearf(boonta_speed_after_rival_contact(INFINITY), 0.0f));
@@ -936,7 +969,8 @@ static void race_state_reset_tests(void) {
  assert(state.session_phase == BOONTA_RACE_SESSION_READY);
  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
   assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
-  assert(nearf(state.rival_lateral[i], 0.0f));
+
+   assert(nearf(state.rival_progress[i], boonta_rival_initial_progress(i)));  assert(nearf(state.rival_lateral[i], 0.0f));
   assert(nearf(state.rival_speed[i], boonta_rival_initial_speed(i)));
  }
 
@@ -1060,7 +1094,8 @@ int main(void) {
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
- multiframe_rival_contact_tests();
+
+  rival_absolute_progress_tests(); multiframe_rival_contact_tests();
  rival_event_tests();
  overtake_count_tests();
   road_width_alignment_tests();

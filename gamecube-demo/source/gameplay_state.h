@@ -39,6 +39,7 @@ typedef struct {
     int boost_active;
     int slide_active;
     float rival_z[BOONTA_RIVAL_COUNT];
+    float rival_progress[BOONTA_RIVAL_COUNT];
     float rival_lateral[BOONTA_RIVAL_COUNT];
     float rival_speed[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
@@ -584,6 +585,35 @@ static inline float boonta_rival_initial_speed(unsigned int rival_index)
     return 0.56f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.06f;
 }
 
+/* Rivals share the player's world-distance coordinate; Z is only a camera view. */
+static inline float boonta_rival_initial_progress(unsigned int rival_index)
+{
+    return 4.0f - boonta_rival_initial_z(rival_index);
+}
+
+static inline float boonta_rival_progress_after_frame(float progress,
+                                                        float speed,
+                                                        float frame_scale)
+{
+    float next_progress;
+    if (!isfinite(progress) || progress < 0.0f) progress = 0.0f;
+    speed = boonta_clamp_finite_float(speed, 0.0f, 1.0f);
+    frame_scale = boonta_sanitize_frame_scale(frame_scale);
+    next_progress = progress + speed * 0.14f * frame_scale;
+    return isfinite(next_progress) && next_progress >= progress
+        ? next_progress : progress;
+}
+
+static inline float boonta_rival_relative_z_from_progress(float player_progress,
+                                                           float rival_progress)
+{
+    float relative_z;
+    if (!isfinite(player_progress) || player_progress < 0.0f ||
+        !isfinite(rival_progress) || rival_progress < 0.0f) return 0.0f;
+    relative_z = 4.0f + player_progress - rival_progress;
+    return isfinite(relative_z) ? relative_z : 0.0f;
+}
+
 
 /*
  * Reset every gameplay value affected by the Y-button restart, including the
@@ -618,15 +648,10 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
     state->session_phase = BOONTA_RACE_SESSION_READY;
     for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
         state->rival_z[i] = boonta_rival_initial_z(i);
+        state->rival_progress[i] = boonta_rival_initial_progress(i);
         state->rival_lateral[i] = 0.0f;
         state->rival_speed[i] = boonta_rival_initial_speed(i);
     }
-}
-
-static inline float boonta_rival_respawn_z(unsigned int rival_index, int collision)
-{
-    const float respawn_base = collision ? -20.0f : -22.0f;
-    return respawn_base - (float)rival_index * 12.0f;
 }
 
 static inline float boonta_rival_z_after_frame(float rival_z, float speed, float frame_scale)
@@ -655,6 +680,33 @@ static inline int boonta_rival_event(float rival_z,
             : BOONTA_RIVAL_EVENT_OVERTAKE;
     }
     if (rival_z >= 1.8f) return BOONTA_RIVAL_EVENT_OVERTAKE;
+    return BOONTA_RIVAL_EVENT_NONE;
+}
+
+/* Trigger contacts/passes on entry to a window, not for every overlapping frame. */
+static inline int boonta_rival_event_after_frame(float previous_z,
+                                                  float current_z,
+                                                  float player_lateral,
+                                                  float rival_lateral)
+{
+    float lateral_gap;
+    int entered_contact_window;
+
+    if (!isfinite(previous_z) || !isfinite(current_z) ||
+        !isfinite(player_lateral) || !isfinite(rival_lateral)) {
+        return BOONTA_RIVAL_EVENT_NONE;
+    }
+    lateral_gap = player_lateral - rival_lateral;
+    if (lateral_gap < 0.0f) lateral_gap = -lateral_gap;
+    entered_contact_window =
+        ((previous_z <= -1.0f && current_z > -1.0f && current_z < 1.8f) ||
+         (previous_z >= 1.8f && current_z < 1.8f && current_z > -1.0f));
+    if (entered_contact_window && lateral_gap < 0.92f) {
+        return BOONTA_RIVAL_EVENT_COLLISION;
+    }
+    if (previous_z < 1.8f && current_z >= 1.8f) {
+        return BOONTA_RIVAL_EVENT_OVERTAKE;
+    }
     return BOONTA_RIVAL_EVENT_NONE;
 }
 

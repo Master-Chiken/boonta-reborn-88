@@ -9,13 +9,13 @@ This directory is a **clean-room, original technical slice** for Boonta Reborn 8
 - A spline-aligned desert canyon with a deterministic staggered rock-ridge silhouette and faceted outcrops, avoiding uniform wall tops.
 - An original low-poly twin-engine racer authored in `boonta-mesh-v1` JSON, exported to a validated C mesh and textured through the native GX RGB565 path; its exhaust plumes still lengthen with speed and boost.
 - GameCube controller steering with lateral inertia, off-road speed loss, and rail-edge recovery, plus throttle, brake, pitch, and slide. Pitching nose-down increases forward progress at the cost of steering authority; pitching nose-up slows progress but improves steering. Holding L initiates a low-grip slide: it increases turn impulse while retaining sideways drift, so releasing it early is part of cornering. Pitch/slide state is exposed in the HUD and covered by deterministic host tests.
-- Three clean-room procedural rival craft approach at staggered intervals, change lanes with independent phases, can collide with the player, and can be overtaken; up to eight overtake markers are shown in the HUD.
+- Three clean-room procedural rival craft start at staggered route-distance positions and keep persistent progress for the whole race. They adjust lanes and pace for upcoming corners, can collide with the player, and can be overtaken without teleporting back ahead; up to eight overtake markers are shown in the HUD.
 - A basic speed bar, steering-position tick, rechargeable boost-energy meter, overheat/cooldown bar, race clock, current-lap timer and best-lap display, lap-progress bar, repeating start/finish stripe, and three completed-lap indicators (the prototype's configured race limit).
 - An explicit READY → ACTIVE → PAUSED → RESULTS session: Start begins the run, toggles pause/resume while racing, and restarts after the three-lap results screen; Y returns to READY. The results panel freezes the run and shows only measured lap count, total time, last/best lap, and overtakes.
 - A time-based damped chase camera that follows both the vehicle-relative position and route look-ahead target; its exponential response is stable across 50/60 Hz update cadence, bounded after stalls, and snapped cleanly on race reset.
 - A reproducible CI build that uploads the resulting DOL and ELF if compilation succeeds.
 
-This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rival behavior is deliberately simple and scripted; collision response and overtake counting are prototypes, not a full physics or race-position system. Audio, saves, a title menu, and a full physics model are not implemented.
+This is a gameplay prototype, not the completed racer and not a port of the commercial game. Rivals now keep independent absolute route progress, and collision/overtake events are transition-based; their pace and race strategy remain deliberately simple, and a complete leaderboard/championship system is not implemented. Audio, saves, a title menu, and a full physics model are not implemented.
 
 ## Original player mesh and texture
 
