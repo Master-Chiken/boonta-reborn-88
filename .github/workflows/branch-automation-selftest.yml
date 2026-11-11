@@ -108,6 +108,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_delivery_plan.py
 
+      - name: Validate guarded deterministic GitHub writer with mocked API (offline)
+        shell: bash
+        run: python3 tools/test_execute_autonomous_github_delivery.py
+
       - name: Confirm canonical empty queue grants no model write paths
         shell: bash
         run: |
