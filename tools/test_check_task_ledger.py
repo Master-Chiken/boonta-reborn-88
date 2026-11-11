@@ -27,6 +27,7 @@ def valid_task(task_id="TASK-001", status="queued"):
         "platform_scope": ["GameCube/Wii"],
         "owner_role_id": "research",
         "parent_objective_id": "BOONTA-COMPLETE-GAME",
+        "depends_on": [],
         "status": status,
         "question": "What does the pinned evidence establish?",
         "acceptance_criteria": ["Record exact source revision", "Separate facts from unknowns"],
@@ -93,6 +94,37 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"][0]["parent_objective_id"] = "UNKNOWN-OBJECTIVE"
         errors = ledger.validate_ledger(data, {"research"}, {"BOONTA-COMPLETE-GAME"})
         self.assertTrue(any("unknown objective" in error for error in errors))
+
+    def test_rejects_unknown_task_dependency(self):
+        data = valid_ledger()
+        data["tasks"][0]["depends_on"] = ["TASK-404"]
+        self.assertTrue(any("depends_on unknown task TASK-404" in error for error in ledger.validate_ledger(data)))
+
+    def test_rejects_dependency_cycles(self):
+        first = valid_task("TASK-001")
+        second = valid_task("TASK-002")
+        first["depends_on"] = ["TASK-002"]
+        second["depends_on"] = ["TASK-001"]
+        data = valid_ledger()
+        data["tasks"] = [first, second]
+        self.assertTrue(any("dependency cycle" in error for error in ledger.validate_ledger(data)))
+
+    def test_active_task_requires_completed_dependencies(self):
+        dependency = valid_task("TASK-001", "queued")
+        active = valid_task("TASK-002", "active")
+        active["read_paths"] = ["tools/check_task_ledger.py"]
+        active["depends_on"] = ["TASK-001"]
+        data = valid_ledger()
+        data["tasks"] = [dependency, active]
+        self.assertTrue(any("until dependency TASK-001 is completed" in error for error in ledger.validate_ledger(data)))
+
+    def test_queued_task_may_wait_for_dependencies(self):
+        dependency = valid_task("TASK-001", "queued")
+        queued = valid_task("TASK-002", "queued")
+        queued["depends_on"] = ["TASK-001"]
+        data = valid_ledger()
+        data["tasks"] = [dependency, queued]
+        self.assertEqual(ledger.validate_ledger(data), [])
 
     def test_active_task_requires_bounded_read_paths(self):
         data = valid_ledger()
