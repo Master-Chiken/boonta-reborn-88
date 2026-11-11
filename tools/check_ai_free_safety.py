@@ -989,7 +989,7 @@ for label, prompt in dynamic_task_prompts:
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
     ("OpenRouter", openrouter_fallback, "2400", "2200"),
-    ("Groq", groq_fallback, "1500", "1400"),
+    ("Groq", groq_fallback, "3200", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -1577,9 +1577,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
+        if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1152 context / 384 output tokens so four direct-delivery steps stay below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1500 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
             )
         if groq_model.get("temperature") is not True:
             errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
@@ -1592,16 +1592,16 @@ else:
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
 for required in (
-    "1,152/384 limits; max 4 steps (6,144 nominal tokens).",
-    "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
-    "new retrieved text below 300 tokens.",
-    "Only MCP tools: create_branch, push_files, create_pull_request.",
+    "1,500/256 limits; max 4 steps (7,024 nominal tokens).",
+    "No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.",
+    "model-side file reads and repo-wide discovery are disabled.",
+    "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3600 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,600-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 5200 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 5,200-character TPM prompt ceiling before inference")
 if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
