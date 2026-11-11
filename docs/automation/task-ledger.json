@@ -1013,7 +1013,7 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "After GC-RACE-PROGRESSION is merged, trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
+      "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
       "updated_at": "2026-11-11"
     },
     {
@@ -1070,7 +1070,7 @@
         "Run relevant host tests, GameCube build and exact-head CI; clearly distinguish headless emulator checks from visual/hardware verification."
       ],
       "evidence": [],
-      "next_action": "After GC-RIVAL-ROUTE-PROGRESSION is merged, build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently available course/pod only; add content selection only when multiple lawful native options exist.",
+      "next_action": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently available course/pod only; add content selection only when multiple lawful native options exist.",
       "updated_at": "2026-11-11"
     },
     {
@@ -1127,7 +1127,7 @@
         "Record before/after measurements, target environment, uncertainty and any remaining hardware-only validation."
       ],
       "evidence": [],
-      "next_action": "Only after functional race and front-end milestones are merged, profile the native frame loop and route sampler. Optimize one demonstrated bottleneck with before/after measurements; never trade away correctness for speculative speed.",
+      "next_action": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route sampler. Optimize one demonstrated bottleneck with before/after measurements; never trade away correctness for speculative speed.",
       "updated_at": "2026-11-11"
     }
   ]
