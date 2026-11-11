@@ -18,6 +18,8 @@ def ledger_with_paths(paths: list[str]) -> dict:
         "title": "Bounded source read test",
         "queue": "#226",
         "platform_scope": ["automation"],
+        "owner_role_id": "chief-of-staff",
+        "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
         "status": "active",
         "target_branch": "main",
         "read_paths": paths,
