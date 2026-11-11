@@ -80,7 +80,33 @@ class PipelineFixture(unittest.TestCase):
             encoding="utf-8",
         )
         (tools / "test_pass.py").write_text("print('pass')\n", encoding="utf-8")
-        git(self.root, "add", SOURCE_PATH, "tools")
+
+        docs = self.root / "docs/automation"
+        docs.mkdir(parents=True)
+        (docs / "task-ledger-summary.json").write_text(json.dumps({
+            "schema_version": 2,
+            "source": "docs/automation/task-ledger.json",
+            "tasks": [{
+                "task_id": TASK_ID,
+                "status": "active",
+                "target_branch": "main",
+            }],
+        }), encoding="utf-8")
+        (docs / "patch-path-allowlist.json").write_text(json.dumps({
+            "schema_version": 1,
+            "policy": {
+                "owner_review_required": True,
+                "path_mode": "exact",
+                "max_paths_per_task": 20,
+            },
+            "tasks": [{
+                "task_id": TASK_ID,
+                "purpose": "Synthetic fixture approval",
+                "approval_ref": APPROVAL,
+                "allowed_paths": [SOURCE_PATH],
+            }],
+        }), encoding="utf-8")
+        git(self.root, "add", SOURCE_PATH, "tools", "docs/automation")
         git(self.root, "commit", "-qm", "pipeline fixture base")
         self.base_sha = git(self.root, "rev-parse", "HEAD")
 
@@ -207,6 +233,12 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         self.write_proposal(diff=diff)
         self.write_allowlist(paths=[SOURCE_PATH])
         with self.assertRaisesRegex(ProposalError, "outside the trusted task allowlist"):
+            self.run_pipeline()
+        self.assert_source_checkout_untouched()
+
+    def test_forged_allowlist_report_cannot_expand_current_owner_policy(self):
+        self.write_allowlist(paths=["src/other.c"])
+        with self.assertRaisesRegex(PipelineError, "current canonical owner-reviewed path policy"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
 
