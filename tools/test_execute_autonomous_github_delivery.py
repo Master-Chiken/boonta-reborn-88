@@ -195,6 +195,8 @@ class WriterFixture(unittest.TestCase):
         duplicate_pr_after_create=False,
         moved_on_recheck=False,
         wrong_draft_response=False,
+        wrong_pr_head_sha=False,
+        wrong_pr_base_sha=False,
     ):
         calls = []
         base_calls = 0
