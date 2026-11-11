@@ -31,6 +31,7 @@ def build_summary(ledger: dict) -> dict:
                 "title": task["title"],
                 "owner_role_id": task["owner_role_id"],
                 "parent_objective_id": task["parent_objective_id"],
+                "depends_on": task.get("depends_on", []),
                 "queue": task.get("queue"),
                 "platform_scope": task.get("platform_scope", []),
                 "status": task["status"],
