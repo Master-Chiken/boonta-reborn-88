@@ -184,12 +184,21 @@ class WriterFixture(unittest.TestCase):
             repository=REPOSITORY,
         )
 
-    def fake_api(self, *, branch_exists=False, duplicate_pr=False, moved_on_recheck=False):
+    def fake_api(
+        self,
+        *,
+        branch_exists=False,
+        duplicate_pr=False,
+        duplicate_pr_after_create=False,
+        moved_on_recheck=False,
+        wrong_draft_response=False,
+    ):
         calls = []
         base_calls = 0
+        pr_list_calls = 0
 
         def request(token, method, path, *, payload=None, allowed_404=False, timeout=20):
-            nonlocal base_calls
+            nonlocal base_calls, pr_list_calls
             calls.append((method, path, payload, allowed_404))
             if path == f"/repos/{REPOSITORY}/git/ref/heads/main":
                 base_calls += 1
@@ -200,7 +209,8 @@ class WriterFixture(unittest.TestCase):
             if path == f"/repos/{REPOSITORY}/git/ref/heads/{self.plan['branch_name']}":
                 return {"object": {"sha": "d" * 40}} if branch_exists else None
             if path == f"/repos/{REPOSITORY}/pulls?state=open&per_page=100&page=1":
-                if duplicate_pr:
+                pr_list_calls += 1
+                if duplicate_pr or (duplicate_pr_after_create and pr_list_calls >= 2):
                     return [{
                         "number": 123,
                         "body": f"Existing item\nBOONTA_TASK_ID: {TASK_ID}",
@@ -209,15 +219,24 @@ class WriterFixture(unittest.TestCase):
             if path == f"/repos/{REPOSITORY}/git/trees":
                 return {"sha": "a" * 40}
             if path == f"/repos/{REPOSITORY}/git/commits":
-                return {"sha": "b" * 40}
+                return {
+                    "sha": "b" * 40,
+                    "tree": {"sha": "a" * 40},
+                    "parents": [{"sha": self.base_sha}],
+                }
             if path == f"/repos/{REPOSITORY}/git/refs":
-                return {"ref": self.plan["github_write_plan"]["create_ref"]["ref"],
-                        "object": {"sha": "b" * 40}}
+                return {
+                    "ref": self.plan["github_write_plan"]["create_ref"]["ref"],
+                    "object": {"sha": "b" * 40},
+                }
             if path == f"/repos/{REPOSITORY}/pulls":
                 return {
                     "number": 456,
                     "html_url": f"https://github.com/{REPOSITORY}/pull/456",
-                    "draft": True,
+                    "title": self.plan["pr_title"],
+                    "draft": not wrong_draft_response,
+                    "head": {"ref": self.plan["branch_name"]},
+                    "base": {"ref": self.plan["target_branch"]},
                 }
             raise AssertionError(f"Unexpected API call: {method} {path}")
 
@@ -256,6 +275,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
                 ("POST", "commits"),
                 ("POST", "refs"),
                 ("GET", "main"),
+                ("GET", "pulls?state=open&per_page=100&page=1"),
                 ("POST", "pulls"),
             ],
         )
@@ -309,6 +329,23 @@ class DeterministicGitHubWriterTests(WriterFixture):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/refs") for method, path, *_ in calls))
         self.assertFalse(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
+        self.assert_repo_clean()
+
+    def test_concurrent_task_pr_appearing_after_branch_creation_stops_delivery(self):
+        request, calls = self.fake_api(duplicate_pr_after_create=True)
+        with patch.dict(os.environ, self.env, clear=False):
+            with self.assertRaisesRegex(DeliveryExecutionError, "appeared for this task"):
+                self.execute_with_fake(request)
+        self.assertTrue(any(method == "POST" and path.endswith("/refs") for method, path, *_ in calls))
+        self.assertFalse(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
+        self.assert_repo_clean()
+
+    def test_writer_rejects_non_draft_api_confirmation(self):
+        request, calls = self.fake_api(wrong_draft_response=True)
+        with patch.dict(os.environ, self.env, clear=False):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft pull request"):
+                self.execute_with_fake(request)
+        self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
 
     def test_execution_gates_require_exact_true_and_a_token(self):
