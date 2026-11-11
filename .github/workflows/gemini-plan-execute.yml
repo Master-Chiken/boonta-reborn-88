@@ -441,7 +441,7 @@ jobs:
           SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'
         with:
           script: |
-            const summary = (process.env.GEMINI_SUMMARY || '').trim();
+            const rawSummary = (process.env.GEMINI_SUMMARY || '').trim();\n            const { attachReservedCycleMetadata } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');\n            const summary = attachReservedCycleMetadata(rawSummary, process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {
