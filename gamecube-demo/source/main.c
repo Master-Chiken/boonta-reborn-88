@@ -1458,11 +1458,8 @@ int main(int argc, char **argv)
             boonta_race_session_finish_if_complete(&g_race_state, RACE_LAP_LIMIT);
         }
 
-        /* Staggered scripted opponents approach in camera space and change lanes. */
+        /* Persistent opponents advance in route space and change lanes for upcoming corners. */
         if (!g_race_finished) {
-            const float player_speed_snapshot = g_speed;
-            const float player_pitch_snapshot = g_pitch_down;
-            const int player_boost_snapshot = g_boost_active;
             float rival_target_lateral[BOONTA_RIVAL_COUNT];
             float rival_target_speed[BOONTA_RIVAL_COUNT];
 
