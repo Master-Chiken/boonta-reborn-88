@@ -666,7 +666,9 @@ if len(actual_groq_prompt) > 1900:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,200-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 2800, 1100)
+context_limits("Groq", groq, 3200, 1100)
+if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
+    errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 2 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact two-criteria/100-character next-action handoff")
 if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
