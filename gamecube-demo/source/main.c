@@ -128,8 +128,8 @@ static void initialise_pod_texture(void)
 #define g_rival_lateral     (g_race_state.rival_lateral)
 #define g_rival_speed       (g_race_state.rival_speed)
 #define g_overtake_count    (g_race_state.overtake_count)
-#define g_paused            (g_race_state.paused)
-#define g_race_finished     (g_race_state.race_finished)
+#define g_paused            (g_race_state.session_phase == BOONTA_RACE_SESSION_PAUSED)
+#define g_race_finished     (g_race_state.session_phase == BOONTA_RACE_SESSION_RESULTS)
 
 static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
@@ -159,8 +159,11 @@ static const u8 g_font5x7[128][7] = {
     ['H'] = {17,17,17,31,17,17,17},
     ['E'] = {31,16,16,30,16,16,31}, ['F'] = {31,16,16,30,16,16,16},
     ['I'] = {14,4,4,4,4,4,14}, ['N'] = {17,25,21,19,17,17,17},
-    ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
-    ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
+    ['K'] = {17,18,20,24,20,18,17}, ['L'] = {16,16,16,16,16,16,31},
+    ['M'] = {17,27,21,21,17,17,17}, ['O'] = {14,17,17,17,17,17,14},
+    ['P'] = {30,17,17,30,16,16,16}, ['R'] = {30,17,17,30,20,18,17},
+    ['S'] = {15,16,16,14,1,1,30}, ['U'] = {17,17,17,17,17,17,14},
+    ['V'] = {17,17,17,17,17,10,4}, ['Y'] = {17,17,10,4,4,4,4},
     ['T'] = {31,4,4,4,4,4,4}, [':'] = {0,4,4,0,4,4,0},
     ['.'] = {0,0,0,0,0,4,4}, ['-'] = {0,0,0,31,0,0,0},
     [' '] = {0,0,0,0,0,0,0}
@@ -916,6 +919,9 @@ static void draw_hud(void)
     char time_text[20];
     char lap_text[40];
     char best_text[20];
+    char last_text[20];
+    char laps_text[16];
+    char overtakes_text[16];
     unsigned int lap_display;
     const float w = (float)g_video_mode->fbWidth;
     const float h = (float)g_video_mode->efbHeight;
@@ -936,6 +942,9 @@ static void draw_hud(void)
 
     append_formatted_time(time_text, sizeof(time_text), g_race_seconds);
     append_formatted_time(best_text, sizeof(best_text), g_best_lap_seconds);
+    append_formatted_time(last_text, sizeof(last_text), g_last_lap_seconds);
+    (void)snprintf(laps_text, sizeof(laps_text), "%u", g_lap_count);
+    (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
     {
         char lap_time[20];
@@ -1077,30 +1086,33 @@ static void draw_hud(void)
     }
 #endif
 
-    /* Finish banner: a readable FINISH label and checkered flag made from original GX quads. */
+    /* Read-only results use only values measured by this prototype run. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
-        const float tile = 14.0f;
-        const float left = cx - 28.0f;
-        const float top = cy - 21.0f;
-        const GXColor finish_panel = { 8, 18, 30, 245 };
-        const GXColor black = { 12, 18, 27, 255 };
-        unsigned int row;
-        unsigned int col;
-        append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
-                           0.6f, finish_panel);
-        append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);
-        for (row = 0; row < 3U; ++row) {
-            for (col = 0; col < 4U; ++col) {
-                const GXColor square = (((row + col) & 1U) == 0U) ? white : black;
-                append_screen_quad(left + (float)col * tile,
-                                   top + (float)row * tile,
-                                   left + (float)(col + 1U) * tile,
-                                   top + (float)(row + 1U) * tile,
-                                   0.2f, square);
-            }
-        }
+        const GXColor results_panel = { 8, 18, 30, 248 };
+        append_screen_quad(cx - 132.0f, cy - 76.0f, cx + 132.0f, cy + 76.0f,
+                           0.6f, results_panel);
+        append_text("RESULTS", cx - 26.0f, cy - 62.0f, 1.2f, boost_fill);
+        append_text("LAPS", cx - 108.0f, cy - 34.0f, 1.0f, white);
+        append_text(laps_text, cx - 68.0f, cy - 34.0f, 1.0f, white);
+        append_text("TOTAL", cx - 8.0f, cy - 34.0f, 1.0f, white);
+        append_text(time_text, cx + 34.0f, cy - 34.0f, 1.0f, white);
+        append_text("LAST", cx - 108.0f, cy - 10.0f, 1.0f, heat_cool);
+        append_text(last_text, cx - 68.0f, cy - 10.0f, 1.0f, heat_cool);
+        append_text("BEST", cx - 8.0f, cy - 10.0f, 1.0f, heat_cool);
+        append_text(best_text, cx + 34.0f, cy - 10.0f, 1.0f, heat_cool);
+        append_text("OVERTAKES", cx - 108.0f, cy + 14.0f, 1.0f, rival_mark);
+        append_text(overtakes_text, cx + 4.0f, cy + 14.0f, 1.0f, rival_mark);
+        append_text("START TO RESTART", cx - 46.0f, cy + 49.0f, 1.0f, white);
+    } else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
+        const float cx = w * 0.5f;
+        const float cy = h * 0.5f;
+        const GXColor ready_panel = { 8, 18, 30, 240 };
+        append_screen_quad(cx - 92.0f, cy - 38.0f, cx + 92.0f, cy + 38.0f,
+                           0.6f, ready_panel);
+        append_text("READY", cx - 15.0f, cy - 20.0f, 1.2f, boost_fill);
+        append_text("PRESS START", cx - 32.0f, cy + 4.0f, 1.0f, white);
     } else if (g_paused) {
         /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
@@ -1332,11 +1344,11 @@ int main(int argc, char **argv)
             draw_frame(frame_delta_seconds);
             continue;
         }
-        if (!g_race_finished && (buttons_down & BOONTA_BUTTON_START) != 0U) {
-            g_paused = boonta_pause_state_next(g_paused, 1, 0);
+        if ((buttons_down & BOONTA_BUTTON_START) != 0U) {
+            boonta_race_session_start_press(&g_race_state);
         }
 
-        if (g_paused || g_race_finished) {
+        if (!boonta_race_session_should_advance(&g_race_state)) {
             g_boost_active = 0;
             g_slide_active = 0;
             draw_frame(frame_delta_seconds);
@@ -1436,13 +1448,7 @@ int main(int argc, char **argv)
                     g_best_lap_seconds, g_last_lap_seconds);
                 g_lap_seconds = 0.0f;
             }
-            if (boonta_race_is_finished(g_lap_count, RACE_LAP_LIMIT)) {
-                g_race_finished = 1;
-                g_speed = 0.0f;
-                g_boost_active = 0;
-                /* Keep the finished HUD on the completed final-lap time. */
-                g_lap_seconds = g_last_lap_seconds;
-            }
+            boonta_race_session_finish_if_complete(&g_race_state, RACE_LAP_LIMIT);
         }
 
         /* Staggered scripted opponents approach in camera space and change lanes. */
