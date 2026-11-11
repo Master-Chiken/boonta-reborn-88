@@ -818,7 +818,9 @@ for required in (
         errors.append(f"Autonomous queue-state reporting is missing {required!r}")
 for required_case in (
     '"name": "empty canonical ledger reports EMPTY_QUEUE"',
-    '"name": "queued task is visible but not silently promoted"',
+    '"name": "queued task is visible but not silently promoted until its dependency is completed"',
+    '"name": "first owner-approved queued task is promoted only after every dependency is completed"',
+    '"name": "queued task without explicit owner approval is not promoted"',
     '"name": "blocked non-activation tasks are not auto-unblocked"',
     '"name": "activation same-day backoff is reported separately from empty queue"',
     '"name": "open task PR is reported as waiting for reconciliation"',
