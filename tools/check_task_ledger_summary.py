@@ -21,6 +21,10 @@ def build_summary(ledger: dict) -> dict:
         "schema_version": 2,
         "source": "docs/automation/task-ledger.json",
         "updated_at": ledger.get("updated_at"),
+        "completed_task_ids": [
+            task["task_id"] for task in ledger.get("tasks", [])
+            if task.get("status") == "completed"
+        ],
         "policy": {
             "max_active_tasks": ledger.get("policy", {}).get("max_active_tasks", 1),
             "completed_requires_merged_pr": True,
@@ -32,18 +36,19 @@ def build_summary(ledger: dict) -> dict:
                 "owner_role_id": task["owner_role_id"],
                 "parent_objective_id": task["parent_objective_id"],
                 "depends_on": task.get("depends_on", []),
+                "owner_approved": task.get("owner_approved", False),
                 "queue": task.get("queue"),
                 "platform_scope": task.get("platform_scope", []),
                 "status": task["status"],
                 "target_branch": task.get("target_branch"),
-                "read_paths": task.get("read_paths", []) if task["status"] != "queued" else [],
-                "read_ranges": task.get("read_ranges", []) if task["status"] != "queued" else [],
-                "question_excerpt": excerpt(task.get("question"), 240) if task["status"] != "queued" else "",
-                "acceptance_criteria_total": len(task.get("acceptance_criteria") or []) if task["status"] != "queued" else 0,
+                "read_paths": task.get("read_paths", []),
+                "read_ranges": task.get("read_ranges", []),
+                "question_excerpt": excerpt(task.get("question"), 240),
+                "acceptance_criteria_total": len(task.get("acceptance_criteria") or []),
                 "acceptance_criteria_excerpt": [
                     excerpt(item, 140)
                     for item in (task.get("acceptance_criteria") or [])[:5]
-                ] if task["status"] != "queued" else [],
+                ],
                 "pr_url": task.get("pr_url"),
                 "head_sha": task.get("head_sha"),
                 "next_action_excerpt": excerpt(task.get("next_action"), 180 if task["status"] == "queued" else 420),
