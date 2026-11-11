@@ -1577,9 +1577,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
+        if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1500 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1550 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
             )
         if groq_model.get("temperature") is not True:
             errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
@@ -1594,7 +1594,7 @@ else:
 if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1400" not in openrouter_fallback:
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
-    "1,500/256 limits; max 4 steps (7,024 nominal tokens).",
+    "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
     "No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.",
     "Model-side file reads and repo-wide discovery are disabled.",
     "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
@@ -1602,8 +1602,8 @@ for required in (
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 5200 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 5,200-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 5500 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
 if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
