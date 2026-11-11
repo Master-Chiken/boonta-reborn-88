@@ -988,7 +988,7 @@ for label, prompt in dynamic_task_prompts:
 # Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
-    ("OpenRouter", openrouter_fallback, "2400", "2200"),
+    ("OpenRouter", openrouter_fallback, "2800", "1100"),
     ("Groq", groq_fallback, "3200", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
@@ -1577,7 +1577,10 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
+        if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1400" not in openrouter_fallback:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
+
+if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
             errors.append(
                 "Groq GPT-OSS 20B must remain capped at 1500 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
             )
