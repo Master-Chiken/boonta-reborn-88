@@ -685,7 +685,7 @@ if "Use preloaded excerpts from every exact task path before the one permitted f
     errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
 if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
-if "--max-criteria 4 --max-next-action 80" not in groq:
+if "--max-criteria 4 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
 if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
     errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
