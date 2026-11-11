@@ -231,11 +231,15 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
-              !Array.isArray(ledgerSummary.tasks)
+              !Array.isArray(ledgerSummary.tasks) ||
+              !Array.isArray(ledgerSummary.completed_task_ids) ||
+              ledgerSummary.completed_task_ids.some((id) => typeof id !== 'string' || !id.trim()) ||
+              new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length
             ) {
-              failClosed('canonical compact task ledger schema or one-active-task policy is invalid');
+              failClosed('canonical compact task ledger schema, completed dependencies or one-active-task policy is invalid');
               return;
             }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
@@ -257,9 +261,19 @@ jobs:
             }
             const task = matches[0];
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const dependenciesSatisfied = Array.isArray(task.depends_on) &&
+              task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              );
+            const activeReservation = task.status === 'active' &&
+              activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
+              dependenciesSatisfied;
+            const approvedQueuePromotion = task.status === 'queued' &&
+              task.owner_approved === true && activeTasks.length === 0 &&
+              dependenciesSatisfied;
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
-              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+              : activeReservation || approvedQueuePromotion;
             if (!eligibleStatus) {
               failClosed('the selected task status or active-task reservation changed while this run waited');
               return;
@@ -272,7 +286,18 @@ jobs:
               !Array.isArray(task.acceptance_criteria_excerpt) ||
               task.acceptance_criteria_excerpt.length === 0 ||
               !Array.isArray(task.platform_scope) ||
-              task.platform_scope.length === 0
+              task.platform_scope.length === 0 ||
+              !Array.isArray(task.read_paths) ||
+              task.read_paths.length < 1 || task.read_paths.length > 4 ||
+              task.read_paths.some((path) =>
+                typeof path !== 'string' || path.length > 120 ||
+                !/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') ||
+                path.split('/').some((part) => !part || part === '.' || part === '..') ||
+                path === 'docs/automation/task-ledger.json' ||
+                path === 'docs/automation/task-ledger-summary.json' ||
+                path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))
+              ) ||
+              new Set(task.read_paths).size !== task.read_paths.length
             ) {
               failClosed('the selected task no longer matches its canonical branch or complete execution context');
               return;
