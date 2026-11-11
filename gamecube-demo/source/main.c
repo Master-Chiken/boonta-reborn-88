@@ -919,8 +919,6 @@ static void draw_hud(void)
     char time_text[20];
     char lap_text[40];
     char best_text[20];
-    char last_text[20];
-    char laps_text[16];
     char overtakes_text[16];
     char lap_split_text[BOONTA_RACE_LAP_CAPACITY][20];
     unsigned int lap_display;
@@ -944,13 +942,11 @@ static void draw_hud(void)
 
     append_formatted_time(time_text, sizeof(time_text), g_race_seconds);
     append_formatted_time(best_text, sizeof(best_text), g_best_lap_seconds);
-    append_formatted_time(last_text, sizeof(last_text), g_last_lap_seconds);
     for (split_index = 0U; split_index < BOONTA_RACE_LAP_CAPACITY; ++split_index) {
         append_formatted_time(lap_split_text[split_index],
                               sizeof(lap_split_text[split_index]),
                               g_race_state.lap_times[split_index]);
     }
-    (void)snprintf(laps_text, sizeof(laps_text), "%u", g_lap_count);
     (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
     {
