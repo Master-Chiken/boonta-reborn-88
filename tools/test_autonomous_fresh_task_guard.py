@@ -425,7 +425,7 @@ async function runCase(testCase) {{
     RESUME_PR_URL: "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
     RESUME_BRANCH: "AUTOMATION-LEDGER-ACTIVATION",
     RESUME_HEAD_SHA: "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
-  }}};
+  }}}};
   await new AsyncFunction("github", "context", "core", "process", script)(github, context, core, process);
   return {{ outputs, failure }};
 }}
