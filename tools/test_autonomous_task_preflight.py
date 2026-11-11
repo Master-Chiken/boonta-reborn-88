@@ -371,13 +371,18 @@ cases = [
         "expected_resume_ready": False,
     },
     {
-        "name": "activation opens after UTC reset",
+        "name": "activation opens after UTC reset with fresh branch guidance",
         "tasks": [activation],
         "marker_day_offset": None,
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-LEDGER-ACTIVATION",
         "expected_blocked": False,
         "expected_queue_state": "READY",
+        "expected_context_contains": [
+            "UTC branch: create a fresh automation-ledger-activation-",
+            "branch from current main; never reuse any earlier attempt branch.",
+        ],
+        "expected_date_branch": True,
     },
     {
         "name": "open PR with exact task marker blocks duplicate activation",
@@ -733,6 +738,17 @@ async function runCase(testCase) {{
         ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt]) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted " + expectedText);
+        }}
+      }}
+      for (const expectedText of testCase.expected_context_contains || []) {{
+        if (!String(outputs.task_context).includes(expectedText)) {{
+          throw new Error(testCase.name + ": task context omitted activation guidance " + expectedText);
+        }}
+      }}
+      if (testCase.expected_date_branch === true) {{
+        const expectedBranch = "automation-ledger-activation-" + new Date().toISOString().slice(0, 10).replace(/-/g, "");
+        if (!String(outputs.task_context).includes(expectedBranch)) {{
+          throw new Error(testCase.name + ": task context omitted the fresh UTC-date branch " + expectedBranch);
         }}
       }}
     }} else if (outputs.task_title !== "" || outputs.task_target_branch !== "" || outputs.task_context !== "") {{

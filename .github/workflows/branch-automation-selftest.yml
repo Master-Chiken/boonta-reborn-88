@@ -88,6 +88,71 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_fresh_task_guard.py
 
+      - name: Validate structured patch proposals with isolated Git fixtures (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_patch_proposal.py
+
+      - name: Validate fixed patch-test dispatcher with isolated fixtures (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_patch_test_runner.py
+
+      - name: Validate owner-approved task path allowlists with isolated Git fixtures (offline)
+        shell: bash
+        run: python3 tools/test_autonomous_path_allowlist.py
+
+      - name: Verify patch application and mandatory tests in disposable worktrees (offline)
+        shell: bash
+        run: python3 tools/test_verify_autonomous_patch.py
+
+      - name: Validate deterministic delivery plans with offline Git fixtures
+        shell: bash
+        run: python3 tools/test_autonomous_delivery_plan.py
+
+      - name: Validate guarded deterministic GitHub writer with mocked API (offline)
+        shell: bash
+        run: python3 tools/test_execute_autonomous_github_delivery.py
+
+      - name: Confirm canonical empty queue grants no model write paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import subprocess
+          import sys
+          from pathlib import Path
+          root = Path.cwd()
+          base_sha = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], cwd=root, text=True,
+              stdin=subprocess.DEVNULL,
+          ).strip()
+          result = subprocess.run(
+              [
+                  sys.executable, "tools/build_autonomous_path_allowlist.py",
+                  "--repo-root", str(root),
+                  "--expected-base-sha", base_sha,
+                  "--task-id", "AUTOMATION-LEDGER-ACTIVATION",
+              ],
+              cwd=root, text=True, capture_output=True, check=False,
+          )
+          if result.returncode != 3:
+              raise SystemExit(f"Expected fail-closed no-active-task exit 3, got {result.returncode}: {result.stdout} {result.stderr}")
+          report = json.loads(result.stdout)
+          if report.get("status") != "NO_ACTIVE_TASK" or report.get("allowed_paths") != []:
+              raise SystemExit("Canonical empty queue unexpectedly granted model write paths")
+          print("PASS: canonical empty queue grants zero model write paths")
+          PY
+
+      - name: Run only repository-owned patch verification tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/run_autonomous_patch_tests.py \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --test-id automation.task_preflight \
+            --test-id automation.provider_handoff \
+            --test-id automation.task_ledger
+
       - name: Validate schema-v2 autonomous context builder with offline fixtures
         shell: bash
         run: python3 tools/test_autonomous_context.py

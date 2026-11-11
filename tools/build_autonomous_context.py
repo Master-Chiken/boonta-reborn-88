@@ -96,18 +96,24 @@ def build_context(
     if not all(item in task_context for item in required_handoff_text):
         raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts")
 
-    bounded_task_context = _short(task_context, max_task_context)
-    if not all(item in bounded_task_context for item in required_handoff_text):
-        raise ContextBuildError(
-            "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
-        )
-    lines = [
+    prefix_lines = [
         "VERIFIED CONTEXT:",
         "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
         "Canonical ledger v2 verified.",
         "Task:",
-        bounded_task_context,
     ]
+    # The total provider ceiling includes the fixed prefix and its newline.
+    # Fit the task handoff to the remaining budget; required ledger excerpts
+    # must still survive or the context fails closed.
+    available_task_chars = max_chars - len("\n".join(prefix_lines)) - 1
+    if available_task_chars < 250:
+        raise ContextBuildError("Verified-context ceiling leaves too little room for a safe task handoff")
+    bounded_task_context = _short(task_context, min(max_task_context, available_task_chars))
+    if not all(item in bounded_task_context for item in required_handoff_text):
+        raise ContextBuildError(
+            "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
+        )
+    lines = [*prefix_lines, bounded_task_context]
     output = "\n".join(lines)
     if len(output) > max_chars:
         raise ContextBuildError(

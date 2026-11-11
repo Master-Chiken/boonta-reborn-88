@@ -1,10 +1,10 @@
 # Next milestone: Finish and refine the clean-room racing slice
 
-Last updated: 2026-11-07
+Last updated: 2026-11-11
 
 ## Owner priority update
 
-Continue implementation and automated testing now; do not wait for physical-controller testing before advancing gameplay. The current active research queue is RE-001; keep RE-002 parked. The GameCube runtime now evaluates the eight authored cubic Bezier edges directly for its one closed oval, and the post-finish Start-restart transition has been ported into the current route-graph candidate. Continue refining this playable closed-loop slice, its handling, rival behavior, camera, and track readability in small, regression-tested changes. Runtime branch selection remains future work. Defer the human-operated visible-Dolphin checklist until the race slice is consolidated; physical GameCube/Wii testing comes later still.
+The roadmap still prioritizes implementation and automated testing rather than waiting for physical-controller testing. However, the canonical task ledger on 2026-11-11 has 11 records (9 completed, 2 blocked), with no queued or active task; no engineering task is currently authorized for the scheduled writer. The Phase 1 reuse/compatibility decision remains a proposed next item, not an active assignment. The GameCube runtime now evaluates the eight authored cubic Bezier edges directly for its one closed oval, and the post-finish Start-restart transition is integrated in main. Continue gameplay work only after the owner adds and approves a bounded task in the canonical ledger. Runtime branch selection remains future work. Defer the human-operated visible-Dolphin checklist until the race slice is consolidated; physical GameCube/Wii testing comes later still.
 
 The manual checklist below remains required before claiming the prototype is fully playable. It is not a blanket blocker for independent code, design, or automated-test improvements. Keep test claims evidence-based, keep the €0/tooling and clean-room constraints, and do not merge without appropriate independent review and required checks.
 
@@ -16,11 +16,11 @@ The manual acceptance checklist is the gate for declaring full playability, not 
 
 ## Development snapshot — 2026-11-03
 
-- [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) carries the direct native Bezier runtime and active RE-001 work. It remains open and unmerged.
+- [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274) was merged on 2026-11-07 (merge commit `713192093648a946f521b24bdfa846c96975d2f8`). Its native Bezier runtime and route-graph work are now in main; there is no open PR #274.
 - The runtime sampler caches 128 distance intervals per edge and uses bounded binary searches for edge and interval lookup. Exact-head host tests cover all 1,024 interval boundaries and their midpoints; the current direct Bezier curve measurement differs from the compiled lap coordinate by 0.00026%.
 - Start toggles pause/resume during a live race. In the finished state, Start now follows the same full-state reset path as Y and begins a new run. Host C decision-table tests and a scripted DTM profile cover the finished/live × Start/Y cases.
 - The current race is still one unbranched loop. Route-graph branch choices/history, runtime JSON loading, multiple playable routes, and B-spline execution are not implemented.
-- [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) remains draft pending physical Wii tests of the official Nintendo and Under Control Classic Controllers.
+- [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) was merged on 2026-11-07 (merge commit `291f5d430782dcaa917a6215326a887fbeeb7f72`). The native Wii Classic Controller backend is in main; physical Wii/controller acceptance remains NOT TESTED.
 - Human-operated visible-Dolphin acceptance remains **NOT TESTED** in [issue #126](https://github.com/Master-Chiken/boonta-reborn-88/issues/126). Scripted movie/render checks never substitute for that manual checklist.
 
 
@@ -104,7 +104,7 @@ Do not merge unclear-provenance code or any commercial assets.
 
 ## Native Wii Classic Controller acceptance
 
-The native Wii Classic Controller backend is being consolidated into the same integration as the GameCube route-graph runtime in [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274). Its implementation uses the shared logical input contract and keeps the GameCube PAD backend available. The separate predecessor [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) is being absorbed rather than maintained as a second development line.
+The native Wii Classic Controller backend was integrated by [PR #269](https://github.com/Master-Chiken/boonta-reborn-88/pull/269) and the route-graph runtime by [PR #274](https://github.com/Master-Chiken/boonta-reborn-88/pull/274); both are merged into main. The implementation uses the shared logical input contract and keeps the GameCube PAD backend available. Physical Wii/Classic Controller acceptance remains NOT TESTED and must not be inferred from CI.
 
 **Automated evidence:** the previous exact Wii-backend head `609672632b79d971fd2cb91d91c745bf15937fea` passed host input tests, native GameCube/Wii DOL/ELF builds and artifact validation, Dolphin null-backend smoke, and the optional scripted Software Renderer diagnostic. The combined route-graph + Wii-backend candidate must pass its own exact-head CI before it is merged into `main`.
 

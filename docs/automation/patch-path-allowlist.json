@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "owner_review_required": true,
+    "path_mode": "exact",
+    "max_paths_per_task": 20,
+    "note": "A task gets write paths only through an explicit reviewed change to this file. No globs, prefixes, inferred scopes or model-selected paths."
+  },
+  "tasks": []
+}
