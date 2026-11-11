@@ -146,14 +146,16 @@ cases = [
             "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "AUTOMATION-LEDGER-ACTIVATION", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
             "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
-            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": True,
+        "expected_resume_ready": True,
         "expected_resume_pr_number": "388",
+        "expected_resume_task_id": "AUTOMATION-LEDGER-ACTIVATION",
     },
     {
         "name": "duplicate exact task markers fail closed for resume discovery",
@@ -346,6 +348,27 @@ cases = [
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": False,
+    },
+    {
+        "name": "task PR missing exact target-branch marker is not resumable",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 399,
+            "state": "open",
+            "draft": False,
+            "user": {"login": "Master-Chiken"},
+            "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "AUTOMATION-LEDGER-ACTIVATION", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+            "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/399",
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+        }],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": False,
+        "expected_resume_ready": False,
     },
     {
         "name": "activation opens after UTC reset",
@@ -674,8 +697,29 @@ async function runCase(testCase) {{
       outputs.resume_pr_number !== testCase.expected_resume_pr_number) {{
       throw new Error(testCase.name + ": expected resume_pr_number=" + testCase.expected_resume_pr_number + ", got " + outputs.resume_pr_number);
     }}
+    if (testCase.expected_resume_ready !== undefined &&
+      outputs.resume_ready !== String(testCase.expected_resume_ready)) {{
+      throw new Error(testCase.name + ": expected resume_ready=" + testCase.expected_resume_ready + ", got " + outputs.resume_ready);
+    }}
+    if (testCase.expected_resume_ready === undefined && outputs.resume_ready !== "false") {{
+      throw new Error(testCase.name + ": unexpected resume-ready task handoff");
+    }}
+    if (testCase.expected_resume_task_id !== undefined &&
+      outputs.resume_task_id !== testCase.expected_resume_task_id) {{
+      throw new Error(testCase.name + ": expected resume_task_id=" + testCase.expected_resume_task_id + ", got " + outputs.resume_task_id);
+    }}
     if (outputs.resume_pr_candidate === "true" && outputs.task_ready !== "false") {{
-      throw new Error(testCase.name + ": resume discovery must not authorize a provider before provider-side resume support exists");
+      throw new Error(testCase.name + ": resume must remain separate from normal task readiness");
+    }}
+    if (outputs.resume_ready === "true" && (
+      outputs.task_ready !== "false" ||
+      outputs.resume_task_context.indexOf(testCase.expected_resume_task_id) < 0 ||
+      outputs.resume_target_branch !== "main" ||
+      outputs.resume_pr_url !== "https://github.com/Master-Chiken/boonta-reborn-88/pull/388" ||
+      outputs.resume_branch !== "AUTOMATION-LEDGER-ACTIVATION" ||
+      outputs.resume_head_sha !== "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
+    )) {{
+      throw new Error(testCase.name + ": exact safe-resume metadata/task context was not propagated");
     }}
     if (testCase.expected_ready) {{
       if (String(outputs.task_context).length > 2500) {{
