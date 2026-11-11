@@ -34,6 +34,13 @@ gemini = read("gemini")
 openrouter = read("openrouter")
 groq = read("groq")
 loop = read("loop")
+
+# Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
+# repeated validation/comment side effects. Keep this workflow single-pass.
+groq_step_ids = re.findall(r"(?m)^        id:\\s*([A-Za-z0-9_-]+)\\s*$", groq)
+if len(groq_step_ids) != len(set(groq_step_ids)):
+    errors.append("Groq workflow must not contain duplicate step IDs")
+
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
 cycle_validator = read("cycle_validator")
