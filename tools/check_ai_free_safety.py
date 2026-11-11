@@ -1198,6 +1198,34 @@ else:
             f"found {job_permissions!r}"
         )
 
+# The on-demand owner-approved plan-execute caller must pass the same
+# least-privilege permission set requested by the reusable Gemini workflow.
+dispatch_plan_job = dispatch.split("  plan-execute:", 1)[1]
+dispatch_plan_permissions_match = re.search(
+    r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
+    dispatch_plan_job,
+)
+if not dispatch_plan_permissions_match:
+    errors.append("On-demand Gemini plan-execute caller must declare explicit reusable-workflow permissions")
+else:
+    dispatch_plan_permissions = dict(
+        re.findall(
+            r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
+            dispatch_plan_permissions_match.group("block"),
+        )
+    )
+    expected_dispatch_plan_permissions = {
+        "contents": "write",
+        "issues": "write",
+        "pull-requests": "write",
+        "checks": "read",
+    }
+    if dispatch_plan_permissions != expected_dispatch_plan_permissions:
+        errors.append(
+            "On-demand Gemini plan-execute caller must pass contents/issues/PR write plus checks read only; "
+            f"found {dispatch_plan_permissions!r}"
+        )
+
 if "secrets: inherit" not in autonomous:
     errors.append("Autonomous caller must pass only the repository-scoped secrets required by its reusable workflow")
 if "workflow_dispatch" in autonomous_trigger and "github.actor == github.repository_owner" not in autonomous:
