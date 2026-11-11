@@ -196,6 +196,15 @@ jobs:
               Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0 &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
+              Array.isArray(task.read_paths) && task.read_paths.length >= 1 && task.read_paths.length <= 4 &&
+              task.read_paths.every((path) => typeof path === 'string' && path.length <= 120 &&
+                /^[A-Za-z0-9._/-]+$/.test(path) && !path.startsWith('/') &&
+                path.split('/').every((part) => part && part !== '.' && part !== '..') &&
+                /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(path) &&
+                path !== 'docs/automation/task-ledger.json' &&
+                path !== 'docs/automation/task-ledger-summary.json' &&
+                !path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))) &&
+              new Set(task.read_paths).size === task.read_paths.length &&
               ['main', 'dev'].includes(task.target_branch)
             );
             const resumeSlotValid = activeTasks.length === 0
@@ -240,6 +249,7 @@ jobs:
               'Task ID: ' + resumeCandidateTask.task_id,
               'Title: ' + resumeCandidateTask.title,
               'Target branch: ' + resumeCandidateTask.target_branch,
+              'Read-only source paths (select at most one): ' + resumeCandidateTask.read_paths.join(', '),
               'Question: ' + resumeCandidateTask.question_excerpt,
               'Acceptance criteria (' + resumeCandidateTask.acceptance_criteria_total + '; first 5):',
               ...resumeCandidateTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
@@ -327,17 +337,16 @@ jobs:
               'Task ID: ' + selectedTask.task_id,
               'Title: ' + selectedTask.title,
               'Target branch: ' + selectedTask.target_branch,
+              'Read-only source paths (select at most one): ' + selectedTask.read_paths.join(', '),
               'Question: ' + selectedTask.question_excerpt,
               'Acceptance criteria (' + selectedTask.acceptance_criteria_total + '; first 5):',
               ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
               'Next: ' + selectedTask.next_action_excerpt,
               ...(selectedTask.task_id === 'AUTOMATION-LEDGER-ACTIVATION' ? [
-                'Full canonical task record: docs/automation/task-ledger.json (exact path; read this file only if more than the first five criteria are needed).',
-                'Known relevant ledger files: tools/check_task_ledger.py, tools/audit_task_ledger_github.py, tools/test_check_task_ledger.py, tools/test_autonomous_task_preflight.py, tools/check_autonomous_provider_handoff.py.',
-                'Do not read repository root, list directories, or guess file paths. Use the exact paths above; at most one directly relevant source/test read.',
+                'Use only the read-only source paths listed above; never read the canonical ledger or discover files.',
                 'UTC branch: create a fresh automation-ledger-activation-' + todayUtc.replace(/-/g, '') + ' branch from current main; never reuse any earlier attempt branch.',
               ] : [
-                'If criteria exceed these excerpts, read only this task record at the exact path docs/automation/task-ledger.json before coding; do not list repository directories or guess file paths.',
+                'Use only the read-only source paths listed above; never list directories or guess file paths.',
               ]),
               'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.',
             ].join('\n') : '';

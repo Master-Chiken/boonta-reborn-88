@@ -33,6 +33,7 @@ def build_summary(ledger: dict) -> dict:
                 "platform_scope": task.get("platform_scope", []),
                 "status": task["status"],
                 "target_branch": task.get("target_branch"),
+                "read_paths": task.get("read_paths", []),
                 "question_excerpt": excerpt(task.get("question"), 240),
                 "acceptance_criteria_total": len(task.get("acceptance_criteria") or []),
                 "acceptance_criteria_excerpt": [

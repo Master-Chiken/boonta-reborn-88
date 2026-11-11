@@ -16,6 +16,12 @@
       ],
       "status": "blocked",
       "target_branch": "main",
+      "read_paths": [
+        "tools/check_task_ledger.py",
+        "tools/test_check_task_ledger.py",
+        "tools/audit_task_ledger_github.py",
+        "tools/check_autonomous_provider_handoff.py"
+      ],
       "question_excerpt": "Does the merged autonomous loop consistently reconcile the task ledger and avoid duplicate or stale work?",
       "acceptance_criteria_total": 15,
       "acceptance_criteria_excerpt": [
@@ -39,6 +45,7 @@
       ],
       "status": "blocked",
       "target_branch": "main",
+      "read_paths": [],
       "question_excerpt": "Can the prepared 68,284-byte owner-local Pupp candidate be structurally parsed and assessed for N64/GameCube compatibility without publishing ROM-derived data?",
       "acceptance_criteria_total": 6,
       "acceptance_criteria_excerpt": [
@@ -62,6 +69,12 @@
       ],
       "status": "active",
       "target_branch": "dev",
+      "read_paths": [
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/pause_state.h",
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/tests/test_gameplay_state.c"
+      ],
       "question_excerpt": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
       "acceptance_criteria_total": 8,
       "acceptance_criteria_excerpt": [

@@ -64,6 +64,7 @@ def task(
         ],
         "next_action_excerpt": "Complete one small, source-verified automation task.",
         "platform_scope": ["automation"],
+        "read_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
         "pr_url": "",
         "head_sha": "",
     }
@@ -778,7 +779,8 @@ async function runCase(testCase) {{
         throw new Error(testCase.name + ": selected task title/target branch were not propagated");
       }}
       for (const expectedText of [selected.task_id, selected.title, selected.question_excerpt,
-        ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt]) {{
+        ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt,
+        "Read-only source paths (select at most one): " + selected.read_paths.join(", ")]) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted " + expectedText);
         }}

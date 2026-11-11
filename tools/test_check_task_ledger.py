@@ -80,6 +80,22 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"][0]["platform_scope"] = []
         self.assertTrue(any("platform_scope" in e for e in ledger.validate_ledger(data)))
 
+    def test_active_task_requires_bounded_read_paths(self):
+        data = valid_ledger()
+        active = valid_task(status="active")
+        active["read_paths"] = ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"]
+        data["tasks"] = [active]
+        self.assertEqual(ledger.validate_ledger(data), [])
+
+    def test_active_task_rejects_unsafe_read_paths(self):
+        for path in ("../outside.py", "/absolute/file.py", "docs/automation/task-ledger.json", "assets/model.bin"):
+            with self.subTest(path=path):
+                data = valid_ledger()
+                active = valid_task(status="active")
+                active["read_paths"] = [path]
+                data["tasks"] = [active]
+                self.assertTrue(any("read_paths" in error for error in ledger.validate_ledger(data)))
+
 
 class LiveGitHubReconciliationTests(unittest.TestCase):
     def test_accepts_open_pr_with_exact_head(self):

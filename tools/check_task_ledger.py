@@ -15,6 +15,21 @@ STATUSES = {"queued", "active", "blocked", "in_review", "completed", "superseded
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 REPO = "Master-Chiken/boonta-reborn-88"
+READ_PATH_EXTENSIONS = {".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md", ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh"}
+READ_PATH_BLOCKED = {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
+
+
+def _valid_read_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value or len(value) > 120:
+        return False
+    if not re.fullmatch(r"[A-Za-z0-9._/-]+", value) or "\\" in value:
+        return False
+    parts = value.split("/")
+    if value.startswith("/") or any(part in {"", ".", ".."} for part in parts):
+        return False
+    if value in READ_PATH_BLOCKED or any(part.lower() in {"generated", "roms", "private"} for part in parts):
+        return False
+    return Path(value).suffix.lower() in READ_PATH_EXTENSIONS
 
 
 def _is_date(value: Any) -> bool:
@@ -68,6 +83,22 @@ def validate_ledger(data: Any) -> list[str]:
             errors.append(f"{prefix}.status must be one of {sorted(STATUSES)}")
         if status == "active":
             active += 1
+        read_paths = task.get("read_paths")
+        requires_read_paths = status == "active" or (
+            task_id == "AUTOMATION-LEDGER-ACTIVATION" and status == "blocked"
+        )
+        if requires_read_paths and not (
+            isinstance(read_paths, list) and 1 <= len(read_paths) <= 4
+            and all(_valid_read_path(path) for path in read_paths)
+            and len(set(read_paths)) == len(read_paths)
+        ):
+            errors.append(f"{prefix}.read_paths must contain 1-4 unique safe repository text paths for executable tasks")
+        elif read_paths is not None and not (
+            isinstance(read_paths, list) and len(read_paths) <= 4
+            and all(_valid_read_path(path) for path in read_paths)
+            and len(set(read_paths)) == len(read_paths)
+        ):
+            errors.append(f"{prefix}.read_paths must contain at most four unique safe repository text paths")
         for field in ("question", "next_action"):
             if not isinstance(task.get(field), str) or not task[field].strip():
                 errors.append(f"{prefix}.{field} is required")
