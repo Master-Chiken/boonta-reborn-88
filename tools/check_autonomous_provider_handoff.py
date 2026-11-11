@@ -147,7 +147,7 @@ for content, needle, message in (
         errors.append(message)
 
 resume_guard_start = groq.find("      - name: Revalidate existing task PR after acquiring the shared writer slot")
-resume_guard_end = groq.find("\\n      - name: Mint scoped GitHub App token", resume_guard_start)
+resume_guard_end = groq.find("\n      - name: Mint scoped GitHub App token", resume_guard_start)
 resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
 if not resume_guard:
     errors.append("Groq owner-dispatched resume must have a separate post-queue PR revalidation step")
@@ -218,8 +218,8 @@ for required in (
     "resume_pr_url:",
     "resume_branch:",
     "resume_head_sha:",
-    "pull.head?.sha !== resumeHeadSha",
-    "bodyLines.filter((line) => line === targetMarkerLine).length !== 1",
+    "pull.head?.sha !== expectedHeadSha",
+    "bodyLines.filter((line) => line === targetMarker).length !== 1",
     'export GITHUB_TOOLS="push_files"',
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "Groq Free, €0 only. Resume exactly one existing task PR.",
