@@ -406,10 +406,7 @@
       "head_sha": null,
       "target_branch": "main",
       "read_paths": [
-        "tools/check_task_ledger.py",
-        "tools/test_check_task_ledger.py",
-        "tools/audit_task_ledger_github.py",
-        "tools/check_autonomous_provider_handoff.py"
+        "tools/check_task_ledger_summary.py"
       ]
     },
     {
@@ -894,10 +891,8 @@
       "head_sha": null,
       "target_branch": "dev",
       "read_paths": [
-        "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/pause_state.h",
-        "gamecube-demo/source/main.c",
-        "gamecube-demo/tests/test_gameplay_state.c"
+        "gamecube-demo/tests/test_pause_state.c"
       ]
     }
   ]

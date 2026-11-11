@@ -83,6 +83,11 @@ jobs:
       - name: Execute global task preflight with mocked GitHub data (offline)
         shell: bash
         run: python3 tools/test_autonomous_task_preflight.py
+      - name: Validate bounded task-scoped source reads (offline)
+        shell: bash
+        run: |
+          python3 tools/check_task_read_paths.py
+          python3 tools/test_task_read_paths.py
 
       - name: Revalidate queued autonomous tasks with mocked GitHub data (offline)
         shell: bash
