@@ -234,7 +234,7 @@ jobs:
                     textFilePattern.test(value) &&
                     value !== 'docs/automation/task-ledger.json' &&
                     value !== 'docs/automation/task-ledger-summary.json' &&
-                    !parts.some((part) => part.toLowerCase() === 'generated');
+                    !parts.some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()));
                 };
                 resumeFilePaths = [...new Set(changedFiles
                   .filter((file) => file && file.status !== 'removed' && safePath(file.filename))
