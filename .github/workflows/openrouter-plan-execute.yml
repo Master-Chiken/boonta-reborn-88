@@ -635,9 +635,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const { findBlockedReportContradictions, validateAutonomousCycleReport } =
+            const { attachReservedCycleMetadata, findBlockedReportContradictions, validateAutonomousCycleReport } =
               require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
-            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const rawSummary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();\n            const summary = attachReservedCycleMetadata(rawSummary, process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {
