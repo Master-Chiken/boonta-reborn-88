@@ -396,7 +396,7 @@ if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
 if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
     errors.append("Groq must have four bounded write/PR/report steps")
-elif 4 * (1152 + 384) >= 8000:
+elif 4 * (1500 + 256) >= 8000:
     errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
@@ -431,8 +431,8 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,152 context tokens and 384 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
-    errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
+if "1,500 context tokens and 256 output tokens" not in budget or "3,200-character verified-context ceiling; 1,100-character task handoff" not in budget:
+    errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
@@ -661,7 +661,7 @@ else:
     resume_body = groq[resume_start + len(resume_start_marker):resume_end]
     resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
     if len(resume_body) > 1400:
-        errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
+        errors.append(f"Groq resume prompt leaves insufficient room under the 5,200-character TPM cap: {len(resume_body)}")
 if len(actual_groq_prompt) > 1900:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,200-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
