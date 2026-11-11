@@ -1191,7 +1191,7 @@ else:
 # least-privilege permission set requested by the reusable Gemini workflow.
 dispatch_plan_job = dispatch.split("  plan-execute:", 1)[1]
 dispatch_plan_permissions_match = re.search(
-    r"(?ms)^    permissions:\\n(?P<block>(?:      [^\\n]*\\n)+)",
+    r"(?ms)^    permissions:\n(?P<block>(?:      [^\n]*\n)+)",
     dispatch_plan_job,
 )
 if not dispatch_plan_permissions_match:
@@ -1199,7 +1199,7 @@ if not dispatch_plan_permissions_match:
 else:
     dispatch_plan_permissions = dict(
         re.findall(
-            r"(?m)^      ([a-zA-Z-]+):\\s*([a-zA-Z]+)\\s*$",
+            r"(?m)^      ([a-zA-Z-]+):\s*([a-zA-Z]+)\s*$",
             dispatch_plan_permissions_match.group("block"),
         )
     )
