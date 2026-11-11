@@ -12,8 +12,8 @@ const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
 
 assert.equal(
-  attachReservedCycleMetadata('BOONTA_CYCLE_STATUS: BLOCKED\\nBOONTA_CYCLE_TASK_ID: WRONG\\nBOONTA_CYCLE_EVIDENCE_BASE: dev', taskId, 'main'),
-  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\\nBOONTA_CYCLE_STATUS: BLOCKED\\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  attachReservedCycleMetadata('BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_TASK_ID: WRONG\nBOONTA_CYCLE_EVIDENCE_BASE: dev', taskId, 'main'),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
   'the trusted workflow reservation must replace omitted or model-supplied task/base metadata without changing the substantive report'
 );
 assert.throws(
