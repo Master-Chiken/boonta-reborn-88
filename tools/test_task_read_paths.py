@@ -20,6 +20,7 @@ def ledger_with_paths(paths: list[str]) -> dict:
         "platform_scope": ["automation"],
         "owner_role_id": "chief-of-staff",
         "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+        "depends_on": [],
         "status": "active",
         "target_branch": "main",
         "read_paths": paths,
