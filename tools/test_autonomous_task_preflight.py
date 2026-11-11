@@ -132,7 +132,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
-        "expected_resume_candidate": false,
+        "expected_resume_candidate": False,
     },
     {
         "name": "trusted owner-authored same-repository task PR is identified as a resume candidate without launching a provider",
@@ -152,7 +152,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": false,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
-        "expected_resume_candidate": true,
+        "expected_resume_candidate": True,
         "expected_resume_pr_number": "388",
     },
     {
@@ -173,7 +173,7 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": false,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
-        "expected_resume_candidate": false,
+        "expected_resume_candidate": False,
     },
     {
         "name": "activation opens after UTC reset",
