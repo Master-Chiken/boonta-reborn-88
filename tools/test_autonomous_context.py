@@ -20,7 +20,7 @@ def fixture(root: Path) -> str:
         "DISCOVER VERIFY EXTRACT/CONVERT/REUSE GameCube/Wii", encoding="utf-8"
     )
     (root / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md").write_text(
-        "One model provider invocation at most; €0; 1,500 tokens", encoding="utf-8"
+        "One model provider invocation at most; €0; 1,550 context tokens", encoding="utf-8"
     )
     summary = {
         "schema_version": 2,
