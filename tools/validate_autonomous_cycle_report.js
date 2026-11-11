@@ -34,7 +34,7 @@ function attachReservedCycleMetadata(summary, expectedTaskId, expectedBase) {
       !expectedTaskId.trim() || !Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)) {
     throw new Error('Cannot attach incomplete or invalid reserved cycle metadata.');
   }
-  const lines = summary.trim().split(/\\r?\\n/).filter((line) =>
+  const lines = summary.trim().split(/\r?\n/).filter((line) =>
     !line.startsWith('BOONTA_CYCLE_TASK_ID:') &&
     !line.startsWith('BOONTA_CYCLE_EVIDENCE_BASE:')
   );
