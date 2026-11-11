@@ -11,6 +11,9 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER_PATH = ROOT / "docs/automation/task-ledger.json"
+ROLE_REGISTRY_PATH = ROOT / "docs/automation/agent-roles.json"
+ROLE_ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
+OBJECTIVE_ID_RE = re.compile(r"^[A-Z][A-Z0-9-]{2,63}$")
 STATUSES = {"queued", "active", "blocked", "in_review", "completed", "superseded"}
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
@@ -42,7 +45,7 @@ def _is_date(value: Any) -> bool:
         return False
 
 
-def validate_ledger(data: Any) -> list[str]:
+def validate_ledger(data: Any, role_ids: set[str] | None = None, objective_ids: set[str] | None = None) -> list[str]:
     errors: list[str] = []
     if not isinstance(data, dict):
         return ["ledger root must be a JSON object"]
@@ -73,6 +76,16 @@ def validate_ledger(data: Any) -> list[str]:
             seen.add(task_id)
         if not isinstance(task.get("title"), str) or not task["title"].strip():
             errors.append(f"{prefix}.title is required")
+        owner_role_id = task.get("owner_role_id")
+        if not isinstance(owner_role_id, str) or not ROLE_ID_RE.fullmatch(owner_role_id):
+            errors.append(f"{prefix}.owner_role_id must be a stable role identifier")
+        elif role_ids is not None and owner_role_id not in role_ids:
+            errors.append(f"{prefix}.owner_role_id references an unknown role")
+        parent_objective_id = task.get("parent_objective_id")
+        if not isinstance(parent_objective_id, str) or not OBJECTIVE_ID_RE.fullmatch(parent_objective_id):
+            errors.append(f"{prefix}.parent_objective_id must be a stable objective identifier")
+        elif objective_ids is not None and parent_objective_id not in objective_ids:
+            errors.append(f"{prefix}.parent_objective_id references an unknown objective")
         if not isinstance(task.get("queue"), str) or not task["queue"].startswith("#"):
             errors.append(f"{prefix}.queue must reference a canonical issue")
         scope = task.get("platform_scope")
@@ -128,10 +141,15 @@ def validate_ledger(data: Any) -> list[str]:
 def main() -> int:
     try:
         data = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"Task ledger could not be read: {exc}", file=sys.stderr)
+        registry = json.loads(ROLE_REGISTRY_PATH.read_text(encoding="utf-8"))
+        roles = registry.get("roles", [])
+        objectives = registry.get("objectives", [])
+        role_ids = {role["id"] for role in roles if isinstance(role, dict) and isinstance(role.get("id"), str)}
+        objective_ids = {objective["id"] for objective in objectives if isinstance(objective, dict) and isinstance(objective.get("id"), str)}
+    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        print(f"Task ledger or role registry could not be read: {exc}", file=sys.stderr)
         return 1
-    errors = validate_ledger(data)
+    errors = validate_ledger(data, role_ids, objective_ids)
     if errors:
         print("Boonta task ledger validation FAILED:")
         for error in errors:
