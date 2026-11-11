@@ -8,6 +8,12 @@ on:
       - .github/workflows/boonta-autonomous-readiness.yml
   workflow_dispatch:
   workflow_call:
+    inputs:
+      allow_scheduled:
+        description: Allow the trusted main-branch autonomous loop to run its read-only preflight for a scheduled event.
+        required: false
+        type: boolean
+        default: false
     outputs:
       writer_state:
         description: Whether the owner has enabled the autonomous writer
@@ -26,7 +32,7 @@ jobs:
     name: Verify autonomous configuration without running Gemini
     outputs:
       writer_state: ${{ steps.owner_gates.outputs.writer_state }}
-    if: github.ref == 'refs/heads/main' && github.actor == github.repository_owner
+    if: github.ref == 'refs/heads/main' && (inputs.allow_scheduled == true || github.actor == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

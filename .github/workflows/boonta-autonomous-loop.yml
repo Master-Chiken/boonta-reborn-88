@@ -37,6 +37,8 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
+    with:
+      allow_scheduled: ${{ github.event_name == 'schedule' }}
     secrets: inherit
 
   provider-cooldowns:
