@@ -584,8 +584,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
-    errors.append("Groq must remain capped at 1152 context / 384 output tokens so four write/PR/report steps stay below the observed 8k TPM refusal")
+if groq_limits.get("context") != 1500 or groq_limits.get("output") != 256:
+    errors.append("Groq must remain capped at 1500 context / 256 output tokens; four invocations reserve 7,024 nominal tokens below the observed 8k TPM ceiling")
 groq_model_config = (
     groq_config.get("provider", {})
     .get("groq", {})
@@ -615,7 +615,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 3600 )); then", "Groq must enforce its 3,600-character TPM prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 5200 )); then", "Groq must enforce its 5,200-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
@@ -623,7 +623,7 @@ for content, needle, message in (
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Only github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.", "Groq normal mode must expose only branch, push and PR tools"),
 
 ):
     if needle not in content:
@@ -662,18 +662,18 @@ else:
     resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
     if len(resume_body) > 1400:
         errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
-if len(actual_groq_prompt) > 1820:
-    errors.append(f"Groq static prompt leaves insufficient room under its 3,600-character TPM cap: {len(actual_groq_prompt)}")
+if len(actual_groq_prompt) > 1900:
+    errors.append(f"Groq static prompt leaves insufficient room under its 5,200-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1500, 1400)
-if "--max-criteria 3 --max-next-action 140" not in groq:
-    errors.append("Groq must use the reviewed compact three-criteria/140-character next-action handoff")
-if "read at most one exact path from its read-only list" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must require one exact task-scoped source read")
+context_limits("Groq", groq, 2800, 1100)
+if "--max-criteria 2 --max-next-action 100" not in groq:
+    errors.append("Groq must use the reviewed compact two-criteria/100-character next-action handoff")
+if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
 context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 1500 + 400 > 3600:
-    errors.append("Groq worst-case prompt plus task context and report exceeds its 3,600-character TPM cap")
+if len(actual_groq_prompt) + 2800 + 400 > 5200:
+    errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,200-character cap")
 if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
