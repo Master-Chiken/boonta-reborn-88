@@ -146,6 +146,31 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
+resume_guard_start = groq.find("      - name: Revalidate existing task PR after acquiring the shared writer slot")
+resume_guard_end = groq.find("\n      - name: Mint scoped GitHub App token", resume_guard_start)
+resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
+if not resume_guard:
+    errors.append("Groq owner-dispatched resume must have a separate post-queue PR revalidation step")
+elif not (
+    0 <= resume_guard_start < resume_guard_end <
+    groq.find("name: Mint scoped GitHub App token", resume_guard_start) <
+    groq.find("name: Run OpenCode through the Groq Free route", resume_guard_start)
+):
+    errors.append("Groq resume revalidation must complete before minting a write token or invoking the model")
+else:
+    for required in (
+        "inputs.resume_mode == true",
+        "RESUME_TASK_ID: ${{ inputs.resume_task_id }}",
+        "RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}",
+        "pull.head?.sha !== expectedHeadSha",
+        "pull.user?.login !== context.repo.owner",
+        "pull.draft !== false",
+        "task.pr_url || task.head_sha",
+        "bodyLines.filter((line) => line === targetMarker).length !== 1",
+    ):
+        if required not in resume_guard:
+            errors.append(f"Groq resume preflight is missing {required!r}")
+
 # A provider that failed in this run must not immediately launch another model.
 # The next provider is eligible only when its predecessor's persistent UTC
 # cooldown was already active during the global preflight at this run's start.
@@ -176,7 +201,31 @@ for needle in groq_gates:
         errors.append(f"Groq next-cycle gate missing: {needle}")
 if "needs.openrouter-fallback.result == 'failure'" in groq_job:
     errors.append("Groq must not launch after an OpenRouter failure in the same run")
-
+for required in (
+    "needs.provider-cooldowns.outputs.task_ready == 'true'",
+    "needs.provider-cooldowns.outputs.task_ready != 'true'",
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
+    "github.event_name == 'workflow_dispatch'",
+    "github.actor == github.repository_owner",
+):
+    if required not in groq_job:
+        errors.append(f"Groq owner-dispatched resume route is missing {required!r}")
+for required in (
+    "resume_mode:",
+    "resume_pr_number:",
+    "resume_pr_url:",
+    "resume_branch:",
+    "resume_head_sha:",
+    "pull.head?.sha !== expectedHeadSha",
+    "bodyLines.filter((line) => line === targetMarker).length !== 1",
+    'export GITHUB_TOOLS="push_files"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
+    "Groq Free, €0 only. Resume exactly one existing task PR.",
+):
+    if required not in groq:
+        errors.append(f"Groq exact-PR resume guard is missing {required!r}")
 # The cooldown read path must use GitHub's updated-since filter so every
 # six-hour run does not paginate the full append-only #226 comment history.
 cooldown_readers = (
@@ -416,25 +465,34 @@ else:
 openrouter_tools = set(
     openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
 )
-groq_tools = set(
-    groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
-)
+groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
     "create_branch", "push_files", "create_pull_request",
 }
+required_groq_resume_tools = {"push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
 if openrouter_tools != required_openrouter_tools:
     errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
-if groq_tools != required_groq_tools:
-    errors.append("Groq must expose exactly three direct branch/push/PR tools; all reads and PR searches are preflight-owned")
+if groq_config_tools != "{env:GITHUB_TOOLS}":
+    errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
+else:
+    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
+    expected_groq_modes = {
+        "create_branch,push_files,create_pull_request",
+        "push_files",
+    }
+    if groq_modes != expected_groq_modes:
+        errors.append("Groq must expose exactly three branch/push/PR tools normally and push_files only for existing-PR resume")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
+    errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", openrouter_tools), ("Groq", groq_tools)):
+for label, toolset in (("OpenRouter", openrouter_tools),):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
@@ -570,6 +628,17 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
+resume_start_marker = "          PROMPT=\"$(cat <<'RESUME_PROMPT'\n"
+resume_end_marker = "\n          RESUME_PROMPT\n          )\""
+resume_start = groq.find(resume_start_marker)
+resume_end = groq.find(resume_end_marker, resume_start + len(resume_start_marker)) if resume_start >= 0 else -1
+if resume_start < 0 or resume_end < 0:
+    errors.append("Groq compact resume-only prompt is missing")
+else:
+    resume_body = groq[resume_start + len(resume_start_marker):resume_end]
+    resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
+    if len(resume_body) > 1400:
+        errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
 if len(actual_groq_prompt) > 1820:
     errors.append(f"Groq static prompt leaves insufficient room under its 3,600-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:

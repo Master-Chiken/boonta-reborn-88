@@ -70,6 +70,16 @@ jobs:
       openrouter_active: ${{ steps.check.outputs.openrouter_active }}
       groq_active: ${{ steps.check.outputs.groq_active }}
       task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}
+      resume_ready: ${{ steps.check.outputs.resume_ready }}
+      resume_task_id: ${{ steps.check.outputs.resume_task_id }}
+      resume_task_title: ${{ steps.check.outputs.resume_task_title }}
+      resume_task_context: ${{ steps.check.outputs.resume_task_context }}
+      resume_target_branch: ${{ steps.check.outputs.resume_target_branch }}
+      resume_pr_candidate: ${{ steps.check.outputs.resume_pr_candidate }}
+      resume_pr_number: ${{ steps.check.outputs.resume_pr_number }}
+      resume_pr_url: ${{ steps.check.outputs.resume_pr_url }}
+      resume_branch: ${{ steps.check.outputs.resume_branch }}
+      resume_head_sha: ${{ steps.check.outputs.resume_head_sha }}
     steps:
       - name: Read the three persistent UTC cooldown markers
         id: check
@@ -111,12 +121,36 @@ jobs:
             if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
               throw new Error('Open PR inventory reached the 100-item safety ceiling; refusing provider invocation to avoid duplicate task work.');
             }
-            const openTaskPullRequest = (task) => {
-              if (!task) return null;
+            const matchingTaskPullRequests = (task) => {
+              if (!task) return [];
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
-              return openPullRequests.find((pull) =>
+              return openPullRequests.filter((pull) =>
                 (pull.body || '').split(/\r?\n/).some((line) => line.trim() === markerLine)
-              ) || null;
+              );
+            };
+            const openTaskPullRequest = (task) => {
+              const matches = matchingTaskPullRequests(task);
+              return matches.length === 1 ? matches[0] : (matches.length > 1 ? { unsafe_duplicate_markers: true, number: matches[0].number } : null);
+            };
+            const isTrustedResumeCandidate = (task, pull) => {
+              if (!task || !pull || pull.unsafe_duplicate_markers) return false;
+              const bodyLines = (pull.body || '').split(/\r?\n/).map((line) => line.trim());
+              const taskMarker = 'BOONTA_TASK_ID: ' + task.task_id;
+              const targetMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + task.target_branch;
+              return (
+                pull.state === 'open' && pull.draft === false &&
+                pull.user?.login === context.repo.owner &&
+                pull.head?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
+                pull.base?.repo?.full_name === context.repo.owner + '/' + context.repo.repo &&
+                pull.base?.ref === task.target_branch &&
+                typeof pull.head?.ref === 'string' && pull.head.ref &&
+                pull.head.ref !== pull.base.ref &&
+                /^[0-9a-f]{40}$/.test(pull.head?.sha || '') &&
+                bodyLines.filter((line) => line === taskMarker).length === 1 &&
+                bodyLines.filter((line) => line === targetMarker).length === 1 &&
+                typeof pull.html_url === 'string' &&
+                pull.html_url === 'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/pull/' + pull.number
+              );
             };
 
             // Refuse a model call unless the compact canonical queue exposes one eligible task.
@@ -150,6 +184,10 @@ jobs:
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
+            const resumeCandidateTask = activeTasks.length === 1 ? activeTasks[0] : activationTask;
+            const resumeCandidatePr = activeTasks.length === 1 ? activeTaskOpenPr : activationTaskOpenPr;
+            const resumeCandidateTrusted = isTrustedResumeCandidate(resumeCandidateTask, resumeCandidatePr) &&
+              !resumeCandidateTask?.pr_url && !resumeCandidateTask?.head_sha;
             const usableTask = (task) => Boolean(
               task && typeof task.task_id === 'string' && task.task_id.trim() &&
               typeof task.title === 'string' && task.title.trim() &&
@@ -159,6 +197,23 @@ jobs:
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
               ['main', 'dev'].includes(task.target_branch)
             );
+            const resumeSlotValid = activeTasks.length === 0
+              ? resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' && resumeCandidateTask?.status === 'blocked'
+              : activeTasks.length === 1 && activeTasks[0].task_id === resumeCandidateTask?.task_id && resumeCandidateTask?.status === 'active';
+            const resumeReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            const resumeTaskContext = resumeReady ? [
+              'Task ID: ' + resumeCandidateTask.task_id,
+              'Title: ' + resumeCandidateTask.title,
+              'Target branch: ' + resumeCandidateTask.target_branch,
+              'Question: ' + resumeCandidateTask.question_excerpt,
+              'Acceptance criteria (' + resumeCandidateTask.acceptance_criteria_total + '; first 5):',
+              ...resumeCandidateTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
+              'Next: ' + resumeCandidateTask.next_action_excerpt,
+              'Resume only the already-open PR identified by verified preflight metadata; do not create a branch or PR.',
+            ].join('\n') : '';
+            if (resumeReady && resumeTaskContext.length > 2500) {
+              throw new Error('Resume task context exceeds the bounded 2,500-character provider handoff budget.');
+            }
             let selectedTask = null;
             let taskReason = '';
             if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
@@ -207,6 +262,9 @@ jobs:
               taskReason = 'the activation task is paused by its same-day UTC backoff; a qualifying owner manual dispatch or main push is required';
             } else {
               taskReason = 'no eligible active task or approved post-cooldown activation task exists';
+            }
+            if (resumeReady) {
+              taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' is eligible for owner-dispatched Groq Free resume';
             }
             const taskReady = Boolean(selectedTask);
             const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
@@ -260,6 +318,11 @@ jobs:
             core.setOutput('task_context', taskContext);
             core.setOutput('task_target_branch', selectedTask?.target_branch || '');
             core.setOutput('task_reason', taskReason);
+            core.setOutput('resume_pr_candidate', String(resumeCandidateTrusted));
+            core.setOutput('resume_pr_number', resumeCandidateTrusted ? String(resumeCandidatePr.number) : '');
+            core.setOutput('resume_pr_url', resumeCandidateTrusted ? resumeCandidatePr.html_url : '');
+            core.setOutput('resume_branch', resumeCandidateTrusted ? resumeCandidatePr.head.ref : '');
+            core.setOutput('resume_head_sha', resumeCandidateTrusted ? resumeCandidatePr.head.sha : '');
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
             const definitions = {
@@ -269,6 +332,11 @@ jobs:
             };
             const results = {};
             core.setOutput('task_blocked_active', String(taskBlockedActive));
+            core.setOutput('resume_ready', String(resumeReady));
+            core.setOutput('resume_task_id', resumeReady ? resumeCandidateTask.task_id : '');
+            core.setOutput('resume_task_title', resumeReady ? resumeCandidateTask.title : '');
+            core.setOutput('resume_task_context', resumeTaskContext);
+            core.setOutput('resume_target_branch', resumeReady ? resumeCandidateTask.target_branch : '');
             core.info('single-task daily backoff=' + taskBlockedActive + (taskBlockedDate ? ', recorded UTC date=' + taskBlockedDate : ', no active marker'));
             for (const [provider, marker] of Object.entries(definitions)) {
               const markerComment = botComments.find((comment) => marker.test(comment.body || ''));
@@ -291,6 +359,7 @@ jobs:
                 ['Queued / active / blocked', queuedTasks.length + ' / ' + activeTasks.length + ' / ' + blockedTasks.length],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
+                ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (owner-dispatch only)' : 'none'],
               ])
               .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, active-task reconciliation and READY. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
               .write();
@@ -357,22 +426,33 @@ jobs:
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
+  # The resume-only route requires an explicit owner workflow_dispatch; schedules do not retouch open PRs.
   groq-fallback:
-    name: Next-cycle Groq Free fallback after Gemini and OpenRouter cooldowns
+    name: Groq Free fallback or owner-dispatched existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
-      needs.provider-cooldowns.outputs.task_ready == 'true' &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       needs.autonomous-cycle.result == 'skipped' &&
-      needs.provider-cooldowns.outputs.gemini_active == 'true' &&
       needs.openrouter-fallback.result == 'skipped' &&
-      needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
-      needs.openrouter-fallback.outputs.invocation_outcome != 'success' &&
+      (
+        (
+          needs.provider-cooldowns.outputs.task_ready == 'true' &&
+          needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
+          needs.openrouter-fallback.outputs.invocation_outcome != 'success'
+        ) ||
+        (
+          needs.provider-cooldowns.outputs.task_ready != 'true' &&
+          needs.provider-cooldowns.outputs.resume_ready == 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          github.actor == github.repository_owner
+        )
+      ) &&
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
     uses: ./.github/workflows/groq-plan-execute.yml
@@ -389,6 +469,15 @@ jobs:
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
+      resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
+      resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
+      resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
+      resume_task_description: ${{ needs.provider-cooldowns.outputs.resume_task_context }}
+      resume_pr_number: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
+      resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
+      resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
+      resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
     secrets: inherit
 
   cycle-summary:
@@ -416,6 +505,8 @@ jobs:
           TASK_TITLE: ${{ needs.provider-cooldowns.outputs.task_title }}
           TASK_TARGET_BRANCH: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
           TASK_REASON: ${{ needs.provider-cooldowns.outputs.task_reason }}
+          RESUME_READY: ${{ needs.provider-cooldowns.outputs.resume_ready }}
+          RESUME_PR_NUMBER: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
           EVENT_NAME: ${{ github.event_name }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
           OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
@@ -488,6 +579,7 @@ jobs:
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
             echo "- Queue state: **${QUEUE_STATE:-NOT_EVALUATED}** (queued=${QUEUED_COUNT:-unknown}, active=${ACTIVE_COUNT:-unknown}, blocked=${BLOCKED_COUNT:-unknown})"
+            if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; owner-dispatch only."; fi
             case "${QUEUE_STATE:-NOT_EVALUATED}" in
               EMPTY_QUEUE)
                 echo
