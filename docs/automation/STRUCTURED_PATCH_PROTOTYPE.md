@@ -68,7 +68,7 @@ python3 tools/execute_autonomous_github_delivery.py \
   --expected-base-sha "$BASE_SHA_FROM_PREFLIGHT"
 \`\`\`
 
-Adding \`--execute\` without both exact-true gates fails closed before any GitHub request. Successful execution creates only a draft PR. The writer checks that the target branch still equals the verified base SHA, the deterministic branch does not already exist, and no open PR already carries the task marker. It rechecks the base branch and open task PR immediately before opening the draft. A partial failure after ref creation leaves the branch for human reconciliation; the writer does not overwrite or delete it.
+Adding \`--execute\` without both exact-true gates fails closed before any GitHub request. Successful execution creates only a draft PR. The writer checks that the target branch still equals the verified base SHA, the deterministic branch does not already exist, and no open PR already carries the task marker. It rechecks the base branch and open task PR immediately before opening the draft. A partial failure after ref creation leaves the branch for human reconciliation; the writer does not overwrite or delete it. The API destination is pinned in code to `Master-Chiken/boonta-reborn-88`; a plan cannot be retargeted to another repository, even when a token has access there.
 
 The writer is a separately callable tool. It is **not** invoked by Gemini, OpenRouter, Groq, Paperclip or the scheduled autonomous loop. No live writer execution has been performed as part of this prototype.
 
