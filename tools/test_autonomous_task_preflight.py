@@ -132,6 +132,48 @@ cases = [
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": false,
+    },
+    {
+        "name": "trusted owner-authored same-repository task PR is identified as a resume candidate without launching a provider",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 388,
+            "state": "open",
+            "draft": false,
+            "user": {"login": "Master-Chiken"},
+            "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "AUTOMATION-LEDGER-ACTIVATION", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+            "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+        }],
+        "expected_ready": false,
+        "expected_task_id": "",
+        "expected_blocked": false,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": true,
+        "expected_resume_pr_number": "388",
+    },
+    {
+        "name": "non-owner task PR is never marked resumable",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 389,
+            "state": "open",
+            "draft": false,
+            "user": {"login": "external-contributor"},
+            "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "task-branch", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+            "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/389",
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION"
+        }],
+        "expected_ready": false,
+        "expected_task_id": "",
+        "expected_blocked": false,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": false,
     },
     {
         "name": "activation opens after UTC reset",
@@ -451,6 +493,17 @@ async function runCase(testCase) {{
     }}
     if (outputs.task_id !== testCase.expected_task_id) {{
       throw new Error(testCase.name + ": expected task_id=" + testCase.expected_task_id + ", got " + outputs.task_id);
+    }}
+    if (testCase.expected_resume_candidate !== undefined &&
+      outputs.resume_pr_candidate !== String(testCase.expected_resume_candidate)) {{
+      throw new Error(testCase.name + ": expected resume_pr_candidate=" + testCase.expected_resume_candidate + ", got " + outputs.resume_pr_candidate);
+    }}
+    if (testCase.expected_resume_pr_number !== undefined &&
+      outputs.resume_pr_number !== testCase.expected_resume_pr_number) {{
+      throw new Error(testCase.name + ": expected resume_pr_number=" + testCase.expected_resume_pr_number + ", got " + outputs.resume_pr_number);
+    }}
+    if (outputs.resume_pr_candidate === "true" && outputs.task_ready !== "false") {{
+      throw new Error(testCase.name + ": resume discovery must not authorize a provider before provider-side resume support exists");
     }}
     if (testCase.expected_ready) {{
       if (String(outputs.task_context).length > 2500) {{
