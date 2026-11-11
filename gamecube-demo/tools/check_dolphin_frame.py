@@ -228,7 +228,15 @@ def reset_state_metrics(image: Image.Image) -> dict[str, float]:
                         if g > 180 and r > 100 and b > 100)
     lap_done = sum(1 for r, g, b in lap_marker_row
                    if g > 180 and r > 100 and b > 100)
-    steering_marker_offset = abs(steering_indicator_center(image) - width / 2.0)
+    try:
+        steering_marker_offset = abs(steering_indicator_center(image) - width / 2.0)
+    except ValueError:
+        # The post-Y reset returns to READY / COURSE SELECT. That screen has
+        # no active steering marker, so validate its explicit course-select
+        # panel instead of treating a deliberately absent marker as failure.
+        if not course_select_view_visible(image):
+            raise
+        steering_marker_offset = 0.0
     row_width = max(1, len(speed_row))
     return {
         "speed_fill_pixels": float(speed_fill),
@@ -329,6 +337,42 @@ def results_view_visible(image: Image.Image) -> bool:
             if r >= 220 and 120 <= g <= 190 and b <= 100:
                 orange_pixels += 1
     return orange_pixels >= 12
+
+
+
+def course_select_view_visible(image: Image.Image) -> bool:
+    """Detect the READY screen's COURSE SELECT heading and dark selection panel."""
+    image = image.convert("RGB")
+    width, height = image.size
+    viewport_top = detect_game_viewport_top(image)
+    viewport_height = max(1, height - viewport_top)
+    scale_x = width / 800.0
+    scale_y = viewport_height / 480.0
+    center_x = width / 2.0
+    center_y = viewport_top + viewport_height / 2.0
+    x0 = max(0, int(center_x - 90.0 * scale_x))
+    x1 = min(width, int(center_x + 90.0 * scale_x))
+    y0 = max(0, int(center_y - 49.0 * scale_y))
+    y1 = min(height, int(center_y - 30.0 * scale_y))
+    pixels = image.load()
+    orange_heading_pixels = 0
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            r, g, b = pixels[x, y]
+            if r >= 220 and 120 <= g <= 190 and b <= 100:
+                orange_heading_pixels += 1
+
+    panel_x0 = max(0, int(center_x - 120.0 * scale_x))
+    panel_x1 = min(width, int(center_x + 120.0 * scale_x))
+    panel_y0 = max(0, int(center_y - 52.0 * scale_y))
+    panel_y1 = min(height, int(center_y + 52.0 * scale_y))
+    dark_panel_pixels = 0
+    for y in range(panel_y0, panel_y1):
+        for x in range(panel_x0, panel_x1):
+            r, g, b = pixels[x, y]
+            if r <= 35 and g <= 42 and b <= 55:
+                dark_panel_pixels += 1
+    return orange_heading_pixels >= 12 and dark_panel_pixels >= 1000
 
 
 def finish_banner_visible(image: Image.Image) -> bool:
