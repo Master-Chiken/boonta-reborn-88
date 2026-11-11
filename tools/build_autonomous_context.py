@@ -113,21 +113,18 @@ def _build_source_excerpt(
         except UnicodeDecodeError as exc:
             raise ContextBuildError(f"Exact source path is not valid UTF-8: {path}") from exc
         chunks: list[str] = []
-        remaining = per_path_budget
+        range_budget = max(80, per_path_budget // len(path_ranges))
         for start, end in path_ranges:
             if end > len(lines):
                 raise ContextBuildError(f"Source range {path}:{start}-{end} exceeds the {len(lines)}-line file")
-            header = f"[{path}:{start}-{end}]\n"
-            body = "\n".join(lines[start - 1:end])
-            chunk = header + body + "\n"
-            if len(chunk) > remaining:
-                if remaining <= len(header) + 24:
-                    break
-                chunk = header + body[: remaining - len(header) - 2].rstrip() + "…\n"
+            header = f"[{path}:{start}-{end}]\\n"
+            body = "\\n".join(lines[start - 1:end])
+            chunk = header + body + "\\n"
+            if len(chunk) > range_budget:
+                if range_budget <= len(header) + 24:
+                    raise ContextBuildError(f"Source excerpt budget is too small for {path}:{start}-{end}")
+                chunk = header + body[: range_budget - len(header) - 2].rstrip() + "…\\n"
             chunks.append(chunk)
-            remaining -= len(chunk)
-            if remaining <= 0:
-                break
         rendered.append("".join(chunks).rstrip())
     output = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\n" + "\n".join(rendered)
     if len(output) > max_source_chars:
