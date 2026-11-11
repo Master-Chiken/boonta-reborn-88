@@ -661,7 +661,8 @@ jobs:
           Groq Free, €0 only. Execute the one globally selected task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative. Use the preloaded excerpts for every exact task path, taken from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.\n          - No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths; model-side file reads and repo-wide discovery are disabled.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative. Use the preloaded excerpts for every exact task path, taken from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
+          - No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths; model-side file reads and repo-wide discovery are disabled.
           - Do not search PR history. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
           SAFETY
@@ -669,7 +670,8 @@ jobs:
           - Preserve clean-room provenance; never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs.
           
           TOOLS / DELIVERY
-          - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.\n          - Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
+          - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.
+          - Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
           - Four steps: create TASK_BRANCH_NAME from TASK_TARGET_BRANCH; push_files once with one coherent patch; create one non-draft PR; report.
           - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
           
