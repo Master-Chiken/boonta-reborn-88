@@ -14,33 +14,71 @@ const context = { repo: { owner, repo } };
 assert.equal(
   bindCycleReportToReservedTask(
     'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.',
-    taskId
+    taskId,
+    'main'
   ),
-  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.\nBOONTA_CYCLE_TASK_ID: ' + taskId,
-  'the workflow must bind an omitted task ID from its trusted reservation'
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'the workflow must bind both omitted task ID and evidence base from its trusted reservation'
 );
 assert.equal(
-  bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED', taskId),
-  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED',
-  'an exact model echo must be preserved'
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+    taskId,
+    'main'
+  ),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'exact model echoes must be preserved'
+);
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED',
+    taskId,
+    'main'
+  ),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'an omitted evidence base must be supplied from the trusted reservation'
 );
 assert.throws(
-  () => bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED', taskId),
-  /conflicts with the workflow reservation/,
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED', taskId, 'main'),
+  /task identity conflicts with the workflow reservation/,
   'a conflicting model task ID must be rejected'
 );
 assert.throws(
   () => bindCycleReportToReservedTask(
     'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_TASK_ID: ' + taskId,
-    taskId
+    taskId,
+    'main'
   ),
   /more than one task identity marker/,
   'duplicate task identity markers must be rejected'
 );
 assert.throws(
-  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', 'bad task id'),
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: dev',
+    taskId,
+    'main'
+  ),
+  /evidence base conflicts with the workflow reservation/,
+  'a conflicting model evidence base must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+    taskId,
+    'main'
+  ),
+  /more than one evidence base marker/,
+  'duplicate evidence base markers must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', 'bad task id', 'main'),
   /valid reserved task ID/,
   'invalid preflight task IDs must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', taskId, 'staging'),
+  /valid reserved evidence base/,
+  'invalid preflight evidence bases must be rejected'
 );
 
 

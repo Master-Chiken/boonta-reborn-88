@@ -654,7 +654,7 @@ jobs:
             let summary;
             try {
               const rawSummary = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
-              summary = bindCycleReportToReservedTask(rawSummary, process.env.SELECTED_TASK_ID);
+              summary = bindCycleReportToReservedTask(rawSummary, process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
             } catch (error) {
               core.setFailed('OpenRouter report could not be bound to the reserved task: ' + error.message);
               return;

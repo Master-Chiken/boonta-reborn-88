@@ -475,7 +475,7 @@ jobs:
             const { bindCycleReportToReservedTask } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             let summary;
             try {
-              summary = bindCycleReportToReservedTask(process.env.GEMINI_SUMMARY || '', process.env.SELECTED_TASK_ID);
+              summary = bindCycleReportToReservedTask(process.env.GEMINI_SUMMARY || '', process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
             } catch (error) {
               core.setFailed('Gemini report could not be bound to the reserved task: ' + error.message);
               return;

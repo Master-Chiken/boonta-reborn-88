@@ -857,7 +857,8 @@ jobs:
             try {
               summary = bindCycleReportToReservedTask(
                 fs.readFileSync(process.env.REPORT_PATH, 'utf8'),
-                process.env.SELECTED_TASK_ID
+                process.env.SELECTED_TASK_ID,
+                process.env.SELECTED_TASK_TARGET_BRANCH
               );
             } catch (error) {
               core.setFailed('Groq report could not be bound to the reserved task: ' + error.message);
