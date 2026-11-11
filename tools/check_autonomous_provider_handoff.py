@@ -107,6 +107,7 @@ provider_model_visible_tools = (
     )),
     ("Groq", groq, (
         "github_create_branch",
+        "github_get_file_contents",
         "github_push_files",
         "github_create_pull_request",
     )),
@@ -218,6 +219,7 @@ for required in (
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
     "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
+    "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
     "github.event_name == 'workflow_dispatch'",
     "github.actor == github.repository_owner",
 ):
@@ -229,14 +231,25 @@ for required in (
     "resume_pr_url:",
     "resume_branch:",
     "resume_head_sha:",
+    "resume_file_paths:",
     "pull.head?.sha !== expectedHeadSha",
     "bodyLines.filter((line) => line === targetMarker).length !== 1",
-    'export GITHUB_TOOLS="push_files"',
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "Groq Free, €0 only. Resume exactly one existing task PR.",
+    "Only github_get_file_contents and github_push_files are exposed.",
+    "Read exactly one listed path using the supplied existing branch as the ref",
 ):
     if required not in groq:
         errors.append(f"Groq exact-PR resume guard is missing {required!r}")
+for required in (
+    "pulls.listFiles({",
+    "resumeFilePaths = [...new Set(changedFiles",
+    "core.setOutput('resume_file_paths', JSON.stringify(resumeReady ? resumeFilePaths : []))",
+):
+    if required not in loop:
+        errors.append(f"Groq resume preflight is missing verified changed-file handoff: {required!r}")
+
 # The cooldown read path must use GitHub's updated-since filter so every
 # six-hour run does not paginate the full append-only #226 comment history.
 cooldown_readers = (
@@ -496,10 +509,10 @@ else:
     groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
     expected_groq_modes = {
         "create_branch,push_files,create_pull_request",
-        "push_files",
+        "get_file_contents,push_files",
     }
     if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly three branch/push/PR tools normally and push_files only for existing-PR resume")
+        errors.append("Groq must expose exactly three branch/push/PR tools normally and one targeted read plus push only for existing-PR resume")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
     errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
