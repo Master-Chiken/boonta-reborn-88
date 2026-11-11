@@ -61,7 +61,17 @@
         "implement_production_changes",
         "approve_own_work",
         "merge",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "write_protected_branch",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -111,7 +121,17 @@
       "forbidden_actions": [
         "merge",
         "waive_qa",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "write_protected_branch",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -134,7 +154,17 @@
         "publish_rom_data",
         "publish_proprietary_assets",
         "merge",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "write_protected_branch",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -155,7 +185,16 @@
       "forbidden_actions": [
         "merge",
         "write_protected_branch",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -178,7 +217,16 @@
         "publish_proprietary_assets",
         "merge",
         "write_protected_branch",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -199,7 +247,16 @@
       "forbidden_actions": [
         "merge",
         "write_protected_branch",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -223,7 +280,17 @@
         "implement_reviewed_change",
         "merge",
         "waive_required_ci",
-        "change_governance"
+        "change_governance",
+        "auto_merge",
+        "force_push",
+        "write_protected_branch",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     },
     {
@@ -247,7 +314,14 @@
         "auto_merge",
         "force_push",
         "write_protected_branch",
-        "change_governance"
+        "change_governance",
+        "change_secrets",
+        "change_permissions",
+        "change_billing",
+        "change_branch_protection",
+        "change_provider_order",
+        "change_cooldowns",
+        "paid_fallback"
       ]
     }
   ]
