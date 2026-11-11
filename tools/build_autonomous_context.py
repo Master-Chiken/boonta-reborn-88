@@ -85,7 +85,7 @@ def _build_source_excerpt(
         raise ContextBuildError("Every exact task read path must have at least one bounded source range")
 
     source_root = source_root.resolve()
-    source_header = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\\n"
+    source_header = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\n"
     per_path_budget = max(80, (max_source_chars - len(source_header)) // len(read_paths))
     rendered: list[str] = []
     for path in read_paths:
@@ -117,13 +117,13 @@ def _build_source_excerpt(
         for start, end in path_ranges:
             if end > len(lines):
                 raise ContextBuildError(f"Source range {path}:{start}-{end} exceeds the {len(lines)}-line file")
-            header = f"[{path}:{start}-{end}]\\n"
-            body = "\\n".join(lines[start - 1:end])
-            chunk = header + body + "\\n"
+            header = f"[{path}:{start}-{end}]\n"
+            body = "\n".join(lines[start - 1:end])
+            chunk = header + body + "\n"
             if len(chunk) > range_budget:
                 if range_budget <= len(header) + 24:
                     raise ContextBuildError(f"Source excerpt budget is too small for {path}:{start}-{end}")
-                chunk = header + body[: range_budget - len(header) - 2].rstrip() + "…\\n"
+                chunk = header + body[: range_budget - len(header) - 2].rstrip() + "…\n"
             chunks.append(chunk)
         rendered.append("".join(chunks).rstrip())
     output = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\n" + "\n".join(rendered)
