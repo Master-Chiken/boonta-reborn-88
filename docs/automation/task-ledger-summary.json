@@ -2,6 +2,17 @@
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
   "updated_at": "2026-11-12",
+  "completed_task_ids": [
+    "RE002-SYSTEM-MATRIX",
+    "RE001-SYSTEM-MATRIX",
+    "RE001-RACE-LIFECYCLE-TRACE",
+    "AUTOMATION-CYCLE-REPORT-CONTRACT",
+    "AUTOMATION-GEMINI-DAILY-COOLDOWN",
+    "RE001-GC-WII-TOOLCHAIN-AUDIT",
+    "RE002-SPLINE-CURSOR-RECOVERY",
+    "AUTOMATION-READINESS-PREFLIGHT",
+    "N64-COMPWOLF-INVENTORY"
+  ],
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true
@@ -13,6 +24,7 @@
       "owner_role_id": "chief-of-staff",
       "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
       "depends_on": [],
+      "owner_approved": false,
       "queue": "#226",
       "platform_scope": [
         "automation"
@@ -71,6 +83,7 @@
       "owner_role_id": "research",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [],
+      "owner_approved": false,
       "queue": "#226",
       "platform_scope": [
         "Nintendo 64",
@@ -99,6 +112,7 @@
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [],
+      "owner_approved": false,
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -170,6 +184,7 @@
       "depends_on": [
         "GC-RACE-PROGRESSION"
       ],
+      "owner_approved": true,
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -177,11 +192,22 @@
       ],
       "status": "queued",
       "target_branch": "dev",
-      "read_paths": [],
+      "read_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/tests/test_rival_ai.c"
+      ],
       "read_ranges": [],
-      "question_excerpt": "",
-      "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are…",
+        "Implement the smallest deterministic native rival-progress model that can represent route distance, lap completion and finished state…",
+        "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
+        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
+        "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset."
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap…"
@@ -194,6 +220,7 @@
       "depends_on": [
         "GC-RIVAL-ROUTE-PROGRESSION"
       ],
+      "owner_approved": true,
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -203,9 +230,15 @@
       "target_branch": "dev",
       "read_paths": [],
       "read_ranges": [],
-      "question_excerpt": "",
-      "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "question_excerpt": "Can the immediate-boot single-race loop become a coherent native game flow with title/start, pre-race transition, active race, results and restart while keeping all transitions testable?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Trace the current boot, input, draw, pause, finish, results and reset paths; reuse existing input and HUD/rendering helpers before…",
+        "Introduce an explicit, testable front-end/session state machine for title, pre-race, active race, pause, results and restart; no state may…",
+        "Provide a usable GameCube controller path from boot to starting the existing native race and from results back to a clean new race.",
+        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…",
+        "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions."
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently…"
@@ -220,6 +253,7 @@
         "GC-RIVAL-ROUTE-PROGRESSION",
         "GC-RACE-FRONTEND-FLOW"
       ],
+      "owner_approved": true,
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -229,9 +263,15 @@
       "target_branch": "dev",
       "read_paths": [],
       "read_ranges": [],
-      "question_excerpt": "",
-      "acceptance_criteria_total": 0,
-      "acceptance_criteria_excerpt": [],
+      "question_excerpt": "Which native race-frame CPU, route-sampling, GX submission or memory costs are actually limiting performance, and what smallest measured optimization improves them without changing gameplay?",
+      "acceptance_criteria_total": 7,
+      "acceptance_criteria_excerpt": [
+        "Do not start until the race lifecycle, rival progression and front-end flow have passing functional regression tests.",
+        "Establish a repeatable baseline for frame time, route sampling, GX submission and memory use on available Dolphin diagnostics and/or real…",
+        "Identify one measured bottleneck with reproducible evidence before changing implementation; do not optimize based only on intuition or…",
+        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…",
+        "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject…"
+      ],
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route…"
