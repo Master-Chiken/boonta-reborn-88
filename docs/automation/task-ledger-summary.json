@@ -12,6 +12,7 @@
       "title": "Activate and validate persistent autonomous task tracking",
       "owner_role_id": "chief-of-staff",
       "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": [],
       "queue": "#226",
       "platform_scope": [
         "automation"
@@ -69,6 +70,7 @@
       "title": "Validate the N64 Pupp candidate with an owner-local structural parser probe (T2)",
       "owner_role_id": "research",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [],
       "queue": "#226",
       "platform_scope": [
         "Nintendo 64",
@@ -96,6 +98,7 @@
       "title": "Complete the native single-race lifecycle through results and restart",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [],
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -164,6 +167,9 @@
       "title": "Make rival racers progress through the native route and complete the race",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION"
+      ],
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -185,6 +191,9 @@
       "title": "Add a native title and pre-race flow around the playable race",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RIVAL-ROUTE-PROGRESSION"
+      ],
       "queue": "#226",
       "platform_scope": [
         "GameCube",
@@ -206,6 +215,11 @@
       "title": "Measure and optimize the native race frame on GameCube/Wii",
       "owner_role_id": "platform",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION",
+        "GC-RIVAL-ROUTE-PROGRESSION",
+        "GC-RACE-FRONTEND-FLOW"
+      ],
       "queue": "#226",
       "platform_scope": [
         "GameCube",
