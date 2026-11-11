@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-11",
+  "updated_at": "2026-11-12",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -893,7 +893,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "active",
+      "status": "in_review",
       "question": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
       "acceptance_criteria": [
         "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in gamecube-demo/source/main.c, gamecube-demo/source/gameplay_state.h, gamecube-demo/source/pause_state.h and their host tests; distinguish existing behavior from the specific missing results/session transition.",
@@ -915,10 +915,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
       ],
-      "next_action": "Owner-approved 2026-11-11. Start on the current dev branch by tracing existing lifecycle transitions and PR #327 rival integration; implement only the missing results/session transition with production-helper host tests, then open one PR to dev. Preserve all platform/provenance and exact-head CI limits.",
-      "updated_at": "2026-11-11",
-      "pr_url": null,
-      "head_sha": null,
+      "next_action": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main.",
+      "updated_at": "2026-11-12",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
+      "head_sha": "1073e2a19ac754492044df44a0b42b233ecb7563",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
