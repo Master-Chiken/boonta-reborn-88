@@ -594,7 +594,7 @@ jobs:
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,500/256 limits; max 4 steps (7,024 nominal tokens). Exact task source excerpts are preloaded; no model file-read step.
+          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Exact task source excerpts are preloaded; no model file-read step.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -619,7 +619,7 @@ jobs:
                   "openai/gpt-oss-20b": {
                     "temperature": true,
                     "limit": {
-                      "context": 1500,
+                      "context": 1550,
                       "output": 256
                     }
                   }
@@ -747,8 +747,8 @@ jobs:
           fi
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 5200 )); then
-            echo "::error::Groq prompt exceeds the 5,200-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 5500 )); then
+            echo "::error::Groq prompt exceeds the 5,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
