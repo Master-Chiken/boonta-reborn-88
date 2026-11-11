@@ -496,17 +496,505 @@ required_openrouter_tools = {
 required_groq_tools = {
     "create_branch", "push_files", "create_pull_request",
 }
-required_groq_resume_tools = {"push_files"}
+required_groq_resume_tools = {"get_file_contents", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
 if openrouter_tools != required_openrouter_tools:
     errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
+if not required_groq_resume_tools.issubset(set("get_file_contents,push_files".split(","))):
+    errors.append("Groq resume toolset must include only targeted reading and branch writing")
 if groq_config_tools != "{env:GITHUB_TOOLS}":
     errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
 else:
-    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
+    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"
+        "create_branch,push_files,create_pull_request",
+        "get_file_contents,push_files",
+    }
+    if groq_modes != expected_groq_modes:
+        errors.append("Groq must expose exactly three branch/push/PR tools normally and one targeted read plus push only for existing-PR resume")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
+    errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
+
+for label, toolset in (("OpenRouter", openrouter_tools),):
+    forbidden = {
+        "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
+        "list_branches", "list_commits", "merge_pull_request", "delete_branch",
+        "update_pull_request", "add_issue_comment", "pull_request_read",
+        "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
+    }
+    if forbidden.intersection(toolset):
+        errors.append(f"{label} MCP allow-list exposes unnecessary or unsafe tools: {sorted(forbidden.intersection(toolset))}")
+
+required_gemini_ci_tools = {
+    "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
+}
+gemini_settings_match = re.search(r'"includeTools":\s*\[(.*?)\]', gemini, re.DOTALL)
+if not gemini_settings_match:
+    errors.append("Gemini MCP allow-list is missing")
+else:
+    gemini_tools = set(re.findall(r'"([^"]+)"', gemini_settings_match.group(1)))
+    if not required_writer_tools.issubset(gemini_tools):
+        errors.append("Gemini MCP allow-list is missing a bounded branch/PR editing tool")
+    if not required_gemini_ci_tools.issubset(gemini_tools):
+        errors.append("Gemini must retain bounded read-only PR/Actions CI diagnostic tools")
+    if {"merge_pull_request", "delete_branch", "update_pull_request", "list_pull_requests"}.intersection(gemini_tools):
+        errors.append("Gemini MCP allow-list exposes an unsafe or unavailable repository mutation/list tool")
+
+# Both OpenCode providers must resolve the actual checked-out repository root,
+# validate the selected task against schema v2, and preload policy/context before
+# spending provider inference or scarce agent tool steps.
+for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
+    required = (
+        "id: prepare_context",
+        "tools/build_autonomous_context.py",
+        'git -C "$candidate" rev-parse --show-toplevel',
+        'AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}',
+        'REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}',
+        "steps.prepare_context.outcome == 'success'",
+        '"$REPO_ROOT" <<' + "'PY'",
+    )
+    for needle in required:
+        if needle not in content:
+            errors.append(f"{label} must resolve the checked-out root and preload schema-v2 context: missing {needle!r}")
+    if '"$GITHUB_WORKSPACE" <<' + "'PY'" in content:
+        errors.append(f"{label} must not launch OpenCode from the ambiguous outer workspace root")
+
+for required in (
+    'summary.get("schema_version") != 2',
+    'summary.get("source") != "docs/automation/task-ledger.json"',
+    'task.get("title") != task_title or task.get("target_branch") != target_branch',
+    'task.get("pr_url") or task.get("head_sha")',
+    'task_id != "AUTOMATION-LEDGER-ACTIVATION"',
+    'required_handoff_text',
+    'task["question_excerpt"]',
+    'task["next_action_excerpt"]',
+    "if not all(item in bounded_task_context for item in required_handoff_text)",
+    "truncates required question, acceptance-criteria or next-action excerpts",
+):
+    if required not in context_builder:
+        errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
+if "tight context budget to reject truncated required task excerpts" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must prove required task excerpts are not silently truncated")
+# Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
+# pre-inference size guard. The workflow remains €0-only.
+groq_limits = (
+    groq_config.get("provider", {})
+    .get("groq", {})
+    .get("models", {})
+    .get("openai/gpt-oss-20b", {})
+    .get("limit", {})
+)
+if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
+    errors.append("Groq must remain capped at 1152 context / 384 output tokens so four write/PR/report steps stay below the observed 8k TPM refusal")
+groq_model_config = (
+    groq_config.get("provider", {})
+    .get("groq", {})
+    .get("models", {})
+    .get("openai/gpt-oss-20b", {})
+)
+if groq_model_config.get("temperature") is not True:
+    errors.append("Groq model must explicitly declare temperature support so OpenCode does not silently drop the build-agent setting")
+if groq_config.get("agent", {}).get("build", {}).get("temperature") != 0.2:
+    errors.append("Groq build agent must use temperature 0.2 for more deterministic structured tool-call generation")
+for required in (
+    "start_new_session=True",
+    "tokens per minute\\s*\\(TPM\\)",
+    "free-models-per-day",
+    "free-models-per-minute",
+    "HTTP\\s*429",
+    "HTTP\\s*401",
+    "too many requests",
+    "missing authentication header",
+    "invalid api key",
+    "os.killpg(process.pid, signal.SIGTERM)",
+    "signal.signal(signal.SIGTERM, handle_shutdown)",
+    "signal.signal(signal.SIGINT, handle_shutdown)",
+    "sys.exit(75)",
+    "report.flush()",
+):
+    if required not in groq:
+        errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
+for content, needle, message in (
+    (groq, "if (( ${#PROMPT} > 3600 )); then", "Groq must enforce its 3,600-character TPM prompt-size guard before inference"),
+    (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
+    (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
+
+    (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
+    (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
+    (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
+    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+
+):
+    if needle not in content:
+        errors.append(message)
+
+
+# Measure the actual de-indented heredoc sent to each provider. The prior
+# guards only rejected oversized prompts after assembling them; they did not
+# prove that the configured maximum context could fit below those guards.
+def actual_provider_prompt(label: str, workflow: str) -> str:
+    start_marker = "          PROMPT=\"$(cat <<'PROMPT'\n"
+    end_marker = "\n          PROMPT\n          )\""
+    start = workflow.find(start_marker)
+    end = workflow.find(end_marker, start + len(start_marker)) if start >= 0 else -1
+    if start < 0 or end < 0:
+        errors.append(f"{label} provider prompt heredoc is missing")
+        return ""
+    body = workflow[start + len(start_marker):end]
+    return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
+
+def context_limits(label: str, workflow: str, expected_chars: int, expected_task: int) -> None:
+    match = re.search(r"--max-chars (\d+) --max-task-context (\d+)", workflow)
+    if not match or (int(match.group(1)), int(match.group(2))) != (expected_chars, expected_task):
+        errors.append(f"{label} context builder must use the reviewed {expected_chars}/{expected_task}-character limits")
+
+actual_groq_prompt = actual_provider_prompt("Groq", groq)
+actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
+resume_start_marker = "          PROMPT=\"$(cat <<'RESUME_PROMPT'\n"
+resume_end_marker = "\n          RESUME_PROMPT\n          )\""
+resume_start = groq.find(resume_start_marker)
+resume_end = groq.find(resume_end_marker, resume_start + len(resume_start_marker)) if resume_start >= 0 else -1
+if resume_start < 0 or resume_end < 0:
+    errors.append("Groq compact resume-only prompt is missing")
+else:
+    resume_body = groq[resume_start + len(resume_start_marker):resume_end]
+    resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
+    if len(resume_body) > 1400:
+        errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
+if len(actual_groq_prompt) > 1820:
+    errors.append(f"Groq static prompt leaves insufficient room under its 3,600-character TPM cap: {len(actual_groq_prompt)}")
+if len(actual_openrouter_prompt) > 3600:
+    errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
+context_limits("Groq", groq, 1500, 1400)
+context_limits("OpenRouter", openrouter, 2400, 2200)
+if len(actual_groq_prompt) + 1500 + 400 > 3600:
+    errors.append("Groq worst-case prompt plus task context and report exceeds its 3,600-character TPM cap")
+if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
+    errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
+
+
+# Keep autonomous prompts compact and aligned with the already-merged gameplay state.
+# A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
+if len(gemini_prompt) > 8500:
+    errors.append(f"Gemini autonomous prompt exceeds the 8,500-character context ceiling: {len(gemini_prompt)}")
+if gemini_prompt.count("Keep newly retrieved repository/issue text below 1,500 tokens total.") != 1:
+    errors.append("Gemini autonomous prompt must state the 1,500-token retrieval budget exactly once")
+for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq), ("Autonomous loop", loop)):
+    if "#317 → #318 → #319" in content:
+        errors.append(f"{label} instructions still reference the superseded rival-AI PR chain")
+    if "69deb6778f9383887118803428e7014686865a83" not in content:
+        errors.append(f"{label} instructions must identify the merged PR #327 implementation")
+    required_reopen_rule = (
+        "#317/#318/#319 are superseded. Do not recreate them."
+        if label == "Groq" else "Do not reopen, replay or recreate that chain"
+    )
+    if required_reopen_rule not in content:
+        errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
+
+# Free-agent preflight has already reserved the exact ledger row and rejected a
+# matching open task PR. Do not spend scarce inference steps repeating that lookup.
+for label, prompt in (("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "Global preflight is authoritative",
+        "Do not search PR history",
+        "pr_url",
+        "head_sha",
+        "older merged automation PRs",
+    ):
+        if required not in prompt:
+            errors.append(f"{label} prompt is missing preflight-owned task-state rule {required!r}")
+for required in (
+    "Post-merge reconciliation",
+    "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
+    "including merged/closed results",
+    "closed-unmerged is not completion",
+    "verify live `merged_at`",
+    "final `head.sha`",
+    "record that original PR URL and exact head SHA as evidence",
+    "Never use the ledger-update PR's own SHA as task evidence",
+):
+    if required not in gemini_prompt:
+        errors.append(f"Gemini prompt is missing the post-merge task reconciliation rule {required!r}")
+
+# A provider request is permitted only when the compact ledger yields one eligible task.
+for required in (
+    "permissions:\n      contents: read\n      issues: read\n      pull-requests: read",
+    "path: 'docs/automation/task-ledger-summary.json'",
+    "ledgerSummary.schema_version !== 2",
+    "ledgerSummary.source !== 'docs/automation/task-ledger.json'",
+    "ledgerSummary.policy?.max_active_tasks !== 1",
+    "new Set(taskIds).size !== taskIds.length",
+    "activeTasks.length === 1",
+    "activationTask.status === 'blocked'",
+    "const usableTask = (task) => Boolean(",
+    "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "const { data: openPullRequests } = await github.rest.pulls.list({",
+    "state: 'open'",
+    "page: 1",
+    "openPullRequests.length >= 100",
+    "const openTaskPullRequest = (task) =>",
+    "const markerLine = 'BOONTA_TASK_ID: ' + task.task_id",
+    "const activationTaskOpenPr = openTaskPullRequest(activationTask)",
+    "!activationTaskOpenPr",
+    "activeTaskOpenPr",
+    "!taskBlockedActive",
+    "core.setOutput('task_ready', String(taskReady))",
+):
+    if required not in loop:
+        errors.append(f"Task eligibility preflight is missing {required!r}")
+if loop.count("needs.provider-cooldowns.outputs.task_ready == 'true'") != 3:
+    errors.append("All three provider routes must require the same eligible-task preflight")
+
+# A skipped provider cycle must explain whether the queue is empty, blocked,
+# waiting for task promotion, or waiting for PR reconciliation.
+for required in (
+    "queue_state: ${{ steps.check.outputs.queue_state }}",
+    "queued_count: ${{ steps.check.outputs.queued_count }}",
+    "const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');",
+    "const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');",
+    "queueState = 'EMPTY_QUEUE';",
+    "queueState = 'QUEUED_TASKS_WAITING_FOR_PROMOTION';",
+    "queueState = 'BLOCKED_TASKS_ONLY';",
+    "core.setOutput('queue_state', queueState)",
+    "QUEUE_STATE: ${{ needs.provider-cooldowns.outputs.queue_state }}",
+    "EMPTY_QUEUE — WAITING_FOR_OWNER_APPROVAL",
+    "No AI provider was invoked, no provider cooldown was written",
+):
+    if required not in loop:
+        errors.append(f"Autonomous queue-state reporting is missing {required!r}")
+for required_case in (
+    '"name": "empty canonical ledger reports EMPTY_QUEUE"',
+    '"name": "queued task is visible but not silently promoted"',
+    '"name": "blocked non-activation tasks are not auto-unblocked"',
+    '"name": "activation same-day backoff is reported separately from empty queue"',
+    '"name": "open task PR is reported as waiting for reconciliation"',
+):
+    if required_case not in task_preflight_tests:
+        errors.append(f"Offline task-preflight tests are missing queue-state scenario {required_case!r}")
+if 'outputs.queue_state !== testCase.expected_queue_state' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must assert the queue-state output")
+if '"name": "open PR with exact task marker blocks duplicate activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove an open PR with the exact task marker blocks duplicate inference")
+if '"name": "open PR for a different task does not block activation"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove unrelated task markers do not block the selected task")
+if '"name": "100 open PRs fail closed at the bounded inventory ceiling"' not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must prove the open-PR inventory ceiling fails closed")
+if 'options.state !== "open"' not in task_preflight_tests or "options.per_page !== 100" not in task_preflight_tests or "options.page !== 1" not in task_preflight_tests:
+    errors.append("Offline task-preflight tests must enforce the bounded one-page open-PR query")
+
+# The blocked-task marker is referenced during selection. It must be computed
+# from today's bot comments before that first reference, not later in the script.
+preflight_start = loop.find("      - name: Read the three persistent UTC cooldown markers")
+preflight_script_start = loop.find("          script: |", preflight_start)
+preflight_script_end = loop.find("\n  autonomous-cycle:", preflight_script_start)
+if preflight_start < 0 or preflight_script_start < 0 or preflight_script_end < 0:
+    errors.append("Task eligibility preflight script could not be isolated for ordering checks")
+else:
+    preflight_script = loop[preflight_script_start:preflight_script_end]
+    declaration = preflight_script.find("const taskBlockedActive =")
+    first_use = preflight_script.find("!taskBlockedActive")
+    marker_date = preflight_script.find("const taskBlockedDate =")
+    if not (0 <= marker_date < declaration < first_use):
+        errors.append("Same-day task-blocked marker must be derived before the first task eligibility reference")
+    if preflight_script.count("const taskBlockedActive =") != 1:
+        errors.append("Task-blocked state must be initialized exactly once in the global preflight")
+    for required in (
+        "const taskBlockedDate = taskMarkerComment?.body?.match(taskMarker)?.[1] || '';",
+        "const taskBlockedActive = taskBlockedDate === todayUtc;",
+        "const botComments = comments.filter((comment) => comment.user?.login === 'github-actions[bot]');",
+    ):
+        if required not in preflight_script:
+            errors.append(f"Task-blocked preflight derivation is missing {required!r}")
+
+# Cycle-fresh reports may cite only PRs created or advanced after the snapshot.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    for required in (
+        "state: 'open'",
+        "core.setOutput('snapshot_at', snapshotAt)",
+        "PRE_CYCLE_PR_SNAPSHOT_AT",
+        "steps.snapshot_pr_heads.outputs.heads",
+        "validateAutonomousCycleReport",
+        "snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT",
+    ):
+        if required not in workflow:
+            errors.append(f"{label} cycle-fresh PR gate is missing {required!r}")
+    if "state: 'all'" in workflow:
+        errors.append(f"{label} must not paginate closed-PR history before inference")
+for required in (
+    "'Validate workflow YAML and embedded Python'",
+    "createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime",
+    "previousHeadSha = existedAtStart ? baseSnapshot[String(pullNumber)] : ''",
+    "advancedDuringCycle = existedAtStart && previousHeadSha !== exactHead",
+    "commitCreatedDuringCycle",
+    "commitTimestamp >= snapshotTime",
+    "commitTimestamp <= Date.now() + 5 * 60 * 1000",
+    "(!createdAfterSnapshot && !advancedDuringCycle)",
+    "contentChangedDuringCycle",
+    "previousHeadCommit.commit?.tree?.sha",
+    "exactTreeSha",
+    "!contentChangedDuringCycle",
+    "!commitCreatedDuringCycle",
+    "pr.head.sha !== exactHead",
+    "headCommit.sha !== exactHead",
+    "github.rest.checks.listForRef",
+    "run.head_sha === exactHead",
+    "run.app?.slug === 'github-actions'",
+    "check.status === 'completed' && check.conclusion === 'success'",
+    "const { data: finalPr } = await github.rest.pulls.get",
+    "finalPr.state !== 'open'",
+    "finalPr.head.repo?.full_name !== owner + '/' + repo",
+    "finalPr.base.repo?.full_name !== owner + '/' + repo",
+    "finalPr.head.sha !== exactHead",
+    "finalPr.base.ref !== expectedBase",
+    "changed while exact-head CI was running",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared exact-head validator is missing the cycle-fresh PR gate {required!r}")
+
+# Autonomous report identity and branch must match the exact task selected by preflight.
+for label, workflow, report_title in (
+    ("Gemini", gemini, "Validate autonomous cycle report contract"),
+    ("OpenRouter", openrouter, "Validate OpenRouter autonomous cycle report"),
+    ("Groq", groq, "Validate Groq autonomous cycle report"),
+):
+    report_start = workflow.find("name: " + report_title)
+    sync_start = workflow.find("name: Sync the single-task daily backoff marker", report_start)
+    report_block = workflow[report_start:sync_start] if report_start >= 0 and sync_start > report_start else ""
+    for required in (
+        "SELECTED_TASK_ID:",
+        "SELECTED_TASK_TARGET_BRANCH:",
+        "validateAutonomousCycleReport",
+        "expectedTaskId: process.env.SELECTED_TASK_ID",
+        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+    ):
+        if required not in report_block:
+            errors.append(f"{label} report validator handoff is missing {required!r}")
+gemini_report_start = gemini.find("name: Validate autonomous cycle report contract")
+gemini_report_end = gemini.find("name: Sync the single-task daily backoff marker", gemini_report_start)
+gemini_report_block = gemini[gemini_report_start:gemini_report_end] if gemini_report_start >= 0 and gemini_report_end > gemini_report_start else ""
+for required in (
+    "findBlockedReportContradictions",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
+):
+    if required not in gemini_report_block:
+        errors.append(f"Gemini report consistency guard is missing {required!r}")
+
+# Free-tier provider reports must not contradict a GitHub App token that
+# was successfully minted earlier in the same cycle. OpenRouter also checks
+# its authenticated provider-key preflight through the shared helper.
+for required in (
+    "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
+    "findBlockedReportContradictions",
+    "githubAppTokenMinted: process.env.GITHUB_APP_TOKEN_OUTCOME === 'success'",
+):
+    if required not in groq:
+        errors.append(f"Groq report consistency guard is missing {required!r}")
+
+groq_report_start = groq.find("name: Validate Groq autonomous cycle report")
+groq_report_end = groq.find("name: Sync the single-task daily backoff marker", groq_report_start)
+groq_report_block = groq[groq_report_start:groq_report_end] if groq_report_start >= 0 and groq_report_end > groq_report_start else ""
+if r"const lines = summary.split(/\\r?\\n/);" in groq_report_block:
+    errors.append("Groq report validator contains a double-escaped line-splitting regex")
+if r"const lines = summary.split(/\r?\n/);" not in groq_report_block:
+    errors.append("Groq report validator must split machine-readable reports on actual line endings")
+
+for required in (
+    "BOONTA_CYCLE_TASK_ID",
+    "taskMarker = 'BOONTA_TASK_ID: ' + expectedTaskId",
+    "targetBranchMarker = 'BOONTA_TASK_TARGET_BRANCH: ' + expectedBase",
+    "bodyHasTaskMarker",
+    "bodyHasTargetBranchMarker",
+    "taskMarkerCount === 1",
+    "targetBranchMarkerCount === 1",
+    "evidenceBase !== expectedBase",
+    "pr.base.ref !== expectedBase",
+):
+    if required not in cycle_validator:
+        errors.append(f"Shared report validator is missing selected-task integrity check {required!r}")
+for required in (
+    "validator self-test check is required",
+    "missing PR target-branch marker",
+    "duplicate PR target-branch markers",
+    "required check failed",
+    "new PR points at a commit created before this cycle",
+    "new PR points at a commit with an implausibly future timestamp",
+    "same-name check from an untrusted app is ignored",
+    "wait for exact-head checks",
+    "dev target uses native build/host/emulator checks",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Shared report validator regression suite is missing {required!r}")
+
+for required in (
+    "fresh empty commit on an existing PR is not progress",
+    "existing PR with changed tree content is eligible for exact-head checks",
+    "PR head updated while exact-head CI was polling",
+    "PR closed while exact-head CI was polling",
+    "PR head repository changed while exact-head CI was polling",
+    "PR base changed while exact-head CI was polling",
+):
+    if required not in cycle_validator_tests:
+        errors.append(f"Shared exact-head regression suite is missing {required!r}")
+
+for label, prompt in (
+    ("Gemini", gemini_prompt),
+    ("OpenRouter", openrouter),
+    ("Groq", groq),
+):
+    if label == "Groq":
+        if "copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim." not in prompt or 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in prompt:
+            errors.append("Groq report instructions must require the exact selected task ID")
+        if "PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH." not in prompt:
+            errors.append("Groq PR instructions must require exact task/target markers in the PR body")
+    else:
+        if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt and "The shell appends the exact reserved task ID" not in prompt and "literal reserved value appended below" not in prompt:
+            errors.append(f"{label} report instructions must require the exact selected task ID")
+        if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
+            errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
+
+# Reject doubled shell escapes in fallback prompt construction.
+for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
+    prompt_lines = [
+        line for line in workflow.splitlines()
+        if line.lstrip().startswith("PROMPT=") or line.lstrip().startswith("PROMPT+=")
+    ]
+    if any((chr(92) * 2 + "n") in line for line in prompt_lines):
+        errors.append(f"{label} prompt handoff contains a literal double-escaped newline")
+
+# Gemini Free-tier TPM protection: one model attempt and three session turns.
+settings_marker = "          settings: |-\n"
+settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+if settings_marker not in gemini or settings_end_marker not in gemini:
+    errors.append("Gemini explicit bounded settings block is missing")
+else:
+    try:
+        settings_text = gemini.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+        settings = json.loads(settings_text)
+        if settings.get("general", {}).get("maxAttempts") != 1:
+            errors.append("Gemini must use one model attempt per invocation")
+        if settings.get("model", {}).get("maxSessionTurns") != 3:
+            errors.append("Gemini must use a three-turn session ceiling")
+    except (json.JSONDecodeError, TypeError) as exc:
+        errors.append(f"Gemini bounded settings JSON is invalid: {exc}")
+if "exactly 1 attempt per invocation" not in budget or "maximum 3 session turns" not in budget:
+    errors.append("Shared context budget must document Gemini's one-attempt/three-turn cap")
+if "task-eligibility preflight" not in budget or "one eligible task" not in budget:
+    errors.append("Shared context budget must document the pre-inference task gate")
+
+if errors:
+    print("Autonomous provider handoff checks FAILED:")
+    for error in errors:
+        print(f" - {error}")
+    sys.exit(1)
+
+print("Autonomous provider handoff checks passed.")
+print("- At most one model provider invocation is allowed per workflow run.")
+print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
+print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
+, groq))
     expected_groq_modes = {
         "create_branch,push_files,create_pull_request",
         "get_file_contents,push_files",
