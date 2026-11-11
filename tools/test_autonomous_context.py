@@ -303,4 +303,42 @@ with tempfile.TemporaryDirectory() as temp:
     assert all(path in context for path in paths)
     assert "line 3" in context and "line 11" in context
 
+
+# Production smoke test: build the actual activation-task context from the
+# canonical compact summary and the exact current repository source files.
+with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
+    production_summary = json.load(handle)
+activation = next(
+    task for task in production_summary["tasks"]
+    if task["task_id"] == "AUTOMATION-LEDGER-ACTIVATION"
+)
+production_handoff = "\n".join([
+    "Task ID: " + activation["task_id"],
+    "Title: " + activation["title"],
+    "Target branch: " + activation["target_branch"],
+    "Question: " + activation["question_excerpt"],
+    f"Acceptance criteria ({activation['acceptance_criteria_total']}; first 5):",
+    *("- " + item for item in activation["acceptance_criteria_excerpt"]),
+    "Next: " + activation["next_action_excerpt"],
+    "Read-only source paths (select at most one): " + ", ".join(activation["read_paths"]),
+])
+production_context = MODULE.build_context(
+    ROOT,
+    activation["task_id"],
+    activation["title"],
+    activation["target_branch"],
+    production_handoff,
+    max_chars=3000,
+    max_task_context=1100,
+    max_criteria=4,
+    max_next_action=100,
+    source_root=ROOT,
+    max_source_chars=1800,
+)
+assert len(production_context) <= 3000
+assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
+assert all(f"[{path}:" in production_context for path in activation["read_paths"])
+assert "task-ledger-summary.json" not in production_context
+assert "BOONTA_TASK_ID" in production_context or "One active task maximum" in production_context
+
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
