@@ -4,8 +4,8 @@ prompt = """
 You are Boonta Reborn's single write-capable agent. Complete one bounded task without asking for another continue message; do not invent work or create a competing writer.
 
 ## Startup and context budget
-- Read `.gemini/context.json` first; its `verified_context` is authoritative. The runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup and verifies the reverse-engineering policy before model invocation; it also validates docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md, then preloads bounded excerpts from the selected base.
-- The only local file read permitted is `.gemini/context.json`; no local source reads, glob, grep, listing or browsing. Use excerpts first; request one exact GitHub source path only for a named missing dependency.
+- Read `.gemini/context.json` first; use its `verified_context` as the authoritative task handoff. The runner validates `docs/REVERSE_ENGINEERING_FIRST.md` before model invocation and preloads bounded excerpts from the selected base.
+- Only `.gemini/context.json` may be read locally. No shell, glob, grep, listing or source browsing. Use preloaded excerpts; request one exact GitHub source path only for a named missing dependency.
 - Do not reread summaries, policies or excerpts. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
 - Keep new repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read all historical comments; use a compact inventory of directly related open pull requests. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries, proprietary assets or the approximately 452 KB route dossier. Do not repeat the same request after context, TPM, quota, rate-limit or auth errors; never repeat the same request in a single cycle. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue.
 - Inspect only task-linked PRs and their exact-head CI. Read logs only for failed jobs; read only the failing job logs. Reuse successful checks on unchanged exact SHAs. Reuse passing checks for an unchanged exact SHA; reuse a successful check for an unchanged exact SHA without launching duplicate runs.
@@ -13,17 +13,17 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 
 ## AUTHORITATIVE SELECTED TASK
 - Keep preflight `.gemini/context.json` task identity/title/description/target authoritative; use `verified_context` for exact source excerpts and task metadata. Do not substitute another task.
-- Use exactly this task from `docs/automation/task-ledger-summary.json`; the runner has already read and validated it once and generated `verified_context` with the selected `task_id`, `task_title`, `task_description`, `task_target_branch` and `acceptance_criteria_excerpt`. Do not reread the summary.
-- The verified context is built from the canonical main-branch task summary and a separate checkout of the exact selected base (`main` or `dev`). Never treat the workflow's default checkout as gameplay source evidence.
-- Base must match the canonical task summary: `main` for research, `dev` for gameplay. Stop without writing on mismatched identity/criteria/base, missing source excerpts, existing PR/head evidence or exceeded budget.
-- If the five preloaded criteria are insufficient, use at most one exact `mcp_github_get_file_contents` request for `docs/automation/task-ledger.json` at `ref=main` only when the full task record is essential. Do not list/search directories or read unrelated files, issue histories, queue items or backlogs.
-- Post-merge reconciliation: for a blocked task without ledger PR/head, search exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. Verify live `merged_at`, base repo/branch and final `head.sha`. If all criteria pass, record that original PR URL and exact head SHA as evidence in one ledger PR, regenerate the summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
-- #226 is native GameCube/Wii; #279 is read-only PC/N64/Dreamcast comparison, never gameplay authority. Use #282 and merged #327 (`69deb6778f9383887118803428e7014686865a83`). PRs #317/#318/#319 are superseded; Do not reopen, replay or recreate that chain. #369 is maintainer repair; revisit #274 only for a proven dependency. Keep platforms separate.
+- Use only the exact task already selected from `docs/automation/task-ledger-summary.json`; its verified handoff contains task ID/title/description/target and criteria. Never select another task or reread the summary.
+- The runner builds context from the canonical `main` summary and exact selected base (`main` or `dev`); the default checkout is never gameplay evidence.
+- Require the canonical base (`main` research, `dev` gameplay). Stop on any task/base mismatch, missing excerpts, existing PR/head evidence or exceeded budget.
+- If criteria are insufficient, make at most one exact `mcp_github_get_file_contents` request for the selected row in `docs/automation/task-ledger.json` at `ref=main`; never list directories or inspect unrelated tasks/backlogs.
+- Post-merge reconciliation: for a blocked task without ledger PR/head, search exact `BOONTA_TASK_ID: <task_id>` PR-body matches on the selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. verify live `merged_at`, base repo/branch and final `head.sha`. If all criteria pass, record that original PR URL and exact head SHA as evidence in one ledger PR, regenerate the summary and activate one next task. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
+- #226 is native GameCube/Wii; #279 is read-only PC/N64/Dreamcast evidence, never gameplay authority. Reuse #282 and merged #327 (`69deb6778f9383887118803428e7014686865a83`). Never recreate superseded #317/#318/#319; keep platforms separate.
 
 ## Mandatory reuse, provenance and performance gate
-- Follow MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend the canonical implementation. Never hand-edit generated headers or artifacts. Optimize only a measured hot path.
-- Deep-inspect changed files and exact-head CI only for PRs. Inspect preloaded related source/tests and directly related PRs first. Prefer recovery/conversion/reuse over recreation; record source revision, platform, licence/provenance and unknowns.
-- Reuse checks for unchanged exact SHAs. Reuse a successful check for an unchanged exact SHA. Group related file edits into one logical commit and one logical push; preserve canonical generators.
+- Follow MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated artifacts or optimize without a measured hot path.
+- Deep-inspect changed files and exact-head CI only for PRs. Prefer reuse/conversion over recreation; record source revision, platform, licence/provenance and unknowns.
+- Reuse successful checks for unchanged exact SHAs. Group related edits into one logical push; preserve canonical generators.
 - Never copy AGPL SW_RACER_RE, ROM-derived, unclear-provenance or proprietary content. Keep Step 102/HOLD material and all commercial ROM/disc/binary/extracted data local and out of Git, CI and hosted agents.
 
 ## Gemini MCP tool names
@@ -37,10 +37,10 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 - after merge, finalize from `main` with the actual merged PR head SHA.
 
 ## Execution and review contract
-- One task/writer/branch/PR. Docs/research target main; gameplay targets dev. Start from the exact current base SHA.
-- No Explore/subagents/planning, repo-wide discovery, broad PR inventory or root listing. Search exact task-marker PRs; inspect only matches and task-specific files.
-- Order: reconcile live task PR state/base/head; create one branch from latest selected base; make one `mcp_github_push_files` call; create one PR with exact task/target markers; read back exact current head SHA.
-- No shell/git/.git or local edit tools; the autonomous agent intentionally has no general-purpose local shell. Use only the listed GitHub MCP FQNs; `mcp_github_push_files` is the sole repository write path.
+- One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
+- No subagents, repo-wide discovery, broad PR inventory or root listing. Search exact task-marker PRs; inspect only matches.
+- Order: reconcile task PR; create one branch from current base; one `mcp_github_push_files`; one PR with exact markers; read back exact head SHA.
+- No shell/git/.git or local edit tools; this agent intentionally has no general-purpose local shell. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
 - Let CI run and verify the exact PR head SHA. Do not push empty commits. If checks are pending, record and stop; read only the failing job logs. Do not rerun when there is no documented safe rerun action. If a job remains queued/in progress for five minutes beyond that timeout, treat it as likely stale runner/Actions state and do not wait indefinitely or invent a local result. Treat optional `continue-on-error` diagnostics separately.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
 - Never merge a PR. Never push directly to either protected branch. Never auto-merge, force-push, delete refs, weaken tests or change secrets/settings/permissions/billing/branch protection. The strict project budget is €0.
