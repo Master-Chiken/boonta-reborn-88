@@ -679,6 +679,44 @@ class DolphinDtmTests(unittest.TestCase):
         Image is None or ImageDraw is None or reset_state_visible is None,
         "Pillow is not installed in the lightweight host-test environment",
     )
+    def test_reset_state_detector_accepts_ready_course_select_without_active_steering_tick(self) -> None:
+        # A Y reset returns to READY / COURSE SELECT. The diagnostic must verify
+        # that explicit screen and reset HUD instead of requiring the active-race
+        # steering tick, which is not part of the course-selection interface.
+        image = Image.new("RGB", (800, 480), (239, 239, 239))
+        draw = ImageDraw.Draw(image)
+        viewport_top = 84
+        viewport_height = 480 - viewport_top
+        draw.rectangle((0, viewport_top, 799, 479), fill=(106, 169, 225))
+        draw.rectangle((225, 236, 575, 328), fill=(8, 18, 30))
+        draw.text((342, 243), "COURSE SELECT", fill=(255, 157, 61))
+
+        empty = (48, 66, 80)
+
+        def screen_y(offset: int) -> int:
+            return round(viewport_top + viewport_height * (480 - offset) / 480)
+
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            draw.line((24, y, 213, y), fill=empty, width=2)
+        draw.line((24, screen_y(48), 213, screen_y(48)), fill=(255, 157, 61), width=2)
+        self.assertTrue(reset_state_visible(image))
+
+        # An active-race frame with the marker missing must still fail closed.
+        image_without_ready_panel = Image.new("RGB", (800, 480), (239, 239, 239))
+        active_draw = ImageDraw.Draw(image_without_ready_panel)
+        active_draw.rectangle((0, 84, 799, 479), fill=(106, 169, 225))
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            active_draw.line((24, y, 213, y), fill=empty, width=2)
+        active_draw.line((24, screen_y(48), 213, screen_y(48)), fill=(255, 157, 61), width=2)
+        with self.assertRaisesRegex(ValueError, "No stable bright steering tick"):
+            reset_state_visible(image_without_ready_panel)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or reset_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
     def test_reset_state_detector_accounts_for_dolphin_toolbar_offset(self) -> None:
         image = Image.new("RGB", (800, 480), (239, 239, 239))
         draw = ImageDraw.Draw(image)
