@@ -134,7 +134,7 @@ cases = [
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
     },
     {
-        "name": "activation opens after UTC reset with bounded exact-path guidance",
+        "name": "activation opens after UTC reset with fresh branch guidance",
         "tasks": [activation],
         "marker_day_offset": None,
         "expected_ready": True,
@@ -142,11 +142,8 @@ cases = [
         "expected_blocked": False,
         "expected_queue_state": "READY",
         "expected_context_contains": [
-            "Full canonical task record: docs/automation/task-ledger.json",
-            "Known relevant ledger files: tools/check_task_ledger.py",
-            "Do not read repository root, list directories, or guess file paths.",
-            "For 2026-11-11 only, reuse clean branch AUTOMATION-LEDGER-ACTIVATION",
-            "on any later UTC date, create a fresh branch named automation-ledger-activation-",
+            "UTC branch: create a fresh automation-ledger-activation-",
+            "branch from current main; never reuse any earlier attempt branch.",
         ],
         "expected_date_branch": True,
     },
