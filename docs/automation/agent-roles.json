@@ -324,5 +324,17 @@
         "paid_fallback"
       ]
     }
+  ],
+  "objectives": [
+    {
+      "id": "BOONTA-COMPLETE-GAME",
+      "title": "Deliver the complete original Boonta Reborn racer",
+      "description": "Build a coherent, playable, clean-room native racer with complete game systems and reproducible GameCube/Wii targets."
+    },
+    {
+      "id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "title": "Operate a governed zero-cost engineering pipeline",
+      "description": "Provide reliable, auditable, €0-only task execution and QA that advances the complete-game mission without unsafe writes or duplicate work."
+    }
   ]
 }
