@@ -6,7 +6,7 @@ This setup uses your existing Mac. It does not use a VPS, Oracle Cloud, Docker, 
 
 - macOS on your existing Mac.
 - Node.js 24.11.0 or newer.
-- An existing Google/Gemini CLI login with its confirmed Free-tier allowance, if you want to run Gemini agents.
+- An installed Gemini CLI and an existing Google account login with a confirmed Free-tier allowance, if you want to run Gemini agents. Paperclip's `gemini_local` adapter can use the existing CLI login; an API key is not required when the login path works.
 - An existing GitHub CLI login (`gh`) if the agent needs to push branches and open PRs locally.
 
 Paperclip itself is open source. The local setup uses an embedded PostgreSQL database and stores its state under `~/.paperclip/`.
@@ -24,7 +24,7 @@ It must report `v24.11.0` or newer. If it does not, install the Node.js LTS rele
 Then run the official Paperclip onboarding command:
 
 ```bash
-npx paperclipai@latest onboard --yes
+npx paperclipai onboard --yes
 ```
 
 Open:
@@ -43,11 +43,11 @@ npx paperclipai@latest run
 
 Keep that terminal open while using Paperclip. Closing the process or putting the Mac to sleep stops the local Paperclip server and its agents.
 
-The optional managed background-service install is documented by Paperclip, but it is not needed for the first test. Do not configure a recurring Paperclip routine yet.
+The optional managed background-service install is documented by Paperclip, but it is not needed for the first test. Do not run onboarding as root or with `sudo`; the embedded PostgreSQL process must run as the normal Mac user. Do not configure a recurring Paperclip routine yet.
 
 ## Free AI and GitHub access
 
-- Select `gemini_local` only if the local Gemini CLI environment test confirms an existing Free-tier login and available quota. Do not create a paid API key or enable billing.
+- Select `gemini_local` only if its environment test confirms the installed CLI, usable working directory, existing Google account CLI authentication and available Free-tier quota. The adapter supports CLI login as well as API-key authentication; do not create an API key solely to bypass a working account login, and do not enable billing.
 - Run `gh auth status` to see whether GitHub CLI is already authenticated on this Mac. If it is not, stop and review the access method before creating any token.
 - A fine-grained GitHub token, if eventually needed, must be restricted to `Master-Chiken/boonta-reborn-88`. It is not a hosting subscription, but it is still a credential and should only be created when needed.
 
