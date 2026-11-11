@@ -303,8 +303,6 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
-
-        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         early_boost = record(blob, 20)
         self.assertEqual(early_boost[0], A | X)
         before_reset = record(blob, FINISH_RESET_PRESS_FRAME - 1)
