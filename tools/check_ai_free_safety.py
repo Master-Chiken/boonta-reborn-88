@@ -1068,6 +1068,8 @@ if (
     or "github.actor == github.repository_owner" not in readiness_job_guard.group(1)
 ):
     errors.append("Autonomous readiness must stay pinned to protected main, retain the owner guard, and allow only explicit scheduled-loop handoff")
+if "allow_scheduled: " + "${{ github.event_name == 'schedule' }}" not in autonomous:
+    errors.append("Only the scheduled autonomous loop may set the reusable readiness exception")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
 readiness_permissions = dict(
     re.findall(
