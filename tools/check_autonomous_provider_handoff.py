@@ -146,6 +146,31 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
+resume_guard_start = groq.find("      - name: Revalidate existing task PR after acquiring the shared writer slot")
+resume_guard_end = groq.find("\\n      - name: Mint scoped GitHub App token", resume_guard_start)
+resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
+if not resume_guard:
+    errors.append("Groq owner-dispatched resume must have a separate post-queue PR revalidation step")
+elif not (
+    0 <= resume_guard_start < resume_guard_end <
+    groq.find("name: Mint scoped GitHub App token", resume_guard_start) <
+    groq.find("name: Run OpenCode through the Groq Free route", resume_guard_start)
+):
+    errors.append("Groq resume revalidation must complete before minting a write token or invoking the model")
+else:
+    for required in (
+        "inputs.resume_mode == true",
+        "RESUME_TASK_ID: ${{ inputs.resume_task_id }}",
+        "RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}",
+        "pull.head?.sha !== expectedHeadSha",
+        "pull.user?.login !== context.repo.owner",
+        "pull.draft !== false",
+        "task.pr_url || task.head_sha",
+        "bodyLines.filter((line) => line === targetMarker).length !== 1",
+    ):
+        if required not in resume_guard:
+            errors.append(f"Groq resume preflight is missing {required!r}")
+
 # A provider that failed in this run must not immediately launch another model.
 # The next provider is eligible only when its predecessor's persistent UTC
 # cooldown was already active during the global preflight at this run's start.
