@@ -673,7 +673,15 @@ jobs:
             echo "::error::Global preflight or schema-v2 context builder did not pass; no Groq request was sent."
             exit 2
           fi
-          PROMPT="${PROMPT}"          PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
+          PROMPT="${PROMPT}"$'\n\n'
+          PROMPT+="${AUTONOMOUS_CONTEXT}"
+          if [[ "${RESUME_MODE:-false}" != "true" ]]; then
+            PROMPT+=$'\nSelected base: '"${TASK_TARGET_BRANCH}"$'\nNew branch: '"${TASK_BRANCH_NAME}"
+          fi
+          REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
+          REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
+          PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
+          PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
           PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>'
           PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
           PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
