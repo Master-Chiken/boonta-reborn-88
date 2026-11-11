@@ -27,6 +27,7 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 MAX_PLAN_BYTES = 512 * 1024
 API_ROOT = "https://api.github.com"
+CANONICAL_REPOSITORY = "Master-Chiken/boonta-reborn-88"
 
 
 class DeliveryExecutionError(RuntimeError):
@@ -71,8 +72,10 @@ def validate_plan_against_sources(
     expected_base_sha: str,
     repository: str,
 ) -> None:
-    if not isinstance(repository, str) or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
-        raise DeliveryExecutionError("Repository must use the owner/name form")
+    if not isinstance(repository, str) or repository != CANONICAL_REPOSITORY:
+        raise DeliveryExecutionError(
+            f"GitHub delivery is restricted to the canonical repository {CANONICAL_REPOSITORY}"
+        )
     if not isinstance(expected_task_id, str) or not TASK_ID_RE.fullmatch(expected_task_id):
         raise DeliveryExecutionError("Expected task ID is invalid")
     if not isinstance(expected_base_sha, str) or not SHA_RE.fullmatch(expected_base_sha):
@@ -349,6 +352,10 @@ def execute_delivery(
 
 
 def require_execution_gates(repository: str) -> str:
+    if repository != CANONICAL_REPOSITORY:
+        raise DeliveryExecutionError(
+            f"GitHub delivery is restricted to the canonical repository {CANONICAL_REPOSITORY}"
+        )
     if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_ENABLED") != "true":
         raise DeliveryExecutionError("BOONTA_DETERMINISTIC_DELIVERY_ENABLED must equal exact string true")
     if os.environ.get("BOONTA_DETERMINISTIC_DELIVERY_OWNER_APPROVED") != "true":
