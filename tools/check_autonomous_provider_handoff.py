@@ -576,8 +576,8 @@ for required in (
     'required_handoff_text',
     'task["question_excerpt"]',
     'task["next_action_excerpt"]',
-    "if not all(item in bounded_task_context for item in required_handoff_text)",
-    "truncates required question, acceptance-criteria or next-action excerpts",
+    "if not all(item in task_context for item in required_handoff_text)",
+    "Verified task excerpts exceed the configured",
 ):
     if required not in context_builder:
         errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
@@ -675,16 +675,22 @@ if len(actual_groq_prompt) > 1900:
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
 context_limits("Groq", groq, 3200, 1100)
+if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
+    errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
+if "--max-source-chars 1400" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its 1,400-character source excerpt budget")
+if "bounded excerpts from every exact task path" not in actual_openrouter_prompt:
+    errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
 if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 2 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact two-criteria/100-character next-action handoff")
 if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
     errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
-context_limits("OpenRouter", openrouter, 2400, 2200)
+context_limits("OpenRouter", openrouter, 2800, 1100)
 if len(actual_groq_prompt) + 3200 + 400 > 5200:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,200-character cap")
-if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
+if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
 
