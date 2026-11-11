@@ -171,6 +171,17 @@ else:
         if required not in resume_guard:
             errors.append(f"Groq resume preflight is missing {required!r}")
 
+
+# Task identity is orchestration metadata: every provider binds the report to
+# the exact preflight reservation before parsing or validating its status.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    if "bindCycleReportToReservedTask" not in workflow:
+        errors.append(f"{label} report must bind to the workflow-reserved task ID before validation")
+if "function bindCycleReportToReservedTask(report, expectedTaskId)" not in cycle_validator:
+    errors.append("Shared cycle validator must provide the deterministic task-identity binder")
+if "omitted task ID from its trusted reservation" not in cycle_validator_tests:
+    errors.append("Cycle-report tests must cover automatic binding of an omitted task ID")
+
 # A provider that failed in this run must not immediately launch another model.
 # The next provider is eligible only when its predecessor's persistent UTC
 # cooldown was already active during the global preflight at this run's start.

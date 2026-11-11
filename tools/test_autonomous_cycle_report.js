@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
+const { validateAutonomousCycleReport, findBlockedReportContradictions, bindCycleReportToReservedTask, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
 const repo = 'boonta-reborn-88';
@@ -11,6 +11,38 @@ const taskId = 'AUTOMATION-LEDGER-ACTIVATION';
 const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
 const context = { repo: { owner, repo } };
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.',
+    taskId
+  ),
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.\nBOONTA_CYCLE_TASK_ID: ' + taskId,
+  'the workflow must bind an omitted task ID from its trusted reservation'
+);
+assert.equal(
+  bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED', taskId),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED',
+  'an exact model echo must be preserved'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED', taskId),
+  /conflicts with the workflow reservation/,
+  'a conflicting model task ID must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_TASK_ID: ' + taskId,
+    taskId
+  ),
+  /more than one task identity marker/,
+  'duplicate task identity markers must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', 'bad task id'),
+  /valid reserved task ID/,
+  'invalid preflight task IDs must be rejected'
+);
+
 
 const missingOpenRouterKeyClaim = 'The provider blocker says no provider key was available in this invocation.';
 assert.equal(
