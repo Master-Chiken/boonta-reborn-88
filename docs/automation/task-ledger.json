@@ -891,8 +891,10 @@
       "head_sha": null,
       "target_branch": "dev",
       "read_paths": [
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/pause_state.h",
-        "gamecube-demo/tests/test_pause_state.c"
+        "gamecube-demo/tests/test_gameplay_state.c"
       ]
     }
   ]
