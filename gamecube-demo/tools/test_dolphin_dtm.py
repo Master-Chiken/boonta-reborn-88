@@ -474,7 +474,7 @@ class DolphinDtmTests(unittest.TestCase):
         def draw_results(image, viewport_top: int) -> None:
             draw = ImageDraw.Draw(image)
             x = 400.0 - 26.0
-            y = viewport_top + 240.0 - 62.0
+            y = viewport_top + 240.0 - 78.0
             for char in "RESULTS":
                 for row, bits in enumerate(glyphs[char]):
                     for col in range(5):
