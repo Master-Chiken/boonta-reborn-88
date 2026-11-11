@@ -301,7 +301,7 @@ if completed.returncode != 0:
 print(f"Validated {len(cases)} post-queue guard scenarios across all three providers.")
 
 
-// The existing-PR resume gate is Groq-only and remains independent from the shared guard above.
+# The existing-PR resume gate is Groq-only and remains independent from the shared guard above.
 resume_script = extract_script(
     ROOT / ".github/workflows/groq-plan-execute.yml",
     "Revalidate existing task PR after acquiring the shared writer slot",
@@ -327,7 +327,7 @@ resume_pr = {
     },
     "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
     "body": (
-        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\\n"
+        "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "BOONTA_TASK_TARGET_BRANCH: main"
     ),
 }
