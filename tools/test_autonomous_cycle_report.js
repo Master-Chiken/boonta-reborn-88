@@ -229,6 +229,7 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
 }
 
 async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const { machineReport, ...runtimeEnvOverrides } = envOverrides;
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/gemini-plan-execute.yml',
     stepName: 'Validate autonomous cycle report contract',
@@ -236,15 +237,17 @@ async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) 
     summaryEnv: 'GEMINI_SUMMARY',
     blocker,
     nextAction,
+    machineReport,
     envOverrides: {
       GEMINI_PREFLIGHT_ALLOWED: 'true',
       GITHUB_APP_TOKEN_OUTCOME: 'success',
-      ...envOverrides
+      ...runtimeEnvOverrides
     }
   });
 }
 
 async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const { machineReport, ...runtimeEnvOverrides } = envOverrides;
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/groq-plan-execute.yml',
     stepName: 'Validate Groq autonomous cycle report',
@@ -252,9 +255,10 @@ async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
     summaryEnv: 'REPORT_PATH',
     blocker,
     nextAction,
+    machineReport,
     envOverrides: {
       GITHUB_APP_TOKEN_OUTCOME: 'success',
-      ...envOverrides
+      ...runtimeEnvOverrides
     }
   });
 }
@@ -435,6 +439,36 @@ async function run(name, options = {}) {
     'the actual Gemini BLOCKED script must not confuse credential isolation with missing preflight configuration');
   assert.equal(geminiCredentialIsolation.outputs.cycle_status, 'blocked');
 
+  const geminiReportWithoutTaskIdentity = await executeGeminiBlockedStep(
+    'The Gemini provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.equal(geminiReportWithoutTaskIdentity.failure, '',
+    'the real embedded Gemini validator must bind an omitted task ID and evidence base from the trusted reservation');
+  assert.equal(geminiReportWithoutTaskIdentity.outputs.cycle_status, 'blocked');
+
+  const geminiConflictingTaskIdentity = await executeGeminiBlockedStep(
+    'The Gemini provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_TASK_ID: UNRELATED-TASK',
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.ok(geminiConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
+    'the real embedded Gemini validator must reject a conflicting task ID');
+
   const groqMissingAppToken = await executeGroqBlockedStep(
     'There is no verified live GitHub App token.',
     'Record the verified dependency and next step.'
@@ -449,6 +483,36 @@ async function run(name, options = {}) {
   assert.equal(groqCredentialIsolation.failure, '',
     'the actual Groq BLOCKED script must accept a blocker unrelated to GitHub App authentication');
   assert.equal(groqCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const groqReportWithoutTaskIdentity = await executeGroqBlockedStep(
+    'The Groq provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.equal(groqReportWithoutTaskIdentity.failure, '',
+    'the real embedded Groq validator must bind an omitted task ID and evidence base from the trusted reservation');
+  assert.equal(groqReportWithoutTaskIdentity.outputs.cycle_status, 'blocked');
+
+  const groqConflictingTaskIdentity = await executeGroqBlockedStep(
+    'The Groq provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_TASK_ID: UNRELATED-TASK',
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.ok(groqConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
+    'the real embedded Groq validator must reject a conflicting task ID');
 
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
