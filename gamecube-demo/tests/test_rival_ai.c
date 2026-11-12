@@ -39,6 +39,23 @@ static void nearby_rival_avoidance(void)
     assert(target > 0.1f);
 }
 
+static void closest_rival_conflict_wins_independent_of_array_order(void)
+{
+    const float first_z[3] = {-18.0f, -17.0f, -15.0f};
+    const float first_lateral[3] = {0.0f, 0.8f, -0.8f};
+    const float reversed_z[3] = {-18.0f, -15.0f, -17.0f};
+    const float reversed_lateral[3] = {0.0f, -0.8f, 0.8f};
+    const float first_target = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, first_z, first_lateral, 3U, 0.0f, 3.4f);
+    const float reversed_target = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, reversed_z, reversed_lateral,
+        3U, 0.0f, 3.4f);
+
+    /* The closer rival needs a left move in both roster arrangements. */
+    assert(nearf_ai(first_target, -0.75f));
+    assert(nearf_ai(reversed_target, -0.75f));
+}
+
 static void tied_rivals_split_traffic_lanes_deterministically(void)
 {
     const float z[2] = {-18.0f, -17.0f};
@@ -254,6 +271,7 @@ int main(void)
     lane_preference_is_deterministic();
     player_avoidance_only_when_close();
     nearby_rival_avoidance();
+    closest_rival_conflict_wins_independent_of_array_order();
     tied_rivals_split_traffic_lanes_deterministically();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();

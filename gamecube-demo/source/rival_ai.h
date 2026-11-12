@@ -143,8 +143,15 @@ static inline float boonta_rival_ai_target_lateral(
         target = player_lateral <= current_lateral ? 1.45f : -1.45f;
     }
 
-    /* Keep a small lateral gap from nearby rivals; ignore distant traffic. */
+    /*
+     * Resolve multiple close-rival conflicts from the same snapshot. Select
+     * the nearest longitudinal threat, then the lower roster index on a tie;
+     * the target must not depend on which array element happened to be last.
+     */
     if (other_z != 0 && other_lateral != 0) {
+        unsigned int nearest_rival = rival_count;
+        float nearest_longitudinal_gap = 3.5f;
+        float nearest_lateral_gap = 0.0f;
         for (i = 0U; i < rival_count; ++i) {
             float longitudinal_gap;
             float lateral_gap;
@@ -153,10 +160,20 @@ static inline float boonta_rival_ai_target_lateral(
             longitudinal_gap = fabsf(rival_z - other_z[i]);
             lateral_gap = current_lateral - other_lateral[i];
             if (longitudinal_gap < 3.5f &&
-                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target = current_lateral + boonta_rival_ai_traffic_avoidance_offset(
-                    rival_index, i, lateral_gap);
+                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP &&
+                (nearest_rival == rival_count ||
+                 longitudinal_gap < nearest_longitudinal_gap ||
+                 (fabsf(longitudinal_gap - nearest_longitudinal_gap) <= 0.0001f &&
+                  i < nearest_rival))) {
+                nearest_rival = i;
+                nearest_longitudinal_gap = longitudinal_gap;
+                nearest_lateral_gap = lateral_gap;
             }
+        }
+        if (nearest_rival < rival_count) {
+            target = current_lateral +
+                boonta_rival_ai_traffic_avoidance_offset(
+                    rival_index, nearest_rival, nearest_lateral_gap);
         }
     }
 
