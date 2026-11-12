@@ -114,12 +114,30 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
         "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
     )
     for required in expected_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must expose validated invocation/report status: {required!r}")
+    # Resume-mode reports are bound to the task selected by preflight, not to
+    # the empty normal-mode inputs. Gemini resolves the two values before the
+    # shared validator; OpenRouter/Groq select them in the report-step env.
+    if provider == "Gemini":
+        task_binding_requirements = (
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+        )
+    else:
+        task_binding_requirements = (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
+            "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+        )
+    for required in task_binding_requirements:
+        if required not in workflow:
+            errors.append(f"{provider} workflow must bind exact-head validation to the preflight-selected task in both normal and resume modes: {required!r}")
 
 # A single read-only cooldown preflight avoids starting three provider runners
 # when all providers are already suppressed for the current UTC day.
@@ -1457,11 +1475,25 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
     report_start = workflow.find("      - name: " + report_name)
     report_end = workflow.find("      - name: Sync the single-task daily backoff marker", report_start)
     report_step = workflow[report_start:report_end] if report_start >= 0 and report_end > report_start else ""
+    report_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
+            "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+        )
+    )
     for required in (
         "id: validate_report",
         "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        *report_binding_requirements,
         "baseline: JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}')",
         "snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT",
         "steps.snapshot_pr_heads.outputs.heads",
@@ -1475,11 +1507,20 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
         errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
-    if ("SELECTED_TASK_ID: '${{ inputs.task_id }}'" not in report_step and "SELECTED_TASK_ID: ${{ inputs.task_id }}" not in report_step) or (
-        "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" not in report_step and
-        "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}" not in report_step
-    ):
-        errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight")
+    if label == "Gemini":
+        has_task_binding = (
+            "SELECTED_TASK_ID: '${{ inputs.task_id }}'" in report_step
+            and "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" in report_step
+            and "RESUME_TASK_ID: '${{ inputs.resume_task_id }}'" in report_step
+            and "RESUME_TASK_TARGET_BRANCH: '${{ inputs.resume_task_target_branch }}'" in report_step
+        )
+    else:
+        has_task_binding = (
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}" in report_step
+            and "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}" in report_step
+        )
+    if not has_task_binding:
+        errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight in normal and resume modes")
 if "github.rest.checks.listForRef" not in cycle_validator:
     errors.append("Autonomous progress must wait for the exact PR-head check runs before reporting progress")
 if "The check runs must be from the GitHub Actions app" not in cycle_validator and "run.app?.slug === 'github-actions'" not in cycle_validator:
