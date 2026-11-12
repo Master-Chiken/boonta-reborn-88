@@ -132,10 +132,19 @@ class DolphinDtmTests(unittest.TestCase):
         for viewport_top, height in ((0, 480), (84, 564)):
             title_pixels = build_title(viewport_top)
             center_y = viewport_top + 240.0
+            scale_y = (height - viewport_top) / 480.0
+            content_pixels = {
+                (x, round(center_y + offset * scale_y) + dy)
+                for offset in (-48, -27, -6, 22, 45, 65, 80)
+                for x in range(320, 365)
+                for dy in range(0, max(1, round(7 * scale_y)))
+            }
 
             def pixel_at(x: int, y: int) -> tuple[int, int, int]:
                 if (x, y) in title_pixels:
                     return (255, 157, 61)
+                if (x, y) in content_pixels:
+                    return (238, 246, 255)
                 if (
                     268 <= x <= 532
                     and center_y - 92 <= y <= center_y + 92
@@ -155,10 +164,18 @@ class DolphinDtmTests(unittest.TestCase):
             (367 + (index % 34), 215 + (index // 34))
             for index in range(68)
         }
+        content_pixels = {
+            (x, round(282.0 + offset * (396.0 / 480.0)) + dy)
+            for offset in (-48, -27, -6, 22, 45, 65, 80)
+            for x in range(320, 365)
+            for dy in range(0, 6)
+        }
 
         def pixel_at(x: int, y: int) -> tuple[int, int, int]:
             if (x, y) in orange_pixels:
                 return (255, 157, 61)
+            if (x, y) in content_pixels:
+                return (238, 246, 255)
             if 268 <= x <= 532 and 206 <= y <= 358:
                 return (8, 18, 30)
             return (105, 170, 225)
