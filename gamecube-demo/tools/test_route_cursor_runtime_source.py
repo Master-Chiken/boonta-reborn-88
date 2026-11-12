@@ -15,7 +15,7 @@ class CourseRuntimeSourceTests(unittest.TestCase):
 
     def test_runtime_samples_through_selected_course_interface(self):
         start = self.main.index("static void track_sample_at(")
-        end = self.main.index("static void select_course(", start)
+        end = self.main.index("static float track_signed_curvature_at(", start)
         sampler = self.main[start:end]
         self.assertIn("g_current_course->sample", sampler)
         self.assertIn("g_course_ready", sampler)
@@ -38,14 +38,16 @@ class CourseRuntimeSourceTests(unittest.TestCase):
         self.assertIn("BOONTA_RUNTIME_ROUTE_HAS_BRANCHES", finish)
         self.assertIn("boonta_route_cursor_distance_to_next_lap", finish)
 
-    def test_course_selection_and_reset_reinitialize_runtime_context(self):
-        start = self.main.index("static void select_course(")
-        end = self.main.index("/*", start)
-        selection = self.main[start:end]
-        self.assertIn("boonta_course_catalog[g_selected_course_index]", selection)
-        self.assertIn("boonta_race_state_reset", selection)
-        self.assertIn("reset_runtime_route_cursor", selection)
+    def test_single_course_start_and_reset_reinitialize_runtime_context(self):
+        main_start = self.main.index("int main(")
+        startup = self.main[main_start:self.main.index("previous_tick = gettime();", main_start)]
+        self.assertIn("g_current_course = boonta_course_catalog[0];", startup)
+        self.assertIn("boonta_race_state_reset(&g_race_state);", startup)
+        self.assertIn("reset_runtime_route_cursor();", startup)
         self.assertGreaterEqual(self.main.count("reset_runtime_route_cursor();"), 2)
+        self.assertNotIn("g_selected_course_index", self.main)
+        self.assertNotIn("select_course(", self.main)
+        self.assertNotIn("BOONTA_BUTTON_LEFT | BOONTA_BUTTON_RIGHT", self.main)
 
     def test_branch_cursor_is_wired_through_the_selected_course_adapter(self):
         self.assertIn("static int advance_runtime_route_cursor(", self.main)
