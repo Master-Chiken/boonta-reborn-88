@@ -498,7 +498,10 @@ jobs:
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
-  # Resume only a trusted, already-open task PR; scheduled runs may continue it after read-only preflight and writer-lock revalidation.
+  # Provider routing uses cooldown markers captured before any provider call.
+  # If both predecessor markers are active, Gemini and OpenRouter were skipped
+  # at cycle start; failures created later in this run cannot unlock another call.
+  # Resume only a trusted, already-open task PR after preflight and writer-lock revalidation.
   groq-fallback:
     name: Groq Free fallback or safe scheduled existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
@@ -509,14 +512,11 @@ jobs:
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
-      needs.autonomous-cycle.result == 'skipped' &&
-      needs.openrouter-fallback.result == 'skipped' &&
       (
         (
           needs.provider-cooldowns.outputs.task_ready == 'true' &&
           needs.provider-cooldowns.outputs.gemini_active == 'true' &&
-          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
-          needs.openrouter-fallback.outputs.invocation_outcome != 'success'
+          needs.provider-cooldowns.outputs.openrouter_active == 'true'
         ) ||
         (
           needs.provider-cooldowns.outputs.task_ready != 'true' &&

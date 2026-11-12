@@ -174,10 +174,14 @@ if "needs.provider-cooldowns.outputs.groq_active != 'true'" not in autonomous:
     errors.append("Groq fallback must not start while its UTC cooldown is active")
 if "needs.autonomous-cycle.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.gemini_active == 'true'" not in autonomous:
     errors.append("OpenRouter must run only on a later cycle where Gemini was skipped by an already-active global cooldown")
-if "needs.openrouter-fallback.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.openrouter_active == 'true'" not in autonomous:
-    errors.append("Groq must run only on a later cycle where OpenRouter was skipped by an already-active global cooldown")
-if "needs.autonomous-cycle.result == 'failure'" in autonomous or "needs.openrouter-fallback.result == 'failure'" in autonomous:
-    errors.append("A failed provider must not trigger another provider invocation in the same workflow run")
+if (
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'" not in autonomous or
+    "needs.provider-cooldowns.outputs.openrouter_active == 'true'" not in autonomous
+):
+    errors.append("Groq must run only when both predecessor UTC cooldowns were already active in the global preflight")
+groq_route = autonomous.split("  groq-fallback:", 1)[1].split("  cycle-summary:", 1)[0]
+if "needs.openrouter-fallback.outputs.invocation_outcome" in groq_route or "needs.autonomous-cycle.result ==" in groq_route or "needs.openrouter-fallback.result ==" in groq_route:
+    errors.append("Groq eligibility must use pre-invocation cooldown evidence, not downstream job outcomes")
 
 summary_marker = "  cycle-summary:"
 if summary_marker not in autonomous:
