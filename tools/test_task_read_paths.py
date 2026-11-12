@@ -145,6 +145,24 @@ class TaskReadPathTests(unittest.TestCase):
             errors = validate_read_paths(ledger_with_paths(paths), root)
             self.assertTrue(any("aggregate source budget" in error for error in errors))
 
+    def test_counts_a_shared_source_once_in_the_repo_wide_budget(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "source").mkdir()
+            shared_path = "source/shared.c"
+            (root / shared_path).write_text("x" * (90 * 1024), encoding="utf-8")
+
+            data = ledger_with_paths([shared_path])
+            for index in (2, 3):
+                task = dict(data["tasks"][0])
+                task["task_id"] = f"TASK-00{index}"
+                task["title"] = f"Shared source reader {index}"
+                task["status"] = "queued"
+                task["owner_approved"] = True
+                data["tasks"].append(task)
+
+            self.assertEqual(validate_read_paths(data, root), [])
+
     def test_rejects_too_many_paths(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
