@@ -1462,11 +1462,13 @@ int main(int argc, char **argv)
                 const float signed_lookahead_curvature =
                     track_signed_curvature_at(lookahead_progress);
                 const float lookahead_half_width = track_half_width_at(lookahead_progress);
-                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
-                    rival_index, g_rival_z[rival_index],
-                    g_rival_lateral[rival_index], g_player_lateral,
-                    g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
-                    signed_lookahead_curvature, lookahead_half_width);
+                rival_target_lateral[rival_index] =
+                    boonta_rival_ai_target_lateral_with_rivalry(
+                        rival_index, g_rival_z[rival_index],
+                        g_rival_lateral[rival_index], g_player_lateral,
+                        g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
+                        signed_lookahead_curvature, lookahead_half_width,
+                        g_rival_rivalry[rival_index]);
                 rival_target_speed[rival_index] =
                     boonta_rival_ai_target_speed_with_rivalry(
                         rival_index, lookahead_curvature,
