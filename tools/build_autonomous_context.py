@@ -93,6 +93,20 @@ def _owner_approved_write_paths(root: Path, task_id: str) -> list[str]:
         or len(set(paths)) != len(paths)
     ):
         raise ContextBuildError("Queued task owner-reviewed write paths are malformed or unsafe")
+    for path in paths:
+        candidate = root / path
+        if candidate.is_symlink() or not candidate.is_file():
+            raise ContextBuildError(f"Owner-reviewed write path is not an existing regular file: {path}")
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(root.resolve())
+        except ValueError as exc:
+            raise ContextBuildError(f"Owner-reviewed write path escapes the repository: {path}") from exc
+        parent = candidate.parent
+        while parent != root and parent != parent.parent:
+            if parent.is_symlink():
+                raise ContextBuildError(f"Owner-reviewed write path contains a symlink parent: {path}")
+            parent = parent.parent
     return paths
 
 
