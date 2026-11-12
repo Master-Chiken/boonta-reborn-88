@@ -170,17 +170,36 @@ static inline float boonta_rival_ai_after_frame(
 }
 
 /*
+ * Five lightweight, deterministic driving temperaments. The profile is tied
+ * to the stable roster slot, so it cannot reroll every frame or depend on RNG.
+ * Positive pace bias makes a rival more assertive on straights; curvature
+ * sensitivity controls how much it lifts in bends.
+ */
+static inline float boonta_rival_ai_personality_speed_bias(unsigned int rival_index)
+{
+    static const float bias[5] = {-0.025f, 0.0f, 0.020f, 0.010f, -0.010f};
+    return bias[rival_index % 5U];
+}
+
+static inline float boonta_rival_ai_personality_curve_sensitivity(
+    unsigned int rival_index)
+{
+    static const float sensitivity[5] = {2.35f, 1.80f, 1.35f, 1.55f, 2.05f};
+    return sensitivity[rival_index % 5U];
+}
+
+/*
  * Curvature is estimated from the clean-room track sampler in radians per metre.
- * This first pace model intentionally adjusts speed only; it does not modify
- * the player's physics or claim retail GameCube/Wii physics parity.
+ * Personalities alter only rival target pace; player physics remain untouched.
  */
 static inline float boonta_rival_ai_target_speed(
     unsigned int rival_index, float curvature_radians_per_metre)
 {
     const float curvature = boonta_rival_ai_clamp(
         curvature_radians_per_metre, 0.0f, 0.18f);
-    const float target_speed = boonta_rival_initial_speed(rival_index) -
-                               curvature * 1.8f;
+    const float target_speed = boonta_rival_initial_speed(rival_index) +
+        boonta_rival_ai_personality_speed_bias(rival_index) -
+        curvature * boonta_rival_ai_personality_curve_sensitivity(rival_index);
     return boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
 }
 
