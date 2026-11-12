@@ -1037,6 +1037,14 @@ static void draw_hud(void)
     }
 #endif
 
+    /* Keep the measured results screen independent of the busy in-race HUD.
+     * Flush the ordinary HUD first, then give the complete results overlay a
+     * fresh vertex buffer so earlier bars/glyphs cannot consume its budget. */
+    if (g_race_finished) {
+        draw_vertex_buffer();
+        g_vertex_count = 0U;
+    }
+
     /* Read-only results use only values measured by this prototype run. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
