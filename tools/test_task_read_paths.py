@@ -145,6 +145,26 @@ class TaskReadPathTests(unittest.TestCase):
             errors = validate_read_paths(ledger_with_paths(paths), root)
             self.assertTrue(any("aggregate source budget" in error for error in errors))
 
+    def test_aggregate_budget_is_per_task_not_across_all_tasks(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "source").mkdir()
+            data = ledger_with_paths(["source/a.c", "source/b.c"])
+            first = data["tasks"][0]
+            first["status"] = "blocked"
+            second = dict(first)
+            second["task_id"] = "TASK-002"
+            second["read_paths"] = ["source/c.c", "source/d.c"]
+            second["read_ranges"] = [
+                {"path": path, "start_line": 1, "end_line": 1}
+                for path in second["read_paths"]
+            ]
+            data["tasks"].append(second)
+            for path in ("source/a.c", "source/b.c", "source/c.c", "source/d.c"):
+                (root / path).write_text("x" * 70000, encoding="utf-8")
+            self.assertGreater(4 * 70000, MAX_TOTAL_READ_BYTES)
+            self.assertEqual(validate_read_paths(data, root), [])
+
     def test_rejects_too_many_paths(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
