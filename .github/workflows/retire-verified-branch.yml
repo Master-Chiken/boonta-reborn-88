@@ -190,7 +190,7 @@ jobs:
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
-            echo "::error::Branch tip is not reachable from a verified archive or main."
+            echo "::error::Branch tip is not reachable from a verified archive, main or dev."
             exit 1
           fi
 
@@ -236,7 +236,7 @@ jobs:
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
-            echo "::error::Branch tip is not reachable from a verified archive or main."
+            echo "::error::Branch tip is not reachable from a verified archive, main or dev."
             exit 1
           fi
 
