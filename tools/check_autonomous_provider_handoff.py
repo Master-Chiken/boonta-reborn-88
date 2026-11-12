@@ -301,8 +301,12 @@ for required in (
 resume_route = groq_job.split("needs.provider-cooldowns.outputs.task_ready != 'true' &&", 1)[1].split("\n        )", 1)[0] if "needs.provider-cooldowns.outputs.task_ready != 'true' &&" in groq_job else ""
 if not resume_route or "needs.provider-cooldowns.outputs.resume_ready == 'true'" not in resume_route:
     errors.append("Groq must have a distinct existing-PR resume branch")
-if "github.event_name == 'workflow_dispatch'" in resume_route or "github.actor == github.repository_owner" in resume_route:
-    errors.append("Existing-PR scheduled resume must not be restricted to manual workflow_dispatch")
+if (
+    "github.event_name == 'schedule'" not in resume_route or
+    "github.event_name == 'workflow_dispatch'" not in resume_route or
+    "github.actor == github.repository_owner" not in resume_route
+):
+    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
 for provider_label, route_job in (("Gemini", gemini_resume_job), ("OpenRouter", openrouter_job), ("Groq", groq_job)):
     if "github.event_name == 'schedule'" not in route_job:
         errors.append(f"{provider_label} resume route must remain reachable from scheduled workflow runs")
