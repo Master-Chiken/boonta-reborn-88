@@ -18,15 +18,6 @@
         "gamecube-demo/source/main.c",
         "gamecube-demo/tests/test_rival_ai.c"
       ]
-    },
-    {
-      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
-      "purpose": "Bounded bootstrap: harden compact task-ledger summary generation and regression coverage",
-      "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
-      "allowed_paths": [
-        "tools/check_task_ledger_summary.py",
-        "tools/test_check_task_ledger.py"
-      ]
     }
   ]
 }
