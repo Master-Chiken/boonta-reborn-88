@@ -523,13 +523,13 @@ jobs:
                   --config=Logger.Logs.Video=True \
                   --exec="$DOL" --movie="$movie" --user="$user_dir" > "$log" 2>&1 &
                 emu_pid=$!
-                sleep 6
+                # Do not let the movie run unattended before the first screenshot.
                 if ! kill -0 "$emu_pid" 2>/dev/null; then
                   cat "$log"
                   echo "Dolphin exited before the finish/restart window became available."
                   return 1
                 fi
-                for attempt in $(seq 1 15); do
+                for attempt in $(seq 1 30); do
                   for id in $(xdotool search --onlyvisible --class dolphin-emu 2>/dev/null || true); do
                     title=$(xdotool getwindowname "$id" 2>/dev/null || true)
                     geometry=$(xdotool getwindowgeometry --shell "$id" 2>/dev/null || true)
@@ -541,7 +541,7 @@ jobs:
                     fi
                   done
                   [[ -n "$window" ]] && break
-                  sleep 1
+                  sleep 0.25
                 done
                 if [[ -z "$window" ]]; then
                   echo "No visible Dolphin main window was found for the finish/restart diagnostic."
@@ -552,10 +552,15 @@ jobs:
                   return 1
                 fi
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
-                # Wait for the finish banner, then the first clean HUD after Start alone restarts.
-                for attempt in $(seq 1 220); do
+                mkdir -p "$GITHUB_WORKSPACE/dolphin-finish-restart-samples"
+                # Poll frequently: the DTM can advance the finish transition much faster
+                # than wall-clock time, so sparse screenshots can miss the RESULTS panel.
+                for attempt in $(seq 1 1800); do
                   import -window "$window" "$capture"
                   test -s "$capture"
+                  if [[ "$attempt" -eq 1 || $((attempt % 25)) -eq 0 ]]; then
+                    cp "$capture" "$GITHUB_WORKSPACE/dolphin-finish-restart-samples/frame-${attempt}.png"
+                  fi
                   if [[ "$saw_finish" -eq 0 ]]; then
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log" 2>&1; then
                       echo "Finish banner detected in live frame $attempt."
@@ -571,7 +576,7 @@ jobs:
                       break
                     fi
                   fi
-                  sleep 3
+                  sleep 0.10
                 done
                 flatpak kill org.DolphinEmu.dolphin-emu >/dev/null 2>&1 || true
                 kill -KILL "$emu_pid" >/dev/null 2>&1 || true
@@ -730,6 +735,7 @@ jobs:
             dolphin-finish-restart.log
             dolphin-finish-restart-finish-detector.log
             dolphin-finish-restart-reset-detector.log
+            dolphin-finish-restart-samples/*.png
             dolphin-finish-restart-user/Logs/**
             dolphin-neutral-user/Logs/**
             dolphin-steered-user/Logs/**
