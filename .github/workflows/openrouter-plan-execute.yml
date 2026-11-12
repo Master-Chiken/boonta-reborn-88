@@ -55,7 +55,7 @@ on:
         type: string
         required: false
       resume_pr_number:
-        type: number
+        type: string
         required: false
       resume_pr_url:
         type: string
@@ -590,12 +590,23 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success'
         shell: bash
         env:
-          TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
-          TASK_TITLE: ${{ inputs.resume_mode == true && inputs.resume_task_title || inputs.task_title }}
-          TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
-          TASK_DESCRIPTION: ${{ inputs.resume_mode == true && inputs.resume_task_description || inputs.task_description }}
+          TASK_ID: ${{ inputs.task_id }}
+          TASK_TITLE: ${{ inputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
+          RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
+          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
+          RESUME_TASK_DESCRIPTION: ${{ inputs.resume_task_description }}
         run: |
           set -euo pipefail
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            TASK_ID="${RESUME_TASK_ID:-}"
+            TASK_TITLE="${RESUME_TASK_TITLE:-}"
+            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH:-}"
+            TASK_DESCRIPTION="${RESUME_TASK_DESCRIPTION:-}"
+          fi
           repo_root=''
           for candidate in "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/boonta-reborn-88"; do
             [[ -d "$candidate" ]] || continue
@@ -627,10 +638,13 @@ jobs:
           OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
           OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
-          TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
-          TASK_TITLE: ${{ inputs.resume_mode == true && inputs.resume_task_title || inputs.task_title }}
-          TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          TASK_ID: ${{ inputs.task_id }}
+          TASK_TITLE: ${{ inputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
+          RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
+          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
           RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
           RESUME_PR_URL: ${{ inputs.resume_pr_url }}
           RESUME_BRANCH: ${{ inputs.resume_branch }}
@@ -643,6 +657,9 @@ jobs:
           set +x
 
           if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            TASK_ID="${RESUME_TASK_ID:-}"
+            TASK_TITLE="${RESUME_TASK_TITLE:-}"
+            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH:-}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
             export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"
