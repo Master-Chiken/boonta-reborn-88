@@ -202,7 +202,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.base_sha = git(self.root, "rev-parse", "HEAD")
         self.write_allowlist(base_sha=self.base_sha)
         self.write_verified()
-        with self.assertRaisesRegex(DeliveryPlanError, "active or dependency-complete"):
+        with self.assertRaisesRegex(DeliveryPlanError, "WAITING_FOR_DEPENDENCIES|dependency-complete"):
             self.plan()
 
     def test_valid_verified_report_produces_deterministic_plan(self):
