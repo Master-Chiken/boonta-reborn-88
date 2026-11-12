@@ -948,7 +948,7 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
       ],
-      "next_action": "PR #395 is open against dev at exact head 2738ee47163a092eeff6d2bbef4f5d1502be87eb. Its source tree is unchanged from tested head e3a6e499341af120b8e192941b6de7957985c054; host tests, GameCube build, Dolphin headless smoke and software-renderer diagnostic passed there. The visible diagnostic detected the three-lap finish banner and a clean HUD after post-finish Start restart. Exact-head CI is rerunning after the ancestry-only commit. Owner-operated second-race acceptance remains required; do not mark completed until the PR is merged.",
+      "next_action": "PR #395 is open against dev at exact head 2738ee47163a092eeff6d2bbef4f5d1502be87eb. Host tests, GameCube build, Dolphin headless smoke and software-renderer diagnostic all pass. Visible Dolphin frames detected the three-lap finish banner, clean post-finish Start reset, Y-reset, and pause/resume. Human-operated second-race acceptance remains required; do not mark completed until the PR is merged.",
       "updated_at": "2026-11-12",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
       "head_sha": "2738ee47163a092eeff6d2bbef4f5d1502be87eb",
