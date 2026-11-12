@@ -48,6 +48,9 @@ on:
           - fix/groq-tool-json-temperature-20261110
           - fix/gemini-transient-fetch-retry-20261109
           - automation/fix-gemini-secondary-key-20261108
+          - automation-ledger-activation-20261112
+          - automation-ledger-validation
+          - fix/activation-handoff-mainline-20261111
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -154,6 +157,9 @@ jobs:
             "fix/groq-tool-json-temperature-20261110") PINNED_SHA="c592d3eb724ac8456dd9a340bed5c6edfa41b031" ;;
             "fix/gemini-transient-fetch-retry-20261109") PINNED_SHA="973690f8b3a63299750959cb98b65200d03932d0" ;;
             "automation/fix-gemini-secondary-key-20261108") PINNED_SHA="40a9db2ee79bafa0752899ded915bae8af3a4a8c" ;;
+            "automation-ledger-activation-20261112") PINNED_SHA="a89555e6d65aa4b086bd883a295501db91e9748c" ;;
+            "automation-ledger-validation") PINNED_SHA="c1d3fb6c87379777d508f1facaa222b849faa9e7" ;;
+            "fix/activation-handoff-mainline-20261111") PINNED_SHA="7dca23ebd573e5b7194b36a8ad92ccd6231c60c9" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
