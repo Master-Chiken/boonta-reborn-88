@@ -272,6 +272,8 @@ for required in (
 ):
     if required not in groq_job:
         errors.append(f"Groq safe scheduled/owner-dispatched resume route is missing {required!r}")
+if "resume_pr_number:\n        type: string\n        required: false" not in groq:
+    errors.append("Groq resume PR number must accept the empty-string no-resume handoff and validate only in resume mode")
 for required in (
     "resume_mode:",
     "resume_pr_number:",
