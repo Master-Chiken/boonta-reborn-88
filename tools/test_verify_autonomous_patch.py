@@ -86,10 +86,12 @@ class PipelineFixture(unittest.TestCase):
         (docs / "task-ledger-summary.json").write_text(json.dumps({
             "schema_version": 2,
             "source": "docs/automation/task-ledger.json",
+            "completed_task_ids": [],
             "tasks": [{
                 "task_id": TASK_ID,
                 "status": "active",
                 "target_branch": "main",
+                "depends_on": [],
             }],
         }), encoding="utf-8")
         (docs / "patch-path-allowlist.json").write_text(json.dumps({
