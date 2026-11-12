@@ -172,6 +172,8 @@ if "needs.provider-cooldowns.outputs.openrouter_active != 'true'" not in autonom
     errors.append("OpenRouter fallback must not start while its UTC cooldown is active")
 if "needs.provider-cooldowns.outputs.groq_active != 'true'" not in autonomous:
     errors.append("Groq fallback must not start while its UTC cooldown is active")
+if "resume_pr_number: ${{ fromJSON(needs.provider-cooldowns.outputs.resume_pr_number || '0') }}" not in autonomous:
+    errors.append("Groq reusable-workflow number input must receive a numeric zero sentinel when no resume PR exists")
 if "needs.autonomous-cycle.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.gemini_active == 'true'" not in autonomous:
     errors.append("OpenRouter must run only on a later cycle where Gemini was skipped by an already-active global cooldown")
 if "needs.openrouter-fallback.result == 'skipped'" not in autonomous or "needs.provider-cooldowns.outputs.openrouter_active == 'true'" not in autonomous:
