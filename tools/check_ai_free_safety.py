@@ -492,7 +492,7 @@ for required in (
 
 openrouter_normal_tools = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
 openrouter_resume_tools = {"get_file_contents", "push_files"}
-openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
+openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
 if openrouter_modes != {frozenset(openrouter_normal_tools), frozenset(openrouter_resume_tools)}:
     errors.append("OpenRouter must expose four normal-delivery tools and only targeted read plus push in resume mode")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in openrouter_fallback:
