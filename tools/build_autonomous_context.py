@@ -23,6 +23,10 @@ MAX_SOURCE_RANGES = 8
 MAX_RANGE_LINES = 80
 MAX_TOTAL_RANGE_LINES = 240
 MAX_SOURCE_FILE_BYTES = 96 * 1024
+MAX_WRITE_PATHS = 20
+APPROVAL_REF_RE = re.compile(
+    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+)
 
 
 def _read(root: Path, relative: str) -> str:
@@ -50,6 +54,46 @@ def _safe_source_path(path: Any) -> bool:
         and path not in {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
         and not any(part.lower() in {"generated", "roms", "private", "secrets", "credentials"} for part in parts)
     )
+
+
+def _owner_approved_write_paths(root: Path, task_id: str) -> list[str]:
+    try:
+        policy = json.loads(_read(root, "docs/automation/patch-path-allowlist.json"))
+    except json.JSONDecodeError as exc:
+        raise ContextBuildError("Owner-reviewed exact write-path policy is not valid JSON") from exc
+    if (
+        not isinstance(policy, dict)
+        or type(policy.get("schema_version")) is not int
+        or policy.get("schema_version") != 1
+        or not isinstance(policy.get("policy"), dict)
+        or policy["policy"].get("owner_review_required") is not True
+        or policy["policy"].get("path_mode") != "exact"
+        or policy["policy"].get("max_paths_per_task") != MAX_WRITE_PATHS
+        or not isinstance(policy.get("tasks"), list)
+    ):
+        raise ContextBuildError("Owner-reviewed exact write-path policy is invalid")
+    matches = [
+        item for item in policy["tasks"]
+        if isinstance(item, dict) and item.get("task_id") == task_id
+    ]
+    if len(matches) != 1:
+        raise ContextBuildError("Queued task has no unique owner-reviewed exact write-path entry")
+    entry = matches[0]
+    paths = entry.get("allowed_paths")
+    if (
+        not isinstance(entry.get("purpose"), str)
+        or not entry["purpose"].strip()
+        or len(entry["purpose"]) > 240
+        or not isinstance(entry.get("approval_ref"), str)
+        or not APPROVAL_REF_RE.fullmatch(entry["approval_ref"])
+        or not isinstance(paths, list)
+        or not 1 <= len(paths) <= MAX_WRITE_PATHS
+        or not all(_safe_source_path(path) for path in paths)
+        or any(path.startswith(".github/") or path.startswith("docs/automation/") for path in paths)
+        or len(set(paths)) != len(paths)
+    ):
+        raise ContextBuildError("Queued task owner-reviewed write paths are malformed or unsafe")
+    return paths
 
 
 def _build_source_excerpt(
@@ -189,10 +233,26 @@ def build_context(
     if task.get("title") != task_title or task.get("target_branch") != target_branch:
         raise ContextBuildError("Selected task title or target branch differs from the canonical ledger")
     status = str(task.get("status", "")).lower()
-    if status not in {"active", "in_progress", "in_review", "ready", "blocked"}:
+    if status not in {"active", "in_progress", "in_review", "ready", "blocked", "queued"}:
         raise ContextBuildError("Selected task has a non-executable ledger status")
     if status == "blocked" and task_id != "AUTOMATION-LEDGER-ACTIVATION":
         raise ContextBuildError("Only the explicitly tracked activation bootstrap may be selected while blocked")
+    write_paths: list[str] = []
+    if status == "queued":
+        completed_ids = summary.get("completed_task_ids")
+        dependencies = task.get("depends_on")
+        active_tasks = [item for item in tasks if isinstance(item, dict) and item.get("status") == "active"]
+        if (
+            task.get("owner_approved") is not True
+            or not isinstance(completed_ids, list)
+            or any(not isinstance(item, str) or not item.strip() for item in completed_ids)
+            or len(set(completed_ids)) != len(completed_ids)
+            or not isinstance(dependencies, list)
+            or any(not isinstance(item, str) or item not in set(completed_ids) for item in dependencies)
+            or active_tasks
+        ):
+            raise ContextBuildError("Queued task is not owner-approved, dependency-complete, or the writer slot is occupied")
+        write_paths = _owner_approved_write_paths(root, task_id)
     if task.get("pr_url") or task.get("head_sha"):
         raise ContextBuildError("Selected task already has PR/head evidence; refusing a duplicate writer")
     scope = task.get("platform_scope")
@@ -252,6 +312,7 @@ def build_context(
         f"Target branch: {target_branch}",
         "Platform scope: " + ", ".join(scope),
         rendered_paths_line,
+        *(["Exact owner-reviewed write paths (no others): " + ", ".join(write_paths)] if write_paths else []),
         "Question: " + _short(task["question_excerpt"], 150),
         f"Acceptance criteria ({criteria_total} total; first {len(selected_criteria)}):",
         *("- " + _short(item, 140) for item in selected_criteria),
