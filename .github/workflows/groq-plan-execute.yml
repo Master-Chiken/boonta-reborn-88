@@ -689,7 +689,9 @@ jobs:
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
 
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative for task selection and live PR state. Do not search PR history, enumerate PRs, list directories, inspect other paths, fetch issue bodies or reread the ledger.
+          - Trust only the preloaded schema-v2 context and live preflight. The preloaded schema-v2 context is authoritative. Global preflight is authoritative for task selection and live PR state.
+          - Do not search history, enumerate PRs, list directories, inspect other paths, fetch issue bodies or reread the ledger.
+          - Do not search PR history or treat older merged automation PRs as current-cycle evidence.
           - No full issue bodies/comments; exact source excerpts are preloaded.
           - No broad model-side reads or repo discovery; one exact approved file read at most.
           - Use preloaded source excerpts first. Write only the exact owner-reviewed paths listed in context; if absent, report BLOCKED and create no branch/PR.
