@@ -29,7 +29,9 @@ jobs:
               doc = YAML.load_file(path)
               puts "YAML OK: #{path}"
               next unless path.end_with?("retire-verified-branch.yml")
-              doc.fetch("jobs").fetch("retire").fetch("steps").each_with_index do |step, index|
+              job = doc.fetch("jobs").values.find { |candidate| candidate.is_a?(Hash) && candidate["steps"].is_a?(Array) }
+              raise "No workflow job with a steps array in #{path}" unless job
+              job.fetch("steps").each_with_index do |step, index|
                 next unless step["run"]
                 File.write("/tmp/verified-retire-#{index}.sh", step["run"])
               end
