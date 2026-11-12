@@ -152,6 +152,11 @@ class GXColorPipelineTests(unittest.TestCase):
         restart_prompt = hud.index('append_text("START TO RESTART"', results_start)
         self.assertGreater(final_submit, restart_prompt)
         self.assertNotIn("g_vertex_count = 0", results_pass)
+        self.assertNotIn("draw_vertex_buffer();", results_pass)
+        for label in ("RESULTS", "LAP 1", "LAP 2", "LAP 3", "TOTAL",
+                      "BEST", "OVERTAKES", "POSITION", "START TO RESTART"):
+            with self.subTest(label=label):
+                self.assertIn(f'append_text("{label}"', results_pass)
         self.assertIn("draw_vertex_buffer();", hud[results_end:])
 
     def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
