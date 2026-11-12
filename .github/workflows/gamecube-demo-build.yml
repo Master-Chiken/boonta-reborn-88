@@ -553,9 +553,11 @@ jobs:
                 fi
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
                 mkdir -p "$GITHUB_WORKSPACE/dolphin-finish-restart-samples"
-                # Poll frequently: the DTM can advance the finish transition much faster
-                # than wall-clock time, so sparse screenshots can miss the RESULTS panel.
-                for attempt in $(seq 1 1800); do
+                # Poll frequently, but allow the full 14,007-frame DTM to reach its late
+                # Start-restart input. At 30 emulated FPS that is about 467 seconds;
+                # 6,000 polls at 100 ms leaves room for Software Renderer overhead
+                # while remaining below the 1,100-second outer capture timeout.
+                for attempt in $(seq 1 6000); do
                   import -window "$window" "$capture"
                   test -s "$capture"
                   if [[ "$attempt" -eq 1 || $((attempt % 25)) -eq 0 ]]; then
