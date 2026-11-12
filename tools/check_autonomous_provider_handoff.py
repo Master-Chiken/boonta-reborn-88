@@ -611,7 +611,7 @@ for required in (
     'task.get("owner_approved") is not True',
     'patch-path-allowlist.json',
     'Exact owner-reviewed write paths (no others): ',
-    'Queued task is not owner-approved, dependency-complete, or the writer slot is occupied',
+    'Task is not owner-approved, dependency-complete, or the single-writer slot is occupied',
     'required_handoff_text',
     'task["question_excerpt"]',
     'task["next_action_excerpt"]',
