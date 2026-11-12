@@ -618,11 +618,11 @@ jobs:
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="create_branch,create_pull_request,push_files"
+            export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Exact task source excerpts are preloaded; no model file-read step.
+          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Preloaded excerpts first; at most one exact approved file read.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -686,29 +686,29 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free, €0 only. Execute the one globally selected task.
+          Groq Free, €0 only. Execute exactly the preflight-reserved task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence. Use the preloaded excerpts for every exact task path from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
-          - No full issue bodies/comments; exact source excerpts are preloaded.
-          - Source excerpt budget: 1,800 characters.
-          - Queued: write only paths in "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED—no branch/PR.
-          - No model-side reads or repo discovery.
-          - Do not reopen, replay or recreate that chain. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or trust older merged automation PRs.
+          - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
+          - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first.
+          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
+          - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
+          - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
           
           SAFETY
-          - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
-          - Preserve clean-room provenance; never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs.
+          - No paid routes, billing, credits, or provider/secret/settings changes.
+          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
+          - Never upload commercial ROM/assets or write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
           
           TOOLS / DELIVERY
-          - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.
-          - Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
-          - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
-          - Four steps: create TASK_BRANCH_NAME from TASK_TARGET_BRANCH; push_files once with one coherent patch; create one non-draft PR; report.
-          - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
+          - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
+          - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
+          - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Exact markers: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
+          - Use returned PR URL/head_sha; do not read the PR back.
           
           REPORT
-          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output only machine-readable lines. PROGRESS needs same-repo PR URL, exact 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
+          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output machine-readable lines only. PROGRESS needs PR URL and exact 40-character head SHA; otherwise BLOCKED needs one concrete blocker and next action.
           PROMPT
           )"
 

@@ -30,7 +30,6 @@ def validate_read_paths(
     if max_bytes <= 0 or max_total_bytes <= 0:
         return ["read byte budgets must be positive"]
 
-    total_bytes = 0
     path_count = 0
     for task_index, task in enumerate(data.get("tasks", [])):
         paths = task.get("read_paths") or []
@@ -98,7 +97,6 @@ def validate_read_paths(
                 f"tasks[{task_index}].read_paths total {task_bytes} bytes; "
                 f"aggregate source budget is {max_total_bytes}"
             )
-        total_bytes += task_bytes
 
         if isinstance(ranges, list) and paths:
             covered_paths: set[str] = set()
@@ -149,8 +147,6 @@ def validate_read_paths(
 
     if path_count == 0:
         errors.append("No task-scoped agent read paths are configured")
-    if total_bytes > max_total_bytes:
-        errors.append(f"All task read paths total {total_bytes} bytes; aggregate source budget is {max_total_bytes}")
     return errors
 
 
@@ -169,7 +165,7 @@ def main() -> int:
     count = sum(len(task.get("read_paths") or []) for task in data.get("tasks", []))
     print(
         f"Task read paths passed: {count} exact files with complete bounded line ranges; "
-        f"maximum {MAX_READ_PATH_BYTES} bytes per file and {MAX_TOTAL_READ_BYTES} bytes total."
+        f"maximum {MAX_READ_PATH_BYTES} bytes per file and {MAX_TOTAL_READ_BYTES} bytes per task."
     )
     return 0
 

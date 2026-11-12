@@ -26,11 +26,13 @@ def fixture(root: Path) -> str:
         "schema_version": 2,
         "source": "docs/automation/task-ledger.json",
         "updated_at": "2026-11-08",
+        "completed_task_ids": [],
         "policy": {"max_active_tasks": 1, "completed_requires_merged_pr": True},
         "tasks": [{
             "task_id": "AUTOMATION-LEDGER-ACTIVATION",
             "title": "Activate and validate persistent autonomous task tracking",
             "status": "blocked",
+            "depends_on": [],
             "target_branch": "main",
             "platform_scope": ["automation"],
             "read_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
@@ -45,6 +47,18 @@ def fixture(root: Path) -> str:
     (root / "docs/automation/task-ledger-summary.json").write_text(
         json.dumps(summary), encoding="utf-8"
     )
+    (root / "tools").mkdir(parents=True)
+    (root / "tools/test_check_task_ledger.py").write_text("class FixtureTests: pass\\n", encoding="utf-8")
+    (root / "docs/automation/patch-path-allowlist.json").write_text(json.dumps({
+        "schema_version": 1,
+        "policy": {"owner_review_required": True, "path_mode": "exact", "max_paths_per_task": 20},
+        "tasks": [{
+            "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+            "purpose": "Synthetic owner-reviewed fixture scope",
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+            "allowed_paths": ["tools/test_check_task_ledger.py"],
+        }],
+    }), encoding="utf-8")
     return (
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
@@ -64,6 +78,24 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
+    assert "Exact owner-reviewed write paths (no others): tools/test_check_task_ledger.py" in rendered
+
+    # The blocked bootstrap is executable only when an exact owner-reviewed
+    # write-path entry exists; otherwise the context builder fails before inference.
+    path_policy = root / "docs/automation/patch-path-allowlist.json"
+    original_policy = json.loads(path_policy.read_text(encoding="utf-8"))
+    path_policy.write_text(json.dumps({**original_policy, "tasks": []}), encoding="utf-8")
+    try:
+        MODULE.build_context(
+            root, "AUTOMATION-LEDGER-ACTIVATION",
+            "Activate and validate persistent autonomous task tracking",
+            "main", context,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "no unique owner-reviewed exact-path entry" in str(exc)
+    else:
+        raise AssertionError("Blocked activation must not reach inference without owner-reviewed write paths")
+    path_policy.write_text(json.dumps(original_policy), encoding="utf-8")
 
     # Regression: full activation handoffs must survive beyond the former 1,200-char cap.
     long_handoff = context + "\n" + ("Supplemental verified evidence note. " * 30)
@@ -394,14 +426,21 @@ with tempfile.TemporaryDirectory() as temp:
     assert "line 3" in context and "line 11" in context
 
 
-# Production smoke test: build the actual activation-task context from the
-# canonical compact summary and the exact current repository source files.
+# Production smoke test: the real activation task must remain fail-closed
+# until its single owner-reviewed policy entry is merged separately in PR #409.
 with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
     production_summary = json.load(handle)
 activation = next(
     task for task in production_summary["tasks"]
     if task["task_id"] == "AUTOMATION-LEDGER-ACTIVATION"
 )
+policy_path = ROOT / "docs/automation/patch-path-allowlist.json"
+with policy_path.open(encoding="utf-8") as handle:
+    production_policy = json.load(handle)
+activation_entries = [
+    entry for entry in production_policy.get("tasks", [])
+    if isinstance(entry, dict) and entry.get("task_id") == activation["task_id"]
+]
 production_handoff = "\n".join([
     "Task ID: " + activation["task_id"],
     "Title: " + activation["title"],
@@ -412,22 +451,44 @@ production_handoff = "\n".join([
     "Next: " + activation["next_action_excerpt"],
     "Read-only source paths (select at most one): " + ", ".join(activation["read_paths"]),
 ])
-production_context = MODULE.build_context(
-    ROOT,
-    activation["task_id"],
-    activation["title"],
-    activation["target_branch"],
-    production_handoff,
-    max_chars=3000,
-    max_task_context=1100,
-    max_criteria=4,
-    max_next_action=100,
-    source_root=ROOT,
-    max_source_chars=1800,
-)
-assert len(production_context) <= 3000
-assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
-assert all(f"[{path}:" in production_context for path in activation["read_paths"])
-assert "BOONTA_TASK_ID" in production_context or "One active task maximum" in production_context
+if len(activation_entries) == 1:
+    production_context = MODULE.build_context(
+        ROOT,
+        activation["task_id"],
+        activation["title"],
+        activation["target_branch"],
+        production_handoff,
+        max_chars=3000,
+        max_task_context=1100,
+        max_criteria=4,
+        max_next_action=100,
+        source_root=ROOT,
+        max_source_chars=1800,
+    )
+    assert len(production_context) <= 3000
+    assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
+    assert all(f"[{path}:" in production_context for path in activation["read_paths"])
+    assert "Exact owner-reviewed write paths (no others):" in production_context
+elif len(activation_entries) == 0:
+    try:
+        MODULE.build_context(
+            ROOT,
+            activation["task_id"],
+            activation["title"],
+            activation["target_branch"],
+            production_handoff,
+            max_chars=3000,
+            max_task_context=1100,
+            max_criteria=4,
+            max_next_action=100,
+            source_root=ROOT,
+            max_source_chars=1800,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "no unique owner-reviewed exact-path entry" in str(exc)
+    else:
+        raise AssertionError("Activation must fail closed until PR #409 supplies its exact owner-reviewed paths")
+else:
+    raise AssertionError("Activation policy contains duplicate task entries; exactly one is allowed")
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")

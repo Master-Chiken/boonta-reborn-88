@@ -249,7 +249,23 @@ def build_allowlist(
             raise AllowlistError("Active task dependencies are not all completed")
     else:
         requested = task_map.get(requested_task_id)
-        if requested is not None and requested.get("status") == "queued":
+        bootstrap_blocked = (
+            requested_task_id == "AUTOMATION-LEDGER-ACTIVATION"
+            and requested is not None
+            and requested.get("status") == "blocked"
+        )
+        if bootstrap_blocked:
+            dependencies = requested.get("depends_on")
+            if not isinstance(dependencies, list) or any(item not in completed for item in dependencies):
+                return {
+                    "status": "WAITING_FOR_DEPENDENCIES",
+                    "task_id": requested_task_id,
+                    "base_sha": expected_base_sha,
+                    "allowed_paths": [],
+                    "reason": "Blocked activation bootstrap dependencies must be completed before a write path is available.",
+                }
+            selected = requested
+        elif requested is not None and requested.get("status") == "queued":
             if requested.get("owner_approved") is not True:
                 return {
                     "status": "WAITING_FOR_OWNER_APPROVAL",
@@ -267,14 +283,17 @@ def build_allowlist(
                     "allowed_paths": [],
                     "reason": "Every queued-task dependency must be completed before a write path is available.",
                 }
-        eligible_queued = [
-            item for item in task_map.values()
-            if item.get("status") == "queued"
-            and item.get("owner_approved") is True
-            and isinstance(item.get("depends_on"), list)
-            and all(dependency in completed for dependency in item["depends_on"])
-        ]
-        if not eligible_queued:
+        if bootstrap_blocked:
+            eligible_queued = []
+        else:
+            eligible_queued = [
+                item for item in task_map.values()
+                if item.get("status") == "queued"
+                and item.get("owner_approved") is True
+                and isinstance(item.get("depends_on"), list)
+                and all(dependency in completed for dependency in item["depends_on"])
+            ]
+        if not bootstrap_blocked and not eligible_queued:
             return {
                 "status": "NO_ACTIVE_TASK",
                 "task_id": requested_task_id,
@@ -282,9 +301,10 @@ def build_allowlist(
                 "allowed_paths": [],
                 "reason": "No active or dependency-complete owner-approved queued task is available.",
             }
-        selected = eligible_queued[0]
-        if selected.get("task_id") != requested_task_id:
-            raise AllowlistError("Requested task ID does not match the first eligible owner-approved queued task")
+        if not bootstrap_blocked:
+            selected = eligible_queued[0]
+            if selected.get("task_id") != requested_task_id:
+                raise AllowlistError("Requested task ID does not match the first eligible owner-approved queued task")
     if selected.get("target_branch") not in {"main", "dev"}:
         raise AllowlistError("Selected task target branch must be main or dev")
 

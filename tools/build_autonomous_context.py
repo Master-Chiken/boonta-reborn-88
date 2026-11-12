@@ -77,7 +77,7 @@ def _owner_approved_write_paths(root: Path, task_id: str) -> list[str]:
         if isinstance(item, dict) and item.get("task_id") == task_id
     ]
     if len(matches) != 1:
-        raise ContextBuildError("Queued task has no unique owner-reviewed exact write-path entry")
+        raise ContextBuildError("Task has no unique owner-reviewed exact-path entry")
     entry = matches[0]
     paths = entry.get("allowed_paths")
     if (
@@ -252,20 +252,26 @@ def build_context(
     if status == "blocked" and task_id != "AUTOMATION-LEDGER-ACTIVATION":
         raise ContextBuildError("Only the explicitly tracked activation bootstrap may be selected while blocked")
     write_paths: list[str] = []
-    if status == "queued":
+    if status in {"queued", "blocked"} and (
+        status == "queued" or task_id == "AUTOMATION-LEDGER-ACTIVATION"
+    ):
         completed_ids = summary.get("completed_task_ids")
         dependencies = task.get("depends_on")
         active_tasks = [item for item in tasks if isinstance(item, dict) and item.get("status") == "active"]
         if (
-            task.get("owner_approved") is not True
-            or not isinstance(completed_ids, list)
+            not isinstance(completed_ids, list)
             or any(not isinstance(item, str) or not item.strip() for item in completed_ids)
             or len(set(completed_ids)) != len(completed_ids)
             or not isinstance(dependencies, list)
             or any(not isinstance(item, str) or item not in set(completed_ids) for item in dependencies)
             or active_tasks
+            or (status == "queued" and task.get("owner_approved") is not True)
         ):
-            raise ContextBuildError("Queued task is not owner-approved, dependency-complete, or the writer slot is occupied")
+            raise ContextBuildError("Task is not owner-approved, dependency-complete, or the single-writer slot is occupied")
+        # The blocked activation bootstrap receives write scope only after an
+        # explicit exact-path owner policy entry exists. Without it, fail before
+        # any provider call rather than handing the model read-only snippets
+        # while presenting the task as executable.
         write_paths = _owner_approved_write_paths(root, task_id)
     if task.get("pr_url") or task.get("head_sha"):
         raise ContextBuildError("Selected task already has PR/head evidence; refusing a duplicate writer")

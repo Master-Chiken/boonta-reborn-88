@@ -144,6 +144,29 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         self.assertEqual(report["status"], "NO_ACTIVE_TASK")
         self.assertEqual(report["allowed_paths"], [])
 
+    def test_blocked_activation_bootstrap_waits_for_owner_reviewed_paths(self):
+        task = dict(BASE_TASK, task_id="AUTOMATION-LEDGER-ACTIVATION", status="blocked")
+        self.ledger["tasks"] = [task]
+        self.policy["tasks"] = []
+        self.commit_inputs()
+        report = self.call_allowlist(task_id="AUTOMATION-LEDGER-ACTIVATION")
+        self.assertEqual(report["status"], "WAITING_FOR_OWNER_APPROVED_PATHS")
+        self.assertEqual(report["allowed_paths"], [])
+
+    def test_blocked_activation_bootstrap_receives_only_explicit_owner_paths(self):
+        task = dict(BASE_TASK, task_id="AUTOMATION-LEDGER-ACTIVATION", status="blocked")
+        self.ledger["tasks"] = [task]
+        self.policy["tasks"] = [{
+            "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+            "purpose": "Owner-reviewed activation bootstrap test scope",
+            "approval_ref": APPROVAL,
+            "allowed_paths": [PATH],
+        }]
+        self.commit_inputs()
+        report = self.call_allowlist(task_id="AUTOMATION-LEDGER-ACTIVATION")
+        self.assertEqual(report["status"], "READY")
+        self.assertEqual(report["allowed_paths"], [PATH])
+
     def test_missing_owner_approval_entry_returns_waiting(self):
         self.policy["tasks"] = []
         self.commit_inputs()

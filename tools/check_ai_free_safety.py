@@ -1599,10 +1599,11 @@ if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
-    "No full issue bodies/comments; exact source excerpts are preloaded.",
-    "No model-side reads or repo discovery.",
-    "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
+    "No issue bodies/comments; exact source excerpts are preloaded.",
+    "No broad model-side reads or repo discovery; one exact approved file read at most.",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
+    "No paid routes, billing, credits, or provider/secret/settings changes.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
@@ -1614,7 +1615,7 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or pro
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
