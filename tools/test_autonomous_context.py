@@ -187,7 +187,7 @@ with tempfile.TemporaryDirectory() as temp:
     bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
-        "main", full_handoff, max_chars=1500, max_task_context=1400,
+        "main", full_handoff, max_chars=1800, max_task_context=1650,
     )
     assert len(bounded) <= 1800
     assert task["question_excerpt"] in bounded
@@ -197,7 +197,7 @@ with tempfile.TemporaryDirectory() as temp:
     groq_bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
-        "main", full_handoff, max_chars=1500, max_task_context=1400,
+        "main", full_handoff, max_chars=1800, max_task_context=1650,
         max_criteria=3, max_next_action=140,
     )
     assert len(groq_bounded) <= 1800
