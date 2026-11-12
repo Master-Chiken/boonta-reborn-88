@@ -139,7 +139,7 @@ with tempfile.TemporaryDirectory() as temp:
     try:
         MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
     except MODULE.ContextBuildError as exc:
-        assert "weakens the one-writer/€0/human-review policy" in str(exc)
+        assert "weakens the one-writer/provider-order/€0/human-review policy" in str(exc)
     else:
         raise AssertionError("A weakened provider policy must fail closed")
     role_registry["policy"]["paid_fallback"] = False
