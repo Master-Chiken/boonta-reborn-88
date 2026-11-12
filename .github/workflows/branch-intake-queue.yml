@@ -43,6 +43,17 @@ jobs:
           esac
           gh api --paginate --slurp "repos/$GH_REPO/branches?per_page=100" | jq -c 'add' > /tmp/branches.json
           gh api --paginate --slurp "repos/$GH_REPO/pulls?state=open&per_page=100" | jq -c 'add' > /tmp/open-prs.json
+          open_pr_count="$(jq 'length' /tmp/open-prs.json)"
+          if (( open_pr_count >= 3 )); then
+            {
+              echo "## Intake paused by PR budget"
+              echo ""
+              echo "Found $open_pr_count open PRs; the limit for new intake is 3."
+              echo "No candidate PRs will be created. Review, merge or close existing PRs first."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Intake paused: $open_pr_count open PRs already meet/exceed the cap of 3."
+            exit 0
+          fi
           # Mirror public Git history without checking out or executing branch code.
           # git cherry uses patch IDs to detect changes already applied under new SHAs.
           GIT_TERMINAL_PROMPT=0 git clone --mirror --quiet "https://github.com/${GH_REPO}.git" /tmp/racer-intake.git
