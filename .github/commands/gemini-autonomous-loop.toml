@@ -9,14 +9,13 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Do not reread inputs. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
 - Keep newly retrieved repository/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read all historical comments; use a compact inventory of directly related open pull requests. Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries or the approximately 452 KB route dossier. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue. On context/quota/rate/auth errors, never repeat the same request.
 - Inspect task-linked PRs and exact-head CI only. Reuse passing checks for an unchanged exact SHA without launching duplicate runs. Read logs only for failed jobs; read only the failing job logs.
-- Three turns: reconcile → patch → PR/head readback.
-
+- 
 ## AUTHORITATIVE SELECTED TASK
 - Keep preflight `.gemini/context.json` task identity/title/description/target authoritative; use `verified_context` for exact source excerpts and task metadata. Do not substitute another task.
 - Use only the selected task from `docs/automation/task-ledger-summary.json`; its handoff contains `task_title`, `task_description`, `task_target_branch` and `acceptance_criteria_excerpt`. Never select another task.
 - The runner builds context from the canonical `main` summary and exact selected base. Never treat the workflow's default checkout as gameplay source evidence.
 - Require the canonical base (`main` research, `dev` gameplay). Stop on any task/base mismatch, missing excerpts, existing PR/head evidence or exceeded budget.
-- For queued work, `verified_context` must include `Exact owner-reviewed write paths (no others)`. Modify only those exact paths; if the line is absent or empty, report BLOCKED and do not create a branch, push files or open a PR.
+- Queued work: write only the exact paths in verified context's owner-reviewed write-path list; if absent, BLOCKED, no branch/PR.
 - If criteria are insufficient, make at most one exact `mcp_github_get_file_contents` request for the selected row in `docs/automation/task-ledger.json` at `ref=main`; never list directories or inspect unrelated tasks/backlogs.
 - Post-merge reconciliation: for blocked/active tasks lacking ledger PR/head, search exact `BOONTA_TASK_ID: <task_id>` PR-body matches on selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. verify live `merged_at`, base repo/branch and final `head.sha`. If criteria pass, record that original PR URL and exact head SHA as evidence in one ledger PR; clear completed-task read_paths/read_ranges, set 1-4 exact safe paths and 1-8 ranges (<=80 lines each, <=240 total), keep aggregate bytes below 256 KiB, regenerate summary and promote at most one owner-approved queued task. If none, EMPTY_QUEUE. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
 - #226 is GameCube/Wii; #279 is read-only PC/N64/Dreamcast evidence. Reuse #282 and merged #327 (`69deb6778f9383887118803428e7014686865a83`). Do not reopen, replay or recreate that chain (superseded PRs #317/#318/#319).
