@@ -1422,7 +1422,7 @@ int main(int argc, char **argv)
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 const float lookahead_offset = boonta_rival_route_lookahead_sample(
                     g_distance, g_rival_progress[rival_index], 4.0f,
-                    !BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP);
+                    g_current_course != NULL && g_current_course->has_branches);
                 const float lookahead_curvature = track_curvature_at(lookahead_offset);
                 const float signed_lookahead_curvature =
                     track_signed_curvature_at(lookahead_offset);
