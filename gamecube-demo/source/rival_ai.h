@@ -63,6 +63,24 @@ static inline float boonta_rival_ai_curvature_from_samples(
 }
 
 /*
+ * Route samplers accept distance relative to the player's current route cursor.
+ * Rival progress is absolute world distance, so subtract the player snapshot
+ * before asking for the rival's look-ahead geometry.
+ */
+static inline float boonta_rival_route_lookahead_offset(
+    float player_progress, float rival_progress, float lookahead_distance)
+{
+    float offset;
+    if (!isfinite(player_progress) || player_progress < 0.0f ||
+        !isfinite(rival_progress) || rival_progress < 0.0f ||
+        !isfinite(lookahead_distance) || lookahead_distance < 0.0f) {
+        return 0.0f;
+    }
+    offset = rival_progress - player_progress + lookahead_distance;
+    return isfinite(offset) ? offset : 0.0f;
+}
+
+/*
  * Stable racing-line bias: each rival keeps its assigned lane but moves a
  * bounded amount toward the inside of the upcoming bend. Narrow roads reduce
  * both the bias and the allowed lateral envelope.
