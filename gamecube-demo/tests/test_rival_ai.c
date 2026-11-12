@@ -103,18 +103,46 @@ static void curvature_samples_are_measured_and_bounded(void)
         0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f), 0.0f));
 }
 
-static void rival_route_lookahead_uses_player_relative_distance(void)
+static void rival_route_lookahead_uses_the_sampler_coordinate_system(void)
 {
-    /* At the grid, rival zero is 22 m along the route; sample 4 m beyond it. */
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, 22.0f, 4.0f), 26.0f));
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(100.0f, 82.0f, 4.0f), -14.0f));
+    /* The current single-loop sampler consumes absolute course distance. */
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        0.0f, 22.0f, 4.0f, 0), 26.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        100.0f, 82.0f, 4.0f, 0), 86.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        100.0f, 103.0f, 4.0f, 0), 107.0f));
 
-    /* A rival 3 m ahead samples 7 m ahead of the player cursor. */
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(100.0f, 103.0f, 4.0f), 7.0f));
+    /* A branched sampler consumes a distance relative to the player's cursor. */
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        100.0f, 82.0f, 4.0f, 1), -14.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        100.0f, 103.0f, 4.0f, 1), 7.0f));
 
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(NAN, 22.0f, 4.0f), 0.0f));
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, INFINITY, 4.0f), 0.0f));
-    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, 22.0f, NAN), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        NAN, 22.0f, 4.0f, 0), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        0.0f, INFINITY, 4.0f, 1), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        0.0f, 22.0f, NAN, 0), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_sample(
+        0.0f, 22.0f, 4.0f, 2), 0.0f));
+}
+
+static void closest_rival_conflict_wins_independent_of_array_order(void)
+{
+    const float first_z[3] = {-18.0f, -17.0f, -15.0f};
+    const float first_lateral[3] = {0.0f, 0.8f, -0.8f};
+    const float reversed_z[3] = {-18.0f, -15.0f, -17.0f};
+    const float reversed_lateral[3] = {0.0f, -0.8f, 0.8f};
+    const float first_target = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, first_z, first_lateral, 3U, 0.0f, 3.4f);
+    const float reversed_target = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, reversed_z, reversed_lateral,
+        3U, 0.0f, 3.4f);
+
+    assert(nearf_ai(first_target, -0.75f));
+    assert(nearf_ai(reversed_target, -0.75f));
 }
 
 static void curvature_reduces_target_speed(void)
@@ -235,7 +263,8 @@ int main(void)
     signed_curvature_selects_inside_line();
     signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
-    rival_route_lookahead_uses_player_relative_distance();
+    rival_route_lookahead_uses_the_sampler_coordinate_system();
+    closest_rival_conflict_wins_independent_of_array_order();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
     puts("rival AI tests: PASS");

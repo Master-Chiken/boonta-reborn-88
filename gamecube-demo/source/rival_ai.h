@@ -63,21 +63,25 @@ static inline float boonta_rival_ai_curvature_from_samples(
 }
 
 /*
- * Route samplers accept distance relative to the player's current route cursor.
- * Rival progress is absolute world distance, so subtract the player snapshot
- * before asking for the rival's look-ahead geometry.
+ * The single-loop sampler accepts absolute course distance. A branched course
+ * samples relative to its live cursor. Convert the rival's absolute progress
+ * into the coordinate system required by the selected course sampler.
  */
-static inline float boonta_rival_route_lookahead_offset(
-    float player_progress, float rival_progress, float lookahead_distance)
+static inline float boonta_rival_route_lookahead_sample(
+    float player_progress, float rival_progress, float lookahead_distance,
+    int relative_to_player_cursor)
 {
-    float offset;
+    float sample_distance;
     if (!isfinite(player_progress) || player_progress < 0.0f ||
         !isfinite(rival_progress) || rival_progress < 0.0f ||
-        !isfinite(lookahead_distance) || lookahead_distance < 0.0f) {
+        !isfinite(lookahead_distance) || lookahead_distance < 0.0f ||
+        (relative_to_player_cursor != 0 && relative_to_player_cursor != 1)) {
         return 0.0f;
     }
-    offset = rival_progress - player_progress + lookahead_distance;
-    return isfinite(offset) ? offset : 0.0f;
+    sample_distance = relative_to_player_cursor
+        ? rival_progress - player_progress + lookahead_distance
+        : rival_progress + lookahead_distance;
+    return isfinite(sample_distance) ? sample_distance : 0.0f;
 }
 
 /* Stable roster traits: rivals keep their style for the whole race. */
@@ -158,8 +162,15 @@ static inline float boonta_rival_ai_target_lateral(
         target = player_lateral <= current_lateral ? 1.45f : -1.45f;
     }
 
-    /* Keep a small lateral gap from nearby rivals; ignore distant traffic. */
+    /*
+     * Select the nearest longitudinal threat from the shared snapshot. Choosing
+     * the last matching array entry makes lane avoidance depend on roster order.
+     * Break exact-distance ties by stable rival index for deterministic replay.
+     */
     if (other_z != 0 && other_lateral != 0) {
+        unsigned int nearest_rival = rival_count;
+        float nearest_longitudinal_gap = 3.5f;
+        float nearest_lateral_gap = 0.0f;
         for (i = 0U; i < rival_count; ++i) {
             float longitudinal_gap;
             float lateral_gap;
@@ -168,9 +179,22 @@ static inline float boonta_rival_ai_target_lateral(
             longitudinal_gap = fabsf(rival_z - other_z[i]);
             lateral_gap = current_lateral - other_lateral[i];
             if (longitudinal_gap < 3.5f &&
-                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target = current_lateral + (lateral_gap < 0.0f ? -0.75f : 0.75f);
+                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP &&
+                (nearest_rival == rival_count ||
+                 longitudinal_gap < nearest_longitudinal_gap ||
+                 (fabsf(longitudinal_gap - nearest_longitudinal_gap) <= 0.0001f &&
+                  i < nearest_rival))) {
+                nearest_rival = i;
+                nearest_longitudinal_gap = longitudinal_gap;
+                nearest_lateral_gap = lateral_gap;
             }
+        }
+        if (nearest_rival < rival_count) {
+            const float offset = (!isfinite(nearest_lateral_gap) ||
+                                  fabsf(nearest_lateral_gap) < 0.05f)
+                ? (rival_index < nearest_rival ? -0.75f : 0.75f)
+                : (nearest_lateral_gap < 0.0f ? -0.75f : 0.75f);
+            target = current_lateral + offset;
         }
     }
 
