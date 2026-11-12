@@ -271,8 +271,8 @@ jobs:
           retention-days: 7
 
   dolphin-software-frame-diagnostic:
-    name: Experimental Dolphin software-renderer frame diagnostic (non-blocking)
-    continue-on-error: true
+    name: Dolphin software-renderer race diagnostic
+    continue-on-error: ${{ github.event_name != 'pull_request' || github.head_ref != 'feat/gc-race-session-results-20261111' }}
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -295,7 +295,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Bound network/package operations so this optional, non-blocking job
+          # Bound network/package operations so this diagnostic job
           # cannot sit on a runner for its full 30-minute job timeout.
           run_bounded() {
             local label="$1"
@@ -689,7 +689,7 @@ jobs:
             done
           done
           if [[ "$status" -ne 0 ]]; then
-            echo "::warning::The optional Dolphin Software Renderer input/reset diagnostic failed. Native build, null-video smoke, and full gameplay are separate acceptance gates."
+            echo "::warning::The Dolphin Software Renderer input/reset diagnostic failed. Native build and null-video smoke are separate acceptance checks."
             exit "$status"
           fi
 
