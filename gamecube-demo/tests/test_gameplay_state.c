@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "../source/gameplay_state.h"
+#include "../source/rival_ai.h"
 #include "../source/generated_track.h"
 
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
@@ -1072,6 +1073,83 @@ static void invalid_scaled_frame_tests(void) {
  assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
 }
 
+static unsigned int simulate_competitive_race_position(int use_opening_boost)
+{
+ BoontaRaceState state;
+ const float lap_distance = 120.0f;
+ const float lookahead_curvature = 0.08f;
+ unsigned int frame = 0U;
+ unsigned int i;
+
+ boonta_race_state_reset(&state);
+ boonta_race_session_start_press(&state);
+ while (state.session_phase == BOONTA_RACE_SESSION_ACTIVE && frame < 10000U) {
+  const float previous_distance = state.distance;
+  const unsigned int previous_laps = state.lap_count;
+  int boost_active;
+  ++frame;
+
+  state.race_seconds = boonta_elapsed_after_frame(state.race_seconds, 1.0f / 60.0f, 1);
+  state.lap_seconds = boonta_elapsed_after_frame(state.lap_seconds, 1.0f / 60.0f, 1);
+  boost_active = boonta_boost_should_activate_with_heat(
+      use_opening_boost && frame <= 90U, 1, state.boost,
+      state.engine_heat, state.boost_overheated);
+  state.boost_active = boost_active;
+  state.boost = boonta_boost_after_frame_scaled(state.boost, boost_active, 1.0f);
+  state.engine_heat = boonta_engine_heat_after_frame_scaled(
+      state.engine_heat, boost_active, 1.0f);
+  state.boost_overheated = boonta_boost_overheated_after_frame(
+      state.boost_overheated, state.engine_heat);
+  state.speed = boonta_speed_after_input_scaled(state.speed, 1, 0, 1.0f);
+  state.distance = boonta_distance_after_pitch_scaled(
+      state.distance, state.speed, boost_active, 0.0f, 1.0f);
+  state.lap_count = boonta_lap_count_after_frame(
+      state.lap_count, previous_distance, state.distance, lap_distance);
+  if (state.lap_count > previous_laps) {
+   state.last_lap_seconds = state.lap_seconds;
+   assert(boonta_race_record_lap_time(&state, state.last_lap_seconds));
+   state.best_lap_seconds = boonta_best_lap_after_finish(
+       state.best_lap_seconds, state.last_lap_seconds);
+   state.lap_seconds = 0.0f;
+  }
+
+  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+   const float target_speed = boonta_rival_ai_target_speed(i, lookahead_curvature);
+   state.rival_speed[i] = boonta_rival_ai_speed_after_frame(
+       state.rival_speed[i], target_speed, 1.0f);
+   state.rival_progress[i] = boonta_rival_progress_after_frame(
+       state.rival_progress[i], state.rival_speed[i], 1.0f);
+   (void)boonta_rival_record_finish(
+       &state, i, boonta_rival_finish_distance(i, lap_distance, 3U),
+       state.race_seconds);
+  }
+  boonta_race_session_finish_if_complete(&state, 3U);
+ }
+
+ assert(frame < 10000U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_RESULTS);
+ assert(state.lap_count == 3U);
+ assert(state.finish_position >= 1U &&
+        state.finish_position <= BOONTA_RACE_PARTICIPANT_COUNT);
+ return state.finish_position;
+}
+
+static void competitive_race_pace_tests(void)
+{
+ BoontaRaceState state;
+ unsigned int position;
+
+ /* A full-throttle neutral run must meet the fastest AI before the finish. */
+ boonta_race_state_reset(&state);
+ boonta_race_session_start_press(&state);
+ position = simulate_competitive_race_position(0);
+ assert(position == 2U);
+
+ /* The same race is winnable by using the opening boost resource. */
+ position = simulate_competitive_race_position(1);
+ assert(position == 1U);
+}
+
 static void camera_follow_damping_tests(void) {
  BoontaCameraState camera = {0};
  BoontaCameraState camera60 = {0};
@@ -1135,6 +1213,7 @@ int main(void) {
  camera_follow_damping_tests();
  race_session_transition_tests();
  race_order_and_finish_tests();
+ competitive_race_pace_tests();
  race_state_reset_tests();
  finite_clamp_tests();
  frame_scale_tests();
