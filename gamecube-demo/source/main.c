@@ -27,7 +27,7 @@
 #define GX_FIFO_SIZE       (256 * 1024)
 /* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
-#define VERTEX_CAPACITY    8192U
+#define VERTEX_CAPACITY    16384U
 #define ROAD_SEGMENTS      32U
 #define ROUTE_SEGMENT_LENGTH 2.8f
 #define ROUTE_BRANCH_STEERING_DEADZONE 0.20f
