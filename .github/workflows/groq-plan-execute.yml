@@ -693,7 +693,7 @@ jobs:
           - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first.
           - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents once for one listed write path at ref TASK_TARGET_BRANCH.
-          - Write only the exact owner-reviewed paths listed in context; if absent, BLOCKED, no branch/PR.
+          - write only the exact owner-reviewed paths listed in context; if absent, BLOCKED, no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain (#317/#318/#319).
           
           SAFETY
