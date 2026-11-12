@@ -802,7 +802,7 @@ if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
 # A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
 if len(gemini_prompt) > 8500:
     errors.append(f"Gemini autonomous prompt exceeds the 8,500-character context ceiling: {len(gemini_prompt)}")
-if gemini_prompt.count("Keep newly retrieved repository/issue text below 1,500 tokens total.") != 1:
+if gemini_prompt.count("Keep retrieved repo/issue text below 1,500 tokens total.") != 1:
     errors.append("Gemini autonomous prompt must state the 1,500-token retrieval budget exactly once")
 for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq), ("Autonomous loop", loop)):
     if "#317 → #318 → #319" in content:
@@ -1006,8 +1006,8 @@ for label, workflow, report_title in (
         else (
             "expectedTaskId: process.env.SELECTED_TASK_ID",
             "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
-            "SELECTED_TASK_ID: \${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
-            "SELECTED_TASK_TARGET_BRANCH: \${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+            f"SELECTED_TASK_ID: ${{{{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}}}",
+            f"SELECTED_TASK_TARGET_BRANCH: ${{{{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}}}",
         )
     )
     for required in ("SELECTED_TASK_ID:", "SELECTED_TASK_TARGET_BRANCH:", "validateAutonomousCycleReport", *report_binding_requirements):
