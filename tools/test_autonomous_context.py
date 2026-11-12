@@ -243,6 +243,10 @@ with tempfile.TemporaryDirectory() as temp:
         }],
     }
     (root / "docs/automation/patch-path-allowlist.json").write_text(json.dumps(policy), encoding="utf-8")
+    for allowed_path in policy["tasks"][0]["allowed_paths"]:
+        target = root / allowed_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("/* reviewed fixture path */\\n", encoding="utf-8")
     handoff = "\n".join([
         "Task ID: " + task_id,
         "Title: " + title,
@@ -256,6 +260,15 @@ with tempfile.TemporaryDirectory() as temp:
     ])
     queued_context = MODULE.build_context(root, task_id, title, "dev", handoff)
     assert "Exact owner-reviewed write paths (no others): gamecube-demo/source/rival_ai.h, gamecube-demo/tests/test_rival_ai.c" in queued_context
+
+    (root / "gamecube-demo/tests/test_rival_ai.c").unlink()
+    try:
+        MODULE.build_context(root, task_id, title, "dev", handoff)
+    except MODULE.ContextBuildError as exc:
+        assert "existing regular file" in str(exc)
+    else:
+        raise AssertionError("Queued context must reject a missing approved write path")
+    (root / "gamecube-demo/tests/test_rival_ai.c").write_text("/* restored fixture */\\n", encoding="utf-8")
 
     summary["completed_task_ids"] = []
     summary_path.write_text(json.dumps(summary), encoding="utf-8")
