@@ -74,13 +74,13 @@ This proves that a visible prototype scene renders in the CI Dolphin Software Re
 
 ## Runtime validation still required
 
-The remaining acceptance checks are interactive steering, acceleration/braking, boost and overheat cooldown, pause/resume (the clocks should freeze), reset (all clocks should return to zero), completion of a three-lap run with current/best lap timing, and longer-session stability. A screenshot or headless process smoke cannot verify controller response or race completion. Physical GameCube/Wii behavior is also unverified. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
+The remaining owner-operated acceptance checks are interactive steering, acceleration/braking, boost and overheat cooldown, pause/resume (the clocks should freeze), reset (all clocks should return to zero), a three-lap finish with readable results, Start restart into a second complete race, and longer-session stability. Scripted DTM playback in Dolphin now exercises two consecutive three-lap races, but it does not validate a human-operated controller profile or physical GameCube/Wii behavior. Record the Dolphin version/backend or console setup and the outcome when performing an interactive test.
 
 ## Optional full-race CI diagnostic
 
-For a longer free GitHub Actions check, open **Actions → GameCube first-render prototype build → Run workflow** and enable `full_race_diagnostic`. This uses a deterministic 6,000-frame neutral-steering DTM movie, launches the current DOL in Dolphin's Software Renderer, and checks the captured frame for the prototype's centered three-lap finish flag. The movie, log and screenshot are retained in the workflow artifact for seven days.
+The PR diagnostic for `feat/gc-race-session-results-20261111` runs the deterministic two-race acceptance movie automatically in Dolphin's Software Renderer. It checks first RESULTS, Start-to-READY reset, a released-Start interval, a second Start plus sustained throttle, and a fresh second RESULTS panel. The current exact-head evidence is [workflow run #43325875624](https://github.com/Master-Chiken/boonta-reborn-88/actions/runs/43325875624); its diagnostic artifacts are retained for seven days.
 
-The normal push/PR pipeline leaves this option disabled to keep routine CI fast and reduce free Actions-minute usage. The finish-banner check shows that the tested build reached and rendered the prototype's finish state under this scripted emulator run; it is not a substitute for live-controller, long-session or physical GameCube/Wii validation.
+The two-race diagnostic is deliberately enabled for this gameplay PR and remains opt-in for unrelated pushes/PRs to limit Actions minutes. A passing run is scripted emulator evidence for the tested commit; it is not a substitute for live-controller, long-session or physical GameCube/Wii validation.
 
 ## Source boundary
 
@@ -97,7 +97,8 @@ Keep validation claims separate:
 - **Host tests and native DOL/ELF build:** the tested code compiles and its deterministic helper tests pass.
 - **Dolphin null-video smoke:** the emulator process accepts/runs the DOL for the bounded smoke window; this is not visual verification.
 - **Software-renderer camera-follow diagnostic:** scene signatures, pod framing, and road-silhouette/HUD response are checked against a neutral baseline in both left and right steering directions.
-- **Interactive steering and complete race:** still require a visible Dolphin session (or physical hardware) with an actual controller profile, acceleration/braking/steering, three lap crossings, finish, reset, and evidence recorded against the tested commit.
+- **Scripted two-race Software Renderer diagnostic:** checks first three-lap RESULTS, Start reset to READY, release, second Start + throttle, and a second RESULTS panel. The exact-head run also exercises the results-panel detector, which requires the title, panel geometry and all seven content rows.
+- **Interactive steering and complete race:** still require a visible Dolphin session with an actual configured controller, acceleration/braking/steering, three lap crossings, readable results, restart, and a second completed race. Physical GameCube/Wii behavior remains a separate hardware check.
 
 Do not report the scripted capture as proof that the game is fully playable. Follow the interactive acceptance checklist in `../docs/NEXT_MILESTONE.md`.
 
@@ -130,4 +131,4 @@ The Wii backend calls `WPAD_SetDataFormat(WPAD_CHAN_0, WPAD_FMT_BTNS_ACC_IR)` on
 
 There is no separate repair action in the current gameplay slice. Home, Minus and the right stick are currently unused. The mapping is for this native Boonta Wii build only; it does not configure Not64 or the original N64 game.
 
-The current CI run verifies the GameCube and Wii native builds, host translation tests and bounded Dolphin diagnostics. It does not test the Under Control unit or prove a manually completed three-lap race.
+The current CI run verifies GameCube/Wii native builds, host regression suites, and the scripted Dolphin two-race diagnostic. It does not test the Under Control unit or prove a manually operated race; controller and physical-hardware acceptance remain open.
