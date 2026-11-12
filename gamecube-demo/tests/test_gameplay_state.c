@@ -492,6 +492,46 @@ static void multiple_rival_spacing_tests(void) {
  assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
 }
 
+static void rival_encounter_memory_tests(void)
+{
+ BoontaRaceState state;
+ unsigned int i;
+
+ boonta_race_state_reset(&state);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
+ }
+
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[1] == 7U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 0U);
+
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == 17U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 1U);
+ assert(state.rival_rivalry[0] == 0U);
+
+ /* Scores and event counters saturate instead of wrapping. */
+ state.rival_rivalry[1] = BOONTA_RIVAL_RIVALRY_MAX - 5U;
+ state.rival_contacts[1] = 0xffffffffU;
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == BOONTA_RIVAL_RIVALRY_MAX);
+ assert(state.rival_contacts[1] == 0xffffffffU);
+
+ /* Invalid indices, unknown events, and null state are harmless. */
+ boonta_rival_memory_record_event(&state, BOONTA_RIVAL_COUNT,
+                                  BOONTA_RIVAL_EVENT_COLLISION);
+ boonta_rival_memory_record_event(&state, 0U, BOONTA_RIVAL_EVENT_NONE);
+ boonta_rival_memory_record_event(0, 0U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[0] == 0U);
+ assert(boonta_rival_rivalry_after_event(150U, BOONTA_RIVAL_EVENT_NONE) ==
+        BOONTA_RIVAL_RIVALRY_MAX);
+}
+
 static void rival_contact_velocity_tests(void) {
  /* A collision impulse stays inside the same +/-0.085 steering-velocity bound. */
  assert(nearf(boonta_lateral_velocity_after_rival_contact(0.05f, 0.0f, 0.0f),
@@ -780,6 +820,9 @@ static void race_state_reset_tests(void) {
   state.rival_z[i] = 8.0f + (float)i;
   state.rival_lateral[i] = -1.0f - (float)i;
   state.rival_speed[i] = 0.1f;
+  state.rival_rivalry[i] = 80U;
+  state.rival_overtakes[i] = 4U;
+  state.rival_contacts[i] = 3U;
  }
 
  boonta_race_state_reset(&state);
@@ -806,6 +849,9 @@ static void race_state_reset_tests(void) {
   assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
   assert(nearf(state.rival_lateral[i], 0.0f));
   assert(nearf(state.rival_speed[i], boonta_rival_initial_speed(i)));
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
  }
 
  /* Defensive no-op for a missing state pointer. */
@@ -926,6 +972,7 @@ int main(void) {
  track_scroll_tests();
  simulated_three_lap_run_tests();
  multiple_rival_spacing_tests();
+ rival_encounter_memory_tests();
  rival_contact_velocity_tests();
  multiframe_rival_contact_tests();
  rival_event_tests();
