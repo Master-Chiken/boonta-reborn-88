@@ -60,3 +60,5 @@ A provider's `PROGRESS` report is evidence only when all of these conditions hol
 - After CI polling, the validator fetches the PR again and rechecks its state, repository identity, base branch, task markers and exact current head. Any intervening change invalidates the report.
 
 A validated `BLOCKED` report records a blocker and next action; it never counts as progress. These gates prevent stale heads, empty commits and unrelated PRs from satisfying the autonomous activation task.
+
+- Shared Groq budget: 1,550 context tokens and 256 output tokens; caps verified context at 3,000 characters and task handoff at 1,100 characters.
