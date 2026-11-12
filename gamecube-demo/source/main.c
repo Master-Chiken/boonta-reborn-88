@@ -1420,11 +1420,12 @@ int main(int argc, char **argv)
 
             /* Decide from one shared snapshot so rival update order cannot bias AI. */
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-                const float lookahead_progress = g_rival_progress[rival_index] + 4.0f;
-                const float lookahead_curvature = track_curvature_at(lookahead_progress);
+                const float lookahead_offset = boonta_rival_route_lookahead_offset(
+                    g_distance, g_rival_progress[rival_index], 4.0f);
+                const float lookahead_curvature = track_curvature_at(lookahead_offset);
                 const float signed_lookahead_curvature =
-                    track_signed_curvature_at(lookahead_progress);
-                const float lookahead_half_width = track_half_width_at(lookahead_progress);
+                    track_signed_curvature_at(lookahead_offset);
+                const float lookahead_half_width = track_half_width_at(lookahead_offset);
                 rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
                     rival_index, g_rival_z[rival_index],
                     g_rival_lateral[rival_index], g_player_lateral,
