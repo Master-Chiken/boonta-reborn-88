@@ -68,7 +68,7 @@ on:
         type: 'string'
         required: false
       resume_pr_number:
-        type: 'number'
+        type: 'string'
         required: false
       resume_pr_url:
         type: 'string'
@@ -534,6 +534,12 @@ jobs:
         shell: 'bash'
         run: |-
           set -euo pipefail
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            TASK_ID="${RESUME_TASK_ID:-}"
+            TASK_TITLE="${RESUME_TASK_TITLE:-}"
+            TASK_DESCRIPTION="${RESUME_TASK_DESCRIPTION:-}"
+            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH:-}"
+          fi
           mkdir -p .gemini
           VERIFIED_CONTEXT=''
           if [[ "${AUTONOMOUS_MODE:-false}" == "true" ]]; then
@@ -584,12 +590,16 @@ jobs:
           ISSUE_NUMBER: '${{ inputs.issue_number || github.event.pull_request.number || github.event.issue.number }}'
           REPOSITORY: '${{ github.repository }}'
           ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
-          TASK_ID: '${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}'
-          TASK_TITLE: '${{ inputs.resume_mode == true && inputs.resume_task_title || inputs.task_title }}'
-          TASK_DESCRIPTION: '${{ inputs.resume_mode == true && inputs.resume_task_description || inputs.task_description }}'
-          TASK_TARGET_BRANCH: '${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}'
+          TASK_ID: '${{ inputs.task_id }}'
+          TASK_TITLE: '${{ inputs.task_title }}'
+          TASK_DESCRIPTION: '${{ inputs.task_description }}'
+          TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'
           AUTONOMOUS_MODE: '${{ inputs.autonomous_mode }}'
           RESUME_MODE: '${{ inputs.resume_mode }}'
+          RESUME_TASK_ID: '${{ inputs.resume_task_id }}'
+          RESUME_TASK_TITLE: '${{ inputs.resume_task_title }}'
+          RESUME_TASK_DESCRIPTION: '${{ inputs.resume_task_description }}'
+          RESUME_TASK_TARGET_BRANCH: '${{ inputs.resume_task_target_branch }}'
           RESUME_PR_NUMBER: '${{ inputs.resume_pr_number }}'
           RESUME_PR_URL: '${{ inputs.resume_pr_url }}'
           RESUME_BRANCH: '${{ inputs.resume_branch }}'
