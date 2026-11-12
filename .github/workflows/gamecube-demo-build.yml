@@ -513,7 +513,9 @@ jobs:
                 local height=""
                 local saw_finish=0
                 local saw_restart=0
+                local saw_second_finish=0
                 local finish_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-finish.png"
+                local second_finish_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish.png"
                 flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
                   --video_backend="Software Renderer" \
                   --config=Logger.Options.WriteToFile=True \
@@ -554,11 +556,10 @@ jobs:
                 fi
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
                 mkdir -p "$GITHUB_WORKSPACE/dolphin-finish-restart-samples"
-                # Poll frequently, but allow the full 14,007-frame DTM to reach its late
-                # The selected post-finish button input. At 30 emulated FPS this is about 467 seconds;
-                # 6,000 polls at 100 ms leaves room for Software Renderer overhead
-                # while remaining below the 1,100-second outer capture timeout.
-                for attempt in $(seq 1 6000); do
+                # Poll through both three-lap sessions. The DTM holds Start for
+                # the first reset, releases it visibly, then sends a second Start
+                # and sustained throttle for race two.
+                for attempt in $(seq 1 9500); do
                   import -window "$window" "$capture"
                   test -s "$capture"
                   if [[ "$attempt" -eq 1 || $((attempt % 25)) -eq 0 ]]; then
@@ -571,11 +572,21 @@ jobs:
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log"
                       saw_finish=1
                     fi
-                  else
+                  elif [[ "$saw_restart" -eq 0 ]]; then
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" 2>&1; then
                       echo "Clean reset HUD detected after $action_label reset the finished race at live frame $attempt."
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
                       saw_restart=1
+                      if [[ "$action_label" != "Start" ]]; then
+                        break
+                      fi
+                    fi
+                  elif [[ "$action_label" == "Start" ]]; then
+                    if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish-detector.log" 2>&1; then
+                      echo "Second RESULTS panel detected after the reset, second Start press and race-two throttle at live frame $attempt."
+                      cp "$capture" "$second_finish_capture"
+                      cat "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish-detector.log"
+                      saw_second_finish=1
                       break
                     fi
                   fi
@@ -592,6 +603,11 @@ jobs:
                 if [[ "$saw_restart" -ne 1 ]]; then
                   [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
                   echo "The clean HUD state was not detected after the post-finish $action_label input."
+                  return 1
+                fi
+                if [[ "$action_label" == "Start" && "$saw_second_finish" -ne 1 ]]; then
+                  [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish-detector.log"
+                  echo "A fresh second RESULTS panel was not detected after the post-finish Start restart."
                   return 1
                 fi
               }
@@ -658,14 +674,15 @@ jobs:
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
               if [[ "${RUN_FINISH_RESTART_DIAGNOSTIC:-false}" == "true" ]]; then
-                echo "Running targeted three-lap finish + Start-only restart DTM; the live-frame poll checks the finish banner then the clean reset HUD."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-restart-check
+                echo "Running two-race acceptance: first RESULTS -> Start reset -> release -> second Start + throttle -> second RESULTS."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 28068 --game-id ID-boo --steering none --scenario finish-two-race-check
                 mkdir -p "$FINISH_RESTART_USER/Config"
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
                 capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER" "Start"
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
-                echo "Post-finish Start restarted the race into a clean HUD state in the scripted Dolphin diagnostic."
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish.png" --expect-finish
+                echo "The first race reset cleanly and the second three-lap race reached a fresh RESULTS panel."
               fi
             '
           status=$?
@@ -716,6 +733,8 @@ jobs:
             dolphin-finish-restart.dtm
             dolphin-finish-restart.png
             dolphin-finish-restart-finish.png
+            dolphin-finish-restart-second-finish.png
+            dolphin-finish-restart-second-finish-detector.log
             dolphin-finish-restart.log
             dolphin-finish-detector.log
             dolphin-finish-restart-detector.log
