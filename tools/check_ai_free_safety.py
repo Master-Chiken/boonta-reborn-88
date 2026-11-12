@@ -479,8 +479,8 @@ for label, workflow, marker in (
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
     '"GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"',
-    "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 1,000 tokens total; target below 700 tokens",
+    "No PR/branch enumeration or media/binary retrieval.",
+    "Newly retrieved text: at most 700 tokens.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
@@ -1595,8 +1595,8 @@ if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
-    "No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.",
-    "Model-side file reads and repo-wide discovery are disabled.",
+    "No full issue bodies/comments; exact source excerpts are preloaded.",
+    "No model-side reads or repo discovery.",
     "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
