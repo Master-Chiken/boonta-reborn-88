@@ -173,8 +173,8 @@
         "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "2738ee47163a092eeff6d2bbef4f5d1502be87eb",
-      "next_action_excerpt": "PR #395 is open against dev at exact head 2738ee47163a092eeff6d2bbef4f5d1502be87eb. Host tests, GameCube build, Dolphin headless smoke and software-renderer diagnostic all pass. Visible Dolphin frames detected the three-lap finish banner, clean post-finish Start reset, Y-reset, and pause/resume. Human-operated second-race acceptance remains required; do not mark completed until the PR is merged."
+      "head_sha": "5cb0e6989a1acca82bc087b2382503bb519313ca",
+      "next_action_excerpt": "PR #395 is open against dev at exact head 5cb0e6989a1acca82bc087b2382503bb519313ca. Host pause/resume tests and the native GameCube build pass. Dolphin now runs the stronger two-race diagnostic: first RESULTS, Start reset, released Start interval, second Start plus throttle, and a fresh second RESULTS panel. The software-renderer run is still in progress with an extended capture window; do not mark race progression…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
