@@ -30,6 +30,8 @@ def fixture(root: Path) -> str:
         "tasks": [{
             "task_id": "AUTOMATION-LEDGER-ACTIVATION",
             "title": "Activate and validate persistent autonomous task tracking",
+            "owner_role_id": "chief-of-staff",
+            "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
             "status": "blocked",
             "target_branch": "main",
             "platform_scope": ["automation"],
@@ -45,6 +47,33 @@ def fixture(root: Path) -> str:
     (root / "docs/automation/task-ledger-summary.json").write_text(
         json.dumps(summary), encoding="utf-8"
     )
+    registry = {
+        "schema_version": 1,
+        "status": "declarative_only",
+        "execution_plane": "github_actions",
+        "canonical_task_ledger": "docs/automation/task-ledger.json",
+        "policy": {
+            "max_active_missions": 1,
+            "max_provider_invocations_per_run": 1,
+            "model_agents_receive_write_credentials": False,
+            "paid_fallback": False,
+            "auto_merge": False,
+            "human_merge_approval_required": True,
+            "qa_must_be_independent": True,
+        },
+        "roles": [
+            {"id": "human-owner", "title": "Human Owner / Board", "kind": "human", "unit": "governance", "manager_id": None},
+            {"id": "ceo", "title": "CEO / Mission Commander", "kind": "model_role", "unit": "command", "manager_id": "human-owner"},
+            {"id": "cto", "title": "CTO / Engineering Commander", "kind": "model_role", "unit": "engineering", "manager_id": "ceo"},
+            {"id": "chief-of-staff", "title": "Chief of Staff / Operations Controller", "kind": "deterministic", "unit": "operations", "manager_id": "ceo"},
+            {"id": "gameplay", "title": "Engine & Gameplay", "kind": "model_role", "unit": "engineering", "manager_id": "cto"},
+        ],
+        "objectives": [
+            {"id": "BOONTA-COMPLETE-GAME", "title": "Deliver the complete original Boonta Reborn racer"},
+            {"id": "BOONTA-AUTONOMOUS-ENGINEERING", "title": "Operate a governed zero-cost engineering pipeline"},
+        ],
+    }
+    (root / "docs/automation/agent-roles.json").write_text(json.dumps(registry), encoding="utf-8")
     return (
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
@@ -63,6 +92,46 @@ with tempfile.TemporaryDirectory() as temp:
     )
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
+    assert "Accountable role: chief-of-staff" in rendered
+    assert "Reporting chain: human-owner > ceo > chief-of-staff." in rendered
+    assert "Parent objective: BOONTA-AUTONOMOUS-ENGINEERING" in rendered
+    assert "Registry is declarative; it grants no extra permissions." in rendered
+
+    # Role and objective assignments must resolve uniquely, and every manager
+    # chain must terminate at the human owner before any provider context is built.
+    role_registry_path = root / "docs/automation/agent-roles.json"
+    role_registry = json.loads(role_registry_path.read_text(encoding="utf-8"))
+    summary_path = root / "docs/automation/task-ledger-summary.json"
+    role_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    role_summary["tasks"][0]["owner_role_id"] = "unknown-role"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "role is missing or duplicated" in str(exc)
+    else:
+        raise AssertionError("Unknown task role must fail closed")
+    role_summary["tasks"][0]["owner_role_id"] = "chief-of-staff"
+    role_summary["tasks"][0]["parent_objective_id"] = "BOONTA-MISSING"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "objective is missing or duplicated" in str(exc)
+    else:
+        raise AssertionError("Unknown parent objective must fail closed")
+    role_summary["tasks"][0]["parent_objective_id"] = "BOONTA-AUTONOMOUS-ENGINEERING"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    role_registry["roles"][1]["manager_id"] = "chief-of-staff"
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "cyclic manager chain" in str(exc)
+    else:
+        raise AssertionError("Cyclic role hierarchy must fail closed")
+    role_registry["roles"][1]["manager_id"] = "human-owner"
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
     assert "Target branch: main" in rendered
 
     # Regression: full activation handoffs must survive beyond the former 1,200-char cap.
@@ -211,6 +280,8 @@ with tempfile.TemporaryDirectory() as temp:
     queued = {
         "task_id": task_id,
         "title": title,
+        "owner_role_id": "gameplay",
+        "parent_objective_id": "BOONTA-COMPLETE-GAME",
         "status": "queued",
         "owner_approved": True,
         "depends_on": ["GC-RACE-PROGRESSION"],
