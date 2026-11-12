@@ -135,6 +135,50 @@ static void curvature_reduces_target_speed(void)
     assert(nearf_ai(boonta_rival_ai_target_speed(1U, -0.10f), straight));
 }
 
+static void rival_personalities_are_stable_and_distinct(void)
+{
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(0U), -0.025f));
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(1U), 0.0f));
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(2U), 0.020f));
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(3U), 0.010f));
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(4U), -0.010f));
+    assert(nearf_ai(boonta_rival_ai_personality_speed_bias(5U),
+                    boonta_rival_ai_personality_speed_bias(0U)));
+
+    assert(boonta_rival_ai_personality_curve_sensitivity(0U) >
+           boonta_rival_ai_personality_curve_sensitivity(2U));
+    assert(nearf_ai(boonta_rival_ai_personality_curve_sensitivity(6U),
+                    boonta_rival_ai_personality_curve_sensitivity(1U)));
+
+    /* The aggressive profile gains pace on straights and lifts less in bends. */
+    assert(boonta_rival_ai_target_speed(2U, 0.0f) >
+           boonta_rival_initial_speed(2U));
+    assert(boonta_rival_ai_target_speed(2U, 0.10f) <
+           boonta_rival_ai_target_speed(2U, 0.0f));
+    assert(nearf_ai(boonta_rival_ai_target_speed(1U, 0.10f),
+                    boonta_rival_initial_speed(1U) - 0.18f));
+    assert(boonta_rival_ai_target_speed(0U, 0.10f) <
+           boonta_rival_ai_target_speed(2U, 0.10f));
+}
+
+static void rival_personalities_choose_distinct_racing_lines(void)
+{
+    const float bend = 0.10f;
+    const float cautious = boonta_rival_ai_target_line_lateral(0U, bend, 3.4f);
+    const float balanced = boonta_rival_ai_target_line_lateral(1U, bend, 3.4f);
+    const float aggressive = boonta_rival_ai_target_line_lateral(2U, bend, 3.4f);
+
+    assert(nearf_ai(boonta_rival_ai_personality_line_commitment(0U), 0.75f));
+    assert(nearf_ai(boonta_rival_ai_personality_line_commitment(1U), 1.0f));
+    assert(nearf_ai(boonta_rival_ai_personality_line_commitment(2U), 1.25f));
+    assert(nearf_ai(boonta_rival_ai_personality_line_commitment(5U), 0.75f));
+    assert(cautious < balanced);
+    assert(balanced < aggressive);
+    assert(aggressive <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    assert(boonta_rival_ai_target_line_lateral(2U, -bend, 3.4f) < 1.25f);
+    assert(aggressive > 1.25f);
+}
+
 static void nemesis_memory_gently_increases_rival_pace(void)
 {
     const float base = boonta_rival_ai_target_speed(1U, 0.0f);
@@ -217,6 +261,8 @@ int main(void)
     signed_curvature_selects_inside_line();
     signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
+    rival_personalities_are_stable_and_distinct();
+    rival_personalities_choose_distinct_racing_lines();
     nemesis_memory_gently_increases_rival_pace();
     nemesis_memory_changes_racing_line_without_defeating_avoidance();
     speed_response_is_bounded_and_asymmetric();
