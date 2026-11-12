@@ -726,7 +726,7 @@ for required in (
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 5500 )); then", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
-    (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
+    (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "Groq must enforce the 180-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
