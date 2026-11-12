@@ -146,6 +146,25 @@ class DolphinDtmTests(unittest.TestCase):
             with self.subTest(viewport_top=viewport_top):
                 self.assertTrue(results_panel_visible(800, height, viewport_top, pixel_at))
 
+    def test_results_panel_detector_accepts_scaled_viewport_in_fixed_height_window(self) -> None:
+        # A 480px-tall Dolphin window with an 84px toolbar leaves only 396px
+        # for the game viewport. The actual finish capture contains 68 orange
+        # RESULTS glyph pixels after that vertical scaling (versus 80 in a full
+        # 480px viewport), while retaining the full opaque panel structure.
+        orange_pixels = {
+            (367 + (index % 34), 215 + (index // 34))
+            for index in range(68)
+        }
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            if (x, y) in orange_pixels:
+                return (255, 157, 61)
+            if 268 <= x <= 532 and 206 <= y <= 358:
+                return (8, 18, 30)
+            return (105, 170, 225)
+
+        self.assertTrue(results_panel_visible(800, 480, 84, pixel_at))
+
     def test_results_panel_detector_rejects_invalid_viewport_geometry(self) -> None:
         pixel_at = lambda _x, _y: (0, 0, 0)
         self.assertFalse(results_panel_visible(800, 480, -1, pixel_at))
