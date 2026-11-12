@@ -951,8 +951,8 @@ dynamic_task_prompts = (
 for label, prompt in dynamic_task_prompts:
     required_task_safeguards = (
         (
-            "preloaded schema-v2 context is authoritative",
-            "Global preflight is authoritative",
+            "Trust only the preloaded schema-v2 context and live preflight",
+            "Do not search history, enumerate PRs",
             "Do not search PR history",
             "€0 only",
         )
@@ -1600,21 +1600,22 @@ if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
     "No full issue bodies/comments; exact source excerpts are preloaded.",
-    "No model-side reads or repo discovery.",
-    "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
+    "No broad model-side reads or repo discovery; one exact approved file read at most.",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
+    "No paid routes, billing, credits, provider/secret/settings changes.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
 if 'if (( ${#PROMPT} > 5500 )); then' not in groq_fallback:
     errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
-if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
+if "€0 only" not in groq_fallback or "No paid routes, billing, credits, provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.",
+    "Use FQNs: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
