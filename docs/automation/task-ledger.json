@@ -948,10 +948,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
       ],
-      "next_action": "PR #395 is open against dev at exact head 5cb0e6989a1acca82bc087b2382503bb519313ca. Host pause/resume tests and the native GameCube build pass. Dolphin now runs the stronger two-race diagnostic: first RESULTS, Start reset, released Start interval, second Start plus throttle, and a fresh second RESULTS panel. The software-renderer run is still in progress with an extended capture window; do not mark race progression complete until it passes.",
+      "next_action": "PR #395 is open against dev at exact head 0726719521c47e4821d2e9ebde795486b39de80f. Host pause/resume tests, native GameCube/Wii builds, artifact validation and Dolphin headless smoke pass. The two-race Dolphin diagnostic detected both the first RESULTS/reset and a fresh second RESULTS panel, but its final check incorrectly tested the second-finish screenshot as if it were the reset HUD. The workflow now saves the reset frame separately and checks that frame; rerun exact-head software-renderer validation before marking acceptance complete. Human playability and hardware remain unverified.",
       "updated_at": "2026-11-12",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "5cb0e6989a1acca82bc087b2382503bb519313ca",
+      "head_sha": "0726719521c47e4821d2e9ebde795486b39de80f",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
