@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "source": "docs/automation/task-ledger.json",
-  "updated_at": "2026-11-12",
+  "updated_at": "2026-11-13",
   "completed_task_ids": [
     "RE002-SYSTEM-MATRIX",
     "RE001-SYSTEM-MATRIX",
@@ -11,7 +11,8 @@
     "RE001-GC-WII-TOOLCHAIN-AUDIT",
     "RE002-SPLINE-CURSOR-RECOVERY",
     "AUTOMATION-READINESS-PREFLIGHT",
-    "N64-COMPWOLF-INVENTORY"
+    "N64-COMPWOLF-INVENTORY",
+    "GC-RACE-PROGRESSION"
   ],
   "policy": {
     "max_active_tasks": 1,
@@ -105,76 +106,6 @@
       "pr_url": null,
       "head_sha": null,
       "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
-    },
-    {
-      "task_id": "GC-RACE-PROGRESSION",
-      "title": "Complete the native single-race lifecycle through results and restart",
-      "owner_role_id": "gameplay",
-      "parent_objective_id": "BOONTA-COMPLETE-GAME",
-      "depends_on": [],
-      "owner_approved": false,
-      "queue": "#226",
-      "platform_scope": [
-        "GameCube",
-        "Wii"
-      ],
-      "status": "in_review",
-      "target_branch": "dev",
-      "read_paths": [
-        "gamecube-demo/source/main.c",
-        "gamecube-demo/source/gameplay_state.h",
-        "gamecube-demo/source/pause_state.h",
-        "gamecube-demo/tests/test_gameplay_state.c"
-      ],
-      "read_ranges": [
-        {
-          "path": "gamecube-demo/source/main.c",
-          "start_line": 1325,
-          "end_line": 1349
-        },
-        {
-          "path": "gamecube-demo/source/main.c",
-          "start_line": 1433,
-          "end_line": 1445
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 482,
-          "end_line": 484
-        },
-        {
-          "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 511,
-          "end_line": 540
-        },
-        {
-          "path": "gamecube-demo/source/pause_state.h",
-          "start_line": 8,
-          "end_line": 30
-        },
-        {
-          "path": "gamecube-demo/tests/test_gameplay_state.c",
-          "start_line": 431,
-          "end_line": 448
-        },
-        {
-          "path": "gamecube-demo/tests/test_gameplay_state.c",
-          "start_line": 756,
-          "end_line": 805
-        }
-      ],
-      "question_excerpt": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
-      "acceptance_criteria_total": 8,
-      "acceptance_criteria_excerpt": [
-        "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in…",
-        "Reuse the existing native lap counter, three-lap finish condition, race/lap timers, best-lap and overtake metrics, pause/restart helpers,…",
-        "Implement only the smallest explicit, testable session/results state needed for initial start -> active race -> three-lap finish/results…",
-        "Show a read-only results view using only measured prototype data, including completed laps, total race time, available last/best lap data…",
-        "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
-      ],
-      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "b600b5d0eefee6d50cb10a780156e605f4f7b76a",
-      "next_action_excerpt": "PR #395 is open against dev at exact head b600b5d0eefee6d50cb10a780156e605f4f7b76a. Host pause/resume tests, native GameCube/Wii builds, artifact validation and Dolphin headless smoke passed on the prior tested head. The prior two-race Dolphin run detected first RESULTS, the clean reset HUD and a fresh second RESULTS panel; a post-shutdown check then incorrectly re-tested the reset detector on a later frame. The…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",

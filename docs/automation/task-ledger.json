@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-12",
+  "updated_at": "2026-11-13",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -926,7 +926,7 @@
         "GameCube",
         "Wii"
       ],
-      "status": "in_review",
+      "status": "completed",
       "question": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
       "acceptance_criteria": [
         "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in gamecube-demo/source/main.c, gamecube-demo/source/gameplay_state.h, gamecube-demo/source/pause_state.h and their host tests; distinguish existing behavior from the specific missing results/session transition.",
@@ -946,12 +946,15 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/main.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/gameplay_state.h",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
-        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/8557616590978a52243c04939bbce1b31f211bce",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/32fa728a5f2911ecffc2903ca4db5ae5c816b7d9"
       ],
-      "next_action": "PR #395 is open against dev at exact head b600b5d0eefee6d50cb10a780156e605f4f7b76a. Host pause/resume tests, native GameCube/Wii builds, artifact validation and Dolphin headless smoke passed on the prior tested head. The prior two-race Dolphin run detected first RESULTS, the clean reset HUD and a fresh second RESULTS panel; a post-shutdown check then incorrectly re-tested the reset detector on a later frame. The capture loop now validates the exact live reset and second-results frames and checks that both evidence files were saved. Exact-head CI is running; do not mark acceptance complete until it passes. Human playability and hardware remain unverified.",
-      "updated_at": "2026-11-12",
+      "next_action": "Merged as PR #395 into dev at merge commit 32fa728a5f2911ecffc2903ca4db5ae5c816b7d9. Exact merged head 8557616590978a52243c04939bbce1b31f211bce passed host regression tests, GameCube and Wii native builds, artifact validation, Dolphin headless smoke and the software-renderer race diagnostic. Human-operated controller acceptance and physical GameCube/Wii hardware verification remain outstanding and are not claimed.",
+      "updated_at": "2026-11-13",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "b600b5d0eefee6d50cb10a780156e605f4f7b76a",
+      "head_sha": "8557616590978a52243c04939bbce1b31f211bce",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
