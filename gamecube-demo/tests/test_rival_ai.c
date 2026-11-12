@@ -113,6 +113,20 @@ static void curvature_reduces_target_speed(void)
     assert(nearf_ai(boonta_rival_ai_target_speed(1U, -0.10f), straight));
 }
 
+static void nemesis_memory_gently_increases_rival_pace(void)
+{
+    const float base = boonta_rival_ai_target_speed(1U, 0.0f);
+    assert(nearf_ai(boonta_rival_ai_nemesis_pace_bonus(0U), 0.0f));
+    assert(nearf_ai(boonta_rival_ai_nemesis_pace_bonus(25U), 0.01f));
+    assert(nearf_ai(boonta_rival_ai_nemesis_pace_bonus(100U), 0.04f));
+    assert(nearf_ai(boonta_rival_ai_nemesis_pace_bonus(1000U), 0.04f));
+    assert(boonta_rival_ai_target_speed_with_rivalry(1U, 0.0f, 50U) > base);
+    assert(nearf_ai(boonta_rival_ai_target_speed_with_rivalry(1U, 0.0f, 1000U),
+                    boonta_rival_ai_target_speed_with_rivalry(1U, 0.0f, 100U)));
+    assert(nearf_ai(boonta_rival_ai_target_speed_with_rivalry(1U, NAN, 0U), base));
+    assert(boonta_rival_ai_target_speed_with_rivalry(2U, 0.0f, 100U) <= 0.85f);
+}
+
 static void speed_response_is_bounded_and_asymmetric(void)
 {
     assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.50f, 0.70f, 1.0f), 0.504f));
@@ -147,6 +161,7 @@ int main(void)
     signed_curvature_selects_inside_line();
     signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
+    nemesis_memory_gently_increases_rival_pace();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
     puts("rival AI tests: PASS");
