@@ -29,9 +29,19 @@ jobs:
               doc = YAML.load_file(path)
               puts "YAML OK: #{path}"
               next unless path.end_with?("retire-verified-branch.yml")
-              job = doc.fetch("jobs").values.find { |candidate| candidate.is_a?(Hash) && candidate["steps"].is_a?(Array) }
-              raise "No workflow job with a steps array in #{path}" unless job
-              job.fetch("steps").each_with_index do |step, index|
+              job = doc.fetch("jobs").fetch("retire")
+              steps = job.fetch("steps")
+              expected_names = [
+                "Check out main for exact ref and ancestry verification",
+                "Validate exact owner-confirmed branch and SHA",
+                "Verify protection, open PR references and archived ancestry",
+                "Recheck exact ref and atomically retire one branch",
+              ]
+              actual_names = steps.map { |step| step["name"] }
+              raise "Expected exactly four named retirement steps, got #{actual_names.inspect}" unless actual_names == expected_names
+              raise "Every non-checkout step must execute a shell script" unless steps.drop(1).all? { |step| step["shell"] == "bash" && step["run"].is_a?(String) && !step["run"].empty? }
+              raise "Both safety verification steps must be independent" unless steps[2]["run"].include?("open-prs.json") && steps[3]["run"].include?("open-prs-before-delete.json")
+              steps.each_with_index do |step, index|
                 next unless step["run"]
                 File.write("/tmp/verified-retire-#{index}.sh", step["run"])
               end
