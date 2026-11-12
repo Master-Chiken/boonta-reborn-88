@@ -90,7 +90,7 @@ else:
             errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
         if missing_gemini_tools:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
-        if "Gemini MCP FQNs use `mcp_github_` plus the raw tool name." not in gemini_prompt:
+        if "Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`" not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
 
         core_tools = gemini_settings.get("tools", {}).get("core", [])
@@ -110,7 +110,7 @@ else:
             if required not in gemini:
                 errors.append(f"Gemini must preload bounded excerpts from the exact task target: missing {required!r}")
         for required in (
-            "`verified_context` is authoritative",
+            "use its `verified_context` as the authoritative task handoff",
             "The only local file read permitted is `.gemini/context.json`",
             "Never treat the workflow's default checkout as gameplay source evidence",
         ):
@@ -120,9 +120,9 @@ else:
         errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
 
 for required in (
-    "No Explore/subagents/planning, repo-wide discovery",
-    "Normal mode: create one branch/PR from the selected base.",
-    "two-tool contract above",
+    "No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.",
+    "Normal: reconcile, create branch, push one coherent change and open one marked PR.",
+    "Resume exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`",
     "never create a second PR",
 ):
     if required not in gemini_prompt:
