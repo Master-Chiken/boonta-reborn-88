@@ -893,23 +893,33 @@ static inline unsigned int boonta_championship_build_stable_order(
     unsigned int *order,
     unsigned int output_capacity)
 {
-    unsigned int count;
+    unsigned int count = 0U;
     unsigned int i;
 
     if (standings == 0 || order == 0 || output_capacity == 0U) return 0U;
-    count = standing_count < output_capacity ? standing_count : output_capacity;
-    for (i = 0U; i < count; ++i) {
-        unsigned int insertion = i;
-        order[i] = i;
+
+    /*
+     * Maintain only the best output_capacity indices while scanning the full
+     * roster. This is a stable top-k insertion: equal rows remain in roster
+     * order, and a small output buffer does not hide stronger later entries.
+     */
+    for (i = 0U; i < standing_count; ++i) {
+        unsigned int insertion = count;
         while (insertion > 0U &&
                boonta_championship_compare_standings(
-                   &standings[order[insertion]],
-                   &standings[order[insertion - 1U]]) < 0) {
-            const unsigned int previous = order[insertion - 1U];
-            order[insertion - 1U] = order[insertion];
-            order[insertion] = previous;
+                   &standings[i], &standings[order[insertion - 1U]]) < 0) {
             --insertion;
         }
+        if (insertion >= output_capacity) continue;
+        if (count < output_capacity) ++count;
+        {
+            unsigned int shift = count - 1U;
+            while (shift > insertion) {
+                order[shift] = order[shift - 1U];
+                --shift;
+            }
+        }
+        order[insertion] = i;
     }
     return count;
 }
