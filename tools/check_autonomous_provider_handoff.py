@@ -90,7 +90,7 @@ else:
             errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
         if missing_gemini_tools:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
-        if "Gemini CLI model-facing MCP names are FQNs" not in gemini_prompt:
+        if "Gemini MCP FQNs use `mcp_github_` plus the raw tool name." not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
 
         core_tools = gemini_settings.get("tools", {}).get("core", [])
@@ -99,7 +99,7 @@ else:
 
         for required in (
             "name: 'Checkout selected task target for bounded source context'",
-            "ref: ${{ inputs.task_target_branch }}",
+            "ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
             "path: .boonta-target-source",
             "tools/build_autonomous_context.py",
             "--source-root \"$TARGET_ROOT\"",
@@ -110,7 +110,7 @@ else:
             if required not in gemini:
                 errors.append(f"Gemini must preload bounded excerpts from the exact task target: missing {required!r}")
         for required in (
-            "use its `verified_context` as the authoritative task handoff",
+            "`verified_context` is authoritative",
             "The only local file read permitted is `.gemini/context.json`",
             "Never treat the workflow's default checkout as gameplay source evidence",
         ):
@@ -121,9 +121,9 @@ else:
 
 for required in (
     "No Explore/subagents/planning, repo-wide discovery",
-    "create one branch from latest selected base",
-    "one `mcp_github_push_files` call",
-    "read back exact current head SHA",
+    "Normal mode: create one branch/PR from the selected base.",
+    "two-tool contract above",
+    "never create a second PR",
 ):
     if required not in gemini_prompt:
         errors.append(f"Gemini direct-execution contract is missing {required!r}")
@@ -179,18 +179,22 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
-resume_guard_start = groq.find("      - name: Revalidate existing task PR after acquiring the shared writer slot")
-resume_guard_end = groq.find("\n      - name: Mint scoped GitHub App token", resume_guard_start)
-resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
-if not resume_guard:
-    errors.append("Groq owner-dispatched resume must have a separate post-queue PR revalidation step")
-elif not (
-    0 <= resume_guard_start < resume_guard_end <
-    groq.find("name: Mint scoped GitHub App token", resume_guard_start) <
-    groq.find("name: Run OpenCode through the Groq Free route", resume_guard_start)
-):
-    errors.append("Groq resume revalidation must complete before minting a write token or invoking the model")
-else:
+resume_guard_specs = (
+    ("Gemini", gemini, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
+    ("OpenRouter", openrouter, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
+    ("Groq", groq, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: Mint scoped GitHub App token", "name: Run OpenCode through the Groq Free route"),
+)
+for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs:
+    guard_start = workflow.find(guard_marker)
+    guard_end = workflow.find(mint_marker, guard_start)
+    guard = workflow[guard_start:guard_end] if guard_start >= 0 and guard_end > guard_start else ""
+    if not guard:
+        errors.append(f"{label} scheduled resume must have a separate post-queue PR revalidation step")
+        continue
+    mint_pos = workflow.find(mint_marker.strip("\\n"), guard_start)
+    run_pos = workflow.find(run_marker, guard_start)
+    if not (0 <= guard_start < guard_end < mint_pos < run_pos):
+        errors.append(f"{label} resume revalidation must complete before minting a write token or invoking the model")
     for required in (
         "inputs.resume_mode == true",
         "RESUME_TASK_ID: ${{ inputs.resume_task_id }}",
@@ -201,8 +205,8 @@ else:
         "task.pr_url || task.head_sha",
         "bodyLines.filter((line) => line === targetMarker).length !== 1",
     ):
-        if required not in resume_guard:
-            errors.append(f"Groq resume preflight is missing {required!r}")
+        if required not in guard:
+            errors.append(f"{label} resume preflight is missing {required!r}")
 
 for required in (
     "pulls.listFiles({",
@@ -263,14 +267,39 @@ for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
-    "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
-    "github.event_name == 'workflow_dispatch'",
-    "github.actor == github.repository_owner",
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'",
+    "needs.provider-cooldowns.outputs.openrouter_active == 'true'",
 ):
     if required not in groq_job:
-        errors.append(f"Groq owner-dispatched resume route is missing {required!r}")
+        errors.append(f"Groq ordered scheduled-resume route is missing {required!r}")
+
+gemini_resume_job = loop.split("  autonomous-cycle:", 1)[1].split("  openrouter-fallback:", 1)[0]
+for required in (
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "needs.provider-cooldowns.outputs.gemini_active != 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_pr_number:",
+    "resume_pr_url:",
+):
+    if required not in gemini_resume_job:
+        errors.append(f"Gemini first-priority scheduled-resume route is missing {required!r}")
+
+for required in (
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'",
+    "needs.provider-cooldowns.outputs.openrouter_active != 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_pr_number:",
+    "resume_pr_url:",
+):
+    if required not in openrouter_job:
+        errors.append(f"OpenRouter second-priority scheduled-resume route is missing {required!r}")
+
+if "github.event_name == 'workflow_dispatch'" in groq_job or "github.actor == github.repository_owner" in groq_job:
+    errors.append("Existing-PR scheduled resume must not be restricted to manual workflow_dispatch")
 for required in (
     "resume_mode:",
     "resume_pr_number:",
@@ -524,37 +553,36 @@ else:
         except re.error as exc:
             errors.append(f"OpenRouter watchdog regex must compile: {exc}")
 
-openrouter_tools = set(
-    openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
-)
+openrouter_config_tools = openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
-required_openrouter_tools = {
-    "get_file_contents", "create_branch", "push_files", "create_pull_request",
-}
-required_groq_tools = {
-    "create_branch", "create_pull_request", "push_files",
-}
-required_groq_resume_tools = {"get_file_contents", "push_files"}
+required_openrouter_normal = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+required_resume_tools = {"get_file_contents", "push_files"}
+required_groq_tools = {"create_branch", "create_pull_request", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
-if openrouter_tools != required_openrouter_tools:
-    errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
-if groq_config_tools != "{env:GITHUB_TOOLS}":
-    errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
-else:
-    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
-    expected_groq_modes = {
-        ",".join(sorted(required_groq_tools)),
-        ",".join(sorted(required_groq_resume_tools)),
-    }
-    if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly three normal delivery tools and only targeted read plus push for existing-PR resume")
-if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
-    errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
+for label, config_tools, workflow in (
+    ("OpenRouter", openrouter_config_tools, openrouter),
+    ("Groq", groq_config_tools, groq),
+):
+    if config_tools != "{env:GITHUB_TOOLS}":
+        errors.append(f"{label} must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
+    else:
+        modes = {frozenset(item.split(",")) for item in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', workflow)}
+        expected = {frozenset(required_resume_tools), frozenset(required_openrouter_normal if label == "OpenRouter" else required_groq_tools)}
+        if modes != expected:
+            errors.append(f"{label} must expose its normal delivery tools and only targeted read plus push for existing-PR resume")
+    if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in workflow:
+        errors.append(f"{label} container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", openrouter_tools),):
+for label, workflow in (("Gemini", gemini),):
+    if "GITHUB_TOOLS: ${{ inputs.resume_mode == true && 'get_file_contents,push_files'" not in workflow:
+        errors.append("Gemini must reduce its MCP server to targeted read plus push during existing-PR resume")
+    if '"GITHUB_TOOLS": "${GITHUB_TOOLS}"' not in workflow or '"-e",\n                    "GITHUB_TOOLS"' not in workflow:
+        errors.append("Gemini container must inherit the exact workflow-selected tool allow-list")
+
+for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)),):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
