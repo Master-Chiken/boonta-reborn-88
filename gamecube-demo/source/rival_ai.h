@@ -84,7 +84,8 @@ static inline float boonta_rival_ai_target_line_lateral(
     lateral_limit = boonta_rival_ai_clamp(
         road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
     return boonta_rival_ai_clamp(
-        lane_target + curvature_ratio * max_bias,
+        lane_target + curvature_ratio * max_bias *
+            boonta_rival_ai_personality_line_commitment(rival_index),
         -lateral_limit, lateral_limit);
 }
 
@@ -179,6 +180,13 @@ static inline float boonta_rival_ai_personality_speed_bias(unsigned int rival_in
 {
     static const float bias[5] = {-0.025f, 0.0f, 0.020f, 0.010f, -0.010f};
     return bias[rival_index % 5U];
+}
+
+static inline float boonta_rival_ai_personality_line_commitment(
+    unsigned int rival_index)
+{
+    static const float commitment[5] = {0.75f, 1.0f, 1.25f, 1.10f, 0.85f};
+    return commitment[rival_index % 5U];
 }
 
 static inline float boonta_rival_ai_personality_curve_sensitivity(
