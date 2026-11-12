@@ -26,6 +26,7 @@ def fixture(root: Path) -> str:
         "schema_version": 2,
         "source": "docs/automation/task-ledger.json",
         "updated_at": "2026-11-08",
+        "completed_task_ids": [],
         "policy": {"max_active_tasks": 1, "completed_requires_merged_pr": True},
         "tasks": [{
             "task_id": "AUTOMATION-LEDGER-ACTIVATION",
