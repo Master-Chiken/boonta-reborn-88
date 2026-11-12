@@ -795,4 +795,60 @@ static inline float boonta_clamp_player_lateral(float lateral_position)
         lateral_position, -BOONTA_PLAYER_LATERAL_GUARD, BOONTA_PLAYER_LATERAL_GUARD);
 }
 
+
+/*
+ * Small deterministic championship ledger. Kept separate from BoontaRaceState:
+ * restarting a race must never erase season progression. The caller can serialize
+ * this plain-data structure when a save/profile layer is introduced.
+ */
+typedef struct {
+    unsigned int points;
+    unsigned int races_completed;
+    unsigned int wins;
+    unsigned int podiums;
+    unsigned int best_finish; /* 0 means no classified finish yet. */
+} BoontaChampionshipStanding;
+
+static inline unsigned int boonta_championship_points_for_position(
+    unsigned int finish_position)
+{
+    static const unsigned int points_by_position[10] = {
+        15U, 12U, 10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U
+    };
+    if (finish_position == 0U || finish_position > 10U) return 0U;
+    return points_by_position[finish_position - 1U];
+}
+
+static inline unsigned int boonta_unsigned_saturating_add(
+    unsigned int value, unsigned int increment)
+{
+    return increment > 0xffffffffU - value
+        ? 0xffffffffU : value + increment;
+}
+
+/* Invalid/unclassified positions are ignored rather than counted as finishes. */
+static inline void boonta_championship_record_result(
+    BoontaChampionshipStanding *standing, unsigned int finish_position)
+{
+    unsigned int awarded_points;
+    if (standing == 0 || finish_position == 0U) return;
+
+    awarded_points = boonta_championship_points_for_position(finish_position);
+    standing->points = boonta_unsigned_saturating_add(
+        standing->points, awarded_points);
+    standing->races_completed = boonta_unsigned_saturating_add(
+        standing->races_completed, 1U);
+    if (finish_position == 1U) {
+        standing->wins = boonta_unsigned_saturating_add(standing->wins, 1U);
+    }
+    if (finish_position <= 3U) {
+        standing->podiums = boonta_unsigned_saturating_add(
+            standing->podiums, 1U);
+    }
+    if (standing->best_finish == 0U ||
+        finish_position < standing->best_finish) {
+        standing->best_finish = finish_position;
+    }
+}
+
 #endif
