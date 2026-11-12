@@ -689,6 +689,7 @@ jobs:
           - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence. Use the preloaded excerpts for every exact task path from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
           - No full bodies/comments for #156/#226/#279; source excerpts are preloaded from four exact paths.
           - The preloaded source excerpt budget is capped at 1,800 characters total.
+- For queued work, the verified context must include `Exact owner-reviewed write paths (no others)`. Modify only those exact files; if the line is absent or empty, report BLOCKED and do not create a branch, push files or open a PR.
           - Model-side file reads and repo-wide discovery are disabled.
           - Do not reopen, replay or recreate that chain. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
