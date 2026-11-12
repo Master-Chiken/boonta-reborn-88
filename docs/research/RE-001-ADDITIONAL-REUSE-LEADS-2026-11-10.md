@@ -240,3 +240,28 @@ Two further repositories appeared relevant in broad search, but were **not** add
 
 These are intentionally recorded as **HOLD**, not ranked as reusable software. A plausible feature list is not a licence grant or evidence that a tool works on Racer files.
 
+## 8. `imjustprism/borer` — agent-driven binary reverse-engineering engine
+
+- Repository: [imjustprism/borer](https://github.com/imjustprism/borer)
+- Checked: **2026-11-12** against the upstream README and package metadata; this is an early-stage, actively changing tool, so pin a release before any repeatable analysis.
+- Borer is a standalone Rust engine exposed as an MCP server or CLI. Its decompiler runs lifted code in an emulator against seeded states and marks what was checked; unsupported instructions remain explicit assembly comments rather than being silently guessed.
+- Documented file formats: PE, ELF, Mach-O, raw code and memory dumps. Documented architectures: x86, x86-64 and arm64 for disassembly/decompilation/emulation; 32-bit ARM A32/Thumb-2 for disassembly/decompilation only.
+- The README lists function/symbol/string search, decompilation, xrefs, CFG/call graphs, class layouts and deeper analyses including taint, emulation, unpacking and binary diff. It also explicitly warns that Borer is early-stage and has limitations.
+
+### Exact relevance to Boonta
+
+- **Useful candidate for the Windows-PC reference executable** if the locally held executable is a supported x86 PE. It may help inspect function boundaries, strings, call paths and candidate physics, race, rendering or resource-management routines, then compare those findings with the already-pinned public PC source references.
+- **Not a GameCube/Wii executable analyzer:** the documented architecture list does not include PowerPC. It therefore cannot decompile the native GameCube/Wii PowerPC DOL/ELF target.
+- **Not an N64 analyzer:** the documented architecture list does not include MIPS. Do not use it to claim N64 code coverage.
+- It is not an asset extractor. Its documented container support lists embedded children rather than extracting game-specific models, textures, tracks or audio.
+
+### License, safety and operating limits
+
+- Current upstream README states **AGPL-3.0-only**; versions 0.1.0 and 0.1.1 were MIT. Keep Borer as a separate local tool; do not vendor, link or redistribute it as part of Boonta without a deliberate licence review. Local use of an independent tool is distinct from incorporating its code into the game.
+- The default maximum input size is 1 GiB and the file is loaded into memory. There is no interactive debugger or write capability; live-process access is Windows-only.
+- Upstream says the tool has no telemetry or crash reporting. Its CLI performs a daily GitHub update check; optional PDB fetching contacts a symbol server. Avoid PDB fetching unless specifically needed.
+- Do not upload the commercial PC executable, ROMs, disc images or extracted commercial assets to GitHub, CI artifacts or hosted AI services. Run analysis locally against lawfully held files and record only aggregate findings, hashes where appropriate, function addresses/names and evidence notes in Boonta.
+
+**Recommendation:** **conditional local research tool, not a project dependency.** If the owner has a supported Windows-PC x86 executable, test Borer locally on that file and compare a small set of results with the pinned PC decompilation references. Keep the existing asset pipeline and GameCube/Wii implementation untouched. Do not install Borer into GitHub Actions or add it to the runtime. No installation, binary analysis, build, or execution was performed for this note.
+
+Primary reference: [Borer README, formats, architecture support, limits, network behavior and licence](https://github.com/imjustprism/borer).
