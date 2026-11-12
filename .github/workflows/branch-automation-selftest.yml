@@ -32,6 +32,7 @@ jobs:
             .github/workflows/branch-governance.yml \
             .github/workflows/branch-intake-queue.yml \
             .github/workflows/ai-daily-coordinator.yml \
+            .github/workflows/gemini-dispatch.yml \
             .github/workflows/gemini-invoke.yml \
             .github/workflows/gemini-plan-execute.yml \
             .github/workflows/openrouter-plan-execute.yml \
