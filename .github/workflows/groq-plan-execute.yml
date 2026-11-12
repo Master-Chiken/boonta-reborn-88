@@ -697,6 +697,7 @@ jobs:
           SAFETY
           - No paid routes, billing, credits, provider/secret/settings changes or retries after quota, TPM, rate, context or auth errors.
           - Never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
+          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
 
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
