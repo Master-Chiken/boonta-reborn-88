@@ -872,8 +872,8 @@ jobs:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
           PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
           PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
-          SELECTED_TASK_ID: ${{ inputs.task_id }}
-          SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
+          SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
         with:
           script: |
