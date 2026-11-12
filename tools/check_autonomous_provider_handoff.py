@@ -261,7 +261,7 @@ for needle in groq_gates:
         errors.append(f"Groq next-cycle gate missing: {needle}")
 if any(token in groq_job for token in ("needs.autonomous-cycle.result ==", "needs.openrouter-fallback.result ==", "needs.openrouter-fallback.outputs.invocation_outcome")):
     errors.append("Groq eligibility must rely on preflight cooldown markers, never post-invocation provider results")
-if re.search(r"openrouter_active == 'true'\\s*&&\\s*\\)", groq_job):
+if re.search(r"openrouter_active == 'true'\s*&&\s*\)", groq_job):
     errors.append("Groq eligibility expression contains a dangling logical operator")
 for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
