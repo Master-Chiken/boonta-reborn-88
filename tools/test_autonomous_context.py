@@ -150,7 +150,7 @@ with tempfile.TemporaryDirectory() as temp:
     role_summary["tasks"][0]["parent_objective_id"] = "BOONTA-MISSING"
     summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
     try:
-        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent task tracking", "main", context)
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
     except MODULE.ContextBuildError as exc:
         assert "objective is missing or duplicated" in str(exc)
     else:
@@ -170,7 +170,7 @@ with tempfile.TemporaryDirectory() as temp:
     role_registry["policy"]["paid_fallback"] = True
     role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
     try:
-        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent task tracking", "main", context)
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
     except MODULE.ContextBuildError as exc:
         assert "weakens the one-writer/provider-order/€0/human-review policy" in str(exc)
     else:
@@ -179,7 +179,7 @@ with tempfile.TemporaryDirectory() as temp:
     role_registry["provider_order"] = ["groq_free", "gemini", "openrouter_free"]
     role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
     try:
-        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent task tracking", "main", context)
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
     except MODULE.ContextBuildError as exc:
         assert "provider-order" in str(exc)
     else:
