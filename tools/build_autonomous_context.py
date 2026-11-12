@@ -97,7 +97,6 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
         if not isinstance(item, dict) or not isinstance(item.get("id"), str) or item["id"] in by_id:
             raise ContextBuildError("Canonical agent role registry contains malformed or duplicate role IDs")
         by_id[item["id"]] = item
-    chain: list[str] = []
     chain_ids: list[str] = []
     seen: set[str] = set()
     current = role
@@ -109,7 +108,6 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
         title = current.get("title")
         if not isinstance(title, str) or not title.strip():
             raise ContextBuildError("Selected task manager chain contains a role without a title")
-        chain.append(title.strip())
         chain_ids.append(current_id)
         manager_id = current.get("manager_id")
         if manager_id is None:
@@ -121,7 +119,6 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
         current = by_id[manager_id]
         if len(chain) > len(by_id):
             raise ContextBuildError("Selected task manager chain exceeds the registry role count")
-    chain.reverse()
     chain_ids.reverse()
     return [
         f"Accountable role: {role_id} — {_short(role['title'], 28)} ({role['kind']}).",
