@@ -441,7 +441,7 @@ activation_entries = [
     entry for entry in production_policy.get("tasks", [])
     if isinstance(entry, dict) and entry.get("task_id") == activation["task_id"]
 ]
-production_handoff = "\\n".join([
+production_handoff = "\n".join([
     "Task ID: " + activation["task_id"],
     "Title: " + activation["title"],
     "Target branch: " + activation["target_branch"],
