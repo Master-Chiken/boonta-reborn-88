@@ -951,7 +951,7 @@
       "next_action": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main.",
       "updated_at": "2026-11-12",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "ebceaa348a0696f8f7192b07021f5a66cd9f157f",
+      "head_sha": "f0aa23a103feb67a6ea39fb98a4a341ef1a0692b",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
