@@ -38,6 +38,14 @@ on:
           - feat/rival-personality-racing-lines-20261112
           - feat/rival-personality-speed-profiles-20261112
           - fix/rival-traffic-split-tie-break-20261112
+          - fix/regenerate-task-ledger-summary-pr410
+          - fix/groq-dispatch-gate-observability-20261112
+          - fix/groq-free-invocation-timeout-180s-20261111
+          - infra/paperclip-control-plane-20261110
+          - fix/gemini-dispatch-reusable-permissions-20261110
+          - fix/groq-tool-json-temperature-20261110
+          - fix/gemini-transient-fetch-retry-20261109
+          - automation/fix-gemini-secondary-key-20261108
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -134,6 +142,14 @@ jobs:
             "feat/rival-personality-racing-lines-20261112") PINNED_SHA="994e200cb80f53a2296d25b803166b4e7802444d" ;;
             "feat/rival-personality-speed-profiles-20261112") PINNED_SHA="e3a93ac35a4d69dcefabc3e2497d006168cfa737" ;;
             "fix/rival-traffic-split-tie-break-20261112") PINNED_SHA="89e9922f22033b8149f6e372b192914ec2e4fc24" ;;
+            "fix/regenerate-task-ledger-summary-pr410") PINNED_SHA="81e6db46d3cbd174971e547c7657c0879c089117" ;;
+            "fix/groq-dispatch-gate-observability-20261112") PINNED_SHA="4859401f39796e187beda1c4335be236edea42f2" ;;
+            "fix/groq-free-invocation-timeout-180s-20261111") PINNED_SHA="30e119962a51eac54147c29e8e5111f7767ac35f" ;;
+            "infra/paperclip-control-plane-20261110") PINNED_SHA="582dfc020a8068c0fa6b9feaa84f2cc35419cd7a" ;;
+            "fix/gemini-dispatch-reusable-permissions-20261110") PINNED_SHA="c7ae0927ba03b5bd3a4826f5d5d840a4d966655d" ;;
+            "fix/groq-tool-json-temperature-20261110") PINNED_SHA="c592d3eb724ac8456dd9a340bed5c6edfa41b031" ;;
+            "fix/gemini-transient-fetch-retry-20261109") PINNED_SHA="973690f8b3a63299750959cb98b65200d03932d0" ;;
+            "automation/fix-gemini-secondary-key-20261108") PINNED_SHA="40a9db2ee79bafa0752899ded915bae8af3a4a8c" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
