@@ -336,7 +336,38 @@ def results_view_visible(image: Image.Image) -> bool:
             r, g, b = pixels[x, y]
             if r >= 220 and 120 <= g <= 190 and b <= 100:
                 orange_pixels += 1
-    return orange_pixels >= 12
+
+    # The results UI draws an almost opaque 264x184 centered panel. Orange
+    # pixels alone are not sufficient: rival exhaust can occupy this title ROI.
+    # Require both vertical panel edges and the lower panel band, which also
+    # distinguishes RESULTS from the shorter RACE READY panel.
+    def dark_fraction(left: float, top: float, right: float, bottom: float) -> float:
+        x_start = max(0, int(left))
+        y_start = max(0, int(top))
+        x_end = min(width, int(right))
+        y_end = min(height, int(bottom))
+        total = dark = 0
+        for sample_y in range(y_start, y_end):
+            for sample_x in range(x_start, x_end):
+                red, green, blue = pixels[sample_x, sample_y]
+                total += 1
+                if red <= 48 and green <= 58 and blue <= 72:
+                    dark += 1
+        return dark / max(total, 1)
+
+    left_edge = dark_fraction(
+        center_x - 128.0 * scale_x, center_y - 80.0 * scale_y,
+        center_x - 116.0 * scale_x, center_y + 80.0 * scale_y,
+    )
+    right_edge = dark_fraction(
+        center_x + 116.0 * scale_x, center_y - 80.0 * scale_y,
+        center_x + 128.0 * scale_x, center_y + 80.0 * scale_y,
+    )
+    lower_band = dark_fraction(
+        center_x - 112.0 * scale_x, center_y + 62.0 * scale_y,
+        center_x + 112.0 * scale_x, center_y + 84.0 * scale_y,
+    )
+    return orange_pixels >= 80 and min(left_edge, right_edge, lower_band) >= 0.82
 
 
 
