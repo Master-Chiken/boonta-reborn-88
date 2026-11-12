@@ -689,18 +689,22 @@ jobs:
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
 
           TASK
-          - Trust only the preloaded schema-v2 context and live preflight. Do not search history, enumerate PRs, list directories, inspect other paths, fetch issue bodies or reread the ledger.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative for task selection and live PR state. Do not search PR history, enumerate PRs, list directories, inspect other paths, fetch issue bodies or reread the ledger.
+          - No full issue bodies/comments; exact source excerpts are preloaded.
+          - No broad model-side reads or repo discovery; one exact approved file read at most.
           - Use preloaded source excerpts first. Write only the exact owner-reviewed paths listed in context; if absent, report BLOCKED and create no branch/PR.
           - If a full file is needed for a safe whole-file push, call github_get_file_contents at most once for one listed write path on TASK_TARGET_BRANCH. No other reads.
           - Preserve the task ID, target branch, provenance and €0 restrictions.
 
           SAFETY
-          - No paid routes, billing, credits, provider/secret/settings changes or retries after quota, TPM, rate, context or auth errors.
+          - No paid routes, billing, credits, provider/secret/settings changes.
+          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
           - Never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
           - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
 
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
+          - Use FQNs: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
           - At most four direct tool calls: optional exact file read; create one branch from TASK_TARGET_BRANCH; push one coherent update once; create one non-draft PR.
           - Only listed write paths may change. PR body needs standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Do not read the PR back.
           - Use the returned PR URL/head_sha. Report PROGRESS only for a newly created same-repository PR; otherwise report BLOCKED.
