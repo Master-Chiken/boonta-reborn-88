@@ -7,6 +7,8 @@ from pathlib import Path
 from statistics import median
 from PIL import Image
 
+from results_panel import results_panel_visible as _results_panel_visible
+
 
 def scene_signatures(image: Image.Image) -> dict[str, int]:
     pixels = list(image.convert("RGB").getdata())
@@ -316,58 +318,14 @@ def resumed_state_visible(image: Image.Image) -> bool:
 
 
 def results_view_visible(image: Image.Image) -> bool:
-    """Detect the orange RESULTS title in the centered post-race results panel."""
+    """Detect the centered RESULTS title and its structural dark panel."""
     image = image.convert("RGB")
     width, height = image.size
     viewport_top = detect_game_viewport_top(image)
-    viewport_height = max(1, height - viewport_top)
-    scale_x = width / 800.0
-    scale_y = viewport_height / 480.0
-    center_x = width / 2.0
-    center_y = viewport_top + viewport_height / 2.0
-    x0 = max(0, int(center_x - 33.0 * scale_x))
-    x1 = min(width, int(center_x + 33.0 * scale_x))
-    y0 = max(0, int(center_y - 81.0 * scale_y))
-    y1 = min(height, int(center_y - 66.0 * scale_y))
     pixels = image.load()
-    orange_pixels = 0
-    for y in range(y0, y1):
-        for x in range(x0, x1):
-            r, g, b = pixels[x, y]
-            if r >= 220 and 120 <= g <= 190 and b <= 100:
-                orange_pixels += 1
-
-    # The results UI draws an almost opaque 264x184 centered panel. Orange
-    # pixels alone are not sufficient: rival exhaust can occupy this title ROI.
-    # Require both vertical panel edges and the lower panel band, which also
-    # distinguishes RESULTS from the shorter RACE READY panel.
-    def dark_fraction(left: float, top: float, right: float, bottom: float) -> float:
-        x_start = max(0, int(left))
-        y_start = max(0, int(top))
-        x_end = min(width, int(right))
-        y_end = min(height, int(bottom))
-        total = dark = 0
-        for sample_y in range(y_start, y_end):
-            for sample_x in range(x_start, x_end):
-                red, green, blue = pixels[sample_x, sample_y]
-                total += 1
-                if red <= 48 and green <= 58 and blue <= 72:
-                    dark += 1
-        return dark / max(total, 1)
-
-    left_edge = dark_fraction(
-        center_x - 128.0 * scale_x, center_y - 80.0 * scale_y,
-        center_x - 116.0 * scale_x, center_y + 80.0 * scale_y,
+    return _results_panel_visible(
+        width, height, viewport_top, lambda x, y: pixels[x, y]
     )
-    right_edge = dark_fraction(
-        center_x + 116.0 * scale_x, center_y - 80.0 * scale_y,
-        center_x + 128.0 * scale_x, center_y + 80.0 * scale_y,
-    )
-    lower_band = dark_fraction(
-        center_x - 112.0 * scale_x, center_y + 62.0 * scale_y,
-        center_x + 112.0 * scale_x, center_y + 84.0 * scale_y,
-    )
-    return orange_pixels >= 80 and min(left_edge, right_edge, lower_band) >= 0.82
 
 
 
