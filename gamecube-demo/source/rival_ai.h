@@ -62,6 +62,9 @@ static inline float boonta_rival_ai_curvature_from_samples(
         before_x, before_z, middle_x, middle_z, after_x, after_z));
 }
 
+static inline float boonta_rival_ai_personality_line_commitment(
+    unsigned int rival_index);
+
 /*
  * Stable racing-line bias: each rival keeps its assigned lane but moves a
  * bounded amount toward the inside of the upcoming bend. Narrow roads reduce
