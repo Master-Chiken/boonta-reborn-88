@@ -184,6 +184,28 @@ static inline float boonta_rival_ai_target_speed(
     return boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
 }
 
+/*
+ * A rival that has repeatedly battled the player gains a small, bounded
+ * determination bonus. This is deliberately capped so memory changes behavior
+ * without creating an unfair rubber-band speed advantage.
+ */
+static inline float boonta_rival_ai_nemesis_pace_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.0004f;
+}
+
+static inline float boonta_rival_ai_target_speed_with_rivalry(
+    unsigned int rival_index, float curvature_radians_per_metre,
+    unsigned int rivalry_score)
+{
+    return boonta_rival_ai_clamp(
+        boonta_rival_ai_target_speed(rival_index, curvature_radians_per_metre) +
+        boonta_rival_ai_nemesis_pace_bonus(rivalry_score), 0.35f, 0.85f);
+}
+
 static inline float boonta_rival_ai_speed_after_frame(
     float current_speed, float target_speed, float frame_scale)
 {
