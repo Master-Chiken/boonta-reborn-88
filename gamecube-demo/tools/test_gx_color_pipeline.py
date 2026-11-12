@@ -160,7 +160,7 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertIn("draw_vertex_buffer();", hud[results_end:])
 
     def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
-        for glyph in ("K", "O", "R", "U", "V", "Y"):
+        for glyph in ("B", "K", "O", "R", "U", "V", "Y"):
             self.assertRegex(SOURCE, rf"\['{glyph}'\]\s*=\s*\{{[0-9,]+\}}")
         results = SOURCE.split("/* Read-only results use only values measured", 1)[1].split(
             "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)", 1
