@@ -18,6 +18,15 @@
         "gamecube-demo/source/main.c",
         "gamecube-demo/tests/test_rival_ai.c"
       ]
+    },
+    {
+      "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+      "purpose": "Owner-authorized bounded activation of the persistent task-ledger validator and its regression tests; no other files or automation policy may be modified.",
+      "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/408",
+      "allowed_paths": [
+        "tools/check_task_ledger_summary.py",
+        "tools/test_check_task_ledger.py"
+      ]
     }
   ]
 }
