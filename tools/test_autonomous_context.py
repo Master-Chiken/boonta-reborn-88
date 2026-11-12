@@ -132,6 +132,16 @@ with tempfile.TemporaryDirectory() as temp:
         raise AssertionError("Cyclic role hierarchy must fail closed")
     role_registry["roles"][1]["manager_id"] = "human-owner"
     role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    role_registry["policy"]["paid_fallback"] = True
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "weakens the one-writer/€0/human-review policy" in str(exc)
+    else:
+        raise AssertionError("A weakened provider policy must fail closed")
+    role_registry["policy"]["paid_fallback"] = False
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
     assert "Target branch: main" in rendered
 
     # Regression: full activation handoffs must survive beyond the former 1,200-char cap.
