@@ -618,7 +618,7 @@ jobs:
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"
+            export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
