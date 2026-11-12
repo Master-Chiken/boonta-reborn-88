@@ -90,7 +90,7 @@ else:
             errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
         if missing_gemini_tools:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
-        if "Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`" not in gemini_prompt:
+        if "Use GitHub MCP FQNs only:" not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
 
         core_tools = gemini_settings.get("tools", {}).get("core", [])
@@ -112,7 +112,7 @@ else:
         for required in (
             "use its `verified_context` as the authoritative task handoff",
             "The only local file read permitted is `.gemini/context.json`",
-            "Never treat the workflow's default checkout as gameplay source evidence",
+            "default checkout is never gameplay source evidence",
         ):
             if required not in gemini_prompt:
                 errors.append(f"Gemini target-branch context rule is missing {required!r}")
@@ -820,8 +820,9 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "Do not reopen, replay or recreate that chain."
-        if label == "Groq" else "Do not reopen, replay or recreate that chain"
+        "never reopen/replay/recreate superseded #317/#318/#319"
+        if label == "Gemini"
+        else ("Do not reopen, replay or recreate that chain." if label == "Groq" else "Do not reopen, replay or recreate that chain")
     )
     if required_reopen_rule not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
