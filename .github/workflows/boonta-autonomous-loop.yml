@@ -521,7 +521,7 @@ jobs:
 
   # Resume follows strict provider order: Gemini first, then OpenRouter, then Groq only if both earlier cooldowns were active at preflight.
   groq-fallback:
-    name: Groq Free fallback or ordered existing-PR resume
+    name: Groq Free fallback or safe scheduled existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
@@ -530,20 +530,15 @@ jobs:
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
-      needs.autonomous-cycle.result == 'skipped' &&
-      needs.openrouter-fallback.result == 'skipped' &&
       (
         (
           needs.provider-cooldowns.outputs.task_ready == 'true' &&
           needs.provider-cooldowns.outputs.gemini_active == 'true' &&
-          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
-          needs.openrouter-fallback.outputs.invocation_outcome != 'success'
+          needs.provider-cooldowns.outputs.openrouter_active == 'true'
         ) ||
         (
           needs.provider-cooldowns.outputs.task_ready != 'true' &&
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
-          needs.provider-cooldowns.outputs.gemini_active == 'true' &&
-          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
           (
             github.event_name == 'schedule' ||
             (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
