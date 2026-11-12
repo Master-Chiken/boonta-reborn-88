@@ -951,8 +951,8 @@ dynamic_task_prompts = (
 for label, prompt in dynamic_task_prompts:
     required_task_safeguards = (
         (
-            "Trust only the preloaded schema-v2 context and live preflight",
-            "Do not search history, enumerate PRs",
+            "preloaded schema-v2 context is authoritative",
+            "Global preflight is authoritative",
             "Do not search PR history",
             "€0 only",
         )
@@ -1599,11 +1599,11 @@ if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
-    "No full issue bodies/comments; exact source excerpts are preloaded.",
+    "No issue bodies/comments; exact source excerpts are preloaded.",
     "No broad model-side reads or repo discovery; one exact approved file read at most.",
     "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
-    "No paid routes, billing, credits, provider/secret/settings changes.",
+    "No paid routes, billing, credits, or provider/secret/settings changes.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
@@ -1615,7 +1615,7 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, provid
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Use FQNs: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
