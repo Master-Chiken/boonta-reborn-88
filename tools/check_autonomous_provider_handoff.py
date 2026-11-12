@@ -247,18 +247,16 @@ if "needs.autonomous-cycle.result == 'failure'" in openrouter_job:
     errors.append("OpenRouter must not launch after a Gemini failure in the same run")
 
 groq_gates = (
-    "needs.autonomous-cycle.result == 'skipped'",
+    "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.gemini_active == 'true'",
-    "needs.openrouter-fallback.result == 'skipped'",
     "needs.provider-cooldowns.outputs.openrouter_active == 'true'",
     "needs.provider-cooldowns.outputs.groq_active != 'true'",
-    "needs.openrouter-fallback.outputs.invocation_outcome != 'success'",
 )
 for needle in groq_gates:
     if needle not in groq_job:
         errors.append(f"Groq next-cycle gate missing: {needle}")
-if "needs.openrouter-fallback.result == 'failure'" in groq_job:
-    errors.append("Groq must not launch after an OpenRouter failure in the same run")
+if any(token in groq_job for token in ("needs.autonomous-cycle.result ==", "needs.openrouter-fallback.result ==", "needs.openrouter-fallback.outputs.invocation_outcome")):
+    errors.append("Groq eligibility must rely on preflight cooldown markers, never post-invocation provider results")
 for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
