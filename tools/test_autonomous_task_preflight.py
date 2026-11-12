@@ -153,7 +153,7 @@ cases = [
         "name": "blocked activation without an owner-reviewed write scope is not sent to a provider",
         "tasks": [activation],
         "marker_day_offset": None,
-        "owner_paths": false,
+        "owner_paths": False,
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
