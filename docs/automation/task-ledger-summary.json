@@ -173,7 +173,7 @@
         "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "79b43674af8925f2b537d32f529aba1e88e5390a",
+      "head_sha": "16ec563df73737f081dac4e52833ee741c7083ad",
       "next_action_excerpt": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main."
     },
     {
