@@ -1062,7 +1062,40 @@ static void championship_order_is_stable_and_respects_output_capacity(void)
     assert(boonta_championship_build_stable_order(standings, 5U, 0, 5U) == 0U);
 }
 
+
+static void championship_event_results_are_idempotent_and_reject_stale_events(void)
+{
+    BoontaChampionshipState championship;
+    boonta_championship_state_reset(&championship);
+    assert(championship.last_event_id == 0U);
+    assert(championship.recorded_mask == 0U);
+    assert(championship.standings[0].races_completed == 0U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 1);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 0);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 1U, 2U) == 1);
+    assert(championship.standings[1].points == 12U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 0U, 3U) == 1);
+    assert(championship.standings[0].points == 25U);
+    assert(championship.standings[0].races_completed == 2U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 2U, 1U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 0U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 5U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 2U, 4U, 1U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 0U, 2U, 1U) == 0);
+    assert(boonta_championship_record_event_result(0, 2U, 2U, 1U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+}
+
 int main(void) {
+ championship_event_results_are_idempotent_and_reject_stale_events();
  championship_order_is_stable_and_respects_output_capacity();
  championship_standings_use_deterministic_tie_breaks();
  championship_points_follow_fixed_scoring_table();
