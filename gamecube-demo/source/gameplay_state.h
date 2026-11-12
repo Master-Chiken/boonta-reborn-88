@@ -881,4 +881,37 @@ static inline int boonta_championship_compare_standings(
     return 0;
 }
 
+
+/*
+ * Build a stable, allocation-free order of standing indices for a results
+ * table. The returned count is bounded by output_capacity; equal standings
+ * retain their original roster order. The caller owns both arrays.
+ */
+static inline unsigned int boonta_championship_build_stable_order(
+    const BoontaChampionshipStanding *standings,
+    unsigned int standing_count,
+    unsigned int *order,
+    unsigned int output_capacity)
+{
+    unsigned int count;
+    unsigned int i;
+
+    if (standings == 0 || order == 0 || output_capacity == 0U) return 0U;
+    count = standing_count < output_capacity ? standing_count : output_capacity;
+    for (i = 0U; i < count; ++i) {
+        unsigned int insertion = i;
+        order[i] = i;
+        while (insertion > 0U &&
+               boonta_championship_compare_standings(
+                   &standings[order[insertion]],
+                   &standings[order[insertion - 1U]]) < 0) {
+            const unsigned int previous = order[insertion - 1U];
+            order[insertion - 1U] = order[insertion];
+            order[insertion] = previous;
+            --insertion;
+        }
+    }
+    return count;
+}
+
 #endif
