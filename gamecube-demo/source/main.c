@@ -1467,8 +1467,10 @@ int main(int argc, char **argv)
                     g_rival_lateral[rival_index], g_player_lateral,
                     g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
                     signed_lookahead_curvature, lookahead_half_width);
-                rival_target_speed[rival_index] = boonta_rival_ai_target_speed(
-                    rival_index, lookahead_curvature);
+                rival_target_speed[rival_index] =
+                    boonta_rival_ai_target_speed_with_rivalry(
+                        rival_index, lookahead_curvature,
+                        g_rival_rivalry[rival_index]);
             }
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
