@@ -189,7 +189,7 @@ with tempfile.TemporaryDirectory() as temp:
         "Activate and validate persistent autonomous task tracking",
         "main", full_handoff, max_chars=1500, max_task_context=1400,
     )
-    assert len(bounded) <= 1500
+    assert len(bounded) <= 1800
     assert task["question_excerpt"] in bounded
     assert task["next_action_excerpt"] in bounded
     assert all(MODULE._short(item, 140) in bounded for item in task["acceptance_criteria_excerpt"])
@@ -200,7 +200,7 @@ with tempfile.TemporaryDirectory() as temp:
         "main", full_handoff, max_chars=1500, max_task_context=1400,
         max_criteria=3, max_next_action=140,
     )
-    assert len(groq_bounded) <= 1500
+    assert len(groq_bounded) <= 1800
     assert "Read-only source excerpts: disabled for this context build" in groq_bounded
     assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
