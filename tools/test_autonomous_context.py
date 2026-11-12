@@ -45,6 +45,18 @@ def fixture(root: Path) -> str:
     (root / "docs/automation/task-ledger-summary.json").write_text(
         json.dumps(summary), encoding="utf-8"
     )
+    (root / "tools").mkdir(parents=True)
+    (root / "tools/test_check_task_ledger.py").write_text("class FixtureTests: pass\\n", encoding="utf-8")
+    (root / "docs/automation/patch-path-allowlist.json").write_text(json.dumps({
+        "schema_version": 1,
+        "policy": {"owner_review_required": True, "path_mode": "exact", "max_paths_per_task": 20},
+        "tasks": [{
+            "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+            "purpose": "Synthetic owner-reviewed fixture scope",
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+            "allowed_paths": ["tools/test_check_task_ledger.py"],
+        }],
+    }), encoding="utf-8")
     return (
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
@@ -64,6 +76,24 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
     assert "Target branch: main" in rendered
+    assert "Exact owner-reviewed write paths (no others): tools/test_check_task_ledger.py" in rendered
+
+    # The blocked bootstrap is executable only when an exact owner-reviewed
+    # write-path entry exists; otherwise the context builder fails before inference.
+    path_policy = root / "docs/automation/patch-path-allowlist.json"
+    original_policy = json.loads(path_policy.read_text(encoding="utf-8"))
+    path_policy.write_text(json.dumps({**original_policy, "tasks": []}), encoding="utf-8")
+    try:
+        MODULE.build_context(
+            root, "AUTOMATION-LEDGER-ACTIVATION",
+            "Activate and validate persistent autonomous task tracking",
+            "main", context,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "no unique owner-reviewed exact-path entry" in str(exc)
+    else:
+        raise AssertionError("Blocked activation must not reach inference without owner-reviewed write paths")
+    path_policy.write_text(json.dumps(original_policy), encoding="utf-8")
 
     # Regression: full activation handoffs must survive beyond the former 1,200-char cap.
     long_handoff = context + "\n" + ("Supplemental verified evidence note. " * 30)
