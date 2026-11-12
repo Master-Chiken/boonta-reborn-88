@@ -948,10 +948,10 @@
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
         "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
       ],
-      "next_action": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main.",
+      "next_action": "PR #395 is open against dev at exact head 4f5e252a8e55129665045ae100ae90a7ee517a3a. The existing session/results implementation and championship standings port are in the same gameplay branch. Review exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main.",
       "updated_at": "2026-11-12",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "d239e8660bc81c2c6eb83a7c97db40acd8161458",
+      "head_sha": "4f5e252a8e55129665045ae100ae90a7ee517a3a",
       "target_branch": "dev",
       "read_paths": [
         "gamecube-demo/source/main.c",
