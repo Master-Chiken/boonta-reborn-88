@@ -145,10 +145,10 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
             raise ContextBuildError("Selected task manager chain exceeds the registry role count")
     chain_ids.reverse()
     return [
-        f"Role: {role_id} — {_short(role['title'], 28)} ({role['kind']}).",
+        f"Role: {role_id} — {_short(role['title'], 16)} ({role['kind']}).",
         "Chain: " + " > ".join(chain_ids) + ".",
-        f"Objective: {objective_id} (zero-cost).",
-        "Registry: declarative only; no extra permissions.",
+        f"Objective: {objective_id}.",
+        "Registry: declarative only; no rights.",
     ]
 
 
