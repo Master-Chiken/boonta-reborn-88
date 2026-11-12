@@ -251,18 +251,18 @@ if "needs.autonomous-cycle.result == 'failure'" in openrouter_job:
     errors.append("OpenRouter must not launch after a Gemini failure in the same run")
 
 groq_gates = (
-    "needs.autonomous-cycle.result == 'skipped'",
+    "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.gemini_active == 'true'",
-    "needs.openrouter-fallback.result == 'skipped'",
     "needs.provider-cooldowns.outputs.openrouter_active == 'true'",
     "needs.provider-cooldowns.outputs.groq_active != 'true'",
-    "needs.openrouter-fallback.outputs.invocation_outcome != 'success'",
 )
 for needle in groq_gates:
     if needle not in groq_job:
         errors.append(f"Groq next-cycle gate missing: {needle}")
-if "needs.openrouter-fallback.result == 'failure'" in groq_job:
-    errors.append("Groq must not launch after an OpenRouter failure in the same run")
+if any(token in groq_job for token in ("needs.autonomous-cycle.result ==", "needs.openrouter-fallback.result ==", "needs.openrouter-fallback.outputs.invocation_outcome")):
+    errors.append("Groq eligibility must rely on preflight cooldown markers, never post-invocation provider results")
+if re.search(r"openrouter_active == 'true'\\s*&&\\s*\\)", groq_job):
+    errors.append("Groq eligibility expression contains a dangling logical operator")
 for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
@@ -307,9 +307,17 @@ if (
     "github.actor == github.repository_owner" not in resume_route
 ):
     errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
+if (
+    "github.event_name == 'schedule'" not in resume_route or
+    "github.event_name == 'workflow_dispatch'" not in resume_route or
+    "github.actor == github.repository_owner" not in resume_route
+):
+    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
 for provider_label, route_job in (("Gemini", gemini_resume_job), ("OpenRouter", openrouter_job), ("Groq", groq_job)):
     if "github.event_name == 'schedule'" not in route_job:
         errors.append(f"{provider_label} resume route must remain reachable from scheduled workflow runs")
+if "resume_pr_number:\n        type: string\n        required: false" not in groq:
+    errors.append("Groq resume PR number must accept the empty-string no-resume handoff and validate only in resume mode")
 for required in (
     "resume_mode:",
     "resume_pr_number:",
