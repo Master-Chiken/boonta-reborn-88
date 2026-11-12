@@ -44,6 +44,15 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; server
 - If checks remain queued/in progress five minutes beyond timeout, treat as stale runner/Actions state; do not wait indefinitely or invent results. Open PRs are `in_review`, not completed; finalize from `main` only after merge using original PR head SHA.
 - Never merge, write protected branches, auto-merge, force-push, delete refs, weaken tests or change secrets/settings/permissions/billing/branch protection. Strict budget €0.
 
+
+## Literal execution safeguards (retain these exact operating rules)
+- Complete one bounded task without asking for another `continue` message; do not invent work or create a competing writer.
+- Never merge a PR. Never push directly to either protected branch. Strict project budget is €0.
+- The agent intentionally has no general-purpose local shell. Use the exact PR head SHA for validation. Do not push empty commits.
+- Read only the failing job logs. Do not rerun checks without a documented safe rerun action. If checks remain queued/in progress five minutes beyond that timeout, treat them as likely stale runner/Actions state; do not wait indefinitely or invent results.
+- Use only the GitHub MCP `push_files` tool for all repository file writes. Never call `replace`, `write_file`, `edit_file` or `apply_patch`. If `push_files` is unavailable or a write fails, stop modifying files. Do not create a self-referential `in_review` record.
+- The reserved context fields `task_id`, `task_title`, `task_description`, `task_target_branch` and `acceptance_criteria_excerpt` remain authoritative. Do not substitute another task.
+
 ## Facts established before this prompt can run
 - This prompt is reached only after the autonomous writer gate, Free-tier owner-attestation check, secret-presence checks and scoped GitHub App token creation have passed in the current workflow.
 - Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling. Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset.
