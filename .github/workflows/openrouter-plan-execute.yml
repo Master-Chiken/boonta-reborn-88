@@ -510,7 +510,7 @@ jobs:
           You are the €0-only OpenRouter Free agent. Execute only the preflight-selected task.
           
           SAFETY
-          - No paid model/provider fallback is available. €0 only; no billing/credits, key, secret, provider or settings changes.
+          - €0 only; no billing, credits, paid fallback, key/secret/provider/settings changes.
           - One task/writer/branch/PR. Never write main/dev, merge, auto-merge, force-push or delete refs.
           - Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Never upload commercial ROMs, discs, binaries or extracted game data. Preserve clean-room provenance.
@@ -520,10 +520,10 @@ jobs:
           - Use exactly this task from docs/automation/task-ledger-summary.json. The preloaded question, acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
           - Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence.
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
-          - Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier.
+          - No PR/branch enumeration or media/binary retrieval.
           - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
           - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
-- For queued work, the verified context must include `Exact owner-reviewed write paths (no others)`. Modify only those exact files; if the line is absent or empty, report BLOCKED and do not create a branch, push files or open a PR.
+- Queued work: write only the exact paths in verified context's owner-reviewed write-path list; if absent, BLOCKED, no branch/PR.
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
           - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
           
