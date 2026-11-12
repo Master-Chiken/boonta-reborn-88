@@ -773,7 +773,7 @@ if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
 for required_phrase in (
     "without asking for another",
     "one bounded task",
-    "#279 is read-only PC/N64/Dreamcast evidence",
+    "Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue",
     "Never merge or write protected branches",
     "Budget €0",
     "Never merge or write protected branches",
@@ -904,7 +904,7 @@ for required_phrase in (
     "Do not push empty commits",
     "read logs only for failed jobs",
     "no documented safe rerun action",
-    "after five minutes queued/in progress",
+    "After five minutes queued/in progress",
     "treat as likely stale runner/Actions state",
     "do not wait indefinitely",
     "optional `continue-on-error` diagnostics",
