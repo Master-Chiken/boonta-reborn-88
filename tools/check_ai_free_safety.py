@@ -902,7 +902,7 @@ for required_phrase in (
     "intentionally has no general-purpose local shell",
     "exact PR head SHA",
     "Do not push empty commits",
-    "read only the failing job logs",
+    "read logs only for failed jobs",
     "no documented safe rerun action",
     "five minutes beyond that timeout",
     "likely stale runner/Actions state",
@@ -1386,7 +1386,7 @@ for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
     "Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset",
-    "Preflight cannot prove Google billing is absent",
+    "Preflight does not prove Google billing is absent",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
