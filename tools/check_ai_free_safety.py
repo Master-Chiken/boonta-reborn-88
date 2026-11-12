@@ -425,7 +425,7 @@ for required in (
     'ghcr.io/github/github-mcp-server:v0.27.0',
     'GITHUB_TOOLS',
     '"opencode", "run", "--model", "openrouter/openrouter/free",',
-    '"timeout", "--signal=TERM", "--kill-after=5s", "90s",',
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s",',
     'npm install --global opencode-ai@1.19.5',
     'name: Verify OpenRouter Free key authentication without inference',
     'https://openrouter.ai/api/v1/key',
