@@ -200,6 +200,83 @@ with tempfile.TemporaryDirectory() as temp:
         raise AssertionError("Expected a legacy schema to fail closed")
 
 
+# Queue promotion must carry completed dependency evidence and a reviewed exact write scope.
+with tempfile.TemporaryDirectory() as temp:
+    root = Path(temp)
+    fixture(root)
+    summary_path = root / "docs/automation/task-ledger-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    task_id = "GC-RIVAL-ROUTE-PROGRESSION"
+    title = "Make rival racers progress through the native route and complete the race"
+    queued = {
+        "task_id": task_id,
+        "title": title,
+        "status": "queued",
+        "owner_approved": True,
+        "depends_on": ["GC-RACE-PROGRESSION"],
+        "target_branch": "dev",
+        "platform_scope": ["GameCube", "Wii"],
+        "read_paths": ["gamecube-demo/source/rival_ai.h"],
+        "read_ranges": [{"path": "gamecube-demo/source/rival_ai.h", "start_line": 1, "end_line": 20}],
+        "question_excerpt": "Can rivals progress on the native route model?",
+        "acceptance_criteria_total": 1,
+        "acceptance_criteria_excerpt": ["Rivals share deterministic route and lap progress"],
+        "pr_url": None,
+        "head_sha": None,
+        "next_action_excerpt": "Trace the existing route cursor and rival update before changing code.",
+    }
+    summary["completed_task_ids"] = ["GC-RACE-PROGRESSION"]
+    summary["tasks"] = [queued]
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    policy = {
+        "schema_version": 1,
+        "policy": {
+            "owner_review_required": True,
+            "path_mode": "exact",
+            "max_paths_per_task": 20,
+        },
+        "tasks": [{
+            "task_id": task_id,
+            "purpose": "Offline exact write-path fixture",
+            "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
+            "allowed_paths": ["gamecube-demo/source/rival_ai.h", "gamecube-demo/tests/test_rival_ai.c"],
+        }],
+    }
+    (root / "docs/automation/patch-path-allowlist.json").write_text(json.dumps(policy), encoding="utf-8")
+    handoff = "\\n".join([
+        "Task ID: " + task_id,
+        "Title: " + title,
+        "Target branch: dev",
+        "Platform scope: GameCube, Wii",
+        "Question: " + queued["question_excerpt"],
+        "Acceptance criteria (1 total; first 1):",
+        "- " + queued["acceptance_criteria_excerpt"][0],
+        "Next: " + queued["next_action_excerpt"],
+        "Read-only source paths (select at most one): " + ", ".join(queued["read_paths"]),
+    ])
+    queued_context = MODULE.build_context(root, task_id, title, "dev", handoff)
+    assert "Exact owner-reviewed write paths (no others): gamecube-demo/source/rival_ai.h, gamecube-demo/tests/test_rival_ai.c" in queued_context
+
+    summary["completed_task_ids"] = []
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, task_id, title, "dev", handoff)
+    except MODULE.ContextBuildError as exc:
+        assert "dependency-complete" in str(exc)
+    else:
+        raise AssertionError("Queued context must fail closed while any dependency is incomplete")
+
+    summary["completed_task_ids"] = ["GC-RACE-PROGRESSION"]
+    summary["tasks"][0]["owner_approved"] = False
+    summary_path.write_text(json.dumps(summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, task_id, title, "dev", handoff)
+    except MODULE.ContextBuildError as exc:
+        assert "owner-approved" in str(exc)
+    else:
+        raise AssertionError("Queued context must fail closed without explicit owner approval")
+
+
 # Exact multi-file source excerpts are loaded from the selected target checkout,
 # never by asking the model to browse the repository.
 with tempfile.TemporaryDirectory() as temp:
