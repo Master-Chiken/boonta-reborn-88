@@ -128,6 +128,16 @@ class GXColorPipelineTests(unittest.TestCase):
             quad,
         )
 
+    def test_results_panel_gets_a_fresh_vertex_buffer(self) -> None:
+        flush = SOURCE.index("draw_vertex_buffer();", SOURCE.index("/* Keep the measured results screen"))
+        reset = SOURCE.index("g_vertex_count = 0U;", flush)
+        panel = SOURCE.index("append_screen_quad(cx - 132.0f", reset)
+        self.assertLess(flush, reset)
+        self.assertLess(reset, panel)
+        results = SOURCE[flush:panel]
+        self.assertIn("draw_vertex_buffer();", results)
+        self.assertIn("g_vertex_count = 0U;", results)
+
     def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
         for glyph in ("K", "O", "R", "U", "V", "Y"):
             self.assertRegex(SOURCE, rf"\['{glyph}'\]\s*=\s*\{{[0-9,]+\}}")
