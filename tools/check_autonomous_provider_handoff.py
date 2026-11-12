@@ -191,7 +191,7 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
     if not guard:
         errors.append(f"{label} scheduled resume must have a separate post-queue PR revalidation step")
         continue
-    mint_pos = workflow.find(mint_marker.strip("\\n"), guard_start)
+    mint_pos = workflow.find(mint_marker.lstrip("\n"), guard_start)
     run_pos = workflow.find(run_marker, guard_start)
     if not (0 <= guard_start < guard_end < mint_pos < run_pos):
         errors.append(f"{label} resume revalidation must complete before minting a write token or invoking the model")
@@ -372,9 +372,22 @@ for label, workflow, validator_title, sync_title, failure_title in task_backoff_
     if not (0 <= validator_position < sync_position < failure_position):
         errors.append(f"{label} task backoff must follow report validation and precede provider failure cooldown")
     validator_block = workflow[validator_position:sync_position] if validator_position >= 0 and sync_position > validator_position else ""
-    for required in ("validateAutonomousCycleReport", "expectedTaskId: process.env.SELECTED_TASK_ID", "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH"):
+    validator_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        )
+    )
+    for required in ("validateAutonomousCycleReport", *validator_binding_requirements):
         if required not in validator_block:
-            errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator: {required!r}")
+            errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator using the reserved task in both modes: {required!r}")
 for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')", "const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER')", "const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION')"):
     if required not in cycle_validator:
         errors.append(f"Shared BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
@@ -980,15 +993,26 @@ for label, workflow, report_title in (
     report_start = workflow.find("name: " + report_title)
     sync_start = workflow.find("name: Sync the single-task daily backoff marker", report_start)
     report_block = workflow[report_start:sync_start] if report_start >= 0 and sync_start > report_start else ""
-    for required in (
-        "SELECTED_TASK_ID:",
-        "SELECTED_TASK_TARGET_BRANCH:",
-        "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
-    ):
+    report_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+            "RESUME_TASK_ID:",
+            "RESUME_TASK_TARGET_BRANCH:",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            "SELECTED_TASK_ID: \${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
+            "SELECTED_TASK_TARGET_BRANCH: \${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+        )
+    )
+    for required in ("SELECTED_TASK_ID:", "SELECTED_TASK_TARGET_BRANCH:", "validateAutonomousCycleReport", *report_binding_requirements):
         if required not in report_block:
-            errors.append(f"{label} report validator handoff is missing {required!r}")
+            errors.append(f"{label} report validator handoff is missing dynamic preflight binding {required!r}")
 gemini_report_start = gemini.find("name: Validate autonomous cycle report contract")
 gemini_report_end = gemini.find("name: Sync the single-task daily backoff marker", gemini_report_start)
 gemini_report_block = gemini[gemini_report_start:gemini_report_end] if gemini_report_start >= 0 and gemini_report_end > gemini_report_start else ""
