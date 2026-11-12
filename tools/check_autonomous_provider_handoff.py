@@ -183,7 +183,7 @@ resume_guard_start = groq.find("      - name: Revalidate existing task PR after 
 resume_guard_end = groq.find("\n      - name: Mint scoped GitHub App token", resume_guard_start)
 resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
 if not resume_guard:
-    errors.append("Groq owner-dispatched resume must have a separate post-queue PR revalidation step")
+    errors.append("Groq scheduled/owner-dispatched resume must have a separate post-queue PR revalidation step")
 elif not (
     0 <= resume_guard_start < resume_guard_end <
     groq.find("name: Mint scoped GitHub App token", resume_guard_start) <
@@ -266,11 +266,12 @@ for required in (
     "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
+    "github.event_name == 'schedule'",
     "github.event_name == 'workflow_dispatch'",
     "github.actor == github.repository_owner",
 ):
     if required not in groq_job:
-        errors.append(f"Groq owner-dispatched resume route is missing {required!r}")
+        errors.append(f"Groq safe scheduled/owner-dispatched resume route is missing {required!r}")
 for required in (
     "resume_mode:",
     "resume_pr_number:",

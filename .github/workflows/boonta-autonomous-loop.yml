@@ -498,9 +498,9 @@ jobs:
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
     secrets: inherit
 
-  # The resume-only route requires an explicit owner workflow_dispatch; schedules do not retouch open PRs.
+  # Resume only a trusted, already-open task PR; scheduled runs may continue it after read-only preflight and writer-lock revalidation.
   groq-fallback:
-    name: Groq Free fallback or owner-dispatched existing-PR resume
+    name: Groq Free fallback or safe scheduled existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
@@ -521,8 +521,10 @@ jobs:
         (
           needs.provider-cooldowns.outputs.task_ready != 'true' &&
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
-          github.event_name == 'workflow_dispatch' &&
-          github.actor == github.repository_owner
+          (
+            github.event_name == 'schedule' ||
+            (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
+          )
         )
       ) &&
       github.ref == 'refs/heads/main' &&
