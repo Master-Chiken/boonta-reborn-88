@@ -288,9 +288,9 @@ def build_allowlist(
         else:
             eligible_queued = [
                 item for item in task_map.values()
-            if item.get("status") == "queued"
-            and item.get("owner_approved") is True
-            and isinstance(item.get("depends_on"), list)
+                if item.get("status") == "queued"
+                and item.get("owner_approved") is True
+                and isinstance(item.get("depends_on"), list)
                 and all(dependency in completed for dependency in item["depends_on"])
             ]
         if not bootstrap_blocked and not eligible_queued:
