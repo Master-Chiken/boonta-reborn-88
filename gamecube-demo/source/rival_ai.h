@@ -63,6 +63,41 @@ static inline float boonta_rival_ai_curvature_from_samples(
 }
 
 /*
+ * The single-loop sampler accepts absolute course distance. A branched course
+ * samples relative to its live cursor. Convert the rival's absolute progress
+ * into the coordinate system required by the selected course sampler.
+ */
+static inline float boonta_rival_route_lookahead_sample(
+    float player_progress, float rival_progress, float lookahead_distance,
+    int relative_to_player_cursor)
+{
+    float sample_distance;
+    if (!isfinite(player_progress) || player_progress < 0.0f ||
+        !isfinite(rival_progress) || rival_progress < 0.0f ||
+        !isfinite(lookahead_distance) || lookahead_distance < 0.0f ||
+        (relative_to_player_cursor != 0 && relative_to_player_cursor != 1)) {
+        return 0.0f;
+    }
+    sample_distance = relative_to_player_cursor
+        ? rival_progress - player_progress + lookahead_distance
+        : rival_progress + lookahead_distance;
+    return isfinite(sample_distance) ? sample_distance : 0.0f;
+}
+
+/* Stable roster traits: rivals keep their style for the whole race. */
+static inline float boonta_rival_ai_personality_line_commitment(unsigned int rival_index)
+{
+    static const float commitment[5] = {0.75f, 1.0f, 1.25f, 1.10f, 0.85f};
+    return commitment[rival_index % 5U];
+}
+
+static inline float boonta_rival_ai_personality_curve_sensitivity(unsigned int rival_index)
+{
+    static const float sensitivity[5] = {0.060f, 0.050f, 0.035f, 0.045f, 0.055f};
+    return sensitivity[rival_index % 5U];
+}
+
+/*
  * Stable racing-line bias: each rival keeps its assigned lane but moves a
  * bounded amount toward the inside of the upcoming bend. Narrow roads reduce
  * both the bias and the allowed lateral envelope.
@@ -84,7 +119,8 @@ static inline float boonta_rival_ai_target_line_lateral(
     lateral_limit = boonta_rival_ai_clamp(
         road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
     return boonta_rival_ai_clamp(
-        lane_target + curvature_ratio * max_bias,
+        lane_target + curvature_ratio * max_bias *
+            boonta_rival_ai_personality_line_commitment(rival_index),
         -lateral_limit, lateral_limit);
 }
 
@@ -126,8 +162,15 @@ static inline float boonta_rival_ai_target_lateral(
         target = player_lateral <= current_lateral ? 1.45f : -1.45f;
     }
 
-    /* Keep a small lateral gap from nearby rivals; ignore distant traffic. */
+    /*
+     * Select the nearest longitudinal threat from the shared snapshot. Choosing
+     * the last matching array entry makes lane avoidance depend on roster order.
+     * Break exact-distance ties by stable rival index for deterministic replay.
+     */
     if (other_z != 0 && other_lateral != 0) {
+        unsigned int nearest_rival = rival_count;
+        float nearest_longitudinal_gap = 3.5f;
+        float nearest_lateral_gap = 0.0f;
         for (i = 0U; i < rival_count; ++i) {
             float longitudinal_gap;
             float lateral_gap;
@@ -136,12 +179,80 @@ static inline float boonta_rival_ai_target_lateral(
             longitudinal_gap = fabsf(rival_z - other_z[i]);
             lateral_gap = current_lateral - other_lateral[i];
             if (longitudinal_gap < 3.5f &&
-                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target = current_lateral + (lateral_gap < 0.0f ? -0.75f : 0.75f);
+                fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP &&
+                (nearest_rival == rival_count ||
+                 longitudinal_gap < nearest_longitudinal_gap ||
+                 (fabsf(longitudinal_gap - nearest_longitudinal_gap) <= 0.0001f &&
+                  i < nearest_rival))) {
+                nearest_rival = i;
+                nearest_longitudinal_gap = longitudinal_gap;
+                nearest_lateral_gap = lateral_gap;
+            }
+        }
+        if (nearest_rival < rival_count) {
+            const float offset = (!isfinite(nearest_lateral_gap) ||
+                                  fabsf(nearest_lateral_gap) < 0.05f)
+                ? (rival_index < nearest_rival ? -0.75f : 0.75f)
+                : (nearest_lateral_gap < 0.0f ? -0.75f : 0.75f);
+            target = current_lateral + offset;
+        }
+    }
+
+    return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
+}
+
+/* Nemesis memory can strengthen the preferred inside line slightly. */
+static inline float boonta_rival_ai_nemesis_line_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.0025f;
+}
+
+static inline float boonta_rival_ai_target_lateral_with_rivalry(
+    unsigned int rival_index,
+    float rival_z,
+    float current_lateral,
+    float player_lateral,
+    const float *other_z,
+    const float *other_lateral,
+    unsigned int rival_count,
+    float signed_curvature,
+    float road_half_width,
+    unsigned int rivalry_score)
+{
+    float target = boonta_rival_ai_target_lateral(
+        rival_index, rival_z, current_lateral, player_lateral,
+        other_z, other_lateral, rival_count, signed_curvature, road_half_width);
+    float lateral_limit;
+    unsigned int i;
+
+    if (rivalry_score == 0U || !isfinite(signed_curvature) ||
+        fabsf(signed_curvature) < 0.001f ||
+        !isfinite(rival_z) || !isfinite(player_lateral) ||
+        fabsf(rival_z - 1.0f) < 5.5f) {
+        return target;
+    }
+
+    /* Nemesis must never override the existing close-traffic safety envelope. */
+    if (other_z != 0 && other_lateral != 0) {
+        for (i = 0U; i < rival_count; ++i) {
+            if (i == rival_index || !isfinite(other_z[i]) ||
+                !isfinite(other_lateral[i])) continue;
+            if (fabsf(rival_z - other_z[i]) < 3.5f &&
+                fabsf(current_lateral - other_lateral[i]) <
+                    BOONTA_RIVAL_AI_TRAFFIC_GAP) {
+                return target;
             }
         }
     }
 
+    road_half_width = boonta_rival_ai_clamp(road_half_width, 2.2f, 4.8f);
+    lateral_limit = boonta_rival_ai_clamp(
+        road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    target += (signed_curvature > 0.0f ? 1.0f : -1.0f) *
+              boonta_rival_ai_nemesis_line_bonus(rivalry_score);
     return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
 }
 
@@ -170,18 +281,38 @@ static inline float boonta_rival_ai_after_frame(
 }
 
 /*
- * Curvature is estimated from the clean-room track sampler in radians per metre.
- * This first pace model intentionally adjusts speed only; it does not modify
- * the player's physics or claim retail GameCube/Wii physics parity.
+ * Rivals need a race pace close to the player's 1.0 top-speed envelope:
+ * otherwise they can never reach the finish before a neutral full-throttle run.
+ * Skill tiers keep a small deterministic spread; upcoming curvature trims pace
+ * gently without making even the fastest rival mathematically uncompetitive.
+ * This remains a simple pace controller, not retail physics parity.
  */
 static inline float boonta_rival_ai_target_speed(
     unsigned int rival_index, float curvature_radians_per_metre)
 {
     const float curvature = boonta_rival_ai_clamp(
         curvature_radians_per_metre, 0.0f, 0.18f);
-    const float target_speed = boonta_rival_initial_speed(rival_index) -
-                               curvature * 1.8f;
-    return boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
+    const float skill_pace = 0.985f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.0075f;
+    const float target_speed = skill_pace - curvature * boonta_rival_ai_personality_curve_sensitivity(rival_index);
+    return boonta_rival_ai_clamp(target_speed, 0.90f, 1.0f);
+}
+
+/* Small bounded determination; no rival can exceed the player's top-speed envelope. */
+static inline float boonta_rival_ai_nemesis_pace_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.00003f;
+}
+
+static inline float boonta_rival_ai_target_speed_with_rivalry(
+    unsigned int rival_index, float curvature_radians_per_metre,
+    unsigned int rivalry_score)
+{
+    return boonta_rival_ai_clamp(
+        boonta_rival_ai_target_speed(rival_index, curvature_radians_per_metre) +
+        boonta_rival_ai_nemesis_pace_bonus(rivalry_score), 0.90f, 1.0f);
 }
 
 static inline float boonta_rival_ai_speed_after_frame(
@@ -191,7 +322,7 @@ static inline float boonta_rival_ai_speed_after_frame(
     float delta;
 
     current_speed = boonta_rival_ai_clamp(current_speed, 0.0f, 1.0f);
-    target_speed = boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
+    target_speed = boonta_rival_ai_clamp(target_speed, 0.90f, 1.0f);
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     delta = target_speed - current_speed;
     max_step = (delta >= 0.0f ? 0.004f : 0.010f) * frame_scale;

@@ -15,14 +15,9 @@
 #include "pause_state.h"
 #include "gameplay_state.h"
 #include "rival_ai.h"
-#include "generated_route_graph.h"
-#include "route_graph_sampling.h"
+#include "course_catalog.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
-
-#if BOONTA_RUNTIME_ROUTE_EDGE_COUNT < 1U
-#error "The native route-graph runtime requires at least one closed-loop edge."
-#endif
 
 #include <math.h>
 #include <malloc.h>
@@ -32,15 +27,13 @@
 #define GX_FIFO_SIZE       (256 * 1024)
 /* HUD text plus layered finish-banner quads can exceed the old 4096-vertex cap.
  * Keep enough headroom so append operations don't silently drop the checkerboard. */
-#define VERTEX_CAPACITY    8192U
+#define VERTEX_CAPACITY    16384U
 #define ROAD_SEGMENTS      32U
 #define ROUTE_SEGMENT_LENGTH 2.8f
 #define ROUTE_BRANCH_STEERING_DEADZONE 0.20f
 #define ROUTE_BRANCH_SELECTION_DISTANCE (6.0f * ROUTE_SEGMENT_LENGTH)
 /* Ground mesh reaches 42 segments ahead of the player (44 total, 2 behind). */
 #define ROUTE_RENDER_LOOKAHEAD_DISTANCE (42.0f * ROUTE_SEGMENT_LENGTH)
-#define ROAD_HALF_WIDTH    BOONTA_REFERENCE_ROAD_HALF_WIDTH
-#define RACE_LAP_DISTANCE   BOONTA_RUNTIME_ROUTE_LENGTH
 #define RACE_LAP_LIMIT       3U
 #define PLAYER_ANCHOR_LOCAL_Z 1.0f
 #define LAP_INDICATOR_COUNT  RACE_LAP_LIMIT
@@ -76,16 +69,8 @@ static float g_vehicle_anchor_local_z;
 static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 static BoontaCameraState g_camera_state;
-static BoontaRouteGraphSampler g_route_sampler;
-static BoontaRouteCursor g_route_cursor;
-static int g_route_cursor_ready;
-static const BoontaRouteCursorGraph g_runtime_route_cursor_graph = {
-    boonta_runtime_route_topology_edges,
-    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
-    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
-    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
-    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
-};
+static const BoontaCourseDefinition *g_current_course;
+static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
@@ -125,11 +110,12 @@ static void initialise_pod_texture(void)
 #define g_boost_active      (g_race_state.boost_active)
 #define g_slide_active      (g_race_state.slide_active)
 #define g_rival_z           (g_race_state.rival_z)
+#define g_rival_progress    (g_race_state.rival_progress)
 #define g_rival_lateral     (g_race_state.rival_lateral)
 #define g_rival_speed       (g_race_state.rival_speed)
 #define g_overtake_count    (g_race_state.overtake_count)
-#define g_paused            (g_race_state.paused)
-#define g_race_finished     (g_race_state.race_finished)
+#define g_paused            (g_race_state.session_phase == BOONTA_RACE_SESSION_PAUSED)
+#define g_race_finished     (g_race_state.session_phase == BOONTA_RACE_SESSION_RESULTS)
 
 static const GXColor C_SKY = { 105, 170, 225, 255 };
 static const GXColor C_GROUND = { 133, 98, 60, 255 };
@@ -152,15 +138,19 @@ static const u8 g_font5x7[128][7] = {
     ['0'] = {14,17,19,21,25,17,14}, ['1'] = {4,12,4,4,4,4,14},
     ['2'] = {14,17,1,2,4,8,31}, ['3'] = {30,1,1,14,1,1,30},
     ['4'] = {2,6,10,18,31,2,2}, ['5'] = {31,16,16,30,1,1,30},
+    ['B'] = {30,17,17,30,17,17,30},
     ['6'] = {14,16,16,30,17,17,14}, ['7'] = {31,1,2,4,8,8,8},
     ['8'] = {14,17,17,14,17,17,14}, ['9'] = {14,17,17,15,1,1,14},
-    ['A'] = {14,17,17,31,17,17,17}, ['B'] = {30,17,17,30,17,17,30},
+    ['A'] = {14,17,17,31,17,17,17},
     ['C'] = {14,17,16,16,16,17,14}, ['D'] = {30,17,17,17,17,17,30},
     ['H'] = {17,17,17,31,17,17,17},
     ['E'] = {31,16,16,30,16,16,31}, ['F'] = {31,16,16,30,16,16,16},
     ['I'] = {14,4,4,4,4,4,14}, ['N'] = {17,25,21,19,17,17,17},
-    ['L'] = {16,16,16,16,16,16,31}, ['M'] = {17,27,21,21,17,17,17},
-    ['P'] = {30,17,17,30,16,16,16}, ['S'] = {15,16,16,14,1,1,30},
+    ['K'] = {17,18,20,24,20,18,17}, ['L'] = {16,16,16,16,16,16,31},
+    ['M'] = {17,27,21,21,17,17,17}, ['O'] = {14,17,17,17,17,17,14},
+    ['P'] = {30,17,17,30,16,16,16}, ['R'] = {30,17,17,30,20,18,17},
+    ['S'] = {15,16,16,14,1,1,30}, ['U'] = {17,17,17,17,17,17,14},
+    ['V'] = {17,17,17,17,17,10,4}, ['Y'] = {17,17,10,4,4,4,4},
     ['T'] = {31,4,4,4,4,4,4}, [':'] = {0,4,4,0,4,4,0},
     ['.'] = {0,0,0,0,0,4,4}, ['-'] = {0,0,0,31,0,0,0},
     [' '] = {0,0,0,0,0,0,0}
@@ -175,77 +165,36 @@ static const u8 g_font5x7[128][7] = {
  */
 static int reset_runtime_route_cursor(void)
 {
-    if (!boonta_route_graph_sampler_prepare(&g_route_sampler)) {
-        g_route_cursor_ready = 0;
+    if (g_current_course == NULL || g_current_course->reset == NULL) {
+        g_course_ready = 0;
         return 0;
     }
-    g_route_cursor_ready =
-        boonta_route_cursor_init(
-            &g_route_cursor, &g_runtime_route_cursor_graph,
-            g_route_sampler.edge_lengths, 0U) == BOONTA_ROUTE_CURSOR_OK;
-    if (g_route_cursor_ready && BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        /* Default to the straightest route until the player approaches a split. */
-        if (boonta_route_graph_sampler_prime_lookahead(
-                &g_route_sampler, &g_route_cursor, 0,
-                ROUTE_BRANCH_SELECTION_DISTANCE,
-                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-            g_route_cursor_ready = 0;
-        }
-    }
-    return g_route_cursor_ready;
+    g_course_ready = g_current_course->reset(g_current_course->runtime_context);
+    return g_course_ready;
 }
 
 static int advance_runtime_route_cursor(float distance_delta, float steering)
 {
-    if (!g_route_cursor_ready) return 0;
-
-    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        const int branch_direction =
-            steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
-            steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
-        if (boonta_route_graph_sampler_prime_lookahead(
-                &g_route_sampler, &g_route_cursor, branch_direction,
-                ROUTE_BRANCH_SELECTION_DISTANCE,
-                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
-            return 0;
-        }
-    }
-
-    return boonta_route_cursor_move(
-        &g_route_cursor, distance_delta, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK;
+    if (!g_course_ready || g_current_course == NULL ||
+        g_current_course->advance == NULL) return 0;
+    return g_current_course->advance(
+        g_current_course->runtime_context, distance_delta, steering);
 }
 
 static void track_sample_at(float travelled, float *x_out, float *y_out,
                             float *z_out, float *width_out)
 {
-#if BOONTA_RUNTIME_ROUTE_IS_SINGLE_LOOP
-    /*
-     * g_distance and the live cursor are advanced/reset atomically together.
-     * For this compiled unbranched loop, the scalar sampler is equivalent to
-     * cursor-relative sampling but avoids two full cursor/history copies and
-     * cursor traversal for every road, wall, camera and vehicle sample.
-     */
-    boonta_route_graph_sampler_sample_at(
-        &g_route_sampler, travelled, ROAD_HALF_WIDTH,
-        x_out, y_out, z_out, width_out);
-#else
-    if (g_route_cursor_ready &&
-        boonta_route_graph_sampler_sample_relative_to_cursor(
-            &g_route_sampler, &g_route_cursor, g_distance, travelled,
-            ROAD_HALF_WIDTH, x_out, y_out, z_out, width_out) ==
-            BOONTA_ROUTE_CURSOR_OK) {
+    if (g_current_course == NULL || !g_course_ready ||
+        g_current_course->sample == NULL) {
+        if (x_out != NULL) *x_out = 0.0f;
+        if (y_out != NULL) *y_out = 0.0f;
+        if (z_out != NULL) *z_out = 0.0f;
+        if (width_out != NULL) *width_out = g_current_course != NULL
+            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
         return;
     }
-
-    /*
-     * A branched edge catalogue has no flattened fallback route. Keep the
-     * last valid cursor edge visible rather than wrapping across unrelated
-     * edges while an explicit branch decision is still unavailable.
-     */
-    boonta_route_graph_sampler_sample_cursor_at(
-        &g_route_sampler, &g_route_cursor, ROAD_HALF_WIDTH,
-        x_out, y_out, z_out, width_out);
-#endif
+    g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
+        g_current_course->road_half_width, x_out, y_out, z_out, width_out);
 }
 
 /*
@@ -274,12 +223,15 @@ static float track_center_x_at(float travelled)
 {
     float x = 0.0f;
     track_sample_at(travelled, &x, NULL, NULL, NULL);
-    return x * (ROAD_HALF_WIDTH * 0.78f / 22.0f);
+    const float course_half_width = g_current_course != NULL
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    return x * (course_half_width * 0.78f / 22.0f);
 }
 
 static float track_half_width_at(float travelled)
 {
-    float width = ROAD_HALF_WIDTH;
+    float width = g_current_course != NULL
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
     track_sample_at(travelled, NULL, NULL, NULL, &width);
     return width;
 }
@@ -574,17 +526,10 @@ static void add_road(void)
     {
         float remaining = 0.0f;
         int has_next_finish = 0;
-        if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-            has_next_finish = g_route_cursor_ready &&
-                boonta_route_cursor_distance_to_next_lap(
-                    &g_route_cursor, &remaining) == BOONTA_ROUTE_CURSOR_OK;
-        } else {
-            const float next_finish =
-                (floorf(g_distance / RACE_LAP_DISTANCE) + 1.0f) *
-                RACE_LAP_DISTANCE;
-            remaining = next_finish - g_distance;
-            has_next_finish = 1;
-        }
+        has_next_finish = g_current_course != NULL && g_course_ready &&
+            g_current_course->distance_to_next_finish != NULL &&
+            g_current_course->distance_to_next_finish(
+                g_current_course->runtime_context, g_distance, &remaining);
 
         if (has_next_finish && remaining >= 0.0f &&
             remaining < (float)ROAD_SEGMENTS * segment_length) {
@@ -871,28 +816,21 @@ static void append_text(const char *text, float x, float y, float scale,
 static float current_lap_progress(void)
 {
     float progress;
-
     if (g_race_finished) return 1.0f;
-
-    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-        /*
-         * Branch paths can have different physical lengths. Use the active
-         * edge's authored normalized progress span rather than fmodf over a
-         * single oval-length constant.
-         */
-        if (g_route_cursor_ready &&
-            boonta_route_cursor_lap_progress(&g_route_cursor, &progress) ==
-                BOONTA_ROUTE_CURSOR_OK) {
+    if (g_current_course == NULL) return 0.0f;
+    if (g_current_course->has_branches) {
+        unsigned int completed_laps = 0U;
+        if (g_course_ready && g_current_course->get_lap_state != NULL &&
+            g_current_course->get_lap_state(
+                g_current_course->runtime_context, &completed_laps, &progress)) {
             return progress;
         }
         return 0.0f;
     }
-
-    if (!isfinite(g_distance) || !isfinite(RACE_LAP_DISTANCE) ||
-        RACE_LAP_DISTANCE <= 0.001f) {
-        return 0.0f;
-    }
-    progress = fmodf(g_distance, RACE_LAP_DISTANCE) / RACE_LAP_DISTANCE;
+    if (!isfinite(g_distance) || !isfinite(g_current_course->lap_distance) ||
+        g_current_course->lap_distance <= 0.001f) return 0.0f;
+    progress = fmodf(g_distance, g_current_course->lap_distance) /
+               g_current_course->lap_distance;
     if (!isfinite(progress)) return 0.0f;
     if (progress < 0.0f) return 0.0f;
     if (progress > 1.0f) return 1.0f;
@@ -916,7 +854,12 @@ static void draw_hud(void)
     char time_text[20];
     char lap_text[40];
     char best_text[20];
+    char overtakes_text[16];
+    char position_text[16];
+    char lap_split_text[BOONTA_RACE_LAP_CAPACITY][20];
     unsigned int lap_display;
+    unsigned int current_position;
+    unsigned int split_index;
     const float w = (float)g_video_mode->fbWidth;
     const float h = (float)g_video_mode->efbHeight;
     const GXColor dark = { 8, 18, 30, 235 };
@@ -936,6 +879,22 @@ static void draw_hud(void)
 
     append_formatted_time(time_text, sizeof(time_text), g_race_seconds);
     append_formatted_time(best_text, sizeof(best_text), g_best_lap_seconds);
+    for (split_index = 0U; split_index < BOONTA_RACE_LAP_CAPACITY; ++split_index) {
+        append_formatted_time(lap_split_text[split_index],
+                              sizeof(lap_split_text[split_index]),
+                              g_race_state.lap_times[split_index]);
+    }
+    (void)snprintf(overtakes_text, sizeof(overtakes_text), "%u", g_overtake_count);
+    if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
+        (void)snprintf(position_text, sizeof(position_text), "--/%u",
+                       (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
+    } else {
+        current_position = g_race_finished
+            ? g_race_state.finish_position
+            : boonta_race_current_position(&g_race_state);
+        (void)snprintf(position_text, sizeof(position_text), "%u/%u",
+                       current_position, (unsigned int)BOONTA_RACE_PARTICIPANT_COUNT);
+    }
     lap_display = g_race_finished ? g_lap_count : g_lap_count + 1U;
     {
         char lap_time[20];
@@ -998,6 +957,8 @@ static void draw_hud(void)
         append_screen_quad(cx - 100.0f, 10.0f, cx + 100.0f, 60.0f, 0.55f, dark);
         append_text("TIME", cx - 90.0f, 15.0f, 1.0f, white);
         append_text(time_text, cx - 55.0f, 15.0f, 1.0f, white);
+        append_text("POS", cx + 28.0f, 15.0f, 1.0f, heat_cool);
+        append_text(position_text, cx + 54.0f, 15.0f, 1.0f, heat_cool);
         append_text(lap_text, cx - 90.0f, 28.0f, 1.0f, white);
         if (g_best_lap_seconds > 0.0f) {
             append_text("BEST", cx - 90.0f, 41.0f, 1.0f, heat_cool);
@@ -1077,30 +1038,51 @@ static void draw_hud(void)
     }
 #endif
 
-    /* Finish banner: a readable FINISH label and checkered flag made from original GX quads. */
+    /* Keep the measured results screen independent of the busy in-race HUD.
+     * Flush the ordinary HUD first, then give the complete results overlay a
+     * fresh vertex buffer so earlier bars/glyphs cannot consume its budget. */
+    if (g_race_finished) {
+        draw_vertex_buffer();
+        g_vertex_count = 0U;
+    }
+
+    /* Read-only results use only values measured by this prototype run. */
     if (g_race_finished) {
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
-        const float tile = 14.0f;
-        const float left = cx - 28.0f;
-        const float top = cy - 21.0f;
-        const GXColor finish_panel = { 8, 18, 30, 245 };
-        const GXColor black = { 12, 18, 27, 255 };
-        unsigned int row;
-        unsigned int col;
-        append_screen_quad(cx - 52.0f, cy - 34.0f, cx + 52.0f, cy + 34.0f,
-                           0.6f, finish_panel);
-        append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);
-        for (row = 0; row < 3U; ++row) {
-            for (col = 0; col < 4U; ++col) {
-                const GXColor square = (((row + col) & 1U) == 0U) ? white : black;
-                append_screen_quad(left + (float)col * tile,
-                                   top + (float)row * tile,
-                                   left + (float)(col + 1U) * tile,
-                                   top + (float)(row + 1U) * tile,
-                                   0.2f, square);
-            }
-        }
+        const GXColor results_panel = { 8, 18, 30, 248 };
+        append_screen_quad(cx - 132.0f, cy - 92.0f, cx + 132.0f, cy + 92.0f,
+                           0.6f, results_panel);
+        append_text("RESULTS", cx - 26.0f, cy - 78.0f, 1.2f, boost_fill);
+        append_text("LAP 1", cx - 104.0f, cy - 48.0f, 1.0f, white);
+        append_text(lap_split_text[0], cx - 58.0f, cy - 48.0f, 1.0f, white);
+        append_text("LAP 2", cx - 104.0f, cy - 27.0f, 1.0f, white);
+        append_text(lap_split_text[1], cx - 58.0f, cy - 27.0f, 1.0f, white);
+        append_text("LAP 3", cx - 104.0f, cy - 6.0f, 1.0f, white);
+        append_text(lap_split_text[2], cx - 58.0f, cy - 6.0f, 1.0f, white);
+        append_text("TOTAL", cx - 104.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text(time_text, cx - 64.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text("BEST", cx + 12.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text(best_text, cx + 48.0f, cy + 22.0f, 1.0f, heat_cool);
+        append_text("OVERTAKES", cx - 104.0f, cy + 45.0f, 1.0f, rival_mark);
+        append_text(overtakes_text, cx - 46.0f, cy + 45.0f, 1.0f, rival_mark);
+        append_text("POSITION", cx - 104.0f, cy + 65.0f, 1.0f, heat_cool);
+        append_text(position_text, cx - 38.0f, cy + 65.0f, 1.0f, heat_cool);
+        append_text("START TO RESTART", cx - 46.0f, cy + 80.0f, 1.0f, white);
+    } else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY) {
+        const float cx = w * 0.5f;
+        const float cy = h * 0.5f;
+        const GXColor ready_panel = { 8, 18, 30, 242 };
+        const char *course_name = g_current_course != NULL ? g_current_course->display_name : "NO COURSE";
+        const char *course_region = g_current_course != NULL ? g_current_course->region : "";
+        const float name_x = cx - (float)strlen(course_name) * 3.0f;
+        const float region_x = cx - (float)strlen(course_region) * 2.4f;
+        append_screen_quad(cx - 140.0f, cy - 56.0f, cx + 140.0f, cy + 56.0f,
+                           0.6f, ready_panel);
+        append_text("RACE READY", cx - 30.0f, cy - 40.0f, 1.0f, boost_fill);
+        append_text(course_name, name_x, cy - 10.0f, 1.0f, white);
+        append_text(course_region, region_x, cy + 12.0f, 0.8f, heat_cool);
+        append_text("PRESS START", cx - 34.0f, cy + 40.0f, 0.8f, boost_fill);
     } else if (g_paused) {
         /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
@@ -1295,6 +1277,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
+    g_current_course = boonta_course_catalog[0];
     boonta_race_state_reset(&g_race_state);
     boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
@@ -1332,11 +1315,11 @@ int main(int argc, char **argv)
             draw_frame(frame_delta_seconds);
             continue;
         }
-        if (!g_race_finished && (buttons_down & BOONTA_BUTTON_START) != 0U) {
-            g_paused = boonta_pause_state_next(g_paused, 1, 0);
+        if ((buttons_down & BOONTA_BUTTON_START) != 0U) {
+            boonta_race_session_start_press(&g_race_state);
         }
 
-        if (g_paused || g_race_finished) {
+        if (!boonta_race_session_should_advance(&g_race_state)) {
             g_boost_active = 0;
             g_slide_active = 0;
             draw_frame(frame_delta_seconds);
@@ -1413,91 +1396,98 @@ int main(int argc, char **argv)
             const unsigned int previous_laps = g_lap_count;
             g_distance = boonta_distance_after_pitch_scaled(
                 g_distance, g_speed, g_boost_active, pitch_down, frame_scale);
-            if (g_route_cursor_ready &&
-                !advance_runtime_route_cursor(
+            if (g_course_ready && !advance_runtime_route_cursor(
                     g_distance - previous_distance, steering)) {
-                /* Cursor movement is atomic; pause distance and retry next frame. */
+                /* Cursor move is atomic; do not commit distance with invalid route history. */
                 g_distance = previous_distance;
             }
-            if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
-                BoontaRouteCursorState route_state;
-                if (g_route_cursor_ready &&
-                    boonta_route_cursor_get_state(
-                        &g_route_cursor, &route_state) == BOONTA_ROUTE_CURSOR_OK) {
-                    g_lap_count = route_state.completed_laps;
+            if (g_current_course->has_branches) {
+                unsigned int completed_laps = g_lap_count;
+                float progress = 0.0f;
+                if (g_course_ready && g_current_course->get_lap_state != NULL &&
+                    g_current_course->get_lap_state(
+                        g_current_course->runtime_context, &completed_laps, &progress)) {
+                    g_lap_count = completed_laps;
                 }
             } else {
                 g_lap_count = boonta_lap_count_after_frame(
-                    g_lap_count, previous_distance, g_distance, RACE_LAP_DISTANCE);
+                    g_lap_count, previous_distance, g_distance, g_current_course->lap_distance);
             }
             if (g_lap_count > previous_laps) {
                 g_last_lap_seconds = g_lap_seconds;
+                (void)boonta_race_record_lap_time(&g_race_state, g_last_lap_seconds);
                 g_best_lap_seconds = boonta_best_lap_after_finish(
                     g_best_lap_seconds, g_last_lap_seconds);
                 g_lap_seconds = 0.0f;
             }
-            if (boonta_race_is_finished(g_lap_count, RACE_LAP_LIMIT)) {
-                g_race_finished = 1;
-                g_speed = 0.0f;
-                g_boost_active = 0;
-                /* Keep the finished HUD on the completed final-lap time. */
-                g_lap_seconds = g_last_lap_seconds;
-            }
         }
 
-        /* Staggered scripted opponents approach in camera space and change lanes. */
+        /* Persistent opponents advance in route space and change lanes for upcoming corners. */
         if (!g_race_finished) {
-            const float player_speed_snapshot = g_speed;
-            const float player_pitch_snapshot = g_pitch_down;
-            const int player_boost_snapshot = g_boost_active;
             float rival_target_lateral[BOONTA_RIVAL_COUNT];
             float rival_target_speed[BOONTA_RIVAL_COUNT];
 
             /* Decide from one shared snapshot so rival update order cannot bias AI. */
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
-                const float rival_progress = g_distance + (4.0f - g_rival_z[rival_index]);
-                const float lookahead_progress = rival_progress + 4.0f;
-                const float lookahead_curvature = track_curvature_at(lookahead_progress);
+                const float lookahead_offset = boonta_rival_route_lookahead_sample(
+                    g_distance, g_rival_progress[rival_index], 4.0f,
+                    g_current_course != NULL && g_current_course->has_branches);
+                const float lookahead_curvature = track_curvature_at(lookahead_offset);
                 const float signed_lookahead_curvature =
-                    track_signed_curvature_at(lookahead_progress);
-                const float lookahead_half_width = track_half_width_at(lookahead_progress);
-                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
+                    track_signed_curvature_at(lookahead_offset);
+                const float lookahead_half_width = track_half_width_at(lookahead_offset);
+                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral_with_rivalry(
                     rival_index, g_rival_z[rival_index],
                     g_rival_lateral[rival_index], g_player_lateral,
                     g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
-                    signed_lookahead_curvature, lookahead_half_width);
-                rival_target_speed[rival_index] = boonta_rival_ai_target_speed(
-                    rival_index, lookahead_curvature);
+                    signed_lookahead_curvature, lookahead_half_width,
+                    g_race_state.rival_rivalry[rival_index]);
+                rival_target_speed[rival_index] = boonta_rival_ai_target_speed_with_rivalry(
+                    rival_index, lookahead_curvature,
+                    g_race_state.rival_rivalry[rival_index]);
             }
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 int rival_event;
+                const float previous_rival_z = g_rival_z[rival_index];
+                if ((g_race_state.rival_finished_mask & (1U << rival_index)) != 0U) {
+                    g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                        g_distance, g_rival_progress[rival_index]);
+                    continue;
+                }
                 g_rival_lateral[rival_index] = boonta_rival_ai_after_frame(
                     g_rival_lateral[rival_index],
                     rival_target_lateral[rival_index], frame_scale);
                 g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
                     g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
-                g_rival_z[rival_index] = boonta_rival_relative_z_after_frame(
-                    g_rival_z[rival_index], player_speed_snapshot,
-                    player_boost_snapshot, player_pitch_snapshot,
-                    g_rival_speed[rival_index], frame_scale);
-                rival_event = boonta_rival_event(
-                    g_rival_z[rival_index], g_player_lateral,
+                g_rival_progress[rival_index] = boonta_rival_progress_after_frame(
+                    g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
+                g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                    g_distance, g_rival_progress[rival_index]);
+                (void)boonta_rival_record_finish(
+                    &g_race_state, rival_index,
+                    boonta_rival_finish_distance(
+                        rival_index, g_current_course->lap_distance, RACE_LAP_LIMIT),
+                    g_race_seconds);
+                rival_event = boonta_rival_event_after_frame(
+                    previous_rival_z, g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
+                boonta_rival_memory_record_event(
+                    &g_race_state, rival_index, rival_event);
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);
                     g_lateral_velocity = boonta_lateral_velocity_after_rival_contact(
                         g_lateral_velocity, g_player_lateral, g_rival_lateral[rival_index]);
-                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
+                    /* Opponent route progress is preserved; the player absorbs the contact penalty. */
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
                     g_overtake_count = boonta_overtake_count_after_event(g_overtake_count);
-                    g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 0);
                 }
             }
         }
 
+        /* Register rival crossings on this frame before ranking the player. */
+        boonta_race_session_finish_if_complete(&g_race_state, RACE_LAP_LIMIT);
         draw_frame(frame_delta_seconds);
     }
-    return 0;
-}
+    return 0;}

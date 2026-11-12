@@ -14,15 +14,20 @@ from pathlib import Path
 HEADER_SIZE = 256
 CONTROLLER_STATE_SIZE = 8
 DEFAULT_FRAMES = 3600
-MAX_FRAMES = 16000
+MAX_FRAMES = 30000
 STEERING_HOLD_FRAMES = 600  # Long enough to measure response, short enough to avoid driving off-frame.
 RESET_PRESS_FRAME = 120  # Build non-default gameplay state before testing Y reset.
 RESET_HOLD_FRAMES = 6  # Approx. 100 ms at 60 Hz; avoids an unrealistically short button tap.
 RESET_BOOST_END_FRAME = 60
+SESSION_START_PRESS_FRAME = 1
+SESSION_START_HOLD_FRAMES = 6  # Start the new READY session with a realistic emulated press.
 FINISH_RESET_PRESS_FRAME = 14000
 FINISH_RESET_HOLD_FRAMES = 6
 FINISH_RESTART_PRESS_FRAME = 14000
 FINISH_RESTART_HOLD_FRAMES = 6
+FINISH_SECOND_START_PRESS_FRAME = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 30
+FINISH_SECOND_START_HOLD_FRAMES = 6
+FINISH_TWO_RACE_MIN_FRAMES = FINISH_SECOND_START_PRESS_FRAME + FINISH_RESTART_PRESS_FRAME + 32
 PAUSE_PRESS_FRAME = 50  # Pause early enough for a short, bounded visible-render capture.
 PAUSE_HOLD_FRAMES = 6  # Hold Start for ~100 ms so the emulated input poll cannot miss a short tap.
 PAUSE_BOOST_END_FRAME = 30
@@ -86,6 +91,23 @@ def _controller_state(frame: int, steering: str = "right",
             buttons = START
         else:
             buttons = 0
+    elif scenario == "finish-two-race-check":
+        # Complete race one, reset with Start alone, leave a visible READY gap,
+        # then press Start again while beginning to throttle through race two.
+        if frame < FINISH_RESTART_PRESS_FRAME:
+            buttons = A
+            if frame == 0:
+                buttons |= Y
+            if 1 <= frame < RESET_BOOST_END_FRAME:
+                buttons |= X
+        elif frame < FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES:
+            buttons = START
+        elif frame < FINISH_SECOND_START_PRESS_FRAME:
+            buttons = 0
+        elif frame < FINISH_SECOND_START_PRESS_FRAME + FINISH_SECOND_START_HOLD_FRAMES:
+            buttons = A | START
+        else:
+            buttons = A
     elif scenario in ("pause-check", "resume-check"):
         # Create some movement, then press Start alone to pause. The pause-check
         # stays neutral afterward; resume-check presses Start a second time and
@@ -109,6 +131,11 @@ def _controller_state(frame: int, steering: str = "right",
             buttons |= Y  # Reset to a deterministic starting position.
         if 1 <= frame < 80:
             buttons |= X  # Boost near the start.
+    # Every deterministic gameplay scenario now starts from READY: tap Start
+    # after the frame-zero reset/input baseline before expecting simulation.
+    if SESSION_START_PRESS_FRAME <= frame < SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES:
+        buttons |= START
+
     if scenario == "control-smoke":
         if 100 <= frame < 140:
             buttons |= B  # Exercise a short brake pulse.
@@ -119,9 +146,10 @@ def _controller_state(frame: int, steering: str = "right",
     stick_x = NEUTRAL_AXIS
     # Control-smoke movies exercise exactly one steering source at a time. A full
     # race stays centered so it tests lap progression rather than steering response.
-    if ((scenario == "control-smoke" and frame < STEERING_HOLD_FRAMES)
+    steering_session_started = frame >= SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES
+    if ((scenario == "control-smoke" and steering_session_started and frame < STEERING_HOLD_FRAMES)
             or (scenario == "reset-check" and frame < RESET_PRESS_FRAME)
-            or (scenario in ("pause-check", "resume-check") and frame < PAUSE_PRESS_FRAME)):
+            or (scenario in ("pause-check", "resume-check") and steering_session_started and frame < PAUSE_PRESS_FRAME)):
         if steering_source == "dpad":
             if steering == "right":
                 flags |= DPAD_RIGHT
@@ -152,11 +180,11 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError("game_id must be exactly six ASCII bytes")
     if steering not in ("none", "left", "right"):
         raise ValueError("steering must be one of: none, left, right")
-    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check", "finish-restart-check"):
+    if scenario not in ("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check", "finish-restart-check", "finish-two-race-check"):
         raise ValueError("scenario must be one of: control-smoke, full-race, reset-check, pause-check, resume-check, finish-restart-check")
     if steering_source not in ("dpad", "stick"):
         raise ValueError("steering_source must be one of: dpad, stick")
-    if scenario in ("full-race", "finish-reset-check", "finish-restart-check") and steering != "none":
+    if scenario in ("full-race", "finish-reset-check", "finish-restart-check", "finish-two-race-check") and steering != "none":
         raise ValueError(f"{scenario} scenario requires --steering none")
     if (scenario == "finish-reset-check" and
             frame_count < FINISH_RESET_PRESS_FRAME + FINISH_RESET_HOLD_FRAMES + 1):
@@ -170,6 +198,12 @@ def build_dtm(frame_count: int = DEFAULT_FRAMES, game_id: str = DEFAULT_GAME_ID,
         raise ValueError(
             "finish-restart-check needs enough frames to finish the race, press Start, "
             "and record at least one neutral frame after restart"
+        )
+
+    if scenario == "finish-two-race-check" and frame_count < FINISH_TWO_RACE_MIN_FRAMES:
+        raise ValueError(
+            "finish-two-race-check needs enough frames for the first finish/reset, "
+            "a released Start interval, a second Start press, and a full second race"
         )
 
     header = bytearray(HEADER_SIZE)
@@ -204,9 +238,9 @@ def main() -> int:
                         help="six-byte Dolphin executable ID; default matches boonta_gc_demo.dol")
     parser.add_argument("--steering", choices=("none", "left", "right"), default="right",
                         help="directional pulse to encode; use none for a neutral baseline")
-    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check", "finish-restart-check"),
+    parser.add_argument("--scenario", choices=("control-smoke", "full-race", "reset-check", "pause-check", "resume-check", "finish-reset-check", "finish-restart-check", "finish-two-race-check"),
                         default="control-smoke",
-                        help="short controls, full race, Y-reset, Start-pause/resume, post-finish Y-reset or Start-restart check")
+                        help="short controls, full race, Y-reset, Start-pause/resume, post-finish Y-reset, Start-restart, or two-race acceptance check")
     parser.add_argument("--steering-source", choices=("dpad", "stick"), default="dpad",
                         help="send steering with the D-pad or analog main stick")
     args = parser.parse_args()

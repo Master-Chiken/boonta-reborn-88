@@ -119,7 +119,7 @@ class GXColorPipelineTests(unittest.TestCase):
 
 
     def test_quad_builder_keeps_finish_quads_inside_buffer_capacity(self) -> None:
-        self.assertRegex(SOURCE, r"#define VERTEX_CAPACITY\s+8192U")
+        self.assertRegex(SOURCE, r"#define VERTEX_CAPACITY\s+16384U")
         quad = SOURCE.split("static void quad_add", 1)[1].split(
             "static void box_face", 1
         )[0]
@@ -128,18 +128,53 @@ class GXColorPipelineTests(unittest.TestCase):
             quad,
         )
 
-    def test_finish_banner_has_readable_label_and_required_glyphs(self) -> None:
-        self.assertRegex(SOURCE, r"\['F'\]\s*=\s*\{31,16,16,30,16,16,16\}")
-        self.assertRegex(SOURCE, r"\['N'\]\s*=\s*\{17,25,21,19,17,17,17\}")
-        finish = SOURCE.split("/* Finish banner:", 1)[1].split(
-            "} else if (g_paused)", 1
+    def test_results_panel_gets_a_fresh_vertex_buffer(self) -> None:
+        flush = SOURCE.index("draw_vertex_buffer();", SOURCE.index("/* Keep the measured results screen"))
+        reset = SOURCE.index("g_vertex_count = 0U;", flush)
+        panel = SOURCE.index("append_screen_quad(cx - 132.0f", reset)
+        self.assertLess(flush, reset)
+        self.assertLess(reset, panel)
+        results = SOURCE[flush:panel]
+        self.assertIn("draw_vertex_buffer();", results)
+        self.assertIn("g_vertex_count = 0U;", results)
+
+    def test_results_panel_submits_all_rows_in_its_fresh_pass(self) -> None:
+        hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
+            "static void initialise_video_and_gx", 1
         )[0]
-        self.assertIn(
-            'append_text("FINISH", cx - 18.0f, cy - 30.0f, 1.0f, boost_fill);',
-            finish,
+        results_start = hud.index("/* Read-only results use only values measured")
+        results_end = hud.index(
+            "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)",
+            results_start,
         )
-        self.assertIn("for (row = 0; row < 3U; ++row)", finish)
-        self.assertIn("for (col = 0; col < 4U; ++col)", finish)
+        results_pass = hud[results_start:results_end]
+        final_submit = hud.rfind("draw_vertex_buffer();")
+        restart_prompt = hud.index('append_text("START TO RESTART"', results_start)
+        self.assertGreater(final_submit, restart_prompt)
+        self.assertNotIn("g_vertex_count = 0", results_pass)
+        self.assertNotIn("draw_vertex_buffer();", results_pass)
+        for label in ("RESULTS", "LAP 1", "LAP 2", "LAP 3", "TOTAL",
+                      "BEST", "OVERTAKES", "POSITION", "START TO RESTART"):
+            with self.subTest(label=label):
+                self.assertIn(f'append_text("{label}"', results_pass)
+        self.assertIn("draw_vertex_buffer();", hud[results_end:])
+
+    def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
+        for glyph in ("B", "K", "O", "R", "U", "V", "Y"):
+            self.assertRegex(SOURCE, rf"\['{glyph}'\]\s*=\s*\{{[0-9,]+\}}")
+        results = SOURCE.split("/* Read-only results use only values measured", 1)[1].split(
+            "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)", 1
+        )[0]
+        for label in ("RESULTS", "LAP 1", "LAP 2", "LAP 3", "TOTAL", "BEST", "OVERTAKES", "POSITION", "START TO RESTART"):
+            with self.subTest(label=label):
+                self.assertIn(f'append_text("{label}"', results)
+        self.assertIn("lap_split_text[0]", results)
+        self.assertIn("lap_split_text[1]", results)
+        self.assertIn("lap_split_text[2]", results)
+        self.assertIn("append_text(time_text", results)
+        self.assertIn("append_text(best_text", results)
+        self.assertIn("append_text(overtakes_text", results)
+        self.assertIn("boonta_race_record_lap_time(&g_race_state, g_last_lap_seconds)", SOURCE)
 
 
 

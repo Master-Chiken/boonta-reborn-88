@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "../source/gameplay_state.h"
+#include "../source/rival_ai.h"
 #include "../source/generated_track.h"
 
 static int nearf(float a, float b) { return fabsf(a-b) < 0.00001f; }
@@ -479,17 +480,43 @@ static void multiple_rival_spacing_tests(void) {
  assert(nearf(boonta_rival_initial_z(1U), -34.0f));
  assert(nearf(boonta_rival_initial_z(2U), -50.0f));
 
- /* Collision respawns and overtakes preserve staggered spacing. */
- assert(nearf(boonta_rival_respawn_z(0U, 1), -20.0f));
- assert(nearf(boonta_rival_respawn_z(1U, 1), -32.0f));
- assert(nearf(boonta_rival_respawn_z(2U, 1), -44.0f));
- assert(nearf(boonta_rival_respawn_z(0U, 0), -22.0f));
- assert(nearf(boonta_rival_respawn_z(1U, 0), -34.0f));
- assert(nearf(boonta_rival_respawn_z(2U, 0), -46.0f));
+ /* Rivals start at stable absolute route-distance offsets. */
+ assert(nearf(boonta_rival_initial_progress(0U), 22.0f));
+ assert(nearf(boonta_rival_initial_progress(1U), 38.0f));
+ assert(nearf(boonta_rival_initial_progress(2U), 54.0f));
 
  assert(boonta_rival_event(boonta_rival_initial_z(0U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(boonta_rival_initial_z(1U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(boonta_rival_initial_z(2U), 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+}
+
+static void rival_absolute_progress_tests(void) {
+ float progress = boonta_rival_initial_progress(0U);
+ float relative_z = boonta_rival_relative_z_from_progress(0.0f, progress);
+ float next_progress;
+ float next_z;
+
+ assert(nearf(relative_z, -18.0f));
+ next_progress = boonta_rival_progress_after_frame(progress, 0.5f, 1.0f);
+ assert(nearf(next_progress, 22.07f));
+ assert(next_progress > progress);
+
+ /* Passing a rival leaves it behind at its own world position. */
+ next_z = boonta_rival_relative_z_from_progress(25.0f, next_progress);
+ assert(nearf(next_z, 6.93f));
+ assert(boonta_rival_event_after_frame(relative_z, next_z, 0.0f, 0.0f) ==
+        BOONTA_RIVAL_EVENT_OVERTAKE);
+
+ progress = next_progress;
+ next_progress = boonta_rival_progress_after_frame(progress, 0.5f, 1.0f);
+ next_z = boonta_rival_relative_z_from_progress(26.0f, next_progress);
+ assert(nearf(next_progress, 22.14f));
+ assert(boonta_rival_event_after_frame(6.93f, next_z, 0.0f, 0.0f) ==
+        BOONTA_RIVAL_EVENT_NONE);
+
+ assert(nearf(boonta_rival_progress_after_frame(10.0f, 0.5f, NAN), 10.0f));
+ assert(nearf(boonta_rival_progress_after_frame(NAN, 0.5f, 1.0f), 0.07f));
+ assert(nearf(boonta_rival_relative_z_from_progress(NAN, 10.0f), 0.0f));
 }
 
 static void rival_contact_velocity_tests(void) {
@@ -562,6 +589,12 @@ static void rival_event_tests(void) {
  assert(boonta_rival_event(0.0f, 0.92f, 0.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
  assert(boonta_rival_event(0.0f, 0.919f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
 
+  /* Transition events fire once on entry/crossing, not on every overlap frame. */
+  assert(boonta_rival_event_after_frame(-1.01f, -0.99f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_COLLISION);
+  assert(boonta_rival_event_after_frame(-0.99f, -0.95f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+  assert(boonta_rival_event_after_frame(1.79f, 1.80f, 0.0f, 2.0f) == BOONTA_RIVAL_EVENT_OVERTAKE);
+  assert(boonta_rival_event_after_frame(1.80f, 1.90f, 0.0f, 2.0f) == BOONTA_RIVAL_EVENT_NONE);
+  assert(boonta_rival_event_after_frame(2.0f, 1.7f, 0.1f, 0.2f) == BOONTA_RIVAL_EVENT_COLLISION);
  /* Contact penalty is bounded and the lateral response pushes away from the rival. */
  assert(nearf(boonta_speed_after_rival_contact(1.0f), 0.72f));
  assert(nearf(boonta_speed_after_rival_contact(0.1f), 0.0f));
@@ -732,7 +765,8 @@ static void non_finite_physics_state_tests(void) {
  assert(nearf(boonta_rival_z_after_frame(-18.0f, NAN, 1.0f),
               boonta_rival_z_after_frame(-18.0f, 0.0f, 1.0f)));
  assert(boonta_rival_event(NAN, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
- assert(boonta_rival_event(0.0f, NAN, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
+
+  assert(boonta_rival_event_after_frame(NAN, 0.0f, 0.0f, 0.0f) == BOONTA_RIVAL_EVENT_NONE); assert(boonta_rival_event(0.0f, NAN, 0.0f) == BOONTA_RIVAL_EVENT_NONE);
  assert(boonta_rival_event(0.0f, 0.0f, INFINITY) == BOONTA_RIVAL_EVENT_NONE);
  assert(nearf(boonta_speed_after_rival_contact(NAN), 0.0f));
  assert(nearf(boonta_speed_after_rival_contact(INFINITY), 0.0f));
@@ -751,6 +785,190 @@ static void non_finite_physics_state_tests(void) {
  /* A corrupted boost/heat value must not briefly enable boost for one frame. */
  assert(!boonta_boost_should_activate(1, 1, INFINITY));
  assert(!boonta_boost_should_activate_with_heat(1, 1, 0.5f, NAN, 0));
+}
+
+static void race_session_transition_tests(void) {
+ BoontaRaceState state = {0};
+ float frozen_race_seconds;
+ float frozen_lap_seconds;
+
+ boonta_race_state_reset(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ assert(!boonta_race_session_should_advance(&state));
+
+ /* A completed lap counter cannot finish a READY or PAUSED session. */
+ state.lap_count = 3U;
+ boonta_race_session_finish_if_complete(&state, 3U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ boonta_race_session_finish_if_complete(&state, 0U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ state.session_phase = BOONTA_RACE_SESSION_PAUSED;
+ boonta_race_session_finish_if_complete(&state, 3U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_PAUSED);
+ boonta_race_state_reset(&state);
+
+ boonta_race_session_start_press(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
+ assert(boonta_race_session_should_advance(&state));
+ state.race_seconds = boonta_elapsed_after_frame(state.race_seconds, 0.5f,
+     boonta_race_session_should_advance(&state));
+ state.lap_seconds = boonta_elapsed_after_frame(state.lap_seconds, 0.5f,
+     boonta_race_session_should_advance(&state));
+ assert(nearf(state.race_seconds, 0.5f));
+ assert(nearf(state.lap_seconds, 0.5f));
+
+ boonta_race_session_start_press(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_PAUSED);
+ assert(!boonta_race_session_should_advance(&state));
+ frozen_race_seconds = state.race_seconds;
+ frozen_lap_seconds = state.lap_seconds;
+ state.race_seconds = boonta_elapsed_after_frame(state.race_seconds, 1.0f,
+     boonta_race_session_should_advance(&state));
+ state.lap_seconds = boonta_elapsed_after_frame(state.lap_seconds, 1.0f,
+     boonta_race_session_should_advance(&state));
+ assert(nearf(state.race_seconds, frozen_race_seconds));
+ assert(nearf(state.lap_seconds, frozen_lap_seconds));
+ boonta_race_session_start_press(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
+
+ state.speed = 0.8f;
+ state.boost_active = 1;
+ state.slide_active = 1;
+ state.race_seconds = 68.75f;
+ state.overtake_count = 4U;
+ {
+  const float completed_lap_seconds[3] = {23.5f, 21.25f, 22.5f};
+  unsigned int lap;
+  for (lap = 1U; lap <= 3U; ++lap) {
+   const float previous_distance = state.distance;
+   const unsigned int previous_laps = state.lap_count;
+   state.lap_seconds = completed_lap_seconds[lap - 1U];
+   state.distance = (float)lap * 120.0f + 0.01f;
+   state.lap_count = boonta_lap_count_after_frame(
+       state.lap_count, previous_distance, state.distance, 120.0f);
+   if (state.lap_count > previous_laps) {
+    state.last_lap_seconds = state.lap_seconds;
+    if (lap == 1U) {
+     assert(!boonta_race_record_lap_time(&state, NAN));
+     assert(!boonta_race_record_lap_time(&state, INFINITY));
+     assert(!boonta_race_record_lap_time(&state, 0.0f));
+    }
+    assert(boonta_race_record_lap_time(&state, state.last_lap_seconds));
+    assert(!boonta_race_record_lap_time(&state, state.last_lap_seconds + 1.0f));
+    state.best_lap_seconds = boonta_best_lap_after_finish(
+        state.best_lap_seconds, state.last_lap_seconds);
+    state.lap_seconds = 0.0f;
+   }
+   boonta_race_session_finish_if_complete(&state, 3U);
+   if (lap < 3U) {
+    assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
+    assert(boonta_race_session_should_advance(&state));
+   }
+  }
+ }
+ assert(state.lap_count == 3U);
+ assert(state.lap_times_recorded_mask == 0x7U);
+ assert(nearf(state.lap_times[0], 23.5f));
+ assert(nearf(state.lap_times[1], 21.25f));
+ assert(nearf(state.lap_times[2], 22.5f));
+ assert(state.session_phase == BOONTA_RACE_SESSION_RESULTS);
+ assert(!boonta_race_session_should_advance(&state));
+ assert(nearf(state.speed, 0.0f));
+ assert(state.boost_active == 0);
+ assert(state.slide_active == 0);
+ assert(nearf(state.lap_seconds, state.last_lap_seconds));
+
+ frozen_race_seconds = state.race_seconds;
+ frozen_lap_seconds = state.lap_seconds;
+ boonta_race_session_start_press(&state);
+ boonta_race_session_finish_if_complete(&state, 3U);
+ state.race_seconds = boonta_elapsed_after_frame(state.race_seconds, 1.0f,
+     boonta_race_session_should_advance(&state));
+ state.lap_seconds = boonta_elapsed_after_frame(state.lap_seconds, 1.0f,
+     boonta_race_session_should_advance(&state));
+ assert(state.session_phase == BOONTA_RACE_SESSION_RESULTS);
+ assert(nearf(state.race_seconds, frozen_race_seconds));
+ assert(nearf(state.lap_seconds, frozen_lap_seconds));
+ assert(state.lap_count == 3U);
+ assert(nearf(state.last_lap_seconds, 22.5f));
+ assert(nearf(state.best_lap_seconds, 21.25f));
+ assert(state.overtake_count == 4U);
+ assert(!boonta_race_record_lap_time(&state, 10.0f));
+
+ boonta_race_state_reset(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ assert(state.lap_count == 0U);
+ assert(state.lap_times_recorded_mask == 0U);
+ assert(nearf(state.lap_times[0], 0.0f));
+ assert(nearf(state.lap_times[1], 0.0f));
+ assert(nearf(state.lap_times[2], 0.0f));
+ assert(nearf(state.distance, 0.0f));
+ boonta_race_session_start_press(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_ACTIVE);
+ assert(boonta_race_session_should_advance(&state));
+
+ state.session_phase = (BoontaRaceSessionPhase)99;
+ boonta_race_session_start_press(&state);
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
+ assert(!boonta_race_session_should_advance(&state));
+
+ boonta_race_session_start_press(NULL);
+ boonta_race_session_finish_if_complete(NULL, 3U);
+ assert(!boonta_race_session_should_advance(NULL));
+}
+
+static void race_order_and_finish_tests(void) {
+ BoontaRaceState state = {0};
+
+ boonta_race_state_reset(&state);
+ boonta_race_session_start_press(&state);
+ state.distance = 75.0f;
+ state.rival_progress[0] = 90.0f;
+ state.rival_progress[1] = 70.0f;
+ state.rival_progress[2] = 80.0f;
+ assert(boonta_race_current_position(&state) == 3U);
+ assert(nearf(boonta_rival_finish_distance(0U, 100.0f, 3U), 322.0f));
+ assert(nearf(boonta_rival_finish_distance(1U, 100.0f, 3U), 338.0f));
+ assert(nearf(boonta_rival_finish_distance(2U, 100.0f, 3U), 354.0f));
+ assert(nearf(boonta_rival_finish_distance(0U, NAN, 3U), 0.0f));
+ assert(nearf(boonta_rival_finish_distance(3U, 100.0f, 3U), 0.0f));
+ assert(nearf(boonta_rival_finish_distance(0U, 100.0f, 0U), 0.0f));
+
+ /* Finish is rejected until a rival crosses the configured race goal. */
+ assert(!boonta_rival_record_finish(&state, 0U, 100.0f, 39.0f));
+ assert(!boonta_rival_record_finish(&state, 3U, 100.0f, 39.0f));
+ assert(!boonta_rival_record_finish(&state, 0U, 100.0f, NAN));
+
+ state.rival_progress[0] = 100.0f;
+ assert(boonta_rival_record_finish(&state, 0U, 100.0f, 39.0f));
+ assert(!boonta_rival_record_finish(&state, 0U, 100.0f, 39.5f));
+ state.rival_progress[1] = 100.0f;
+ assert(boonta_rival_record_finish(&state, 1U, 100.0f, 42.0f));
+ assert(state.rival_finished_mask == 0x3U);
+
+ /* Player finishes between those timestamps: only the earlier rival ranks ahead. */
+ state.race_seconds = 41.0f;
+ state.lap_count = 3U;
+ state.last_lap_seconds = 19.0f;
+ boonta_race_session_finish_if_complete(&state, 3U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_RESULTS);
+ assert(nearf(state.player_finish_seconds, 41.0f));
+ assert(state.finish_position == 2U);
+ assert(!boonta_race_session_should_advance(&state));
+
+ /* Equal times tie; results remain frozen even if live distance changes. */
+ assert(boonta_race_finish_position_at(&state, 39.0f) == 1U);
+ assert(boonta_race_finish_position_at(&state, NAN) == 0U);
+ state.distance = 500.0f;
+ assert(state.finish_position == 2U);
+
+ boonta_race_state_reset(&state);
+ assert(state.finish_position == 0U);
+ assert(nearf(state.player_finish_seconds, 0.0f));
+ assert(state.rival_finished_mask == 0U);
+ assert(nearf(state.rival_finish_seconds[0], 0.0f));
+ assert(nearf(state.rival_finish_seconds[1], 0.0f));
+ assert(nearf(state.rival_finish_seconds[2], 0.0f));
 }
 
 static void race_state_reset_tests(void) {
@@ -774,10 +992,13 @@ static void race_state_reset_tests(void) {
  state.boost_active = 1;
  state.slide_active = 1;
  state.overtake_count = 7U;
- state.paused = 1;
- state.race_finished = 1;
+ state.session_phase = BOONTA_RACE_SESSION_RESULTS;
+ state.player_finish_seconds = 88.0f;
+ state.finish_position = 4U;
+ state.rival_finished_mask = 0x7U;
  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
   state.rival_z[i] = 8.0f + (float)i;
+  state.rival_finish_seconds[i] = 50.0f + (float)i;
   state.rival_lateral[i] = -1.0f - (float)i;
   state.rival_speed[i] = 0.1f;
  }
@@ -800,11 +1021,19 @@ static void race_state_reset_tests(void) {
  assert(state.boost_active == 0);
  assert(state.slide_active == 0);
  assert(state.overtake_count == 0U);
- assert(state.paused == 0);
- assert(state.race_finished == 0);
+ assert(state.lap_times_recorded_mask == 0U);
+ assert(nearf(state.player_finish_seconds, 0.0f));
+ assert(state.finish_position == 0U);
+ assert(state.rival_finished_mask == 0U);
+ assert(nearf(state.lap_times[0], 0.0f));
+ assert(nearf(state.lap_times[1], 0.0f));
+ assert(nearf(state.lap_times[2], 0.0f));
+ assert(state.session_phase == BOONTA_RACE_SESSION_READY);
  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
   assert(nearf(state.rival_z[i], boonta_rival_initial_z(i)));
-  assert(nearf(state.rival_lateral[i], 0.0f));
+   assert(nearf(state.rival_finish_seconds[i], 0.0f));
+
+   assert(nearf(state.rival_progress[i], boonta_rival_initial_progress(i)));  assert(nearf(state.rival_lateral[i], 0.0f));
   assert(nearf(state.rival_speed[i], boonta_rival_initial_speed(i)));
  }
 
@@ -842,6 +1071,83 @@ static void invalid_scaled_frame_tests(void) {
  assert(nearf(boonta_speed_after_offroad_scaled(0.5f, 4.0f, 1000.0f), boonta_speed_after_offroad_scaled(0.5f, 4.0f, 3.0f)));
  assert(nearf(boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 1000.0f), boonta_lateral_velocity_after_steering_slide_scaled(0.04f, 0.5f, 0.8f, 1, 3.0f)));
  assert(nearf(boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 1000.0f), boonta_distance_after_pitch_scaled(10.0f, 0.5f, 1, 0.7f, 3.0f)));
+}
+
+static unsigned int simulate_competitive_race_position(int use_opening_boost)
+{
+ BoontaRaceState state;
+ const float lap_distance = 120.0f;
+ const float lookahead_curvature = 0.08f;
+ unsigned int frame = 0U;
+ unsigned int i;
+
+ boonta_race_state_reset(&state);
+ boonta_race_session_start_press(&state);
+ while (state.session_phase == BOONTA_RACE_SESSION_ACTIVE && frame < 10000U) {
+  const float previous_distance = state.distance;
+  const unsigned int previous_laps = state.lap_count;
+  int boost_active;
+  ++frame;
+
+  state.race_seconds = boonta_elapsed_after_frame(state.race_seconds, 1.0f / 60.0f, 1);
+  state.lap_seconds = boonta_elapsed_after_frame(state.lap_seconds, 1.0f / 60.0f, 1);
+  boost_active = boonta_boost_should_activate_with_heat(
+      use_opening_boost && frame <= 90U, 1, state.boost,
+      state.engine_heat, state.boost_overheated);
+  state.boost_active = boost_active;
+  state.boost = boonta_boost_after_frame_scaled(state.boost, boost_active, 1.0f);
+  state.engine_heat = boonta_engine_heat_after_frame_scaled(
+      state.engine_heat, boost_active, 1.0f);
+  state.boost_overheated = boonta_boost_overheated_after_frame(
+      state.boost_overheated, state.engine_heat);
+  state.speed = boonta_speed_after_input_scaled(state.speed, 1, 0, 1.0f);
+  state.distance = boonta_distance_after_pitch_scaled(
+      state.distance, state.speed, boost_active, 0.0f, 1.0f);
+  state.lap_count = boonta_lap_count_after_frame(
+      state.lap_count, previous_distance, state.distance, lap_distance);
+  if (state.lap_count > previous_laps) {
+   state.last_lap_seconds = state.lap_seconds;
+   assert(boonta_race_record_lap_time(&state, state.last_lap_seconds));
+   state.best_lap_seconds = boonta_best_lap_after_finish(
+       state.best_lap_seconds, state.last_lap_seconds);
+   state.lap_seconds = 0.0f;
+  }
+
+  for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+   const float target_speed = boonta_rival_ai_target_speed(i, lookahead_curvature);
+   state.rival_speed[i] = boonta_rival_ai_speed_after_frame(
+       state.rival_speed[i], target_speed, 1.0f);
+   state.rival_progress[i] = boonta_rival_progress_after_frame(
+       state.rival_progress[i], state.rival_speed[i], 1.0f);
+   (void)boonta_rival_record_finish(
+       &state, i, boonta_rival_finish_distance(i, lap_distance, 3U),
+       state.race_seconds);
+  }
+  boonta_race_session_finish_if_complete(&state, 3U);
+ }
+
+ assert(frame < 10000U);
+ assert(state.session_phase == BOONTA_RACE_SESSION_RESULTS);
+ assert(state.lap_count == 3U);
+ assert(state.finish_position >= 1U &&
+        state.finish_position <= BOONTA_RACE_PARTICIPANT_COUNT);
+ return state.finish_position;
+}
+
+static void competitive_race_pace_tests(void)
+{
+ BoontaRaceState state;
+ unsigned int position;
+
+ /* A full-throttle neutral run must meet the fastest AI before the finish. */
+ boonta_race_state_reset(&state);
+ boonta_race_session_start_press(&state);
+ position = simulate_competitive_race_position(0);
+ assert(position == 2U);
+
+ /* The same race is winnable by using the opening boost resource. */
+ position = simulate_competitive_race_position(1);
+ assert(position == 1U);
 }
 
 static void camera_follow_damping_tests(void) {
@@ -903,8 +1209,223 @@ static void camera_follow_damping_tests(void) {
  assert(nearf(camera60.target.z, target.z));
 }
 
+static void rival_encounter_memory_tests(void)
+{
+ BoontaRaceState state = {0};
+ unsigned int i;
+
+ boonta_race_state_reset(&state);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
+ }
+
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[1] == 7U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 0U);
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == 17U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 1U);
+ assert(state.rival_rivalry[0] == 0U);
+
+ state.rival_rivalry[1] = BOONTA_RIVAL_RIVALRY_MAX - 5U;
+ state.rival_contacts[1] = 0xffffffffU;
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == BOONTA_RIVAL_RIVALRY_MAX);
+ assert(state.rival_contacts[1] == 0xffffffffU);
+
+ boonta_rival_memory_record_event(&state, BOONTA_RIVAL_COUNT,
+                                  BOONTA_RIVAL_EVENT_COLLISION);
+ boonta_rival_memory_record_event(&state, 0U, BOONTA_RIVAL_EVENT_NONE);
+ boonta_rival_memory_record_event(0, 0U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[0] == 0U);
+ assert(boonta_rival_rivalry_after_event(150U, BOONTA_RIVAL_EVENT_NONE) ==
+        BOONTA_RIVAL_RIVALRY_MAX);
+
+ boonta_race_state_reset(&state);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
+ }
+}
+
+static void championship_points_follow_fixed_scoring_table(void)
+{
+    static const unsigned int expected[12] = {
+        0U, 15U, 12U, 10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U, 0U
+    };
+    unsigned int position;
+    for (position = 0U; position < 12U; ++position) {
+        assert(boonta_championship_points_for_position(position) ==
+               expected[position]);
+    }
+}
+
+static void championship_standings_accumulate_without_race_reset_coupling(void)
+{
+    BoontaChampionshipStanding standing = {0U, 0U, 0U, 0U, 0U};
+
+    boonta_championship_record_result(&standing, 3U);
+    assert(standing.points == 10U);
+    assert(standing.races_completed == 1U);
+    assert(standing.wins == 0U);
+    assert(standing.podiums == 1U);
+    assert(standing.best_finish == 3U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 2U);
+    assert(standing.wins == 1U);
+    assert(standing.podiums == 2U);
+    assert(standing.best_finish == 1U);
+
+    boonta_championship_record_result(&standing, 12U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 3U);
+    assert(standing.best_finish == 1U);
+}
+
+static void championship_ledger_ignores_invalid_results_and_saturates(void)
+{
+    BoontaChampionshipStanding standing = {0xffffffffU, 0xffffffffU,
+                                            0xffffffffU, 0xffffffffU, 0U};
+    boonta_championship_record_result(&standing, 0U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 0U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 1U);
+
+    assert(boonta_unsigned_saturating_add(0xfffffffeU, 5U) == 0xffffffffU);
+    assert(boonta_unsigned_saturating_add(12U, 3U) == 15U);
+    boonta_championship_record_result(0, 1U);
+}
+
+
+static void championship_standings_use_deterministic_tie_breaks(void)
+{
+    const BoontaChampionshipStanding points_leader = {30U, 4U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding win_leader = {30U, 4U, 1U, 1U, 4U};
+    const BoontaChampionshipStanding podium_leader = {30U, 4U, 0U, 3U, 5U};
+    const BoontaChampionshipStanding best_finish_leader = {30U, 4U, 0U, 2U, 1U};
+    const BoontaChampionshipStanding no_finish = {30U, 4U, 0U, 2U, 0U};
+    const BoontaChampionshipStanding exact_tie = {30U, 9U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding lower_points = {29U, 99U, 99U, 99U, 1U};
+
+    assert(boonta_championship_compare_standings(&points_leader, &lower_points) == -1);
+    assert(boonta_championship_compare_standings(&win_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&podium_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&best_finish_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &no_finish) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &exact_tie) == 0);
+    assert(boonta_championship_compare_standings(&lower_points, &points_leader) == 1);
+    assert(boonta_championship_compare_standings(0, &points_leader) == 0);
+    assert(boonta_championship_compare_standings(&points_leader, 0) == 0);
+}
+
+
+static void championship_order_is_stable_and_respects_output_capacity(void)
+{
+    const BoontaChampionshipStanding standings[5] = {
+        {20U, 2U, 1U, 1U, 1U},
+        {30U, 2U, 0U, 2U, 2U},
+        {30U, 3U, 0U, 2U, 2U},
+        {30U, 1U, 0U, 2U, 2U},
+        {10U, 1U, 0U, 0U, 5U}
+    };
+    unsigned int order[5] = {99U, 99U, 99U, 99U, 99U};
+    unsigned int count;
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 5U);
+    assert(count == 5U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+    assert(order[3] == 0U);
+    assert(order[4] == 4U);
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 3U);
+    assert(count == 3U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+
+    assert(boonta_championship_build_stable_order(standings, 5U, order, 0U) == 0U);
+    assert(boonta_championship_build_stable_order(0, 5U, order, 5U) == 0U);
+    assert(boonta_championship_build_stable_order(standings, 5U, 0, 5U) == 0U);
+}
+
+
+static void championship_event_results_are_idempotent_and_reject_stale_events(void)
+{
+    BoontaChampionshipState championship;
+    boonta_championship_state_reset(&championship);
+    assert(championship.last_event_id == 0U);
+    assert(championship.recorded_mask == 0U);
+    assert(championship.finish_position_mask == 0U);
+    assert(championship.standings[0].races_completed == 0U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 1);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+    assert(championship.finish_position_mask == 1U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 0);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 1U, 2U) == 1);
+    assert(championship.standings[1].points == 12U);
+    assert(championship.finish_position_mask == 3U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 0U, 3U) == 1);
+    assert(championship.standings[0].points == 25U);
+    assert(championship.standings[0].races_completed == 2U);
+    assert(championship.recorded_mask == 1U);
+    assert(championship.finish_position_mask == 4U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 2U, 1U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+
+    /* One event cannot award the same finishing place to two racers. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 3U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+    /* A rejected duplicate place does not consume the racer's result slot. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 1U) == 1);
+    assert(championship.standings[2].races_completed == 1U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 3U, 2U) == 1);
+    assert(championship.standings[3].races_completed == 1U);
+
+    /* The next event clears only its per-event masks; same places are reusable. */
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 3U) == 1);
+    assert(championship.standings[2].races_completed == 2U);
+
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 0U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 5U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 4U, 1U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 0U, 2U, 1U) == 0);
+    assert(boonta_championship_record_event_result(0, 3U, 2U, 1U) == 0);
+}
+
 int main(void) {
+ championship_event_results_are_idempotent_and_reject_stale_events();
+ championship_order_is_stable_and_respects_output_capacity();
+ championship_standings_use_deterministic_tie_breaks();
+ championship_points_follow_fixed_scoring_table();
+ championship_standings_accumulate_without_race_reset_coupling();
+ championship_ledger_ignores_invalid_results_and_saturates();
  camera_follow_damping_tests();
+ race_session_transition_tests();
+ race_order_and_finish_tests();
+ competitive_race_pace_tests();
  race_state_reset_tests();
  finite_clamp_tests();
  frame_scale_tests();
@@ -925,9 +1446,11 @@ int main(void) {
  distance_progression_tests();
  track_scroll_tests();
  simulated_three_lap_run_tests();
+ rival_encounter_memory_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
- multiframe_rival_contact_tests();
+
+  rival_absolute_progress_tests(); multiframe_rival_contact_tests();
  rival_event_tests();
  overtake_count_tests();
   road_width_alignment_tests();

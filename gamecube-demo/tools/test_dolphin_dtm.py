@@ -7,6 +7,8 @@ import sys
 import tempfile
 import unittest
 
+from results_panel import results_panel_visible
+
 from make_dolphin_dtm import (
     A,
     B,
@@ -15,12 +17,17 @@ from make_dolphin_dtm import (
     RESET_PRESS_FRAME,
     RESET_HOLD_FRAMES,
     RESET_BOOST_END_FRAME,
+    SESSION_START_PRESS_FRAME,
+    SESSION_START_HOLD_FRAMES,
     STEERING_HOLD_FRAMES,
     DEFAULT_GAME_ID,
     FINISH_RESET_PRESS_FRAME,
     FINISH_RESET_HOLD_FRAMES,
     FINISH_RESTART_PRESS_FRAME,
     FINISH_RESTART_HOLD_FRAMES,
+    FINISH_SECOND_START_PRESS_FRAME,
+    FINISH_SECOND_START_HOLD_FRAMES,
+    FINISH_TWO_RACE_MIN_FRAMES,
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
@@ -42,6 +49,7 @@ try:
     from PIL import Image, ImageDraw
     from check_dolphin_frame import (
         finish_banner_visible,
+        results_view_visible,
         finish_label_visible,
         player_pod_bounds,
         reset_state_visible,
@@ -53,6 +61,7 @@ except ImportError:
     Image = None
     ImageDraw = None
     finish_banner_visible = None
+    results_view_visible = None
     finish_label_visible = None
     player_pod_bounds = None
     reset_state_visible = None
@@ -67,6 +76,154 @@ def record(blob: bytes, frame: int) -> bytes:
 
 
 class DolphinDtmTests(unittest.TestCase):
+    def test_results_panel_detector_rejects_52_orange_exhaust_pixels_without_panel(self) -> None:
+        noise = {
+            (x, y)
+            for x in range(394, 407)
+            for y in range(162, 166)
+        }
+        self.assertEqual(len(noise), 52)
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            return (255, 157, 61) if (x, y) in noise else (105, 170, 225)
+
+        self.assertFalse(results_panel_visible(800, 480, 0, pixel_at))
+
+    def test_results_panel_detector_rejects_ready_panel_even_with_orange_noise(self) -> None:
+        noise = {
+            (x, y)
+            for x in range(390, 410)
+            for y in range(160, 165)
+        }
+        self.assertEqual(len(noise), 100)
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            if (x, y) in noise:
+                return (255, 157, 61)
+            if 260 <= x <= 540 and 184 <= y <= 296:
+                return (8, 18, 30)
+            return (105, 170, 225)
+
+        self.assertFalse(results_panel_visible(800, 480, 0, pixel_at))
+
+    def test_results_panel_detector_accepts_true_panel_on_direct_and_window_frames(self) -> None:
+        glyphs = {
+            "R": (30, 17, 17, 30, 20, 18, 17),
+            "E": (31, 16, 16, 30, 16, 16, 31),
+            "S": (15, 16, 16, 14, 1, 1, 30),
+            "U": (17, 17, 17, 17, 17, 17, 14),
+            "L": (16, 16, 16, 16, 16, 16, 31),
+            "T": (31, 4, 4, 4, 4, 4, 4),
+        }
+
+        def build_title(viewport_top: int) -> set[tuple[int, int]]:
+            title_pixels: set[tuple[int, int]] = set()
+            x = 400.0 - 26.0
+            y = viewport_top + 240.0 - 78.0
+            for char in "RESULTS":
+                for row, bits in enumerate(glyphs[char]):
+                    for col in range(5):
+                        if bits & (1 << (4 - col)):
+                            left = round(x + col * 1.2)
+                            top = round(y + row * 1.2)
+                            for offset_y in (0, 1):
+                                for offset_x in (0, 1):
+                                    title_pixels.add((left + offset_x, top + offset_y))
+                x += 6.0 * 1.2
+            return title_pixels
+
+        for viewport_top, height in ((0, 480), (84, 564)):
+            title_pixels = build_title(viewport_top)
+            center_y = viewport_top + 240.0
+            scale_y = (height - viewport_top) / 480.0
+            content_pixels = {
+                (x, round(center_y + offset * scale_y) + dy)
+                for offset in (-48, -27, -6, 22, 45, 65, 80)
+                for x in range(320, 365)
+                for dy in range(0, max(1, round(7 * scale_y)))
+            }
+
+            def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+                if (x, y) in title_pixels:
+                    return (255, 157, 61)
+                if (x, y) in content_pixels:
+                    return (238, 246, 255)
+                if (
+                    268 <= x <= 532
+                    and center_y - 92 <= y <= center_y + 92
+                ):
+                    return (8, 18, 30)
+                return (105, 170, 225)
+
+            with self.subTest(viewport_top=viewport_top):
+                self.assertTrue(results_panel_visible(800, height, viewport_top, pixel_at))
+                # Each required row must independently be present. This prevents
+                # a clipped middle or lower section from passing merely because
+                # the title, panel border and one surviving text row remain.
+                for missing_offset in (-48, -27, -6, 22, 45, 65, 80):
+                    missing_row_y = round(center_y + missing_offset * scale_y)
+                    remaining_content = content_pixels - {
+                        (x, missing_row_y + dy)
+                        for x in range(320, 365)
+                        for dy in range(0, max(1, round(7 * scale_y)))
+                    }
+
+                    def without_required_row(x: int, y: int) -> tuple[int, int, int]:
+                        if (x, y) in title_pixels:
+                            return (255, 157, 61)
+                        if (x, y) in remaining_content:
+                            return (238, 246, 255)
+                        if (
+                            268 <= x <= 532
+                            and center_y - 92 <= y <= center_y + 92
+                        ):
+                            return (8, 18, 30)
+                        return (105, 170, 225)
+
+                    with self.subTest(
+                        viewport_top=viewport_top,
+                        missing_offset=missing_offset,
+                    ):
+                        self.assertFalse(
+                            results_panel_visible(
+                                800, height, viewport_top, without_required_row
+                            ),
+                            f"RESULTS panel missing required row at {missing_offset}px must fail closed",
+                        )
+
+    def test_results_panel_detector_accepts_scaled_viewport_in_fixed_height_window(self) -> None:
+        # A 480px-tall Dolphin window with an 84px toolbar leaves only 396px
+        # for the game viewport. The actual finish capture contains 68 orange
+        # RESULTS glyph pixels after that vertical scaling (versus 80 in a full
+        # 480px viewport), while retaining the full opaque panel structure.
+        orange_pixels = {
+            (367 + (index % 34), 215 + (index // 34))
+            for index in range(68)
+        }
+        content_pixels = {
+            (x, round(282.0 + offset * (396.0 / 480.0)) + dy)
+            for offset in (-48, -27, -6, 22, 45, 65, 80)
+            for x in range(320, 365)
+            for dy in range(0, 6)
+        }
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            if (x, y) in orange_pixels:
+                return (255, 157, 61)
+            if (x, y) in content_pixels:
+                return (238, 246, 255)
+            if 268 <= x <= 532 and 206 <= y <= 358:
+                return (8, 18, 30)
+            return (105, 170, 225)
+
+        self.assertTrue(results_panel_visible(800, 480, 84, pixel_at))
+
+    def test_results_panel_detector_rejects_invalid_viewport_geometry(self) -> None:
+        pixel_at = lambda _x, _y: (0, 0, 0)
+        self.assertFalse(results_panel_visible(800, 480, -1, pixel_at))
+        self.assertFalse(results_panel_visible(800, 480, 480, pixel_at))
+        self.assertFalse(results_panel_visible(0, 480, 0, pixel_at))
+
     def test_header_and_fixed_record_layout(self) -> None:
         frames = 3000
         blob = build_dtm(frames)
@@ -87,9 +244,16 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertTrue(first[0] & A)
         self.assertTrue(first[0] & Y)
         self.assertTrue(first[1] & IS_CONNECTED)
-        self.assertTrue(first[1] & DPAD_RIGHT)
+        self.assertFalse(first[1] & DPAD_RIGHT)  # Do not let READY course selection consume Start.
         self.assertEqual(NEUTRAL_AXIS, 128)  # raw DTM analog axes use unsigned center
         self.assertEqual(first[4:], bytes((NEUTRAL_AXIS,) * 4))
+
+        session_start = record(blob, SESSION_START_PRESS_FRAME)
+        self.assertEqual(session_start[0], A | X | START)
+        self.assertFalse(session_start[1] & (DPAD_LEFT | DPAD_RIGHT))
+        steering_after_start = record(blob, SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)
+        self.assertEqual(steering_after_start[0], A | X)
+        self.assertTrue(steering_after_start[1] & DPAD_RIGHT)
 
         boost = record(blob, 20)
         self.assertTrue(boost[0] & A)
@@ -170,7 +334,7 @@ class DolphinDtmTests(unittest.TestCase):
         self.assertEqual(initial[5], NEUTRAL_AXIS)
 
         boosted = record(blob, 1)
-        self.assertEqual(boosted[0], A | X)
+        self.assertEqual(boosted[0], A | X | START)
         self.assertEqual(boosted[4], 255)
         before_reset = record(blob, RESET_PRESS_FRAME - 1)
         self.assertEqual(before_reset[0], A)
@@ -200,6 +364,9 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_pause_check_profile_presses_start_once_then_stays_neutral(self) -> None:
         blob = build_dtm(3600, steering="right", scenario="pause-check")
+        start_session = record(blob, SESSION_START_PRESS_FRAME)
+        self.assertEqual(start_session[0], A | X | START)
+        self.assertFalse(start_session[1] & (DPAD_LEFT | DPAD_RIGHT))
         before = record(blob, PAUSE_PRESS_FRAME - 1)
         self.assertTrue(before[0] & A)
         self.assertFalse(before[0] & START)
@@ -231,6 +398,7 @@ class DolphinDtmTests(unittest.TestCase):
 
     def test_resume_check_profile_pauses_then_resumes_with_throttle(self) -> None:
         blob = build_dtm(3600, steering="none", scenario="resume-check")
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         before_pause = record(blob, PAUSE_PRESS_FRAME - 1)
         self.assertEqual(before_pause[0], A)
 
@@ -270,7 +438,8 @@ class DolphinDtmTests(unittest.TestCase):
             with self.subTest(frame=frame):
                 state = record(blob, frame)
                 self.assertTrue(state[0] & A)
-                self.assertFalse(state[0] & (B | START))
+                self.assertFalse(state[0] & B)
+                self.assertEqual(bool(state[0] & START), SESSION_START_PRESS_FRAME <= frame < SESSION_START_PRESS_FRAME + SESSION_START_HOLD_FRAMES)
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertFalse(state[1] & (DPAD_LEFT | DPAD_RIGHT))
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
@@ -288,9 +457,9 @@ class DolphinDtmTests(unittest.TestCase):
 
         start = record(blob, 0)
         self.assertEqual(start[0], A | Y)  # Establish a clean initial state.
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
-
         early_boost = record(blob, 20)
         self.assertEqual(early_boost[0], A | X)
         before_reset = record(blob, FINISH_RESET_PRESS_FRAME - 1)
@@ -322,6 +491,7 @@ class DolphinDtmTests(unittest.TestCase):
 
         start = record(blob, 0)
         self.assertEqual(start[0], A | Y)  # Begin from a clean deterministic state.
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
         self.assertTrue(start[1] & IS_CONNECTED)
         self.assertEqual(start[4:], bytes((NEUTRAL_AXIS,) * 4))
 
@@ -351,6 +521,51 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+    def test_finish_two_race_profile_resets_releases_restarts_and_throttles(self) -> None:
+        frames = FINISH_TWO_RACE_MIN_FRAMES
+        blob = build_dtm(frames, steering="none", scenario="finish-two-race-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+        self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
+
+        self.assertEqual(record(blob, 0)[0], A | Y)
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
+        self.assertEqual(record(blob, FINISH_RESTART_PRESS_FRAME - 1)[0], A)
+
+        for frame in range(
+            FINISH_RESTART_PRESS_FRAME,
+            FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES,
+        ):
+            with self.subTest(first_reset_frame=frame):
+                self.assertEqual(record(blob, frame)[0], START)
+
+        first_release = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES
+        for frame in range(first_release, FINISH_SECOND_START_PRESS_FRAME):
+            with self.subTest(released_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)
+                self.assertTrue(state[1] & IS_CONNECTED)
+
+        for frame in range(
+            FINISH_SECOND_START_PRESS_FRAME,
+            FINISH_SECOND_START_PRESS_FRAME + FINISH_SECOND_START_HOLD_FRAMES,
+        ):
+            with self.subTest(second_start_frame=frame):
+                self.assertEqual(record(blob, frame)[0], A | START)
+
+        self.assertEqual(
+            record(blob, FINISH_SECOND_START_PRESS_FRAME + FINISH_SECOND_START_HOLD_FRAMES)[0],
+            A,
+        )
+        self.assertEqual(record(blob, frames - 1)[0], A)
+
+    def test_finish_two_race_profile_rejects_too_short_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "finish-two-race-check needs enough frames"):
+            build_dtm(
+                FINISH_TWO_RACE_MIN_FRAMES - 1,
+                steering="none",
+                scenario="finish-two-race-check",
+            )
+
     def test_cli_accepts_finish_restart_scenario(self) -> None:
         frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
         script = Path(__file__).with_name("make_dolphin_dtm.py")
@@ -370,6 +585,26 @@ class DolphinDtmTests(unittest.TestCase):
                 text=True,
                 timeout=10,
                 check=False,
+            )
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            self.assertTrue(output.is_file(), msg=completed.stdout)
+            self.assertEqual(output.stat().st_size, HEADER_SIZE + frames * 8)
+
+    def test_cli_accepts_finish_two_race_scenario(self) -> None:
+        frames = FINISH_TWO_RACE_MIN_FRAMES
+        script = Path(__file__).with_name("make_dolphin_dtm.py")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "finish-two-race.dtm"
+            completed = subprocess.run(
+                [
+                    sys.executable, str(script),
+                    "--output", str(output),
+                    "--frames", str(frames),
+                    "--game-id", DEFAULT_GAME_ID,
+                    "--steering", "none",
+                    "--scenario", "finish-two-race-check",
+                ],
+                capture_output=True, text=True, timeout=10, check=False,
             )
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             self.assertTrue(output.is_file(), msg=completed.stdout)
@@ -442,6 +677,73 @@ class DolphinDtmTests(unittest.TestCase):
         clipped_draw.rectangle((0, 350, 40, 400), fill=cyan)
         with self.assertRaises(ValueError):
             player_pod_bounds(clipped)
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or results_view_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_results_detector_rejects_title_only_panel(self) -> None:
+        color = (255, 157, 61)
+        glyphs = {
+            "R": (30, 17, 17, 30, 20, 18, 17),
+            "E": (31, 16, 16, 30, 16, 16, 31),
+            "S": (15, 16, 16, 14, 1, 1, 30),
+            "U": (17, 17, 17, 17, 17, 17, 14),
+            "L": (16, 16, 16, 16, 16, 16, 31),
+            "T": (31, 4, 4, 4, 4, 4, 4),
+        }
+
+        def draw_results(image, viewport_top: int) -> None:
+            draw = ImageDraw.Draw(image)
+            center_x = 400.0
+            center_y = viewport_top + 240.0
+            draw.rectangle(
+                (center_x - 132, center_y - 92, center_x + 132, center_y + 92),
+                fill=(8, 18, 30),
+            )
+            x = center_x - 26.0
+            y = center_y - 78.0
+            for char in "RESULTS":
+                for row, bits in enumerate(glyphs[char]):
+                    for col in range(5):
+                        if bits & (1 << (4 - col)):
+                            left = round(x + col * 1.2)
+                            top = round(y + row * 1.2)
+                            draw.rectangle((left, top, left + 1, top + 1), fill=color)
+                x += 6.0 * 1.2
+
+        direct = Image.new("RGB", (800, 480), (105, 170, 225))
+        draw_results(direct, 0)
+        # A centered heading and dark rectangle alone are not a complete
+        # results screen: the splits, totals, position and restart prompt must
+        # also be visible. Full-panel positive cases live in results_panel.py.
+        self.assertFalse(results_view_visible(direct))
+        self.assertFalse(finish_banner_visible(direct))
+
+        window = Image.new("RGB", (800, 564), (239, 239, 239))
+        ImageDraw.Draw(window).rectangle((0, 84, 799, 563), fill=(105, 170, 225))
+        draw_results(window, 84)
+        self.assertFalse(results_view_visible(window))
+        self.assertFalse(finish_banner_visible(window))
+
+        empty = Image.new("RGB", (800, 480), (105, 170, 225))
+        self.assertFalse(results_view_visible(empty))
+        self.assertFalse(finish_banner_visible(empty))
+
+        # Regression: the previous 12-pixel orange-only test accepted 52
+        # exhaust pixels from an ordinary rival frame as the RESULTS title.
+        exhaust = Image.new("RGB", (800, 480), (105, 170, 225))
+        ImageDraw.Draw(exhaust).rectangle((394, 162, 406, 165), fill=color)
+        self.assertFalse(results_view_visible(exhaust))
+        self.assertFalse(finish_banner_visible(exhaust))
+
+        # RACE READY also has a centered dark panel, but it is too short to
+        # satisfy the RESULTS lower-band geometry, even with stray orange pixels.
+        ready = Image.new("RGB", (800, 480), (105, 170, 225))
+        ready_draw = ImageDraw.Draw(ready)
+        ready_draw.rectangle((260, 184, 540, 296), fill=(8, 18, 30))
+        ready_draw.rectangle((394, 162, 406, 165), fill=color)
+        self.assertFalse(results_view_visible(ready))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or finish_banner_visible is None,
@@ -614,6 +916,44 @@ class DolphinDtmTests(unittest.TestCase):
         completed_lap = image.copy()
         ImageDraw.Draw(completed_lap).rectangle((24, 398, 44, 405), fill=(137, 241, 154))
         self.assertFalse(reset_state_visible(completed_lap))
+
+    @unittest.skipIf(
+        Image is None or ImageDraw is None or reset_state_visible is None,
+        "Pillow is not installed in the lightweight host-test environment",
+    )
+    def test_reset_state_detector_accepts_ready_course_select_without_active_steering_tick(self) -> None:
+        # A Y reset returns to READY / COURSE SELECT. The diagnostic must verify
+        # that explicit screen and reset HUD instead of requiring the active-race
+        # steering tick, which is not part of the course-selection interface.
+        image = Image.new("RGB", (800, 480), (239, 239, 239))
+        draw = ImageDraw.Draw(image)
+        viewport_top = 84
+        viewport_height = 480 - viewport_top
+        draw.rectangle((0, viewport_top, 799, 479), fill=(106, 169, 225))
+        draw.rectangle((225, 236, 575, 328), fill=(8, 18, 30))
+        draw.text((342, 243), "COURSE SELECT", fill=(255, 157, 61))
+
+        empty = (48, 66, 80)
+
+        def screen_y(offset: int) -> int:
+            return round(viewport_top + viewport_height * (480 - offset) / 480)
+
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            draw.line((24, y, 213, y), fill=empty, width=2)
+        draw.line((24, screen_y(48), 213, screen_y(48)), fill=(255, 157, 61), width=2)
+        self.assertTrue(reset_state_visible(image))
+
+        # An active-race frame with the marker missing must still fail closed.
+        image_without_ready_panel = Image.new("RGB", (800, 480), (239, 239, 239))
+        active_draw = ImageDraw.Draw(image_without_ready_panel)
+        active_draw.rectangle((0, 84, 799, 479), fill=(106, 169, 225))
+        for offset in (30, 70, 62, 78):
+            y = screen_y(offset)
+            active_draw.line((24, y, 213, y), fill=empty, width=2)
+        active_draw.line((24, screen_y(48), 213, screen_y(48)), fill=(255, 157, 61), width=2)
+        with self.assertRaisesRegex(ValueError, "No stable bright steering tick"):
+            reset_state_visible(image_without_ready_panel)
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or reset_state_visible is None,
