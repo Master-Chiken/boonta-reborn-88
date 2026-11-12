@@ -298,7 +298,7 @@ for required in (
     if required not in openrouter_job:
         errors.append(f"OpenRouter second-priority scheduled-resume route is missing {required!r}")
 
-resume_route = groq_job.split("needs.provider-cooldowns.outputs.task_ready != 'true' &&", 1)[1].split("\\n        )", 1)[0] if "needs.provider-cooldowns.outputs.task_ready != 'true' &&" in groq_job else ""
+resume_route = groq_job.split("needs.provider-cooldowns.outputs.task_ready != 'true' &&", 1)[1].split("\n        )", 1)[0] if "needs.provider-cooldowns.outputs.task_ready != 'true' &&" in groq_job else ""
 if not resume_route or "needs.provider-cooldowns.outputs.resume_ready == 'true'" not in resume_route:
     errors.append("Groq must have a distinct existing-PR resume branch")
 if "github.event_name == 'workflow_dispatch'" in resume_route or "github.actor == github.repository_owner" in resume_route:
