@@ -39,6 +39,28 @@ static void nearby_rival_avoidance(void)
     assert(target > 0.1f);
 }
 
+static void tied_rivals_split_traffic_lanes_deterministically(void)
+{
+    const float z[2] = {-18.0f, -17.0f};
+    const float lateral[2] = {0.0f, 0.0f};
+    const float first_target = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, z, lateral, 2U, 0.0f, 3.4f);
+    const float second_target = boonta_rival_ai_target_lateral(
+        1U, -17.0f, 0.0f, 0.0f, z, lateral, 2U, 0.0f, 3.4f);
+
+    assert(nearf_ai(boonta_rival_ai_traffic_avoidance_offset(0U, 1U, 0.0f),
+                    -0.75f));
+    assert(nearf_ai(boonta_rival_ai_traffic_avoidance_offset(1U, 0U, 0.0f),
+                    0.75f));
+    assert(nearf_ai(boonta_rival_ai_traffic_avoidance_offset(0U, 1U, NAN),
+                    -0.75f));
+    assert(nearf_ai(boonta_rival_ai_traffic_avoidance_offset(1U, 0U, 0.20f),
+                    0.75f));
+    assert(first_target < 0.0f);
+    assert(second_target > 0.0f);
+    assert(nearf_ai(first_target, -second_target));
+}
+
 static void movement_is_bounded_and_time_scaled(void)
 {
     assert(nearf_ai(boonta_rival_ai_after_frame(0.0f, 1.0f, 1.0f), 0.035f));
@@ -188,6 +210,7 @@ int main(void)
     lane_preference_is_deterministic();
     player_avoidance_only_when_close();
     nearby_rival_avoidance();
+    tied_rivals_split_traffic_lanes_deterministically();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
     curvature_samples_are_measured_and_bounded();
