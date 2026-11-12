@@ -748,6 +748,15 @@ jobs:
           fi
           PROMPT="${PROMPT}"$'\n\n'
           PROMPT+="${AUTONOMOUS_CONTEXT}"
+
+          PROMPT="${PROMPT}
+
+          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
+          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
+          - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
+          - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
+          These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Execute only the task selected by the global preflight and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
+
           if [[ "${RESUME_MODE:-false}" == "true" ]]; then
             if [[ ! "${RESUME_PR_NUMBER:-}" =~ ^[1-9][0-9]*$ || -z "${RESUME_PR_URL:-}" || -z "${RESUME_BRANCH:-}" || ! "${RESUME_HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
               echo "::error::Verified resume metadata is incomplete; no OpenRouter request was sent."
@@ -784,22 +793,25 @@ REPORT
 - Output only machine-readable lines. Copy the reserved task ID and target branch appended below. No prose or fences.
 RESUME_PROMPT
             )"
-            PROMPT="${PROMPT}"
-
-          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):
-          - OpenRouter owner/free-only preflight: ${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}
-          - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
-          - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
-          These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Execute only the task selected by the global preflight and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
+            PROMPT="${PROMPT}"$'\n\n'
+            PROMPT+="${AUTONOMOUS_CONTEXT}"
+            PROMPT+=$'\nExisting PR: '"${RESUME_PR_URL}"
+            PROMPT+=$'\nExisting branch: '"${RESUME_BRANCH}"
+            PROMPT+=$'\nPrior exact HEAD: '"${RESUME_HEAD_SHA}"
+            PROMPT+=$'\nVerified changed files (read at most one):\n'"${RESUME_ALLOWED_PATHS}"
+            PROMPT+=$'\nSame-run preflight and OpenRouter authentication succeeded; do not claim missing credentials or failed Free-tier authentication.'
+          fi
           REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
           REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
           PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
           PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
           if [[ "${RESUME_MODE:-false}" == "true" ]]; then
-            PROMPT+=
+            PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: '"${RESUME_PR_URL}"' @ <exact new 40-character head SHA returned by github_push_files>'
+          else
+            PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>'
+          fi
           PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
           PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
-
           if (( ${#PROMPT} > 7000 )); then
             echo "::error::OpenRouter prompt exceeds the 7,000-character safety ceiling; no model request was sent."
             exit 2
