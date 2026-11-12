@@ -101,6 +101,7 @@ Le chemin de modification est séparé et verrouillé :
 - le workflow exige une approbation correspondant au plan explicite et la variable Actions \`GEMINI_WRITE_ENABLED\` exactement égale à \`true\` ;
 - il doit créer une branche dédiée puis ouvrir une PR ;
 - il ne doit jamais pousser sur \`main\`, fusionner une PR, activer l'auto-merge ou supprimer des branches.
+- Le workflow appelant doit accorder au job réutilisable le même ensemble de permissions que celui demandé par le workflow appelé. Le chemin d'écriture Gemini requiert `contents: write`, `checks: read`, `issues: write` et `pull-requests: write`. Le plafond global doit les autoriser, tandis que chaque autre job conserve son bloc `permissions` plus restrictif. GitHub refuse les élévations de permissions dans les workflows réutilisables avant le démarrage des jobs.
 
 Le chemin manuel reste contrôlé par `GEMINI_WRITE_ENABLED` et la commande d'approbation du propriétaire. Le chemin autonome est contrôlé séparément par `GEMINI_AUTONOMOUS_ENABLED` et la configuration listée ci-dessus. Le propriétaire a autorisé le principe de la sélection automatique des tâches ; l'activation technique reste conditionnée aux protections, secrets et vérifications de gratuité. Un seul agent capable d'écrire doit travailler à la fois.
 

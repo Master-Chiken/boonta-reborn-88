@@ -9,7 +9,9 @@ on:
     types: [submitted]
 
 permissions:
-  contents: read
+  # Maximum permission envelope for reusable calls; every job below narrows it.
+  contents: write
+  checks: read
   issues: write
   pull-requests: write
 
