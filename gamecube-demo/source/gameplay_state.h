@@ -937,6 +937,7 @@ typedef struct {
     BoontaChampionshipStanding standings[BOONTA_CHAMPIONSHIP_RACER_COUNT];
     unsigned int last_event_id;
     unsigned int recorded_mask;
+    unsigned int finish_position_mask;
 } BoontaChampionshipState;
 
 static inline void boonta_championship_state_reset(BoontaChampionshipState *state)
@@ -952,6 +953,7 @@ static inline void boonta_championship_state_reset(BoontaChampionshipState *stat
     }
     state->last_event_id = 0U;
     state->recorded_mask = 0U;
+    state->finish_position_mask = 0U;
 }
 
 /*
@@ -967,6 +969,7 @@ static inline int boonta_championship_record_event_result(
     unsigned int finish_position)
 {
     unsigned int racer_bit;
+    unsigned int finish_bit;
     if (state == 0 || event_id == 0U ||
         racer_index >= BOONTA_CHAMPIONSHIP_RACER_COUNT ||
         finish_position == 0U ||
@@ -975,12 +978,16 @@ static inline int boonta_championship_record_event_result(
     if (event_id > state->last_event_id) {
         state->last_event_id = event_id;
         state->recorded_mask = 0U;
+        state->finish_position_mask = 0U;
     }
     racer_bit = 1U << racer_index;
-    if ((state->recorded_mask & racer_bit) != 0U) return 0;
+    finish_bit = 1U << (finish_position - 1U);
+    if ((state->recorded_mask & racer_bit) != 0U ||
+        (state->finish_position_mask & finish_bit) != 0U) return 0;
     boonta_championship_record_result(&state->standings[racer_index],
                                       finish_position);
     state->recorded_mask |= racer_bit;
+    state->finish_position_mask |= finish_bit;
     return 1;
 }
 

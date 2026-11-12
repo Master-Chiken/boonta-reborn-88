@@ -1069,29 +1069,46 @@ static void championship_event_results_are_idempotent_and_reject_stale_events(vo
     boonta_championship_state_reset(&championship);
     assert(championship.last_event_id == 0U);
     assert(championship.recorded_mask == 0U);
+    assert(championship.finish_position_mask == 0U);
     assert(championship.standings[0].races_completed == 0U);
 
     assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 1);
     assert(championship.standings[0].points == 15U);
     assert(championship.standings[0].races_completed == 1U);
+    assert(championship.finish_position_mask == 1U);
     assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 0);
     assert(championship.standings[0].points == 15U);
     assert(championship.standings[0].races_completed == 1U);
 
     assert(boonta_championship_record_event_result(&championship, 1U, 1U, 2U) == 1);
     assert(championship.standings[1].points == 12U);
+    assert(championship.finish_position_mask == 3U);
     assert(boonta_championship_record_event_result(&championship, 2U, 0U, 3U) == 1);
     assert(championship.standings[0].points == 25U);
     assert(championship.standings[0].races_completed == 2U);
+    assert(championship.recorded_mask == 1U);
+    assert(championship.finish_position_mask == 4U);
     assert(boonta_championship_record_event_result(&championship, 1U, 2U, 1U) == 0);
     assert(championship.standings[2].races_completed == 0U);
 
-    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 0U) == 0);
-    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 5U) == 0);
-    assert(boonta_championship_record_event_result(&championship, 2U, 4U, 1U) == 0);
-    assert(boonta_championship_record_event_result(&championship, 0U, 2U, 1U) == 0);
-    assert(boonta_championship_record_event_result(0, 2U, 2U, 1U) == 0);
+    /* One event cannot award the same finishing place to two racers. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 3U) == 0);
     assert(championship.standings[2].races_completed == 0U);
+    /* A rejected duplicate place does not consume the racer's result slot. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 1U) == 1);
+    assert(championship.standings[2].races_completed == 1U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 3U, 2U) == 1);
+    assert(championship.standings[3].races_completed == 1U);
+
+    /* The next event clears only its per-event masks; same places are reusable. */
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 3U) == 1);
+    assert(championship.standings[2].races_completed == 2U);
+
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 0U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 5U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 4U, 1U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 0U, 2U, 1U) == 0);
+    assert(boonta_championship_record_event_result(0, 3U, 2U, 1U) == 0);
 }
 
 int main(void) {
