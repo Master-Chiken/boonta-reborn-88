@@ -546,7 +546,7 @@ jobs:
       resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
       resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
       resume_task_description: ${{ needs.provider-cooldowns.outputs.resume_task_context }}
-      resume_pr_number: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
+      resume_pr_number: ${{ fromJSON(needs.provider-cooldowns.outputs.resume_pr_number || '0') }}
       resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
       resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
       resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
