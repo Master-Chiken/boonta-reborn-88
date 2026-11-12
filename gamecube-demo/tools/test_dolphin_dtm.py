@@ -7,6 +7,8 @@ import sys
 import tempfile
 import unittest
 
+from results_panel import results_panel_visible
+
 from make_dolphin_dtm import (
     A,
     B,
@@ -71,6 +73,85 @@ def record(blob: bytes, frame: int) -> bytes:
 
 
 class DolphinDtmTests(unittest.TestCase):
+    def test_results_panel_detector_rejects_52_orange_exhaust_pixels_without_panel(self) -> None:
+        noise = {
+            (x, y)
+            for x in range(394, 407)
+            for y in range(162, 166)
+        }
+        self.assertEqual(len(noise), 52)
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            return (255, 157, 61) if (x, y) in noise else (105, 170, 225)
+
+        self.assertFalse(results_panel_visible(800, 480, 0, pixel_at))
+
+    def test_results_panel_detector_rejects_ready_panel_even_with_orange_noise(self) -> None:
+        noise = {
+            (x, y)
+            for x in range(390, 410)
+            for y in range(160, 165)
+        }
+        self.assertEqual(len(noise), 100)
+
+        def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+            if (x, y) in noise:
+                return (255, 157, 61)
+            if 260 <= x <= 540 and 184 <= y <= 296:
+                return (8, 18, 30)
+            return (105, 170, 225)
+
+        self.assertFalse(results_panel_visible(800, 480, 0, pixel_at))
+
+    def test_results_panel_detector_accepts_true_panel_on_direct_and_window_frames(self) -> None:
+        glyphs = {
+            "R": (30, 17, 17, 30, 20, 18, 17),
+            "E": (31, 16, 16, 30, 16, 16, 31),
+            "S": (15, 16, 16, 14, 1, 1, 30),
+            "U": (17, 17, 17, 17, 17, 17, 14),
+            "L": (16, 16, 16, 16, 16, 16, 31),
+            "T": (31, 4, 4, 4, 4, 4, 4),
+        }
+
+        def build_title(viewport_top: int) -> set[tuple[int, int]]:
+            title_pixels: set[tuple[int, int]] = set()
+            x = 400.0 - 26.0
+            y = viewport_top + 240.0 - 78.0
+            for char in "RESULTS":
+                for row, bits in enumerate(glyphs[char]):
+                    for col in range(5):
+                        if bits & (1 << (4 - col)):
+                            left = round(x + col * 1.2)
+                            top = round(y + row * 1.2)
+                            for offset_y in (0, 1):
+                                for offset_x in (0, 1):
+                                    title_pixels.add((left + offset_x, top + offset_y))
+                x += 6.0 * 1.2
+            return title_pixels
+
+        for viewport_top, height in ((0, 480), (84, 564)):
+            title_pixels = build_title(viewport_top)
+            center_y = viewport_top + 240.0
+
+            def pixel_at(x: int, y: int) -> tuple[int, int, int]:
+                if (x, y) in title_pixels:
+                    return (255, 157, 61)
+                if (
+                    268 <= x <= 532
+                    and center_y - 92 <= y <= center_y + 92
+                ):
+                    return (8, 18, 30)
+                return (105, 170, 225)
+
+            with self.subTest(viewport_top=viewport_top):
+                self.assertTrue(results_panel_visible(800, height, viewport_top, pixel_at))
+
+    def test_results_panel_detector_rejects_invalid_viewport_geometry(self) -> None:
+        pixel_at = lambda _x, _y: (0, 0, 0)
+        self.assertFalse(results_panel_visible(800, 480, -1, pixel_at))
+        self.assertFalse(results_panel_visible(800, 480, 480, pixel_at))
+        self.assertFalse(results_panel_visible(0, 480, 0, pixel_at))
+
     def test_header_and_fixed_record_layout(self) -> None:
         frames = 3000
         blob = build_dtm(frames)
