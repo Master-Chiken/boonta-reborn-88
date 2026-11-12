@@ -105,21 +105,27 @@ static void curvature_samples_are_measured_and_bounded(void)
 
 static void curvature_reduces_target_speed(void)
 {
-    const float straight = boonta_rival_ai_target_speed(1U, 0.0f);
+    const float slow_rival = boonta_rival_ai_target_speed(0U, 0.0f);
+    const float middle_rival = boonta_rival_ai_target_speed(1U, 0.0f);
+    const float fast_rival = boonta_rival_ai_target_speed(2U, 0.0f);
     const float bend = boonta_rival_ai_target_speed(1U, 0.10f);
-    assert(nearf_ai(straight, boonta_rival_initial_speed(1U)));
-    assert(bend < straight);
-    assert(nearf_ai(boonta_rival_ai_target_speed(1U, NAN), straight));
-    assert(nearf_ai(boonta_rival_ai_target_speed(1U, -0.10f), straight));
+
+    assert(nearf_ai(slow_rival, 0.985f));
+    assert(nearf_ai(middle_rival, 0.9925f));
+    assert(nearf_ai(fast_rival, 1.0f));
+    assert(slow_rival < middle_rival && middle_rival < fast_rival);
+    assert(bend < middle_rival && bend >= 0.90f);
+    assert(nearf_ai(boonta_rival_ai_target_speed(1U, NAN), middle_rival));
+    assert(nearf_ai(boonta_rival_ai_target_speed(1U, -0.10f), middle_rival));
 }
 
 static void speed_response_is_bounded_and_asymmetric(void)
 {
-    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.50f, 0.70f, 1.0f), 0.504f));
-    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.70f, 0.50f, 1.0f), 0.690f));
-    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.50f, 0.70f, 2.0f), 0.508f));
-    assert(nearf_ai(boonta_rival_ai_speed_after_frame(NAN, 0.70f, 1.0f), 0.004f));
-    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.70f, 0.50f, NAN), 0.70f));
+    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.90f, 1.0f, 1.0f), 0.904f));
+    assert(nearf_ai(boonta_rival_ai_speed_after_frame(1.0f, 0.90f, 1.0f), 0.990f));
+    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.90f, 1.0f, 2.0f), 0.908f));
+    assert(nearf_ai(boonta_rival_ai_speed_after_frame(NAN, 1.0f, 1.0f), 0.004f));
+    assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.95f, 0.90f, NAN), 0.95f));
 }
 
 static void relative_progress_uses_player_and_rival_pace(void)
