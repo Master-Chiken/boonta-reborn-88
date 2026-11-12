@@ -1028,4 +1028,201 @@ static inline float boonta_clamp_player_lateral(float lateral_position)
         lateral_position, -BOONTA_PLAYER_LATERAL_GUARD, BOONTA_PLAYER_LATERAL_GUARD);
 }
 
+
+/*
+ * Small deterministic championship ledger. Kept separate from BoontaRaceState:
+ * restarting a race must never erase season progression. The caller can serialize
+ * this plain-data structure when a save/profile layer is introduced.
+ */
+typedef struct {
+    unsigned int points;
+    unsigned int races_completed;
+    unsigned int wins;
+    unsigned int podiums;
+    unsigned int best_finish; /* 0 means no classified finish yet. */
+} BoontaChampionshipStanding;
+
+static inline unsigned int boonta_championship_points_for_position(
+    unsigned int finish_position)
+{
+    static const unsigned int points_by_position[10] = {
+        15U, 12U, 10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U
+    };
+    if (finish_position == 0U || finish_position > 10U) return 0U;
+    return points_by_position[finish_position - 1U];
+}
+
+static inline unsigned int boonta_unsigned_saturating_add(
+    unsigned int value, unsigned int increment)
+{
+    return increment > 0xffffffffU - value
+        ? 0xffffffffU : value + increment;
+}
+
+/* Invalid/unclassified positions are ignored rather than counted as finishes. */
+static inline void boonta_championship_record_result(
+    BoontaChampionshipStanding *standing, unsigned int finish_position)
+{
+    unsigned int awarded_points;
+    if (standing == 0 || finish_position == 0U) return;
+
+    awarded_points = boonta_championship_points_for_position(finish_position);
+    standing->points = boonta_unsigned_saturating_add(
+        standing->points, awarded_points);
+    standing->races_completed = boonta_unsigned_saturating_add(
+        standing->races_completed, 1U);
+    if (finish_position == 1U) {
+        standing->wins = boonta_unsigned_saturating_add(standing->wins, 1U);
+    }
+    if (finish_position <= 3U) {
+        standing->podiums = boonta_unsigned_saturating_add(
+            standing->podiums, 1U);
+    }
+    if (standing->best_finish == 0U ||
+        finish_position < standing->best_finish) {
+        standing->best_finish = finish_position;
+    }
+}
+
+
+/*
+ * Compare championship rows for deterministic table ordering.
+ * Return -1 when left ranks ahead, 1 when right ranks ahead, 0 for a true tie.
+ * Points lead; wins and podiums break ties; then best finish. A zero best
+ * finish means the pilot has no classified result and ranks behind any
+ * classified best finish. Exact ties remain equal for stable roster ordering.
+ */
+static inline int boonta_championship_compare_standings(
+    const BoontaChampionshipStanding *left,
+    const BoontaChampionshipStanding *right)
+{
+    if (left == 0 || right == 0) return 0;
+    if (left->points != right->points) {
+        return left->points > right->points ? -1 : 1;
+    }
+    if (left->wins != right->wins) {
+        return left->wins > right->wins ? -1 : 1;
+    }
+    if (left->podiums != right->podiums) {
+        return left->podiums > right->podiums ? -1 : 1;
+    }
+    if (left->best_finish != right->best_finish) {
+        if (left->best_finish == 0U) return 1;
+        if (right->best_finish == 0U) return -1;
+        return left->best_finish < right->best_finish ? -1 : 1;
+    }
+    return 0;
+}
+
+
+/*
+ * Build a stable, allocation-free order of standing indices for a results
+ * table. The returned count is bounded by output_capacity; equal standings
+ * retain their original roster order. The caller owns both arrays.
+ */
+static inline unsigned int boonta_championship_build_stable_order(
+    const BoontaChampionshipStanding *standings,
+    unsigned int standing_count,
+    unsigned int *order,
+    unsigned int output_capacity)
+{
+    unsigned int count = 0U;
+    unsigned int i;
+
+    if (standings == 0 || order == 0 || output_capacity == 0U) return 0U;
+
+    /*
+     * Maintain only the best output_capacity indices while scanning the full
+     * roster. This is a stable top-k insertion: equal rows remain in roster
+     * order, and a small output buffer does not hide stronger later entries.
+     */
+    for (i = 0U; i < standing_count; ++i) {
+        unsigned int insertion = count;
+        while (insertion > 0U &&
+               boonta_championship_compare_standings(
+                   &standings[i], &standings[order[insertion - 1U]]) < 0) {
+            --insertion;
+        }
+        if (insertion >= output_capacity) continue;
+        if (count < output_capacity) ++count;
+        {
+            unsigned int shift = count - 1U;
+            while (shift > insertion) {
+                order[shift] = order[shift - 1U];
+                --shift;
+            }
+        }
+        order[insertion] = i;
+    }
+    return count;
+}
+
+
+#define BOONTA_CHAMPIONSHIP_RACER_COUNT (BOONTA_RIVAL_COUNT + 1U)
+
+/*
+ * Fixed-roster event ledger: index 0 is the player and indices 1..N are
+ * rivals. A monotonically increasing event_id makes result commits
+ * idempotent within an event and rejects stale results from earlier events.
+ * Persistence and event-id ownership remain the caller's responsibility.
+ */
+typedef struct {
+    BoontaChampionshipStanding standings[BOONTA_CHAMPIONSHIP_RACER_COUNT];
+    unsigned int last_event_id;
+    unsigned int recorded_mask;
+    unsigned int finish_position_mask;
+} BoontaChampionshipState;
+
+static inline void boonta_championship_state_reset(BoontaChampionshipState *state)
+{
+    unsigned int i;
+    if (state == 0) return;
+    for (i = 0U; i < BOONTA_CHAMPIONSHIP_RACER_COUNT; ++i) {
+        state->standings[i].points = 0U;
+        state->standings[i].races_completed = 0U;
+        state->standings[i].wins = 0U;
+        state->standings[i].podiums = 0U;
+        state->standings[i].best_finish = 0U;
+    }
+    state->last_event_id = 0U;
+    state->recorded_mask = 0U;
+    state->finish_position_mask = 0U;
+}
+
+/*
+ * Record one classified finish. Returns 1 only when a new result is committed.
+ * Event IDs must be nonzero and increase between championship events.
+ * Position zero (DNF/unclassified) and positions outside the four-racer
+ * roster are rejected without consuming that racer's one result slot.
+ */
+static inline int boonta_championship_record_event_result(
+    BoontaChampionshipState *state,
+    unsigned int event_id,
+    unsigned int racer_index,
+    unsigned int finish_position)
+{
+    unsigned int racer_bit;
+    unsigned int finish_bit;
+    if (state == 0 || event_id == 0U ||
+        racer_index >= BOONTA_CHAMPIONSHIP_RACER_COUNT ||
+        finish_position == 0U ||
+        finish_position > BOONTA_CHAMPIONSHIP_RACER_COUNT) return 0;
+    if (event_id < state->last_event_id) return 0;
+    if (event_id > state->last_event_id) {
+        state->last_event_id = event_id;
+        state->recorded_mask = 0U;
+        state->finish_position_mask = 0U;
+    }
+    racer_bit = 1U << racer_index;
+    finish_bit = 1U << (finish_position - 1U);
+    if ((state->recorded_mask & racer_bit) != 0U ||
+        (state->finish_position_mask & finish_bit) != 0U) return 0;
+    boonta_championship_record_result(&state->standings[racer_index],
+                                      finish_position);
+    state->recorded_mask |= racer_bit;
+    state->finish_position_mask |= finish_bit;
+    return 1;
+}
+
+
 #endif
