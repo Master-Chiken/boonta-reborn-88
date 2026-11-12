@@ -102,6 +102,8 @@
         "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC…",
         "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type"
       ],
+      "pr_url": null,
+      "head_sha": null,
       "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
     },
     {
@@ -241,6 +243,8 @@
         "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
         "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset."
       ],
+      "pr_url": null,
+      "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap…"
     },
     {
@@ -270,6 +274,8 @@
         "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…",
         "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions."
       ],
+      "pr_url": null,
+      "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently…"
     },
     {
@@ -301,6 +307,8 @@
         "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…",
         "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject…"
       ],
+      "pr_url": null,
+      "head_sha": null,
       "next_action_excerpt": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route…"
     }
   ]
