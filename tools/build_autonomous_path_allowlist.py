@@ -230,19 +230,63 @@ def build_allowlist(
     active = [item for item in task_map.values() if item.get("status") == "active"]
     if len(active) > 1:
         raise AllowlistError("Canonical ledger violates the one-active-task policy")
-    if not active:
-        return {
-            "status": "NO_ACTIVE_TASK",
-            "task_id": requested_task_id,
-            "base_sha": expected_base_sha,
-            "allowed_paths": [],
-            "reason": "No canonical task is active; no model write path is available.",
-        }
-    selected = active[0]
-    if selected.get("task_id") != requested_task_id:
-        raise AllowlistError("Requested task ID does not match the unique canonical active task")
+
+    completed_ids = ledger.get("completed_task_ids", [])
+    if (
+        not isinstance(completed_ids, list)
+        or any(not isinstance(item, str) or not TASK_ID_RE.fullmatch(item) for item in completed_ids)
+        or len(set(completed_ids)) != len(completed_ids)
+    ):
+        raise AllowlistError("Canonical completed_task_ids is missing, malformed or duplicated")
+    completed = set(completed_ids)
+
+    if active:
+        selected = active[0]
+        if selected.get("task_id") != requested_task_id:
+            raise AllowlistError("Requested task ID does not match the unique canonical active task")
+        dependencies = selected.get("depends_on")
+        if not isinstance(dependencies, list) or any(item not in completed for item in dependencies):
+            raise AllowlistError("Active task dependencies are not all completed")
+    else:
+        requested = task_map.get(requested_task_id)
+        if requested is not None and requested.get("status") == "queued":
+            if requested.get("owner_approved") is not True:
+                return {
+                    "status": "WAITING_FOR_OWNER_APPROVAL",
+                    "task_id": requested_task_id,
+                    "base_sha": expected_base_sha,
+                    "allowed_paths": [],
+                    "reason": "Queued task has no explicit owner approval.",
+                }
+            dependencies = requested.get("depends_on")
+            if not isinstance(dependencies, list) or any(item not in completed for item in dependencies):
+                return {
+                    "status": "WAITING_FOR_DEPENDENCIES",
+                    "task_id": requested_task_id,
+                    "base_sha": expected_base_sha,
+                    "allowed_paths": [],
+                    "reason": "Every queued-task dependency must be completed before a write path is available.",
+                }
+        eligible_queued = [
+            item for item in task_map.values()
+            if item.get("status") == "queued"
+            and item.get("owner_approved") is True
+            and isinstance(item.get("depends_on"), list)
+            and all(dependency in completed for dependency in item["depends_on"])
+        ]
+        if not eligible_queued:
+            return {
+                "status": "NO_ACTIVE_TASK",
+                "task_id": requested_task_id,
+                "base_sha": expected_base_sha,
+                "allowed_paths": [],
+                "reason": "No active or dependency-complete owner-approved queued task is available.",
+            }
+        selected = eligible_queued[0]
+        if selected.get("task_id") != requested_task_id:
+            raise AllowlistError("Requested task ID does not match the first eligible owner-approved queued task")
     if selected.get("target_branch") not in {"main", "dev"}:
-        raise AllowlistError("Active task target branch must be main or dev")
+        raise AllowlistError("Selected task target branch must be main or dev")
 
     owner_entry = policy_map.get(requested_task_id)
     if owner_entry is None:
