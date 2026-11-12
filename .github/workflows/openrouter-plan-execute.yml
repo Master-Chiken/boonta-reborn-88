@@ -849,7 +849,7 @@ jobs:
 
           prompt, report_path, workspace = sys.argv[1:]
           command = [
-              "timeout", "--signal=TERM", "--kill-after=5s", "90s",
+              "timeout", "--signal=TERM", "--kill-after=5s", "180s",
               "opencode", "run", "--model", "openrouter/openrouter/free",
               "--auto", "--dir", workspace, prompt,
           ]
