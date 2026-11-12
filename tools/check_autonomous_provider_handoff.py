@@ -535,7 +535,7 @@ required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
-    "create_branch", "create_pull_request", "push_files",
+    "get_file_contents", "create_branch", "create_pull_request", "push_files",
 }
 required_groq_resume_tools = {"get_file_contents", "push_files"}
 required_writer_tools = {
@@ -553,7 +553,7 @@ else:
         ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly three normal delivery tools and only targeted read plus push for existing-PR resume")
+        errors.append("Groq must expose exactly four normal tools (one optional exact read, branch, push and PR) and only targeted read plus push for existing-PR resume")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
     errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
@@ -626,9 +626,13 @@ if "Queued context must fail closed while any dependency is incomplete" not in c
     errors.append("Schema-v2 context tests must reject queued work with incomplete dependencies")
 if "Queued context must fail closed without explicit owner approval" not in context_builder_tests:
     errors.append("Schema-v2 context tests must reject queued work without owner approval")
+if "Blocked activation must not reach inference without owner-reviewed write paths" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must reject blocked activation without explicit write paths")
+if "blocked activation without an owner-reviewed write scope is not sent to a provider" not in task_preflight_tests:
+    errors.append("Production task preflight tests must prove missing write scope blocks provider selection")
 for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
     if "Exact owner-reviewed write paths (no others)" not in prompt:
-        errors.append(f"{label} prompt must restrict queued writes to the owner-reviewed exact-path list")
+        errors.append(f"{label} prompt must restrict every model write to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
@@ -677,7 +681,7 @@ for content, needle, message in (
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.", "Groq normal mode must expose only branch, push and PR tools"),
+    (groq, "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.", "Groq normal mode must expose one optional exact read plus branch, push and PR tools"),
 
 ):
     if needle not in content:
@@ -733,8 +737,14 @@ if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
-if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
+if "Use preloaded source excerpts first" not in actual_groq_prompt or "call github_get_file_contents at most once" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must use trusted excerpts first and permit only one exact owner-approved file read")
+if "write only the exact owner-reviewed paths listed in context" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must restrict every write to explicit owner-reviewed paths")
+if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
+    errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
+if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
+    errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
 context_limits("OpenRouter", openrouter, 2800, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
