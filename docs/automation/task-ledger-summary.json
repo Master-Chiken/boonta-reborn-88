@@ -173,8 +173,8 @@
         "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival…"
       ],
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
-      "head_sha": "0726719521c47e4821d2e9ebde795486b39de80f",
-      "next_action_excerpt": "PR #395 is open against dev at exact head 0726719521c47e4821d2e9ebde795486b39de80f. Host pause/resume tests, native GameCube/Wii builds, artifact validation and Dolphin headless smoke pass. The two-race Dolphin diagnostic detected both the first RESULTS/reset and a fresh second RESULTS panel, but its final check incorrectly tested the second-finish screenshot as if it were the reset HUD. The workflow now saves the…"
+      "head_sha": "b600b5d0eefee6d50cb10a780156e605f4f7b76a",
+      "next_action_excerpt": "PR #395 is open against dev at exact head b600b5d0eefee6d50cb10a780156e605f4f7b76a. Host pause/resume tests, native GameCube/Wii builds, artifact validation and Dolphin headless smoke passed on the prior tested head. The prior two-race Dolphin run detected first RESULTS, the clean reset HUD and a fresh second RESULTS panel; a post-shutdown check then incorrectly re-tested the reset detector on a later frame. The…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
