@@ -4,43 +4,47 @@
 #include <string.h>
 #include "../source/course_catalog.h"
 
-static void test_course(const BoontaCourseDefinition *c,float *sx,float *sy,float *sz)
+static void test_single_vertical_slice_course(void)
 {
-    unsigned int laps=99U;
-    float progress=-1.0f,remaining=0.0f,x=0.0f,y=0.0f,z=0.0f,w=0.0f;
-    assert(c!=NULL&&c->id!=NULL&&c->display_name!=NULL&&c->region!=NULL);
-    assert(isfinite(c->lap_distance)&&c->lap_distance>150.0f);
-    assert(c->node_count==8U&&c->edge_count==8U);
-    assert(c->reset&&c->advance&&c->sample&&c->get_lap_state&&c->distance_to_next_finish);
-    assert(c->runtime_context!=NULL);
-    assert(c->reset(c->runtime_context));
-    assert(c->get_lap_state(c->runtime_context,&laps,&progress));
-    assert(laps==0U&&isfinite(progress)&&progress>=0.0f&&progress<=1.0f);
-    assert(c->distance_to_next_finish(c->runtime_context,0.0f,&remaining));
-    assert(fabsf(remaining-c->lap_distance)<0.001f);
-    c->sample(c->runtime_context,0.0f,c->lap_distance*0.25f,c->road_half_width,
-              &x,&y,&z,&w);
-    assert(isfinite(x)&&isfinite(y)&&isfinite(z)&&isfinite(w));
-    assert(w>=2.2f&&w<=4.8f);
-    *sx=x;*sy=y;*sz=z;
-    assert(c->advance(c->runtime_context,0.25f,0.0f));
-    assert(c->distance_to_next_finish(c->runtime_context,0.25f,&remaining));
-    assert(fabsf(remaining-(c->lap_distance-0.25f))<0.001f);
+    const BoontaCourseDefinition *course = boonta_course_catalog[0];
+    unsigned int completed_laps = 99U;
+    float progress = -1.0f;
+    float remaining = 0.0f;
+    float x = 0.0f, y = 0.0f, z = 0.0f, width = 0.0f;
+
+    assert(BOONTA_COURSE_COUNT == 1U);
+    assert(course != NULL);
+    assert(strcmp(course->id, "canyon-run") == 0);
+    assert(strcmp(course->display_name, "CANYON RUN") == 0);
+    assert(strcmp(course->region, "DESERT CANYON") == 0);
+    assert(isfinite(course->lap_distance) && course->lap_distance > 150.0f);
+    assert(course->node_count == 8U && course->edge_count == 8U);
+    assert(!course->has_branches);
+    assert(course->reset && course->advance && course->sample);
+    assert(course->get_lap_state && course->distance_to_next_finish);
+    assert(course->runtime_context != NULL);
+
+    assert(course->reset(course->runtime_context));
+    assert(course->get_lap_state(course->runtime_context, &completed_laps, &progress));
+    assert(completed_laps == 0U);
+    assert(isfinite(progress) && progress >= 0.0f && progress <= 1.0f);
+
+    assert(course->distance_to_next_finish(course->runtime_context, 0.0f, &remaining));
+    assert(fabsf(remaining - course->lap_distance) < 0.001f);
+
+    course->sample(course->runtime_context, 0.0f, course->lap_distance * 0.25f,
+                   course->road_half_width, &x, &y, &z, &width);
+    assert(isfinite(x) && isfinite(y) && isfinite(z) && isfinite(width));
+    assert(width >= 2.2f && width <= 4.8f);
+
+    assert(course->advance(course->runtime_context, 0.25f, 0.0f));
+    assert(course->distance_to_next_finish(course->runtime_context, 0.25f, &remaining));
+    assert(fabsf(remaining - (course->lap_distance - 0.25f)) < 0.001f);
 }
+
 int main(void)
 {
-    unsigned int i,j;
-    float x[BOONTA_COURSE_COUNT],y[BOONTA_COURSE_COUNT],z[BOONTA_COURSE_COUNT];
-    for(i=0U;i<BOONTA_COURSE_COUNT;i++){
-        test_course(boonta_course_catalog[i],&x[i],&y[i],&z[i]);
-        for(j=0U;j<i;j++){
-            assert(fabsf(x[i]-x[j])+fabsf(y[i]-y[j])+fabsf(z[i]-z[j])>1.0f);
-            assert(strcmp(boonta_course_catalog[i]->id,boonta_course_catalog[j]->id)!=0);
-        }
-    }
-    assert(!boonta_course_catalog[0]->has_branches);
-    assert(!boonta_course_catalog[1]->has_branches);
-    assert(!boonta_course_catalog[2]->has_branches);
-    puts("course catalog tests passed");
+    test_single_vertical_slice_course();
+    puts("single-course vertical-slice tests passed");
     return 0;
 }
