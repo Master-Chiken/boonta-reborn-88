@@ -145,6 +145,65 @@ static inline float boonta_rival_ai_target_lateral(
     return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
 }
 
+/*
+ * Nemesis memory can make a rival commit slightly harder to its preferred
+ * inside line. The bonus is disabled near traffic so it cannot override the
+ * existing collision-avoidance decisions.
+ */
+static inline float boonta_rival_ai_nemesis_line_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.0025f;
+}
+
+static inline float boonta_rival_ai_target_lateral_with_rivalry(
+    unsigned int rival_index,
+    float rival_z,
+    float current_lateral,
+    float player_lateral,
+    const float *other_z,
+    const float *other_lateral,
+    unsigned int rival_count,
+    float signed_curvature,
+    float road_half_width,
+    unsigned int rivalry_score)
+{
+    float target = boonta_rival_ai_target_lateral(
+        rival_index, rival_z, current_lateral, player_lateral,
+        other_z, other_lateral, rival_count, signed_curvature, road_half_width);
+    float lateral_limit;
+    unsigned int i;
+
+    if (rivalry_score == 0U || !isfinite(signed_curvature) ||
+        fabsf(signed_curvature) < 0.001f ||
+        !isfinite(rival_z) || !isfinite(player_lateral) ||
+        fabsf(rival_z - 1.0f) < 5.5f) {
+        return target;
+    }
+
+    /* Do not let Nemesis line commitment defeat close-traffic avoidance. */
+    if (other_z != 0 && other_lateral != 0) {
+        for (i = 0U; i < rival_count; ++i) {
+            if (i == rival_index || !isfinite(other_z[i]) ||
+                !isfinite(other_lateral[i])) continue;
+            if (fabsf(rival_z - other_z[i]) < 3.5f &&
+                fabsf(current_lateral - other_lateral[i]) <
+                    BOONTA_RIVAL_AI_TRAFFIC_GAP) {
+                return target;
+            }
+        }
+    }
+
+    road_half_width = boonta_rival_ai_clamp(road_half_width, 2.2f, 4.8f);
+    lateral_limit = boonta_rival_ai_clamp(
+        road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    target += (signed_curvature > 0.0f ? 1.0f : -1.0f) *
+              boonta_rival_ai_nemesis_line_bonus(rivalry_score);
+    return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
+}
+
 static inline float boonta_rival_ai_after_frame(
     float current_lateral, float target_lateral, float frame_scale)
 {
