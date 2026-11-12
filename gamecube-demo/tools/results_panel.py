@@ -45,6 +45,30 @@ def results_panel_visible(
             if red >= 220 and 120 <= green <= 190 and blue <= 100:
                 orange_pixels += 1
 
+    def text_row_visible(offset: float) -> bool:
+        # The RESULTS overlay uses white, amber and orange text. The panel is
+        # opaque, so these high-contrast pixels cannot be confused with the
+        # moving course behind it. Check each content row, not only the title.
+        row_top = max(0, int(center_y + (offset - 1.0) * scale_y))
+        row_bottom = min(height, int(center_y + (offset + 8.0) * scale_y))
+        row_left = max(0, int(center_x - 112.0 * scale_x))
+        row_right = min(width, int(center_x + 112.0 * scale_x))
+        hits = 0
+        for sample_y in range(row_top, row_bottom):
+            for sample_x in range(row_left, row_right):
+                red, green, blue = pixel_at(sample_x, sample_y)
+                if ((red >= 180 and green >= 120 and blue >= 70)
+                        or (red >= 190 and green >= 190 and blue >= 190)):
+                    hits += 1
+        return hits >= max(18, round(32.0 * scale_x * scale_y))
+
+    # Three lap splits, the total/best row, overtakes, position and restart
+    # prompt must all be present. This catches a clipped lower half of RESULTS.
+    content_rows_visible = all(
+        text_row_visible(offset)
+        for offset in (-48.0, -27.0, -6.0, 22.0, 45.0, 65.0, 80.0)
+    )
+
     def dark_fraction(left: float, top: float, right: float, bottom: float) -> float:
         left_edge = max(0, int(left))
         top_edge = max(0, int(top))
@@ -80,4 +104,5 @@ def results_panel_visible(
     return (
         orange_pixels >= minimum_orange_pixels
         and min(left_panel_edge, right_panel_edge, lower_panel_band) >= 0.82
+        and content_rows_visible
     )
