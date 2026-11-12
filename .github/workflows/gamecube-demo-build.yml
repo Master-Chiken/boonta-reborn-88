@@ -340,7 +340,7 @@ jobs:
       - name: Launch the DOL and capture a non-blocking diagnostic frame
         timeout-minutes: 20
         env:
-          # Run the three-lap finish and post-finish Start-restart checks automatically for this gameplay candidate.
+          # Run the three-lap finish and post-finish Y-button reset checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
           RUN_FULL_RACE_DIAGNOSTIC: ${{ inputs.full_race_diagnostic || (github.event_name == 'pull_request' && (github.head_ref == 'feature/runtime-track-spline' || github.head_ref == 'test/dolphin-pause-state-acceptance' || github.head_ref == 'feat/game-finish-banner-label-20261017' || github.head_ref == 'feat/rocky-canyon-silhouette-20261017' || github.head_ref == 'fix/width-aware-rail-collision-20261017' || github.head_ref == 'recovery/all-branch-heads-20261102' || github.head_ref == 'feat/gc-race-session-results-20261111')) }}
           RUN_FINISH_RESTART_DIAGNOSTIC: ${{ github.event_name == 'pull_request' && github.head_ref == 'jules-13405833958059564976-aeac2b04' }}
@@ -645,14 +645,14 @@ jobs:
                   python3 gamecube-demo/tools/check_dolphin_frame.py "$RACE_CAPTURE" --expect-finish-label
                   echo "The finish banner and orange FINISH label were detected on the dedicated finish frame."
                 fi
-                echo "Running one finish/reset DTM; the capture-poll loop checks finish and the first clean HUD after Start-only restart."
-                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-restart-check
+                echo "Running one finish/Y-reset DTM; the capture-poll loop checks the three-lap finish and the first clean HUD after the Y button."
+                python3 gamecube-demo/tools/make_dolphin_dtm.py --output "$FINISH_RESTART_DTM" --frames 14007 --game-id ID-boo --steering none --scenario finish-reset-check
                 mkdir -p "$FINISH_RESTART_USER/Config"
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
                 capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER"
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
-                echo "Post-finish Start restarted the race into a clean visible HUD state."
+                echo "Post-finish Y reset the race into a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
               fi
