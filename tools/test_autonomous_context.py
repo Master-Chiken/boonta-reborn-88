@@ -108,10 +108,10 @@ with tempfile.TemporaryDirectory() as temp:
     )
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
-    assert "Accountable role: chief-of-staff" in rendered
-    assert "Reporting chain: human-owner > ceo > chief-of-staff." in rendered
-    assert "Parent objective: BOONTA-AUTONOMOUS-ENGINEERING" in rendered
-    assert "Registry is declarative; it grants no extra permissions." in rendered
+    assert "Role: chief-of-staff — Chief of Staff (deterministic)." in rendered
+    assert "Chain: human-owner > ceo > chief-of-staff." in rendered
+    assert "Objective: BOONTA-AUTONOMOUS-ENGINEERING (zero-cost)." in rendered
+    assert "Registry: declarative only; no extra permissions." in rendered
     assert "Target branch: main" in rendered
     assert "Exact owner-reviewed write paths (no others): tools/test_check_task_ledger.py" in rendered
 
