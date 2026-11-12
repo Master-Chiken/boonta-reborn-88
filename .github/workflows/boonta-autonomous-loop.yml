@@ -581,6 +581,13 @@ jobs:
           RESUME_READY: ${{ needs.provider-cooldowns.outputs.resume_ready }}
           RESUME_PR_NUMBER: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
           EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_VALUE: ${{ github.ref }}
+          GITHUB_ACTOR_VALUE: ${{ github.actor }}
+          GITHUB_REPOSITORY_OWNER_VALUE: ${{ github.repository_owner }}
+          AUTONOMOUS_JOB_RESULT: ${{ needs.autonomous-cycle.result }}
+          OPENROUTER_JOB_RESULT: ${{ needs.openrouter-fallback.result }}
+          PROVIDER_COOLDOWN_JOB_RESULT: ${{ needs.provider-cooldowns.result }}
+          GROQ_GATE_RESUME_READY: ${{ needs.provider-cooldowns.outputs.resume_ready }}
           GEMINI_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.gemini_active }}
           OPENROUTER_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.openrouter_active }}
           GROQ_COOLDOWN_ACTIVE: ${{ needs.provider-cooldowns.outputs.groq_active }}
@@ -651,6 +658,13 @@ jobs:
             echo "- Readiness: **${READINESS_RESULT:-unknown}**"
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
+            echo
+            echo "### Groq dispatch diagnostics (no secrets or provider request)"
+            echo "- Readiness/writer: ${READINESS_RESULT:-unknown} / ${WRITER_STATE:-unknown}"
+            echo "- Cooldown preflight: ${PROVIDER_COOLDOWN_JOB_RESULT:-unknown}; task ready=${TASK_READY:-unknown}; task backoff=${TASK_BLOCKED_ACTIVE:-unknown}"
+            echo "- Provider cooldowns: Gemini=${GEMINI_COOLDOWN_ACTIVE:-unknown}, OpenRouter=${OPENROUTER_COOLDOWN_ACTIVE:-unknown}, Groq=${GROQ_COOLDOWN_ACTIVE:-unknown}"
+            echo "- Upstream jobs: Gemini=${AUTONOMOUS_JOB_RESULT:-unknown}, OpenRouter=${OPENROUTER_JOB_RESULT:-unknown}; OpenRouter invocation=${OPENROUTER_INVOCATION:-unset}"
+            echo "- Resume candidate=${GROQ_GATE_RESUME_READY:-unknown}; event=${EVENT_NAME:-unknown}; ref=${GITHUB_REF_VALUE:-unknown}; actor=${GITHUB_ACTOR_VALUE:-unknown}; owner=${GITHUB_REPOSITORY_OWNER_VALUE:-unknown}"
             echo "- Queue state: **${QUEUE_STATE:-NOT_EVALUATED}** (queued=${QUEUED_COUNT:-unknown}, active=${ACTIVE_COUNT:-unknown}, blocked=${BLOCKED_COUNT:-unknown})"
             if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; owner-dispatch only."; fi
             case "${QUEUE_STATE:-NOT_EVALUATED}" in
