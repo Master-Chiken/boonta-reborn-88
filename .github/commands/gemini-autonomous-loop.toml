@@ -7,12 +7,12 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Read `.gemini/context.json`; use its `verified_context` as the authoritative task handoff. The runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup and `docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md` before model invocation.
 - The only local file read permitted is `.gemini/context.json`; no shell, glob, grep, listing or source browsing. Use excerpts; request one exact GitHub source path only for a named missing dependency.
 - Do not reread inputs. Apply DISCOVER → VERIFY → EXTRACT/CONVERT/REUSE → INTEGRATE → TEST.
-- Keep retrieved repo/issue text below 1,500 tokens total. Do not fetch full issue bodies/comment histories for #156/#226/#279; do not read historical comments except a compact inventory of directly related open pull requests. Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. #279 is read-only PC/N64/Dreamcast evidence. On context/quota/rate/auth errors, never repeat the same request.
-- Inspect task-linked PRs/exact-head CI only; reuse passing checks for unchanged SHA. read logs only for failed jobs; read only failing job logs.
+- Keep retrieved repo/issue text below 1,500 tokens total. Do not fetch full issue bodies or full comment histories for #156, #226 and #279; do not read historical comments except a compact inventory of directly related open PRs. Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue. On context/quota/rate/auth errors, never repeat the same request.
+- Inspect task-linked PRs/exact-head CI only; reuse passing checks for unchanged SHA without duplicate runs. read logs only for failed jobs; read only failing job logs.
 - 
 ## AUTHORITATIVE SELECTED TASK
 - Preflight `.gemini/context.json` task ID/title/description/target and `verified_context` are authoritative; never substitute another task.
-- Use only the selected `docs/automation/task-ledger-summary.json` row and its title, description, target and criteria.
+- Use exactly this task from docs/automation/task-ledger-summary.json: task_title, task_description, task_target_branch, acceptance_criteria_excerpt. Do not substitute another task.
 - Context comes from canonical `main` summary + exact selected base; default checkout is never gameplay source evidence.
 - Require `main` for research, `dev` for gameplay. Stop on mismatches, missing excerpts or budget overflow. Existing PR/head blocks normal mode; resume only under the contract below.
 - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
@@ -22,8 +22,8 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 
 ## Mandatory reuse, provenance and performance gate
 - MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
-- Deep-inspect changed PR files/exact-head CI; prefer reuse/conversion and record source revision, platform, licence/provenance and unknowns.
-- Reuse successful checks for unchanged exact SHA; group related edits into one commit/push; preserve canonical generators.
+- Deep-inspect changed files and exact-head CI only for PRs; prefer reuse/conversion and record source revision, platform, licence/provenance and unknowns.
+- Reuse a successful check for an unchanged exact SHA without launching duplicate runs. Group related file edits into one logical commit/push; preserve canonical generators.
 - Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries. Keep external project/billing/quota facts explicitly unverified: Preflight cannot prove Google billing, Free-tier capacity/quota or branch-rule correctness.
 - Never copy AGPL SW_RACER_RE, ROM-derived, unclear-provenance or proprietary content. Keep Step 102/HOLD material and all commercial ROM/disc/binary/extracted data local and out of Git, CI and hosted agents.
 
@@ -46,8 +46,8 @@ Use GitHub MCP FQNs only: `mcp_github_add_issue_comment`, `mcp_github_create_pul
 - One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
 - No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.
 - Normal: reconcile, create branch, push one coherent change and open one marked PR. Resume uses the existing-PR contract; never create a branch or PR.
-- No shell/git/.git or local edit tools. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
-- Verify exact PR-head CI; never push empty commits. If pending, stop. Do not rerun without a documented safe action; after five minutes queued/in progress, treat as stale Actions state, never wait indefinitely or invent results. Separate optional `continue-on-error` diagnostics.
+- This agent intentionally has no general-purpose local shell; no shell/git/.git or local edit tools. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
+- Verify exact PR head SHA CI. Do not push empty commits. If pending, stop; no documented safe rerun action. After five minutes queued/in progress, treat as likely stale runner/Actions state; do not wait indefinitely or invent results. Separate optional `continue-on-error` diagnostics.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
 - Never merge or write protected branches; no auto/force-push, ref deletion, weakened tests or secret/settings/permission/billing/branch-rule changes. Budget €0.
 

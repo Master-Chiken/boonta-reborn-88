@@ -773,10 +773,10 @@ if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
 for required_phrase in (
     "without asking for another",
     "one bounded task",
-    "Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue",
-    "Never merge a PR",
-    "strict project budget is €0",
-    "Never push directly to either protected branch",
+    "#279 is read-only PC/N64/Dreamcast evidence",
+    "Never merge or write protected branches",
+    "Budget €0",
+    "Never merge or write protected branches",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
@@ -784,17 +784,17 @@ for required_phrase in (
 # Enforce a reuse-first engineering method and efficient evidence-based validation.
 for required_phrase in (
     "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST",
-    "Extend the canonical implementation",
-    "Never hand-edit generated headers or artifacts",
-    "Optimize only a measured hot path",
-    "Reuse passing checks for an unchanged exact SHA",
-    "Group related file edits into one logical commit",
+    "Extend canonical code",
+    "never hand-edit generated headers/artifacts",
+    "optimize only measured hot paths",
+    "Reuse a successful check for an unchanged exact SHA",
+    "Group related file edits into one logical commit/push",
     "do not read historical comments except",
     "compact inventory of directly related open PRs",
     "Deep-inspect changed files and exact-head CI only for PRs",
     "read logs only for failed jobs",
     "Reuse a successful check for an unchanged exact SHA",
-    "without launching duplicate runs",
+    "without duplicate runs",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
@@ -899,13 +899,13 @@ if "cancel-in-progress: true" not in gamecube_concurrency:
 
 # The autonomous agent must use exact-head CI rather than invent local test results.
 for required_phrase in (
-    "intentionally has no general-purpose local shell",
+    "This agent intentionally has no general-purpose local shell",
     "exact PR head SHA",
     "Do not push empty commits",
     "read logs only for failed jobs",
     "no documented safe rerun action",
-    "five minutes beyond that timeout",
-    "likely stale runner/Actions state",
+    "after five minutes queued/in progress",
+    "treat as likely stale runner/Actions state",
     "do not wait indefinitely",
     "optional `continue-on-error` diagnostics",
 ):
