@@ -482,7 +482,7 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    '"GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "No PR/branch enumeration or media/binary retrieval.",
     "Newly retrieved text: at most 700 tokens.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
@@ -490,29 +490,20 @@ for required in (
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
 
-tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
-if not tools_match:
-    errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
-else:
-    github_tools = tools_match.group(1).split(",")
-    forbidden_github_tools = [
-        tool for tool in github_tools
-        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request", "issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"))
-    ]
-    if forbidden_github_tools:
-        errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    expected_github_tools = [
-        "get_file_contents",
-        "create_branch",
-        "push_files",
-        "create_pull_request",
-    ]
-    if github_tools != expected_github_tools:
-        errors.append(
-            "OpenRouter GitHub MCP allow-list must match the minimal four-tool direct-delivery contract exactly"
-        )
-    if any(tool not in expected_github_tools for tool in github_tools):
-        errors.append("OpenRouter GitHub MCP allow-list exposes tools outside the reviewed minimal contract")
+openrouter_normal_tools = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+openrouter_resume_tools = {"get_file_contents", "push_files"}
+openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
+if openrouter_modes != {frozenset(openrouter_normal_tools), frozenset(openrouter_resume_tools)}:
+    errors.append("OpenRouter must expose four normal-delivery tools and only targeted read plus push in resume mode")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in openrouter_fallback:
+    errors.append("OpenRouter MCP container must inherit the explicitly selected mode-specific tool allow-list")
+forbidden_github_tools = {
+    "merge_pull_request", "delete_branch", "delete_file", "create_or_update_file",
+    "update_pull_request", "issue_read", "list_issues", "list_pull_requests",
+    "list_branches", "list_commits", "repository_settings", "repository_ruleset",
+}
+if forbidden_github_tools.intersection(openrouter_normal_tools.union(openrouter_resume_tools)):
+    errors.append("OpenRouter GitHub MCP mode lists must not expose merge, deletion, settings or unrelated enumeration tools")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
     errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
