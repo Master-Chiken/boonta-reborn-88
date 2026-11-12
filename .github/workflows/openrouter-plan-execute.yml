@@ -756,6 +756,50 @@ jobs:
           - GET /api/v1/key authentication, including is_free_tier=true: ${OPENROUTER_AUTH_OUTCOME:-unknown}
           - Scoped GitHub App token creation: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}
           These facts apply only to this invocation and override older ledger summaries, issue comments, documentation and prior-run logs. If preflight is true and auth outcome is success, do not report a missing/invalid OpenRouter key, HTTP 401 or failed Free-tier authentication. Never ask the owner to replace the key. Do not base such a request on older notes. Execute only the task selected by the global preflight and either produce a valid cycle-fresh PR or identify a different dependency supported by current evidence."
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            if [[ ! "${RESUME_PR_NUMBER:-}" =~ ^[1-9][0-9]*$ || -z "${RESUME_PR_URL:-}" || -z "${RESUME_BRANCH:-}" || ! "${RESUME_HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Verified resume metadata is incomplete; no OpenRouter request was sent."
+              exit 2
+            fi
+            if ! jq -e 'type == "array" and length >= 1 and length <= 4 and all(.[]; type == "string" and length > 0 and length <= 120 and test("^[A-Za-z0-9._/-]+$") and (split("/") | all(.[]; . != "" and . != "." and . != "..")))' <<<"${RESUME_FILE_PATHS:-}" >/dev/null; then
+              echo "::error::Resume path allow-list is missing or invalid; no OpenRouter request was sent."
+              exit 2
+            fi
+            RESUME_ALLOWED_PATHS="$(jq -r '.[] | "- " + .' <<<"$RESUME_FILE_PATHS")"
+            PROMPT="$(cat <<'RESUME_PROMPT'
+You are the €0-only OpenRouter Free agent. Resume exactly one existing task PR.
+
+AUTHORITY
+- The workflow verified the task, owner, same repository, open/non-draft state, unique task/target markers, base, branch, PR URL and prior exact HEAD after acquiring the shared writer slot.
+- Do not search PR history, inspect unrelated PRs or treat an open PR as completed.
+
+SAFETY
+- €0 only. No credits, billing, paid fallback, key/secret/provider/settings changes.
+- Never write main/dev, create branches or PRs, merge, auto-merge, force-push or delete refs.
+- Preserve clean-room provenance; never upload ROMs, commercial binaries or extracted assets.
+
+TOOLS / WRITE
+- Only github_get_file_contents and github_push_files are exposed. Read exactly one file from the verified changed-file allow-list below using the existing branch as the ref.
+- Call github_push_files exactly once with one coherent patch, updating only that same file on the same existing branch.
+- Do not create a branch or PR. Do not read another path, write the canonical ledger or alter repository settings.
+- If one file is insufficient, stop and report BLOCKED rather than guessing.
+
+EVIDENCE
+- PROGRESS cites the existing PR URL and exact new head SHA returned by github_push_files. The shared validator re-fetches the PR and requires fresh content and exact-head CI.
+- Otherwise report BLOCKED with one verified blocker and one concrete next action.
+
+REPORT
+- Output only machine-readable lines. Copy the reserved task ID and target branch appended below. No prose or fences.
+RESUME_PROMPT
+            )"
+            PROMPT="${PROMPT}"$'\n\n'
+            PROMPT+="${AUTONOMOUS_CONTEXT}"
+            PROMPT+=$'\nExisting PR: '"${RESUME_PR_URL}"
+            PROMPT+=$'\nExisting branch: '"${RESUME_BRANCH}"
+            PROMPT+=$'\nPrior exact HEAD: '"${RESUME_HEAD_SHA}"
+            PROMPT+=$'\nVerified changed files (read at most one):\n'"${RESUME_ALLOWED_PATHS}"
+            PROMPT+=$'\nSame-run preflight and OpenRouter authentication succeeded; do not claim missing credentials or failed Free-tier authentication.'
+          fi
           REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
           REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
           PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
