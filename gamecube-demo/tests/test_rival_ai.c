@@ -103,6 +103,20 @@ static void curvature_samples_are_measured_and_bounded(void)
         0.0f, 0.0f, 0.0f, 0.0f, 2.0f, 0.0f), 0.0f));
 }
 
+static void rival_route_lookahead_uses_player_relative_distance(void)
+{
+    /* At the grid, rival zero is 18 m behind the player, not 22 m ahead. */
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, 22.0f, 4.0f), -14.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(100.0f, 82.0f, 4.0f), -14.0f));
+
+    /* A rival 3 m ahead samples 7 m ahead of the player cursor. */
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(100.0f, 103.0f, 4.0f), 7.0f));
+
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(NAN, 22.0f, 4.0f), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, INFINITY, 4.0f), 0.0f));
+    assert(nearf_ai(boonta_rival_route_lookahead_offset(0.0f, 22.0f, NAN), 0.0f));
+}
+
 static void curvature_reduces_target_speed(void)
 {
     const float slow_rival = boonta_rival_ai_target_speed(0U, 0.0f);
@@ -153,6 +167,7 @@ int main(void)
     signed_curvature_selects_inside_line();
     signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
+    rival_route_lookahead_uses_player_relative_distance();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
     puts("rival AI tests: PASS");
