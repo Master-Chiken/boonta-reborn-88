@@ -25,6 +25,9 @@ from make_dolphin_dtm import (
     FINISH_RESET_HOLD_FRAMES,
     FINISH_RESTART_PRESS_FRAME,
     FINISH_RESTART_HOLD_FRAMES,
+    FINISH_SECOND_START_PRESS_FRAME,
+    FINISH_SECOND_START_HOLD_FRAMES,
+    FINISH_TWO_RACE_MIN_FRAMES,
     PAUSE_BOOST_END_FRAME,
     PAUSE_HOLD_FRAMES,
     PAUSE_PRESS_FRAME,
@@ -508,6 +511,51 @@ class DolphinDtmTests(unittest.TestCase):
                 self.assertTrue(state[1] & IS_CONNECTED)
                 self.assertEqual(state[4:], bytes((NEUTRAL_AXIS,) * 4))
 
+    def test_finish_two_race_profile_resets_releases_restarts_and_throttles(self) -> None:
+        frames = FINISH_TWO_RACE_MIN_FRAMES
+        blob = build_dtm(frames, steering="none", scenario="finish-two-race-check")
+        self.assertEqual(len(blob), HEADER_SIZE + frames * 8)
+        self.assertEqual(struct.unpack_from("<Q", blob, 0x0D)[0], frames)
+
+        self.assertEqual(record(blob, 0)[0], A | Y)
+        self.assertEqual(record(blob, SESSION_START_PRESS_FRAME)[0], A | X | START)
+        self.assertEqual(record(blob, FINISH_RESTART_PRESS_FRAME - 1)[0], A)
+
+        for frame in range(
+            FINISH_RESTART_PRESS_FRAME,
+            FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES,
+        ):
+            with self.subTest(first_reset_frame=frame):
+                self.assertEqual(record(blob, frame)[0], START)
+
+        first_release = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES
+        for frame in range(first_release, FINISH_SECOND_START_PRESS_FRAME):
+            with self.subTest(released_frame=frame):
+                state = record(blob, frame)
+                self.assertEqual(state[0], 0)
+                self.assertTrue(state[1] & IS_CONNECTED)
+
+        for frame in range(
+            FINISH_SECOND_START_PRESS_FRAME,
+            FINISH_SECOND_START_PRESS_FRAME + FINISH_SECOND_START_HOLD_FRAMES,
+        ):
+            with self.subTest(second_start_frame=frame):
+                self.assertEqual(record(blob, frame)[0], A | START)
+
+        self.assertEqual(
+            record(blob, FINISH_SECOND_START_PRESS_FRAME + FINISH_SECOND_START_HOLD_FRAMES)[0],
+            A,
+        )
+        self.assertEqual(record(blob, frames - 1)[0], A)
+
+    def test_finish_two_race_profile_rejects_too_short_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "finish-two-race-check needs enough frames"):
+            build_dtm(
+                FINISH_TWO_RACE_MIN_FRAMES - 1,
+                steering="none",
+                scenario="finish-two-race-check",
+            )
+
     def test_cli_accepts_finish_restart_scenario(self) -> None:
         frames = FINISH_RESTART_PRESS_FRAME + FINISH_RESTART_HOLD_FRAMES + 1
         script = Path(__file__).with_name("make_dolphin_dtm.py")
@@ -527,6 +575,26 @@ class DolphinDtmTests(unittest.TestCase):
                 text=True,
                 timeout=10,
                 check=False,
+            )
+            self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+            self.assertTrue(output.is_file(), msg=completed.stdout)
+            self.assertEqual(output.stat().st_size, HEADER_SIZE + frames * 8)
+
+    def test_cli_accepts_finish_two_race_scenario(self) -> None:
+        frames = FINISH_TWO_RACE_MIN_FRAMES
+        script = Path(__file__).with_name("make_dolphin_dtm.py")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "finish-two-race.dtm"
+            completed = subprocess.run(
+                [
+                    sys.executable, str(script),
+                    "--output", str(output),
+                    "--frames", str(frames),
+                    "--game-id", DEFAULT_GAME_ID,
+                    "--steering", "none",
+                    "--scenario", "finish-two-race-check",
+                ],
+                capture_output=True, text=True, timeout=10, check=False,
             )
             self.assertEqual(completed.returncode, 0, msg=completed.stderr)
             self.assertTrue(output.is_file(), msg=completed.stdout)
