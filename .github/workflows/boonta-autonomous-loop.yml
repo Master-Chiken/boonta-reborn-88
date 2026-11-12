@@ -339,11 +339,62 @@ jobs:
             } else if (resumeCandidateReady && resumeUnavailableReason) {
               taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' cannot be resumed safely: ' + resumeUnavailableReason;
             }
+            let selectedWritePaths = [];
+            let waitingForOwnerApprovedPaths = false;
+            if (selectedTask) {
+              const { data: writePolicyFile } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: 'docs/automation/patch-path-allowlist.json',
+                ref: 'main',
+              });
+              if (!writePolicyFile || Array.isArray(writePolicyFile) || writePolicyFile.encoding !== 'base64') {
+                throw new Error('Owner-reviewed exact write-path policy is missing or not a base64 file.');
+              }
+              const writePolicy = JSON.parse(Buffer.from(writePolicyFile.content, 'base64').toString('utf8'));
+              if (
+                writePolicy.schema_version !== 1 ||
+                writePolicy.policy?.owner_review_required !== true ||
+                writePolicy.policy?.path_mode !== 'exact' ||
+                writePolicy.policy?.max_paths_per_task !== 20 ||
+                !Array.isArray(writePolicy.tasks)
+              ) {
+                throw new Error('Owner-reviewed exact write-path policy schema is invalid.');
+              }
+              const writeEntries = writePolicy.tasks.filter((entry) => entry?.task_id === selectedTask.task_id);
+              const entry = writeEntries.length === 1 ? writeEntries[0] : null;
+              const safeWritePath = (value) => {
+                if (typeof value !== 'string' || value.length < 1 || value.length > 120 ||
+                    !/^[A-Za-z0-9._/-]+$/.test(value) || value.startsWith('/') ||
+                    value.startsWith('.github/') || value.startsWith('.git/') ||
+                    value.startsWith('docs/automation/') ||
+                    value === 'tools/check_task_ledger.py' ||
+                    value.split('/').some((part) => !part || part === '.' || part === '..')) return false;
+                return /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(value);
+              };
+              if (
+                !entry ||
+                typeof entry.purpose !== 'string' || !entry.purpose.trim() || entry.purpose.length > 240 ||
+                typeof entry.approval_ref !== 'string' ||
+                !/^https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/[1-9][0-9]*$/.test(entry.approval_ref) ||
+                !Array.isArray(entry.allowed_paths) || entry.allowed_paths.length < 1 || entry.allowed_paths.length > 20 ||
+                entry.allowed_paths.some((path) => !safeWritePath(path) || !selectedTask.read_paths.includes(path)) ||
+                new Set(entry.allowed_paths).size !== entry.allowed_paths.length
+              ) {
+                waitingForOwnerApprovedPaths = true;
+                taskReason = 'selected task has no unique owner-reviewed exact write-path entry within its read allow-list; owner review is required before inference';
+                selectedTask = null;
+              } else {
+                selectedWritePaths = entry.allowed_paths;
+              }
+            }
             const taskReady = Boolean(selectedTask);
             const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');
             let queueState = 'EMPTY_QUEUE';
             if (taskReady) {
               queueState = 'READY';
+            } else if (waitingForOwnerApprovedPaths) {
+              queueState = 'WAITING_FOR_OWNER_APPROVED_PATHS';
             } else if (activeTasks.length > 0) {
               queueState = 'ACTIVE_TASK_REQUIRES_RECONCILIATION';
             } else if (
@@ -367,6 +418,7 @@ jobs:
               'Acceptance criteria (' + selectedTask.acceptance_criteria_total + '; first 5):',
               ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
               'Next: ' + selectedTask.next_action_excerpt,
+              'Exact owner-reviewed write paths (no others): ' + selectedWritePaths.join(', '),
               ...(selectedTask.task_id === 'AUTOMATION-LEDGER-ACTIVATION' ? [
                 'Use only the read-only source paths listed above; never read the canonical ledger or discover files.',
                 'UTC branch: create a fresh automation-ledger-activation-' + todayUtc.replace(/-/g, '') + ' branch from current main; never reuse any earlier attempt branch.',
