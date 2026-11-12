@@ -426,15 +426,22 @@ with tempfile.TemporaryDirectory() as temp:
     assert "line 3" in context and "line 11" in context
 
 
-# Production smoke test: build the actual activation-task context from the
-# canonical compact summary and the exact current repository source files.
+# Production smoke test: the real activation task must remain fail-closed
+# until its single owner-reviewed policy entry is merged separately in PR #409.
 with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
     production_summary = json.load(handle)
 activation = next(
     task for task in production_summary["tasks"]
     if task["task_id"] == "AUTOMATION-LEDGER-ACTIVATION"
 )
-production_handoff = "\n".join([
+policy_path = ROOT / "docs/automation/patch-path-allowlist.json"
+with policy_path.open(encoding="utf-8") as handle:
+    production_policy = json.load(handle)
+activation_entries = [
+    entry for entry in production_policy.get("tasks", [])
+    if isinstance(entry, dict) and entry.get("task_id") == activation["task_id"]
+]
+production_handoff = "\\n".join([
     "Task ID: " + activation["task_id"],
     "Title: " + activation["title"],
     "Target branch: " + activation["target_branch"],
@@ -444,22 +451,44 @@ production_handoff = "\n".join([
     "Next: " + activation["next_action_excerpt"],
     "Read-only source paths (select at most one): " + ", ".join(activation["read_paths"]),
 ])
-production_context = MODULE.build_context(
-    ROOT,
-    activation["task_id"],
-    activation["title"],
-    activation["target_branch"],
-    production_handoff,
-    max_chars=3000,
-    max_task_context=1100,
-    max_criteria=4,
-    max_next_action=100,
-    source_root=ROOT,
-    max_source_chars=1800,
-)
-assert len(production_context) <= 3000
-assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
-assert all(f"[{path}:" in production_context for path in activation["read_paths"])
-assert "BOONTA_TASK_ID" in production_context or "One active task maximum" in production_context
+if len(activation_entries) == 1:
+    production_context = MODULE.build_context(
+        ROOT,
+        activation["task_id"],
+        activation["title"],
+        activation["target_branch"],
+        production_handoff,
+        max_chars=3000,
+        max_task_context=1100,
+        max_criteria=4,
+        max_next_action=100,
+        source_root=ROOT,
+        max_source_chars=1800,
+    )
+    assert len(production_context) <= 3000
+    assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
+    assert all(f"[{path}:" in production_context for path in activation["read_paths"])
+    assert "Exact owner-reviewed write paths (no others):" in production_context
+elif len(activation_entries) == 0:
+    try:
+        MODULE.build_context(
+            ROOT,
+            activation["task_id"],
+            activation["title"],
+            activation["target_branch"],
+            production_handoff,
+            max_chars=3000,
+            max_task_context=1100,
+            max_criteria=4,
+            max_next_action=100,
+            source_root=ROOT,
+            max_source_chars=1800,
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "no unique owner-reviewed exact-path entry" in str(exc)
+    else:
+        raise AssertionError("Activation must fail closed until PR #409 supplies its exact owner-reviewed paths")
+else:
+    raise AssertionError("Activation policy contains duplicate task entries; exactly one is allowed")
 
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
