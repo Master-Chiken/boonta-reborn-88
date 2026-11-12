@@ -8,27 +8,6 @@ on:
         required: true
         type: choice
         options:
-          - docs/branch-audit-20261020
-          - feat/dpad-pitch-control-7615408465390853764-3543088446284898244
-          - feat/dpad-pitch-control-7615408465390853764
-          - feat/dpad-pitch-input-support-17230867255224679905
-          - feat/native-wii-classic-input-267
-          - feat/start-button-finished-race-reset-4403260542384541549
-          - fix/steering-stick-deadzone-27065704226814874
-          - fix/steering-stick-deadzone-20261019-14221623089412890411
-          - fix/steering-stick-deadzone-clean-20261020-1968330082647905868
-          - fix/steering-stick-deadzone-clean-20261020
-          - jules/re-001-public-source-crosscheck-5621653419986752281
-          - re-001-ares-gdb-smoke-20261021
-          - safety/openrouter-exact-head-sha
-          - test/ares-gdb-smoke-20261021
-          - agent/boonta-chatgpt/activation-ledger-evidence-20261107
-          - feat/deterministic-rival-ai-20261106
-          - feat/rival-curvature-pace-20261106
-          - feat/rival-track-line-20261106
-          - docs/reverse-engineering-first-20261106
-          - agent/boonta-auto/gemini-daily-cooldown-20261104
-          - agent/boonta-auto/openrouter-daily-cooldown-20261104
           - feat/career-stable-standings-order-20261112
           - feat/championship-standings-core-20261112
           - feat/championship-standings-tiebreaks-20261112
@@ -85,13 +64,11 @@ jobs:
       INPUT_EXPECTED_SHA: ${{ inputs.expected_sha || '' }}
       INPUT_CONFIRM_BRANCH: ${{ inputs.confirm_branch || '' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Resolve one explicit owner retirement command
         id: selection
         shell: bash
         run: |
@@ -117,27 +94,27 @@ jobs:
           }
 
           case "$BRANCH_NAME" in
-            "docs/branch-audit-20261020") PINNED_SHA="d78f4113a2ba6a9b0eabbc83ddc81cd0c9a9fdf3" ;;
-            "feat/dpad-pitch-control-7615408465390853764-3543088446284898244") PINNED_SHA="888bb824f1ee6201efa965756712f0c84c6c7c43" ;;
-            "feat/dpad-pitch-control-7615408465390853764") PINNED_SHA="c8c69c562dfeb84cfdc8218bd5364b88706a1e4f" ;;
-            "feat/dpad-pitch-input-support-17230867255224679905") PINNED_SHA="df29ed77b12dabf4bfc84fa066389b5f3c6baeb8" ;;
-            "feat/native-wii-classic-input-267") PINNED_SHA="18db18c60ce033c1f589ceaaf0a06790024bd5a5" ;;
-            "feat/start-button-finished-race-reset-4403260542384541549") PINNED_SHA="2e00824f9b24cb86c47fc50220eb532c9023a2df" ;;
-            "fix/steering-stick-deadzone-27065704226814874") PINNED_SHA="4c3014b054e427fa0edbb53a6765bd6147659955" ;;
-            "fix/steering-stick-deadzone-20261019-14221623089412890411") PINNED_SHA="0fe5dba576bd823208cd3e9aff9e282b30025c05" ;;
-            "fix/steering-stick-deadzone-clean-20261020-1968330082647905868") PINNED_SHA="a6d0ee1cc0b383849c942de4d38f10bbc185a8cd" ;;
-            "fix/steering-stick-deadzone-clean-20261020") PINNED_SHA="6b31321294e8238b836e7d1807c0ef006835f377" ;;
-            "jules/re-001-public-source-crosscheck-5621653419986752281") PINNED_SHA="de33cca64ce8eeefc3c34260e3d413832b3fd666" ;;
-            "re-001-ares-gdb-smoke-20261021") PINNED_SHA="3df2aedeccaef904c48637710eedc88699db7acb" ;;
-            "safety/openrouter-exact-head-sha") PINNED_SHA="c52c9b2594b711a76a8f7ccf5e25acce7982c381" ;;
-            "test/ares-gdb-smoke-20261021") PINNED_SHA="fa8cee047ae8e74c30c87cd94977c434bb1c7398" ;;
-            "agent/boonta-chatgpt/activation-ledger-evidence-20261107") PINNED_SHA="05b4fac74701092c7b9c9dcbd161054eea6754b3" ;;
-            "feat/deterministic-rival-ai-20261106") PINNED_SHA="216e4a8bdef8941dadc7a604a24021ad54f09db8" ;;
-            "feat/rival-curvature-pace-20261106") PINNED_SHA="b3d215df243a11d3e0022ecf562ab2ba1de96da9" ;;
-            "feat/rival-track-line-20261106") PINNED_SHA="1a5e5ed69c9b7f1453322f4deb7de8adcb167642" ;;
-            "docs/reverse-engineering-first-20261106") PINNED_SHA="38bd467e3da5d81ecb30de20d71df67850a53e51" ;;
-            "agent/boonta-auto/gemini-daily-cooldown-20261104") PINNED_SHA="dad92c6b84ad01aecfcf9358422b75d8ea445b5a" ;;
-            "agent/boonta-auto/openrouter-daily-cooldown-20261104") PINNED_SHA="287222f23f8e4c7207f3d2b6029e67bf6bff95c7" ;;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             "feat/career-stable-standings-order-20261112") PINNED_SHA="548c69bec25dc82011344b2c1f0a9c99edcdc563" ;;
             "feat/championship-standings-core-20261112") PINNED_SHA="360de5a647418cbac3555c5670d88790851bbc45" ;;
             "feat/championship-standings-tiebreaks-20261112") PINNED_SHA="7604e09d98f88f1ca4fdaf79fb0cdb19bf982afb" ;;
@@ -172,7 +149,6 @@ jobs:
             echo "expected_sha=$EXPECTED_SHA"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Verify exact head, protection, open PRs and archive reachability
         shell: bash
         env:
           BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
@@ -220,7 +196,6 @@ jobs:
             exit 1
           fi
 
-      - name: Recheck exact ref and atomically retire one branch
         shell: bash
         env:
           BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
