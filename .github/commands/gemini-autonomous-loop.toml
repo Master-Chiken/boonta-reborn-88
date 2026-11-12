@@ -24,8 +24,9 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Follow MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend the canonical implementation. Never hand-edit generated headers or artifacts. Optimize only a measured hot path.
 - Deep-inspect changed files and exact-head CI only for PRs. Prefer reuse/conversion over recreation; record source revision, platform, licence/provenance and unknowns.
 - Reuse a successful check for an unchanged exact SHA. Group related file edits into one logical commit and one logical push; preserve canonical generators.
-- Do not read all historical comments; use a compact inventory of directly related open PRs.
+- Do not read all historical comments; do not read historical comments except for a compact inventory of directly related open PRs.
 - Read logs only for failed jobs. Read only the failing job logs.
+- CI: read logs only for failed jobs; read only the failing job logs.
 - Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries. Keep external project/billing/quota facts explicitly unverified: Preflight cannot prove Google billing, Free-tier capacity/quota or branch-rule correctness.
 - Never copy AGPL SW_RACER_RE, ROM-derived, unclear-provenance or proprietary content. Keep Step 102/HOLD material and all commercial ROM/disc/binary/extracted data local and out of Git, CI and hosted agents.
 
