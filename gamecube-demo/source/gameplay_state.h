@@ -914,4 +914,64 @@ static inline unsigned int boonta_championship_build_stable_order(
     return count;
 }
 
+
+#define BOONTA_CHAMPIONSHIP_RACER_COUNT (BOONTA_RIVAL_COUNT + 1U)
+
+/*
+ * Fixed-roster event ledger: index 0 is the player and indices 1..N are
+ * rivals. A monotonically increasing event_id makes result commits
+ * idempotent within an event and rejects stale results from earlier events.
+ * Persistence and event-id ownership remain the caller's responsibility.
+ */
+typedef struct {
+    BoontaChampionshipStanding standings[BOONTA_CHAMPIONSHIP_RACER_COUNT];
+    unsigned int last_event_id;
+    unsigned int recorded_mask;
+} BoontaChampionshipState;
+
+static inline void boonta_championship_state_reset(BoontaChampionshipState *state)
+{
+    unsigned int i;
+    if (state == 0) return;
+    for (i = 0U; i < BOONTA_CHAMPIONSHIP_RACER_COUNT; ++i) {
+        state->standings[i].points = 0U;
+        state->standings[i].races_completed = 0U;
+        state->standings[i].wins = 0U;
+        state->standings[i].podiums = 0U;
+        state->standings[i].best_finish = 0U;
+    }
+    state->last_event_id = 0U;
+    state->recorded_mask = 0U;
+}
+
+/*
+ * Record one classified finish. Returns 1 only when a new result is committed.
+ * Event IDs must be nonzero and increase between championship events.
+ * Position zero (DNF/unclassified) and positions outside the four-racer
+ * roster are rejected without consuming that racer's one result slot.
+ */
+static inline int boonta_championship_record_event_result(
+    BoontaChampionshipState *state,
+    unsigned int event_id,
+    unsigned int racer_index,
+    unsigned int finish_position)
+{
+    unsigned int racer_bit;
+    if (state == 0 || event_id == 0U ||
+        racer_index >= BOONTA_CHAMPIONSHIP_RACER_COUNT ||
+        finish_position == 0U ||
+        finish_position > BOONTA_CHAMPIONSHIP_RACER_COUNT) return 0;
+    if (event_id < state->last_event_id) return 0;
+    if (event_id > state->last_event_id) {
+        state->last_event_id = event_id;
+        state->recorded_mask = 0U;
+    }
+    racer_bit = 1U << racer_index;
+    if ((state->recorded_mask & racer_bit) != 0U) return 0;
+    boonta_championship_record_result(&state->standings[racer_index],
+                                      finish_position);
+    state->recorded_mask |= racer_bit;
+    return 1;
+}
+
 #endif
