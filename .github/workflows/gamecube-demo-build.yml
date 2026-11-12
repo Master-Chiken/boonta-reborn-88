@@ -275,7 +275,7 @@ jobs:
     continue-on-error: ${{ github.event_name != 'pull_request' || github.head_ref != 'feat/gc-race-session-results-20261111' }}
     needs: [build-gamecube-demo, host-pause-state-tests]
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 32
     permissions:
       contents: read
       actions: read
@@ -338,7 +338,7 @@ jobs:
         run: python3 -m unittest discover -s gamecube-demo/tools -p 'test_dolphin_dtm.py' -v
 
       - name: Launch the DOL and capture a non-blocking diagnostic frame
-        timeout-minutes: 20
+        timeout-minutes: 27
         env:
           # Run the three-lap finish and post-finish Y-button reset checks automatically for this gameplay candidate.
           # All other PRs/pushes retain the existing opt-in behavior to conserve CI minutes.
@@ -422,7 +422,7 @@ jobs:
           # Finish-label branches perform a separate 12,000-frame label capture
           # before the finish/reset movie, so they need a longer overall window.
           if [[ "${CHECK_FINISH_LABEL:-false}" == "true" ]]; then capture_timeout=1450; fi
-          if [[ "${RUN_FINISH_RESTART_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1100; fi
+          if [[ "${RUN_FINISH_RESTART_DIAGNOSTIC:-false}" == "true" ]]; then capture_timeout=1450; fi
           set +e
           timeout --signal=TERM --kill-after=3s "${capture_timeout}s" xvfb-run -a -s "-screen 0 1280x720x24" \
             env QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 \
@@ -559,7 +559,7 @@ jobs:
                 # Poll through both three-lap sessions. The DTM holds Start for
                 # the first reset, releases it visibly, then sends a second Start
                 # and sustained throttle for race two.
-                for attempt in $(seq 1 9500); do
+                for attempt in $(seq 1 14000); do
                   import -window "$window" "$capture"
                   test -s "$capture"
                   if [[ "$attempt" -eq 1 || $((attempt % 25)) -eq 0 ]]; then
