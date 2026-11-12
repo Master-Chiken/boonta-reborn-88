@@ -54,8 +54,11 @@ on:
       resume_task_description:
         type: string
         required: false
+      # The caller passes an empty string when no resume is selected.
+      # Keep this optional transport field textual; the post-lock guard parses
+      # and validates a positive integer only when resume_mode is true.
       resume_pr_number:
-        type: number
+        type: string
         required: false
       resume_pr_url:
         type: string
