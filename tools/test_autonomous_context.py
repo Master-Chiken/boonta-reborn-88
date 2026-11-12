@@ -55,6 +55,7 @@ def fixture(root: Path) -> str:
         "policy": {
             "max_active_missions": 1,
             "max_provider_invocations_per_run": 1,
+            "repository_writers": ["github_actions"],
             "model_agents_receive_write_credentials": False,
             "paid_fallback": False,
             "auto_merge": False,
@@ -141,6 +142,15 @@ with tempfile.TemporaryDirectory() as temp:
     else:
         raise AssertionError("A weakened provider policy must fail closed")
     role_registry["policy"]["paid_fallback"] = False
+    role_registry["provider_order"] = ["groq_free", "gemini", "openrouter_free"]
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "provider-order" in str(exc)
+    else:
+        raise AssertionError("Provider order drift must fail closed")
+    role_registry["provider_order"] = ["gemini", "openrouter_free", "groq_free"]
     role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
     assert "Target branch: main" in rendered
 
