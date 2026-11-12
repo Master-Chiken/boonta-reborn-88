@@ -613,7 +613,8 @@ for label, workflow in (("Gemini", gemini),):
     if '"GITHUB_TOOLS": "${GITHUB_TOOLS}"' not in workflow or '"-e",\n                    "GITHUB_TOOLS"' not in workflow:
         errors.append("Gemini container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)),):    forbidden = {
+for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)),):
+    forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
         "update_pull_request", "add_issue_comment", "pull_request_read",
