@@ -157,29 +157,39 @@ class DolphinDtmTests(unittest.TestCase):
 
             with self.subTest(viewport_top=viewport_top):
                 self.assertTrue(results_panel_visible(800, height, viewport_top, pixel_at))
-                restart_row_y = round(center_y + 80.0 * scale_y)
-                missing_restart_row = content_pixels - {
-                    (x, restart_row_y + dy)
-                    for x in range(320, 365)
-                    for dy in range(0, max(1, round(7 * scale_y)))
-                }
+                # Each required row must independently be present. This prevents
+                # a clipped middle or lower section from passing merely because
+                # the title, panel border and one surviving text row remain.
+                for missing_offset in (-48, -27, -6, 22, 45, 65, 80):
+                    missing_row_y = round(center_y + missing_offset * scale_y)
+                    remaining_content = content_pixels - {
+                        (x, missing_row_y + dy)
+                        for x in range(320, 365)
+                        for dy in range(0, max(1, round(7 * scale_y)))
+                    }
 
-                def without_restart_prompt(x: int, y: int) -> tuple[int, int, int]:
-                    if (x, y) in title_pixels:
-                        return (255, 157, 61)
-                    if (x, y) in missing_restart_row:
-                        return (238, 246, 255)
-                    if (
-                        268 <= x <= 532
-                        and center_y - 92 <= y <= center_y + 92
+                    def without_required_row(x: int, y: int) -> tuple[int, int, int]:
+                        if (x, y) in title_pixels:
+                            return (255, 157, 61)
+                        if (x, y) in remaining_content:
+                            return (238, 246, 255)
+                        if (
+                            268 <= x <= 532
+                            and center_y - 92 <= y <= center_y + 92
+                        ):
+                            return (8, 18, 30)
+                        return (105, 170, 225)
+
+                    with self.subTest(
+                        viewport_top=viewport_top,
+                        missing_offset=missing_offset,
                     ):
-                        return (8, 18, 30)
-                    return (105, 170, 225)
-
-                self.assertFalse(
-                    results_panel_visible(800, height, viewport_top, without_restart_prompt),
-                    "a RESULTS panel without its restart prompt must fail closed",
-                )
+                        self.assertFalse(
+                            results_panel_visible(
+                                800, height, viewport_top, without_required_row
+                            ),
+                            f"RESULTS panel missing required row at {missing_offset}px must fail closed",
+                        )
 
     def test_results_panel_detector_accepts_scaled_viewport_in_fixed_height_window(self) -> None:
         # A 480px-tall Dolphin window with an 84px toolbar leaves only 396px
