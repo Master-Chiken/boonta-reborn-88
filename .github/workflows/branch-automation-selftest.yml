@@ -269,7 +269,7 @@ jobs:
           "OpenRouter exposes only the reviewed normal/resume GitHub MCP allowlists": '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,push_files"' in openrouter,
               "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require >= 0 and openrouter_validator_require_call > openrouter_validator_require and openrouter_validator_call > openrouter_validator_require_call,
               "OpenRouter prompt uses OpenCode-prefixed direct GitHub tools": "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request." in openrouter,
-              "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
+              "Groq invocation has a bounded 180-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "180s"' in groq and "sys.exit(invocation_status)" in groq,
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
               "Groq prompt explicitly stops on provider quota errors": "Stop after the first quota, TPM, rate-limit, context or auth error; never retry." in groq,
