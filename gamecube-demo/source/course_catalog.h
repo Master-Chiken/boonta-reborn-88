@@ -1,6 +1,6 @@
 #ifndef BOONTA_REBORN_COURSE_CATALOG_H
 #define BOONTA_REBORN_COURSE_CATALOG_H
-#define BOONTA_COURSE_COUNT 3U
+#define BOONTA_COURSE_COUNT 1U
 typedef struct BoontaCourseDefinition {
     const char *id;
     const char *display_name;
@@ -22,7 +22,5 @@ typedef struct BoontaCourseDefinition {
     void *runtime_context;
 } BoontaCourseDefinition;
 extern const BoontaCourseDefinition boonta_course_canyon_run;
-extern const BoontaCourseDefinition boonta_course_red_dunes;
-extern const BoontaCourseDefinition boonta_course_basalt_spiral;
 extern const BoontaCourseDefinition *const boonta_course_catalog[BOONTA_COURSE_COUNT];
 #endif
