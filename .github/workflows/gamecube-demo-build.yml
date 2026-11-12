@@ -515,6 +515,7 @@ jobs:
                 local saw_restart=0
                 local saw_second_finish=0
                 local finish_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-finish.png"
+                local reset_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-reset.png"
                 local second_finish_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish.png"
                 flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
                   --video_backend="Software Renderer" \
@@ -576,6 +577,7 @@ jobs:
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" 2>&1; then
                       echo "Clean reset HUD detected after $action_label reset the finished race at live frame $attempt."
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
+                      cp "$capture" "$reset_capture"
                       saw_restart=1
                       if [[ "$action_label" != "Start" ]]; then
                         break
@@ -668,7 +670,7 @@ jobs:
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
                 capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER" "Y"
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$GITHUB_WORKSPACE/dolphin-finish-restart-reset.png" --expect-reset
                 echo "Post-finish Y reset the race into a clean visible HUD state."
               else
                 echo "Full-race finish check not requested; the default job remains the short bidirectional steering diagnostic."
@@ -680,7 +682,7 @@ jobs:
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
                 capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER" "Start"
-                python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
+                python3 gamecube-demo/tools/check_dolphin_frame.py "$GITHUB_WORKSPACE/dolphin-finish-restart-reset.png" --expect-reset
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$GITHUB_WORKSPACE/dolphin-finish-restart-second-finish.png" --expect-finish
                 echo "The first race reset cleanly and the second three-lap race reached a fresh RESULTS panel."
               fi
