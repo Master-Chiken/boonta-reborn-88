@@ -1030,7 +1030,40 @@ static void championship_standings_use_deterministic_tie_breaks(void)
     assert(boonta_championship_compare_standings(&points_leader, 0) == 0);
 }
 
+
+static void championship_order_is_stable_and_respects_output_capacity(void)
+{
+    const BoontaChampionshipStanding standings[5] = {
+        {20U, 2U, 1U, 1U, 1U},
+        {30U, 2U, 0U, 2U, 2U},
+        {30U, 3U, 0U, 2U, 2U},
+        {30U, 1U, 0U, 2U, 2U},
+        {10U, 1U, 0U, 0U, 5U}
+    };
+    unsigned int order[5] = {99U, 99U, 99U, 99U, 99U};
+    unsigned int count;
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 5U);
+    assert(count == 5U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+    assert(order[3] == 0U);
+    assert(order[4] == 4U);
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 3U);
+    assert(count == 3U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+
+    assert(boonta_championship_build_stable_order(standings, 5U, order, 0U) == 0U);
+    assert(boonta_championship_build_stable_order(0, 5U, order, 5U) == 0U);
+    assert(boonta_championship_build_stable_order(standings, 5U, 0, 5U) == 0U);
+}
+
 int main(void) {
+ championship_order_is_stable_and_respects_output_capacity();
  championship_standings_use_deterministic_tie_breaks();
  championship_points_follow_fixed_scoring_table();
  championship_standings_accumulate_without_race_reset_coupling();
