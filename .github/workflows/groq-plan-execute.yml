@@ -55,8 +55,7 @@ on:
         type: string
         required: false
       # The caller passes an empty string when no resume is selected.
-      # Keep this optional transport field textual; the post-lock guard parses
-      # and validates a positive integer only when resume_mode is true.
+      # Validate a positive ID only in the post-lock resume guard.
       resume_pr_number:
         type: string
         required: false
@@ -860,7 +859,7 @@ jobs:
           invocation_status = process.wait()
           if invocation_status in (124, 137):
               print(
-                  "Groq invocation reached its 90-second hard limit; daily cooldown will be recorded.",
+                  "Groq invocation reached its 180-second hard limit; daily cooldown will be recorded.",
                   flush=True,
               )
           sys.exit(invocation_status)
@@ -875,8 +874,8 @@ jobs:
           REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt
           PRE_CYCLE_PR_HEADS: ${{ steps.snapshot_pr_heads.outputs.heads }}
           PRE_CYCLE_PR_SNAPSHOT_AT: ${{ steps.snapshot_pr_heads.outputs.snapshot_at }}
-          SELECTED_TASK_ID: ${{ inputs.task_id }}
-          SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
+          SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
         with:
           script: |

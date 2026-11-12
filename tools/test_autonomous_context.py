@@ -31,6 +31,8 @@ def fixture(root: Path) -> str:
         "tasks": [{
             "task_id": "AUTOMATION-LEDGER-ACTIVATION",
             "title": "Activate and validate persistent autonomous task tracking",
+            "owner_role_id": "chief-of-staff",
+            "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
             "status": "blocked",
             "depends_on": [],
             "target_branch": "main",
@@ -59,6 +61,35 @@ def fixture(root: Path) -> str:
             "allowed_paths": ["tools/test_check_task_ledger.py"],
         }],
     }), encoding="utf-8")
+    registry = {
+        "schema_version": 1,
+        "status": "declarative_only",
+        "execution_plane": "github_actions",
+        "canonical_task_ledger": "docs/automation/task-ledger.json",
+        "provider_order": ["gemini", "openrouter_free", "groq_free"],
+        "policy": {
+            "max_active_missions": 1,
+            "max_provider_invocations_per_run": 1,
+            "repository_writers": ["github_actions"],
+            "model_agents_receive_write_credentials": False,
+            "paid_fallback": False,
+            "auto_merge": False,
+            "human_merge_approval_required": True,
+            "qa_must_be_independent": True,
+        },
+        "roles": [
+            {"id": "human-owner", "title": "Human Owner / Board", "kind": "human", "unit": "governance", "manager_id": None},
+            {"id": "ceo", "title": "CEO / Mission Commander", "kind": "model_role", "unit": "command", "manager_id": "human-owner"},
+            {"id": "cto", "title": "CTO / Engineering Commander", "kind": "model_role", "unit": "engineering", "manager_id": "ceo"},
+            {"id": "chief-of-staff", "title": "Chief of Staff / Operations Controller", "kind": "deterministic", "unit": "operations", "manager_id": "ceo"},
+            {"id": "gameplay", "title": "Engine & Gameplay", "kind": "model_role", "unit": "engineering", "manager_id": "cto"},
+        ],
+        "objectives": [
+            {"id": "BOONTA-COMPLETE-GAME", "title": "Deliver the complete original Boonta Reborn racer"},
+            {"id": "BOONTA-AUTONOMOUS-ENGINEERING", "title": "Operate a governed zero-cost engineering pipeline"},
+        ],
+    }
+    (root / "docs/automation/agent-roles.json").write_text(json.dumps(registry), encoding="utf-8")
     return (
         "Task ID: AUTOMATION-LEDGER-ACTIVATION\n"
         "Title: Activate and validate persistent autonomous task tracking\n"
@@ -77,6 +108,10 @@ with tempfile.TemporaryDirectory() as temp:
     )
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
+    assert "Role: chief-of-staff — Chief of Staff" in rendered
+    assert "Chain: human-owner > ceo > chief-of-staff." in rendered
+    assert "Objective: BOONTA-AUTONOMOUS-ENGINEERING." in rendered
+    assert "Registry: declarative only; no rights." in rendered
     assert "Target branch: main" in rendered
     assert "Exact owner-reviewed write paths (no others): tools/test_check_task_ledger.py" in rendered
 
@@ -96,6 +131,61 @@ with tempfile.TemporaryDirectory() as temp:
     else:
         raise AssertionError("Blocked activation must not reach inference without owner-reviewed write paths")
     path_policy.write_text(json.dumps(original_policy), encoding="utf-8")
+
+    # Role and objective assignments must resolve uniquely, and every manager
+    # chain must terminate at the human owner before any provider context is built.
+    role_registry_path = root / "docs/automation/agent-roles.json"
+    role_registry = json.loads(role_registry_path.read_text(encoding="utf-8"))
+    summary_path = root / "docs/automation/task-ledger-summary.json"
+    role_summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    role_summary["tasks"][0]["owner_role_id"] = "unknown-role"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "role is missing or duplicated" in str(exc)
+    else:
+        raise AssertionError("Unknown task role must fail closed")
+    role_summary["tasks"][0]["owner_role_id"] = "chief-of-staff"
+    role_summary["tasks"][0]["parent_objective_id"] = "BOONTA-MISSING"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "objective is missing or duplicated" in str(exc)
+    else:
+        raise AssertionError("Unknown parent objective must fail closed")
+    role_summary["tasks"][0]["parent_objective_id"] = "BOONTA-AUTONOMOUS-ENGINEERING"
+    summary_path.write_text(json.dumps(role_summary), encoding="utf-8")
+    role_registry["roles"][1]["manager_id"] = "chief-of-staff"
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "cyclic manager chain" in str(exc)
+    else:
+        raise AssertionError("Cyclic role hierarchy must fail closed")
+    role_registry["roles"][1]["manager_id"] = "human-owner"
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    role_registry["policy"]["paid_fallback"] = True
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "weakens the one-writer/provider-order/€0/human-review policy" in str(exc)
+    else:
+        raise AssertionError("A weakened provider policy must fail closed")
+    role_registry["policy"]["paid_fallback"] = False
+    role_registry["provider_order"] = ["groq_free", "gemini", "openrouter_free"]
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
+    try:
+        MODULE.build_context(root, "AUTOMATION-LEDGER-ACTIVATION", "Activate and validate persistent autonomous task tracking", "main", context)
+    except MODULE.ContextBuildError as exc:
+        assert "provider-order" in str(exc)
+    else:
+        raise AssertionError("Provider order drift must fail closed")
+    role_registry["provider_order"] = ["gemini", "openrouter_free", "groq_free"]
+    role_registry_path.write_text(json.dumps(role_registry), encoding="utf-8")
 
     # Regression: full activation handoffs must survive beyond the former 1,200-char cap.
     long_handoff = context + "\n" + ("Supplemental verified evidence note. " * 30)
@@ -140,9 +230,9 @@ with tempfile.TemporaryDirectory() as temp:
     bounded = MODULE.build_context(
         root, "AUTOMATION-LEDGER-ACTIVATION",
         "Activate and validate persistent autonomous task tracking",
-        "main", full_handoff, max_chars=1500, max_task_context=1400,
+        "main", full_handoff, max_chars=1800, max_task_context=1650,
     )
-    assert len(bounded) <= 1500
+    assert len(bounded) <= 1800
     assert task["question_excerpt"] in bounded
     assert task["next_action_excerpt"] in bounded
     assert all(MODULE._short(item, 140) in bounded for item in task["acceptance_criteria_excerpt"])
@@ -153,7 +243,7 @@ with tempfile.TemporaryDirectory() as temp:
         "main", full_handoff, max_chars=1500, max_task_context=1400,
         max_criteria=3, max_next_action=140,
     )
-    assert len(groq_bounded) <= 1500
+    assert len(groq_bounded) <= 1800
     assert "Read-only source excerpts: disabled for this context build" in groq_bounded
     assert all(item in groq_bounded for item in task["acceptance_criteria_excerpt"][:3])
     assert task["acceptance_criteria_excerpt"][3] not in groq_bounded
@@ -243,6 +333,8 @@ with tempfile.TemporaryDirectory() as temp:
     queued = {
         "task_id": task_id,
         "title": title,
+        "owner_role_id": "gameplay",
+        "parent_objective_id": "BOONTA-COMPLETE-GAME",
         "status": "queued",
         "owner_approved": True,
         "depends_on": ["GC-RACE-PROGRESSION"],

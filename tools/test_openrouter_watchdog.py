@@ -279,7 +279,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                 os.kill(process.pid, signal.SIGTERM)
                 output, _ = process.communicate(timeout=10)
                 self.assertEqual(process.returncode, 128 + signal.SIGTERM, output)
-                self.assertIn("WATCHDOG_READY", report.read_text(encoding="utf-8"))
+                self.assertGreater(self.grandchild_pid(report), 0)
                 self.assert_heartbeat_stopped(heartbeat)
             finally:
                 if process.poll() is None:

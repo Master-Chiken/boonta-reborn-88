@@ -3,6 +3,7 @@
 ## Policy
 
 - **Active-branch target:** no more than 10 active working branches.
+- **Open-PR budget:** no more than 3 open pull requests repository-wide (including drafts). Existing trusted PRs may be resumed, but new task branches/intake are paused at the cap.
 - **Total-count warning:** 10 or more branch refs.
 - **Red line:** more than 20 total branch refs.
 - **Do not delete branches automatically.** This is an explicit project rule.
@@ -10,6 +11,7 @@
 - Preserve every branch's commits and useful work. Prefer reviewing, testing, and merging completed work into `main`; do not merge merely to reduce the count.
 - Keep `main` protected. Do not describe CI as merge-blocking unless the applicable GitHub ruleset explicitly requires the selected status checks.
 - Avoid creating a branch when an existing work branch can safely be reused. Prefer one focused branch per task and avoid duplicate `-v2` / `-v3` branches unless the reason is documented.
+- Keep at most one active implementation task and three open PRs. Consolidate related changes before opening another PR; never use extra PRs as progress markers.
 - An AI agent may inventory branches, classify candidates, prepare consolidation PRs, and report recommendations. It must not delete branches or force-push without explicit human authorization.
 
 ## Merge gates and required status checks
@@ -63,4 +65,4 @@ When the total-count warning or red line is reached, it opens or updates one tra
 
 The companion [Branch intake queue](BRANCH_INTAKE.md) compares existing branch tips with the default branch and prepares a limited number of draft PRs for small, distinct changes. It runs the existing GameCube prototype tests for relevant code candidates and defers overlapping, oversized, and Step 102/source-import changes for manual review.
 
-The intake queue does not create branches, merge PRs, push to the default branch, force-push, or delete history. A draft PR is only a review surface; each candidate must still pass the exact-head checks and the mainline acceptance gate before a maintainer merges it.
+The intake queue does not create branches, merge PRs, push to the default branch, force-push, or delete history. It must stop before creating a draft PR whenever three or more PRs are already open. A draft PR is only a review surface; each candidate must still pass the exact-head checks and the mainline acceptance gate before a maintainer merges it.

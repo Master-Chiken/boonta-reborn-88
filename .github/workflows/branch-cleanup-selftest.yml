@@ -29,7 +29,19 @@ jobs:
               doc = YAML.load_file(path)
               puts "YAML OK: #{path}"
               next unless path.end_with?("retire-verified-branch.yml")
-              doc.fetch("jobs").fetch("retire").fetch("steps").each_with_index do |step, index|
+              job = doc.fetch("jobs").fetch("retire")
+              steps = job.fetch("steps")
+              expected_names = [
+                "Check out main for exact ref and ancestry verification",
+                "Validate exact owner-confirmed branch and SHA",
+                "Verify protection, open PR references and archived ancestry",
+                "Recheck exact ref and atomically retire one branch",
+              ]
+              actual_names = steps.map { |step| step["name"] }
+              raise "Expected exactly four named retirement steps, got #{actual_names.inspect}" unless actual_names == expected_names
+              raise "Every non-checkout step must execute a shell script" unless steps.drop(1).all? { |step| step["shell"] == "bash" && step["run"].is_a?(String) && !step["run"].empty? }
+              raise "Both safety verification steps must be independent" unless steps[2]["run"].include?("open-prs.json") && steps[3]["run"].include?("open-prs-before-delete.json")
+              steps.each_with_index do |step, index|
                 next unless step["run"]
                 File.write("/tmp/verified-retire-#{index}.sh", step["run"])
               end
@@ -57,27 +69,6 @@ jobs:
               flags=re.MULTILINE,
           ))
           expected = {
-              "docs/branch-audit-20261020": "d78f4113a2ba6a9b0eabbc83ddc81cd0c9a9fdf3",
-              "feat/dpad-pitch-control-7615408465390853764-3543088446284898244": "888bb824f1ee6201efa965756712f0c84c6c7c43",
-              "feat/dpad-pitch-control-7615408465390853764": "c8c69c562dfeb84cfdc8218bd5364b88706a1e4f",
-              "feat/dpad-pitch-input-support-17230867255224679905": "df29ed77b12dabf4bfc84fa066389b5f3c6baeb8",
-              "feat/native-wii-classic-input-267": "18db18c60ce033c1f589ceaaf0a06790024bd5a5",
-              "feat/start-button-finished-race-reset-4403260542384541549": "2e00824f9b24cb86c47fc50220eb532c9023a2df",
-              "fix/steering-stick-deadzone-27065704226814874": "4c3014b054e427fa0edbb53a6765bd6147659955",
-              "fix/steering-stick-deadzone-20261019-14221623089412890411": "0fe5dba576bd823208cd3e9aff9e282b30025c05",
-              "fix/steering-stick-deadzone-clean-20261020-1968330082647905868": "a6d0ee1cc0b383849c942de4d38f10bbc185a8cd",
-              "fix/steering-stick-deadzone-clean-20261020": "6b31321294e8238b836e7d1807c0ef006835f377",
-              "jules/re-001-public-source-crosscheck-5621653419986752281": "de33cca64ce8eeefc3c34260e3d413832b3fd666",
-              "re-001-ares-gdb-smoke-20261021": "3df2aedeccaef904c48637710eedc88699db7acb",
-              "safety/openrouter-exact-head-sha": "c52c9b2594b711a76a8f7ccf5e25acce7982c381",
-              "test/ares-gdb-smoke-20261021": "fa8cee047ae8e74c30c87cd94977c434bb1c7398",
-              "agent/boonta-chatgpt/activation-ledger-evidence-20261107": "05b4fac74701092c7b9c9dcbd161054eea6754b3",
-              "feat/deterministic-rival-ai-20261106": "216e4a8bdef8941dadc7a604a24021ad54f09db8",
-              "feat/rival-curvature-pace-20261106": "b3d215df243a11d3e0022ecf562ab2ba1de96da9",
-              "feat/rival-track-line-20261106": "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
-              "docs/reverse-engineering-first-20261106": "38bd467e3da5d81ecb30de20d71df67850a53e51",
-              "agent/boonta-auto/gemini-daily-cooldown-20261104": "dad92c6b84ad01aecfcf9358422b75d8ea445b5a",
-              "agent/boonta-auto/openrouter-daily-cooldown-20261104": "287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
               "feat/career-stable-standings-order-20261112": "548c69bec25dc82011344b2c1f0a9c99edcdc563",
               "feat/championship-standings-core-20261112": "360de5a647418cbac3555c5670d88790851bbc45",
               "feat/championship-standings-tiebreaks-20261112": "7604e09d98f88f1ca4fdaf79fb0cdb19bf982afb",
@@ -87,13 +78,27 @@ jobs:
               "feat/rival-personality-racing-lines-20261112": "994e200cb80f53a2296d25b803166b4e7802444d",
               "feat/rival-personality-speed-profiles-20261112": "e3a93ac35a4d69dcefabc3e2497d006168cfa737",
               "fix/rival-traffic-split-tie-break-20261112": "89e9922f22033b8149f6e372b192914ec2e4fc24",
+              "feat/role-aware-autonomous-context-20261112": "80a8e470ccdeee8f9d6221ed527d131e0286528e",
+              "feat/paperclip-role-governance-20261112": "a37e9df742371a9e537ad6ca8b75dd286192a06c",
+              "fix/regenerate-task-ledger-summary-pr410": "81e6db46d3cbd174971e547c7657c0879c089117",
+              "fix/groq-dispatch-gate-observability-20261112": "4859401f39796e187beda1c4335be236edea42f2",
+              "fix/groq-free-invocation-timeout-180s-20261111": "30e119962a51eac54147c29e8e5111f7767ac35f",
+              "infra/paperclip-control-plane-20261110": "582dfc020a8068c0fa6b9feaa84f2cc35419cd7a",
+              "fix/gemini-dispatch-reusable-permissions-20261110": "c7ae0927ba03b5bd3a4826f5d5d840a4d966655d",
+              "fix/groq-tool-json-temperature-20261110": "c592d3eb724ac8456dd9a340bed5c6edfa41b031",
+              "fix/gemini-transient-fetch-retry-20261109": "973690f8b3a63299750959cb98b65200d03932d0",
+              "automation/fix-gemini-secondary-key-20261108": "40a9db2ee79bafa0752899ded915bae8af3a4a8c",
+              "automation-ledger-activation-20261112": "a89555e6d65aa4b086bd883a295501db91e9748c",
+              "automation-ledger-validation": "c1d3fb6c87379777d508f1facaa222b849faa9e7",
+              "fix/activation-handoff-mainline-20261111": "7dca23ebd573e5b7194b36a8ad92ccd6231c60c9",
           }
 
           checks = {
               "manual triggers only": "workflow_dispatch:" in header and "issue_comment:" in header and all(token not in header for token in ("push:", "pull_request:", "schedule:")),
               "actor, main ref and dedicated issue gate": "github.actor == 'Master-Chiken'" in workflow and "github.ref == 'refs/heads/main'" in workflow and "github.event.issue.number == 248" in workflow and "github.event.issue.pull_request == null" in workflow,
               "comment requires exact one-line command and explicit confirmation": r"^/retire-branch" in workflow and "CONFIRM$" in workflow and "Use exactly: /retire-branch BRANCH_NAME EXPECTED_SHA CONFIRM" in workflow,
-              "30 unique exact branch/SHA pins": cases == expected and len(cases) == 30,
+              "22 unique live exact branch/SHA pins": cases == expected and len(cases) == 22,
+              "all pinned refs are available in manual selection": all(f"- {name}" in header for name in cases),
               "current open PR heads are not allowlisted": "recovery/all-branch-heads-20261102" not in cases and "feat/native-wii-classic-input-main-20261102" not in cases,
               "permanent refs cannot be retired": all(name not in cases for name in ("main", "dev", "archive/branch-heads-20261019", "archive/rival-ai-history-20261107")) and "archive/rival-ai-history-20261107" in workflow,
               "checks exact live head": '.object.sha' in workflow and '== "$EXPECTED_SHA"' in workflow,
@@ -105,9 +110,10 @@ jobs:
               "deletion uses exact-SHA lease": 'git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"' in workflow,
               "one ref per workflow run and no broad delete": "branch_name" in workflow and "push --delete" not in workflow and workflow.count('git push --force-with-lease=') == 1,
               "concurrent retirements are serialized": "cancel-in-progress: false" in workflow and "concurrency:" in workflow,
-              "new candidate SHA is pinned exactly": cases.get("agent/boonta-chatgpt/activation-ledger-evidence-20261107") == "05b4fac74701092c7b9c9dcbd161054eea6754b3",
-              "all rival-AI branch heads are pinned exactly": cases.get("feat/deterministic-rival-ai-20261106") == "216e4a8bdef8941dadc7a604a24021ad54f09db8" and cases.get("feat/rival-curvature-pace-20261106") == "b3d215df243a11d3e0022ecf562ab2ba1de96da9" and cases.get("feat/rival-track-line-20261106") == "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
-              "Gemini and OpenRouter superseded cooldown branch heads are pinned exactly": cases.get("agent/boonta-auto/gemini-daily-cooldown-20261104") == "dad92c6b84ad01aecfcf9358422b75d8ea445b5a" and cases.get("agent/boonta-auto/openrouter-daily-cooldown-20261104") == "287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+              "superseded role-aware context branch is pinned exactly": cases.get("feat/role-aware-autonomous-context-20261112") == "80a8e470ccdeee8f9d6221ed527d131e0286528e",
+              "superseded role-registry branch is pinned exactly": cases.get("feat/paperclip-role-governance-20261112") == "a37e9df742371a9e537ad6ca8b75dd286192a06c",
+              "superseded task-ledger refs are pinned exactly": cases.get("automation-ledger-activation-20261112") == "a89555e6d65aa4b086bd883a295501db91e9748c" and cases.get("automation-ledger-validation") == "c1d3fb6c87379777d508f1facaa222b849faa9e7",
+              "mainline activation handoff is pinned exactly": cases.get("fix/activation-handoff-mainline-20261111") == "7dca23ebd573e5b7194b36a8ad92ccd6231c60c9",
               "new candidate retirement requires pinned archive, main or dev ancestry": "refs/remotes/origin/main" in workflow and "refs/remotes/origin/dev" in workflow and "Branch tip is not reachable from a verified archive, main or dev." in workflow and "ARCHIVE_CHECKPOINT" in workflow,
               "never deletes via an unguarded REST DELETE": "gh api --method DELETE" not in workflow,
           }

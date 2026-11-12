@@ -114,12 +114,30 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
         "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
     )
     for required in expected_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must expose validated invocation/report status: {required!r}")
+    # Resume-mode reports are bound to the task selected by preflight, not to
+    # the empty normal-mode inputs. Gemini resolves the two values before the
+    # shared validator; OpenRouter/Groq select them in the report-step env.
+    if provider == "Gemini":
+        task_binding_requirements = (
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+        )
+    else:
+        task_binding_requirements = (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
+            "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+        )
+    for required in task_binding_requirements:
+        if required not in workflow:
+            errors.append(f"{provider} workflow must bind exact-head validation to the preflight-selected task in both normal and resume modes: {required!r}")
 
 # A single read-only cooldown preflight avoids starting three provider runners
 # when all providers are already suppressed for the current UTC day.
@@ -517,7 +535,7 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    '"GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"',
+    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "No PR/branch enumeration or media/binary retrieval.",
     "Newly retrieved text: at most 700 tokens.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
@@ -525,29 +543,20 @@ for required in (
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
 
-tools_match = re.search(r'"GITHUB_TOOLS": "([^"]+)"', openrouter_fallback)
-if not tools_match:
-    errors.append("OpenRouter fallback must define an auditable GitHub MCP tool allow-list")
-else:
-    github_tools = tools_match.group(1).split(",")
-    forbidden_github_tools = [
-        tool for tool in github_tools
-        if any(fragment in tool.lower() for fragment in ("merge", "delete", "secret", "variable", "repository_settings", "repository_ruleset", "update_pull_request", "issue_read", "list_issues", "list_pull_requests", "create_or_update_file", "list_branches", "list_commits"))
-    ]
-    if forbidden_github_tools:
-        errors.append(f"OpenRouter GitHub MCP allow-list exposes forbidden capabilities: {forbidden_github_tools!r}")
-    expected_github_tools = [
-        "get_file_contents",
-        "create_branch",
-        "push_files",
-        "create_pull_request",
-    ]
-    if github_tools != expected_github_tools:
-        errors.append(
-            "OpenRouter GitHub MCP allow-list must match the minimal four-tool direct-delivery contract exactly"
-        )
-    if any(tool not in expected_github_tools for tool in github_tools):
-        errors.append("OpenRouter GitHub MCP allow-list exposes tools outside the reviewed minimal contract")
+openrouter_normal_tools = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+openrouter_resume_tools = {"get_file_contents", "push_files"}
+openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
+if openrouter_modes != {frozenset(openrouter_normal_tools), frozenset(openrouter_resume_tools)}:
+    errors.append("OpenRouter must expose four normal-delivery tools and only targeted read plus push in resume mode")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in openrouter_fallback:
+    errors.append("OpenRouter MCP container must inherit the explicitly selected mode-specific tool allow-list")
+forbidden_github_tools = {
+    "merge_pull_request", "delete_branch", "delete_file", "create_or_update_file",
+    "update_pull_request", "issue_read", "list_issues", "list_pull_requests",
+    "list_branches", "list_commits", "repository_settings", "repository_ruleset",
+}
+if forbidden_github_tools.intersection(openrouter_normal_tools.union(openrouter_resume_tools)):
+    errors.append("OpenRouter GitHub MCP mode lists must not expose merge, deletion, settings or unrelated enumeration tools")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
     errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
@@ -800,9 +809,9 @@ for required_phrase in (
     "without asking for another",
     "one bounded task",
     "Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue",
-    "Never merge a PR",
-    "strict project budget is €0",
-    "Never push directly to either protected branch",
+    "Never merge or write protected branches",
+    "Budget €0",
+    "Never merge or write protected branches",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
@@ -810,17 +819,17 @@ for required_phrase in (
 # Enforce a reuse-first engineering method and efficient evidence-based validation.
 for required_phrase in (
     "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST",
-    "Extend the canonical implementation",
-    "Never hand-edit generated headers or artifacts",
-    "Optimize only a measured hot path",
-    "Reuse passing checks for an unchanged exact SHA",
-    "Group related file edits into one logical commit",
-    "Do not read all historical comments",
-    "compact inventory of directly related open pull requests",
-    "Deep-inspect changed files and exact-head CI only for PRs",
-    "Read logs only for failed jobs",
+    "Extend canonical code",
+    "never hand-edit generated headers/artifacts",
+    "optimize only measured hot paths",
     "Reuse a successful check for an unchanged exact SHA",
-    "without launching duplicate runs",
+    "Group related file edits into one logical commit/push",
+    "do not read historical comments except",
+    "compact inventory of directly related open PRs",
+    "Deep-inspect changed files and exact-head CI only for PRs",
+    "read logs only for failed jobs",
+    "Reuse a successful check for an unchanged exact SHA",
+    "without duplicate runs",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
@@ -925,13 +934,13 @@ if "cancel-in-progress: true" not in gamecube_concurrency:
 
 # The autonomous agent must use exact-head CI rather than invent local test results.
 for required_phrase in (
-    "intentionally has no general-purpose local shell",
+    "This agent intentionally has no general-purpose local shell",
     "exact PR head SHA",
     "Do not push empty commits",
-    "read only the failing job logs",
+    "read logs only for failed jobs",
     "no documented safe rerun action",
-    "five minutes beyond that timeout",
-    "likely stale runner/Actions state",
+    "After five minutes queued/in progress",
+    "treat as likely stale runner/Actions state",
     "do not wait indefinitely",
     "optional `continue-on-error` diagnostics",
 ):
@@ -1311,7 +1320,7 @@ editing_contract_requirements = (
     "Never call `replace`, `write_file`, `edit_file` or `apply_patch`",
     "If `push_files` is unavailable or a write fails, stop modifying files",
     "Do not create a self-referential `in_review` record",
-    "after merge, finalize from `main` with the actual merged PR head SHA",
+    "after merge, finalize from `main` using the actual merged PR head SHA",
 )
 missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
 if missing_editing_contract:
@@ -1402,7 +1411,7 @@ if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]
 for required in (
     "Do not fetch full issue bodies or full comment histories for #156, #226 and #279",
     "below 1,500 tokens total",
-    "Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries",
+    "Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries",
     "never repeat the same request",
     "approximately 452 KB route dossier",
 ):
@@ -1412,7 +1421,7 @@ for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
     "Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset",
-    "does **not** prove that the Google project truly has no linked Cloud Billing account",
+    "Preflight cannot prove Google billing, Free-tier capacity/quota or branch-rule correctness",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
@@ -1501,11 +1510,25 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
     report_start = workflow.find("      - name: " + report_name)
     report_end = workflow.find("      - name: Sync the single-task daily backoff marker", report_start)
     report_step = workflow[report_start:report_end] if report_start >= 0 and report_end > report_start else ""
+    report_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}",
+            "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
+        )
+    )
     for required in (
         "id: validate_report",
         "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        *report_binding_requirements,
         "baseline: JSON.parse(process.env.PRE_CYCLE_PR_HEADS || '{}')",
         "snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT",
         "steps.snapshot_pr_heads.outputs.heads",
@@ -1519,11 +1542,20 @@ for label, workflow in (("Gemini", execute), ("OpenRouter fallback", openrouter_
         errors.append(f"{label} must capture the complete pre-cycle PR inventory")
     if "inputs.autonomous_mode == true" not in workflow and "steps.free_tier_guard.outputs.allowed == 'true'" not in workflow:
         errors.append(f"{label} must keep the pre-cycle snapshot behind the free-tier/owner gate")
-    if ("SELECTED_TASK_ID: '${{ inputs.task_id }}'" not in report_step and "SELECTED_TASK_ID: ${{ inputs.task_id }}" not in report_step) or (
-        "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" not in report_step and
-        "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}" not in report_step
-    ):
-        errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight")
+    if label == "Gemini":
+        has_task_binding = (
+            "SELECTED_TASK_ID: '${{ inputs.task_id }}'" in report_step
+            and "SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'" in report_step
+            and "RESUME_TASK_ID: '${{ inputs.resume_task_id }}'" in report_step
+            and "RESUME_TASK_TARGET_BRANCH: '${{ inputs.resume_task_target_branch }}'" in report_step
+        )
+    else:
+        has_task_binding = (
+            "SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}" in report_step
+            and "SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}" in report_step
+        )
+    if not has_task_binding:
+        errors.append(f"{label} must bind validation to the exact task and target branch selected by preflight in normal and resume modes")
 if "github.rest.checks.listForRef" not in cycle_validator:
     errors.append("Autonomous progress must wait for the exact PR-head check runs before reporting progress")
 if "The check runs must be from the GitHub Actions app" not in cycle_validator and "run.app?.slug === 'github-actions'" not in cycle_validator:

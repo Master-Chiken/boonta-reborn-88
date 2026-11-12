@@ -90,7 +90,7 @@ else:
             errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
         if missing_gemini_tools:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
-        if "Gemini CLI model-facing MCP names are FQNs" not in gemini_prompt:
+        if "Use GitHub MCP FQNs only:" not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
 
         core_tools = gemini_settings.get("tools", {}).get("core", [])
@@ -99,7 +99,7 @@ else:
 
         for required in (
             "name: 'Checkout selected task target for bounded source context'",
-            "ref: ${{ inputs.task_target_branch }}",
+            "ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
             "path: .boonta-target-source",
             "tools/build_autonomous_context.py",
             "--source-root \"$TARGET_ROOT\"",
@@ -112,7 +112,7 @@ else:
         for required in (
             "use its `verified_context` as the authoritative task handoff",
             "The only local file read permitted is `.gemini/context.json`",
-            "Never treat the workflow's default checkout as gameplay source evidence",
+            "default checkout is never gameplay source evidence",
         ):
             if required not in gemini_prompt:
                 errors.append(f"Gemini target-branch context rule is missing {required!r}")
@@ -120,10 +120,10 @@ else:
         errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
 
 for required in (
-    "No Explore/subagents/planning, repo-wide discovery",
-    "create one branch from latest selected base",
-    "one `mcp_github_push_files` call",
-    "read back exact current head SHA",
+    "No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.",
+    "Normal: reconcile, create branch, push one coherent change and open one marked PR.",
+    "Resume exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`",
+    "Never create a branch/PR",
 ):
     if required not in gemini_prompt:
         errors.append(f"Gemini direct-execution contract is missing {required!r}")
@@ -179,18 +179,22 @@ for content, needle, message in (
     if needle not in content:
         errors.append(message)
 
-resume_guard_start = groq.find("      - name: Revalidate existing task PR after acquiring the shared writer slot")
-resume_guard_end = groq.find("\n      - name: Mint scoped GitHub App token", resume_guard_start)
-resume_guard = groq[resume_guard_start:resume_guard_end] if resume_guard_start >= 0 and resume_guard_end > resume_guard_start else ""
-if not resume_guard:
-    errors.append("Groq scheduled/owner-dispatched resume must have a separate post-queue PR revalidation step")
-elif not (
-    0 <= resume_guard_start < resume_guard_end <
-    groq.find("name: Mint scoped GitHub App token", resume_guard_start) <
-    groq.find("name: Run OpenCode through the Groq Free route", resume_guard_start)
-):
-    errors.append("Groq resume revalidation must complete before minting a write token or invoking the model")
-else:
+resume_guard_specs = (
+    ("Gemini", gemini, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
+    ("OpenRouter", openrouter, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
+    ("Groq", groq, "      - name: Revalidate existing task PR after acquiring the shared writer slot", "\n      - name: Mint scoped GitHub App token", "name: Run OpenCode through the Groq Free route"),
+)
+for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs:
+    guard_start = workflow.find(guard_marker)
+    guard_end = workflow.find(mint_marker, guard_start)
+    guard = workflow[guard_start:guard_end] if guard_start >= 0 and guard_end > guard_start else ""
+    if not guard:
+        errors.append(f"{label} scheduled resume must have a separate post-queue PR revalidation step")
+        continue
+    mint_pos = workflow.find(mint_marker.lstrip("\n"), guard_start)
+    run_pos = workflow.find(run_marker, guard_start)
+    if not (0 <= guard_start < guard_end < mint_pos < run_pos):
+        errors.append(f"{label} resume revalidation must complete before minting a write token or invoking the model")
     for required in (
         "inputs.resume_mode == true",
         "RESUME_TASK_ID: ${{ inputs.resume_task_id }}",
@@ -201,8 +205,8 @@ else:
         "task.pr_url || task.head_sha",
         "bodyLines.filter((line) => line === targetMarker).length !== 1",
     ):
-        if required not in resume_guard:
-            errors.append(f"Groq resume preflight is missing {required!r}")
+        if required not in guard:
+            errors.append(f"{label} resume preflight is missing {required!r}")
 
 for required in (
     "pulls.listFiles({",
@@ -222,7 +226,7 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
 if "function bindCycleReportToReservedTask(report, expectedTaskId, expectedBase)" not in cycle_validator:
     errors.append("Shared cycle validator must provide the deterministic task-and-base metadata binder")
 if "Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)" not in cycle_validator or "!trimmed.startsWith('BOONTA_CYCLE_EVIDENCE_BASE:')" not in cycle_validator:
-    errors.append("Shared cycle validator must validate and bind the reserved evidence base from trusted workflow metadata")
+    errors.append("Shared cycle validator must validate and bind the reserved evidence base")
 if "omitted task ID from its trusted reservation" not in cycle_validator_tests:
     errors.append("Cycle-report tests must cover automatic binding of an omitted task ID")
 for required in ("stale model-supplied orchestration metadata must be replaced", "duplicate model-supplied metadata cannot create ambiguity"):
@@ -263,15 +267,55 @@ for required in (
     "needs.provider-cooldowns.outputs.task_ready == 'true'",
     "needs.provider-cooldowns.outputs.task_ready != 'true'",
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
-    "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
     "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
-    "github.event_name == 'schedule'",
-    "github.event_name == 'workflow_dispatch'",
-    "github.actor == github.repository_owner",
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'",
+    "needs.provider-cooldowns.outputs.openrouter_active == 'true'",
 ):
     if required not in groq_job:
-        errors.append(f"Groq safe scheduled/owner-dispatched resume route is missing {required!r}")
+        errors.append(f"Groq ordered scheduled-resume route is missing {required!r}")
+
+gemini_resume_job = loop.split("  autonomous-cycle:", 1)[1].split("  openrouter-fallback:", 1)[0]
+for required in (
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "needs.provider-cooldowns.outputs.gemini_active != 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_pr_number:",
+    "resume_pr_url:",
+):
+    if required not in gemini_resume_job:
+        errors.append(f"Gemini first-priority scheduled-resume route is missing {required!r}")
+
+for required in (
+    "needs.provider-cooldowns.outputs.resume_ready == 'true'",
+    "needs.provider-cooldowns.outputs.gemini_active == 'true'",
+    "needs.provider-cooldowns.outputs.openrouter_active != 'true'",
+    "resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
+    "resume_pr_number:",
+    "resume_pr_url:",
+):
+    if required not in openrouter_job:
+        errors.append(f"OpenRouter second-priority scheduled-resume route is missing {required!r}")
+
+resume_route = groq_job.split("needs.provider-cooldowns.outputs.task_ready != 'true' &&", 1)[1].split("\n        )", 1)[0] if "needs.provider-cooldowns.outputs.task_ready != 'true' &&" in groq_job else ""
+if not resume_route or "needs.provider-cooldowns.outputs.resume_ready == 'true'" not in resume_route:
+    errors.append("Groq must have a distinct existing-PR resume branch")
+if (
+    "github.event_name == 'schedule'" not in resume_route or
+    "github.event_name == 'workflow_dispatch'" not in resume_route or
+    "github.actor == github.repository_owner" not in resume_route
+):
+    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
+if (
+    "github.event_name == 'schedule'" not in resume_route or
+    "github.event_name == 'workflow_dispatch'" not in resume_route or
+    "github.actor == github.repository_owner" not in resume_route
+):
+    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
+for provider_label, route_job in (("Gemini", gemini_resume_job), ("OpenRouter", openrouter_job), ("Groq", groq_job)):
+    if "github.event_name == 'schedule'" not in route_job:
+        errors.append(f"{provider_label} resume route must remain reachable from scheduled workflow runs")
 if "resume_pr_number:\n        type: string\n        required: false" not in groq:
     errors.append("Groq resume PR number must accept the empty-string no-resume handoff and validate only in resume mode")
 for required in (
@@ -328,9 +372,22 @@ for label, workflow, validator_title, sync_title, failure_title in task_backoff_
     if not (0 <= validator_position < sync_position < failure_position):
         errors.append(f"{label} task backoff must follow report validation and precede provider failure cooldown")
     validator_block = workflow[validator_position:sync_position] if validator_position >= 0 and sync_position > validator_position else ""
-    for required in ("validateAutonomousCycleReport", "expectedTaskId: process.env.SELECTED_TASK_ID", "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH"):
+    validator_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+        )
+    )
+    for required in ("validateAutonomousCycleReport", *validator_binding_requirements):
         if required not in validator_block:
-            errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator: {required!r}")
+            errors.append(f"{label} must delegate BLOCKED/PROGRESS validation to the shared validator using the reserved task in both modes: {required!r}")
 for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_status', 'blocked')", "require('crypto')", "const blocker = oneLine(lines, 'BOONTA_CYCLE_BLOCKER')", "const nextAction = oneLine(lines, 'BOONTA_CYCLE_NEXT_ACTION')"):
     if required not in cycle_validator:
         errors.append(f"Shared BLOCKED validator must produce a deterministic task fingerprint: {required!r}")
@@ -527,37 +584,36 @@ else:
         except re.error as exc:
             errors.append(f"OpenRouter watchdog regex must compile: {exc}")
 
-openrouter_tools = set(
-    openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "").split(",")
-)
+openrouter_config_tools = openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
-required_openrouter_tools = {
-    "get_file_contents", "create_branch", "push_files", "create_pull_request",
-}
-required_groq_tools = {
-    "get_file_contents", "create_branch", "create_pull_request", "push_files",
-}
-required_groq_resume_tools = {"get_file_contents", "push_files"}
+required_openrouter_normal = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+required_resume_tools = {"get_file_contents", "push_files"}
+required_groq_tools = {"get_file_contents", "create_branch", "create_pull_request", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
 }
-if openrouter_tools != required_openrouter_tools:
-    errors.append("OpenRouter must expose exactly four tools: targeted read, branch, push and PR; PR history search is preflight-owned")
-if groq_config_tools != "{env:GITHUB_TOOLS}":
-    errors.append("Groq must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
-else:
-    groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
-    expected_groq_modes = {
-        ",".join(sorted(required_groq_tools)),
-        ",".join(sorted(required_groq_resume_tools)),
-    }
-    if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly four normal tools (one optional exact read, branch, push and PR) and only targeted read plus push for existing-PR resume")
-if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
-    errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
+for label, config_tools, workflow in (
+    ("OpenRouter", openrouter_config_tools, openrouter),
+    ("Groq", groq_config_tools, groq),
+):
+    if config_tools != "{env:GITHUB_TOOLS}":
+        errors.append(f"{label} must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
+    else:
+        modes = {frozenset(item.split(",")) for item in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', workflow)}
+        expected = {frozenset(required_resume_tools), frozenset(required_openrouter_normal if label == "OpenRouter" else required_groq_tools)}
+        if modes != expected:
+            errors.append(f"{label} must expose its normal delivery tools and only targeted read plus push for existing-PR resume")
+    if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in workflow:
+        errors.append(f"{label} container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", openrouter_tools),):
+for label, workflow in (("Gemini", gemini),):
+    if "GITHUB_TOOLS: ${{ inputs.resume_mode == true && 'get_file_contents,push_files'" not in workflow:
+        errors.append("Gemini must reduce its MCP server to targeted read plus push during existing-PR resume")
+    if '"GITHUB_TOOLS": "${GITHUB_TOOLS}"' not in workflow or '"-e",\n                    "GITHUB_TOOLS"' not in workflow:
+        errors.append("Gemini container must inherit the exact workflow-selected tool allow-list")
+
+for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)), ("Groq", set().union(required_groq_tools, required_resume_tools))):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
@@ -756,7 +812,7 @@ if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
 # A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
 if len(gemini_prompt) > 8500:
     errors.append(f"Gemini autonomous prompt exceeds the 8,500-character context ceiling: {len(gemini_prompt)}")
-if gemini_prompt.count("Keep newly retrieved repository/issue text below 1,500 tokens total.") != 1:
+if gemini_prompt.count("Keep retrieved repo/issue text below 1,500 tokens total.") != 1:
     errors.append("Gemini autonomous prompt must state the 1,500-token retrieval budget exactly once")
 for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq), ("Autonomous loop", loop)):
     if "#317 → #318 → #319" in content:
@@ -764,8 +820,9 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "Do not reopen, replay or recreate that chain."
-        if label == "Groq" else "Do not reopen, replay or recreate that chain"
+        "never reopen/replay/recreate superseded #317/#318/#319"
+        if label == "Gemini"
+        else ("Do not reopen, replay or recreate that chain." if label == "Groq" else "Do not reopen, replay or recreate that chain")
     )
     if required_reopen_rule not in content:
         errors.append(f"{label} instructions must forbid reopening/recreating superseded PRs #317/#318/#319")
@@ -947,15 +1004,26 @@ for label, workflow, report_title in (
     report_start = workflow.find("name: " + report_title)
     sync_start = workflow.find("name: Sync the single-task daily backoff marker", report_start)
     report_block = workflow[report_start:sync_start] if report_start >= 0 and sync_start > report_start else ""
-    for required in (
-        "SELECTED_TASK_ID:",
-        "SELECTED_TASK_TARGET_BRANCH:",
-        "validateAutonomousCycleReport",
-        "expectedTaskId: process.env.SELECTED_TASK_ID",
-        "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
-    ):
+    report_binding_requirements = (
+        (
+            "expectedTaskId: selectedTaskId",
+            "expectedBase: selectedTargetBranch",
+            "const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;",
+            "const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;",
+            "RESUME_TASK_ID:",
+            "RESUME_TASK_TARGET_BRANCH:",
+        )
+        if label == "Gemini"
+        else (
+            "expectedTaskId: process.env.SELECTED_TASK_ID",
+            "expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH",
+            f"SELECTED_TASK_ID: ${{{{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}}}",
+            f"SELECTED_TASK_TARGET_BRANCH: ${{{{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}}}",
+        )
+    )
+    for required in ("SELECTED_TASK_ID:", "SELECTED_TASK_TARGET_BRANCH:", "validateAutonomousCycleReport", *report_binding_requirements):
         if required not in report_block:
-            errors.append(f"{label} report validator handoff is missing {required!r}")
+            errors.append(f"{label} report validator handoff is missing dynamic preflight binding {required!r}")
 gemini_report_start = gemini.find("name: Validate autonomous cycle report contract")
 gemini_report_end = gemini.find("name: Sync the single-task daily backoff marker", gemini_report_start)
 gemini_report_block = gemini[gemini_report_start:gemini_report_end] if gemini_report_start >= 0 and gemini_report_end > gemini_report_start else ""
