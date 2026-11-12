@@ -117,7 +117,7 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
         if not isinstance(manager_id, str) or manager_id not in by_id:
             raise ContextBuildError("Selected task manager chain references a missing manager")
         current = by_id[manager_id]
-        if len(chain) > len(by_id):
+        if len(chain_ids) > len(by_id):
             raise ContextBuildError("Selected task manager chain exceeds the registry role count")
     chain_ids.reverse()
     return [
