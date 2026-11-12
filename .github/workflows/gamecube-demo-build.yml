@@ -512,6 +512,7 @@ jobs:
                 local height=""
                 local saw_finish=0
                 local saw_restart=0
+                local finish_capture="$GITHUB_WORKSPACE/dolphin-finish-restart-finish.png"
                 flatpak run --command=dolphin-emu --filesystem="$GITHUB_WORKSPACE" org.DolphinEmu.dolphin-emu \
                   --video_backend="Software Renderer" \
                   --config=Logger.Options.WriteToFile=True \
@@ -558,6 +559,7 @@ jobs:
                   if [[ "$saw_finish" -eq 0 ]]; then
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-finish > "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log" 2>&1; then
                       echo "Finish banner detected in live frame $attempt."
+                      cp "$capture" "$finish_capture"
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log"
                       saw_finish=1
                     fi
@@ -705,6 +707,7 @@ jobs:
             dolphin-resume-state.dtm
             dolphin-finish-restart.dtm
             dolphin-finish-restart.png
+            dolphin-finish-restart-finish.png
             dolphin-finish-restart.log
             dolphin-finish-detector.log
             dolphin-finish-restart-detector.log
