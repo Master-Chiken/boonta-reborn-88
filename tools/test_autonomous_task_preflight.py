@@ -150,6 +150,17 @@ cases = [
         "expected_blocked_count": 1,
     },
     {
+        "name": "blocked activation without an owner-reviewed write scope is not sent to a provider",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "owner_paths": false,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OWNER_APPROVED_PATHS",
+        "reason_contains": "no unique owner-reviewed exact write-path entry",
+    },
+    {
         "name": "activation same-day backoff is reported separately from empty queue",
         "tasks": [activation],
         "marker_day_offset": 0,
@@ -704,15 +715,39 @@ async function runCase(testCase) {{
       }},
       repos: {{
         getContent: async (options) => {{
-          if (options.path !== "docs/automation/task-ledger-summary.json" || options.ref !== "main") {{
-            throw new Error("unexpected canonical-ledger read");
+          if (options.ref !== "main") throw new Error("unexpected canonical file ref");
+          if (options.path === "docs/automation/task-ledger-summary.json") {{
+            return {{
+              data: {{
+                encoding: "base64",
+                content: Buffer.from(JSON.stringify(ledger), "utf8").toString("base64")
+              }}
+            }};
           }}
-          return {{
-            data: {{
-              encoding: "base64",
-              content: Buffer.from(JSON.stringify(ledger), "utf8").toString("base64")
-            }}
-          }};
+          if (options.path === "docs/automation/patch-path-allowlist.json") {{
+            const entries = testCase.owner_paths === false ? [] :
+              (testCase.owner_paths || (testCase.expected_ready ? testCase.tasks.filter((item) =>
+                item.status === "active" || item.status === "queued" ||
+                item.task_id === "AUTOMATION-LEDGER-ACTIVATION"
+              ).map((item) => ({{
+                task_id: item.task_id,
+                purpose: "Synthetic owner-reviewed exact write scope",
+                approval_ref: "https://github.com/Master-Chiken/boonta-reborn-88/pull/999",
+                allowed_paths: [item.read_paths[1]]
+              }})) : []));
+            const policy = {{
+              schema_version: 1,
+              policy: {{ owner_review_required: true, path_mode: "exact", max_paths_per_task: 20 }},
+              tasks: entries
+            }};
+            return {{
+              data: {{
+                encoding: "base64",
+                content: Buffer.from(JSON.stringify(policy), "utf8").toString("base64")
+              }}
+            }};
+          }}
+          throw new Error("unexpected canonical file path: " + options.path);
         }}
       }}
     }}
@@ -820,7 +855,8 @@ async function runCase(testCase) {{
       }}
       for (const expectedText of [selected.task_id, selected.title, selected.question_excerpt,
         ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt,
-        "Read-only source paths (select at most one): " + selected.read_paths.join(", ")]) {{
+        "Read-only source paths (select at most one): " + selected.read_paths.join(", "),
+        "Exact owner-reviewed write paths (no others): " + selected.read_paths[1]]) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted " + expectedText);
         }}
