@@ -519,9 +519,9 @@ jobs:
       resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
     secrets: inherit
 
-  # The resume-only route requires an explicit owner workflow_dispatch; schedules do not retouch open PRs.
+  # Resume follows strict provider order: Gemini first, then OpenRouter, then Groq only if both earlier cooldowns were active at preflight.
   groq-fallback:
-    name: Groq Free fallback or owner-dispatched existing-PR resume
+    name: Groq Free fallback or ordered existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
@@ -562,7 +562,7 @@ jobs:
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
-      resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}
       resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
       resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
       resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
@@ -590,8 +590,6 @@ jobs:
           WRITER_STATE: ${{ needs.readiness.outputs.writer_state }}
           COOLDOWN_CHECK_RESULT: ${{ needs.provider-cooldowns.result }}
           TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}
-          RESUME_READY: ${{ needs.provider-cooldowns.outputs.resume_ready }}
-          RESUME_PR_NUMBER: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
           TASK_READY: ${{ needs.provider-cooldowns.outputs.task_ready }}
           QUEUE_STATE: ${{ needs.provider-cooldowns.outputs.queue_state }}
           QUEUED_COUNT: ${{ needs.provider-cooldowns.outputs.queued_count }}
