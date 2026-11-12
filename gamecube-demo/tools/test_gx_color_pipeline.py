@@ -138,6 +138,21 @@ class GXColorPipelineTests(unittest.TestCase):
         self.assertIn("draw_vertex_buffer();", results)
         self.assertIn("g_vertex_count = 0U;", results)
 
+    def test_results_panel_submits_all_rows_in_its_fresh_pass(self) -> None:
+        hud = SOURCE.split("static void draw_hud(void)", 1)[1].split(
+            "static void initialise_video_and_gx", 1
+        )[0]
+        results_start = hud.index("/* Read-only results use only values measured")
+        results_end = hud.index(
+            "} else if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY)",
+            results_start,
+        )
+        results_pass = hud[results_start:results_end]
+        final_submit = results_pass.rfind("draw_vertex_buffer();")
+        self.assertGreater(final_submit, results_pass.index('append_text("START TO RESTART"'))
+        self.assertNotIn("g_vertex_count = 0", results_pass)
+        self.assertIn("draw_vertex_buffer();", hud[results_end:])
+
     def test_results_panel_has_measured_fields_and_required_glyphs(self) -> None:
         for glyph in ("K", "O", "R", "U", "V", "Y"):
             self.assertRegex(SOURCE, rf"\['{glyph}'\]\s*=\s*\{{[0-9,]+\}}")
