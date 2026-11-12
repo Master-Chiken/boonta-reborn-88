@@ -36,10 +36,19 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 - Do not create a self-referential `in_review` record.
 - after merge, finalize from `main` with the actual merged PR head SHA.
 
+## Existing-task PR resume mode
+- Read the structured fields in `.gemini/context.json`. Resume mode is active only when `resume_mode == "true"`; the trusted fields are `resume_pr_url`, `resume_branch`, `resume_head_sha`, `resume_pr_number`, and `resume_file_paths`.
+- The workflow has already revalidated the exact open, non-draft, owner-authored, same-repository PR, its unique task/target markers, base, branch, URL and prior HEAD after acquiring the single-writer lock.
+- In resume mode, the GitHub server exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`. Do not attempt any other MCP tool.
+- Read exactly one file from the preflight-verified `resume_file_paths` list, using `resume_branch` as the ref. Never read another path or search PR history.
+- Make one coherent change and call `mcp_github_push_files` exactly once on `resume_branch`. Never create a branch/PR, alter the PR description, write the canonical ledger, or change main/dev.
+- The progress evidence must cite `resume_pr_url` and the exact new head SHA returned by `mcp_github_push_files`; the shared validator independently checks cycle freshness and exact-head CI. If the single permitted file cannot safely advance the task, report BLOCKED instead.
+- In normal mode (`resume_mode != "true"`), retain the existing one-branch/one-PR delivery process.
+
 ## Execution and review contract
 - One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
 - No Explore/subagents/planning, repo-wide discovery; search exact task-marker PRs only.
-- Order: reconcile task PR; create one branch from latest selected base; make one `mcp_github_push_files` call; create one marked PR; read back exact current head SHA.
+- Order in normal mode: reconcile task PR; create one branch from latest selected base; make one `mcp_github_push_files` call; create one marked PR; read back exact current head SHA. In resume mode, preserve the preflight-verified existing PR/branch and use the two-tool resume contract above; never create a second PR.
 - No shell/git/.git or local edit tools; this agent intentionally has no general-purpose local shell. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
 - Verify CI on the exact PR head SHA. Do not push empty commits. If pending, stop; read only the failing job logs. Do not rerun when there is no documented safe rerun action. If queued/in progress five minutes beyond that timeout, treat as likely stale runner/Actions state; do not wait indefinitely or invent local results. Treat optional `continue-on-error` diagnostics separately.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
