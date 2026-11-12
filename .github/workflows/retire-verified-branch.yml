@@ -29,6 +29,15 @@ on:
           - docs/reverse-engineering-first-20261106
           - agent/boonta-auto/gemini-daily-cooldown-20261104
           - agent/boonta-auto/openrouter-daily-cooldown-20261104
+          - feat/career-stable-standings-order-20261112
+          - feat/championship-standings-core-20261112
+          - feat/championship-standings-tiebreaks-20261112
+          - feat/nemesis-adaptive-rival-pace-20261112
+          - feat/nemesis-racing-line-commitment-20261112
+          - feat/rival-encounter-memory-20261112
+          - feat/rival-personality-racing-lines-20261112
+          - feat/rival-personality-speed-profiles-20261112
+          - fix/rival-traffic-split-tie-break-20261112
       expected_sha:
         description: "Exact SHA from the reviewed inventory"
         required: true
@@ -116,6 +125,15 @@ jobs:
             "docs/reverse-engineering-first-20261106") PINNED_SHA="38bd467e3da5d81ecb30de20d71df67850a53e51" ;;
             "agent/boonta-auto/gemini-daily-cooldown-20261104") PINNED_SHA="dad92c6b84ad01aecfcf9358422b75d8ea445b5a" ;;
             "agent/boonta-auto/openrouter-daily-cooldown-20261104") PINNED_SHA="287222f23f8e4c7207f3d2b6029e67bf6bff95c7" ;;
+            "feat/career-stable-standings-order-20261112") PINNED_SHA="548c69bec25dc82011344b2c1f0a9c99edcdc563" ;;
+            "feat/championship-standings-core-20261112") PINNED_SHA="360de5a647418cbac3555c5670d88790851bbc45" ;;
+            "feat/championship-standings-tiebreaks-20261112") PINNED_SHA="7604e09d98f88f1ca4fdaf79fb0cdb19bf982afb" ;;
+            "feat/nemesis-adaptive-rival-pace-20261112") PINNED_SHA="3a981183964e1a866589df69c58a6a9280f6b975" ;;
+            "feat/nemesis-racing-line-commitment-20261112") PINNED_SHA="452a81487c285cf17f2df80f06b86c662235074d" ;;
+            "feat/rival-encounter-memory-20261112") PINNED_SHA="a8c6c2fee2ad63469f7c122f52d517554965ae47" ;;
+            "feat/rival-personality-racing-lines-20261112") PINNED_SHA="994e200cb80f53a2296d25b803166b4e7802444d" ;;
+            "feat/rival-personality-speed-profiles-20261112") PINNED_SHA="e3a93ac35a4d69dcefabc3e2497d006168cfa737" ;;
+            "fix/rival-traffic-split-tie-break-20261112") PINNED_SHA="89e9922f22033b8149f6e372b192914ec2e4fc24" ;;
             *) echo "::error::Branch is not allowlisted."; exit 1 ;;
           esac
 
@@ -167,10 +185,11 @@ jobs:
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main"
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
-             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main; then
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
             echo "::error::Branch tip is not reachable from a verified archive or main."
             exit 1
           fi
@@ -212,10 +231,11 @@ jobs:
             echo "::error::The pinned rival-AI history archive moved or is missing."
             exit 1
           }
-          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main"
+          git fetch --no-tags origin "+refs/heads/archive/branch-heads-20261019:refs/remotes/origin/archive/branch-heads-20261019" "+refs/heads/$ARCHIVE_BRANCH:refs/remotes/origin/$ARCHIVE_BRANCH" "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/dev:refs/remotes/origin/dev"
           if ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/archive/branch-heads-20261019 &&
              ! git merge-base --is-ancestor "$EXPECTED_SHA" "refs/remotes/origin/$ARCHIVE_BRANCH" &&
-             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main; then
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main &&
+             ! git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/dev; then
             echo "::error::Branch tip is not reachable from a verified archive or main."
             exit 1
           fi
