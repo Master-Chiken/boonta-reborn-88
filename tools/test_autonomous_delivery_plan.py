@@ -61,11 +61,13 @@ class DeliveryPlanFixture(unittest.TestCase):
         self.ledger = {
             "schema_version": 2,
             "source": "docs/automation/task-ledger.json",
+            "completed_task_ids": [],
             "tasks": [{
                 "task_id": TASK_ID,
                 "title": "Offline delivery fixture",
                 "status": "active",
                 "target_branch": "main",
+                "depends_on": [],
             }],
         }
         self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
@@ -171,6 +173,38 @@ class DeliveryPlanFixture(unittest.TestCase):
 
 
 class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
+    def test_owner_approved_queued_task_with_completed_dependencies_produces_plan(self):
+        self.ledger["completed_task_ids"] = ["TASK-PREREQUISITE"]
+        self.ledger["tasks"][0].update({
+            "status": "queued",
+            "owner_approved": True,
+            "depends_on": ["TASK-PREREQUISITE"],
+        })
+        self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
+        git(self.root, "add", "docs/automation/task-ledger-summary.json")
+        git(self.root, "commit", "-qm", "approve dependency-complete queued task")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.write_allowlist(base_sha=self.base_sha)
+        self.write_verified()
+        plan = self.plan()
+        self.assertEqual(plan["status"], "DELIVERY_PLAN_READY")
+        self.assertEqual(plan["task_id"], TASK_ID)
+
+    def test_queued_task_with_incomplete_dependencies_cannot_produce_plan(self):
+        self.ledger["tasks"][0].update({
+            "status": "queued",
+            "owner_approved": True,
+            "depends_on": ["TASK-PREREQUISITE"],
+        })
+        self.ledger_path.write_text(json.dumps(self.ledger), encoding="utf-8")
+        git(self.root, "add", "docs/automation/task-ledger-summary.json")
+        git(self.root, "commit", "-qm", "queue task behind incomplete dependency")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.write_allowlist(base_sha=self.base_sha)
+        self.write_verified()
+        with self.assertRaisesRegex(DeliveryPlanError, "active or dependency-complete"):
+            self.plan()
+
     def test_valid_verified_report_produces_deterministic_plan(self):
         first = self.plan()
         second = self.plan()
