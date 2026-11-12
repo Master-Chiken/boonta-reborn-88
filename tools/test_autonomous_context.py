@@ -31,6 +31,7 @@ def fixture(root: Path) -> str:
             "task_id": "AUTOMATION-LEDGER-ACTIVATION",
             "title": "Activate and validate persistent autonomous task tracking",
             "status": "blocked",
+            "depends_on": [],
             "target_branch": "main",
             "platform_scope": ["automation"],
             "read_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
