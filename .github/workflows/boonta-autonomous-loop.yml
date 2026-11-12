@@ -431,7 +431,7 @@ jobs:
                 ['Queued / active / blocked', queuedTasks.length + ' / ' + activeTasks.length + ' / ' + blockedTasks.length],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
-                ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (owner-dispatch only)' : 'none'],
+                ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (eligible provider selected by cooldown order)' : 'none'],
               ])
               .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, active-task reconciliation and READY. An existing open PR for the selected task blocks duplicate provider work until it is reconciled.')
               .write();
@@ -442,7 +442,8 @@ jobs:
     if: >-
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
-      needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      (needs.provider-cooldowns.outputs.task_ready == 'true' ||
+       (needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true')) &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.gemini_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -462,6 +463,16 @@ jobs:
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
+      resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
+      resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
+      resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
+      resume_task_description: ${{ needs.provider-cooldowns.outputs.resume_task_context }}
+      resume_pr_number: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
+      resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
+      resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
+      resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
+      resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
       additional_context: >-
         Owner-authorized scheduled or manual main-branch loop. The selected task ID, title, acceptance criteria and target branch are supplied by the read-only preflight and must remain identical across providers. Use only one provider invocation per workflow run; fallback is allowed only on a later eligible run after the earlier provider cooldown is already active. Budget €0; preserve provenance, exact-head checks and human review. Never merge or change secrets, billing, permissions, branch protection or merge policy.
     secrets: inherit
@@ -473,7 +484,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
-      needs.provider-cooldowns.outputs.task_ready == 'true' &&
+      (needs.provider-cooldowns.outputs.task_ready == 'true' || (needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true')) &&
       (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
@@ -496,11 +507,21 @@ jobs:
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
+      resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
+      resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
+      resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
+      resume_task_description: ${{ needs.provider-cooldowns.outputs.resume_task_context }}
+      resume_pr_number: ${{ needs.provider-cooldowns.outputs.resume_pr_number }}
+      resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
+      resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
+      resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
+      resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
     secrets: inherit
 
-  # The resume-only route requires an explicit owner workflow_dispatch; schedules do not retouch open PRs.
+  # Resume follows strict provider order: Gemini first, then OpenRouter, then Groq only if both earlier cooldowns were active at preflight.
   groq-fallback:
-    name: Groq Free fallback or owner-dispatched existing-PR resume
+    name: Groq Free fallback or ordered existing-PR resume
     needs: [readiness, provider-cooldowns, autonomous-cycle, openrouter-fallback]
     if: >-
       always() &&
@@ -521,8 +542,8 @@ jobs:
         (
           needs.provider-cooldowns.outputs.task_ready != 'true' &&
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
-          github.event_name == 'workflow_dispatch' &&
-          github.actor == github.repository_owner
+          needs.provider-cooldowns.outputs.gemini_active == 'true' &&
+          needs.provider-cooldowns.outputs.openrouter_active == 'true'
         )
       ) &&
       github.ref == 'refs/heads/main' &&
@@ -541,7 +562,7 @@ jobs:
       task_title: ${{ needs.provider-cooldowns.outputs.task_title }}
       task_target_branch: ${{ needs.provider-cooldowns.outputs.task_target_branch }}
       task_description: ${{ needs.provider-cooldowns.outputs.task_context }}
-      resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}
+      resume_mode: ${{ needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true' }}
       resume_task_id: ${{ needs.provider-cooldowns.outputs.resume_task_id }}
       resume_task_title: ${{ needs.provider-cooldowns.outputs.resume_task_title }}
       resume_task_target_branch: ${{ needs.provider-cooldowns.outputs.resume_target_branch }}
