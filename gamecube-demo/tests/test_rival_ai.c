@@ -127,6 +127,39 @@ static void nemesis_memory_gently_increases_rival_pace(void)
     assert(boonta_rival_ai_target_speed_with_rivalry(2U, 0.0f, 100U) <= 0.85f);
 }
 
+static void nemesis_memory_changes_racing_line_without_defeating_avoidance(void)
+{
+    const float other_z[2] = {-18.0f, -17.0f};
+    const float other_lateral[2] = {0.0f, 0.0f};
+    const float base = boonta_rival_ai_target_lateral(
+        0U, -18.0f, 0.0f, 0.0f, 0, 0, 1U, 0.10f, 3.4f);
+    const float committed = boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, 0.0f, 0.0f, 0, 0, 1U, 0.10f, 3.4f, 100U);
+
+    assert(nearf_ai(boonta_rival_ai_nemesis_line_bonus(0U), 0.0f));
+    assert(nearf_ai(boonta_rival_ai_nemesis_line_bonus(100U), 0.25f));
+    assert(nearf_ai(boonta_rival_ai_nemesis_line_bonus(1000U), 0.25f));
+    assert(nearf_ai(boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, 0.0f, 0.0f, 0, 0, 1U, 0.10f, 3.4f, 0U), base));
+    assert(committed > base);
+    assert(nearf_ai(boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, 0.0f, 0.0f, 0, 0, 1U, -0.10f, 3.4f, 100U),
+        boonta_rival_ai_target_lateral(
+            0U, -18.0f, 0.0f, 0.0f, 0, 0, 1U, -0.10f, 3.4f) - 0.25f));
+
+    /* Close player and rival traffic avoidance always take priority. */
+    assert(nearf_ai(boonta_rival_ai_target_lateral_with_rivalry(
+        0U, 1.5f, 0.0f, 0.0f, 0, 0, 1U, 0.10f, 3.4f, 100U),
+        boonta_rival_ai_target_lateral(
+            0U, 1.5f, 0.0f, 0.0f, 0, 0, 1U, 0.10f, 3.4f)));
+    assert(nearf_ai(boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, 0.0f, 0.0f, other_z, other_lateral, 2U,
+        0.10f, 3.4f, 100U),
+        boonta_rival_ai_target_lateral(
+            0U, -18.0f, 0.0f, 0.0f, other_z, other_lateral, 2U,
+            0.10f, 3.4f)));
+}
+
 static void speed_response_is_bounded_and_asymmetric(void)
 {
     assert(nearf_ai(boonta_rival_ai_speed_after_frame(0.50f, 0.70f, 1.0f), 0.504f));
@@ -162,6 +195,7 @@ int main(void)
     signed_curvature_preserves_turn_direction();
     curvature_reduces_target_speed();
     nemesis_memory_gently_increases_rival_pace();
+    nemesis_memory_changes_racing_line_without_defeating_avoidance();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
     puts("rival AI tests: PASS");
