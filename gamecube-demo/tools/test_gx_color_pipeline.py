@@ -119,7 +119,7 @@ class GXColorPipelineTests(unittest.TestCase):
 
 
     def test_quad_builder_keeps_finish_quads_inside_buffer_capacity(self) -> None:
-        self.assertRegex(SOURCE, r"#define VERTEX_CAPACITY\s+8192U")
+        self.assertRegex(SOURCE, r"#define VERTEX_CAPACITY\s+16384U")
         quad = SOURCE.split("static void quad_add", 1)[1].split(
             "static void box_face", 1
         )[0]
