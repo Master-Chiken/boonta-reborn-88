@@ -170,18 +170,20 @@ static inline float boonta_rival_ai_after_frame(
 }
 
 /*
- * Curvature is estimated from the clean-room track sampler in radians per metre.
- * This first pace model intentionally adjusts speed only; it does not modify
- * the player's physics or claim retail GameCube/Wii physics parity.
+ * Rivals need a race pace close to the player's 1.0 top-speed envelope:
+ * otherwise they can never reach the finish before a neutral full-throttle run.
+ * Skill tiers keep a small deterministic spread; upcoming curvature trims pace
+ * gently without making even the fastest rival mathematically uncompetitive.
+ * This remains a simple pace controller, not retail physics parity.
  */
 static inline float boonta_rival_ai_target_speed(
     unsigned int rival_index, float curvature_radians_per_metre)
 {
     const float curvature = boonta_rival_ai_clamp(
         curvature_radians_per_metre, 0.0f, 0.18f);
-    const float target_speed = boonta_rival_initial_speed(rival_index) -
-                               curvature * 1.8f;
-    return boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
+    const float skill_pace = 0.985f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.0075f;
+    const float target_speed = skill_pace - curvature * 0.05f;
+    return boonta_rival_ai_clamp(target_speed, 0.90f, 1.0f);
 }
 
 static inline float boonta_rival_ai_speed_after_frame(
@@ -191,7 +193,7 @@ static inline float boonta_rival_ai_speed_after_frame(
     float delta;
 
     current_speed = boonta_rival_ai_clamp(current_speed, 0.0f, 1.0f);
-    target_speed = boonta_rival_ai_clamp(target_speed, 0.35f, 0.85f);
+    target_speed = boonta_rival_ai_clamp(target_speed, 0.90f, 1.0f);
     frame_scale = boonta_sanitize_frame_scale(frame_scale);
     delta = target_speed - current_speed;
     max_step = (delta >= 0.0f ? 0.004f : 0.010f) * frame_scale;
