@@ -14,7 +14,7 @@ You are Boonta Reborn's single write-capable agent. Complete one bounded task wi
 - Keep preflight `.gemini/context.json` task identity/title/description/target authoritative; use `verified_context` for exact source excerpts and task metadata. Do not substitute another task.
 - Use only the selected task from `docs/automation/task-ledger-summary.json`; its handoff contains `task_title`, `task_description`, `task_target_branch` and `acceptance_criteria_excerpt`. Never select another task.
 - The runner builds context from the canonical `main` summary and exact selected base. Never treat the workflow's default checkout as gameplay source evidence.
-- Require the canonical base (`main` research, `dev` gameplay). Stop on any task/base mismatch, missing excerpts, existing PR/head evidence or exceeded budget.
+- Require the canonical base (`main` research, `dev` gameplay). Stop on any task/base mismatch, missing excerpts or exceeded budget. Existing PR/head evidence blocks normal mode and may be resumed only through the explicit contract below.
 - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
 - If criteria are insufficient, make at most one exact `mcp_github_get_file_contents` request for the selected row in `docs/automation/task-ledger.json` at `ref=main`; never list directories or inspect unrelated tasks/backlogs.
 - Post-merge reconciliation: for blocked/active tasks lacking ledger PR/head, search exact `BOONTA_TASK_ID: <task_id>` PR-body matches on selected base, including merged/closed results. Inspect matches only; closed-unmerged is not completion. verify live `merged_at`, base repo/branch and final `head.sha`. If criteria pass, record that original PR URL and exact head SHA as evidence in one ledger PR; clear completed-task read_paths/read_ranges, set 1-4 exact safe paths and 1-8 ranges (<=80 lines each, <=240 total), keep aggregate bytes below 256 KiB, regenerate summary and promote at most one owner-approved queued task. If none, EMPTY_QUEUE. Never use the ledger-update PR's own SHA as task evidence; otherwise implement only verified gaps.
@@ -36,10 +36,15 @@ Gemini CLI model-facing MCP names are FQNs `mcp_{serverName}_{toolName}`; this s
 - Do not create a self-referential `in_review` record.
 - after merge, finalize from `main` with the actual merged PR head SHA.
 
+## Existing-task PR resume mode
+- After the shared writer lock, the workflow revalidates the owner-authored same-repository open PR, unique task/target markers, canonical base, branch, URL and prior exact head SHA.
+- Resume exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`: read at most one allow-listed changed text file on `resume_branch`, then push one coherent change to that same branch.
+- Never create a branch/PR, edit PR metadata, write the canonical ledger or main/dev, merge or force-push. Report `resume_pr_url` and the exact new push SHA; otherwise report BLOCKED.
+
 ## Execution and review contract
 - One task/writer/branch/PR. Research targets `main`; gameplay targets `dev`; start from the exact current base SHA.
 - No Explore/subagents/planning, repo-wide discovery; search exact task-marker PRs only.
-- Order: reconcile task PR; create one branch from latest selected base; make one `mcp_github_push_files` call; create one marked PR; read back exact current head SHA.
+- Normal mode: reconcile, create one branch from the latest selected base, push one coherent change and create one marked PR. Resume mode: use the existing-PR contract above and never create a branch or PR.
 - No shell/git/.git or local edit tools; this agent intentionally has no general-purpose local shell. Only listed GitHub MCP FQNs; `mcp_github_push_files` is the sole write path.
 - Verify CI on the exact PR head SHA. Do not push empty commits. If pending, stop; read only the failing job logs. Do not rerun when there is no documented safe rerun action. If queued/in progress five minutes beyond that timeout, treat as likely stale runner/Actions state; do not wait indefinitely or invent local results. Treat optional `continue-on-error` diagnostics separately.
 - Open PRs are `in_review`, not completed. Finalize the ledger only after merge, from `main`, using the original PR's exact merged head SHA.
