@@ -54,8 +54,10 @@ on:
       resume_task_description:
         type: string
         required: false
+      # The caller passes an empty string when no resume is selected.
+      # Validate a positive ID only in the post-lock resume guard.
       resume_pr_number:
-        type: number
+        type: string
         required: false
       resume_pr_url:
         type: string
