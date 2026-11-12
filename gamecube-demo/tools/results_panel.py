@@ -71,7 +71,13 @@ def results_panel_visible(
         center_x - 112.0 * scale_x, center_y + 62.0 * scale_y,
         center_x + 112.0 * scale_x, center_y + 84.0 * scale_y,
     )
+    # A captured Dolphin window can be shorter than the 480-line game viewport
+    # because its toolbar shares the same fixed-height window. The title glyphs
+    # are then vertically scaled with the viewport; scale the pixel-count gate
+    # by the sampled area so a genuine RESULTS panel is not rejected solely due
+    # to the smaller capture. Keep a floor to reject isolated exhaust pixels.
+    minimum_orange_pixels = max(40, round(80.0 * scale_x * scale_y))
     return (
-        orange_pixels >= 80
+        orange_pixels >= minimum_orange_pixels
         and min(left_panel_edge, right_panel_edge, lower_panel_band) >= 0.82
     )
