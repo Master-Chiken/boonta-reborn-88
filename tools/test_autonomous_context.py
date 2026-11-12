@@ -52,6 +52,7 @@ def fixture(root: Path) -> str:
         "status": "declarative_only",
         "execution_plane": "github_actions",
         "canonical_task_ledger": "docs/automation/task-ledger.json",
+        "provider_order": ["gemini", "openrouter_free", "groq_free"],
         "policy": {
             "max_active_missions": 1,
             "max_provider_invocations_per_run": 1,
