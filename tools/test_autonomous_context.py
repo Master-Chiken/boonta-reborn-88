@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory() as temp:
     )
     assert "Canonical ledger v2" in rendered
     assert "One active task maximum" in rendered
-    assert "Role: chief-of-staff — Chief of Staff (deterministic)." in rendered
+    assert "Role: chief-of-staff — Chief of Staff" in rendered
     assert "Chain: human-owner > ceo > chief-of-staff." in rendered
     assert "Objective: BOONTA-AUTONOMOUS-ENGINEERING (zero-cost)." in rendered
     assert "Registry: declarative only; no extra permissions." in rendered
