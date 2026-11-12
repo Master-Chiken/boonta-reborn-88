@@ -110,8 +110,8 @@ with tempfile.TemporaryDirectory() as temp:
     assert "One active task maximum" in rendered
     assert "Role: chief-of-staff — Chief of Staff" in rendered
     assert "Chain: human-owner > ceo > chief-of-staff." in rendered
-    assert "Objective: BOONTA-AUTONOMOUS-ENGINEERING (zero-cost)." in rendered
-    assert "Registry: declarative only; no extra permissions." in rendered
+    assert "Objective: BOONTA-AUTONOMOUS-ENGINEERING." in rendered
+    assert "Registry: declarative only; no rights." in rendered
     assert "Target branch: main" in rendered
     assert "Exact owner-reviewed write paths (no others): tools/test_check_task_ledger.py" in rendered
 
