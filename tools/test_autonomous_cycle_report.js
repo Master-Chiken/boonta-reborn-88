@@ -26,8 +26,8 @@ assert.equal(
     taskId,
     'main'
   ),
-  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
-  'exact model echoes must be preserved'
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'exact model echoes are replaced by one canonical copy from the trusted reservation'
 );
 assert.equal(
   bindCycleReportToReservedTask(
@@ -35,40 +35,27 @@ assert.equal(
     taskId,
     'main'
   ),
-  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
   'an omitted evidence base must be supplied from the trusted reservation'
 );
-assert.throws(
-  () => bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED', taskId, 'main'),
-  /task identity conflicts with the workflow reservation/,
-  'a conflicting model task ID must be rejected'
-);
-assert.throws(
-  () => bindCycleReportToReservedTask(
-    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_TASK_ID: ' + taskId,
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: dev',
     taskId,
     'main'
   ),
-  /more than one task identity marker/,
-  'duplicate task identity markers must be rejected'
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'stale model-supplied orchestration metadata must be replaced by the trusted reservation'
 );
-assert.throws(
-  () => bindCycleReportToReservedTask(
-    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: dev',
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_TASK_ID: ' + taskId +
+      '\nBOONTA_CYCLE_EVIDENCE_BASE: dev\nBOONTA_CYCLE_EVIDENCE_BASE: main\nBOONTA_CYCLE_STATUS: BLOCKED',
     taskId,
     'main'
   ),
-  /evidence base conflicts with the workflow reservation/,
-  'a conflicting model evidence base must be rejected'
-);
-assert.throws(
-  () => bindCycleReportToReservedTask(
-    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main\nBOONTA_CYCLE_EVIDENCE_BASE: main',
-    taskId,
-    'main'
-  ),
-  /more than one evidence base marker/,
-  'duplicate evidence base markers must be rejected'
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'duplicate model-supplied metadata cannot create ambiguity in the canonical report'
 );
 assert.throws(
   () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', 'bad task id', 'main'),
@@ -399,8 +386,9 @@ async function run(name, options = {}) {
       ].join('\n')
     }
   );
-  assert.ok(openRouterConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
-    'the real embedded OpenRouter validator must reject a model-supplied conflicting task ID instead of overwriting it');
+  assert.equal(openRouterConflictingTaskIdentity.failure, '',
+    'the real embedded OpenRouter validator must replace stale model task metadata with the trusted reservation');
+  assert.equal(openRouterConflictingTaskIdentity.outputs.cycle_status, 'blocked');
 
   const openRouterCredentialIsolation = await executeOpenRouterBlockedStep(
     'The provider key is intentionally not exposed to the model.',
@@ -466,8 +454,9 @@ async function run(name, options = {}) {
       ].join('\n')
     }
   );
-  assert.ok(geminiConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
-    'the real embedded Gemini validator must reject a conflicting task ID');
+  assert.equal(geminiConflictingTaskIdentity.failure, '',
+    'the real embedded Gemini validator must replace stale model task metadata with the trusted reservation');
+  assert.equal(geminiConflictingTaskIdentity.outputs.cycle_status, 'blocked');
 
   const groqMissingAppToken = await executeGroqBlockedStep(
     'There is no verified live GitHub App token.',
@@ -511,8 +500,9 @@ async function run(name, options = {}) {
       ].join('\n')
     }
   );
-  assert.ok(groqConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
-    'the real embedded Groq validator must reject a conflicting task ID');
+  assert.equal(groqConflictingTaskIdentity.failure, '',
+    'the real embedded Groq validator must replace stale model task metadata with the trusted reservation');
+  assert.equal(groqConflictingTaskIdentity.outputs.cycle_status, 'blocked');
 
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
