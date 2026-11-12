@@ -692,9 +692,9 @@ jobs:
           - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or trust older merged automation PRs.
           - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents once for one listed write path at ref TASK_TARGET_BRANCH.
-          - write only the exact owner-reviewed paths listed in context; if absent, BLOCKED, no branch/PR.
-          - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain (#317/#318/#319).
+          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
+          - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
+          - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
           
           SAFETY
           - No paid routes, billing, credits, or provider/secret/settings changes.
@@ -704,7 +704,7 @@ jobs:
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
           - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
-          - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH; include BOONTA_TASK_ID: <exact task ID> and BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
+          - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Exact markers: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           - Use returned PR URL/head_sha; do not read the PR back.
           
           REPORT
