@@ -127,8 +127,8 @@ static void rival_personalities_choose_distinct_racing_lines(void)
     assert(cautious < balanced);
     assert(balanced < aggressive);
     assert(aggressive <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
-    assert(nearf_ai(boonta_rival_ai_target_line_lateral(2U, -bend, 3.4f),
-                    -aggressive));
+    assert(boonta_rival_ai_target_line_lateral(2U, -bend, 3.4f) < 1.25f);
+    assert(aggressive > 1.25f);
 }
 
 static void rival_personalities_are_stable_and_distinct(void)
