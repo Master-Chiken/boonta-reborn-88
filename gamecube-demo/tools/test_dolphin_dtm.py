@@ -477,8 +477,14 @@ class DolphinDtmTests(unittest.TestCase):
 
         def draw_results(image, viewport_top: int) -> None:
             draw = ImageDraw.Draw(image)
-            x = 400.0 - 26.0
-            y = viewport_top + 240.0 - 78.0
+            center_x = 400.0
+            center_y = viewport_top + 240.0
+            draw.rectangle(
+                (center_x - 132, center_y - 92, center_x + 132, center_y + 92),
+                fill=(8, 18, 30),
+            )
+            x = center_x - 26.0
+            y = center_y - 78.0
             for char in "RESULTS":
                 for row, bits in enumerate(glyphs[char]):
                     for col in range(5):
@@ -502,6 +508,21 @@ class DolphinDtmTests(unittest.TestCase):
         empty = Image.new("RGB", (800, 480), (105, 170, 225))
         self.assertFalse(results_view_visible(empty))
         self.assertFalse(finish_banner_visible(empty))
+
+        # Regression: the previous 12-pixel orange-only test accepted 52
+        # exhaust pixels from an ordinary rival frame as the RESULTS title.
+        exhaust = Image.new("RGB", (800, 480), (105, 170, 225))
+        ImageDraw.Draw(exhaust).rectangle((394, 162, 406, 165), fill=color)
+        self.assertFalse(results_view_visible(exhaust))
+        self.assertFalse(finish_banner_visible(exhaust))
+
+        # RACE READY also has a centered dark panel, but it is too short to
+        # satisfy the RESULTS lower-band geometry, even with stray orange pixels.
+        ready = Image.new("RGB", (800, 480), (105, 170, 225))
+        ready_draw = ImageDraw.Draw(ready)
+        ready_draw.rectangle((260, 184, 540, 296), fill=(8, 18, 30))
+        ready_draw.rectangle((394, 162, 406, 165), fill=color)
+        self.assertFalse(results_view_visible(ready))
 
     @unittest.skipIf(
         Image is None or ImageDraw is None or finish_banner_visible is None,
