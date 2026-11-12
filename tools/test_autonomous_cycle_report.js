@@ -171,7 +171,7 @@ async function executeEmbeddedBlockedStep({
     'BOONTA_CYCLE_STATUS: BLOCKED',
     'BOONTA_CYCLE_BLOCKER: ' + blocker,
     'BOONTA_CYCLE_NEXT_ACTION: ' + nextAction
-  ].join('\\n');
+  ].join('\n');
   const env = {
     REPORT_PATH: 'report.txt',
     GEMINI_SUMMARY: machineReport,
@@ -375,7 +375,7 @@ async function run(name, options = {}) {
         'BOONTA_CYCLE_STATUS: BLOCKED',
         'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
         'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
-      ].join('\\n')
+      ].join('\n')
     }
   );
   assert.equal(openRouterReportWithoutTaskIdentity.failure, '',
@@ -392,7 +392,7 @@ async function run(name, options = {}) {
         'BOONTA_CYCLE_STATUS: BLOCKED',
         'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
         'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
-      ].join('\\n')
+      ].join('\n')
     }
   );
   assert.ok(openRouterConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
