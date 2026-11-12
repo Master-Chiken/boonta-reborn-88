@@ -543,7 +543,11 @@ jobs:
           needs.provider-cooldowns.outputs.task_ready != 'true' &&
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
           needs.provider-cooldowns.outputs.gemini_active == 'true' &&
-          needs.provider-cooldowns.outputs.openrouter_active == 'true'
+          needs.provider-cooldowns.outputs.openrouter_active == 'true' &&
+          (
+            github.event_name == 'schedule' ||
+            (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
+          )
         )
       ) &&
       github.ref == 'refs/heads/main' &&
