@@ -588,7 +588,7 @@ openrouter_config_tools = openrouter_config.get("mcp", {}).get("github", {}).get
 groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 required_openrouter_normal = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
 required_resume_tools = {"get_file_contents", "push_files"}
-required_groq_tools = {"create_branch", "create_pull_request", "push_files"}
+required_groq_tools = {"get_file_contents", "create_branch", "create_pull_request", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
@@ -613,7 +613,7 @@ for label, workflow in (("Gemini", gemini),):
     if '"GITHUB_TOOLS": "${GITHUB_TOOLS}"' not in workflow or '"-e",\n                    "GITHUB_TOOLS"' not in workflow:
         errors.append("Gemini container must inherit the exact workflow-selected tool allow-list")
 
-for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)),):
+for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)), ("Groq", set().union(required_groq_tools, required_resume_tools))):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
