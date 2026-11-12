@@ -122,6 +122,9 @@ jobs:
             if (!Array.isArray(openPullRequests) || openPullRequests.length >= 100) {
               throw new Error('Open PR inventory reached the 100-item safety ceiling; refusing provider invocation to avoid duplicate task work.');
             }
+            // Existing trusted PRs remain resumable; never start new work above the PR budget.
+            const MAX_OPEN_PRS_FOR_NEW_TASK = 3;
+            const canStartNewTask = openPullRequests.length < MAX_OPEN_PRS_FOR_NEW_TASK;
             const matchingTaskPullRequests = (task) => {
               if (!task) return [];
               const markerLine = 'BOONTA_TASK_ID: ' + task.task_id;
@@ -220,7 +223,7 @@ jobs:
             const resumeCandidateReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
             // Promote only the first explicitly owner-approved queued task whose complete dependency set
             // is already completed in the canonical ledger. An open/in-review PR never satisfies a dependency.
-            const eligibleQueuedTask = activeTasks.length === 0
+            const eligibleQueuedTask = activeTasks.length === 0 && canStartNewTask
               ? queuedTasks.find((task) =>
                   task.owner_approved === true &&
                   Array.isArray(task.depends_on) &&
@@ -282,7 +285,7 @@ jobs:
             }
             let selectedTask = null;
             let taskReason = '';
-            if (activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
+            if (canStartNewTask && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
               selectedTask = activeTasks[0];
               taskReason = 'one complete active ledger task with no existing PR, head or open task PR';
             } else if (activeTasks.length === 1 && usableTask(activeTasks[0]) && activeTaskOpenPr) {
@@ -294,6 +297,7 @@ jobs:
               !activationTask.pr_url &&
               !activationTask.head_sha &&
               taskBackoffAllowsSelection &&
+              canStartNewTask &&
               !activationTaskOpenPr
             ) {
               selectedTask = activationTask;
@@ -313,6 +317,8 @@ jobs:
             } else if (activeTasks.length === 0 && eligibleQueuedTask) {
               selectedTask = eligibleQueuedTask;
               taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
+            } else if (!canStartNewTask) {
+              taskReason = 'open PR budget reached (' + openPullRequests.length + '/' + MAX_OPEN_PRS_FOR_NEW_TASK + '); no new task branch or PR will be created, but a trusted existing task PR may still be resumed';
             } else if (activeTasks.length === 0 && queuedTasks.length > 0) {
               taskReason = 'queued tasks are waiting for completed dependencies, explicit owner approval, bounded read paths, or PR reconciliation';
             } else if (activeTasks.length > 1) {
