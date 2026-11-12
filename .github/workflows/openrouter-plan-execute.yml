@@ -245,11 +245,15 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
-              !Array.isArray(ledgerSummary.tasks)
+              !Array.isArray(ledgerSummary.tasks) ||
+              !Array.isArray(ledgerSummary.completed_task_ids) ||
+              ledgerSummary.completed_task_ids.some((id) => typeof id !== 'string' || !id.trim()) ||
+              new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length
             ) {
-              failClosed('canonical compact task ledger schema or one-active-task policy is invalid');
+              failClosed('canonical compact task ledger schema, completed dependencies or one-active-task policy is invalid');
               return;
             }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
@@ -271,9 +275,19 @@ jobs:
             }
             const task = matches[0];
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const dependenciesSatisfied = Array.isArray(task.depends_on) &&
+              task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              );
+            const activeReservation = task.status === 'active' &&
+              activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
+              dependenciesSatisfied;
+            const approvedQueuePromotion = task.status === 'queued' &&
+              task.owner_approved === true && activeTasks.length === 0 &&
+              dependenciesSatisfied;
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
-              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+              : activeReservation || approvedQueuePromotion;
             if (!eligibleStatus) {
               failClosed('the selected task status or active-task reservation changed while this run waited');
               return;
@@ -286,7 +300,18 @@ jobs:
               !Array.isArray(task.acceptance_criteria_excerpt) ||
               task.acceptance_criteria_excerpt.length === 0 ||
               !Array.isArray(task.platform_scope) ||
-              task.platform_scope.length === 0
+              task.platform_scope.length === 0 ||
+              !Array.isArray(task.read_paths) ||
+              task.read_paths.length < 1 || task.read_paths.length > 4 ||
+              task.read_paths.some((path) =>
+                typeof path !== 'string' || path.length > 120 ||
+                !/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') ||
+                path.split('/').some((part) => !part || part === '.' || part === '..') ||
+                path === 'docs/automation/task-ledger.json' ||
+                path === 'docs/automation/task-ledger-summary.json' ||
+                path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))
+              ) ||
+              new Set(task.read_paths).size !== task.read_paths.length
             ) {
               failClosed('the selected task no longer matches its canonical branch or complete execution context');
               return;
@@ -341,6 +366,15 @@ jobs:
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
 
+      - name: Checkout selected task target for bounded source context
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ inputs.task_target_branch }}
+          path: .boonta-target-source
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: false
+
       - name: Install pinned OpenCode CLI
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         shell: bash
@@ -391,7 +425,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no OpenRouter inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 2400 --max-task-context 2200)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 1400 --max-criteria 4 --max-next-action 100)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -476,7 +510,7 @@ jobs:
           You are the €0-only OpenRouter Free agent. Execute only the preflight-selected task.
           
           SAFETY
-          - No paid model/provider fallback is available. €0 only; no billing/credits, key, secret, provider or settings changes.
+          - €0 only; no billing, credits, paid fallback, key/secret/provider/settings changes.
           - One task/writer/branch/PR. Never write main/dev, merge, auto-merge, force-push or delete refs.
           - Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request.
           - Never upload commercial ROMs, discs, binaries or extracted game data. Preserve clean-room provenance.
@@ -486,8 +520,12 @@ jobs:
           - Use exactly this task from docs/automation/task-ledger-summary.json. The preloaded question, acceptance_criteria_excerpt and next action are authoritative. Do not substitute another task.
           - Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence.
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
-          - Keep newly retrieved text below 1,000 tokens total; target below 700 tokens. Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier. At most one directly relevant source/test file.
-          - Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
+          - No PR/branch enumeration or media/binary retrieval.
+          - Newly retrieved text: at most 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
+          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
+          - Queued: write only paths in "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED—no branch/PR.
+          - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
+          - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
           
           TOOLS / DELIVERY
           - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
@@ -637,7 +675,16 @@ jobs:
             const fs = require('fs');
             const { findBlockedReportContradictions, validateAutonomousCycleReport } =
               require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
-            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const { bindCycleReportToReservedTask } =
+              require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            let summary;
+            try {
+              const rawSummary = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
+              summary = bindCycleReportToReservedTask(rawSummary, process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
+            } catch (error) {
+              core.setFailed('OpenRouter report could not be bound to the reserved task: ' + error.message);
+              return;
+            }
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {

@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const { validateAutonomousCycleReport, findBlockedReportContradictions, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
+const { validateAutonomousCycleReport, findBlockedReportContradictions, bindCycleReportToReservedTask, REQUIRED_CHECKS } = require('./validate_autonomous_cycle_report');
 
 const owner = 'Master-Chiken';
 const repo = 'boonta-reborn-88';
@@ -11,6 +11,76 @@ const taskId = 'AUTOMATION-LEDGER-ACTIVATION';
 const head = 'a'.repeat(40);
 const snapshotAt = new Date(Date.now() - 60_000).toISOString();
 const context = { repo: { owner, repo } };
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.',
+    taskId,
+    'main'
+  ),
+  'BOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_BLOCKER: A named dependency\nBOONTA_CYCLE_NEXT_ACTION: Check it.\nBOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'the workflow must bind the omitted task ID from its trusted reservation and supply the omitted evidence base from its trusted reservation'
+);
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+    taskId,
+    'main'
+  ),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'exact model echoes must be preserved'
+);
+assert.equal(
+  bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED',
+    taskId,
+    'main'
+  ),
+  'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_STATUS: BLOCKED\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+  'an omitted evidence base must be supplied from the trusted reservation'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_TASK_ID: OTHER-TASK\nBOONTA_CYCLE_STATUS: BLOCKED', taskId, 'main'),
+  /task identity conflicts with the workflow reservation/,
+  'a conflicting model task ID must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_TASK_ID: ' + taskId,
+    taskId,
+    'main'
+  ),
+  /more than one task identity marker/,
+  'duplicate task identity markers must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: dev',
+    taskId,
+    'main'
+  ),
+  /evidence base conflicts with the workflow reservation/,
+  'a conflicting model evidence base must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask(
+    'BOONTA_CYCLE_TASK_ID: ' + taskId + '\nBOONTA_CYCLE_EVIDENCE_BASE: main\nBOONTA_CYCLE_EVIDENCE_BASE: main',
+    taskId,
+    'main'
+  ),
+  /more than one evidence base marker/,
+  'duplicate evidence base markers must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', 'bad task id', 'main'),
+  /valid reserved task ID/,
+  'invalid preflight task IDs must be rejected'
+);
+assert.throws(
+  () => bindCycleReportToReservedTask('BOONTA_CYCLE_STATUS: BLOCKED', taskId, 'staging'),
+  /valid reserved evidence base/,
+  'invalid preflight evidence bases must be rejected'
+);
+
 
 const missingOpenRouterKeyClaim = 'The provider blocker says no provider key was available in this invocation.';
 assert.equal(
@@ -71,7 +141,8 @@ async function executeEmbeddedBlockedStep({
   summaryEnv,
   blocker,
   nextAction,
-  envOverrides = {}
+  envOverrides = {},
+  machineReport: suppliedMachineReport
 }) {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
   const stepStart = workflow.indexOf('      - name: ' + stepName + '\n');
@@ -95,7 +166,7 @@ async function executeEmbeddedBlockedStep({
   assert.ok(script.some((line) => line.includes('findBlockedReportContradictions')),
     stepName + ' must exercise the shared contradiction guard');
 
-  const machineReport = [
+  const machineReport = suppliedMachineReport || [
     'BOONTA_CYCLE_TASK_ID: ' + taskId,
     'BOONTA_CYCLE_STATUS: BLOCKED',
     'BOONTA_CYCLE_BLOCKER: ' + blocker,
@@ -139,6 +210,7 @@ async function executeEmbeddedBlockedStep({
 }
 
 async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const { machineReport, ...runtimeEnvOverrides } = envOverrides;
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/openrouter-plan-execute.yml',
     stepName: 'Validate OpenRouter autonomous cycle report',
@@ -146,16 +218,18 @@ async function executeOpenRouterBlockedStep(blocker, nextAction, envOverrides = 
     summaryEnv: 'REPORT_PATH',
     blocker,
     nextAction,
+    machineReport,
     envOverrides: {
       OPENROUTER_PREFLIGHT_ALLOWED: 'true',
       OPENROUTER_AUTH_OUTCOME: 'success',
       GITHUB_APP_TOKEN_OUTCOME: 'success',
-      ...envOverrides
+      ...runtimeEnvOverrides
     }
   });
 }
 
 async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const { machineReport, ...runtimeEnvOverrides } = envOverrides;
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/gemini-plan-execute.yml',
     stepName: 'Validate autonomous cycle report contract',
@@ -163,15 +237,17 @@ async function executeGeminiBlockedStep(blocker, nextAction, envOverrides = {}) 
     summaryEnv: 'GEMINI_SUMMARY',
     blocker,
     nextAction,
+    machineReport,
     envOverrides: {
       GEMINI_PREFLIGHT_ALLOWED: 'true',
       GITHUB_APP_TOKEN_OUTCOME: 'success',
-      ...envOverrides
+      ...runtimeEnvOverrides
     }
   });
 }
 
 async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
+  const { machineReport, ...runtimeEnvOverrides } = envOverrides;
   return executeEmbeddedBlockedStep({
     workflowPath: '.github/workflows/groq-plan-execute.yml',
     stepName: 'Validate Groq autonomous cycle report',
@@ -179,9 +255,10 @@ async function executeGroqBlockedStep(blocker, nextAction, envOverrides = {}) {
     summaryEnv: 'REPORT_PATH',
     blocker,
     nextAction,
+    machineReport,
     envOverrides: {
       GITHUB_APP_TOKEN_OUTCOME: 'success',
-      ...envOverrides
+      ...runtimeEnvOverrides
     }
   });
 }
@@ -294,6 +371,37 @@ async function run(name, options = {}) {
   assert.ok(openRouterMissingToken.failure.includes('contradicts same-run preflight evidence'),
     'the actual embedded OpenRouter BLOCKED script must reject a missing-token claim after successful App token creation');
 
+  const openRouterReportWithoutTaskIdentity = await executeOpenRouterBlockedStep(
+    'The provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.equal(openRouterReportWithoutTaskIdentity.failure, '',
+    'the real embedded OpenRouter validator must bind an omitted task ID and evidence base from the trusted reservation');
+  assert.equal(openRouterReportWithoutTaskIdentity.outputs.cycle_status, 'blocked',
+    'a report missing only orchestration metadata must still reach the normal BLOCKED validator');
+
+  const openRouterConflictingTaskIdentity = await executeOpenRouterBlockedStep(
+    'The provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_TASK_ID: UNRELATED-TASK',
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.ok(openRouterConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
+    'the real embedded OpenRouter validator must reject a model-supplied conflicting task ID instead of overwriting it');
+
   const openRouterCredentialIsolation = await executeOpenRouterBlockedStep(
     'The provider key is intentionally not exposed to the model.',
     'Record the verified owner result in the task ledger.'
@@ -331,6 +439,36 @@ async function run(name, options = {}) {
     'the actual Gemini BLOCKED script must not confuse credential isolation with missing preflight configuration');
   assert.equal(geminiCredentialIsolation.outputs.cycle_status, 'blocked');
 
+  const geminiReportWithoutTaskIdentity = await executeGeminiBlockedStep(
+    'The Gemini provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.equal(geminiReportWithoutTaskIdentity.failure, '',
+    'the real embedded Gemini validator must bind an omitted task ID and evidence base from the trusted reservation');
+  assert.equal(geminiReportWithoutTaskIdentity.outputs.cycle_status, 'blocked');
+
+  const geminiConflictingTaskIdentity = await executeGeminiBlockedStep(
+    'The Gemini provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_TASK_ID: UNRELATED-TASK',
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.ok(geminiConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
+    'the real embedded Gemini validator must reject a conflicting task ID');
+
   const groqMissingAppToken = await executeGroqBlockedStep(
     'There is no verified live GitHub App token.',
     'Record the verified dependency and next step.'
@@ -345,6 +483,36 @@ async function run(name, options = {}) {
   assert.equal(groqCredentialIsolation.failure, '',
     'the actual Groq BLOCKED script must accept a blocker unrelated to GitHub App authentication');
   assert.equal(groqCredentialIsolation.outputs.cycle_status, 'blocked');
+
+  const groqReportWithoutTaskIdentity = await executeGroqBlockedStep(
+    'The Groq provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.equal(groqReportWithoutTaskIdentity.failure, '',
+    'the real embedded Groq validator must bind an omitted task ID and evidence base from the trusted reservation');
+  assert.equal(groqReportWithoutTaskIdentity.outputs.cycle_status, 'blocked');
+
+  const groqConflictingTaskIdentity = await executeGroqBlockedStep(
+    'The Groq provider completed its bounded research attempt.',
+    'Record the verified dependency and next step.',
+    {
+      machineReport: [
+        'BOONTA_CYCLE_TASK_ID: UNRELATED-TASK',
+        'BOONTA_CYCLE_STATUS: BLOCKED',
+        'BOONTA_CYCLE_BLOCKER: A bounded research dependency remains unresolved.',
+        'BOONTA_CYCLE_NEXT_ACTION: Record the evidence and retry in a later eligible cycle.'
+      ].join('\n')
+    }
+  );
+  assert.ok(groqConflictingTaskIdentity.failure.includes('could not be bound to the reserved task'),
+    'the real embedded Groq validator must reject a conflicting task ID');
 
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');

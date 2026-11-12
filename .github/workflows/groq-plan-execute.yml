@@ -65,6 +65,9 @@ on:
         required: false
       resume_head_sha:
         type: string
+      resume_file_paths:
+        type: string
+        required: false
 
 concurrency:
   group: boonta-single-writer
@@ -228,11 +231,15 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
-              !Array.isArray(ledgerSummary.tasks)
+              !Array.isArray(ledgerSummary.tasks) ||
+              !Array.isArray(ledgerSummary.completed_task_ids) ||
+              ledgerSummary.completed_task_ids.some((id) => typeof id !== 'string' || !id.trim()) ||
+              new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length
             ) {
-              failClosed('canonical compact task ledger schema or one-active-task policy is invalid');
+              failClosed('canonical compact task ledger schema, completed dependencies or one-active-task policy is invalid');
               return;
             }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
@@ -254,9 +261,19 @@ jobs:
             }
             const task = matches[0];
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const dependenciesSatisfied = Array.isArray(task.depends_on) &&
+              task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              );
+            const activeReservation = task.status === 'active' &&
+              activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
+              dependenciesSatisfied;
+            const approvedQueuePromotion = task.status === 'queued' &&
+              task.owner_approved === true && activeTasks.length === 0 &&
+              dependenciesSatisfied;
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
-              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+              : activeReservation || approvedQueuePromotion;
             if (!eligibleStatus) {
               failClosed('the selected task status or active-task reservation changed while this run waited');
               return;
@@ -269,7 +286,18 @@ jobs:
               !Array.isArray(task.acceptance_criteria_excerpt) ||
               task.acceptance_criteria_excerpt.length === 0 ||
               !Array.isArray(task.platform_scope) ||
-              task.platform_scope.length === 0
+              task.platform_scope.length === 0 ||
+              !Array.isArray(task.read_paths) ||
+              task.read_paths.length < 1 || task.read_paths.length > 4 ||
+              task.read_paths.some((path) =>
+                typeof path !== 'string' || path.length > 120 ||
+                !/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') ||
+                path.split('/').some((part) => !part || part === '.' || part === '..') ||
+                path === 'docs/automation/task-ledger.json' ||
+                path === 'docs/automation/task-ledger-summary.json' ||
+                path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))
+              ) ||
+              new Set(task.read_paths).size !== task.read_paths.length
             ) {
               failClosed('the selected task no longer matches its canonical branch or complete execution context');
               return;
@@ -477,6 +505,15 @@ jobs:
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
 
+      - name: Checkout selected task target for bounded source context
+        if: steps.free_tier_guard.outputs.allowed == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          path: .boonta-target-source
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: false
+
       - name: Install pinned OpenCode CLI
         if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: bash
@@ -538,7 +575,7 @@ jobs:
             echo "::error::Could not identify the exact checked-out Boonta repository root; no Groq inference was sent."
             exit 1
           fi
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1500 --max-task-context 1400)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3000 --max-task-context 1100 --max-criteria 4 --max-next-action 100 --max-source-chars 1800)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -556,6 +593,7 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          TASK_BRANCH_NAME: autonomous-${{ inputs.task_id }}-${{ github.run_id }}
           RESUME_TASK_ID: ${{ inputs.resume_task_id }}
           RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
           RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
@@ -566,6 +604,7 @@ jobs:
           RESUME_PR_URL: ${{ inputs.resume_pr_url }}
           RESUME_BRANCH: ${{ inputs.resume_branch }}
           RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
+          RESUME_FILE_PATHS: ${{ inputs.resume_file_paths }}
         run: |
           set -euo pipefail
           set +x
@@ -574,13 +613,13 @@ jobs:
             TASK_ID="${RESUME_TASK_ID}"
             TASK_TITLE="${RESUME_TASK_TITLE}"
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
-            export GITHUB_TOOLS="push_files"
+            export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="create_branch,push_files,create_pull_request"
+            export GITHUB_TOOLS="create_branch,create_pull_request,push_files"
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,152/384 limits; max 4 steps (6,144 nominal tokens). Skip optional reads; reserve one final report step below the observed 8k TPM ceiling.
+          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Exact task source excerpts are preloaded; no model file-read step.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
@@ -605,8 +644,8 @@ jobs:
                   "openai/gpt-oss-20b": {
                     "temperature": true,
                     "limit": {
-                      "context": 1152,
-                      "output": 384
+                      "context": 1550,
+                      "output": 256
                     }
                   }
                 }
@@ -644,31 +683,29 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
 
           PROMPT="$(cat <<'PROMPT'
-          Groq Free. €0 only; execute the preflight-selected task.
+          Groq Free, €0 only. Execute the one globally selected task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: it selected exactly one task, loaded its question/criteria/next action, and confirmed activation pr_url/head_sha are empty with no matching open PR. Do not read files; report BLOCKED if this handoff is insufficient.
-          - Do not search PR history: ignore older merged automation PRs. Do not reread summary, ledger or budget.
-          - #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded. Do not recreate them.
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence. Use the preloaded excerpts for every exact task path from TASK_TARGET_BRANCH. Do not browse, list, call file-read tools, inspect other paths or reread the ledger. If an excerpt is insufficient, report BLOCKED rather than guess.
+          - No full issue bodies/comments; exact source excerpts are preloaded.
+          - Source excerpt budget: 1,800 characters.
+          - Queued: write only paths in "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED—no branch/PR.
+          - No model-side reads or repo discovery.
+          - Do not reopen, replay or recreate that chain. #327 is merged at 69deb6778f9383887118803428e7014686865a83; #317/#318/#319 are superseded.
           
           SAFETY
-          - No paid routes, billing, credits, or provider/secret/settings changes.
-          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
-          - No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.
-          - One task/branch/patch/PR. Never write main/dev, merge/auto-merge, force-push or delete refs.
+          - No paid routes, billing, credits, or provider/secret/settings changes. Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
+          - Preserve clean-room provenance; never upload commercial ROMs/assets. Never write main/dev, merge, force-push or delete refs.
           
-          TOOLS
-          - Only MCP tools: create_branch, push_files, create_pull_request. Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
-          - Direct MCP only; no Task/subagents, shell or filesystem.
-          
-          DELIVERY
-          - Four model steps: create one branch, call push_files once with one coherent patch, create one non-draft PR, then emit the final machine-readable report.
-          - Use create_pull_request result URL/head_sha; shared validator re-fetches PR and checks exact-head CI.
+          TOOLS / DELIVERY
+          - Only github_create_branch, github_push_files and github_create_pull_request in normal mode. No source reads, shell, filesystem or subagents; excerpts are preloaded by the trusted workflow.
+          - Use FQNs: github_create_branch, github_push_files, github_create_pull_request.
           - PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
+          - Four steps: create TASK_BRANCH_NAME from TASK_TARGET_BRANCH; push_files once with one coherent patch; create one non-draft PR; report.
+          - PR body must contain BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Use returned PR URL/head_sha; no PR readback.
           
           REPORT
-          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim.
-          - Output only machine-readable lines. PROGRESS needs same-repo PR URL, 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
+          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output only machine-readable lines. PROGRESS needs same-repo PR URL, exact 40-char HEAD and base. BLOCKED needs one verified blocker and next action.
           PROMPT
           )"
 
@@ -678,6 +715,9 @@ jobs:
           fi
           PROMPT="${PROMPT}"$'\n\n'
           PROMPT+="${AUTONOMOUS_CONTEXT}"
+          if [[ "${RESUME_MODE:-false}" != "true" ]]; then
+            PROMPT+=$'\nSelected base: '"${TASK_TARGET_BRANCH}"$'\nNew branch: '"${TASK_BRANCH_NAME}"
+          fi
           REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
           REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
           PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
@@ -691,15 +731,20 @@ jobs:
               echo "::error::Verified resume metadata is incomplete; no Groq request was sent."
               exit 2
             fi
+            if ! jq -e 'type == "array" and length >= 1 and length <= 4 and all(.[]; type == "string" and length > 0 and length <= 120 and test("^[A-Za-z0-9._/-]+$") and (split("/") | all(.[]; . != "" and . != "." and . != "..")))' <<<"${RESUME_FILE_PATHS:-}" >/dev/null; then
+              echo "::error::Resume path allow-list is missing or invalid; no Groq request was sent."
+              exit 2
+            fi
+            RESUME_ALLOWED_PATHS="$(jq -r '.[] | "- " + .' <<<"$RESUME_FILE_PATHS")"
             PROMPT="$(cat <<'RESUME_PROMPT'
           Groq Free, €0 only. Resume exactly one existing task PR.
           
           AUTHORITY
           - The preloaded task context and exact existing-PR metadata are authoritative. The workflow revalidated owner, same repository, open/non-draft, task/target markers, branch, URL and prior head SHA.
-          - Do not search history, read files, use agents, or inspect unrelated PRs.
+          - Do not search history, use agents, or inspect unrelated PRs. Read exactly one file from the preflight-verified changed-path allow-list appended below.
           
           WRITE
-          - Only github_push_files is exposed. Call it once on the supplied existing branch with one coherent task patch.
+          - Only github_get_file_contents and github_push_files are exposed. Read exactly one listed path using the supplied existing branch as the ref, then call github_push_files once with the full updated file content on that same branch.
           - Never create a branch or PR; never write main/dev, merge, force-push, delete refs, change secrets or edit the canonical ledger.
           - Preserve provenance and licenses. Stop rather than guess.
           
@@ -716,6 +761,8 @@ jobs:
             PROMPT+=$'\nPR: '"${RESUME_PR_URL}"
             PROMPT+=$'\nBranch: '"${RESUME_BRANCH}"
             PROMPT+=$'\nPrior HEAD: '"${RESUME_HEAD_SHA}"
+            PROMPT+=$'\nPreflight-verified changed paths (read at most one):\n'"${RESUME_ALLOWED_PATHS}"
+            PROMPT+=$'\nRead no other paths. Preserve the existing branch and PR; do not create a new one.'
             REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
             REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
             PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
@@ -726,8 +773,8 @@ jobs:
           fi
 
           # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 3600 )); then
-            echo "::error::Groq prompt exceeds the 3,600-character TPM safety ceiling; no model request was sent."
+          if (( ${#PROMPT} > 5500 )); then
+            echo "::error::Groq prompt exceeds the 5,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
           echo "Groq prompt size: ${#PROMPT} characters."
@@ -831,7 +878,18 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const summary = fs.readFileSync(process.env.REPORT_PATH, 'utf8').trim();
+            const { bindCycleReportToReservedTask } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            let summary;
+            try {
+              summary = bindCycleReportToReservedTask(
+                fs.readFileSync(process.env.REPORT_PATH, 'utf8'),
+                process.env.SELECTED_TASK_ID,
+                process.env.SELECTED_TASK_TARGET_BRANCH
+              );
+            } catch (error) {
+              core.setFailed('Groq report could not be bound to the reserved task: ' + error.message);
+              return;
+            }
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {

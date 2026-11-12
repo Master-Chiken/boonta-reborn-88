@@ -6,5 +6,18 @@
     "max_paths_per_task": 20,
     "note": "A task gets write paths only through an explicit reviewed change to this file. No globs, prefixes, inferred scopes or model-selected paths."
   },
-  "tasks": []
+  "tasks": [
+    {
+      "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+      "purpose": "Implement deterministic GameCube/Wii rival route distance, lap completion, finish state and regression coverage.",
+      "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/400",
+      "allowed_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/tests/test_rival_ai.c"
+      ]
+    }
+  ]
 }

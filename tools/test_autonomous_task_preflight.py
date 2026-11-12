@@ -64,6 +64,9 @@ def task(
         ],
         "next_action_excerpt": "Complete one small, source-verified automation task.",
         "platform_scope": ["automation"],
+        "owner_approved": status == "queued",
+        "depends_on": [],
+        "read_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
         "pr_url": "",
         "head_sha": "",
     }
@@ -92,14 +95,49 @@ cases = [
         "expected_queue_state": "EMPTY_QUEUE",
     },
     {
-        "name": "queued task is visible but not silently promoted",
-        "tasks": [valid_queued],
+        "name": "queued task is visible but not silently promoted until its dependency is completed",
+        "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
+        "completed_task_ids": [],
         "marker_day_offset": None,
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
         "expected_queued_count": 1,
+    },
+    {
+        "name": "first owner-approved queued task is promoted only after every dependency is completed",
+        "tasks": [{**valid_queued, "depends_on": ["TASK-PREREQUISITE"]}],
+        "completed_task_ids": ["TASK-PREREQUISITE"],
+        "marker_day_offset": None,
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-TEST-QUEUED",
+        "expected_blocked": False,
+        "expected_queue_state": "READY",
+    },
+    {
+        "name": "queued task without explicit owner approval is not promoted",
+        "tasks": [{**valid_queued, "owner_approved": False}],
+        "completed_task_ids": [],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
+    },
+    {
+        "name": "queued task with an open matching PR is not promoted",
+        "tasks": [valid_queued],
+        "completed_task_ids": [],
+        "open_task_prs": [{
+            "number": 457,
+            "body": "BOONTA_TASK_ID: AUTOMATION-TEST-QUEUED"
+        }],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
     },
     {
         "name": "blocked non-activation tasks are not auto-unblocked",
@@ -148,6 +186,15 @@ cases = [
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
             "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\nBOONTA_TASK_TARGET_BRANCH: main"
         }],
+        "pr_files": [
+            {"filename": "tools/check_task_ledger.py", "status": "modified"},
+            {"filename": "tools/test_check_task_ledger.py", "status": "modified"},
+            {"filename": "docs/automation/task-ledger.json", "status": "modified"},
+            {"filename": "assets/reference.bin", "status": "modified"},
+            {"filename": "../unsafe.py", "status": "modified"},
+            {"filename": "roms/synthetic_probe.c", "status": "modified"},
+            {"filename": "private/owner-notes.md", "status": "modified"},
+        ],
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
@@ -156,6 +203,31 @@ cases = [
         "expected_resume_ready": True,
         "expected_resume_pr_number": "388",
         "expected_resume_task_id": "AUTOMATION-LEDGER-ACTIVATION",
+        "expected_resume_file_paths": ["tools/check_task_ledger.py", "tools/test_check_task_ledger.py"],
+    },
+    {
+        "name": "trusted PR without an eligible text file is not resumable",
+        "tasks": [activation],
+        "marker_day_offset": None,
+        "open_task_prs": [{
+            "number": 388,
+            "state": "open",
+            "draft": False,
+            "user": {"login": "Master-Chiken"},
+            "head": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "AUTOMATION-LEDGER-ACTIVATION", "sha": "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"},
+            "base": {"repo": {"full_name": "Master-Chiken/boonta-reborn-88"}, "ref": "main"},
+            "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/388",
+            "body": "BOONTA_TASK_ID: AUTOMATION-LEDGER-ACTIVATION\nBOONTA_TASK_TARGET_BRANCH: main"
+        }],
+        "pr_files": [{"filename": "assets/reference.bin", "status": "modified"}],
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+        "expected_resume_file_paths": [],
+        "reason_contains": "no eligible safe text file",
     },
     {
         "name": "duplicate exact task markers fail closed for resume discovery",
@@ -604,6 +676,7 @@ async function runCase(testCase) {{
     source: "docs/automation/task-ledger.json",
     updated_at: todayUtc,
     policy: {{ max_active_tasks: 1 }},
+    completed_task_ids: testCase.completed_task_ids || [],
     tasks: testCase.tasks
   }};
   const github = {{
@@ -621,6 +694,12 @@ async function runCase(testCase) {{
             throw new Error("unexpected open-PR query");
           }}
           return {{ data: testCase.open_task_prs || [] }};
+        }},
+        listFiles: async (options) => {{
+          if (options.pull_number !== 388 || options.per_page !== 100 || options.page !== 1) {{
+            throw new Error("unexpected resume changed-file query");
+          }}
+          return {{ data: testCase.pr_files || [] }};
         }}
       }},
       repos: {{
@@ -713,6 +792,10 @@ async function runCase(testCase) {{
       outputs.resume_task_id !== testCase.expected_resume_task_id) {{
       throw new Error(testCase.name + ": expected resume_task_id=" + testCase.expected_resume_task_id + ", got " + outputs.resume_task_id);
     }}
+    if (testCase.expected_resume_file_paths !== undefined &&
+      outputs.resume_file_paths !== JSON.stringify(testCase.expected_resume_file_paths)) {{
+      throw new Error(testCase.name + ": expected resume file allow-list " + JSON.stringify(testCase.expected_resume_file_paths) + ", got " + outputs.resume_file_paths);
+    }}
     if (outputs.resume_pr_candidate === "true" && outputs.task_ready !== "false") {{
       throw new Error(testCase.name + ": resume must remain separate from normal task readiness");
     }}
@@ -722,7 +805,8 @@ async function runCase(testCase) {{
       outputs.resume_target_branch !== "main" ||
       outputs.resume_pr_url !== "https://github.com/Master-Chiken/boonta-reborn-88/pull/388" ||
       outputs.resume_branch !== "AUTOMATION-LEDGER-ACTIVATION" ||
-      outputs.resume_head_sha !== "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2"
+      outputs.resume_head_sha !== "d5b2fa770b6fed40c006dfbfb4a23949ecb83ae2" ||
+      outputs.resume_file_paths !== JSON.stringify(testCase.expected_resume_file_paths || [])
     )) {{
       throw new Error(testCase.name + ": exact safe-resume metadata/task context was not propagated");
     }}
@@ -735,7 +819,8 @@ async function runCase(testCase) {{
         throw new Error(testCase.name + ": selected task title/target branch were not propagated");
       }}
       for (const expectedText of [selected.task_id, selected.title, selected.question_excerpt,
-        ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt]) {{
+        ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt,
+        "Read-only source paths (select at most one): " + selected.read_paths.join(", ")]) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted " + expectedText);
         }}

@@ -116,13 +116,39 @@ def _load_canonical_task(root: Path, task_id: str) -> dict[str, Any]:
         raise DeliveryPlanError("Canonical task summary schema or source is invalid")
     tasks = ledger["tasks"]
     active = [task for task in tasks if isinstance(task, dict) and task.get("status") == "active"]
-    if len(active) != 1:
-        raise DeliveryPlanError("Delivery plan requires exactly one canonical active task")
-    selected = active[0]
-    if selected.get("task_id") != task_id:
-        raise DeliveryPlanError("Verified task ID does not match the unique active task")
+    if len(active) > 1:
+        raise DeliveryPlanError("Canonical task summary violates the one-active-task policy")
+    completed_ids = ledger.get("completed_task_ids", [])
+    if (
+        not isinstance(completed_ids, list)
+        or any(not isinstance(item, str) or not TASK_ID_RE.fullmatch(item) for item in completed_ids)
+        or len(set(completed_ids)) != len(completed_ids)
+    ):
+        raise DeliveryPlanError("Canonical completed_task_ids is missing, malformed or duplicated")
+    completed = set(completed_ids)
+    if active:
+        selected = active[0]
+        if selected.get("task_id") != task_id:
+            raise DeliveryPlanError("Verified task ID does not match the unique active task")
+        dependencies = selected.get("depends_on")
+        if not isinstance(dependencies, list) or any(item not in completed for item in dependencies):
+            raise DeliveryPlanError("Active task dependencies are not all completed")
+    else:
+        eligible_queued = [
+            task for task in tasks
+            if isinstance(task, dict)
+            and task.get("status") == "queued"
+            and task.get("owner_approved") is True
+            and isinstance(task.get("depends_on"), list)
+            and all(dependency in completed for dependency in task["depends_on"])
+        ]
+        if not eligible_queued:
+            raise DeliveryPlanError("Delivery plan requires an active or dependency-complete owner-approved queued task")
+        selected = eligible_queued[0]
+        if selected.get("task_id") != task_id:
+            raise DeliveryPlanError("Verified task ID does not match the first eligible queued task")
     if selected.get("target_branch") not in {"main", "dev"}:
-        raise DeliveryPlanError("Canonical active task has an unsupported target branch")
+        raise DeliveryPlanError("Canonical selected task has an unsupported target branch")
     return selected
 
 

@@ -34,6 +34,9 @@ gemini = read("gemini")
 openrouter = read("openrouter")
 groq = read("groq")
 loop = read("loop")
+
+groq_step_ids = re.findall(r"(?m)^        id:\s*([A-Za-z0-9_-]+)\s*$", groq)
+
 gemini_prompt = read("gemini_prompt")
 budget = read("budget")
 cycle_validator = read("cycle_validator")
@@ -42,6 +45,11 @@ context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
+# Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
+# repeated validation/comment side effects. Keep this workflow single-pass.
+if len(groq_step_ids) != len(set(groq_step_ids)):
+    errors.append("Groq workflow must not contain duplicate step IDs")
+
 
 # Every provider needs checks:read for the shared exact-head validator, with no
 # broader permissions than its existing contents/issues/PR write operations.
@@ -84,6 +92,30 @@ else:
             errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
         if "Gemini CLI model-facing MCP names are FQNs" not in gemini_prompt:
             errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
+
+        core_tools = gemini_settings.get("tools", {}).get("core", [])
+        if core_tools != ["read_file"]:
+            errors.append("Gemini autonomous local tools must be limited to read_file for the injected context file")
+
+        for required in (
+            "name: 'Checkout selected task target for bounded source context'",
+            "ref: ${{ inputs.task_target_branch }}",
+            "path: .boonta-target-source",
+            "tools/build_autonomous_context.py",
+            "--source-root \"$TARGET_ROOT\"",
+            "--max-source-chars 1600",
+            "--arg verified_context",
+            "verified_context: $verified_context",
+        ):
+            if required not in gemini:
+                errors.append(f"Gemini must preload bounded excerpts from the exact task target: missing {required!r}")
+        for required in (
+            "use its `verified_context` as the authoritative task handoff",
+            "The only local file read permitted is `.gemini/context.json`",
+            "Never treat the workflow's default checkout as gameplay source evidence",
+        ):
+            if required not in gemini_prompt:
+                errors.append(f"Gemini target-branch context rule is missing {required!r}")
     except (json.JSONDecodeError, StopIteration, AttributeError, TypeError) as exc:
         errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
 
@@ -107,6 +139,7 @@ provider_model_visible_tools = (
     )),
     ("Groq", groq, (
         "github_create_branch",
+        "github_get_file_contents",
         "github_push_files",
         "github_create_pull_request",
     )),
@@ -171,6 +204,31 @@ else:
         if required not in resume_guard:
             errors.append(f"Groq resume preflight is missing {required!r}")
 
+for required in (
+    "pulls.listFiles({",
+    "resumeFilePaths = [...new Set(changedFiles",
+    "core.setOutput('resume_file_paths', JSON.stringify(resumeReady ? resumeFilePaths : []))",
+):
+    if required not in loop:
+        errors.append(f"Groq resume preflight is missing verified changed-file handoff: {required!r}")
+
+# Task identity is orchestration metadata: every provider binds the report to
+# the exact preflight reservation before parsing or validating its status.
+for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq", groq)):
+    if "bindCycleReportToReservedTask" not in workflow:
+        errors.append(f"{label} report must bind to the workflow-reserved task ID before validation")
+    if "process.env.SELECTED_TASK_TARGET_BRANCH" not in workflow:
+        errors.append(f"{label} report binder must receive the trusted target branch")
+if "function bindCycleReportToReservedTask(report, expectedTaskId, expectedBase)" not in cycle_validator:
+    errors.append("Shared cycle validator must provide the deterministic task-and-base metadata binder")
+if "Object.prototype.hasOwnProperty.call(REQUIRED_CHECKS, expectedBase)" not in cycle_validator or "marker: 'BOONTA_CYCLE_EVIDENCE_BASE:'" not in cycle_validator:
+    errors.append("Shared cycle validator must validate and bind the reserved evidence base")
+if "omitted task ID from its trusted reservation" not in cycle_validator_tests:
+    errors.append("Cycle-report tests must cover automatic binding of an omitted task ID")
+for required in ("conflicting model evidence base must be rejected", "duplicate evidence base markers must be rejected"):
+    if required not in cycle_validator_tests:
+        errors.append(f"Cycle-report tests must cover {required}")
+
 # A provider that failed in this run must not immediately launch another model.
 # The next provider is eligible only when its predecessor's persistent UTC
 # cooldown was already active during the global preflight at this run's start.
@@ -207,6 +265,7 @@ for required in (
     "needs.provider-cooldowns.outputs.resume_ready == 'true'",
     "resume_mode: ${{ needs.provider-cooldowns.outputs.resume_ready == 'true' }}",
     "resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}",
+    "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}",
     "github.event_name == 'workflow_dispatch'",
     "github.actor == github.repository_owner",
 ):
@@ -218,11 +277,14 @@ for required in (
     "resume_pr_url:",
     "resume_branch:",
     "resume_head_sha:",
+    "resume_file_paths:",
     "pull.head?.sha !== expectedHeadSha",
     "bodyLines.filter((line) => line === targetMarker).length !== 1",
-    'export GITHUB_TOOLS="push_files"',
+    'export GITHUB_TOOLS="get_file_contents,push_files"',
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "Groq Free, €0 only. Resume exactly one existing task PR.",
+    "Only github_get_file_contents and github_push_files are exposed.",
+    "Read exactly one listed path using the supplied existing branch as the ref",
 ):
     if required not in groq:
         errors.append(f"Groq exact-PR resume guard is missing {required!r}")
@@ -337,8 +399,8 @@ if "task context exceeds the 2,500-character provider handoff budget" not in tas
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "1,000 tokens"),
-    ("Groq", groq, "300 tokens"),
+    ("OpenRouter", openrouter, "at most 700 tokens"),
+    ("Groq", groq, "1,800 characters"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
@@ -373,7 +435,7 @@ if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
 if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
     errors.append("Groq must have four bounded write/PR/report steps")
-elif 4 * (1152 + 384) >= 8000:
+elif 4 * (1550 + 256) >= 8000:
     errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
@@ -408,8 +470,8 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,152 context tokens and 384 output tokens" not in budget or "1,500-character verified-context ceiling; 1,400-character task handoff" not in budget:
-    errors.append("Groq shared budget documentation must match its reduced TPM-safe context and handoff ceilings")
+if "1,550 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
+    errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
@@ -470,9 +532,9 @@ required_openrouter_tools = {
     "get_file_contents", "create_branch", "push_files", "create_pull_request",
 }
 required_groq_tools = {
-    "create_branch", "push_files", "create_pull_request",
+    "create_branch", "create_pull_request", "push_files",
 }
-required_groq_resume_tools = {"push_files"}
+required_groq_resume_tools = {"get_file_contents", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
@@ -484,11 +546,11 @@ if groq_config_tools != "{env:GITHUB_TOOLS}":
 else:
     groq_modes = set(re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', groq))
     expected_groq_modes = {
-        "create_branch,push_files,create_pull_request",
-        "push_files",
+        ",".join(sorted(required_groq_tools)),
+        ",".join(sorted(required_groq_resume_tools)),
     }
     if groq_modes != expected_groq_modes:
-        errors.append("Groq must expose exactly three branch/push/PR tools normally and push_files only for existing-PR resume")
+        errors.append("Groq must expose exactly three normal delivery tools and only targeted read plus push for existing-PR resume")
 if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
     errors.append("Groq container must inherit the exact workflow-selected tool allow-list")
 
@@ -542,16 +604,28 @@ for required in (
     'task.get("title") != task_title or task.get("target_branch") != target_branch',
     'task.get("pr_url") or task.get("head_sha")',
     'task_id != "AUTOMATION-LEDGER-ACTIVATION"',
+    'status == "queued"',
+    'task.get("owner_approved") is not True',
+    'patch-path-allowlist.json',
+    'Exact owner-reviewed write paths (no others): ',
+    'Queued task is not owner-approved, dependency-complete, or the writer slot is occupied',
     'required_handoff_text',
     'task["question_excerpt"]',
     'task["next_action_excerpt"]',
-    "if not all(item in bounded_task_context for item in required_handoff_text)",
-    "truncates required question, acceptance-criteria or next-action excerpts",
+    "if not all(item in task_context for item in required_handoff_text)",
+    "Verified task excerpts exceed the configured",
 ):
     if required not in context_builder:
         errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
 if "tight context budget to reject truncated required task excerpts" not in context_builder_tests:
     errors.append("Schema-v2 context tests must prove required task excerpts are not silently truncated")
+if "Queued context must fail closed while any dependency is incomplete" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must reject queued work with incomplete dependencies")
+if "Queued context must fail closed without explicit owner approval" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must reject queued work without owner approval")
+for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
+    if "Exact owner-reviewed write paths (no others)" not in prompt:
+        errors.append(f"{label} prompt must restrict queued writes to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
@@ -561,8 +635,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
-    errors.append("Groq must remain capped at 1152 context / 384 output tokens so four write/PR/report steps stay below the observed 8k TPM refusal")
+if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
+    errors.append("Groq must remain capped at 1550 context / 256 output tokens; four invocations reserve 7,224 nominal tokens below the observed 8k TPM ceiling")
 groq_model_config = (
     groq_config.get("provider", {})
     .get("groq", {})
@@ -592,7 +666,7 @@ for required in (
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
 for content, needle, message in (
-    (groq, "if (( ${#PROMPT} > 3600 )); then", "Groq must enforce its 3,600-character TPM prompt-size guard before inference"),
+    (groq, "if (( ${#PROMPT} > 5500 )); then", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
@@ -600,7 +674,7 @@ for content, needle, message in (
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Use FQNs: github_create_branch, github_push_files, github_create_pull_request.", "Groq must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (groq, "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.", "Groq normal mode must expose only branch, push and PR tools"),
 
 ):
     if needle not in content:
@@ -638,16 +712,30 @@ else:
     resume_body = groq[resume_start + len(resume_start_marker):resume_end]
     resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
     if len(resume_body) > 1400:
-        errors.append(f"Groq resume prompt leaves insufficient room under the 3,600-character TPM cap: {len(resume_body)}")
-if len(actual_groq_prompt) > 1820:
-    errors.append(f"Groq static prompt leaves insufficient room under its 3,600-character TPM cap: {len(actual_groq_prompt)}")
+        errors.append(f"Groq resume prompt leaves insufficient room under the 5,500-character TPM cap: {len(resume_body)}")
+if len(actual_groq_prompt) > 2100:
+    errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1500, 1400)
-context_limits("OpenRouter", openrouter, 2400, 2200)
-if len(actual_groq_prompt) + 1500 + 400 > 3600:
-    errors.append("Groq worst-case prompt plus task context and report exceeds its 3,600-character TPM cap")
-if len(actual_openrouter_prompt) + 2200 + 500 > 7000:
+context_limits("Groq", groq, 3000, 1100)
+if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
+    errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
+if "--max-source-chars 1400" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its 1,400-character source excerpt budget")
+if "--max-criteria 4 --max-next-action 100" not in openrouter:
+    errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
+if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
+    errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
+if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
+    errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
+if "--max-criteria 4 --max-next-action 100" not in groq:
+    errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
+if "Use the preloaded excerpts for every exact task path" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must require trusted multi-file excerpts and forbid model-side browsing")
+context_limits("OpenRouter", openrouter, 2800, 1100)
+if len(actual_groq_prompt) + 3000 + 400 > 5500:
+    errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
+if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
     errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
 
 
@@ -663,7 +751,7 @@ for label, content in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("
     if "69deb6778f9383887118803428e7014686865a83" not in content:
         errors.append(f"{label} instructions must identify the merged PR #327 implementation")
     required_reopen_rule = (
-        "#317/#318/#319 are superseded. Do not recreate them."
+        "Do not reopen, replay or recreate that chain."
         if label == "Groq" else "Do not reopen, replay or recreate that chain"
     )
     if required_reopen_rule not in content:
@@ -706,6 +794,12 @@ for required in (
     "activationTask.status === 'blocked'",
     "const usableTask = (task) => Boolean(",
     "Array.isArray(task.platform_scope) && task.platform_scope.length > 0",
+    "ledgerSummary.completed_task_ids",
+    "const completedTaskIds = new Set(ledgerSummary.completed_task_ids)",
+    "const eligibleQueuedTask = activeTasks.length === 0",
+    "task.owner_approved === true",
+    "task.depends_on.every((dependencyId) =>",
+    "completedTaskIds.has(dependencyId)",
     "const { data: openPullRequests } = await github.rest.pulls.list({",
     "state: 'open'",
     "page: 1",
@@ -742,7 +836,9 @@ for required in (
         errors.append(f"Autonomous queue-state reporting is missing {required!r}")
 for required_case in (
     '"name": "empty canonical ledger reports EMPTY_QUEUE"',
-    '"name": "queued task is visible but not silently promoted"',
+    '"name": "queued task is visible but not silently promoted until its dependency is completed"',
+    '"name": "first owner-approved queued task is promoted only after every dependency is completed"',
+    '"name": "queued task without explicit owner approval is not promoted"',
     '"name": "blocked non-activation tasks are not auto-unblocked"',
     '"name": "activation same-day backoff is reported separately from empty queue"',
     '"name": "open task PR is reported as waiting for reconciliation"',

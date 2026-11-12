@@ -479,8 +479,8 @@ for label, workflow, marker in (
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
     '"GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"',
-    "Do not enumerate all PRs/branches or retrieve attachments, media, binaries or the large route dossier",
-    "Keep newly retrieved text below 1,000 tokens total; target below 700 tokens",
+    "No PR/branch enumeration or media/binary retrieval.",
+    "Newly retrieved text: at most 700 tokens.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
@@ -988,8 +988,8 @@ for label, prompt in dynamic_task_prompts:
 # Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
-    ("OpenRouter", openrouter_fallback, "2400", "2200"),
-    ("Groq", groq_fallback, "1500", "1400"),
+    ("OpenRouter", openrouter_fallback, "2800", "1100"),
+    ("Groq", groq_fallback, "3000", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -1577,9 +1577,9 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1152 or groq_limits.get("output") != 384:
+        if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1152 context / 384 output tokens so four direct-delivery steps stay below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 1550 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
             )
         if groq_model.get("temperature") is not True:
             errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
@@ -1591,17 +1591,19 @@ else:
             errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
+if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1400" not in openrouter_fallback:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
-    "1,152/384 limits; max 4 steps (6,144 nominal tokens).",
-    "No full bodies/comments for #156/#226/#279; new retrieved text below 300 tokens.",
-    "new retrieved text below 300 tokens.",
-    "Only MCP tools: create_branch, push_files, create_pull_request.",
+    "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
+    "No full issue bodies/comments; exact source excerpts are preloaded.",
+    "No model-side reads or repo discovery.",
+    "Only github_create_branch, github_push_files and github_create_pull_request in normal mode.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 3600 )); then' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 3,600-character TPM prompt ceiling before inference")
+if 'if (( ${#PROMPT} > 5500 )); then' not in groq_fallback:
+    errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
 if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 
@@ -1640,8 +1642,8 @@ for required in (
 ):
     if required not in reverse_engineering_policy:
         errors.append(f"Reverse-engineering-first policy is missing required decision-gate language: {required!r}")
-if "REVERSE_ENGINEERING_FIRST.md" not in autonomous_prompt:
-    errors.append("Gemini autonomous startup must read the reverse-engineering-first policy")
+if "runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup" not in autonomous_prompt:
+    errors.append("Gemini prompt must state that the runner verifies reverse-engineering policy before model invocation")
 if "REVERSE_ENGINEERING_FIRST.md" not in openrouter_fallback:
     errors.append("OpenRouter autonomous prompt must read the reverse-engineering-first policy")
 if "REVERSE_ENGINEERING_FIRST.md" not in groq_fallback:

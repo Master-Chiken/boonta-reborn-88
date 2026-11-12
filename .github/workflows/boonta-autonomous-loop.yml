@@ -80,6 +80,7 @@ jobs:
       resume_pr_url: ${{ steps.check.outputs.resume_pr_url }}
       resume_branch: ${{ steps.check.outputs.resume_branch }}
       resume_head_sha: ${{ steps.check.outputs.resume_head_sha }}
+      resume_file_paths: ${{ steps.check.outputs.resume_file_paths }}
     steps:
       - name: Read the three persistent UTC cooldown markers
         id: check
@@ -180,7 +181,14 @@ jobs:
             ) {
               throw new Error('Canonical compact task ledger contains missing or duplicate task IDs.');
             }
+            if (!Array.isArray(ledgerSummary.completed_task_ids) ||
+                ledgerSummary.completed_task_ids.some((taskId) => typeof taskId !== 'string' || !taskId.trim()) ||
+                new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length) {
+              throw new Error('Canonical compact task ledger completed_task_ids is missing, malformed or duplicated.');
+            }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             const activeTasks = ledgerSummary.tasks.filter((task) => task.status === 'active');
+            const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const activationTask = ledgerSummary.tasks.find((task) => task.task_id === 'AUTOMATION-LEDGER-ACTIVATION');
             const activeTaskOpenPr = activeTasks.length === 1 ? openTaskPullRequest(activeTasks[0]) : null;
             const activationTaskOpenPr = openTaskPullRequest(activationTask);
@@ -195,16 +203,74 @@ jobs:
               Array.isArray(task.acceptance_criteria_excerpt) && task.acceptance_criteria_excerpt.length > 0 &&
               typeof task.next_action_excerpt === 'string' && task.next_action_excerpt.trim() &&
               Array.isArray(task.platform_scope) && task.platform_scope.length > 0 &&
+              Array.isArray(task.read_paths) && task.read_paths.length >= 1 && task.read_paths.length <= 4 &&
+              task.read_paths.every((path) => typeof path === 'string' && path.length <= 120 &&
+                /^[A-Za-z0-9._/-]+$/.test(path) && !path.startsWith('/') &&
+                path.split('/').every((part) => part && part !== '.' && part !== '..') &&
+                /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(path) &&
+                path !== 'docs/automation/task-ledger.json' &&
+                path !== 'docs/automation/task-ledger-summary.json' &&
+                !path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))) &&
+              new Set(task.read_paths).size === task.read_paths.length &&
               ['main', 'dev'].includes(task.target_branch)
             );
             const resumeSlotValid = activeTasks.length === 0
               ? resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' && resumeCandidateTask?.status === 'blocked'
               : activeTasks.length === 1 && activeTasks[0].task_id === resumeCandidateTask?.task_id && resumeCandidateTask?.status === 'active';
-            const resumeReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            const resumeCandidateReady = Boolean(resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask));
+            // Promote only the first explicitly owner-approved queued task whose complete dependency set
+            // is already completed in the canonical ledger. An open/in-review PR never satisfies a dependency.
+            const eligibleQueuedTask = activeTasks.length === 0
+              ? queuedTasks.find((task) =>
+                  task.owner_approved === true &&
+                  Array.isArray(task.depends_on) &&
+                  task.depends_on.every((dependencyId) =>
+                    typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+                  ) &&
+                  !task.pr_url && !task.head_sha &&
+                  !openTaskPullRequest(task) &&
+                  usableTask(task)
+                )
+              : null;
+            let resumeFilePaths = [];
+            let resumeReady = false;
+            let resumeUnavailableReason = '';
+            if (resumeCandidateReady) {
+              const { data: changedFiles } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: resumeCandidatePr.number,
+                per_page: 100,
+                page: 1,
+              });
+              if (!Array.isArray(changedFiles) || changedFiles.length === 0 || changedFiles.length >= 100) {
+                resumeUnavailableReason = 'the existing PR changed-file inventory is empty or reached the 100-file safety ceiling';
+              } else {
+                const textFilePattern = /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i;
+                const safePath = (value) => {
+                  if (typeof value !== 'string' || !value || value.length > 120 || !/^[A-Za-z0-9._/-]+$/.test(value) || /[\\\u0000-\u001f\u007f]/.test(value)) return false;
+                  const parts = value.split('/');
+                  return !value.startsWith('/') &&
+                    parts.every((part) => part && part !== '.' && part !== '..') &&
+                    textFilePattern.test(value) &&
+                    value !== 'docs/automation/task-ledger.json' &&
+                    value !== 'docs/automation/task-ledger-summary.json' &&
+                    !parts.some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()));
+                };
+                resumeFilePaths = [...new Set(changedFiles
+                  .filter((file) => file && file.status !== 'removed' && safePath(file.filename))
+                  .map((file) => file.filename))].sort().slice(0, 4);
+                resumeReady = resumeFilePaths.length > 0;
+                if (!resumeReady) {
+                  resumeUnavailableReason = 'the existing PR has no eligible safe text file to read';
+                }
+              }
+            }
             const resumeTaskContext = resumeReady ? [
               'Task ID: ' + resumeCandidateTask.task_id,
               'Title: ' + resumeCandidateTask.title,
               'Target branch: ' + resumeCandidateTask.target_branch,
+              'Read-only source paths (select at most one): ' + resumeCandidateTask.read_paths.join(', '),
               'Question: ' + resumeCandidateTask.question_excerpt,
               'Acceptance criteria (' + resumeCandidateTask.acceptance_criteria_total + '; first 5):',
               ...resumeCandidateTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
@@ -244,6 +310,11 @@ jobs:
               activationTaskOpenPr
             ) {
               taskReason = 'the activation task already has open PR #' + activationTaskOpenPr.number + '; reconcile it before another provider invocation';
+            } else if (activeTasks.length === 0 && eligibleQueuedTask) {
+              selectedTask = eligibleQueuedTask;
+              taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
+            } else if (activeTasks.length === 0 && queuedTasks.length > 0) {
+              taskReason = 'queued tasks are waiting for completed dependencies, explicit owner approval, bounded read paths, or PR reconciliation';
             } else if (activeTasks.length > 1) {
               taskReason = 'multiple active tasks violate the one-active-task policy';
             } else if (activeTasks.length === 1 && !usableTask(activeTasks[0])) {
@@ -265,9 +336,10 @@ jobs:
             }
             if (resumeReady) {
               taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' is eligible for owner-dispatched Groq Free resume';
+            } else if (resumeCandidateReady && resumeUnavailableReason) {
+              taskReason = 'trusted open PR #' + resumeCandidatePr.number + ' cannot be resumed safely: ' + resumeUnavailableReason;
             }
             const taskReady = Boolean(selectedTask);
-            const queuedTasks = ledgerSummary.tasks.filter((task) => task.status === 'queued');
             const blockedTasks = ledgerSummary.tasks.filter((task) => task.status === 'blocked');
             let queueState = 'EMPTY_QUEUE';
             if (taskReady) {
@@ -290,17 +362,16 @@ jobs:
               'Task ID: ' + selectedTask.task_id,
               'Title: ' + selectedTask.title,
               'Target branch: ' + selectedTask.target_branch,
+              'Read-only source paths (select at most one): ' + selectedTask.read_paths.join(', '),
               'Question: ' + selectedTask.question_excerpt,
               'Acceptance criteria (' + selectedTask.acceptance_criteria_total + '; first 5):',
               ...selectedTask.acceptance_criteria_excerpt.map((item) => '- ' + item),
               'Next: ' + selectedTask.next_action_excerpt,
               ...(selectedTask.task_id === 'AUTOMATION-LEDGER-ACTIVATION' ? [
-                'Full canonical task record: docs/automation/task-ledger.json (exact path; read this file only if more than the first five criteria are needed).',
-                'Known relevant ledger files: tools/check_task_ledger.py, tools/audit_task_ledger_github.py, tools/test_check_task_ledger.py, tools/test_autonomous_task_preflight.py, tools/check_autonomous_provider_handoff.py.',
-                'Do not read repository root, list directories, or guess file paths. Use the exact paths above; at most one directly relevant source/test read.',
+                'Use only the read-only source paths listed above; never read the canonical ledger or discover files.',
                 'UTC branch: create a fresh automation-ledger-activation-' + todayUtc.replace(/-/g, '') + ' branch from current main; never reuse any earlier attempt branch.',
               ] : [
-                'If criteria exceed these excerpts, read only this task record at the exact path docs/automation/task-ledger.json before coding; do not list repository directories or guess file paths.',
+                'Use only the read-only source paths listed above; never list directories or guess file paths.',
               ]),
               'PR #327 is integrated at main merge commit 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.',
             ].join('\n') : '';
@@ -323,6 +394,7 @@ jobs:
             core.setOutput('resume_pr_url', resumeCandidateTrusted ? resumeCandidatePr.html_url : '');
             core.setOutput('resume_branch', resumeCandidateTrusted ? resumeCandidatePr.head.ref : '');
             core.setOutput('resume_head_sha', resumeCandidateTrusted ? resumeCandidatePr.head.sha : '');
+            core.setOutput('resume_file_paths', JSON.stringify(resumeReady ? resumeFilePaths : []));
             core.info('Task eligibility=' + taskReady + '; task=' + (selectedTask?.task_id || 'none') + '; reason=' + taskReason);
 
             const definitions = {
@@ -478,6 +550,7 @@ jobs:
       resume_pr_url: ${{ needs.provider-cooldowns.outputs.resume_pr_url }}
       resume_branch: ${{ needs.provider-cooldowns.outputs.resume_branch }}
       resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
+      resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
     secrets: inherit
 
   cycle-summary:

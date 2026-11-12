@@ -215,11 +215,15 @@ jobs:
               ledgerSummary.source !== 'docs/automation/task-ledger.json' ||
               !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(ledgerSummary.updated_at || '') ||
               ledgerSummary.policy?.max_active_tasks !== 1 ||
-              !Array.isArray(ledgerSummary.tasks)
+              !Array.isArray(ledgerSummary.tasks) ||
+              !Array.isArray(ledgerSummary.completed_task_ids) ||
+              ledgerSummary.completed_task_ids.some((id) => typeof id !== 'string' || !id.trim()) ||
+              new Set(ledgerSummary.completed_task_ids).size !== ledgerSummary.completed_task_ids.length
             ) {
-              failClosed('canonical compact task ledger schema or one-active-task policy is invalid');
+              failClosed('canonical compact task ledger schema, completed dependencies or one-active-task policy is invalid');
               return;
             }
+            const completedTaskIds = new Set(ledgerSummary.completed_task_ids);
             
             const taskIds = ledgerSummary.tasks.map((task) => task?.task_id);
             if (
@@ -241,9 +245,19 @@ jobs:
             }
             const task = matches[0];
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const dependenciesSatisfied = Array.isArray(task.depends_on) &&
+              task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              );
+            const activeReservation = task.status === 'active' &&
+              activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
+              dependenciesSatisfied;
+            const approvedQueuePromotion = task.status === 'queued' &&
+              task.owner_approved === true && activeTasks.length === 0 &&
+              dependenciesSatisfied;
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
-              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+              : activeReservation || approvedQueuePromotion;
             if (!eligibleStatus) {
               failClosed('the selected task status or active-task reservation changed while this run waited');
               return;
@@ -256,7 +270,18 @@ jobs:
               !Array.isArray(task.acceptance_criteria_excerpt) ||
               task.acceptance_criteria_excerpt.length === 0 ||
               !Array.isArray(task.platform_scope) ||
-              task.platform_scope.length === 0
+              task.platform_scope.length === 0 ||
+              !Array.isArray(task.read_paths) ||
+              task.read_paths.length < 1 || task.read_paths.length > 4 ||
+              task.read_paths.some((path) =>
+                typeof path !== 'string' || path.length > 120 ||
+                !/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') ||
+                path.split('/').some((part) => !part || part === '.' || part === '..') ||
+                path === 'docs/automation/task-ledger.json' ||
+                path === 'docs/automation/task-ledger-summary.json' ||
+                path.split('/').some((part) => ['generated', 'roms', 'private'].includes(part.toLowerCase()))
+              ) ||
+              new Set(task.read_paths).size !== task.read_paths.length
             ) {
               failClosed('the selected task no longer matches its canonical branch or complete execution context');
               return;
@@ -310,11 +335,41 @@ jobs:
         with:
           persist-credentials: 'false'
 
+      - name: 'Checkout selected task target for bounded source context'
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true' && steps.mint_identity_token.outcome == 'success'
+        uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
+        with:
+          ref: ${{ inputs.task_target_branch }}
+          path: .boonta-target-source
+          token: ${{ steps.mint_identity_token.outputs.token }}
+          persist-credentials: 'false'
+
       - name: 'Prepare prompt context'
         if: steps.free_tier_guard.outputs.allowed == 'true'
         shell: 'bash'
         run: |-
+          set -euo pipefail
           mkdir -p .gemini
+          VERIFIED_CONTEXT=''
+          if [[ "${AUTONOMOUS_MODE:-false}" == "true" ]]; then
+            TARGET_ROOT="$GITHUB_WORKSPACE/.boonta-target-source"
+            if [[ ! -d "$TARGET_ROOT" ]] || [[ "$(git -C "$TARGET_ROOT" rev-parse --show-toplevel)" != "$TARGET_ROOT" ]]; then
+              echo "::error::Selected task target checkout is missing or not the exact repository root."
+              exit 1
+            fi
+            VERIFIED_CONTEXT="$(python3 "$GITHUB_WORKSPACE/tools/build_autonomous_context.py" \
+              --root "$GITHUB_WORKSPACE" \
+              --source-root "$TARGET_ROOT" \
+              --task-id "$TASK_ID" \
+              --task-title "$TASK_TITLE" \
+              --target-branch "$TASK_TARGET_BRANCH" \
+              --task-context "$TASK_DESCRIPTION" \
+              --max-chars 3000 \
+              --max-task-context 1100 \
+              --max-criteria 5 \
+              --max-next-action 180 \
+              --max-source-chars 1600)"
+          fi
           jq -n \
             --arg title "${TITLE}" \
             --arg desc "${DESCRIPTION}" \
@@ -328,7 +383,8 @@ jobs:
             --arg task_description "${TASK_DESCRIPTION}" \
             --arg task_target_branch "${TASK_TARGET_BRANCH}" \
             --arg autonomous_mode "${AUTONOMOUS_MODE}" \
-            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_id: $task_id, task_title: $task_title, task_description: $task_description, task_target_branch: $task_target_branch}' > .gemini/context.json
+            --arg verified_context "$VERIFIED_CONTEXT" \
+            '{title: $title, description: $desc, event_name: $event, is_pull_request: $pr, issue_number: $num, repository: $repo, additional_context: $context, autonomous_mode: $autonomous_mode, task_id: $task_id, task_title: $task_title, task_description: $task_description, task_target_branch: $task_target_branch, verified_context: $verified_context}' > .gemini/context.json
         env:
           TITLE: '${{ inputs.task_title || github.event.pull_request.title || github.event.issue.title }}'
           DESCRIPTION: '${{ inputs.task_description || github.event.pull_request.body || github.event.issue.body }}'
@@ -422,7 +478,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["read_file", "glob", "grep_search", "list_directory"]
+                "core": ["read_file"]
               }
             }
           prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
@@ -441,7 +497,14 @@ jobs:
           SELECTED_TASK_TARGET_BRANCH: '${{ inputs.task_target_branch }}'
         with:
           script: |
-            const summary = (process.env.GEMINI_SUMMARY || '').trim();
+            const { bindCycleReportToReservedTask } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
+            let summary;
+            try {
+              summary = bindCycleReportToReservedTask(process.env.GEMINI_SUMMARY || '', process.env.SELECTED_TASK_ID, process.env.SELECTED_TASK_TARGET_BRANCH);
+            } catch (error) {
+              core.setFailed('Gemini report could not be bound to the reserved task: ' + error.message);
+              return;
+            }
             const lines = summary.split(/\r?\n/);
             const statusLines = lines.filter((line) => line.startsWith('BOONTA_CYCLE_STATUS:'));
             if (statusLines.length === 1 && statusLines[0] === 'BOONTA_CYCLE_STATUS: BLOCKED') {

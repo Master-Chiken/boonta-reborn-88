@@ -1,15 +1,32 @@
 #!/usr/bin/env python3
-"""Build a bounded provider context from the canonical v2 task ledger."""
+"""Build bounded provider context from the canonical task ledger and exact source ranges."""
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 
 class ContextBuildError(ValueError):
     """Raised when a provider context cannot be proven safe and consistent."""
+
+
+SAFE_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]{1,120}$")
+ALLOWED_SUFFIXES = {
+    ".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".toml", ".md",
+    ".c", ".h", ".cc", ".cpp", ".hpp", ".cmake", ".sh",
+}
+MAX_SOURCE_PATHS = 4
+MAX_SOURCE_RANGES = 8
+MAX_RANGE_LINES = 80
+MAX_TOTAL_RANGE_LINES = 240
+MAX_SOURCE_FILE_BYTES = 96 * 1024
+MAX_WRITE_PATHS = 20
+APPROVAL_REF_RE = re.compile(
+    r"^https://github\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+)
 
 
 def _read(root: Path, relative: str) -> str:
@@ -26,6 +43,155 @@ def _short(value: Any, limit: int) -> str:
     return text[: limit - 1].rstrip() + "…"
 
 
+def _safe_source_path(path: Any) -> bool:
+    if not isinstance(path, str) or not SAFE_PATH_RE.fullmatch(path):
+        return False
+    parts = path.split("/")
+    return (
+        not path.startswith("/")
+        and all(part and part not in {".", ".."} for part in parts)
+        and Path(path).suffix.lower() in ALLOWED_SUFFIXES
+        and path not in {"docs/automation/task-ledger.json", "docs/automation/task-ledger-summary.json"}
+        and not any(part.lower() in {"generated", "roms", "private", "secrets", "credentials"} for part in parts)
+    )
+
+
+def _owner_approved_write_paths(root: Path, task_id: str) -> list[str]:
+    try:
+        policy = json.loads(_read(root, "docs/automation/patch-path-allowlist.json"))
+    except json.JSONDecodeError as exc:
+        raise ContextBuildError("Owner-reviewed exact write-path policy is not valid JSON") from exc
+    if (
+        not isinstance(policy, dict)
+        or type(policy.get("schema_version")) is not int
+        or policy.get("schema_version") != 1
+        or not isinstance(policy.get("policy"), dict)
+        or policy["policy"].get("owner_review_required") is not True
+        or policy["policy"].get("path_mode") != "exact"
+        or policy["policy"].get("max_paths_per_task") != MAX_WRITE_PATHS
+        or not isinstance(policy.get("tasks"), list)
+    ):
+        raise ContextBuildError("Owner-reviewed exact write-path policy is invalid")
+    matches = [
+        item for item in policy["tasks"]
+        if isinstance(item, dict) and item.get("task_id") == task_id
+    ]
+    if len(matches) != 1:
+        raise ContextBuildError("Queued task has no unique owner-reviewed exact write-path entry")
+    entry = matches[0]
+    paths = entry.get("allowed_paths")
+    if (
+        not isinstance(entry.get("purpose"), str)
+        or not entry["purpose"].strip()
+        or len(entry["purpose"]) > 240
+        or not isinstance(entry.get("approval_ref"), str)
+        or not APPROVAL_REF_RE.fullmatch(entry["approval_ref"])
+        or not isinstance(paths, list)
+        or not 1 <= len(paths) <= MAX_WRITE_PATHS
+        or not all(_safe_source_path(path) for path in paths)
+        or any(path.startswith(".github/") or path.startswith("docs/automation/") for path in paths)
+        or len(set(paths)) != len(paths)
+    ):
+        raise ContextBuildError("Queued task owner-reviewed write paths are malformed or unsafe")
+    for path in paths:
+        candidate = root / path
+        if candidate.is_symlink() or not candidate.is_file():
+            raise ContextBuildError(f"Owner-reviewed write path is not an existing regular file: {path}")
+        resolved = candidate.resolve()
+        try:
+            resolved.relative_to(root.resolve())
+        except ValueError as exc:
+            raise ContextBuildError(f"Owner-reviewed write path escapes the repository: {path}") from exc
+        parent = candidate.parent
+        while parent != root and parent != parent.parent:
+            if parent.is_symlink():
+                raise ContextBuildError(f"Owner-reviewed write path contains a symlink parent: {path}")
+            parent = parent.parent
+    return paths
+
+
+def _build_source_excerpt(
+    source_root: Path,
+    read_paths: list[str],
+    read_ranges: Any,
+    max_source_chars: int,
+) -> str:
+    if not isinstance(read_ranges, list) or not read_ranges:
+        raise ContextBuildError(
+            "A non-empty exact source-range allow-list is required when source excerpts are enabled"
+        )
+    if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_SOURCE_RANGES:
+        raise ContextBuildError("Selected task source ranges must contain 1-8 exact ranges")
+    checked: list[tuple[str, int, int]] = []
+    total_lines = 0
+    for item in read_ranges:
+        if not isinstance(item, dict) or set(item) != {"path", "start_line", "end_line"}:
+            raise ContextBuildError("Every source range must contain exactly path, start_line and end_line")
+        path = item["path"]
+        start = item["start_line"]
+        end = item["end_line"]
+        if path not in read_paths or not _safe_source_path(path):
+            raise ContextBuildError("A source range refers to a path outside the exact task read allow-list")
+        if type(start) is not int or type(end) is not int or start < 1 or end < start:
+            raise ContextBuildError("Source range line numbers must be positive, ordered integers")
+        line_count = end - start + 1
+        if line_count > MAX_RANGE_LINES:
+            raise ContextBuildError(f"Source range exceeds the {MAX_RANGE_LINES}-line per-range limit")
+        total_lines += line_count
+        checked.append((path, start, end))
+    if total_lines > MAX_TOTAL_RANGE_LINES:
+        raise ContextBuildError(f"Task source ranges exceed the {MAX_TOTAL_RANGE_LINES}-line aggregate limit")
+    if set(path for path, _, _ in checked) != set(read_paths):
+        raise ContextBuildError("Every exact task read path must have at least one bounded source range")
+
+    source_root = source_root.resolve()
+    source_header = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\n"
+    per_path_budget = max(80, (max_source_chars - len(source_header)) // len(read_paths))
+    rendered: list[str] = []
+    for path in read_paths:
+        path_ranges = [(start, end) for item_path, start, end in checked if item_path == path]
+        if not path_ranges:
+            raise ContextBuildError(f"No bounded source range is configured for {path}")
+        candidate = source_root / path
+        if candidate.is_symlink():
+            raise ContextBuildError(f"Exact source path must not be a symlink: {path}")
+        try:
+            source_file = candidate.resolve(strict=True)
+            source_file.relative_to(source_root)
+        except (OSError, ValueError) as exc:
+            raise ContextBuildError(f"Exact source path is missing or escapes the selected target checkout: {path}") from exc
+        if not source_file.is_file():
+            raise ContextBuildError(f"Exact source path is not a regular file: {path}")
+        try:
+            payload = source_file.read_bytes()
+        except OSError as exc:
+            raise ContextBuildError(f"Exact source path cannot be read: {path}") from exc
+        if len(payload) > MAX_SOURCE_FILE_BYTES or b"\x00" in payload:
+            raise ContextBuildError(f"Exact source path exceeds the bounded text-file policy: {path}")
+        try:
+            lines = payload.decode("utf-8").splitlines()
+        except UnicodeDecodeError as exc:
+            raise ContextBuildError(f"Exact source path is not valid UTF-8: {path}") from exc
+        chunks: list[str] = []
+        range_budget = max(80, per_path_budget // len(path_ranges))
+        for start, end in path_ranges:
+            if end > len(lines):
+                raise ContextBuildError(f"Source range {path}:{start}-{end} exceeds the {len(lines)}-line file")
+            header = f"[{path}:{start}-{end}]\n"
+            body = "\n".join(lines[start - 1:end])
+            chunk = header + body + "\n"
+            if len(chunk) > range_budget:
+                if range_budget <= len(header) + 24:
+                    raise ContextBuildError(f"Source excerpt budget is too small for {path}:{start}-{end}")
+                chunk = header + body[: range_budget - len(header) - 2].rstrip() + "…\n"
+            chunks.append(chunk)
+        rendered.append("".join(chunks).rstrip())
+    output = "SOURCE EXCERPTS (read-only; exact task ranges on target branch):\n" + "\n".join(rendered)
+    if len(output) > max_source_chars:
+        output = output[: max_source_chars - 1].rstrip() + "…"
+    return output
+
+
 def build_context(
     root: Path,
     task_id: str,
@@ -34,8 +200,12 @@ def build_context(
     task_context: str,
     max_chars: int = 3500,
     max_task_context: int = 2500,
+    max_criteria: int = 5,
+    max_next_action: int = 420,
+    source_root: Path | None = None,
+    max_source_chars: int = 0,
 ) -> str:
-    """Validate the selected v2 ledger row and emit compact, preloaded context."""
+    """Validate selected v2 task metadata and preload exact, bounded source excerpts."""
     root = root.resolve()
     if not task_id.strip() or not task_title.strip() or target_branch not in {"main", "dev"}:
         raise ContextBuildError("Selected task identity or target branch is invalid")
@@ -46,13 +216,17 @@ def build_context(
             raise ContextBuildError(f"Global preflight context does not contain {expected!r}")
     if max_chars < 900 or max_task_context < 250:
         raise ContextBuildError("Context ceilings are below safe minimums")
+    if not 1 <= max_criteria <= 5 or not 80 <= max_next_action <= 420:
+        raise ContextBuildError("Provider-specific criteria/action limits are outside safe bounds")
+    if max_source_chars < 0 or max_source_chars > 2200:
+        raise ContextBuildError("Source excerpt budget must be between 0 and 2,200 characters")
 
     reverse_policy = _read(root, "docs/REVERSE_ENGINEERING_FIRST.md")
     budget_policy = _read(root, "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md")
     summary_text = _read(root, "docs/automation/task-ledger-summary.json")
     if not all(term in reverse_policy for term in ("DISCOVER", "VERIFY", "REUSE", "GameCube/Wii")):
         raise ContextBuildError("Reverse-engineering policy is incomplete or unexpected")
-    if not all(term in budget_policy for term in ("One model provider invocation at most", "€0", "1,500 tokens")):
+    if not all(term in budget_policy for term in ("One model provider invocation at most", "€0", "1,550 context tokens")):
         raise ContextBuildError("Provider context-budget policy is incomplete or unexpected")
     try:
         summary = json.loads(summary_text)
@@ -73,10 +247,26 @@ def build_context(
     if task.get("title") != task_title or task.get("target_branch") != target_branch:
         raise ContextBuildError("Selected task title or target branch differs from the canonical ledger")
     status = str(task.get("status", "")).lower()
-    if status not in {"active", "in_progress", "in_review", "ready", "blocked"}:
+    if status not in {"active", "in_progress", "in_review", "ready", "blocked", "queued"}:
         raise ContextBuildError("Selected task has a non-executable ledger status")
     if status == "blocked" and task_id != "AUTOMATION-LEDGER-ACTIVATION":
         raise ContextBuildError("Only the explicitly tracked activation bootstrap may be selected while blocked")
+    write_paths: list[str] = []
+    if status == "queued":
+        completed_ids = summary.get("completed_task_ids")
+        dependencies = task.get("depends_on")
+        active_tasks = [item for item in tasks if isinstance(item, dict) and item.get("status") == "active"]
+        if (
+            task.get("owner_approved") is not True
+            or not isinstance(completed_ids, list)
+            or any(not isinstance(item, str) or not item.strip() for item in completed_ids)
+            or len(set(completed_ids)) != len(completed_ids)
+            or not isinstance(dependencies, list)
+            or any(not isinstance(item, str) or item not in set(completed_ids) for item in dependencies)
+            or active_tasks
+        ):
+            raise ContextBuildError("Queued task is not owner-approved, dependency-complete, or the writer slot is occupied")
+        write_paths = _owner_approved_write_paths(root, task_id)
     if task.get("pr_url") or task.get("head_sha"):
         raise ContextBuildError("Selected task already has PR/head evidence; refusing a duplicate writer")
     scope = task.get("platform_scope")
@@ -92,50 +282,91 @@ def build_context(
         raise ContextBuildError("Selected task has no acceptance-criteria excerpts")
     if not isinstance(criteria_total, int) or criteria_total < len(criteria):
         raise ContextBuildError("Selected task acceptance-criteria count is inconsistent")
-    required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5]]
+    read_paths = task.get("read_paths")
+    if not (
+        isinstance(read_paths, list) and 1 <= len(read_paths) <= MAX_SOURCE_PATHS
+        and all(_safe_source_path(path) for path in read_paths)
+        and len(set(read_paths)) == len(read_paths)
+    ):
+        raise ContextBuildError("Selected task has no valid 1-4 path read allow-list")
+    handoff_paths_line = "Read-only source paths (select at most one): " + ", ".join(read_paths)
+    required_handoff_text = [task["question_excerpt"], task["next_action_excerpt"], *criteria[:5], handoff_paths_line]
     if not all(item in task_context for item in required_handoff_text):
-        raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts")
+        raise ContextBuildError("Global preflight context does not contain the selected ledger excerpts/read paths")
 
+    source_excerpt = ""
+    if max_source_chars > 0:
+        source_excerpt = _build_source_excerpt(
+            source_root or root, read_paths, task.get("read_ranges", []), max_source_chars
+        )
+        if not source_excerpt.strip():
+            raise ContextBuildError("Configured source excerpts are empty; refusing an ungrounded provider handoff")
+    rendered_paths_line = (
+        "Read-only source excerpts: exact task path/range excerpts are included below"
+        if source_excerpt else
+        "Read-only source excerpts: disabled for this context build"
+    )
     prefix_lines = [
         "VERIFIED CONTEXT:",
         "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
         "Canonical ledger v2 verified.",
         "Task:",
     ]
-    # The total provider ceiling includes the fixed prefix and its newline.
-    # Fit the task handoff to the remaining budget; required ledger excerpts
-    # must still survive or the context fails closed.
-    available_task_chars = max_chars - len("\n".join(prefix_lines)) - 1
+    source_reserve = len(source_excerpt) + (2 if source_excerpt else 0)
+    available_task_chars = min(
+        max_task_context,
+        max_chars - len("\n".join(prefix_lines)) - source_reserve - 2,
+    )
     if available_task_chars < 250:
-        raise ContextBuildError("Verified-context ceiling leaves too little room for a safe task handoff")
-    bounded_task_context = _short(task_context, min(max_task_context, available_task_chars))
-    if not all(item in bounded_task_context for item in required_handoff_text):
+        raise ContextBuildError("Verified-context ceiling leaves too little room for safe task/source excerpts")
+    selected_criteria = criteria[:max_criteria]
+    compact_lines = [
+        f"Task ID: {task_id}",
+        f"Title: {task_title}",
+        f"Target branch: {target_branch}",
+        "Platform scope: " + ", ".join(scope),
+        rendered_paths_line,
+        *(["Exact owner-reviewed write paths (no others): " + ", ".join(write_paths)] if write_paths else []),
+        "Question: " + _short(task["question_excerpt"], 150),
+        f"Acceptance criteria ({criteria_total} total; first {len(selected_criteria)}):",
+        *("- " + _short(item, 140) for item in selected_criteria),
+        "Next: " + _short(task["next_action_excerpt"], max_next_action),
+    ]
+    bounded_task_context = "\n".join(compact_lines)
+    if len(bounded_task_context) > available_task_chars:
         raise ContextBuildError(
-            "Configured task-context budget truncates required question, acceptance-criteria or next-action excerpts"
+            f"Verified task excerpts exceed the configured {available_task_chars}-character budget "
+            f"({len(bounded_task_context)} chars); reduce task excerpts or source ranges"
         )
     lines = [*prefix_lines, bounded_task_context]
+    if source_excerpt:
+        lines.append(source_excerpt)
     output = "\n".join(lines)
     if len(output) > max_chars:
-        raise ContextBuildError(
-            f"Verified context exceeds the configured {max_chars}-character limit ({len(output)} chars)"
-        )
+        raise ContextBuildError(f"Verified context exceeds the configured {max_chars}-character limit ({len(output)} chars)")
     return output
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--source-root", type=Path)
     parser.add_argument("--task-id", required=True)
     parser.add_argument("--task-title", required=True)
     parser.add_argument("--target-branch", required=True)
     parser.add_argument("--task-context", required=True)
     parser.add_argument("--max-chars", type=int, default=3500)
     parser.add_argument("--max-task-context", type=int, default=2500)
+    parser.add_argument("--max-criteria", type=int, default=5)
+    parser.add_argument("--max-next-action", type=int, default=420)
+    parser.add_argument("--max-source-chars", type=int, default=0)
     args = parser.parse_args()
     try:
         print(build_context(
             args.root, args.task_id, args.task_title, args.target_branch,
             args.task_context, args.max_chars, args.max_task_context,
+            args.max_criteria, args.max_next_action, args.source_root,
+            args.max_source_chars,
         ))
     except ContextBuildError as exc:
         parser.error(str(exc))

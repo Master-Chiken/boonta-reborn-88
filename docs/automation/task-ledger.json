@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-10",
+  "updated_at": "2026-11-12",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -30,7 +30,10 @@
       "next_action": "RE-002 matrix is merged. Select the next unresolved PC spline call-path question from live issue #279; do not recreate the matrix.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/280",
       "head_sha": "a0116b2c033e37735f08be0b600c67c3c87c5ffe",
-      "updated_at": "2026-11-04"
+      "updated_at": "2026-11-04",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "RE001-SYSTEM-MATRIX",
@@ -228,7 +231,10 @@
       "next_action": "Completed: PR #282 was squash-merged into main at commit cf6b6472f6d8a394e0ffd60939c3874fada382a8 from exact head 4dff19dd751765a9a3d89c0f569e6969a398e280. The dossier consolidates the PC-reference system matrix and lifecycle evidence while explicitly keeping PC findings separate from GameCube/Wii behavior. Remaining unknowns and platform boundaries are documented; no console parity or unverified runtime behavior is claimed.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
       "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
-      "updated_at": "2026-11-07"
+      "updated_at": "2026-11-07",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-LEDGER-ACTIVATION",
@@ -404,7 +410,43 @@
       "updated_at": "2026-11-10",
       "pr_url": null,
       "head_sha": null,
-      "target_branch": "main"
+      "target_branch": "main",
+      "read_paths": [
+        "tools/check_task_ledger.py",
+        "tools/test_check_task_ledger.py",
+        "tools/check_task_ledger_summary.py",
+        ".github/workflows/boonta-autonomous-loop.yml"
+      ],
+      "read_ranges": [
+        {
+          "path": "tools/check_task_ledger.py",
+          "start_line": 48,
+          "end_line": 94
+        },
+        {
+          "path": "tools/test_check_task_ledger.py",
+          "start_line": 46,
+          "end_line": 82
+        },
+        {
+          "path": "tools/check_task_ledger_summary.py",
+          "start_line": 20,
+          "end_line": 62
+        },
+        {
+          "path": ".github/workflows/boonta-autonomous-loop.yml",
+          "start_line": 156,
+          "end_line": 199
+        },
+        {
+          "path": ".github/workflows/boonta-autonomous-loop.yml",
+          "start_line": 217,
+          "end_line": 246
+        }
+      ],
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "RE001-RACE-LIFECYCLE-TRACE",
@@ -613,7 +655,10 @@
       "next_action": "Completed as a bounded research deliverable in merged PR #282 at commit cf6b6472f6d8a394e0ffd60939c3874fada382a8 (exact head 4dff19dd751765a9a3d89c0f569e6969a398e280). The Steam-PC evidence identifies candidate lifecycle/event boundaries but does not prove the decisive retail finish-to-results dispatch or GameCube/Wii parity; unresolved items remain explicitly UNKNOWN.",
       "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/282",
-      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280"
+      "head_sha": "4dff19dd751765a9a3d89c0f569e6969a398e280",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-CYCLE-REPORT-CONTRACT",
@@ -647,7 +692,10 @@
       "next_action": "Merged in PR #287 at head 649f869c00e92eae12b3fb93fc11c61e6ab465fc (merge commit 7079a2f16aad0014f61828f3e7ddf21a041a014b). The Gemini and OpenRouter autonomous report contract is now on main. Exact-head CI passed, including 10 regression tests and live reconciliation.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/287",
       "head_sha": "649f869c00e92eae12b3fb93fc11c61e6ab465fc",
-      "updated_at": "2026-11-05"
+      "updated_at": "2026-11-05",
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-GEMINI-DAILY-COOLDOWN",
@@ -686,7 +734,10 @@
       "next_action": "Merged in PR #291 at exact head a14d4546330414335ca30bfcbc815984dc24c480 (merge commit 0f2c7d1803df76f51a692972044f7a63420b036a). Independent UTC-day failure cooldowns now guard Gemini and OpenRouter Free; autonomous context is bounded; cycle-fresh exact-head evidence is enforced. Remaining activation task: verify owner-controlled free-tier attestations and GitHub App credentials via the read-only readiness check, then validate a real scheduled autonomous cycle.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/291",
       "head_sha": "a14d4546330414335ca30bfcbc815984dc24c480",
-      "updated_at": "2026-11-05"
+      "updated_at": "2026-11-05",
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "RE001-GC-WII-TOOLCHAIN-AUDIT",
@@ -718,7 +769,10 @@
       "next_action": "The GameCube/Wii toolchain and clean-room reuse audit is integrated in main via PR #278 (merge commit 0e03ed6814c55241765fcae1415a70ed53beff0b). Any synthetic, non-game DOL/REL fixture validation is tracked as a separate task; original game binaries, disc images, extracted assets and private Ghidra databases remain local.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/278",
       "head_sha": "32c256eb511ba75982f1503ea63aa14976a4b506",
-      "updated_at": "2026-11-07"
+      "updated_at": "2026-11-07",
+      "owner_role_id": "platform",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "RE002-SPLINE-CURSOR-RECOVERY",
@@ -749,7 +803,10 @@
       "next_action": "Completed as a bounded PC-reference research pass in merged PR #284 at commit d44caba42614a8099f7d9a34a1f2ab1a3cdded46 (exact head 0afa0b580d8d8c956efbe51f988529e854ba7f59). The bounded Steam-PC offset search did not recover typed downstream readers for splineRebindResult or trackOffset; both remain UNKNOWN pending a full xref pass on the exact local executable/analysis database. No GameCube/Wii parity is inferred.",
       "updated_at": "2026-11-07",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/284",
-      "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59"
+      "head_sha": "0afa0b580d8d8c956efbe51f988529e854ba7f59",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "AUTOMATION-READINESS-PREFLIGHT",
@@ -778,7 +835,10 @@
       "next_action": "Merged in PR #285 at exact head 9d87f894d81da6f1f5edc4a66da24ccca7847717 (merge commit c09ed2c629ad505910a5c61856cb95e4e184f529). Exact-head AI safety/live-ledger, 10 ledger regression tests, workflow YAML/Python, trusted-path and held-assets checks all passed. The readiness workflow itself remains a manual workflow_dispatch; no execution or provider/account status is inferred from these static checks.",
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/285",
       "head_sha": "9d87f894d81da6f1f5edc4a66da24ccca7847717",
-      "updated_at": "2026-11-05"
+      "updated_at": "2026-11-05",
+      "owner_role_id": "chief-of-staff",
+      "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+      "depends_on": []
     },
     {
       "task_id": "N64-COMPWOLF-INVENTORY",
@@ -821,7 +881,10 @@
       "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/334",
       "head_sha": "4a6b00540d0eea6acbdfea1d88289a2068962d0d",
       "next_action": "Completed: PR #334 was squash-merged into main at merge commit f704140970dcf75dbfa8062f3494a07de4c23550 from exact branch head 4a6b00540d0eea6acbdfea1d88289a2068962d0d. Owner-local exact PR #334 scan confirmed 92 validated / 0 rejected / 0 undefined initial-history reads, 20/20 synthetic tests, and matching aggregate counts. T2 is tracked separately as N64-COMPWOLF-PUPP-T2-PARSE-PROBE (blocked). The owner-local 68,284-byte candidate has been prepared locally; the machine is macOS 26.6.2 arm64 with no .NET installed. Next install .NET 10.0.403 SDK Arm64 and run an isolated parser-only console probe under ~/racer-work using the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; report only parser status, runtime type and aggregate counts. No model bytes, offsets, dumps, images or extracted assets are uploaded. Audit package licenses and N64 compatibility before integration.",
-      "updated_at": "2026-11-07"
+      "updated_at": "2026-11-07",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
@@ -850,7 +913,230 @@
       ],
       "next_action": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture references); on failure return only the exception type. Do not upload candidate bytes, offsets, dumps, images or assets. Keep N64-format compatibility and dependency-license review as blockers before integration or GX conversion.",
       "updated_at": "2026-11-07",
-      "target_branch": "main"
+      "target_branch": "main",
+      "owner_role_id": "research",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
+    },
+    {
+      "task_id": "GC-RACE-PROGRESSION",
+      "title": "Complete the native single-race lifecycle through results and restart",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "in_review",
+      "question": "What is the smallest clean-room state flow that completes one native race from initial start through three laps, finish/results, and a clean restart while reusing the existing race, pause, and rival systems?",
+      "acceptance_criteria": [
+        "Before editing, trace the actual initial, racing, paused, lap-crossing, finished, results and restart transitions in gamecube-demo/source/main.c, gamecube-demo/source/gameplay_state.h, gamecube-demo/source/pause_state.h and their host tests; distinguish existing behavior from the specific missing results/session transition.",
+        "Reuse the existing native lap counter, three-lap finish condition, race/lap timers, best-lap and overtake metrics, pause/restart helpers, route-cursor reset, and the rival implementation integrated by PR #327; do not recreate or replace those systems.",
+        "Implement only the smallest explicit, testable session/results state needed for initial start -> active race -> three-lap finish/results -> restart. Pause/resume must remain confined to an active race, and no simulation or timer may advance after the finish.",
+        "Show a read-only results view using only measured prototype data, including completed laps, total race time, available last/best lap data and overtake count. Do not invent finishing positions, championship standings, persistent saves or unsupported rival results.",
+        "Restart must clear all per-run state consistently, including distance, lap/timing data, finish/results flags, pause, boost/heat, rival placement/overtake state and route cursor; a second run must behave like a fresh first run.",
+        "Add host regression tests against the production transition helpers for valid and invalid transitions, the exact three-lap finish, pause/timer freeze, post-finish immutability, results stability and full restart reset; tests must cover relevant boundary cases.",
+        "The exact PR head must pass host tests, native GameCube and Wii DOL/ELF builds, artifact validation, and the existing bounded Dolphin checks. Label scripted emulator evidence as scripted; do not claim human-operated or physical-hardware acceptance.",
+        "Keep all new code/assets clean-room and source-authored. Do not import Step 102 content, commercial assets, ROM-derived data or PC/N64 code; keep this task limited to the single-race lifecycle."
+      ],
+      "evidence": [
+        "https://github.com/Master-Chiken/boonta-reborn-88/issues/226",
+        "https://github.com/Master-Chiken/boonta-reborn-88/pull/327",
+        "https://github.com/Master-Chiken/boonta-reborn-88/commit/69deb6778f9383887118803428e7014686865a83",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/README.md",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/main.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/source/gameplay_state.h",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/dev/gamecube-demo/tests/test_gameplay_state.c",
+        "https://github.com/Master-Chiken/boonta-reborn-88/blob/main/.github/workflows/gamecube-demo-build.yml"
+      ],
+      "next_action": "PR #395 is open against dev at the recorded exact head. Review the bounded session/results/restart scope and exact-head checks; obtain visible manual Dolphin evidence for three-lap finish, results, Y restart and a second race before acceptance. Do not mark completed until the PR is merged and the canonical ledger is reconciled from main.",
+      "updated_at": "2026-11-12",
+      "pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/395",
+      "head_sha": "1073e2a19ac754492044df44a0b42b233ecb7563",
+      "target_branch": "dev",
+      "read_paths": [
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/pause_state.h",
+        "gamecube-demo/tests/test_gameplay_state.c"
+      ],
+      "read_ranges": [
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1325,
+          "end_line": 1349
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1433,
+          "end_line": 1445
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 482,
+          "end_line": 484
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 511,
+          "end_line": 540
+        },
+        {
+          "path": "gamecube-demo/source/pause_state.h",
+          "start_line": 8,
+          "end_line": 30
+        },
+        {
+          "path": "gamecube-demo/tests/test_gameplay_state.c",
+          "start_line": 431,
+          "end_line": 448
+        },
+        {
+          "path": "gamecube-demo/tests/test_gameplay_state.c",
+          "start_line": 756,
+          "end_line": 805
+        }
+      ],
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": []
+    },
+    {
+      "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+      "title": "Make rival racers progress through the native route and complete the race",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "question": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
+      "read_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h"
+      ],
+      "read_ranges": [
+        {
+          "path": "gamecube-demo/source/rival_ai.h",
+          "start_line": 91,
+          "end_line": 145
+        },
+        {
+          "path": "gamecube-demo/source/rival_ai.h",
+          "start_line": 203,
+          "end_line": 223
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 56,
+          "end_line": 67
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 228,
+          "end_line": 275
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 400,
+          "end_line": 419
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 14,
+          "end_line": 35
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 435,
+          "end_line": 484
+        }
+      ],
+      "acceptance_criteria": [
+        "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are camera-relative versus route-relative.",
+        "Implement the smallest deterministic native rival-progress model that can represent route distance, lap completion and finished state without relying on camera-relative Z as race progress.",
+        "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing collision/avoidance behavior unless tests prove a correction is required.",
+        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
+        "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset.",
+        "Integrate rival progress into the current results/session data only where values are measured; do not invent finishing positions or claim retail AI parity.",
+        "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
+      ],
+      "evidence": [],
+      "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
+      "updated_at": "2026-11-11",
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION"
+      ],
+      "owner_approved": true
+    },
+    {
+      "task_id": "GC-RACE-FRONTEND-FLOW",
+      "title": "Add a native title and pre-race flow around the playable race",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "question": "Can the immediate-boot single-race loop become a coherent native game flow with title/start, pre-race transition, active race, results and restart while keeping all transitions testable?",
+      "read_paths": [],
+      "read_ranges": [],
+      "acceptance_criteria": [
+        "Trace the current boot, input, draw, pause, finish, results and reset paths; reuse existing input and HUD/rendering helpers before creating new systems.",
+        "Introduce an explicit, testable front-end/session state machine for title, pre-race, active race, pause, results and restart; no state may be inferred from unrelated booleans.",
+        "Provide a usable GameCube controller path from boot to starting the existing native race and from results back to a clean new race.",
+        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles, logos, audio or commercial assets.",
+        "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions.",
+        "Keep rendering read-only with respect to simulation state and ensure menus/results do not advance race timers or rival simulation.",
+        "Run relevant host tests, GameCube build and exact-head CI; clearly distinguish headless emulator checks from visual/hardware verification."
+      ],
+      "evidence": [],
+      "next_action": "Owner-approved 2026-11-11 after rival progression. Build a minimal native title/start and pre-race flow using existing controller, HUD and render helpers. Keep the currently available course/pod only; add content selection only when multiple lawful native options exist.",
+      "updated_at": "2026-11-11",
+      "owner_role_id": "gameplay",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RIVAL-ROUTE-PROGRESSION"
+      ],
+      "owner_approved": true
+    },
+    {
+      "task_id": "GC-RACE-PERFORMANCE-PROFILE",
+      "title": "Measure and optimize the native race frame on GameCube/Wii",
+      "queue": "#226",
+      "platform_scope": [
+        "GameCube",
+        "Wii"
+      ],
+      "status": "queued",
+      "target_branch": "dev",
+      "question": "Which native race-frame CPU, route-sampling, GX submission or memory costs are actually limiting performance, and what smallest measured optimization improves them without changing gameplay?",
+      "read_paths": [],
+      "read_ranges": [],
+      "acceptance_criteria": [
+        "Do not start until the race lifecycle, rival progression and front-end flow have passing functional regression tests.",
+        "Establish a repeatable baseline for frame time, route sampling, GX submission and memory use on available Dolphin diagnostics and/or real hardware; label unavailable measurements explicitly.",
+        "Identify one measured bottleneck with reproducible evidence before changing implementation; do not optimize based only on intuition or source appearance.",
+        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory constraints.",
+        "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject optimizations without measurable benefit.",
+        "Run host tests, GameCube build, headless Dolphin smoke and available frame diagnostics; do not describe headless smoke as visual verification.",
+        "Record before/after measurements, target environment, uncertainty and any remaining hardware-only validation."
+      ],
+      "evidence": [],
+      "next_action": "Owner-approved 2026-11-11 as the later MAKE IT FAST milestone. Only after functional race, rival and front-end milestones are merged, profile the native frame loop and route sampler. Optimize one demonstrated bottleneck with before/after measurements; never trade away correctness for speculative speed.",
+      "updated_at": "2026-11-11",
+      "owner_role_id": "platform",
+      "parent_objective_id": "BOONTA-COMPLETE-GAME",
+      "depends_on": [
+        "GC-RACE-PROGRESSION",
+        "GC-RIVAL-ROUTE-PROGRESSION",
+        "GC-RACE-FRONTEND-FLOW"
+      ],
+      "owner_approved": true
     }
   ]
 }

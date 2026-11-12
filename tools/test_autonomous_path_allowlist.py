@@ -15,6 +15,7 @@ BASE_TASK = {
     "task_id": TASK_ID,
     "status": "active",
     "target_branch": "main",
+    "depends_on": [],
     "title": "Offline fixture task",
 }
 PATH = "src/main.c"
@@ -46,6 +47,7 @@ class AllowlistFixture(unittest.TestCase):
         self.ledger = {
             "schema_version": 2,
             "source": "docs/automation/task-ledger.json",
+            "completed_task_ids": [],
             "tasks": [dict(BASE_TASK)],
         }
         self.policy = {
@@ -101,6 +103,32 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         self.assertEqual(report["allowed_paths"], [PATH])
         self.assertEqual(report["base_sha"], self.base_sha)
         self.assertEqual(report["approval_ref"], APPROVAL)
+
+    def test_owner_approved_queued_task_with_completed_dependencies_is_ready(self):
+        queued = dict(BASE_TASK, status="queued", owner_approved=True, depends_on=["TASK-PREREQUISITE"])
+        self.ledger["tasks"] = [queued]
+        self.ledger["completed_task_ids"] = ["TASK-PREREQUISITE"]
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "READY")
+        self.assertEqual(report["allowed_paths"], [PATH])
+
+    def test_queued_task_waits_for_dependencies(self):
+        queued = dict(BASE_TASK, status="queued", owner_approved=True, depends_on=["TASK-PREREQUISITE"])
+        self.ledger["tasks"] = [queued]
+        self.ledger["completed_task_ids"] = []
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "WAITING_FOR_DEPENDENCIES")
+        self.assertEqual(report["allowed_paths"], [])
+
+    def test_queued_task_without_owner_approval_waits(self):
+        queued = dict(BASE_TASK, status="queued", owner_approved=False, depends_on=[])
+        self.ledger["tasks"] = [queued]
+        self.commit_inputs()
+        report = self.call_allowlist()
+        self.assertEqual(report["status"], "WAITING_FOR_OWNER_APPROVAL")
+        self.assertEqual(report["allowed_paths"], [])
 
     def test_empty_queue_fails_closed_without_paths(self):
         self.ledger["tasks"][0]["status"] = "completed"

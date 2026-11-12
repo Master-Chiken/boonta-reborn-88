@@ -87,6 +87,6 @@ The structured-patch pipeline is now implemented as an **offline, deterministic 
 
 ## 8. Queue liveness and owner-approved next work
 
-The canonical main ledger was audited at `4fdfd6292e5379977b0ca240c47d9c15e2b320eb`: 9 completed tasks, 2 blocked, and no queued, active or in-review task. The proposed next tasks and their acceptance criteria are in [OWNER-REVIEW-BACKLOG.md](OWNER-REVIEW-BACKLOG.md). They are **not approved or executable** until the owner adds the selected row to the canonical task ledger and regenerates the compact summary.
+Before PR #393, the main ledger at `4fdfd6292e5379977b0ca240c47d9c15e2b320eb` contained 9 completed and 2 blocked tasks, with no active or queued row. The owner has now approved Candidate B: PR #393 stages `GC-RACE-PROGRESSION` as the single active task targeting `dev`, together with a regenerated compact summary. It becomes executable only after PR #393 merges. Candidate A and Candidate C remain unapproved proposals.
 
 When the queue is empty, a healthy autonomous loop must report `EMPTY_QUEUE` / `WAITING_FOR_OWNER_APPROVAL` without calling a model, changing a task, creating a branch or consuming free quota. It must never invent a task or automatically unblock the owner-local N64 parser probe.
