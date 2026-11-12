@@ -949,7 +949,69 @@ static void camera_follow_damping_tests(void) {
  assert(nearf(camera60.target.z, target.z));
 }
 
+static void championship_points_follow_fixed_scoring_table(void)
+{
+    static const unsigned int expected[12] = {
+        0U, 15U, 12U, 10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U, 0U
+    };
+    unsigned int position;
+    for (position = 0U; position < 12U; ++position) {
+        assert(boonta_championship_points_for_position(position) ==
+               expected[position]);
+    }
+}
+
+static void championship_standings_accumulate_without_race_reset_coupling(void)
+{
+    BoontaChampionshipStanding standing = {0U, 0U, 0U, 0U, 0U};
+
+    boonta_championship_record_result(&standing, 3U);
+    assert(standing.points == 10U);
+    assert(standing.races_completed == 1U);
+    assert(standing.wins == 0U);
+    assert(standing.podiums == 1U);
+    assert(standing.best_finish == 3U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 2U);
+    assert(standing.wins == 1U);
+    assert(standing.podiums == 2U);
+    assert(standing.best_finish == 1U);
+
+    boonta_championship_record_result(&standing, 12U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 3U);
+    assert(standing.best_finish == 1U);
+}
+
+static void championship_ledger_ignores_invalid_results_and_saturates(void)
+{
+    BoontaChampionshipStanding standing = {0xffffffffU, 0xffffffffU,
+                                            0xffffffffU, 0xffffffffU, 0U};
+    boonta_championship_record_result(&standing, 0U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 0U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 1U);
+
+    assert(boonta_unsigned_saturating_add(0xfffffffeU, 5U) == 0xffffffffU);
+    assert(boonta_unsigned_saturating_add(12U, 3U) == 15U);
+    boonta_championship_record_result(0, 1U);
+}
+
 int main(void) {
+ championship_points_follow_fixed_scoring_table();
+ championship_standings_accumulate_without_race_reset_coupling();
+ championship_ledger_ignores_invalid_results_and_saturates();
  camera_follow_damping_tests();
  race_state_reset_tests();
  finite_clamp_tests();
