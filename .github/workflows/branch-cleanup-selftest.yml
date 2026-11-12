@@ -100,6 +100,7 @@ jobs:
               "rejects protected branches": '.protected' in workflow and '== "false"' in workflow,
               "rejects open PR heads and bases": '.head.ref == $branch or .base.ref == $branch' in workflow,
               "requires protected archive, pinned rival-AI archive, main or dev ancestry": workflow.count("git merge-base --is-ancestor") == 8 and "refs/remotes/origin/main" in workflow and "refs/remotes/origin/dev" in workflow and 'ARCHIVE_CHECKPOINT="1c863bf93ab680ef07fe7dfacc8748934341acab"' in workflow,
+              "dev is fetched for both reachability checks": workflow.count('"+refs/heads/dev:refs/remotes/origin/dev"') == 2 and workflow.count("refs/remotes/origin/dev") >= 4,
               "rechecks immediately before deletion": workflow.count('ref_json="$(gh api') == 2 and "Recheck exact ref and atomically retire one branch" in workflow,
               "deletion uses exact-SHA lease": 'git push --force-with-lease="refs/heads/$BRANCH_NAME:$EXPECTED_SHA" origin ":refs/heads/$BRANCH_NAME"' in workflow,
               "one ref per workflow run and no broad delete": "branch_name" in workflow and "push --delete" not in workflow and workflow.count('git push --force-with-lease=') == 1,
