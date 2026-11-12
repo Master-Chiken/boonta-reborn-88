@@ -243,7 +243,7 @@ with tempfile.TemporaryDirectory() as temp:
         }],
     }
     (root / "docs/automation/patch-path-allowlist.json").write_text(json.dumps(policy), encoding="utf-8")
-    handoff = "\\n".join([
+    handoff = "\n".join([
         "Task ID: " + task_id,
         "Title: " + title,
         "Target branch: dev",
