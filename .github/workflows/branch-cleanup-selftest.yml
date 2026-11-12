@@ -97,13 +97,17 @@ jobs:
               "fix/groq-tool-json-temperature-20261110": "c592d3eb724ac8456dd9a340bed5c6edfa41b031",
               "fix/gemini-transient-fetch-retry-20261109": "973690f8b3a63299750959cb98b65200d03932d0",
               "automation/fix-gemini-secondary-key-20261108": "40a9db2ee79bafa0752899ded915bae8af3a4a8c",
+              "automation-ledger-activation-20261112": "a89555e6d65aa4b086bd883a295501db91e9748c",
+              "automation-ledger-validation": "c1d3fb6c87379777d508f1facaa222b849faa9e7",
+              "fix/activation-handoff-mainline-20261111": "7dca23ebd573e5b7194b36a8ad92ccd6231c60c9",
           }
 
           checks = {
               "manual triggers only": "workflow_dispatch:" in header and "issue_comment:" in header and all(token not in header for token in ("push:", "pull_request:", "schedule:")),
               "actor, main ref and dedicated issue gate": "github.actor == 'Master-Chiken'" in workflow and "github.ref == 'refs/heads/main'" in workflow and "github.event.issue.number == 248" in workflow and "github.event.issue.pull_request == null" in workflow,
               "comment requires exact one-line command and explicit confirmation": r"^/retire-branch" in workflow and "CONFIRM$" in workflow and "Use exactly: /retire-branch BRANCH_NAME EXPECTED_SHA CONFIRM" in workflow,
-              "40 unique exact branch/SHA pins": cases == expected and len(cases) == 40,
+              "43 unique exact branch/SHA pins": cases == expected and len(cases) == 43,
+              "all pinned refs are available in manual selection": all(f"- {name}" in header for name in cases),
               "current open PR heads are not allowlisted": "recovery/all-branch-heads-20261102" not in cases and "feat/native-wii-classic-input-main-20261102" not in cases,
               "permanent refs cannot be retired": all(name not in cases for name in ("main", "dev", "archive/branch-heads-20261019", "archive/rival-ai-history-20261107")) and "archive/rival-ai-history-20261107" in workflow,
               "checks exact live head": '.object.sha' in workflow and '== "$EXPECTED_SHA"' in workflow,
@@ -120,6 +124,8 @@ jobs:
               "superseded role-registry branch is pinned exactly": cases.get("feat/paperclip-role-governance-20261112") == "a37e9df742371a9e537ad6ca8b75dd286192a06c",
               "all rival-AI branch heads are pinned exactly": cases.get("feat/deterministic-rival-ai-20261106") == "216e4a8bdef8941dadc7a604a24021ad54f09db8" and cases.get("feat/rival-curvature-pace-20261106") == "b3d215df243a11d3e0022ecf562ab2ba1de96da9" and cases.get("feat/rival-track-line-20261106") == "1a5e5ed69c9b7f1453322f4deb7de8adcb167642",
               "Gemini and OpenRouter superseded cooldown branch heads are pinned exactly": cases.get("agent/boonta-auto/gemini-daily-cooldown-20261104") == "dad92c6b84ad01aecfcf9358422b75d8ea445b5a" and cases.get("agent/boonta-auto/openrouter-daily-cooldown-20261104") == "287222f23f8e4c7207f3d2b6029e67bf6bff95c7",
+              "superseded task-ledger refs are pinned exactly": cases.get("automation-ledger-activation-20261112") == "a89555e6d65aa4b086bd883a295501db91e9748c" and cases.get("automation-ledger-validation") == "c1d3fb6c87379777d508f1facaa222b849faa9e7",
+              "mainline activation handoff is pinned exactly": cases.get("fix/activation-handoff-mainline-20261111") == "7dca23ebd573e5b7194b36a8ad92ccd6231c60c9",
               "new candidate retirement requires pinned archive, main or dev ancestry": "refs/remotes/origin/main" in workflow and "refs/remotes/origin/dev" in workflow and "Branch tip is not reachable from a verified archive, main or dev." in workflow and "ARCHIVE_CHECKPOINT" in workflow,
               "never deletes via an unguarded REST DELETE": "gh api --method DELETE" not in workflow,
           }
