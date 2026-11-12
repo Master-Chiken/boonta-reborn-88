@@ -38,6 +38,37 @@ on:
         type: boolean
         required: false
         default: false
+      resume_mode:
+        type: boolean
+        required: false
+        default: false
+      resume_task_id:
+        type: string
+        required: false
+      resume_task_title:
+        type: string
+        required: false
+      resume_task_target_branch:
+        type: string
+        required: false
+      resume_task_description:
+        type: string
+        required: false
+      resume_pr_number:
+        type: number
+        required: false
+      resume_pr_url:
+        type: string
+        required: false
+      resume_branch:
+        type: string
+        required: false
+      resume_head_sha:
+        type: string
+        required: false
+      resume_file_paths:
+        type: string
+        required: false
 
 concurrency:
   group: boonta-single-writer
@@ -190,7 +221,7 @@ jobs:
 
       - name: Revalidate selected task after acquiring the shared writer slot
         id: fresh_task_guard
-        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
+        if: inputs.autonomous_mode == true && steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && inputs.resume_mode != true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
           TASK_ID: ${{ inputs.task_id }}
