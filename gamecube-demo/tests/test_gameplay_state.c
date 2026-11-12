@@ -1253,7 +1253,175 @@ static void rival_encounter_memory_tests(void)
  }
 }
 
+static void championship_points_follow_fixed_scoring_table(void)
+{
+    static const unsigned int expected[12] = {
+        0U, 15U, 12U, 10U, 8U, 6U, 5U, 4U, 3U, 2U, 1U, 0U
+    };
+    unsigned int position;
+    for (position = 0U; position < 12U; ++position) {
+        assert(boonta_championship_points_for_position(position) ==
+               expected[position]);
+    }
+}
+
+static void championship_standings_accumulate_without_race_reset_coupling(void)
+{
+    BoontaChampionshipStanding standing = {0U, 0U, 0U, 0U, 0U};
+
+    boonta_championship_record_result(&standing, 3U);
+    assert(standing.points == 10U);
+    assert(standing.races_completed == 1U);
+    assert(standing.wins == 0U);
+    assert(standing.podiums == 1U);
+    assert(standing.best_finish == 3U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 2U);
+    assert(standing.wins == 1U);
+    assert(standing.podiums == 2U);
+    assert(standing.best_finish == 1U);
+
+    boonta_championship_record_result(&standing, 12U);
+    assert(standing.points == 25U);
+    assert(standing.races_completed == 3U);
+    assert(standing.best_finish == 1U);
+}
+
+static void championship_ledger_ignores_invalid_results_and_saturates(void)
+{
+    BoontaChampionshipStanding standing = {0xffffffffU, 0xffffffffU,
+                                            0xffffffffU, 0xffffffffU, 0U};
+    boonta_championship_record_result(&standing, 0U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 0U);
+
+    boonta_championship_record_result(&standing, 1U);
+    assert(standing.points == 0xffffffffU);
+    assert(standing.races_completed == 0xffffffffU);
+    assert(standing.wins == 0xffffffffU);
+    assert(standing.podiums == 0xffffffffU);
+    assert(standing.best_finish == 1U);
+
+    assert(boonta_unsigned_saturating_add(0xfffffffeU, 5U) == 0xffffffffU);
+    assert(boonta_unsigned_saturating_add(12U, 3U) == 15U);
+    boonta_championship_record_result(0, 1U);
+}
+
+
+static void championship_standings_use_deterministic_tie_breaks(void)
+{
+    const BoontaChampionshipStanding points_leader = {30U, 4U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding win_leader = {30U, 4U, 1U, 1U, 4U};
+    const BoontaChampionshipStanding podium_leader = {30U, 4U, 0U, 3U, 5U};
+    const BoontaChampionshipStanding best_finish_leader = {30U, 4U, 0U, 2U, 1U};
+    const BoontaChampionshipStanding no_finish = {30U, 4U, 0U, 2U, 0U};
+    const BoontaChampionshipStanding exact_tie = {30U, 9U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding lower_points = {29U, 99U, 99U, 99U, 1U};
+
+    assert(boonta_championship_compare_standings(&points_leader, &lower_points) == -1);
+    assert(boonta_championship_compare_standings(&win_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&podium_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&best_finish_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &no_finish) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &exact_tie) == 0);
+    assert(boonta_championship_compare_standings(&lower_points, &points_leader) == 1);
+    assert(boonta_championship_compare_standings(0, &points_leader) == 0);
+    assert(boonta_championship_compare_standings(&points_leader, 0) == 0);
+}
+
+
+static void championship_order_is_stable_and_respects_output_capacity(void)
+{
+    const BoontaChampionshipStanding standings[5] = {
+        {20U, 2U, 1U, 1U, 1U},
+        {30U, 2U, 0U, 2U, 2U},
+        {30U, 3U, 0U, 2U, 2U},
+        {30U, 1U, 0U, 2U, 2U},
+        {10U, 1U, 0U, 0U, 5U}
+    };
+    unsigned int order[5] = {99U, 99U, 99U, 99U, 99U};
+    unsigned int count;
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 5U);
+    assert(count == 5U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+    assert(order[3] == 0U);
+    assert(order[4] == 4U);
+
+    count = boonta_championship_build_stable_order(standings, 5U, order, 3U);
+    assert(count == 3U);
+    assert(order[0] == 1U);
+    assert(order[1] == 2U);
+    assert(order[2] == 3U);
+
+    assert(boonta_championship_build_stable_order(standings, 5U, order, 0U) == 0U);
+    assert(boonta_championship_build_stable_order(0, 5U, order, 5U) == 0U);
+    assert(boonta_championship_build_stable_order(standings, 5U, 0, 5U) == 0U);
+}
+
+
+static void championship_event_results_are_idempotent_and_reject_stale_events(void)
+{
+    BoontaChampionshipState championship;
+    boonta_championship_state_reset(&championship);
+    assert(championship.last_event_id == 0U);
+    assert(championship.recorded_mask == 0U);
+    assert(championship.finish_position_mask == 0U);
+    assert(championship.standings[0].races_completed == 0U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 1);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+    assert(championship.finish_position_mask == 1U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 0U, 1U) == 0);
+    assert(championship.standings[0].points == 15U);
+    assert(championship.standings[0].races_completed == 1U);
+
+    assert(boonta_championship_record_event_result(&championship, 1U, 1U, 2U) == 1);
+    assert(championship.standings[1].points == 12U);
+    assert(championship.finish_position_mask == 3U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 0U, 3U) == 1);
+    assert(championship.standings[0].points == 25U);
+    assert(championship.standings[0].races_completed == 2U);
+    assert(championship.recorded_mask == 1U);
+    assert(championship.finish_position_mask == 4U);
+    assert(boonta_championship_record_event_result(&championship, 1U, 2U, 1U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+
+    /* One event cannot award the same finishing place to two racers. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 3U) == 0);
+    assert(championship.standings[2].races_completed == 0U);
+    /* A rejected duplicate place does not consume the racer's result slot. */
+    assert(boonta_championship_record_event_result(&championship, 2U, 2U, 1U) == 1);
+    assert(championship.standings[2].races_completed == 1U);
+    assert(boonta_championship_record_event_result(&championship, 2U, 3U, 2U) == 1);
+    assert(championship.standings[3].races_completed == 1U);
+
+    /* The next event clears only its per-event masks; same places are reusable. */
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 3U) == 1);
+    assert(championship.standings[2].races_completed == 2U);
+
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 0U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 2U, 5U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 3U, 4U, 1U) == 0);
+    assert(boonta_championship_record_event_result(&championship, 0U, 2U, 1U) == 0);
+    assert(boonta_championship_record_event_result(0, 3U, 2U, 1U) == 0);
+}
+
 int main(void) {
+ championship_event_results_are_idempotent_and_reject_stale_events();
+ championship_order_is_stable_and_respects_output_capacity();
+ championship_standings_use_deterministic_tie_breaks();
+ championship_points_follow_fixed_scoring_table();
+ championship_standings_accumulate_without_race_reset_coupling();
+ championship_ledger_ignores_invalid_results_and_saturates();
  camera_follow_damping_tests();
  race_session_transition_tests();
  race_order_and_finish_tests();
