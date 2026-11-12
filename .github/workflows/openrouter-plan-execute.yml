@@ -554,7 +554,7 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
         with:
-          ref: ${{ inputs.task_target_branch }}
+          ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
           path: .boonta-target-source
           token: ${{ steps.mint_identity_token.outputs.token }}
           persist-credentials: false
@@ -590,10 +590,10 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.openrouter_auth_check.outcome == 'success' && steps.openrouter_auth_check.outputs.quota_available == 'true' && steps.snapshot_pr_heads.outcome == 'success'
         shell: bash
         env:
-          TASK_ID: ${{ inputs.task_id }}
-          TASK_TITLE: ${{ inputs.task_title }}
-          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
-          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
+          TASK_TITLE: ${{ inputs.resume_mode == true && inputs.resume_task_title || inputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          TASK_DESCRIPTION: ${{ inputs.resume_mode == true && inputs.resume_task_description || inputs.task_description }}
         run: |
           set -euo pipefail
           repo_root=''
@@ -627,14 +627,26 @@ jobs:
           OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
           OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
-          TASK_ID: ${{ inputs.task_id }}
-          TASK_TITLE: ${{ inputs.task_title }}
-          TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
+          TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
+          TASK_TITLE: ${{ inputs.resume_mode == true && inputs.resume_task_title || inputs.task_title }}
+          TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
+          RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
+          RESUME_PR_URL: ${{ inputs.resume_pr_url }}
+          RESUME_BRANCH: ${{ inputs.resume_branch }}
+          RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
+          RESUME_FILE_PATHS: ${{ inputs.resume_file_paths }}
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
         run: |
           set -euo pipefail
           set +x
+
+          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
+            export GITHUB_TOOLS="get_file_contents,push_files"
+          else
+            export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"
+          fi
 
           # OpenCode 1.19.5 reads provider credentials from OPENCODE_AUTH_CONTENT.
           # Supply the existing secret as the explicit OpenRouter API auth record.
@@ -670,7 +682,7 @@ jobs:
                 ],
                 "environment": {
                   "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "get_file_contents,create_branch,push_files,create_pull_request"
+                  "GITHUB_TOOLS": "{env:GITHUB_TOOLS}"
                 },
                 "enabled": true,
                 "timeout": 60000
