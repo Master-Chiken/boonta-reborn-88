@@ -25,7 +25,7 @@ MAX_TOTAL_RANGE_LINES = 240
 MAX_SOURCE_FILE_BYTES = 96 * 1024
 MAX_WRITE_PATHS = 20
 APPROVAL_REF_RE = re.compile(
-    r"^https://github\\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
+    r"^https://github\.com/Master-Chiken/boonta-reborn-88/pull/[1-9][0-9]*$"
 )
 
 
