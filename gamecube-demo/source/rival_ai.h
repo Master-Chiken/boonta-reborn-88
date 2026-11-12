@@ -88,6 +88,19 @@ static inline float boonta_rival_ai_target_line_lateral(
         -lateral_limit, lateral_limit);
 }
 
+/*
+ * When two rivals occupy virtually the same lateral position, split them
+ * deterministically by roster order instead of sending every tied rival right.
+ */
+static inline float boonta_rival_ai_traffic_avoidance_offset(
+    unsigned int rival_index, unsigned int other_index, float lateral_gap)
+{
+    if (!isfinite(lateral_gap) || fabsf(lateral_gap) < 0.05f) {
+        return rival_index < other_index ? -0.75f : 0.75f;
+    }
+    return lateral_gap < 0.0f ? -0.75f : 0.75f;
+}
+
 static inline float boonta_rival_ai_target_lateral(
     unsigned int rival_index,
     float rival_z,
@@ -137,7 +150,8 @@ static inline float boonta_rival_ai_target_lateral(
             lateral_gap = current_lateral - other_lateral[i];
             if (longitudinal_gap < 3.5f &&
                 fabsf(lateral_gap) < BOONTA_RIVAL_AI_TRAFFIC_GAP) {
-                target = current_lateral + (lateral_gap < 0.0f ? -0.75f : 0.75f);
+                target = current_lateral + boonta_rival_ai_traffic_avoidance_offset(
+                    rival_index, i, lateral_gap);
             }
         }
     }
