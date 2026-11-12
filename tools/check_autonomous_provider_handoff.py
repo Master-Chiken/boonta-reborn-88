@@ -604,6 +604,11 @@ for required in (
     'task.get("title") != task_title or task.get("target_branch") != target_branch',
     'task.get("pr_url") or task.get("head_sha")',
     'task_id != "AUTOMATION-LEDGER-ACTIVATION"',
+    'status == "queued"',
+    'task.get("owner_approved") is not True',
+    'patch-path-allowlist.json',
+    'Exact owner-reviewed write paths (no others): ',
+    'Queued task is not owner-approved, dependency-complete, or the writer slot is occupied',
     'required_handoff_text',
     'task["question_excerpt"]',
     'task["next_action_excerpt"]',
@@ -614,6 +619,13 @@ for required in (
         errors.append(f"Schema-v2 context builder is missing fail-closed validation {required!r}")
 if "tight context budget to reject truncated required task excerpts" not in context_builder_tests:
     errors.append("Schema-v2 context tests must prove required task excerpts are not silently truncated")
+if "Queued context must fail closed while any dependency is incomplete" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must reject queued work with incomplete dependencies")
+if "Queued context must fail closed without explicit owner approval" not in context_builder_tests:
+    errors.append("Schema-v2 context tests must reject queued work without owner approval")
+for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
+    if "Exact owner-reviewed write paths (no others)" not in prompt:
+        errors.append(f"{label} prompt must restrict queued writes to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
