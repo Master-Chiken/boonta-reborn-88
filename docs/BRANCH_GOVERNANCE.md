@@ -2,7 +2,7 @@
 
 ## Policy
 
-- **Active-branch target:** no more than 3 active working branches.
+- **Active-branch target:** no more than 10 active working branches.
 - **Open-PR budget:** no more than 3 open pull requests repository-wide (including drafts). Existing trusted PRs may be resumed, but new task branches/intake are paused at the cap.
 - **Total-count warning:** 10 or more branch refs.
 - **Red line:** more than 20 total branch refs.
