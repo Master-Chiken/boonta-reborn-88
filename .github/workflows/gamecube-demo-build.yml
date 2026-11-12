@@ -500,6 +500,7 @@ jobs:
                 sleep 2
               }
               capture_finish_then_restart() {
+                local action_label="${5:-Start}"
                 local movie="$1"
                 local log="$2"
                 local capture="$3"
@@ -554,7 +555,7 @@ jobs:
                 xdotool windowactivate --sync "$window" >/dev/null 2>&1 || true
                 mkdir -p "$GITHUB_WORKSPACE/dolphin-finish-restart-samples"
                 # Poll frequently, but allow the full 14,007-frame DTM to reach its late
-                # Start-restart input. At 30 emulated FPS that is about 467 seconds;
+                # The selected post-finish button input. At 30 emulated FPS this is about 467 seconds;
                 # 6,000 polls at 100 ms leaves room for Software Renderer overhead
                 # while remaining below the 1,100-second outer capture timeout.
                 for attempt in $(seq 1 6000); do
@@ -572,7 +573,7 @@ jobs:
                     fi
                   else
                     if python3 gamecube-demo/tools/check_dolphin_frame.py "$capture" --expect-reset > "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" 2>&1; then
-                      echo "Clean reset HUD detected after Start restarted the finished race at live frame $attempt."
+                      echo "Clean reset HUD detected after $action_label reset the finished race at live frame $attempt."
                       cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
                       saw_restart=1
                       break
@@ -585,12 +586,12 @@ jobs:
                 wait "$emu_pid" >/dev/null 2>&1 || true
                 if [[ "$saw_finish" -ne 1 ]]; then
                   [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-restart-finish-detector.log"
-                  echo "The finish banner was not detected during the Start-restart movie."
+                  echo "The finish banner was not detected during the post-finish $action_label movie."
                   return 1
                 fi
                 if [[ "$saw_restart" -ne 1 ]]; then
                   [[ ! -f "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log" ]] || cat "$GITHUB_WORKSPACE/dolphin-finish-restart-reset-detector.log"
-                  echo "The clean HUD state was not detected after Start restarted the finished race."
+                  echo "The clean HUD state was not detected after the post-finish $action_label input."
                   return 1
                 fi
               }
@@ -650,7 +651,7 @@ jobs:
                 mkdir -p "$FINISH_RESTART_USER/Config"
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
-                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER"
+                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER" "Y"
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
                 echo "Post-finish Y reset the race into a clean visible HUD state."
               else
@@ -662,7 +663,7 @@ jobs:
                 mkdir -p "$FINISH_RESTART_USER/Config"
                 chmod 700 "$FINISH_RESTART_USER"
                 printf "%s\\n" "[Display]" "RenderToMain = True" > "$FINISH_RESTART_USER/Config/Dolphin.ini"
-                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER"
+                capture_finish_then_restart "$FINISH_RESTART_DTM" "$FINISH_RESTART_LOG" "$FINISH_RESTART_CAPTURE" "$FINISH_RESTART_USER" "Start"
                 python3 gamecube-demo/tools/check_dolphin_frame.py "$FINISH_RESTART_CAPTURE" --expect-reset
                 echo "Post-finish Start restarted the race into a clean HUD state in the scripted Dolphin diagnostic."
               fi
