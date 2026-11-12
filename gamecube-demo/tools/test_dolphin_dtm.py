@@ -604,7 +604,7 @@ class DolphinDtmTests(unittest.TestCase):
         Image is None or ImageDraw is None or results_view_visible is None,
         "Pillow is not installed in the lightweight host-test environment",
     )
-    def test_results_detector_accepts_centered_results_title(self) -> None:
+    def test_results_detector_rejects_title_only_panel(self) -> None:
         color = (255, 157, 61)
         glyphs = {
             "R": (30, 17, 17, 30, 20, 18, 17),
@@ -636,14 +636,17 @@ class DolphinDtmTests(unittest.TestCase):
 
         direct = Image.new("RGB", (800, 480), (105, 170, 225))
         draw_results(direct, 0)
-        self.assertTrue(results_view_visible(direct))
-        self.assertTrue(finish_banner_visible(direct))
+        # A centered heading and dark rectangle alone are not a complete
+        # results screen: the splits, totals, position and restart prompt must
+        # also be visible. Full-panel positive cases live in results_panel.py.
+        self.assertFalse(results_view_visible(direct))
+        self.assertFalse(finish_banner_visible(direct))
 
         window = Image.new("RGB", (800, 564), (239, 239, 239))
         ImageDraw.Draw(window).rectangle((0, 84, 799, 563), fill=(105, 170, 225))
         draw_results(window, 84)
-        self.assertTrue(results_view_visible(window))
-        self.assertTrue(finish_banner_visible(window))
+        self.assertFalse(results_view_visible(window))
+        self.assertFalse(finish_banner_visible(window))
 
         empty = Image.new("RGB", (800, 480), (105, 170, 225))
         self.assertFalse(results_view_visible(empty))
