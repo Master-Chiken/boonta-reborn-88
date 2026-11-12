@@ -64,11 +64,14 @@ jobs:
       INPUT_EXPECTED_SHA: ${{ inputs.expected_sha || '' }}
       INPUT_CONFIRM_BRANCH: ${{ inputs.confirm_branch || '' }}
     steps:
+      - name: Check out main for exact ref and ancestry verification
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: true
 
+      - name: Validate exact owner-confirmed branch and SHA
         id: selection
         shell: bash
         run: |
@@ -149,6 +152,8 @@ jobs:
             echo "expected_sha=$EXPECTED_SHA"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Verify protection, open PR references and archived ancestry
+      - name: Revalidate exact ref and delete with compare-and-swap lease
         shell: bash
         env:
           BRANCH_NAME: ${{ steps.selection.outputs.branch_name }}
