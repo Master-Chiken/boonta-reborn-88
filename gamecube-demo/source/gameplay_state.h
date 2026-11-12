@@ -851,4 +851,34 @@ static inline void boonta_championship_record_result(
     }
 }
 
+
+/*
+ * Compare championship rows for deterministic table ordering.
+ * Return -1 when left ranks ahead, 1 when right ranks ahead, 0 for a true tie.
+ * Points lead; wins and podiums break ties; then best finish. A zero best
+ * finish means the pilot has no classified result and ranks behind any
+ * classified best finish. Exact ties remain equal for stable roster ordering.
+ */
+static inline int boonta_championship_compare_standings(
+    const BoontaChampionshipStanding *left,
+    const BoontaChampionshipStanding *right)
+{
+    if (left == 0 || right == 0) return 0;
+    if (left->points != right->points) {
+        return left->points > right->points ? -1 : 1;
+    }
+    if (left->wins != right->wins) {
+        return left->wins > right->wins ? -1 : 1;
+    }
+    if (left->podiums != right->podiums) {
+        return left->podiums > right->podiums ? -1 : 1;
+    }
+    if (left->best_finish != right->best_finish) {
+        if (left->best_finish == 0U) return 1;
+        if (right->best_finish == 0U) return -1;
+        return left->best_finish < right->best_finish ? -1 : 1;
+    }
+    return 0;
+}
+
 #endif
