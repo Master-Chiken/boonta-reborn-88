@@ -68,17 +68,28 @@ def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
         not isinstance(policy, dict)
         or policy.get("max_active_missions") != 1
         or policy.get("max_provider_invocations_per_run") != 1
+        or policy.get("repository_writers") != ["github_actions"]
         or policy.get("model_agents_receive_write_credentials") is not False
         or policy.get("paid_fallback") is not False
         or policy.get("auto_merge") is not False
         or policy.get("human_merge_approval_required") is not True
         or policy.get("qa_must_be_independent") is not True
+        or registry.get("provider_order") != ["gemini", "openrouter_free", "groq_free"]
     ):
-        raise ContextBuildError("Canonical agent role registry weakens the one-writer/€0/human-review policy")
+        raise ContextBuildError("Canonical agent role registry weakens the one-writer/provider-order/€0/human-review policy")
     roles = registry.get("roles")
     objectives = registry.get("objectives")
     if not isinstance(roles, list) or not isinstance(objectives, list):
         raise ContextBuildError("Canonical agent role registry has no roles or objectives")
+    objective_ids = [
+        item.get("id") for item in objectives if isinstance(item, dict)
+    ]
+    if (
+        len(objective_ids) != len(objectives)
+        or any(not isinstance(item, str) or not item for item in objective_ids)
+        or len(objective_ids) != len(set(objective_ids))
+    ):
+        raise ContextBuildError("Canonical agent role registry contains malformed or duplicate objective IDs")
     role_matches = [item for item in roles if isinstance(item, dict) and item.get("id") == role_id]
     objective_matches = [item for item in objectives if isinstance(item, dict) and item.get("id") == objective_id]
     if len(role_matches) != 1:
