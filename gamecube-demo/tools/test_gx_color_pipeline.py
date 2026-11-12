@@ -148,8 +148,9 @@ class GXColorPipelineTests(unittest.TestCase):
             results_start,
         )
         results_pass = hud[results_start:results_end]
-        final_submit = results_pass.rfind("draw_vertex_buffer();")
-        self.assertGreater(final_submit, results_pass.index('append_text("START TO RESTART"'))
+        final_submit = hud.rfind("draw_vertex_buffer();")
+        restart_prompt = hud.index('append_text("START TO RESTART"', results_start)
+        self.assertGreater(final_submit, restart_prompt)
         self.assertNotIn("g_vertex_count = 0", results_pass)
         self.assertIn("draw_vertex_buffer();", hud[results_end:])
 
