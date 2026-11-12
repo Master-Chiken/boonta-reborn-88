@@ -127,6 +127,7 @@ static void initialise_pod_texture(void)
 #define g_rival_z           (g_race_state.rival_z)
 #define g_rival_lateral     (g_race_state.rival_lateral)
 #define g_rival_speed       (g_race_state.rival_speed)
+#define g_rival_rivalry     (g_race_state.rival_rivalry)
 #define g_overtake_count    (g_race_state.overtake_count)
 #define g_paused            (g_race_state.paused)
 #define g_race_finished     (g_race_state.race_finished)
@@ -1485,12 +1486,14 @@ int main(int argc, char **argv)
                     g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
+                    boonta_rival_memory_record_event(&g_race_state, rival_index, rival_event);
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);
                     g_lateral_velocity = boonta_lateral_velocity_after_rival_contact(
                         g_lateral_velocity, g_player_lateral, g_rival_lateral[rival_index]);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 1);
                 } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
+                    boonta_rival_memory_record_event(&g_race_state, rival_index, rival_event);
                     g_overtake_count = boonta_overtake_count_after_event(g_overtake_count);
                     g_rival_z[rival_index] = boonta_rival_respawn_z(rival_index, 0);
                 }
