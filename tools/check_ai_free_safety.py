@@ -789,10 +789,10 @@ for required_phrase in (
     "Optimize only a measured hot path",
     "Reuse passing checks for an unchanged exact SHA",
     "Group related file edits into one logical commit",
-    "Do not read all historical comments",
-    "compact inventory of directly related open pull requests",
+    "do not read historical comments except",
+    "compact inventory of directly related open PRs",
     "Deep-inspect changed files and exact-head CI only for PRs",
-    "Read logs only for failed jobs",
+    "read logs only for failed jobs",
     "Reuse a successful check for an unchanged exact SHA",
     "without launching duplicate runs",
 ):
@@ -1285,7 +1285,7 @@ editing_contract_requirements = (
     "Never call `replace`, `write_file`, `edit_file` or `apply_patch`",
     "If `push_files` is unavailable or a write fails, stop modifying files",
     "Do not create a self-referential `in_review` record",
-    "after merge, finalize from `main` with the actual merged PR head SHA",
+    "after merge, finalize from `main` using the actual merged PR head SHA",
 )
 missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
 if missing_editing_contract:
@@ -1376,7 +1376,7 @@ if "if: inputs.autonomous_mode == true" not in execute[:cooldown_guard_position]
 for required in (
     "Do not fetch full issue bodies or full comment histories for #156, #226 and #279",
     "below 1,500 tokens total",
-    "Do not retrieve attachments, images, media, artifacts, ROMs, disc images, BIOS, binaries",
+    "Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries",
     "never repeat the same request",
     "approximately 452 KB route dossier",
 ):
@@ -1386,7 +1386,7 @@ for required in (
     "Facts established before this prompt can run",
     "Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling",
     "Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset",
-    "does **not** prove that the Google project truly has no linked Cloud Billing account",
+    "Preflight cannot prove Google billing is absent",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Gemini autonomous prompt must distinguish passed preflight gates from external verification: {required!r}")
