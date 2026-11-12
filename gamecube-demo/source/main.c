@@ -1426,13 +1426,15 @@ int main(int argc, char **argv)
                 const float signed_lookahead_curvature =
                     track_signed_curvature_at(lookahead_offset);
                 const float lookahead_half_width = track_half_width_at(lookahead_offset);
-                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral(
+                rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral_with_rivalry(
                     rival_index, g_rival_z[rival_index],
                     g_rival_lateral[rival_index], g_player_lateral,
                     g_rival_z, g_rival_lateral, BOONTA_RIVAL_COUNT,
-                    signed_lookahead_curvature, lookahead_half_width);
-                rival_target_speed[rival_index] = boonta_rival_ai_target_speed(
-                    rival_index, lookahead_curvature);
+                    signed_lookahead_curvature, lookahead_half_width,
+                    g_race_state.rival_rivalry[rival_index]);
+                rival_target_speed[rival_index] = boonta_rival_ai_target_speed_with_rivalry(
+                    rival_index, lookahead_curvature,
+                    g_race_state.rival_rivalry[rival_index]);
             }
 
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
@@ -1460,6 +1462,8 @@ int main(int argc, char **argv)
                 rival_event = boonta_rival_event_after_frame(
                     previous_rival_z, g_rival_z[rival_index], g_player_lateral,
                     g_rival_lateral[rival_index]);
+                boonta_rival_memory_record_event(
+                    &g_race_state, rival_index, rival_event);
                 if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
                     /* Any single contact costs speed and nudges the player from that rival. */
                     g_speed = boonta_speed_after_rival_contact(g_speed);

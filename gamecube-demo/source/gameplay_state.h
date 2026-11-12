@@ -47,6 +47,9 @@ typedef struct {
     unsigned int rival_finished_mask;
     float rival_lateral[BOONTA_RIVAL_COUNT];
     float rival_speed[BOONTA_RIVAL_COUNT];
+    unsigned int rival_rivalry[BOONTA_RIVAL_COUNT];
+    unsigned int rival_overtakes[BOONTA_RIVAL_COUNT];
+    unsigned int rival_contacts[BOONTA_RIVAL_COUNT];
     unsigned int overtake_count;
     BoontaRaceSessionPhase session_phase;
 } BoontaRaceState;
@@ -652,6 +655,50 @@ enum {
     BOONTA_RIVAL_EVENT_OVERTAKE = 2
 };
 
+/*
+ * Compact per-rival encounter memory for the Nemesis layer. Scores saturate
+ * instead of wrapping, and only completed close encounters are recorded.
+ */
+#define BOONTA_RIVAL_RIVALRY_MAX 100U
+
+static inline unsigned int boonta_rival_rivalry_after_event(
+    unsigned int current_score, int rival_event)
+{
+    unsigned int increase;
+    if (current_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        current_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
+        increase = 10U;
+    } else if (rival_event == BOONTA_RIVAL_EVENT_OVERTAKE) {
+        increase = 7U;
+    } else {
+        increase = 0U;
+    }
+    if (increase > BOONTA_RIVAL_RIVALRY_MAX - current_score) {
+        return BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return current_score + increase;
+}
+
+static inline void boonta_rival_memory_record_event(
+    BoontaRaceState *state, unsigned int rival_index, int rival_event)
+{
+    if (state == NULL || rival_index >= BOONTA_RIVAL_COUNT) return;
+    if (rival_event != BOONTA_RIVAL_EVENT_COLLISION &&
+        rival_event != BOONTA_RIVAL_EVENT_OVERTAKE) return;
+
+    state->rival_rivalry[rival_index] = boonta_rival_rivalry_after_event(
+        state->rival_rivalry[rival_index], rival_event);
+    if (rival_event == BOONTA_RIVAL_EVENT_COLLISION) {
+        if (state->rival_contacts[rival_index] < 0xffffffffU) {
+            ++state->rival_contacts[rival_index];
+        }
+    } else if (state->rival_overtakes[rival_index] < 0xffffffffU) {
+        ++state->rival_overtakes[rival_index];
+    }
+}
+
 /* Three procedural rivals keep a readable stagger in the scrolling-course demo. */
 static inline float boonta_rival_initial_z(unsigned int rival_index)
 {
@@ -747,6 +794,9 @@ static inline void boonta_race_state_reset(BoontaRaceState *state)
         state->rival_finish_seconds[i] = 0.0f;
         state->rival_lateral[i] = 0.0f;
         state->rival_speed[i] = boonta_rival_initial_speed(i);
+        state->rival_rivalry[i] = 0U;
+        state->rival_overtakes[i] = 0U;
+        state->rival_contacts[i] = 0U;
     }
 }
 

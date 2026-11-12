@@ -80,6 +80,19 @@ static inline float boonta_rival_route_lookahead_offset(
     return isfinite(offset) ? offset : 0.0f;
 }
 
+/* Stable roster traits: rivals keep their style for the whole race. */
+static inline float boonta_rival_ai_personality_line_commitment(unsigned int rival_index)
+{
+    static const float commitment[5] = {0.75f, 1.0f, 1.25f, 1.10f, 0.85f};
+    return commitment[rival_index % 5U];
+}
+
+static inline float boonta_rival_ai_personality_curve_sensitivity(unsigned int rival_index)
+{
+    static const float sensitivity[5] = {0.060f, 0.050f, 0.035f, 0.045f, 0.055f};
+    return sensitivity[rival_index % 5U];
+}
+
 /*
  * Stable racing-line bias: each rival keeps its assigned lane but moves a
  * bounded amount toward the inside of the upcoming bend. Narrow roads reduce
@@ -102,7 +115,8 @@ static inline float boonta_rival_ai_target_line_lateral(
     lateral_limit = boonta_rival_ai_clamp(
         road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
     return boonta_rival_ai_clamp(
-        lane_target + curvature_ratio * max_bias,
+        lane_target + curvature_ratio * max_bias *
+            boonta_rival_ai_personality_line_commitment(rival_index),
         -lateral_limit, lateral_limit);
 }
 
@@ -163,6 +177,61 @@ static inline float boonta_rival_ai_target_lateral(
     return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
 }
 
+/* Nemesis memory can strengthen the preferred inside line slightly. */
+static inline float boonta_rival_ai_nemesis_line_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.0025f;
+}
+
+static inline float boonta_rival_ai_target_lateral_with_rivalry(
+    unsigned int rival_index,
+    float rival_z,
+    float current_lateral,
+    float player_lateral,
+    const float *other_z,
+    const float *other_lateral,
+    unsigned int rival_count,
+    float signed_curvature,
+    float road_half_width,
+    unsigned int rivalry_score)
+{
+    float target = boonta_rival_ai_target_lateral(
+        rival_index, rival_z, current_lateral, player_lateral,
+        other_z, other_lateral, rival_count, signed_curvature, road_half_width);
+    float lateral_limit;
+    unsigned int i;
+
+    if (rivalry_score == 0U || !isfinite(signed_curvature) ||
+        fabsf(signed_curvature) < 0.001f ||
+        !isfinite(rival_z) || !isfinite(player_lateral) ||
+        fabsf(rival_z - 1.0f) < 5.5f) {
+        return target;
+    }
+
+    /* Nemesis must never override the existing close-traffic safety envelope. */
+    if (other_z != 0 && other_lateral != 0) {
+        for (i = 0U; i < rival_count; ++i) {
+            if (i == rival_index || !isfinite(other_z[i]) ||
+                !isfinite(other_lateral[i])) continue;
+            if (fabsf(rival_z - other_z[i]) < 3.5f &&
+                fabsf(current_lateral - other_lateral[i]) <
+                    BOONTA_RIVAL_AI_TRAFFIC_GAP) {
+                return target;
+            }
+        }
+    }
+
+    road_half_width = boonta_rival_ai_clamp(road_half_width, 2.2f, 4.8f);
+    lateral_limit = boonta_rival_ai_clamp(
+        road_half_width - 0.65f, 1.0f, BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    target += (signed_curvature > 0.0f ? 1.0f : -1.0f) *
+              boonta_rival_ai_nemesis_line_bonus(rivalry_score);
+    return boonta_rival_ai_clamp(target, -lateral_limit, lateral_limit);
+}
+
 static inline float boonta_rival_ai_after_frame(
     float current_lateral, float target_lateral, float frame_scale)
 {
@@ -200,8 +269,26 @@ static inline float boonta_rival_ai_target_speed(
     const float curvature = boonta_rival_ai_clamp(
         curvature_radians_per_metre, 0.0f, 0.18f);
     const float skill_pace = 0.985f + (float)(rival_index % BOONTA_RIVAL_COUNT) * 0.0075f;
-    const float target_speed = skill_pace - curvature * 0.05f;
+    const float target_speed = skill_pace - curvature * boonta_rival_ai_personality_curve_sensitivity(rival_index);
     return boonta_rival_ai_clamp(target_speed, 0.90f, 1.0f);
+}
+
+/* Small bounded determination; no rival can exceed the player's top-speed envelope. */
+static inline float boonta_rival_ai_nemesis_pace_bonus(unsigned int rivalry_score)
+{
+    if (rivalry_score > BOONTA_RIVAL_RIVALRY_MAX) {
+        rivalry_score = BOONTA_RIVAL_RIVALRY_MAX;
+    }
+    return (float)rivalry_score * 0.00003f;
+}
+
+static inline float boonta_rival_ai_target_speed_with_rivalry(
+    unsigned int rival_index, float curvature_radians_per_metre,
+    unsigned int rivalry_score)
+{
+    return boonta_rival_ai_clamp(
+        boonta_rival_ai_target_speed(rival_index, curvature_radians_per_metre) +
+        boonta_rival_ai_nemesis_pace_bonus(rivalry_score), 0.90f, 1.0f);
 }
 
 static inline float boonta_rival_ai_speed_after_frame(

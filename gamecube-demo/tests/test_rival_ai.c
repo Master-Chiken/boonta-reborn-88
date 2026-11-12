@@ -156,6 +156,71 @@ static void relative_progress_uses_player_and_rival_pace(void)
         NAN, NAN, 0, NAN, INFINITY, 1.0f), -18.0f));
 }
 
+static void roster_personalities_shape_lines_and_corner_pace(void)
+{
+    const float cautious = boonta_rival_ai_target_line_lateral(0U, 0.10f, 3.4f);
+    const float balanced = boonta_rival_ai_target_line_lateral(1U, 0.10f, 3.4f);
+    const float assertive = boonta_rival_ai_target_line_lateral(2U, 0.10f, 3.4f);
+    const float cautious_bias = cautious + 1.25f;
+    const float balanced_bias = balanced;
+    const float assertive_bias = assertive - 1.25f;
+
+    assert(cautious_bias > 0.0f);
+    assert(cautious_bias < balanced_bias);
+    assert(balanced_bias < assertive_bias);
+    assert(nearf_ai(boonta_rival_ai_personality_curve_sensitivity(0U), 0.060f));
+    assert(nearf_ai(boonta_rival_ai_personality_curve_sensitivity(1U), 0.050f));
+    assert(nearf_ai(boonta_rival_ai_personality_curve_sensitivity(2U), 0.035f));
+    assert(boonta_rival_ai_target_speed(0U, 0.10f) <
+           boonta_rival_ai_target_speed(1U, 0.10f));
+    assert(boonta_rival_ai_target_speed(1U, 0.10f) <
+           boonta_rival_ai_target_speed(2U, 0.10f));
+}
+
+static void nemesis_memory_changes_a_rivals_line_and_pace_fairly(void)
+{
+    const float other_z[3] = {-18.0f, -34.0f, -50.0f};
+    const float other_lateral[3] = {-1.25f, 0.0f, 1.25f};
+    const float base_line = boonta_rival_ai_target_lateral(
+        0U, -18.0f, -1.25f, 0.0f, other_z, other_lateral, 3U, 0.10f, 3.4f);
+    const float nemesis_line = boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, -1.25f, 0.0f, other_z, other_lateral, 3U,
+        0.10f, 3.4f, BOONTA_RIVAL_RIVALRY_MAX);
+    const float base_pace = boonta_rival_ai_target_speed(0U, 0.0f);
+    const float nemesis_pace = boonta_rival_ai_target_speed_with_rivalry(
+        0U, 0.0f, BOONTA_RIVAL_RIVALRY_MAX);
+
+    assert(nemesis_line > base_line);
+    assert(nemesis_line <= BOONTA_RIVAL_AI_LATERAL_LIMIT);
+    assert(nemesis_pace > base_pace);
+    assert(nemesis_pace <= 1.0f);
+    assert(nearf_ai(boonta_rival_ai_target_speed_with_rivalry(
+        2U, 0.0f, BOONTA_RIVAL_RIVALRY_MAX), 1.0f));
+}
+
+static void nemesis_bonus_yields_to_player_and_close_traffic(void)
+{
+    const float player_close_z[3] = {1.0f, -20.0f, -35.0f};
+    const float player_close_lateral[3] = {-0.25f, 0.8f, -0.8f};
+    const float base_player_avoidance = boonta_rival_ai_target_lateral(
+        0U, 1.0f, -0.25f, 0.0f, player_close_z,
+        player_close_lateral, 3U, 0.10f, 3.4f);
+    const float nemesis_player_avoidance = boonta_rival_ai_target_lateral_with_rivalry(
+        0U, 1.0f, -0.25f, 0.0f, player_close_z,
+        player_close_lateral, 3U, 0.10f, 3.4f, BOONTA_RIVAL_RIVALRY_MAX);
+    const float traffic_z[3] = {-18.0f, -17.0f, -50.0f};
+    const float traffic_lateral[3] = {-1.25f, -0.75f, 1.25f};
+    const float base_traffic = boonta_rival_ai_target_lateral(
+        0U, -18.0f, -1.25f, 0.0f, traffic_z,
+        traffic_lateral, 3U, 0.10f, 3.4f);
+    const float nemesis_traffic = boonta_rival_ai_target_lateral_with_rivalry(
+        0U, -18.0f, -1.25f, 0.0f, traffic_z,
+        traffic_lateral, 3U, 0.10f, 3.4f, BOONTA_RIVAL_RIVALRY_MAX);
+
+    assert(nearf_ai(nemesis_player_avoidance, base_player_avoidance));
+    assert(nearf_ai(nemesis_traffic, base_traffic));
+}
+
 int main(void)
 {
     lane_preference_is_deterministic();
@@ -163,6 +228,9 @@ int main(void)
     nearby_rival_avoidance();
     movement_is_bounded_and_time_scaled();
     invalid_inputs_recover_safely();
+    roster_personalities_shape_lines_and_corner_pace();
+    nemesis_memory_changes_a_rivals_line_and_pace_fairly();
+    nemesis_bonus_yields_to_player_and_close_traffic();
     curvature_samples_are_measured_and_bounded();
     signed_curvature_selects_inside_line();
     signed_curvature_preserves_turn_direction();

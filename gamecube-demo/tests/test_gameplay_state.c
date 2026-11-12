@@ -1209,6 +1209,50 @@ static void camera_follow_damping_tests(void) {
  assert(nearf(camera60.target.z, target.z));
 }
 
+static void rival_encounter_memory_tests(void)
+{
+ BoontaRaceState state = {0};
+ unsigned int i;
+
+ boonta_race_state_reset(&state);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
+ }
+
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[1] == 7U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 0U);
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == 17U);
+ assert(state.rival_overtakes[1] == 1U);
+ assert(state.rival_contacts[1] == 1U);
+ assert(state.rival_rivalry[0] == 0U);
+
+ state.rival_rivalry[1] = BOONTA_RIVAL_RIVALRY_MAX - 5U;
+ state.rival_contacts[1] = 0xffffffffU;
+ boonta_rival_memory_record_event(&state, 1U, BOONTA_RIVAL_EVENT_COLLISION);
+ assert(state.rival_rivalry[1] == BOONTA_RIVAL_RIVALRY_MAX);
+ assert(state.rival_contacts[1] == 0xffffffffU);
+
+ boonta_rival_memory_record_event(&state, BOONTA_RIVAL_COUNT,
+                                  BOONTA_RIVAL_EVENT_COLLISION);
+ boonta_rival_memory_record_event(&state, 0U, BOONTA_RIVAL_EVENT_NONE);
+ boonta_rival_memory_record_event(0, 0U, BOONTA_RIVAL_EVENT_OVERTAKE);
+ assert(state.rival_rivalry[0] == 0U);
+ assert(boonta_rival_rivalry_after_event(150U, BOONTA_RIVAL_EVENT_NONE) ==
+        BOONTA_RIVAL_RIVALRY_MAX);
+
+ boonta_race_state_reset(&state);
+ for (i = 0U; i < BOONTA_RIVAL_COUNT; ++i) {
+  assert(state.rival_rivalry[i] == 0U);
+  assert(state.rival_overtakes[i] == 0U);
+  assert(state.rival_contacts[i] == 0U);
+ }
+}
+
 int main(void) {
  camera_follow_damping_tests();
  race_session_transition_tests();
@@ -1234,6 +1278,7 @@ int main(void) {
  distance_progression_tests();
  track_scroll_tests();
  simulated_three_lap_run_tests();
+ rival_encounter_memory_tests();
  multiple_rival_spacing_tests();
  rival_contact_velocity_tests();
 
