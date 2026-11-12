@@ -43,6 +43,91 @@ def _short(value: Any, limit: int) -> str:
     return text[: limit - 1].rstrip() + "…"
 
 
+def _role_assignment_context(root: Path, task: dict[str, Any]) -> list[str]:
+    """Resolve accountable role, reporting chain and objective from the canonical registry."""
+    role_id = task.get("owner_role_id")
+    objective_id = task.get("parent_objective_id")
+    if not isinstance(role_id, str) or not re.fullmatch(r"[a-z][a-z0-9-]{1,63}", role_id):
+        raise ContextBuildError("Selected task has no stable accountable owner_role_id")
+    if not isinstance(objective_id, str) or not re.fullmatch(r"[A-Z][A-Z0-9-]{2,63}", objective_id):
+        raise ContextBuildError("Selected task has no stable parent_objective_id")
+    try:
+        registry = json.loads(_read(root, "docs/automation/agent-roles.json"))
+    except json.JSONDecodeError as exc:
+        raise ContextBuildError("Canonical agent role registry is not valid JSON") from exc
+    if (
+        not isinstance(registry, dict)
+        or registry.get("schema_version") != 1
+        or registry.get("status") != "declarative_only"
+        or registry.get("execution_plane") != "github_actions"
+        or registry.get("canonical_task_ledger") != "docs/automation/task-ledger.json"
+    ):
+        raise ContextBuildError("Canonical agent role registry schema or execution boundary is invalid")
+    policy = registry.get("policy")
+    if (
+        not isinstance(policy, dict)
+        or policy.get("max_active_missions") != 1
+        or policy.get("max_provider_invocations_per_run") != 1
+        or policy.get("model_agents_receive_write_credentials") is not False
+        or policy.get("paid_fallback") is not False
+        or policy.get("auto_merge") is not False
+        or policy.get("human_merge_approval_required") is not True
+        or policy.get("qa_must_be_independent") is not True
+    ):
+        raise ContextBuildError("Canonical agent role registry weakens the one-writer/€0/human-review policy")
+    roles = registry.get("roles")
+    objectives = registry.get("objectives")
+    if not isinstance(roles, list) or not isinstance(objectives, list):
+        raise ContextBuildError("Canonical agent role registry has no roles or objectives")
+    role_matches = [item for item in roles if isinstance(item, dict) and item.get("id") == role_id]
+    objective_matches = [item for item in objectives if isinstance(item, dict) and item.get("id") == objective_id]
+    if len(role_matches) != 1:
+        raise ContextBuildError("Selected task accountable role is missing or duplicated in the canonical registry")
+    if len(objective_matches) != 1:
+        raise ContextBuildError("Selected task parent objective is missing or duplicated in the canonical registry")
+    role = role_matches[0]
+    objective = objective_matches[0]
+    if not all(isinstance(role.get(field), str) and role[field].strip() for field in ("title", "kind", "unit")):
+        raise ContextBuildError("Selected task accountable role has incomplete descriptive metadata")
+    if not isinstance(objective.get("title"), str) or not objective["title"].strip():
+        raise ContextBuildError("Selected task parent objective has no title")
+
+    by_id: dict[str, dict[str, Any]] = {}
+    for item in roles:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or item["id"] in by_id:
+            raise ContextBuildError("Canonical agent role registry contains malformed or duplicate role IDs")
+        by_id[item["id"]] = item
+    chain: list[str] = []
+    seen: set[str] = set()
+    current = role
+    while True:
+        current_id = current["id"]
+        if current_id in seen:
+            raise ContextBuildError("Selected task accountable role has a cyclic manager chain")
+        seen.add(current_id)
+        title = current.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise ContextBuildError("Selected task manager chain contains a role without a title")
+        chain.append(title.strip())
+        manager_id = current.get("manager_id")
+        if manager_id is None:
+            if current_id != "human-owner" or current.get("kind") != "human":
+                raise ContextBuildError("Selected task manager chain does not terminate at the human owner")
+            break
+        if not isinstance(manager_id, str) or manager_id not in by_id:
+            raise ContextBuildError("Selected task manager chain references a missing manager")
+        current = by_id[manager_id]
+        if len(chain) > len(by_id):
+            raise ContextBuildError("Selected task manager chain exceeds the registry role count")
+    chain.reverse()
+    return [
+        f"Accountable role: {role_id} — {_short(role['title'], 72)} ({role['kind']}).",
+        "Reporting chain: " + " > ".join(_short(item, 48) for item in chain) + ".",
+        f"Parent objective: {objective_id} — {_short(objective['title'], 84)}.",
+        "Role registry is declarative: it grants no extra tools, credentials or merge authority.",
+    ]
+
+
 def _safe_source_path(path: Any) -> bool:
     if not isinstance(path, str) or not SAFE_PATH_RE.fullmatch(path):
         return False
@@ -324,6 +409,7 @@ def build_context(
         f"Task ID: {task_id}",
         f"Title: {task_title}",
         f"Target branch: {target_branch}",
+        *_role_assignment_context(root, task),
         "Platform scope: " + ", ".join(scope),
         rendered_paths_line,
         *(["Exact owner-reviewed write paths (no others): " + ", ".join(write_paths)] if write_paths else []),
