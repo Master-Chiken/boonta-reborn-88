@@ -123,7 +123,7 @@ for required in (
     "No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.",
     "Normal: reconcile, create branch, push one coherent change and open one marked PR.",
     "Resume exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`",
-    "never create a second PR",
+    "Never create a branch/PR",
 ):
     if required not in gemini_prompt:
         errors.append(f"Gemini direct-execution contract is missing {required!r}")
