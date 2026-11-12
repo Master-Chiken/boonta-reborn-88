@@ -1008,7 +1008,30 @@ static void championship_ledger_ignores_invalid_results_and_saturates(void)
     boonta_championship_record_result(0, 1U);
 }
 
+
+static void championship_standings_use_deterministic_tie_breaks(void)
+{
+    const BoontaChampionshipStanding points_leader = {30U, 4U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding win_leader = {30U, 4U, 1U, 1U, 4U};
+    const BoontaChampionshipStanding podium_leader = {30U, 4U, 0U, 3U, 5U};
+    const BoontaChampionshipStanding best_finish_leader = {30U, 4U, 0U, 2U, 1U};
+    const BoontaChampionshipStanding no_finish = {30U, 4U, 0U, 2U, 0U};
+    const BoontaChampionshipStanding exact_tie = {30U, 9U, 0U, 2U, 2U};
+    const BoontaChampionshipStanding lower_points = {29U, 99U, 99U, 99U, 1U};
+
+    assert(boonta_championship_compare_standings(&points_leader, &lower_points) == -1);
+    assert(boonta_championship_compare_standings(&win_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&podium_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&best_finish_leader, &points_leader) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &no_finish) == -1);
+    assert(boonta_championship_compare_standings(&points_leader, &exact_tie) == 0);
+    assert(boonta_championship_compare_standings(&lower_points, &points_leader) == 1);
+    assert(boonta_championship_compare_standings(0, &points_leader) == 0);
+    assert(boonta_championship_compare_standings(&points_leader, 0) == 0);
+}
+
 int main(void) {
+ championship_standings_use_deterministic_tie_breaks();
  championship_points_follow_fixed_scoring_table();
  championship_standings_accumulate_without_race_reset_coupling();
  championship_ledger_ignores_invalid_results_and_saturates();
