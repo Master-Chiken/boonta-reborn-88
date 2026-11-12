@@ -77,7 +77,7 @@ def _owner_approved_write_paths(root: Path, task_id: str) -> list[str]:
         if isinstance(item, dict) and item.get("task_id") == task_id
     ]
     if len(matches) != 1:
-        raise ContextBuildError("Queued task has no unique owner-reviewed exact write-path entry")
+        raise ContextBuildError("Task has no unique owner-reviewed exact-path entry")
     entry = matches[0]
     paths = entry.get("allowed_paths")
     if (
