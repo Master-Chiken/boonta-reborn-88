@@ -70,7 +70,6 @@ static float g_vehicle_anchor_center_x;
 static BoontaRaceState g_race_state;
 static BoontaCameraState g_camera_state;
 static const BoontaCourseDefinition *g_current_course;
-static unsigned int g_selected_course_index;
 static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 
@@ -195,21 +194,6 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
     }
     g_current_course->sample(g_current_course->runtime_context, g_distance, travelled,
         g_current_course->road_half_width, x_out, y_out, z_out, width_out);
-}
-
-static void select_course(int direction)
-{
-    if (direction == 0 || g_current_course == NULL) return;
-    if (direction < 0) {
-        g_selected_course_index =
-            (g_selected_course_index + BOONTA_COURSE_COUNT - 1U) % BOONTA_COURSE_COUNT;
-    } else {
-        g_selected_course_index = (g_selected_course_index + 1U) % BOONTA_COURSE_COUNT;
-    }
-    g_current_course = boonta_course_catalog[g_selected_course_index];
-    boonta_race_state_reset(&g_race_state);
-    boonta_camera_state_reset(&g_camera_state);
-    (void)reset_runtime_route_cursor();
 }
 
 /*
@@ -1086,11 +1070,10 @@ static void draw_hud(void)
         const float region_x = cx - (float)strlen(course_region) * 2.4f;
         append_screen_quad(cx - 140.0f, cy - 56.0f, cx + 140.0f, cy + 56.0f,
                            0.6f, ready_panel);
-        append_text("COURSE SELECT", cx - 43.0f, cy - 40.0f, 1.0f, boost_fill);
-        append_text(course_name, name_x, cy - 13.0f, 1.0f, white);
-        append_text(course_region, region_x, cy + 7.0f, 0.8f, heat_cool);
-        append_text("LEFT RIGHT", cx - 31.0f, cy + 27.0f, 0.8f, white);
-        append_text("PRESS START", cx - 34.0f, cy + 43.0f, 0.8f, boost_fill);
+        append_text("RACE READY", cx - 30.0f, cy - 40.0f, 1.0f, boost_fill);
+        append_text(course_name, name_x, cy - 10.0f, 1.0f, white);
+        append_text(course_region, region_x, cy + 12.0f, 0.8f, heat_cool);
+        append_text("PRESS START", cx - 34.0f, cy + 40.0f, 0.8f, boost_fill);
     } else if (g_paused) {
         /* Pause icon: a framed pair of bars, with no font or external assets. */
         const float cx = w * 0.5f;
@@ -1285,8 +1268,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
     initialise_video_and_gx();
-    g_selected_course_index = 0U;
-    g_current_course = boonta_course_catalog[g_selected_course_index];
+    g_current_course = boonta_course_catalog[0];
     boonta_race_state_reset(&g_race_state);
     boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
@@ -1324,15 +1306,6 @@ int main(int argc, char **argv)
             draw_frame(frame_delta_seconds);
             continue;
         }
-        if (g_race_state.session_phase == BOONTA_RACE_SESSION_READY &&
-            (buttons_down & (BOONTA_BUTTON_LEFT | BOONTA_BUTTON_RIGHT)) != 0U) {
-            const int left_pressed = (buttons_down & BOONTA_BUTTON_LEFT) != 0U;
-            const int right_pressed = (buttons_down & BOONTA_BUTTON_RIGHT) != 0U;
-            if (left_pressed != right_pressed) select_course(left_pressed ? -1 : 1);
-            draw_frame(frame_delta_seconds);
-            continue;
-        }
-
         if ((buttons_down & BOONTA_BUTTON_START) != 0U) {
             boonta_race_session_start_press(&g_race_state);
         }
