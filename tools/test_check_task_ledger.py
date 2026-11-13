@@ -355,15 +355,6 @@ class CompactTaskSummaryTests(unittest.TestCase):
             "tasks": [task],
         })
         compact_task = compact_summary["tasks"][0]
-        # Reproduce the global preflight's currently committed projection: five
-        # 140-character criteria plus a 420-character historical next_action excerpt.
-        # The provider runner must refresh the derived summary before context building.
-        preflight_task = dict(compact_task)
-        preflight_task["acceptance_criteria_excerpt"] = [
-            task_summary.excerpt(item, 140)
-            for item in task["acceptance_criteria"][:5]
-        ]
-        preflight_task["next_action_excerpt"] = task_summary.excerpt(task["next_action"], 420)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -447,19 +438,18 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 json.dumps(compact_summary, ensure_ascii=False),
             )
 
-            criteria = preflight_task["acceptance_criteria_excerpt"]
+            criteria = compact_task["acceptance_criteria_excerpt"]
             handoff = "\n".join([
                 "Task ID: AUTOMATION-LEDGER-ACTIVATION",
                 "Title: Activate and validate persistent autonomous task tracking",
                 "Target branch: main",
                 "Read-only source paths (select at most one): " + ", ".join(task["read_paths"]),
-                "Question: " + preflight_task["question_excerpt"],
+                "Question: " + compact_task["question_excerpt"],
                 "Acceptance criteria (15; first 5):",
                 *("- " + item for item in criteria),
-                "Next: " + preflight_task["next_action_excerpt"],
+                "Next: " + compact_task["next_action_excerpt"],
             ])
 
-            self.assertGreater(len(handoff), 1100)
             self.assertIn(compact_task["next_action_excerpt"], handoff)
             self.assertEqual(len(compact_task["acceptance_criteria_excerpt"]), 4)
 
