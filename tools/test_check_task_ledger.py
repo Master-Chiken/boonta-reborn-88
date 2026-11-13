@@ -304,7 +304,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
         self.assertEqual(compact["acceptance_criteria_total"], 15)
         self.assertEqual(len(compact["acceptance_criteria_excerpt"]), 4)
         self.assertEqual(compact["acceptance_criteria_excerpt"], task["acceptance_criteria"][:4])
-        self.assertTrue(compact["next_action_excerpt"].startswith("after the UTC reset"))
+        self.assertTrue(compact["next_action_excerpt"].startswith("after 2026-11-11 UTC reset"))
         self.assertIn("same-task PR and exact-head CI", compact["next_action_excerpt"])
         self.assertNotIn("Merged and validated:", compact["next_action_excerpt"])
 
