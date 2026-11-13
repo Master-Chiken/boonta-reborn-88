@@ -475,5 +475,67 @@ class CompactTaskSummaryTests(unittest.TestCase):
 
 
 
+    def test_openrouter_context_budget_fits_real_activation_task(self):
+        root = Path(__file__).resolve().parents[1]
+        summary = json.loads(
+            (root / "docs/automation/task-ledger-summary.json").read_text(encoding="utf-8")
+        )
+        matches = [
+            task for task in summary["tasks"]
+            if task.get("task_id") == "AUTOMATION-LEDGER-ACTIVATION"
+        ]
+        self.assertEqual(len(matches), 1)
+        task = matches[0]
+        task_context = "\\n".join([
+            "Task ID: " + task["task_id"],
+            "Title: " + task["title"],
+            "Target branch: " + task["target_branch"],
+            "Read-only source paths (select at most one): " + ", ".join(task["read_paths"]),
+            "Question: " + task["question_excerpt"],
+            "Acceptance criteria (" + str(task["acceptance_criteria_total"]) + "; first 5):",
+            *("- " + item for item in task["acceptance_criteria_excerpt"]),
+            "Next: " + task["next_action_excerpt"],
+            "Exact owner-reviewed write paths (no others): "
+            "tools/check_task_ledger_summary.py, tools/test_check_task_ledger.py",
+        ])
+
+        # The previous 1,800-character source allocation leaves only ~289
+        # characters for the task metadata inside a 2,200-character context.
+        with self.assertRaisesRegex(
+            context_builder.ContextBuildError,
+            "Verified task excerpts exceed the configured",
+        ):
+            context_builder.build_context(
+                root=root,
+                task_id=task["task_id"],
+                task_title=task["title"],
+                target_branch=task["target_branch"],
+                task_context=task_context,
+                max_chars=2200,
+                max_task_context=1000,
+                max_criteria=4,
+                max_next_action=100,
+                source_root=root,
+                max_source_chars=1800,
+            )
+
+        verified = context_builder.build_context(
+            root=root,
+            task_id=task["task_id"],
+            task_title=task["title"],
+            target_branch=task["target_branch"],
+            task_context=task_context,
+            max_chars=2200,
+            max_task_context=1100,
+            max_criteria=4,
+            max_next_action=100,
+            source_root=root,
+            max_source_chars=950,
+        )
+        self.assertLessEqual(len(verified), 2200)
+        self.assertIn("Exact owner-reviewed write paths (no others):", verified)
+        self.assertIn("SOURCE EXCERPTS", verified)
+
+
 if __name__ == "__main__":
     unittest.main()
