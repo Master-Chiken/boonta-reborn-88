@@ -143,10 +143,15 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
 # permit reading both, then one branch, one grouped write and one PR without asking
 # the owner to paste code. Groq's full-file push payload needs a real output budget.
 def normal_agent_prompt(workflow: str) -> str:
-    start = workflow.find("PROMPT=\"$(cat <<'PROMPT'\\n")
-    if start < 0:
+    markers = (
+        "You are the €0-only OpenRouter Free agent.",
+        "Groq Free, €0 only. Execute exactly the preflight-reserved task.",
+    )
+    starts = [workflow.find(marker) for marker in markers]
+    starts = [position for position in starts if position >= 0]
+    if not starts:
         return ""
-    start += len("PROMPT=\"$(cat <<'PROMPT'\\n")
+    start = min(starts)
     end = workflow.find("\\n          PROMPT\\n", start)
     return workflow[start:end] if end >= 0 else ""
 
@@ -161,7 +166,8 @@ for provider, prompt in (
     ):
         if required not in prompt:
             errors.append(f"{provider} activation agent contract is missing {required!r}")
-    if "at most one exact file read" in prompt or "optional exact read" in prompt:
+    if ("at most one exact file read" in prompt or "optional exact read" in prompt or
+            "optional once" in prompt or "single permitted direct source lookup" in prompt):
         errors.append(f"{provider} activation agent still has a one-file/four-call restriction")
 
 for required in (
