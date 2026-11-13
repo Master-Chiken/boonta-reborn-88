@@ -743,17 +743,17 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - No PR/branch enumeration or media/binary retrieval.
           - Newly retrieved text: at most 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
-          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker. Never ask the owner for code or clarification; implement or report one precise blocker.
+          - The reserved task, criteria and read-path allow-list are preloaded. Use the supplied excerpts before one exact read. Read no other paths; report a blocker on failure. Never ask the owner for code or clarification.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
-          - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
-          - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
+          - Gameplay only: reuse merged PR #327 (69deb6778f9383887118803428e7014686865a83); do not reopen or recreate superseded PRs #317/#318/#319.
+          - If the one permitted read fails, report its exact missing path; do not discover other files.
           
           TOOLS / DELIVERY
           - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
           - OpenCode 1.19.5 prefixes raw MCP names with github_. Direct MCP only; no Code Mode, shell or filesystem.
           - The global preflight already completed the exact task reservation and open-PR duplicate check. Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.
           - Use at most four tool calls: optionally read one directly relevant implementation/test file; create one branch from selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
-          - No PR search/readback. Use create_pull_request's URL/head_sha; the shared validator checks task markers, base, live head and CI.
+          - No PR readback. Use create_pull_request URL/head_sha; the shared report validator re-fetches the live PR.
           - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone lines BOONTA_TASK_ID: <exact selected task ID> and BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           
           FINAL REPORT
