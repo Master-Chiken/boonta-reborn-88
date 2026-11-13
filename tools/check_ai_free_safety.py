@@ -1677,8 +1677,8 @@ if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
-    "No issue bodies/comments; exact source excerpts are preloaded.",
-    "No broad model-side reads or repo discovery; one exact approved file read at most.",
+    "No issue bodies/comments; excerpts preloaded.",
+    "Use preloaded source excerpts first; call github_get_file_contents at most once at ref TASK_TARGET_BRANCH.",
     "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
     "No paid routes, billing, credits, or provider/secret/settings changes.",
