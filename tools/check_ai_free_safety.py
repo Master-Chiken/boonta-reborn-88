@@ -573,7 +573,7 @@ for label, workflow, marker in (
 for required in (
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "No PR/branch enumeration or media/binary retrieval.",
-    "Newly retrieved text: at most 700 tokens.",
+    "No source-read tool is exposed in new-task mode.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
@@ -1715,7 +1715,7 @@ for required in (
     "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
     "No issue bodies/comments; exact source excerpts are preloaded.",
     "No source-read tool is exposed in new-task mode.",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
     "No paid routes, billing, credits, or provider/secret/settings changes.",
 ):
@@ -1729,7 +1729,7 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or pro
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
