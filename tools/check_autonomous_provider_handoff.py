@@ -12,6 +12,7 @@ FILES = {
     "openrouter": ROOT / ".github/workflows/openrouter-plan-execute.yml",
     "groq": ROOT / ".github/workflows/groq-plan-execute.yml",
     "loop": ROOT / ".github/workflows/boonta-autonomous-loop.yml",
+    "readiness": ROOT / ".github/workflows/boonta-autonomous-readiness.yml",
     "gemini_prompt": ROOT / ".github/commands/gemini-autonomous-loop.toml",
     "budget": ROOT / "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
     "summary": ROOT / "docs/automation/task-ledger-summary.json",
@@ -34,6 +35,7 @@ gemini = read("gemini")
 openrouter = read("openrouter")
 groq = read("groq")
 loop = read("loop")
+readiness = read("readiness")
 
 groq_step_ids = re.findall(r"(?m)^        id:\s*([A-Za-z0-9_-]+)\s*$", groq)
 
@@ -74,6 +76,12 @@ if "- cron: '17 0,6,12,18 * * *'" not in loop:
     errors.append("Autonomous loop must retain four bounded UTC opportunities per day")
 if "  workflow_dispatch:\n" not in loop:
     errors.append("Autonomous loop must retain owner-authorized manual dispatch")
+if "  repository_dispatch:\n    types: [boonta-provider-fallback]\n" not in loop:
+    errors.append("Autonomous loop must expose only the named internal provider-fallback dispatch event")
+if "allow_internal_dispatch" not in readiness or "inputs.allow_internal_dispatch == true" not in readiness:
+    errors.append("Readiness must permit internal fallback only through its explicit read-only dispatch input")
+if "allow_internal_dispatch" not in loop:
+    errors.append("Autonomous loop must pass the internal-dispatch readiness input only for the named fallback event")
 # Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
 # repeated validation/comment side effects. Keep this workflow single-pass.
 if len(groq_step_ids) != len(set(groq_step_ids)):
@@ -366,15 +374,23 @@ if not resume_route or "needs.provider-cooldowns.outputs.resume_ready == 'true'"
 if (
     "github.event_name == 'schedule'" not in resume_route or
     "github.event_name == 'workflow_dispatch'" not in resume_route or
-    "github.actor == github.repository_owner" not in resume_route
+    "github.actor == github.repository_owner" not in resume_route or
+    "github.event_name == 'repository_dispatch'" not in resume_route or
+    "github.actor == 'github-actions[bot]'" not in resume_route or
+    "github.event.action == 'boonta-provider-fallback'" not in resume_route or
+    "github.event.client_payload.origin == 'boonta-provider-fallback'" not in resume_route
 ):
-    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
+    errors.append("Groq resume must allow scheduled/manual runs and only the trusted internal fallback dispatch")
 if (
     "github.event_name == 'schedule'" not in resume_route or
     "github.event_name == 'workflow_dispatch'" not in resume_route or
-    "github.actor == github.repository_owner" not in resume_route
+    "github.actor == github.repository_owner" not in resume_route or
+    "github.event_name == 'repository_dispatch'" not in resume_route or
+    "github.actor == 'github-actions[bot]'" not in resume_route or
+    "github.event.action == 'boonta-provider-fallback'" not in resume_route or
+    "github.event.client_payload.origin == 'boonta-provider-fallback'" not in resume_route
 ):
-    errors.append("Groq resume must allow scheduled cycles and owner-authorized manual dispatch")
+    errors.append("Groq resume must allow scheduled/manual runs and only the trusted internal fallback dispatch")
 for provider_label, route_job in (("Gemini", gemini_resume_job), ("OpenRouter", openrouter_job), ("Groq", groq_job)):
     if "github.event_name == 'schedule'" not in route_job:
         errors.append(f"{provider_label} resume route must remain reachable from scheduled workflow runs")
@@ -476,7 +492,7 @@ for required in ("core.setOutput('blocked_fingerprint'", "core.setOutput('cycle_
 for required in (
     "task_blocked_active: ${{ steps.check.outputs.task_blocked_active }}",
     "BOONTA_TASK_BLOCKED_COOLDOWN:",
-    "needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule'",
+    "needs.provider-cooldowns.outputs.task_blocked_active != 'true' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner)",
     "TASK_BLOCKED_ACTIVE: ${{ needs.provider-cooldowns.outputs.task_blocked_active }}",
     "A validated BLOCKED report already exists for the single active task on this UTC day",
     "GEMINI_TASK_QUEUE_STATE",
@@ -485,8 +501,8 @@ for required in (
 ):
     if required not in loop:
         errors.append(f"Autonomous loop task backoff is missing {required!r}")
-if loop.count("needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule'") != 3:
-    errors.append("All three provider routes must pause scheduled calls while task backoff is active")
+if loop.count("needs.provider-cooldowns.outputs.task_blocked_active != 'true' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner)") != 3:
+    errors.append("All three provider routes must pause task backoff except for explicit owner push/manual re-evaluation")
 
 # Report-format/semantic failures also consume an inference request. Record the
 # daily cooldown after validation, but only for an actual invocation or report
@@ -511,6 +527,57 @@ if "At most one provider invocation is allowed per workflow run" not in loop:
     errors.append("Autonomous loop summary must disclose the one-provider-per-run rule")
 if "needs: [readiness, provider-cooldowns]" not in loop:
     errors.append("Gemini must depend on the global cooldown preflight")
+
+# Provider failures advance through a new run, never a second model call in
+# the failing run. The receiving run must validate its bot-only envelope and
+# exact predecessor cooldown state before selecting the next provider.
+const trustedDispatchGate = "github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'";
+if (loop.split(trustedDispatchGate).length - 1 !== 4) {
+    errors.append("All four main-loop gates must require the exact bot-authenticated fallback dispatch envelope");
+}
+for (const [label, workflow, expectedProvider, cooldownId] of [
+    ("Gemini", gemini, "gemini", "record_gemini_cooldown"),
+    ("OpenRouter", openrouter, "openrouter", "record_openrouter_cooldown"),
+]) {
+    const dispatchBlock = workflow.split("      - name: Dispatch ", 2)[1] || "";
+    if (!dispatchBlock.includes("github.rest.repos.createDispatchEvent") ||
+        !dispatchBlock.includes("event_type: 'boonta-provider-fallback'") ||
+        !dispatchBlock.includes("failed_provider: '" + expectedProvider + "'") ||
+        !dispatchBlock.includes("steps." + cooldownId + ".outcome == 'success')) {
+        errors.append(label + " must dispatch the next provider only after its persistent cooldown step succeeds");
+    }
+    if (!workflow.includes("id: " + cooldownId)) {
+        errors.append(label + " cooldown persistence step must expose its outcome for dispatch gating");
+    }
+}
+if (groq.includes("github.rest.repos.createDispatchEvent")) {
+    errors.append("Groq is the terminal provider and must not dispatch another provider");
+}
+if (!loop.includes("context.eventName === 'repository_dispatch'") ||
+    !loop.includes("context.actor === 'github-actions[bot]'") ||
+    !loop.includes("Number.isSafeInteger(payload.source_run_id)") ||
+    !loop.includes("results.gemini === 'ACTIVE' && results.openrouter === 'clear' && results.groq === 'clear'") ||
+    !loop.includes("results.gemini === 'ACTIVE' && results.openrouter === 'ACTIVE' && results.groq === 'clear'")) {
+    errors.append("Global preflight must validate dispatch identity, source run ID and exact provider cooldown order");
+}
+for (const [label, workflow, requiredProvider] of [
+    ("OpenRouter", openrouter, "gemini"),
+    ("Groq", groq, "openrouter"),
+]) {
+    const expectedEnv = "CALLER_DISPATCH_FAILED_PROVIDER: ${{ github.event.client_payload.failed_provider }}";
+    const expectedGuard = "CALLER_DISPATCH_FAILED_PROVIDER:-}" + " != \"" + requiredProvider + "\"";
+    if (!workflow.includes(expectedEnv) ||
+        !workflow.includes("CALLER_EVENT_ACTION: ${{ github.event.action }}") ||
+        !workflow.includes("CALLER_DISPATCH_ORIGIN: ${{ github.event.client_payload.origin }}") ||
+        !workflow.includes(expectedGuard)) {
+        errors.append(label + " provider guard must bind its dispatch to the exact predecessor and origin");
+    }
+}
+if (!gemini.includes("CALLER_EVENT: '${{ github.event_name }}'") ||
+    !gemini.includes("CALLER_EVENT:-}" + " == \"repository_dispatch\"")) {
+    errors.append("Gemini must refuse to run on an internal fallback dispatch");
+}
+
 
 # Keep the global payload within the reviewed provider task-context ceiling.
 if "if (taskReady && taskContext.length > 2500)" not in loop:
@@ -1206,5 +1273,5 @@ if errors:
 
 print("Autonomous provider handoff checks passed.")
 print("- At most one model provider invocation is allowed per workflow run.")
-print("- Fallbacks advance only on later cycles after a pre-existing UTC cooldown.")
+print("- Fallbacks advance only in separate runs after a fresh preflight confirms the prior provider cooldown.")
 print("- Provider limits, CI diagnostics, and €0-only restrictions are enforced.")
