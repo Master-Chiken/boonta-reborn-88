@@ -139,6 +139,42 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must bind exact-head validation to the preflight-selected task in both normal and resume modes: {required!r}")
 
+# Keep provider prompts within the repository's empirically tested Free-tier budgets.
+# OpenRouter and Groq have deliberately different constraints; do not widen either
+# without a new measured, owner-reviewed quota test.
+def normal_agent_prompt(workflow: str) -> str:
+    markers = (
+        "You are the €0-only OpenRouter Free agent.",
+        "Groq Free, €0 only. Execute exactly the preflight-reserved task.",
+    )
+    starts = [position for position in (workflow.find(marker) for marker in markers) if position >= 0]
+    if not starts:
+        return ""
+    start = min(starts)
+    end = workflow.find("\n          PROMPT\n", start)
+    return workflow[start:end] if end >= 0 else ""
+
+openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
+groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
+for required in (
+    "Newly retrieved text: at most 700 tokens.",
+    "Never ask the owner for code or clarification",
+):
+    if required not in openrouter_agent_prompt:
+        errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
+for required in (
+    "preloaded schema-v2 context is authoritative",
+    "Global preflight is authoritative",
+    "Do not search PR history",
+    "one exact approved file read at most",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "At most four calls",
+    "Never ask the owner for code or clarification",
+):
+    if required not in groq_agent_prompt:
+        errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
+
+
 # A single read-only cooldown preflight avoids starting three provider runners
 # when all providers are already suppressed for the current UTC day.
 if "  provider-cooldowns:" not in autonomous:
