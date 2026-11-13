@@ -629,7 +629,7 @@ jobs:
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Preloaded excerpts first; at most one exact approved file read.
+          # 1,550/256 limits; max 4 steps. New tasks use preloaded excerpts only; resume mode permits one exact PR-file read.
           # Shell execution is denied; repository changes must use branch/PR MCP tools.
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
