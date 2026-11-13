@@ -4,8 +4,8 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 
 ## Non-negotiable cycle budget
 
-- One model provider invocation at most per Boonta Autonomous Loop run. If a provider fails, do not call the next provider in that same run. Advance only on a later eligible scheduled cycle after the earlier provider's same-day cooldown is active.
-- Provider order: Gemini first; OpenRouter Free only on a later cycle when Gemini is cooldown-skipped; Groq Free only on a later cycle when both Gemini and OpenRouter are cooldown-skipped.
+- One model provider invocation at most per Boonta Autonomous Loop run. If a provider fails, do not call the next provider in that same run. After its persistent same-day cooldown is recorded, a trusted `repository_dispatch` starts a separate run; that run must re-read the cooldown and task state before advancing. The four daily scheduled runs remain the recovery backstop if dispatch delivery fails.
+- Provider order: Gemini first; OpenRouter Free only in a later, cooldown-gated run when Gemini is skipped; Groq Free only in a later, cooldown-gated run when both Gemini and OpenRouter are skipped. A trusted internal dispatch can start that later run immediately; it never bypasses the cooldown preflight.
 - A successful preflight is configuration evidence, not model execution or project progress. A run is engineering progress only when a provider invocation completed and its report is validated against a new or advanced open PR at the exact current head SHA.
 - Never use a paid route, billing fallback, additional provider, or secret rotation to bypass a Free-tier quota. The project budget remains €0.
 
@@ -27,7 +27,7 @@ This is the shared context and execution budget for scheduled Gemini, OpenRouter
 - Cooldown preflight reads only issue #226 comments updated since 00:00 UTC on the current day (`since`), then verifies the embedded UTC date. Keep this bounded query in the global preflight and every provider-specific cooldown guard; the failure-recording step may still locate/update the persistent marker.
 
 
-- **503 / temporary unavailability:** Gemini makes one model attempt only; after a 503 or TPM refusal, the invocation fails closed and its cooldown prevents another request until the next UTC day. A later scheduled cycle may try the next Free-only provider. Network `fetch failed` retries are disabled.
+- **503 / temporary unavailability:** Gemini makes one model attempt only; after a 503 or TPM refusal, the invocation fails closed and its cooldown is persisted. The workflow then dispatches a separate run; fresh preflight should select OpenRouter Free immediately if its own cooldown is clear. If dispatch delivery fails, the next scheduled or owner-manual run is the backstop. Network `fetch failed` retries are disabled.
 - **429 / TPM, context-size or request-too-large:** stop immediately, do not repeat the same request, and reduce the prompt/retrieved context/tool surface before the next attempt.
 - **Daily Free quota or reserve insufficient:** do not call inference; wait for the next UTC day. OpenRouter preflight requires a reserve equal to its maximum configured build steps (currently 8), rather than starting with only 1–7 requests left. The API reports the counter on a UTC-day basis, and failed attempts count toward the cap. Never add credits or use a paid route.
 - **Authentication or Free-tier attestation failure:** stop before inference. Do not ask for a new key when the same-run authentication already succeeded.
