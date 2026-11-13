@@ -45,6 +45,35 @@ context_builder = read("context_builder")
 context_builder_tests = read("context_builder_tests")
 task_preflight_tests = read("task_preflight_tests")
 errors: list[str] = []
+
+# Event-driven runs must wake when canonical queue, write-scope or execution
+# contracts change. The scheduled cadence remains the backstop; push paths
+# prevent these state changes waiting for the next cron window.
+push_block = loop.split("  schedule:", 1)[0]
+if "    branches:\n      - main\n" not in push_block:
+    errors.append("Autonomous loop push trigger must remain restricted to main")
+if "  push:\n" not in push_block or "    paths:\n" not in push_block:
+    errors.append("Autonomous loop must retain a main-branch push trigger with explicit path filters")
+else:
+    push_paths = push_block.split("    paths:\n", 1)[1]
+    required_push_paths = (
+        "docs/automation/task-ledger-summary.json",
+        "docs/automation/patch-path-allowlist.json",
+        "tools/check_task_ledger.py",
+        "tools/check_task_ledger_summary.py",
+        "tools/build_autonomous_context.py",
+        "tools/validate_autonomous_cycle_report.js",
+        "tools/test_autonomous_task_preflight.py",
+        "tools/test_autonomous_cycle_report.js",
+    )
+    for path in required_push_paths:
+        if not re.search(r"(?m)^      - " + re.escape(path) + r"\s*$", push_paths):
+            errors.append(f"Autonomous loop push trigger is missing canonical dependency {path!r}")
+
+if "- cron: '17 0,6,12,18 * * *'" not in loop:
+    errors.append("Autonomous loop must retain four bounded UTC opportunities per day")
+if "  workflow_dispatch:\n" not in loop:
+    errors.append("Autonomous loop must retain owner-authorized manual dispatch")
 # Duplicate step IDs make GitHub Actions outputs ambiguous and can cause
 # repeated validation/comment side effects. Keep this workflow single-pass.
 if len(groq_step_ids) != len(set(groq_step_ids)):
