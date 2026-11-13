@@ -1072,7 +1072,7 @@ for label, prompt in dynamic_task_prompts:
 # Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
-    ("OpenRouter", openrouter_fallback, "2800", "1100"),
+    ("OpenRouter", openrouter_fallback, "2200", "1000"),
     ("Groq", groq_fallback, "3000", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
