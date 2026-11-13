@@ -709,7 +709,7 @@ jobs:
           - Never upload commercial ROM/assets or write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
           
           TOOLS / DELIVERY
-          - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
+          - Normal tools: github_get_file_contents (up to twice for those exact paths), github_create_branch, github_push_files, github_create_pull_request.
           - At most five calls: read both approved files, create one branch, push both updated files once, then open one non-draft PR.
           - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Exact markers: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           - Use returned PR URL/head_sha; do not read the PR back.
