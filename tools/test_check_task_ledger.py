@@ -300,6 +300,45 @@ class CompactTaskSummaryTests(unittest.TestCase):
         self.assertIn("same-task PR and exact-head CI", compact["next_action_excerpt"])
         self.assertNotIn("Merged and validated:", compact["next_action_excerpt"])
 
+    def test_github_actions_refreshes_only_the_derived_summary_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger_path = root / "task-ledger.json"
+            summary_path = root / "task-ledger-summary.json"
+            canonical_ledger = valid_ledger()
+            original_ledger = json.dumps(canonical_ledger, indent=2)
+            ledger_path.write_text(original_ledger, encoding="utf-8")
+            summary_path.write_text("{ stale summary }\\n", encoding="utf-8")
+
+            with patch.object(task_summary, "LEDGER", ledger_path):
+                with patch.object(task_summary, "SUMMARY", summary_path):
+                    with patch.dict("os.environ", {"GITHUB_ACTIONS": "true"}):
+                        self.assertEqual(task_summary.main(), 0)
+
+            expected = json.dumps(
+                task_summary.build_summary(canonical_ledger),
+                indent=2,
+                ensure_ascii=False,
+            ) + "\\n"
+            self.assertEqual(summary_path.read_text(encoding="utf-8"), expected)
+            self.assertEqual(ledger_path.read_text(encoding="utf-8"), original_ledger)
+
+    def test_local_summary_check_still_rejects_stale_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger_path = root / "task-ledger.json"
+            summary_path = root / "task-ledger-summary.json"
+            ledger_path.write_text(json.dumps(valid_ledger()), encoding="utf-8")
+            stale = "{ stale summary }\\n"
+            summary_path.write_text(stale, encoding="utf-8")
+
+            with patch.object(task_summary, "LEDGER", ledger_path):
+                with patch.object(task_summary, "SUMMARY", summary_path):
+                    with patch.dict("os.environ", {"GITHUB_ACTIONS": "false"}):
+                        self.assertEqual(task_summary.main(), 1)
+
+            self.assertEqual(summary_path.read_text(encoding="utf-8"), stale)
+
     def test_blocked_activation_context_fits_the_1100_character_workflow_budget(self):
         task = self.activation_task()
         compact_summary = task_summary.build_summary({
