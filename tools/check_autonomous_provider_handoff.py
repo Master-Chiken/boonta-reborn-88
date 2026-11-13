@@ -50,6 +50,8 @@ errors: list[str] = []
 # contracts change. The scheduled cadence remains the backstop; push paths
 # prevent these state changes waiting for the next cron window.
 push_block = loop.split("  schedule:", 1)[0]
+if "    branches:\n      - main\n" not in push_block:
+    errors.append("Autonomous loop push trigger must remain restricted to main")
 if "  push:\n" not in push_block or "    paths:\n" not in push_block:
     errors.append("Autonomous loop must retain a main-branch push trigger with explicit path filters")
 else:
