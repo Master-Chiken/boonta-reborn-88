@@ -743,9 +743,9 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - No PR/branch enumeration or media/binary retrieval.
           - Newly retrieved text: at most 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
-          - The reserved task, criteria and read-path allow-list are preloaded. Use the supplied excerpts before one exact read. Read no other paths; report a blocker on failure. Never ask the owner for code or clarification.
+          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker. Never ask the owner for code or clarification; implement or report one precise blocker.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
-          - Gameplay only: reuse merged PR #327 (69deb6778f9383887118803428e7014686865a83); do not reopen or recreate superseded PRs #317/#318/#319.
+          - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
           - If the one permitted read fails, report its exact missing path; do not discover other files.
           
           TOOLS / DELIVERY
