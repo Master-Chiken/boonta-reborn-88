@@ -639,7 +639,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 4,
+                "steps": 6,
                 "temperature": 0.2,
                 "permission": {
                   "task": {
@@ -654,8 +654,8 @@ jobs:
                   "openai/gpt-oss-20b": {
                     "temperature": true,
                     "limit": {
-                      "context": 1550,
-                      "output": 256
+                      "context": 16384,
+                      "output": 8192
                     }
                   }
                 }
@@ -696,10 +696,10 @@ jobs:
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or trust older merged automation PRs.
+          - The preloaded task and live preflight are authoritative; there is no matching task PR. Do not search history or trust older PRs. Never ask the owner for code or clarification; implement or report a precise blocker.
           - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
+          - Read both exact owner-reviewed write paths on TASK_TARGET_BRANCH (two reads max); no other paths or discovery.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
           
@@ -710,7 +710,7 @@ jobs:
           
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
-          - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
+          - At most five calls: read both approved files, create one branch, push both updated files once, then open one non-draft PR.
           - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Exact markers: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           - Use returned PR URL/head_sha; do not read the PR back.
           
@@ -802,7 +802,7 @@ jobs:
 
           prompt, report_path, workspace = sys.argv[1:]
           command = [
-              "timeout", "--signal=TERM", "--kill-after=5s", "90s",
+              "timeout", "--signal=TERM", "--kill-after=5s", "180s",
               "opencode", "run", "--model", "groq/openai/gpt-oss-20b",
               "--auto", "--dir", workspace, prompt,
           ]
