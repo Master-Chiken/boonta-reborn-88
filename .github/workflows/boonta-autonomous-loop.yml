@@ -14,6 +14,15 @@ on:
       - tools/check_autonomous_provider_handoff.py
       - docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md
       - docs/automation/task-ledger.json
+      # These canonical inputs directly control task selection, write authorization and report validation.
+      - docs/automation/task-ledger-summary.json
+      - docs/automation/patch-path-allowlist.json
+      - tools/check_task_ledger.py
+      - tools/check_task_ledger_summary.py
+      - tools/build_autonomous_context.py
+      - tools/validate_autonomous_cycle_report.js
+      - tools/test_autonomous_task_preflight.py
+      - tools/test_autonomous_cycle_report.js
   schedule:
     # Four bounded opportunities per day, including 00:17 UTC just after daily quota reset; runs without asking for another continue message.
     # Keep six-hour spacing; concurrency prevents overlapping writers.
