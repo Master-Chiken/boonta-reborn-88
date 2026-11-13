@@ -743,7 +743,7 @@ jobs:
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - No PR/branch enumeration or media/binary retrieval.
           - No source-read tool is exposed in new-task mode. Use only the preloaded exact task excerpts; if they are insufficient, report BLOCKED with the precise missing fact/path and next action. Never ask owner for code or file contents.
-          - The canonical task reservation, acceptance criteria, owner-reviewed write paths and exact source excerpts are preloaded. Do not request or read additional files in new-task mode. Never ask the owner for code or clarification; implement from the excerpts or report one precise blocker.
+          - The canonical task reservation, acceptance criteria, owner-reviewed write paths and exact source excerpts are preloaded. Do not request or read additional files in new-task mode. Never ask owner for code or file contents. Patch from excerpts or report BLOCKED with the exact gap and next action.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
           - If a required fact is absent from the excerpts, report its exact missing path/fact; do not discover or request other files.
