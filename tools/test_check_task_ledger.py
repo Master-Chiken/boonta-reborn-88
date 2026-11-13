@@ -18,6 +18,18 @@ audit = importlib.util.module_from_spec(AUDIT_SPEC)
 assert AUDIT_SPEC and AUDIT_SPEC.loader
 AUDIT_SPEC.loader.exec_module(audit)
 
+SUMMARY_MODULE_PATH = Path(__file__).with_name("check_task_ledger_summary.py")
+SUMMARY_SPEC = importlib.util.spec_from_file_location("check_task_ledger_summary", SUMMARY_MODULE_PATH)
+task_summary = importlib.util.module_from_spec(SUMMARY_SPEC)
+assert SUMMARY_SPEC and SUMMARY_SPEC.loader
+SUMMARY_SPEC.loader.exec_module(task_summary)
+
+CONTEXT_MODULE_PATH = Path(__file__).with_name("build_autonomous_context.py")
+CONTEXT_SPEC = importlib.util.spec_from_file_location("build_autonomous_context", CONTEXT_MODULE_PATH)
+context_builder = importlib.util.module_from_spec(CONTEXT_SPEC)
+assert CONTEXT_SPEC and CONTEXT_SPEC.loader
+CONTEXT_SPEC.loader.exec_module(context_builder)
+
 
 def valid_task(task_id="TASK-001", status="queued"):
     return {
@@ -222,6 +234,188 @@ class LedgerSourceSelectionTests(unittest.TestCase):
 
     def test_non_pull_request_event_does_not_read_event_file(self):
         self.assertEqual(audit.fetch_event_changed_files("token", "push"), set())
+
+
+class CompactTaskSummaryTests(unittest.TestCase):
+    def activation_task(self):
+        criteria = [
+            "Ledger validator and regression tests pass in CI",
+            "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
+            "One active task maximum is enforced",
+            "A post-merge cycle records exact PR state and continues the next unanswered research question",
+            "Autonomous Gemini repository writes are constrained to the available GitHub MCP push_files tool; unavailable local editing tools are explicitly prohibited",
+            "OpenRouter Free daily-quota preflight fails closed before any inference request",
+        ]
+        criteria.extend(f"Additional activation acceptance criterion {index}" for index in range(7, 16))
+        return {
+            "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+            "title": "Activate and validate persistent autonomous task tracking",
+            "owner_role_id": "chief-of-staff",
+            "parent_objective_id": "BOONTA-AUTONOMOUS-ENGINEERING",
+            "depends_on": [],
+            "owner_approved": False,
+            "queue": "#226",
+            "platform_scope": ["automation"],
+            "status": "blocked",
+            "target_branch": "main",
+            "read_paths": [
+                "tools/check_task_ledger.py",
+                "tools/test_check_task_ledger.py",
+                "tools/check_task_ledger_summary.py",
+                ".github/workflows/boonta-autonomous-loop.yml",
+            ],
+            "read_ranges": [],
+            "question": (
+                "Does the merged autonomous loop consistently reconcile the task ledger "
+                "and avoid duplicate or stale work?"
+            ),
+            "acceptance_criteria": criteria,
+            "next_action": (
+                "Merged and validated: recent owner gates and provider profiles are integrated. "
+                "Next: after the UTC reset, require one actual €0 provider invocation, a same-task PR "
+                "and exact-head CI before completing this task. Only after activation, continue "
+                "the owner-directed cross-platform research decision."
+            ),
+            "pr_url": None,
+            "head_sha": None,
+            "updated_at": "2026-11-13",
+        }
+
+    def test_summary_preserves_four_top_criteria_and_actionable_next_step(self):
+        task = self.activation_task()
+        compact = task_summary.build_summary({
+            "updated_at": "2026-11-13",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [task],
+        })["tasks"][0]
+
+        self.assertEqual(compact["acceptance_criteria_total"], 15)
+        self.assertEqual(len(compact["acceptance_criteria_excerpt"]), 4)
+        self.assertEqual(compact["acceptance_criteria_excerpt"], task["acceptance_criteria"][:4])
+        self.assertTrue(compact["next_action_excerpt"].startswith("after the UTC reset"))
+        self.assertIn("same-task PR and exact-head CI", compact["next_action_excerpt"])
+        self.assertNotIn("Merged and validated:", compact["next_action_excerpt"])
+
+    def test_blocked_activation_context_fits_the_1100_character_workflow_budget(self):
+        task = self.activation_task()
+        compact_summary = task_summary.build_summary({
+            "updated_at": "2026-11-13",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [task],
+        })
+        compact_task = compact_summary["tasks"][0]
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            def write(relative_path, content):
+                path = root / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
+
+            write("docs/REVERSE_ENGINEERING_FIRST.md", "DISCOVER VERIFY REUSE GameCube/Wii")
+            write(
+                "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
+                "One model provider invocation at most; €0; 1,550 context tokens",
+            )
+            write("tools/check_task_ledger_summary.py", "# bounded write target\n")
+            write("tools/test_check_task_ledger.py", "# bounded test target\n")
+            write(
+                "docs/automation/patch-path-allowlist.json",
+                json.dumps({
+                    "schema_version": 1,
+                    "policy": {
+                        "owner_review_required": True,
+                        "path_mode": "exact",
+                        "max_paths_per_task": 20,
+                    },
+                    "tasks": [{
+                        "task_id": "AUTOMATION-LEDGER-ACTIVATION",
+                        "purpose": "Owner-authorized bounded activation test.",
+                        "approval_ref": "https://github.com/Master-Chiken/boonta-reborn-88/pull/408",
+                        "allowed_paths": [
+                            "tools/check_task_ledger_summary.py",
+                            "tools/test_check_task_ledger.py",
+                        ],
+                    }],
+                }),
+            )
+            write(
+                "docs/automation/agent-roles.json",
+                json.dumps({
+                    "schema_version": 1,
+                    "status": "declarative_only",
+                    "execution_plane": "github_actions",
+                    "canonical_task_ledger": "docs/automation/task-ledger.json",
+                    "policy": {
+                        "max_active_missions": 1,
+                        "max_provider_invocations_per_run": 1,
+                        "repository_writers": ["github_actions"],
+                        "model_agents_receive_write_credentials": False,
+                        "paid_fallback": False,
+                        "auto_merge": False,
+                        "human_merge_approval_required": True,
+                        "qa_must_be_independent": True,
+                    },
+                    "provider_order": ["gemini", "openrouter_free", "groq_free"],
+                    "roles": [
+                        {
+                            "id": "chief-of-staff",
+                            "title": "Chief of Staff",
+                            "kind": "agent",
+                            "unit": "automation",
+                            "manager_id": "human-owner",
+                        },
+                        {
+                            "id": "human-owner",
+                            "title": "Human Owner",
+                            "kind": "human",
+                            "unit": "owner",
+                            "manager_id": None,
+                        },
+                    ],
+                    "objectives": [{
+                        "id": "BOONTA-AUTONOMOUS-ENGINEERING",
+                        "title": "Autonomous Engineering",
+                    }],
+                }),
+            )
+            write(
+                "docs/automation/task-ledger-summary.json",
+                json.dumps(compact_summary, ensure_ascii=False),
+            )
+
+            criteria = compact_task["acceptance_criteria_excerpt"]
+            handoff = "\n".join([
+                "Task ID: AUTOMATION-LEDGER-ACTIVATION",
+                "Title: Activate and validate persistent autonomous task tracking",
+                "Target branch: main",
+                "Read-only source paths (select at most one): " + ", ".join(task["read_paths"]),
+                "Question: " + compact_task["question_excerpt"],
+                "Acceptance criteria (15; first 5):",
+                *("- " + item for item in criteria),
+                "Next: " + compact_task["next_action_excerpt"],
+            ])
+
+            verified = context_builder.build_context(
+                root=root,
+                task_id="AUTOMATION-LEDGER-ACTIVATION",
+                task_title=task["title"],
+                target_branch="main",
+                task_context=handoff,
+                max_chars=3000,
+                max_task_context=1100,
+                max_criteria=5,
+                max_next_action=180,
+                max_source_chars=0,
+            )
+
+        self.assertIn("Acceptance criteria (15 total; first 4):", verified)
+        self.assertIn("require one actual €0 provider invocation", verified)
+        self.assertIn("same-task PR and exact-head CI", verified)
+        self.assertNotIn("Merged and validated:", verified)
+
+
 
 
 if __name__ == "__main__":
