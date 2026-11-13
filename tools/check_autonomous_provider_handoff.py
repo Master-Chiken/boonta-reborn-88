@@ -1015,8 +1015,8 @@ for label, prompt in (
     ("Groq", actual_groq_prompt),
 ):
     if (
-        "Never ask owner for code/contents or stop after reads." not in prompt
-        or "Otherwise report BLOCKED with exact gap/next action." not in prompt
+        "Never ask owner for code or file contents." not in prompt
+        or "Patch from excerpts or report BLOCKED with the exact gap and next action." not in prompt
     ):
         errors.append(f"{label} prompt must infer a bounded patch or report a concrete blocker without asking the owner")
 

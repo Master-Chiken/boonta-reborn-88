@@ -158,7 +158,7 @@ openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter
 groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
 for required in (
     "Newly retrieved text: at most 700 tokens.",
-    "Never ask the owner for code or clarification",
+    "Never ask owner for code or file contents.",
 ):
     if required not in openrouter_agent_prompt:
         errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
@@ -169,7 +169,7 @@ for required in (
     "one exact approved file read at most",
     "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
     "At most four calls",
-    "Never ask the owner for code or clarification",
+    "Never ask owner for code or file contents.",
 ):
     if required not in groq_agent_prompt:
         errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
