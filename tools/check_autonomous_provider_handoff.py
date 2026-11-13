@@ -926,7 +926,7 @@ if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-all
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
     errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
-context_limits("OpenRouter", openrouter, 2800, 1100)
+context_limits("OpenRouter", openrouter, 2200, 1000)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
 
