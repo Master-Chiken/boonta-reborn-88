@@ -584,7 +584,7 @@ if "task context exceeds the 2,500-character provider handoff budget" not in tas
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "at most 700 tokens"),
+    ("OpenRouter", openrouter, "No source-read tool is exposed in new-task mode"),
     ("Groq", groq, "1,800 characters"),
 ):
     for required in (
