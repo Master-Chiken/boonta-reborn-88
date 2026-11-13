@@ -225,7 +225,7 @@ for required in (
     "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
     "The global preflight already completed the exact task reservation and open-PR duplicate check.",
     "Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.",
-    "optionally read one directly relevant implementation/test file",
+    "No source reads are available in this mode.",
     "call push_files exactly once with one coherent patch",
     "the shared report validator re-fetches the live PR",
     "NO PROSE OR MARKDOWN FENCES",
