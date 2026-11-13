@@ -746,7 +746,7 @@ jobs:
           - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
-          - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
+          - Never ask owner for code/contents or stop after reads. Infer a tested patch; no placeholders. Otherwise report BLOCKED with exact gap/next action.
           
           TOOLS / DELIVERY
           - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
