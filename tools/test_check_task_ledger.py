@@ -264,7 +264,11 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 "tools/check_task_ledger_summary.py",
                 ".github/workflows/boonta-autonomous-loop.yml",
             ],
-            "read_ranges": [],
+            "read_ranges": [{
+                "path": "tools/check_task_ledger.py",
+                "start_line": 1,
+                "end_line": 1,
+            }],
             "question": (
                 "Does the merged autonomous loop consistently reconcile the task ledger "
                 "and avoid duplicate or stale work?"
@@ -318,6 +322,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
                 "One model provider invocation at most; €0; 1,550 context tokens",
             )
+            write("tools/check_task_ledger.py", "# exact source excerpt for the provider handoff\n")
             write("tools/check_task_ledger_summary.py", "# bounded write target\n")
             write("tools/test_check_task_ledger.py", "# bounded test target\n")
             write(
@@ -407,7 +412,8 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 max_task_context=1100,
                 max_criteria=5,
                 max_next_action=180,
-                max_source_chars=0,
+                source_root=root,
+                max_source_chars=1600,
             )
 
         self.assertIn("Acceptance criteria (15 total; first 4):", verified)
