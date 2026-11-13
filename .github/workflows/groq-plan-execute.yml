@@ -699,7 +699,7 @@ jobs:
           - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: no task PR exists. Do not search PR history or trust older merged automation PRs.
           - No issue bodies/comments; exact source excerpts are preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first; report BLOCKED if a full patch exceeds 256 output tokens.
-          - No source-read tool is exposed in new-task mode. Use only the preloaded exact task excerpts; if they are insufficient, report BLOCKED with the precise missing fact/path and next action. Never ask the owner for code or file contents.
+          - No source-read tool is exposed in new-task mode. Use only the preloaded exact task excerpts; if they are insufficient, report BLOCKED with the precise missing fact/path and next action. Never ask owner for code or file contents.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED with no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
 
