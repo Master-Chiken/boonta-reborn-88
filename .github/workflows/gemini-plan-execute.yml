@@ -548,6 +548,10 @@ jobs:
               echo "::error::Selected task target checkout is missing or not the exact repository root."
               exit 1
             fi
+            # The global preflight reads the committed compact summary. Rebuild
+            # its derived excerpts in this isolated runner workspace so the
+            # provider context uses the current bounded projection of main's ledger.
+            python3 "$GITHUB_WORKSPACE/tools/check_task_ledger_summary.py" --write
             VERIFIED_CONTEXT="$(python3 "$GITHUB_WORKSPACE/tools/build_autonomous_context.py" \
               --root "$GITHUB_WORKSPACE" \
               --source-root "$TARGET_ROOT" \
