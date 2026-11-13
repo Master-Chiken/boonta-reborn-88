@@ -696,9 +696,9 @@ jobs:
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or trust older merged automation PRs.
+          - The preloaded schema-v2 context is authoritative; Global preflight is authoritative (no task PR). Do not search PR history; Never ask the owner for code or clarification.
           - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
-          - Use the 1,800-character preloaded excerpts first. Never ask the owner for code; report BLOCKED if the 256-token output cap prevents a safe complete-file patch.
+          - Use the preloaded 1,800-character source excerpts first; report BLOCKED if a patch exceeds 256 tokens.
           - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
