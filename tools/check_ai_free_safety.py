@@ -139,6 +139,42 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must bind exact-head validation to the preflight-selected task in both normal and resume modes: {required!r}")
 
+# The reserved activation task has two approved write files. The provider budget must
+# permit reading both, then one branch, one grouped write and one PR without asking
+# the owner to paste code. Groq's full-file push payload needs a real output budget.
+def normal_agent_prompt(workflow: str) -> str:
+    start = workflow.find("PROMPT=\"$(cat <<'PROMPT'\\n")
+    if start < 0:
+        return ""
+    start += len("PROMPT=\"$(cat <<'PROMPT'\\n")
+    end = workflow.find("\\n          PROMPT\\n", start)
+    return workflow[start:end] if end >= 0 else ""
+
+for provider, prompt in (
+    ("OpenRouter", normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))),
+    ("Groq", normal_agent_prompt(groq_fallback)),
+):
+    for required in (
+        "Read both exact owner-reviewed write paths",
+        "At most five calls",
+        "Never ask the owner for code or clarification",
+    ):
+        if required not in prompt:
+            errors.append(f"{provider} activation agent contract is missing {required!r}")
+    if "at most one exact file read" in prompt or "optional exact read" in prompt:
+        errors.append(f"{provider} activation agent still has a one-file/four-call restriction")
+
+for required in (
+    '"steps": 6',
+    '"context": 16384',
+    '"output": 8192',
+    '"timeout", "--signal=TERM", "--kill-after=5s", "180s",',
+):
+    if required not in groq_fallback:
+        errors.append(f"Groq Free agent delivery capacity is missing {required!r}")
+if '"timeout", "--signal=TERM", "--kill-after=5s", "90s",' in groq_fallback:
+    errors.append("Groq Free invocation still has the stale 90-second timeout")
+
 # A single read-only cooldown preflight avoids starting three provider runners
 # when all providers are already suppressed for the current UTC day.
 if "  provider-cooldowns:" not in autonomous:
