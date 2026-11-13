@@ -264,11 +264,15 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 "tools/check_task_ledger_summary.py",
                 ".github/workflows/boonta-autonomous-loop.yml",
             ],
-            "read_ranges": [{
-                "path": "tools/check_task_ledger.py",
-                "start_line": 1,
-                "end_line": 1,
-            }],
+            "read_ranges": [
+                {"path": path, "start_line": 1, "end_line": 1}
+                for path in [
+                    "tools/check_task_ledger.py",
+                    "tools/test_check_task_ledger.py",
+                    "tools/check_task_ledger_summary.py",
+                    ".github/workflows/boonta-autonomous-loop.yml",
+                ]
+            ],
             "question": (
                 "Does the merged autonomous loop consistently reconcile the task ledger "
                 "and avoid duplicate or stale work?"
@@ -364,6 +368,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
             write("tools/check_task_ledger.py", "# exact source excerpt for the provider handoff\n")
             write("tools/check_task_ledger_summary.py", "# bounded write target\n")
             write("tools/test_check_task_ledger.py", "# bounded test target\n")
+            write(".github/workflows/boonta-autonomous-loop.yml", "# exact workflow source excerpt\n")
             write(
                 "docs/automation/patch-path-allowlist.json",
                 json.dumps({
