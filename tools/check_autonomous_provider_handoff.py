@@ -1008,6 +1008,18 @@ if openrouter_total_worst_case > 6950:
     )
 
 
+# Free-tier agents must complete the bounded task without soliciting code from the owner.
+for label, prompt in (
+    ("Gemini", gemini_prompt),
+    ("OpenRouter", actual_openrouter_prompt),
+    ("Groq", actual_groq_prompt),
+):
+    if (
+        "Never ask owner for code/contents or stop after reads." not in prompt
+        or "Otherwise report BLOCKED with exact gap/next action." not in prompt
+    ):
+        errors.append(f"{label} prompt must infer a bounded patch or report a concrete blocker without asking the owner")
+
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.
 # A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
 if len(gemini_prompt) > 8500:

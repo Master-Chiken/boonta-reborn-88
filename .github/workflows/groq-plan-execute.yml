@@ -707,7 +707,8 @@ jobs:
           - No paid routes, billing, credits, or provider/secret/settings changes.
           - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
           - Never upload commercial ROM/assets. Never write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
-          - Never ask the owner for code or clarification; report one precise blocker instead.
+          - Never ask owner for code/contents or stop after reads. Infer a tested patch; no placeholders. Otherwise report BLOCKED with exact gap/next action.
+- Never ask the owner for code or clarification; report one precise blocker instead.
 
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
