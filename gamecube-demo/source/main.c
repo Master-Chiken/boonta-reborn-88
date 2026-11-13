@@ -1084,13 +1084,18 @@ static void draw_hud(void)
         append_text(course_region, region_x, cy + 12.0f, 0.8f, heat_cool);
         append_text("PRESS START", cx - 34.0f, cy + 40.0f, 0.8f, boost_fill);
     } else if (g_paused) {
-        /* Pause icon: a framed pair of bars, with no font or external assets. */
+        /* Keep the pause state legible on a TV from normal couch distance. */
         const float cx = w * 0.5f;
         const float cy = h * 0.5f;
-        const GXColor pause_panel = { 8, 18, 30, 235 };
-        append_screen_quad(cx - 32.0f, cy - 30.0f, cx + 32.0f, cy + 30.0f, 0.6f, pause_panel);
-        append_screen_quad(cx - 13.0f, cy - 18.0f, cx - 4.0f, cy + 18.0f, 0.2f, white);
-        append_screen_quad(cx + 4.0f, cy - 18.0f, cx + 13.0f, cy + 18.0f, 0.2f, white);
+        const GXColor pause_panel = { 8, 18, 30, 242 };
+        append_screen_quad(cx - 76.0f, cy - 48.0f, cx + 76.0f, cy + 48.0f,
+                           0.6f, pause_panel);
+        append_text("PAUSED", cx - 18.0f, cy - 25.0f, 1.2f, boost_fill);
+        append_screen_quad(cx - 13.0f, cy - 5.0f, cx - 4.0f, cy + 13.0f,
+                           0.2f, white);
+        append_screen_quad(cx + 4.0f, cy - 5.0f, cx + 13.0f, cy + 13.0f,
+                           0.2f, white);
+        append_text("PRESS START", cx - 34.0f, cy + 27.0f, 0.8f, white);
     }
 
     /* A centered steering tick gives immediate visual feedback without text. */
