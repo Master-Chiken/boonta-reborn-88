@@ -312,7 +312,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
             canonical_ledger = valid_ledger()
             original_ledger = json.dumps(canonical_ledger, indent=2)
             ledger_path.write_text(original_ledger, encoding="utf-8")
-            summary_path.write_text("{ stale summary }\\n", encoding="utf-8")
+            summary_path.write_text("{ stale summary }\n", encoding="utf-8")
 
             with patch.object(task_summary, "LEDGER", ledger_path):
                 with patch.object(task_summary, "SUMMARY", summary_path):
@@ -323,7 +323,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 task_summary.build_summary(canonical_ledger),
                 indent=2,
                 ensure_ascii=False,
-            ) + "\\n"
+            ) + "\n"
             self.assertEqual(summary_path.read_text(encoding="utf-8"), expected)
             self.assertEqual(ledger_path.read_text(encoding="utf-8"), original_ledger)
 
@@ -333,7 +333,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
             ledger_path = root / "task-ledger.json"
             summary_path = root / "task-ledger-summary.json"
             ledger_path.write_text(json.dumps(valid_ledger()), encoding="utf-8")
-            stale = "{ stale summary }\\n"
+            stale = "{ stale summary }\n"
             summary_path.write_text(stale, encoding="utf-8")
 
             with patch.object(task_summary, "LEDGER", ledger_path):
