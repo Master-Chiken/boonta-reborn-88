@@ -139,47 +139,41 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
         if required not in workflow:
             errors.append(f"{provider} workflow must bind exact-head validation to the preflight-selected task in both normal and resume modes: {required!r}")
 
-# The reserved activation task has two approved write files. The provider budget must
-# permit reading both, then one branch, one grouped write and one PR without asking
-# the owner to paste code. Groq's full-file push payload needs a real output budget.
+# Keep provider prompts within the repository's empirically tested Free-tier budgets.
+# OpenRouter and Groq have deliberately different constraints; do not widen either
+# without a new measured, owner-reviewed quota test.
 def normal_agent_prompt(workflow: str) -> str:
     markers = (
         "You are the €0-only OpenRouter Free agent.",
         "Groq Free, €0 only. Execute exactly the preflight-reserved task.",
     )
-    starts = [workflow.find(marker) for marker in markers]
-    starts = [position for position in starts if position >= 0]
+    starts = [position for position in (workflow.find(marker) for marker in markers) if position >= 0]
     if not starts:
         return ""
     start = min(starts)
     end = workflow.find("\n          PROMPT\n", start)
     return workflow[start:end] if end >= 0 else ""
 
-for provider, prompt in (
-    ("OpenRouter", normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))),
-    ("Groq", normal_agent_prompt(groq_fallback)),
-):
-    for required in (
-        "Read both exact owner-reviewed write paths",
-        "five calls",
-        "Never ask the owner for code or clarification",
-    ):
-        if required not in prompt:
-            errors.append(f"{provider} activation agent contract is missing {required!r}")
-    if ("at most one exact file read" in prompt or "optional exact read" in prompt or
-            "optional once" in prompt or "single permitted direct source lookup" in prompt):
-        errors.append(f"{provider} activation agent still has a one-file/four-call restriction")
-
+openrouter_agent_prompt = normal_agent_prompt(openrouter_fallback)
+groq_agent_prompt = normal_agent_prompt(groq_fallback)
 for required in (
-    '"steps": 6',
-    '"context": 16384',
-    '"output": 8192',
-    '"timeout", "--signal=TERM", "--kill-after=5s", "180s",',
+    "Newly retrieved text: at most 700 tokens.",
+    "Never ask the owner for code or clarification",
 ):
-    if required not in groq_fallback:
-        errors.append(f"Groq Free agent delivery capacity is missing {required!r}")
-if '"timeout", "--signal=TERM", "--kill-after=5s", "90s",' in groq_fallback:
-    errors.append("Groq Free invocation still has the stale 90-second timeout")
+    if required not in openrouter_agent_prompt:
+        errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
+for required in (
+    "preloaded schema-v2 context is authoritative",
+    "Global preflight is authoritative",
+    "Do not search PR history",
+    "one exact approved file read at most",
+    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "At most four calls",
+    "Never ask the owner for code or clarification",
+):
+    if required not in groq_agent_prompt:
+        errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
+
 
 # A single read-only cooldown preflight avoids starting three provider runners
 # when all providers are already suppressed for the current UTC day.
