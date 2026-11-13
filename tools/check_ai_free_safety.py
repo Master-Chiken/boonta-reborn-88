@@ -168,7 +168,7 @@ for required in (
     "Do not search PR history",
     "No source-read tool is exposed in new-task mode.",
     "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
-    "At most four calls",
+    "At most three calls",
     "Never ask owner for code or file contents.",
 ):
     if required not in groq_agent_prompt:
