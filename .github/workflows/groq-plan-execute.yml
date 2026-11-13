@@ -697,9 +697,10 @@ jobs:
           
           TASK
           - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or trust older merged automation PRs.
-          - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
+          - Do not search PR history or list PRs/dirs; no ledger rereads. No issue bodies/comments; excerpts preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
+          - Use preloaded source excerpts first; call github_get_file_contents at most once at ref TASK_TARGET_BRANCH.
+          - Never ask owner for code/contents or stop after reads. Infer a tested patch; no placeholders. Otherwise report BLOCKED with exact gap/next action.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
           
