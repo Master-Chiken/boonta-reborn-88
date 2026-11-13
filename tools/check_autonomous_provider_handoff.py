@@ -1020,6 +1020,20 @@ for label, prompt in (
     ):
         errors.append(f"{label} prompt must infer a bounded patch or report a concrete blocker without asking the owner")
 
+# Keep Gemini post-merge ledger evidence ranges explicitly bounded.
+for required in (
+    "1-4 safe paths",
+    "1-8 ranges",
+    "<=80 lines each",
+    "<=240 total",
+    "<=256 KiB",
+):
+    if required not in gemini_prompt:
+        errors.append(
+            f"Gemini post-merge reconciliation must preserve bounded ledger evidence ranges: {required!r}"
+        )
+
+
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.
 # A stale rival-AI sequence caused agents to revisit superseded PRs #317/#318/#319.
 if len(gemini_prompt) > 8500:
