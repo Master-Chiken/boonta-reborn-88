@@ -892,7 +892,7 @@ jobs:
               core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
             }
       - name: Dispatch OpenRouter in a separate cooldown-gated workflow run
-        if: steps.record_gemini_cooldown.outcome == 'success'
+        if: always() && steps.record_gemini_cooldown.outcome == 'success'
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
