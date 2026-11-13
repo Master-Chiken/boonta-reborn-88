@@ -279,10 +279,14 @@ class CompactTaskSummaryTests(unittest.TestCase):
             ),
             "acceptance_criteria": criteria,
             "next_action": (
-                "Merged and validated: recent owner gates and provider profiles are integrated. "
-                "Next: after the UTC reset, require one actual €0 provider invocation, a same-task PR "
-                "and exact-head CI before completing this task. Only after activation, continue "
-                "the owner-directed cross-platform research decision."
+                "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; "
+                "#377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; "
+                "#373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC "
+                "Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider "
+                "calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task "
+                "PR and exact-head CI before completing this task. Only after the activation gate clears, "
+                "perform the owner-directed Phase 1 cross-platform reuse/compatibility decision using #279 "
+                "evidence in #226; defer #307 until the race slice is coherent."
             ),
             "pr_url": None,
             "head_sha": None,
@@ -351,6 +355,15 @@ class CompactTaskSummaryTests(unittest.TestCase):
             "tasks": [task],
         })
         compact_task = compact_summary["tasks"][0]
+        # Reproduce the global preflight's currently committed projection: five
+        # 140-character criteria plus a 420-character historical next_action excerpt.
+        # The provider runner must refresh the derived summary before context building.
+        preflight_task = dict(compact_task)
+        preflight_task["acceptance_criteria_excerpt"] = [
+            task_summary.excerpt(item, 140)
+            for item in task["acceptance_criteria"][:5]
+        ]
+        preflight_task["next_action_excerpt"] = task_summary.excerpt(task["next_action"], 420)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -434,17 +447,21 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 json.dumps(compact_summary, ensure_ascii=False),
             )
 
-            criteria = compact_task["acceptance_criteria_excerpt"]
+            criteria = preflight_task["acceptance_criteria_excerpt"]
             handoff = "\n".join([
                 "Task ID: AUTOMATION-LEDGER-ACTIVATION",
                 "Title: Activate and validate persistent autonomous task tracking",
                 "Target branch: main",
                 "Read-only source paths (select at most one): " + ", ".join(task["read_paths"]),
-                "Question: " + compact_task["question_excerpt"],
+                "Question: " + preflight_task["question_excerpt"],
                 "Acceptance criteria (15; first 5):",
                 *("- " + item for item in criteria),
-                "Next: " + compact_task["next_action_excerpt"],
+                "Next: " + preflight_task["next_action_excerpt"],
             ])
+
+            self.assertGreater(len(handoff), 1100)
+            self.assertIn(compact_task["next_action_excerpt"], handoff)
+            self.assertEqual(len(compact_task["acceptance_criteria_excerpt"]), 4)
 
             verified = context_builder.build_context(
                 root=root,
