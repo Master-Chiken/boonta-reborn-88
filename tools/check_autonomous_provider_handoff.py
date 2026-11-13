@@ -845,8 +845,8 @@ if len(actual_openrouter_prompt) > 3600:
 context_limits("Groq", groq, 3000, 1100)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
-if "--max-source-chars 1400" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
-    errors.append("OpenRouter must preload exact target-branch source ranges within its 1,400-character source excerpt budget")
+if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
 if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
@@ -866,8 +866,81 @@ if "_owner_approved_write_paths(root, task_id)" not in context_builder or "block
 context_limits("OpenRouter", openrouter, 2800, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
-if len(actual_openrouter_prompt) + 2800 + 500 > 7000:
-    errors.append("OpenRouter worst-case prompt plus verified execution metadata exceeds its 7,000-character cap")
+
+# Budget the complete normal OpenRouter prompt, not just its static heredoc.
+# The runtime appends verified context, same-run provider/App facts, and a
+# machine-readable report envelope after the heredoc.
+openrouter_facts_start_marker = (
+    '          PROMPT="' + "$" + "{PROMPT}\n\n"
+    "          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):\n"
+)
+openrouter_facts_end_marker = (
+    "\n          if [[ \"" + "$" + "{RESUME_MODE:-false}\" == \"true\" ]]; then"
+)
+facts_start = openrouter.find(openrouter_facts_start_marker)
+facts_end = (
+    openrouter.find(openrouter_facts_end_marker, facts_start + len(openrouter_facts_start_marker))
+    if facts_start >= 0 else -1
+)
+if facts_start < 0 or facts_end < 0:
+    errors.append("OpenRouter same-run execution-facts prompt block is missing or malformed")
+    openrouter_facts_chars = 0
+else:
+    facts_block = openrouter[facts_start + len('          PROMPT="' + "$" + "{PROMPT}"):facts_end]
+    if facts_block.endswith('"'):
+        facts_block = facts_block[:-1]
+    facts_block = "\n".join(
+        line[10:] if line.startswith("          ") else line
+        for line in facts_block.splitlines()
+    )
+    for token, maximum_value in (
+        ("$" + "{OPENROUTER_PREFLIGHT_ALLOWED:-unknown}", "false"),
+        ("$" + "{OPENROUTER_AUTH_OUTCOME:-unknown}", "cancelled"),
+        ("$" + "{GITHUB_APP_TOKEN_OUTCOME:-unknown}", "cancelled"),
+    ):
+        facts_block = facts_block.replace(token, maximum_value)
+    openrouter_facts_chars = len(facts_block)
+
+openrouter_context_command = re.search(
+    r"--max-chars (\d+) --max-task-context (\d+) --max-source-chars (\d+)", openrouter
+)
+if not openrouter_context_command:
+    errors.append("OpenRouter context builder limits cannot be measured for the complete prompt budget")
+    openrouter_context_chars = 10_000
+else:
+    context_max_chars, task_max_chars, source_max_chars = map(int, openrouter_context_command.groups())
+    context_prefix = "\n".join((
+        "VERIFIED CONTEXT:",
+        "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
+        "Canonical ledger v2 verified.",
+        "Task:",
+    ))
+    openrouter_context_chars = min(
+        context_max_chars,
+        len(context_prefix) + 2 + task_max_chars + source_max_chars,
+    )
+
+# Reserve the longest valid task ID, a ten-digit PR number, and a full SHA.
+openrouter_report_reserve = len(
+    "\n\nBOONTA_CYCLE_TASK_ID: " + "A" * 64
+    + "\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED"
+    + "\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/"
+    + "9" * 10 + " @ " + "a" * 40
+    + "\nBOONTA_CYCLE_EVIDENCE_BASE: main"
+    + "\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION."
+)
+openrouter_total_worst_case = (
+    len(actual_openrouter_prompt)
+    + openrouter_facts_chars
+    + openrouter_context_chars
+    + openrouter_report_reserve
+)
+if openrouter_total_worst_case > 6950:
+    errors.append(
+        "OpenRouter worst-case complete prompt exceeds the 6,950-character design budget "
+        "(7,000-character runtime ceiling with at least 50 characters of headroom): "
+        + str(openrouter_total_worst_case)
+    )
 
 
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.

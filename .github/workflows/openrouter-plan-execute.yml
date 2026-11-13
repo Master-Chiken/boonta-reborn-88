@@ -623,7 +623,7 @@ jobs:
           # Refresh only the runner's derived summary; the global preflight's
           # task handoff is verified as a subset of this current compact projection.
           python3 "$repo_root/tools/check_task_ledger_summary.py" --write
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 1400 --max-criteria 4 --max-next-action 100)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 950 --max-criteria 4 --max-next-action 100)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
