@@ -625,7 +625,7 @@ jobs:
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"
+            export GITHUB_TOOLS="create_branch,create_pull_request,push_files"
           fi
 
           # This config exposes only the explicitly allow-listed GitHub MCP tools.
@@ -699,7 +699,7 @@ jobs:
           - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: no task PR exists. Do not search PR history or trust older merged automation PRs.
           - No issue bodies/comments; exact source excerpts are preloaded.
           - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first; report BLOCKED if a full patch exceeds 256 output tokens.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for a listed path at ref TASK_TARGET_BRANCH.
+          - No source-read tool is exposed in new-task mode. Use only the preloaded exact task excerpts; if they are insufficient, report BLOCKED with the precise missing fact/path and next action. Never ask the owner for code or file contents.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED with no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
 
@@ -710,8 +710,8 @@ jobs:
           - Never ask owner for code or file contents. Patch from excerpts or report BLOCKED with the exact gap and next action.
 
           TOOLS / DELIVERY
-          - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
-          - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
+          - Normal tools: github_create_branch, github_push_files, github_create_pull_request only.
+          - At most three calls: create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR. No source reads are available in this mode.
           - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
           - Use returned PR URL/head_sha; do not read the PR back.
 
