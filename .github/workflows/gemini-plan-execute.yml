@@ -147,6 +147,7 @@ jobs:
           AUTONOMOUS_ISSUE_NUMBER: '${{ inputs.issue_number }}'
           CALLER_WORKFLOW: '${{ github.workflow }}'
           CALLER_REF: '${{ github.ref }}'
+          CALLER_EVENT: '${{ github.event_name }}'
           APP_ID: '${{ vars.APP_ID }}'
           APP_PRIVATE_KEY: '${{ secrets.APP_PRIVATE_KEY }}'
           GEMINI_COOLDOWN_ACTIVE: '${{ steps.gemini_cooldown.outputs.active }}'
@@ -164,6 +165,8 @@ jobs:
             reason="Autonomous mode may only be invoked by the Boonta Autonomous Loop workflow."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_REF:-}" != "refs/heads/main" ]]; then
             reason="Autonomous mode may only be invoked from the protected default branch main."
+          elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${CALLER_EVENT:-}" == "repository_dispatch" ]]; then
+            reason="Internal provider-fallback dispatches must advance past Gemini after its persistent cooldown; Gemini cannot be invoked from that event."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${AUTONOMOUS_ISSUE_NUMBER:-}" != "226" ]]; then
             reason="Autonomous mode is restricted to the canonical active research queue issue #226."
           elif [[ "${AUTONOMOUS_MODE:-false}" == "true" && "${GEMINI_COOLDOWN_ACTIVE:-}" == "true" ]]; then
@@ -842,6 +845,7 @@ jobs:
               core.info('No previous task backoff marker needed clearing.');
             }
       - name: Record same-day Gemini cooldown after an autonomous model failure
+        id: record_gemini_cooldown
         if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
@@ -887,6 +891,49 @@ jobs:
               });
               core.info('Created the persistent Gemini cooldown marker on issue #' + issueNumber + '.');
             }
+      - name: Dispatch OpenRouter in a separate cooldown-gated workflow run
+        if: steps.record_gemini_cooldown.outcome == 'success'
+        continue-on-error: true
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
+        env:
+          ISSUE_NUMBER: '${{ inputs.issue_number || 226 }}'
+          RUN_URL: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+        with:
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER || '226');
+            const marker = '<!-- BOONTA_PROVIDER_FALLBACK_DISPATCHED: gemini ' + context.runId + ' -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100,
+            });
+            if (comments.some((comment) => (comment.body || '').includes(marker))) {
+              core.info('Gemini fallback dispatch was already sent for this workflow run.');
+              return;
+            }
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'boonta-provider-fallback',
+              client_payload: {
+                origin: 'boonta-provider-fallback',
+                failed_provider: 'gemini',
+                source_run_id: context.runId,
+                source_run_url: process.env.RUN_URL,
+              },
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: [
+                marker,
+                'The Gemini cooldown was persisted. A separate repository_dispatch run was started so global preflight can verify the marker and select OpenRouter Free.',
+                '[Source run](' + process.env.RUN_URL + ')',
+              ].join('\n'),
+            });
+            core.notice('Started a separate OpenRouter fallback run; it must pass fresh cooldown and task preflight.');
       - name: Explain why Gemini was not called
         if: steps.free_tier_guard.outputs.allowed != 'true' && steps.gemini_cooldown.outputs.active != 'true'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
