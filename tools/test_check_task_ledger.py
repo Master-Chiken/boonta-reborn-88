@@ -279,10 +279,14 @@ class CompactTaskSummaryTests(unittest.TestCase):
             ),
             "acceptance_criteria": criteria,
             "next_action": (
-                "Merged and validated: recent owner gates and provider profiles are integrated. "
-                "Next: after the UTC reset, require one actual €0 provider invocation, a same-task PR "
-                "and exact-head CI before completing this task. Only after activation, continue "
-                "the owner-directed cross-platform research decision."
+                "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; "
+                "#377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; "
+                "#373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC "
+                "Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider "
+                "calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task "
+                "PR and exact-head CI before completing this task. Only after the activation gate clears, "
+                "perform the owner-directed Phase 1 cross-platform reuse/compatibility decision using #279 "
+                "evidence in #226; defer #307 until the race slice is coherent."
             ),
             "pr_url": None,
             "head_sha": None,
@@ -300,7 +304,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
         self.assertEqual(compact["acceptance_criteria_total"], 15)
         self.assertEqual(len(compact["acceptance_criteria_excerpt"]), 4)
         self.assertEqual(compact["acceptance_criteria_excerpt"], task["acceptance_criteria"][:4])
-        self.assertTrue(compact["next_action_excerpt"].startswith("after the UTC reset"))
+        self.assertTrue(compact["next_action_excerpt"].startswith("after 2026-11-11 UTC reset"))
         self.assertIn("same-task PR and exact-head CI", compact["next_action_excerpt"])
         self.assertNotIn("Merged and validated:", compact["next_action_excerpt"])
 
@@ -445,6 +449,9 @@ class CompactTaskSummaryTests(unittest.TestCase):
                 *("- " + item for item in criteria),
                 "Next: " + compact_task["next_action_excerpt"],
             ])
+
+            self.assertIn(compact_task["next_action_excerpt"], handoff)
+            self.assertEqual(len(compact_task["acceptance_criteria_excerpt"]), 4)
 
             verified = context_builder.build_context(
                 root=root,

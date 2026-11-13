@@ -71,12 +71,11 @@
         "Ledger validator and regression tests pass in CI",
         "Gemini and OpenRouter prompts both reconcile the ledger with live GitHub state",
         "One active task maximum is enforced",
-        "A post-merge cycle records exact PR state and continues the next unanswered research question",
-        "Autonomous Gemini repository writes are constrained to the available GitHub MCP push_files tool; unavailable local editing tools are…"
+        "A post-merge cycle records exact PR state and continues the next unanswered research question"
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Merged and validated: #374 owner re-evaluation gate; #375 direct preflight-owned delivery; #377 Groq four-step/1,152+384/three-tool profile; #378 supported temperature 0.2; #373 order-independent rival avoidance. Mainline checks passed. The 2026-11-10 UTC Gemini/OpenRouter/Groq cooldowns are active and scheduled loops correctly skipped provider calls. Next: after 2026-11-11 UTC reset, require one actual €0 provider…"
+      "next_action_excerpt": "after 2026-11-11 UTC reset, require one actual €0 provider invocation, a same-task PR and exact-head CI before completing this task. Only…"
     },
     {
       "task_id": "N64-COMPWOLF-PUPP-T2-PARSE-PROBE",
@@ -100,12 +99,11 @@
         "Retain sorted Pupp index 10 as a candidate only: 68,284 decoded bytes match the public catalogue size associated with N64 model ID 0087,…",
         "Use only the already-prepared owner-local decoded candidate; do not upload model bytes, decoded payloads, ROM offsets, dumps, images or…",
         "Install .NET 10.0.403 SDK Arm64 only after verifying the current macOS 26.6.2 arm64 environment, then run an isolated parser-only console…",
-        "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC…",
-        "Report only parser status, runtime type and aggregate structure counts; on failure, report only the exception type"
+        "Use the pinned SWE1R.Assets.Blocks 0.0.1-alpha.15 package; determine whether it supports N64 raw CompWolf blocks or only the documented PC…"
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone in ~/racer-work using SWE1R.Assets.Blocks 0.0.1-alpha.15 against the already-prepared local candidate. Return only parser status, runtime type and aggregate structural counts (root/total nodes, animations, meshes, vertices, visible command-list triangles, material and texture…"
+      "next_action_excerpt": "Blocked until the owner installs .NET 10.0.403 SDK Arm64 on macOS 26.6.2 arm64. Run a parser-only console probe outside the upstream clone…"
     },
     {
       "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
@@ -171,8 +169,7 @@
         "Trace the current rival update, route cursor, lap counter, collision and overtake paths before changing code; record which values are…",
         "Implement the smallest deterministic native rival-progress model that can represent route distance, lap completion and finished state…",
         "Keep rival updates order-independent by using one shared frame snapshot; preserve finite-value guards, bounded movement and existing…",
-        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence.",
-        "Add production-helper host tests for lap crossing, route wrap, finish state, ordering independence, invalid inputs and restart reset."
+        "Use route graph sampling and current GameCube/Wii route data only; do not infer console behavior from PC, N64 or Dreamcast evidence."
       ],
       "pr_url": null,
       "head_sha": null,
@@ -202,8 +199,7 @@
         "Trace the current boot, input, draw, pause, finish, results and reset paths; reuse existing input and HUD/rendering helpers before…",
         "Introduce an explicit, testable front-end/session state machine for title, pre-race, active race, pause, results and restart; no state may…",
         "Provide a usable GameCube controller path from boot to starting the existing native race and from results back to a clean new race.",
-        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…",
-        "Add host tests for every legal transition, invalid button combinations, reset precedence, pause/resume and repeated race sessions."
+        "Keep the first implementation bounded to the currently available clean-room course and pod; do not fabricate unavailable tracks, vehicles,…"
       ],
       "pr_url": null,
       "head_sha": null,
@@ -235,8 +231,7 @@
         "Do not start until the race lifecycle, rival progression and front-end flow have passing functional regression tests.",
         "Establish a repeatable baseline for frame time, route sampling, GX submission and memory use on available Dolphin diagnostics and/or real…",
         "Identify one measured bottleneck with reproducible evidence before changing implementation; do not optimize based only on intuition or…",
-        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…",
-        "Add regression tests or deterministic benchmark checks proving behavior is unchanged and the targeted metric improves; reject…"
+        "Optimize only the demonstrated hot path while preserving deterministic simulation, route continuity, visual output and GameCube/Wii memory…"
       ],
       "pr_url": null,
       "head_sha": null,
