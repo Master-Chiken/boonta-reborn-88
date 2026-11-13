@@ -531,53 +531,51 @@ if "needs: [readiness, provider-cooldowns]" not in loop:
 # Provider failures advance through a new run, never a second model call in
 # the failing run. The receiving run must validate its bot-only envelope and
 # exact predecessor cooldown state before selecting the next provider.
-const trustedDispatchGate = "github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'";
-if (loop.split(trustedDispatchGate).length - 1 !== 4) {
-    errors.append("All four main-loop gates must require the exact bot-authenticated fallback dispatch envelope");
-}
-for (const [label, workflow, expectedProvider, cooldownId] of [
-    ("Gemini", gemini, "gemini", "record_gemini_cooldown"),
-    ("OpenRouter", openrouter, "openrouter", "record_openrouter_cooldown"),
-]) {
-    const dispatchBlock = workflow.split("      - name: Dispatch ", 2)[1] || "";
-    if (!dispatchBlock.includes("github.rest.repos.createDispatchEvent") ||
-        !dispatchBlock.includes("event_type: 'boonta-provider-fallback'") ||
-        !dispatchBlock.includes("failed_provider: '" + expectedProvider + "'") ||
-        !dispatchBlock.includes("steps." + cooldownId + ".outcome == 'success')) {
-        errors.append(label + " must dispatch the next provider only after its persistent cooldown step succeeds");
-    }
-    if (!workflow.includes("id: " + cooldownId)) {
-        errors.append(label + " cooldown persistence step must expose its outcome for dispatch gating");
-    }
-}
-if (groq.includes("github.rest.repos.createDispatchEvent")) {
-    errors.append("Groq is the terminal provider and must not dispatch another provider");
-}
-if (!loop.includes("context.eventName === 'repository_dispatch'") ||
-    !loop.includes("context.actor === 'github-actions[bot]'") ||
-    !loop.includes("Number.isSafeInteger(payload.source_run_id)") ||
-    !loop.includes("results.gemini === 'ACTIVE' && results.openrouter === 'clear' && results.groq === 'clear'") ||
-    !loop.includes("results.gemini === 'ACTIVE' && results.openrouter === 'ACTIVE' && results.groq === 'clear'")) {
-    errors.append("Global preflight must validate dispatch identity, source run ID and exact provider cooldown order");
-}
-for (const [label, workflow, requiredProvider] of [
+trusted_dispatch_gate = "github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'"
+if loop.count(trusted_dispatch_gate) != 5:
+    errors.append("All main-loop gates must require the exact bot-authenticated fallback dispatch envelope")
+for label, workflow, expected_provider, cooldown_id, dispatch_name in (
+    ("Gemini", gemini, "gemini", "record_gemini_cooldown", "Dispatch OpenRouter in a separate"),
+    ("OpenRouter", openrouter, "openrouter", "record_openrouter_cooldown", "Dispatch Groq in a separate"),
+):
+    dispatch_pos = workflow.find("      - name: " + dispatch_name)
+    dispatch_block = workflow[dispatch_pos:] if dispatch_pos >= 0 else ""
+    if (
+        "github.rest.repos.createDispatchEvent" not in dispatch_block
+        or "event_type: 'boonta-provider-fallback'" not in dispatch_block
+        or "failed_provider: '" + expected_provider + "'" not in dispatch_block
+        or "steps." + cooldown_id + ".outcome == 'success'" not in dispatch_block
+        or "id: " + cooldown_id not in workflow
+    ):
+        errors.append(f"{label} must dispatch the next provider only after its persistent cooldown step succeeds")
+if "github.rest.repos.createDispatchEvent" in groq:
+    errors.append("Groq is the terminal provider and must not dispatch another provider")
+if (
+    "context.eventName === 'repository_dispatch'" not in loop
+    or "context.actor === 'github-actions[bot]'" not in loop
+    or "Number.isSafeInteger(payload.source_run_id)" not in loop
+    or "results.gemini === 'ACTIVE' && results.openrouter === 'clear' && results.groq === 'clear'" not in loop
+    or "results.gemini === 'ACTIVE' && results.openrouter === 'ACTIVE' && results.groq === 'clear'" not in loop
+):
+    errors.append("Global preflight must validate dispatch identity, source run ID and exact provider cooldown order")
+for label, workflow, required_provider in (
     ("OpenRouter", openrouter, "gemini"),
     ("Groq", groq, "openrouter"),
-]) {
-    const expectedEnv = "CALLER_DISPATCH_FAILED_PROVIDER: ${{ github.event.client_payload.failed_provider }}";
-    const expectedGuard = "CALLER_DISPATCH_FAILED_PROVIDER:-}" + " != \"" + requiredProvider + "\"";
-    if (!workflow.includes(expectedEnv) ||
-        !workflow.includes("CALLER_EVENT_ACTION: ${{ github.event.action }}") ||
-        !workflow.includes("CALLER_DISPATCH_ORIGIN: ${{ github.event.client_payload.origin }}") ||
-        !workflow.includes(expectedGuard)) {
-        errors.append(label + " provider guard must bind its dispatch to the exact predecessor and origin");
-    }
-}
-if (!gemini.includes("CALLER_EVENT: '${{ github.event_name }}'") ||
-    !gemini.includes("CALLER_EVENT:-}" + " == \"repository_dispatch\"")) {
-    errors.append("Gemini must refuse to run on an internal fallback dispatch");
-}
-
+):
+    expected_env = "CALLER_DISPATCH_FAILED_PROVIDER: ${{ github.event.client_payload.failed_provider }}"
+    expected_guard = 'CALLER_DISPATCH_FAILED_PROVIDER:-}" != "' + required_provider + '"'
+    if (
+        expected_env not in workflow
+        or "CALLER_EVENT_ACTION: ${{ github.event.action }}" not in workflow
+        or "CALLER_DISPATCH_ORIGIN: ${{ github.event.client_payload.origin }}" not in workflow
+        or expected_guard not in workflow
+    ):
+        errors.append(f"{label} provider guard must bind its dispatch to the exact predecessor and origin")
+if (
+    "CALLER_EVENT: '${{ github.event_name }}'" not in gemini
+    or 'CALLER_EVENT:-}" == "repository_dispatch"' not in gemini
+):
+    errors.append("Gemini must refuse to run on an internal fallback dispatch")
 
 # Keep the global payload within the reviewed provider task-context ceiling.
 if "if (taskReady && taskContext.length > 2500)" not in loop:
