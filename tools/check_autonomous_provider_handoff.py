@@ -99,6 +99,24 @@ for label, workflow in (("Gemini", gemini), ("OpenRouter", openrouter), ("Groq",
             errors.append(f"{label} provider job permissions must be contents/issues/PR write plus checks read only; found {permissions!r}")
 
 
+# The global scheduler hands providers a compact-summary excerpt, but the
+# checkout may still contain the previously committed derived projection.
+# Refresh that projection in the provider's ephemeral workspace immediately
+# before building verified context; fail closed if the task index cannot be rebuilt.
+provider_context_refreshes = (
+    ("Gemini", gemini, 'python3 "$GITHUB_WORKSPACE/tools/check_task_ledger_summary.py" --write'),
+    ("OpenRouter", openrouter, 'python3 "$repo_root/tools/check_task_ledger_summary.py" --write'),
+    ("Groq", groq, 'python3 "$repo_root/tools/check_task_ledger_summary.py" --write'),
+)
+for label, workflow, refresh_command in provider_context_refreshes:
+    refresh_position = workflow.find(refresh_command)
+    builder_position = workflow.find("tools/build_autonomous_context.py")
+    if refresh_position < 0:
+        errors.append(f"{label} must regenerate the derived task summary in its runner workspace")
+    elif builder_position < 0 or refresh_position > builder_position:
+        errors.append(f"{label} must refresh the compact task summary before building provider context")
+
+
 # Gemini CLI exposes MCP tools as mcp_{serverName}_{toolName}. Derive the
 # model-facing FQNs from the actual server alias and includeTools configuration.
 gemini_settings_marker = "          settings: |-\n"
