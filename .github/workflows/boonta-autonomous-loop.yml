@@ -28,6 +28,8 @@ on:
     # Keep six-hour spacing; concurrency prevents overlapping writers.
     - cron: '17 0,6,12,18 * * *'
   workflow_dispatch:
+  repository_dispatch:
+    types: [boonta-provider-fallback]
 
 permissions:
   contents: write
@@ -48,6 +50,7 @@ jobs:
       pull-requests: read
     with:
       allow_scheduled: ${{ github.event_name == 'schedule' }}
+      allow_internal_dispatch: ${{ github.event_name == 'repository_dispatch' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback' }}
     secrets: inherit
 
   provider-cooldowns:
@@ -57,7 +60,7 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -486,6 +489,27 @@ jobs:
               core.setOutput(provider + '_failed_on', failedOn);
               core.info(provider + ': cooldown=' + active + (failedOn ? ', recorded UTC date=' + failedOn : ', no marker'));
             }
+
+            // Internal fallback dispatches are accepted only from this workflow's
+            // bot token and only when the prior provider's cooldown is visible.
+            if (context.eventName === 'repository_dispatch') {
+              const payload = context.payload?.client_payload || {};
+              const validEnvelope = context.actor === 'github-actions[bot]' &&
+                context.payload?.action === 'boonta-provider-fallback' &&
+                payload.origin === 'boonta-provider-fallback' &&
+                Number.isSafeInteger(payload.source_run_id) && payload.source_run_id > 0 &&
+                ['gemini', 'openrouter'].includes(payload.failed_provider);
+              if (!validEnvelope) {
+                throw new Error('Rejected malformed or untrusted provider-fallback repository_dispatch payload.');
+              }
+              const expectedState = payload.failed_provider === 'gemini'
+                ? results.gemini === 'ACTIVE' && results.openrouter === 'clear' && results.groq === 'clear'
+                : results.gemini === 'ACTIVE' && results.openrouter === 'ACTIVE' && results.groq === 'clear';
+              if (!expectedState) {
+                throw new Error('Rejected stale provider-fallback dispatch: persistent cooldowns do not identify the next provider in order.');
+              }
+              core.notice('Trusted fallback dispatch accepted from run ' + payload.source_run_id + ' after ' + payload.failed_provider + ' cooldown.');
+            }
             await core.summary
               .addHeading('Provider cooldown and task-eligibility preflight')
               .addTable([
@@ -511,11 +535,11 @@ jobs:
       needs.provider-cooldowns.result == 'success' &&
       (needs.provider-cooldowns.outputs.task_ready == 'true' ||
        (needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true')) &&
-      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner)) &&
       needs.provider-cooldowns.outputs.gemini_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'))
     uses: ./.github/workflows/gemini-plan-execute.yml
     permissions:
       contents: write
@@ -541,7 +565,7 @@ jobs:
       resume_head_sha: ${{ needs.provider-cooldowns.outputs.resume_head_sha }}
       resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}
       additional_context: >-
-        Owner-authorized scheduled or manual main-branch loop. The selected task ID, title, acceptance criteria and target branch are supplied by the read-only preflight and must remain identical across providers. Use only one provider invocation per workflow run; fallback is allowed only on a later eligible run after the earlier provider cooldown is already active. Budget €0; preserve provenance, exact-head checks and human review. Never merge or change secrets, billing, permissions, branch protection or merge policy.
+        Owner-authorized scheduled, manual or trusted internal fallback run on main. The selected task ID, title, acceptance criteria and target branch are supplied by the read-only preflight and must remain identical across providers. Use only one provider invocation per workflow run; after a failure, a trusted repository_dispatch may start a separate run, which must re-read the persistent cooldown before advancing to the next provider. Budget €0; preserve provenance, exact-head checks and human review. Never merge or change secrets, billing, permissions, branch protection or merge policy.
     secrets: inherit
 
   openrouter-fallback:
@@ -552,14 +576,14 @@ jobs:
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
       (needs.provider-cooldowns.outputs.task_ready == 'true' || (needs.provider-cooldowns.outputs.task_ready != 'true' && needs.provider-cooldowns.outputs.resume_ready == 'true')) &&
-      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner)) &&
       needs.provider-cooldowns.outputs.openrouter_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       needs.autonomous-cycle.result == 'skipped' &&
       needs.provider-cooldowns.outputs.gemini_active == 'true' &&
       needs.autonomous-cycle.outputs.invocation_outcome != 'success' &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'))
     uses: ./.github/workflows/openrouter-plan-execute.yml
     permissions:
       contents: write
@@ -594,7 +618,7 @@ jobs:
       always() &&
       needs.readiness.result == 'success' &&
       needs.provider-cooldowns.result == 'success' &&
-      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || github.event_name != 'schedule') &&
+      (needs.provider-cooldowns.outputs.task_blocked_active != 'true' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner)) &&
       needs.provider-cooldowns.outputs.groq_active != 'true' &&
       needs.readiness.outputs.writer_state == 'enabled' &&
       (
@@ -608,12 +632,13 @@ jobs:
           needs.provider-cooldowns.outputs.resume_ready == 'true' &&
           (
             github.event_name == 'schedule' ||
-            (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner)
+            (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+            (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback')
           )
         )
       ) &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))
+      (github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner) || (github.event_name == 'repository_dispatch' && github.actor == 'github-actions[bot]' && github.event.action == 'boonta-provider-fallback' && github.event.client_payload.origin == 'boonta-provider-fallback'))
     uses: ./.github/workflows/groq-plan-execute.yml
     permissions:
       contents: write
