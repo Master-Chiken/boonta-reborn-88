@@ -908,7 +908,7 @@ if len(actual_openrouter_prompt) > 3600:
 context_limits("Groq", groq, 3000, 1100)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
-if "--max-source-chars 1800" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
     errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
@@ -926,7 +926,7 @@ if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-all
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
     errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
-context_limits("OpenRouter", openrouter, 2200, 1000)
+context_limits("OpenRouter", openrouter, 2200, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
 
