@@ -110,7 +110,7 @@ jobs:
             ]);
             const isProviderCycleRun = providerWorkflowPaths.has(run.path) || providerWorkflowNames.has(run.name);
 
-            if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch'].includes(run.event) && ['main', 'dev'].includes(run.head_branch)) {
+            if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event) && ['main', 'dev'].includes(run.head_branch)) {
               // Provider reusable workflows are children of the serialized
               // autonomous cycle. Route only exact-current protected-branch
               // failures to the native queue, including zero-job startup errors.
@@ -140,7 +140,7 @@ jobs:
                 return;
               }
               targetIssueNumber = targetBranch === 'dev' ? 226 : 156;
-            } else if (!prNumber && ['push', 'schedule', 'workflow_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
+            } else if (!prNumber && ['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event) && (run.name === 'Boonta Autonomous Loop' || run.path === '.github/workflows/boonta-autonomous-loop.yml') && run.head_branch === 'main') {
               // Do not let a silent autonomous-cycle failure disappear. Report
               // schedule, owner-authorized push, and owner-dispatch failures
               // only while this run is still for the exact current main SHA.

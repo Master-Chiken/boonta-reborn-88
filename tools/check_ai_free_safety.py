@@ -874,7 +874,7 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
-    "['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event)",
     "run.name === 'Boonta Autonomous Loop'",
     "run.head_branch === 'main'",
     "targetIssueNumber = 226",
@@ -897,7 +897,7 @@ for required_path in provider_workflow_paths:
 for required_provider_route in (
     "const providerWorkflowPaths = new Set([",
     "const isProviderCycleRun = providerWorkflowPaths.has(run.path) || providerWorkflowNames.has(run.name);",
-    "if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event)",
     "targetIssueNumber = 226;",
 ):
     if required_provider_route not in ci_triage:
@@ -1113,11 +1113,14 @@ if (
     or not readiness_job_guard
     or "github.ref == 'refs/heads/main'" not in readiness_job_guard.group(1)
     or "inputs.allow_scheduled == true" not in readiness_job_guard.group(1)
+    or "inputs.allow_internal_dispatch == true" not in readiness_job_guard.group(1)
     or "github.actor == github.repository_owner" not in readiness_job_guard.group(1)
 ):
     errors.append("Autonomous readiness must stay pinned to protected main, retain the owner guard, and allow only explicit scheduled-loop handoff")
 if "allow_scheduled: " + "${{ github.event_name == 'schedule' }}" not in autonomous:
     errors.append("Only the scheduled autonomous loop may set the reusable readiness exception")
+if "allow_internal_dispatch" not in autonomous or "github.event.client_payload.origin == 'boonta-provider-fallback'" not in autonomous:
+    errors.append("Only the named internal fallback event may set the reusable readiness exception")
 readiness_permission_block = readiness.split("permissions:", 1)[1].split("jobs:", 1)[0]
 readiness_permissions = dict(
     re.findall(
@@ -1176,8 +1179,10 @@ if "curl --fail --silent --show-error" not in readiness or "-X POST" in readines
 # Scheduled runs, narrowly scoped main pushes after relevant owner merges, and
 # owner-only manual dispatch are the only autonomous entry points.
 autonomous_events = re.findall(r"(?m)^  ([a-zA-Z0-9_-]+):\s*$", autonomous_trigger)
-if autonomous_events != ["push", "schedule", "workflow_dispatch"]:
-    errors.append("Boonta autonomous loop may declare only scoped push, schedule and workflow_dispatch events; " + f"found {autonomous_events!r}")
+if autonomous_events != ["push", "schedule", "workflow_dispatch", "repository_dispatch"]:
+    errors.append("Boonta autonomous loop may declare only scoped push, schedule, workflow_dispatch and named internal fallback events; " + f"found {autonomous_events!r}")
+if "repository_dispatch:\n    types: [boonta-provider-fallback]" not in autonomous_trigger:
+    errors.append("Boonta autonomous loop must restrict internal dispatch to the named provider-fallback event")
 autonomous_push = autonomous_trigger.split("  push:", 1)[1].split("  schedule:", 1)[0] if "  push:" in autonomous_trigger else ""
 required_autonomous_push_paths = (
     ".github/workflows/boonta-autonomous-loop.yml",
@@ -1189,8 +1194,14 @@ required_autonomous_push_paths = (
 )
 if "    branches:\n      - main\n" not in autonomous_push or "    paths:" not in autonomous_push or any(path not in autonomous_push for path in required_autonomous_push_paths):
     errors.append("Autonomous main-push trigger must be restricted to main and the reviewed automation/ledger paths")
-if "github.ref == 'refs/heads/main'" not in autonomous or "(github.event_name == 'schedule' || ((github.event_name == 'workflow_dispatch' || github.event_name == 'push') && github.actor == github.repository_owner))" not in autonomous:
-    errors.append("Autonomous schedule/manual dispatch/main-push continuation must be owner-only and pinned to protected main")
+if (
+    "github.ref == 'refs/heads/main'" not in autonomous
+    or "github.actor == github.repository_owner" not in autonomous
+    or "github.actor == 'github-actions[bot]'" not in autonomous
+    or "github.event.action == 'boonta-provider-fallback'" not in autonomous
+    or "github.event.client_payload.origin == 'boonta-provider-fallback'" not in autonomous
+):
+    errors.append("Autonomous schedule/manual/main-push and internal fallback gates must remain pinned to protected main and owner/bot authenticated")
 if "workflow_dispatch:\n    inputs:" in autonomous_trigger:
     errors.append("Manual autonomous dispatch must not accept user-controlled task/issue overrides")
 

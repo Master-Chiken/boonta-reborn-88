@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: false
+      allow_internal_dispatch:
+        description: Allow a read-only preflight for a bot-authenticated, payload-validated provider fallback dispatch.
+        required: false
+        type: boolean
+        default: false
     outputs:
       writer_state:
         description: Whether the owner has enabled the autonomous writer
@@ -32,7 +37,7 @@ jobs:
     name: Verify autonomous configuration without running Gemini
     outputs:
       writer_state: ${{ steps.owner_gates.outputs.writer_state }}
-    if: github.ref == 'refs/heads/main' && (inputs.allow_scheduled == true || github.actor == github.repository_owner)
+    if: github.ref == 'refs/heads/main' && (inputs.allow_scheduled == true || inputs.allow_internal_dispatch == true || github.actor == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
