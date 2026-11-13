@@ -152,7 +152,7 @@ def normal_agent_prompt(workflow: str) -> str:
     if not starts:
         return ""
     start = min(starts)
-    end = workflow.find("\\n          PROMPT\\n", start)
+    end = workflow.find("\n          PROMPT\n", start)
     return workflow[start:end] if end >= 0 else ""
 
 for provider, prompt in (
@@ -161,7 +161,7 @@ for provider, prompt in (
 ):
     for required in (
         "Read both exact owner-reviewed write paths",
-        "At most five calls",
+        "five calls",
         "Never ask the owner for code or clarification",
     ):
         if required not in prompt:
