@@ -154,8 +154,8 @@ def normal_agent_prompt(workflow: str) -> str:
     end = workflow.find("\n          PROMPT\n", start)
     return workflow[start:end] if end >= 0 else ""
 
-openrouter_agent_prompt = normal_agent_prompt(openrouter_fallback)
-groq_agent_prompt = normal_agent_prompt(groq_fallback)
+openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
+groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
 for required in (
     "Newly retrieved text: at most 700 tokens.",
     "Never ask the owner for code or clarification",
