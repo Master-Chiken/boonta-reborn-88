@@ -694,28 +694,29 @@ jobs:
 
           PROMPT="$(cat <<'PROMPT'
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
-          
+
           TASK
-          - Preloaded schema-v2 context and Global preflight are authoritative: no task PR or older merged automation PRs. Never ask the owner for code or clarification.
-          - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
-          - Use preloaded source excerpts first (1,800 characters); report BLOCKED if full patch exceeds 256 tokens.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
-          - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
-          - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
-          
+          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: no task PR exists. Do not search PR history or trust older merged automation PRs.
+          - Use preloaded source excerpts first (1,800 characters); report BLOCKED if a full patch exceeds 256 output tokens.
+          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for a listed path at ref TASK_TARGET_BRANCH.
+          - write only the exact owner-reviewed paths listed in context; if absent, BLOCKED with no branch/PR.
+          - Reuse merged PR #327 at 69deb6778f9383887118803428e7014686865a83; never reopen superseded PRs #317/#318/#319.
+
           SAFETY
           - No paid routes, billing, credits, or provider/secret/settings changes.
           - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
-          - Never upload commercial ROM/assets or write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
-          
+          - Never upload commercial ROM/assets. Never write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
+          - Never ask the owner for code or clarification; report one precise blocker instead.
+
           TOOLS / DELIVERY
           - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
           - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
-          - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH. Exact markers: BOONTA_TASK_ID: <exact task ID>; BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
+          - Change only listed paths. PR body must include exact standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH markers.
           - Use returned PR URL/head_sha; do not read the PR back.
-          
+
           REPORT
-          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output machine-readable lines only. PROGRESS needs PR URL and exact 40-character head SHA; otherwise BLOCKED needs one concrete blocker and next action.
+          - Copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output machine-readable lines only.
+          - PROGRESS needs PR URL and exact 40-character head SHA; otherwise BLOCKED needs one concrete blocker and next action.
           PROMPT
           )"
 
