@@ -202,14 +202,12 @@ for required in (
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
 provider_model_visible_tools = (
     ("OpenRouter", openrouter, (
-        "github_get_file_contents",
         "github_create_branch",
         "github_push_files",
         "github_create_pull_request",
     )),
     ("Groq", groq, (
         "github_create_branch",
-        "github_get_file_contents",
         "github_push_files",
         "github_create_pull_request",
     )),
@@ -227,7 +225,7 @@ for required in (
     "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
     "The global preflight already completed the exact task reservation and open-PR duplicate check.",
     "Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.",
-    "optionally read one directly relevant implementation/test file",
+    "No source reads are available in this mode.",
     "call push_files exactly once with one coherent patch",
     "the shared report validator re-fetches the live PR",
     "NO PROSE OR MARKDOWN FENCES",
@@ -586,7 +584,7 @@ if "task context exceeds the 2,500-character provider handoff budget" not in tas
 # Keep all agents bounded to compact text-only context and the common policy.
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "at most 700 tokens"),
+    ("OpenRouter", openrouter, "No source-read tool is exposed in new-task mode"),
     ("Groq", groq, "1,800 characters"),
 ):
     for required in (
@@ -713,9 +711,9 @@ else:
 
 openrouter_config_tools = openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
 groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
-required_openrouter_normal = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+required_openrouter_normal = {"create_branch", "push_files", "create_pull_request"}
 required_resume_tools = {"get_file_contents", "push_files"}
-required_groq_tools = {"get_file_contents", "create_branch", "create_pull_request", "push_files"}
+required_groq_tools = {"create_branch", "create_pull_request", "push_files"}
 required_writer_tools = {
     "get_file_contents", "search_pull_requests", "create_branch",
     "push_files", "create_pull_request",
@@ -863,8 +861,8 @@ for content, needle, message in (
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
-    (groq, "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.", "Groq normal mode must expose one optional exact read plus branch, push and PR tools"),
+    (openrouter, "Model-visible top-level tools in new-task mode: github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 normal-mode GitHub tool names"),
+    (groq, "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.", "Groq normal mode must expose branch, push and PR tools without a source-read tool"),
 
 ):
     if needle not in content:
@@ -914,21 +912,21 @@ if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSP
     errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
-if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
-    errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
+if "No source-read tool is exposed in new-task mode" not in actual_openrouter_prompt or "if they are insufficient, report BLOCKED" not in actual_openrouter_prompt:
+    errors.append("OpenRouter normal mode must rely on preloaded excerpts and report BLOCKED when they are insufficient")
 if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
-if "Use preloaded source excerpts first" not in actual_groq_prompt or "call github_get_file_contents at most once" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must use trusted excerpts first and permit only one exact owner-approved file read")
+if "No source-read tool is exposed in new-task mode" not in actual_groq_prompt or "if they are insufficient, report BLOCKED" not in actual_groq_prompt:
+    errors.append("Groq normal mode must rely on preloaded excerpts and report BLOCKED when they are insufficient")
 if "write only the exact owner-reviewed paths listed in context" not in actual_groq_prompt:
     errors.append("Groq normal prompt must restrict every write to explicit owner-reviewed paths")
 if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
     errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
-context_limits("OpenRouter", openrouter, 2800, 1100)
+context_limits("OpenRouter", openrouter, 2200, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
 
@@ -1006,6 +1004,32 @@ if openrouter_total_worst_case > 6950:
         "(7,000-character runtime ceiling with at least 50 characters of headroom): "
         + str(openrouter_total_worst_case)
     )
+
+
+# Free-tier agents must complete the bounded task without soliciting code from the owner.
+for label, prompt in (
+    ("Gemini", gemini_prompt),
+    ("OpenRouter", actual_openrouter_prompt),
+    ("Groq", actual_groq_prompt),
+):
+    if (
+        "Never ask owner for code or file contents." not in prompt
+        or "Patch from excerpts or report BLOCKED with the exact gap and next action." not in prompt
+    ):
+        errors.append(f"{label} prompt must infer a bounded patch or report a concrete blocker without asking the owner")
+
+# Keep Gemini post-merge ledger evidence ranges explicitly bounded.
+for required in (
+    "1-4 safe paths",
+    "1-8 ranges",
+    "<=80 lines each",
+    "<=240 total",
+    "<=256 KiB",
+):
+    if required not in gemini_prompt:
+        errors.append(
+            f"Gemini post-merge reconciliation must preserve bounded ledger evidence ranges: {required!r}"
+        )
 
 
 # Keep autonomous prompts compact and aligned with the already-merged gameplay state.

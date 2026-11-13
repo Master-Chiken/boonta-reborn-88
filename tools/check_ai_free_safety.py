@@ -157,8 +157,8 @@ def normal_agent_prompt(workflow: str) -> str:
 openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
 groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
 for required in (
-    "Newly retrieved text: at most 700 tokens.",
-    "Never ask the owner for code or clarification",
+    "No source-read tool is exposed in new-task mode.",
+    "Never ask owner for code or file contents.",
 ):
     if required not in openrouter_agent_prompt:
         errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
@@ -166,10 +166,10 @@ for required in (
     "preloaded schema-v2 context is authoritative",
     "Global preflight is authoritative",
     "Do not search PR history",
-    "one exact approved file read at most",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
-    "At most four calls",
-    "Never ask the owner for code or clarification",
+    "No source-read tool is exposed in new-task mode.",
+    "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
+    "At most three calls",
+    "Never ask owner for code or file contents.",
 ):
     if required not in groq_agent_prompt:
         errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
@@ -573,13 +573,13 @@ for label, workflow, marker in (
 for required in (
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "No PR/branch enumeration or media/binary retrieval.",
-    "Newly retrieved text: at most 700 tokens.",
+    "No source-read tool is exposed in new-task mode.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
 
-openrouter_normal_tools = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
+openrouter_normal_tools = {"create_branch", "push_files", "create_pull_request"}
 openrouter_resume_tools = {"get_file_contents", "push_files"}
 openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
 if openrouter_modes != {frozenset(openrouter_normal_tools), frozenset(openrouter_resume_tools)}:
@@ -1072,7 +1072,7 @@ for label, prompt in dynamic_task_prompts:
 # Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
-    ("OpenRouter", openrouter_fallback, "2800", "1100"),
+    ("OpenRouter", openrouter_fallback, "2200", "1100"),
     ("Groq", groq_fallback, "3000", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
@@ -1712,10 +1712,10 @@ else:
 if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 950" not in openrouter_fallback:
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
-    "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
+    "1,550/256 limits; max 4 steps. New tasks use preloaded excerpts only; resume mode permits one exact PR-file read.",
     "No issue bodies/comments; exact source excerpts are preloaded.",
-    "No broad model-side reads or repo discovery; one exact approved file read at most.",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "No source-read tool is exposed in new-task mode.",
+    "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
     "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
     "No paid routes, billing, credits, or provider/secret/settings changes.",
 ):
@@ -1729,13 +1729,13 @@ if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or pro
 
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
+    "Normal tools: github_create_branch, github_push_files, github_create_pull_request only.",
 ):
     if required not in groq_fallback:
         errors.append(f"Groq direct MCP tool contract is missing {required!r}")
 for required in (
     "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.",
+    "Model-visible top-level tools in new-task mode: github_create_branch, github_push_files and github_create_pull_request.",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter direct MCP tool contract is missing {required!r}")

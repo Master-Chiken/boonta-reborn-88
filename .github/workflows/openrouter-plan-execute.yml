@@ -628,7 +628,7 @@ jobs:
           # Refresh only the runner's derived summary; the global preflight's
           # task handoff is verified as a subset of this current compact projection.
           python3 "$repo_root/tools/check_task_ledger_summary.py" --write
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2800 --max-task-context 1100 --max-source-chars 950 --max-criteria 4 --max-next-action 100)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --max-chars 2200 --max-task-context 1100 --max-source-chars 950 --max-criteria 4 --max-next-action 100)"
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -670,7 +670,7 @@ jobs:
             TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH:-}"
             export GITHUB_TOOLS="get_file_contents,push_files"
           else
-            export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"
+            export GITHUB_TOOLS="create_branch,push_files,create_pull_request"
           fi
 
           # OpenCode 1.19.5 reads provider credentials from OPENCODE_AUTH_CONTENT.
@@ -742,17 +742,17 @@ jobs:
           - Global preflight is authoritative: task pr_url/head_sha are empty; no matching open PR exists. Do not search PR history or treat older merged automation PRs as current-cycle evidence.
           - Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery. Do not list root or reread summary, ledger or budget.
           - No PR/branch enumeration or media/binary retrieval.
-          - Newly retrieved text: at most 700 tokens. Read at most one exact file from the task's "Read-only source paths" allow-list on the selected target branch. Never list directories, guess paths or retrieve binaries/media.
-          - The canonical task reservation, acceptance criteria and exact read-path allow-list are preloaded. Use preloaded excerpts from every exact task path before the one permitted full-file read. Only those paths may be read; if none is usable, stop with a specific blocker. Never ask the owner for code or clarification; implement or report one precise blocker.
+          - No source-read tool is exposed in new-task mode. Use only the preloaded exact task excerpts; if they are insufficient, report BLOCKED with the precise missing fact/path and next action. Never ask owner for code or file contents.
+          - The canonical task reservation, acceptance criteria, owner-reviewed write paths and exact source excerpts are preloaded. Do not request or read additional files in new-task mode. Never ask owner for code or file contents. Patch from excerpts or report BLOCKED with the exact gap and next action.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
-          - If the one permitted read fails, report its exact missing path; do not discover other files.
+          - If a required fact is absent from the excerpts, report its exact missing path/fact; do not discover or request other files.
           
           TOOLS / DELIVERY
-          - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
+          - Model-visible top-level tools in new-task mode: github_create_branch, github_push_files and github_create_pull_request.
           - OpenCode 1.19.5 prefixes raw MCP names with github_. Direct MCP only; no Code Mode, shell or filesystem.
           - The global preflight already completed the exact task reservation and open-PR duplicate check. Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.
-          - Use at most four tool calls: optionally read one directly relevant implementation/test file; create one branch from selected base; call push_files exactly once with one coherent patch; create one non-draft PR.
+          - Use at most three tool calls: create one branch from selected base; call push_files exactly once with one coherent patch; create one non-draft PR. No source reads are available in this mode.
           - No PR readback. Use create_pull_request URL/head_sha; the shared report validator re-fetches the live PR.
           - Patch must advance task criteria. Docs-only changes require a verified blocker. PR body must have standalone lines BOONTA_TASK_ID: <exact selected task ID> and BOONTA_TASK_TARGET_BRANCH: <exact target branch>.
           
