@@ -1072,7 +1072,7 @@ for label, prompt in dynamic_task_prompts:
 # Groq has a deliberately smaller TPM-bounded handoff; offline builder tests
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
-    ("OpenRouter", openrouter_fallback, "2200", "1000"),
+    ("OpenRouter", openrouter_fallback, "2200", "1100"),
     ("Groq", groq_fallback, "3000", "1100"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
@@ -1709,7 +1709,7 @@ else:
             errors.append("Groq fallback must keep its provider allow-list fixed to Groq")
     except (json.JSONDecodeError, AttributeError, TypeError) as exc:
         errors.append(f"Groq OpenCode config is invalid: {exc}")
-if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 1800" not in openrouter_fallback:
+if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 950" not in openrouter_fallback:
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
     "1,550/256 limits; max 4 steps. New tasks use preloaded excerpts only; resume mode permits one exact PR-file read.",
