@@ -746,7 +746,7 @@ jobs:
           - Reservation, criteria, excerpts and exact write-path policy are preloaded. Read both approved write files only. Never ask the owner for code or clarification; implement or report one precise blocker.
           - Write only paths from "Exact owner-reviewed write paths (no others)"; if absent, BLOCKED (no branch/PR).
           - For gameplay tasks only, reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain. This is not relevant to the current automation-only activation task.
-          - If the single permitted direct source lookup fails, stop and report the exact missing path rather than spending steps on directory discovery.
+          - If either approved write-path read fails, report its exact missing path; do not ask the owner or discover other files.
           
           TOOLS / DELIVERY
           - Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.
