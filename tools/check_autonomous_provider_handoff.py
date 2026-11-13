@@ -871,40 +871,45 @@ if len(actual_groq_prompt) + 3000 + 400 > 5500:
 # The runtime appends verified context, same-run provider/App facts, and a
 # machine-readable report envelope after the heredoc.
 openrouter_facts_start_marker = (
-    '          PROMPT="${PROMPT}\\n\\n          SAME-RUN VERIFIED EXECUTION FACTS '
-    '(authoritative workflow metadata):\\n'
+    '          PROMPT="' + "$" + "{PROMPT}\n\n"
+    "          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):\n"
 )
-openrouter_facts_end_marker = '\\n          if [[ "${RESUME_MODE:-false}" == "true" ]]; then'
+openrouter_facts_end_marker = (
+    "\n          if [[ \"" + "$" + "{RESUME_MODE:-false}\" == \"true\" ]]; then"
+)
 facts_start = openrouter.find(openrouter_facts_start_marker)
-facts_end = openrouter.find(openrouter_facts_end_marker, facts_start + len(openrouter_facts_start_marker)) if facts_start >= 0 else -1
+facts_end = (
+    openrouter.find(openrouter_facts_end_marker, facts_start + len(openrouter_facts_start_marker))
+    if facts_start >= 0 else -1
+)
 if facts_start < 0 or facts_end < 0:
     errors.append("OpenRouter same-run execution-facts prompt block is missing or malformed")
     openrouter_facts_chars = 0
 else:
-    facts_block = openrouter[facts_start + len('          PROMPT="${PROMPT}'):facts_end]
+    facts_block = openrouter[facts_start + len('          PROMPT="' + "$" + "{PROMPT}"):facts_end]
     if facts_block.endswith('"'):
         facts_block = facts_block[:-1]
-    facts_block = "\\n".join(
+    facts_block = "\n".join(
         line[10:] if line.startswith("          ") else line
         for line in facts_block.splitlines()
     )
     for token, maximum_value in (
-        ("${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}", "false"),
-        ("${OPENROUTER_AUTH_OUTCOME:-unknown}", "cancelled"),
-        ("${GITHUB_APP_TOKEN_OUTCOME:-unknown}", "cancelled"),
+        ("$" + "{OPENROUTER_PREFLIGHT_ALLOWED:-unknown}", "false"),
+        ("$" + "{OPENROUTER_AUTH_OUTCOME:-unknown}", "cancelled"),
+        ("$" + "{GITHUB_APP_TOKEN_OUTCOME:-unknown}", "cancelled"),
     ):
         facts_block = facts_block.replace(token, maximum_value)
     openrouter_facts_chars = len(facts_block)
 
 openrouter_context_command = re.search(
-    r"--max-chars (\\d+) --max-task-context (\\d+) --max-source-chars (\\d+)", openrouter
+    r"--max-chars (\d+) --max-task-context (\d+) --max-source-chars (\d+)", openrouter
 )
 if not openrouter_context_command:
     errors.append("OpenRouter context builder limits cannot be measured for the complete prompt budget")
     openrouter_context_chars = 10_000
 else:
     context_max_chars, task_max_chars, source_max_chars = map(int, openrouter_context_command.groups())
-    context_prefix = "\\n".join((
+    context_prefix = "\n".join((
         "VERIFIED CONTEXT:",
         "€0; no commercial game data; preserve AGPL/MIT and platform provenance.",
         "Canonical ledger v2 verified.",
@@ -917,12 +922,12 @@ else:
 
 # Reserve the longest valid task ID, a ten-digit PR number, and a full SHA.
 openrouter_report_reserve = len(
-    "\\n\\nBOONTA_CYCLE_TASK_ID: " + "A" * 64
-    + "\\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED"
-    + "\\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/"
+    "\n\nBOONTA_CYCLE_TASK_ID: " + "A" * 64
+    + "\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED"
+    + "\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/"
     + "9" * 10 + " @ " + "a" * 40
-    + "\\nBOONTA_CYCLE_EVIDENCE_BASE: main"
-    + "\\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION."
+    + "\nBOONTA_CYCLE_EVIDENCE_BASE: main"
+    + "\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION."
 )
 openrouter_total_worst_case = (
     len(actual_openrouter_prompt)
