@@ -696,9 +696,9 @@ jobs:
           Groq Free, €0 only. Execute exactly the preflight-reserved task.
           
           TASK
-          - The preloaded schema-v2 context is authoritative; Global preflight is authoritative (no task PR). Do not search PR history; Never ask the owner for code or clarification.
+          - Preloaded schema-v2 context and Global preflight are authoritative: no task PR or older merged automation PRs. Never ask the owner for code or clarification.
           - Do not search history, enumerate PRs, list directories or reread the ledger. No issue bodies/comments; exact source excerpts are preloaded.
-          - Use the preloaded 1,800-character source excerpts first; report BLOCKED if a patch exceeds 256 tokens.
+          - Use preloaded source excerpts first (1,800 characters); report BLOCKED if full patch exceeds 256 tokens.
           - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for one listed write path at ref TASK_TARGET_BRANCH.
           - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED, no branch/PR.
           - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
@@ -802,7 +802,7 @@ jobs:
 
           prompt, report_path, workspace = sys.argv[1:]
           command = [
-              "timeout", "--signal=TERM", "--kill-after=5s", "180s",
+              "timeout", "--signal=TERM", "--kill-after=5s", "90s",
               "opencode", "run", "--model", "groq/openai/gpt-oss-20b",
               "--auto", "--dir", workspace, prompt,
           ]
@@ -867,7 +867,7 @@ jobs:
           invocation_status = process.wait()
           if invocation_status in (124, 137):
               print(
-                  "Groq invocation reached its 180-second hard limit; daily cooldown will be recorded.",
+                  "Groq invocation reached its 90-second hard limit; daily cooldown will be recorded.",
                   flush=True,
               )
           sys.exit(invocation_status)
