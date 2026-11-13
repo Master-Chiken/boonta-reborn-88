@@ -874,7 +874,7 @@ for required_guard in (
     "branchInfo.commit?.sha !== run.head_sha",
     "targetBranch === 'dev' ? 226 : 156",
     "issue_number: prNumber || targetIssueNumber",
-    "['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event)",
     "run.name === 'Boonta Autonomous Loop'",
     "run.head_branch === 'main'",
     "targetIssueNumber = 226",
@@ -897,7 +897,7 @@ for required_path in provider_workflow_paths:
 for required_provider_route in (
     "const providerWorkflowPaths = new Set([",
     "const isProviderCycleRun = providerWorkflowPaths.has(run.path) || providerWorkflowNames.has(run.name);",
-    "if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch'].includes(run.event)",
+    "if (!prNumber && isProviderCycleRun && ['push', 'schedule', 'workflow_dispatch', 'repository_dispatch'].includes(run.event)",
     "targetIssueNumber = 226;",
 ):
     if required_provider_route not in ci_triage:
