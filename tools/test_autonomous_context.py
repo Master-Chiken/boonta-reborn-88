@@ -423,6 +423,7 @@ with tempfile.TemporaryDirectory() as temp:
         "source/gameplay_state.h",
         "source/pause_state.h",
         "tests/test_gameplay_state.c",
+        "tests/test_route_cursor.c",
     ]
     for index, path in enumerate(paths):
         target = source_root / path
@@ -431,10 +432,16 @@ with tempfile.TemporaryDirectory() as temp:
             f"/* {path} line {line} */" for line in range(1, 31)
         ), encoding="utf-8")
     ranges = [
-        {"path": paths[0], "start_line": 4, "end_line": 8},
-        {"path": paths[1], "start_line": 10, "end_line": 14},
-        {"path": paths[2], "start_line": 16, "end_line": 20},
-        {"path": paths[3], "start_line": 22, "end_line": 26},
+        {"path": paths[0], "start_line": 4, "end_line": 5},
+        {"path": paths[0], "start_line": 6, "end_line": 8},
+        {"path": paths[1], "start_line": 10, "end_line": 11},
+        {"path": paths[1], "start_line": 12, "end_line": 14},
+        {"path": paths[2], "start_line": 16, "end_line": 17},
+        {"path": paths[2], "start_line": 18, "end_line": 20},
+        {"path": paths[3], "start_line": 22, "end_line": 23},
+        {"path": paths[3], "start_line": 24, "end_line": 26},
+        {"path": paths[4], "start_line": 27, "end_line": 28},
+        {"path": paths[4], "start_line": 29, "end_line": 30},
     ]
     excerpt = MODULE._build_source_excerpt(source_root, paths, ranges, 1800)
     assert all(path in excerpt for path in paths)
@@ -474,6 +481,15 @@ with tempfile.TemporaryDirectory() as temp:
         pass
     else:
         raise AssertionError("Expected oversized source ranges to fail closed")
+
+    try:
+        MODULE._build_source_excerpt(
+            source_root, paths, [*ranges, dict(ranges[-1], start_line=1, end_line=1)], 1800
+        )
+    except MODULE.ContextBuildError as exc:
+        assert "1-10 exact ranges" in str(exc)
+    else:
+        raise AssertionError("Eleven source ranges must fail closed")
 
 
 # End-to-end context assembly reads the selected target checkout, not the
