@@ -912,8 +912,14 @@ if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSP
     errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
-if "No source-read tool is exposed in new-task mode" not in actual_openrouter_prompt or "if they are insufficient, report BLOCKED" not in actual_openrouter_prompt:
-    errors.append("OpenRouter normal mode must rely on preloaded excerpts and report BLOCKED when they are insufficient")
+for required in (
+    "New-task mode has no source-read tools.",
+    "if they are insufficient, report BLOCKED",
+    "canonical ledger/summary JSON are intentionally not model-readable",
+    "never cite them as a blocker/next action",
+):
+    if required not in actual_openrouter_prompt:
+        errors.append(f"OpenRouter normal mode must keep protected ledger files out of model-side blocker requests: {required!r}")
 if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
