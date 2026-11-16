@@ -1693,8 +1693,8 @@ for required in (
     "findBlockedReportContradictions",
     "openRouterAuthSucceeded:",
     "githubAppTokenMinted:",
-    "SAME-RUN VERIFIED EXECUTION FACTS",
-    "Never ask the owner to replace the key.",
+    "SAME-RUN EXECUTION FACTS",
+    "The writer token is never exposed to the model or local MCP process.",
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter report consistency guard is missing {required!r}")
@@ -1755,34 +1755,25 @@ else:
 if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 950" not in openrouter_fallback:
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
-    "1,550/256 limits; max 4 steps (7,224 nominal tokens).",
-    "No issue bodies/comments; exact source excerpts are preloaded.",
-    "No broad model-side reads or repo discovery; one exact approved file read at most.",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
-    "Stop after the first quota, TPM, rate-limit, context or auth error; never retry.",
-    "No paid routes, billing, credits, or provider/secret/settings changes.",
+    "Call boonta_read_approved_sources exactly once",
+    "boonta_submit_patch_proposal exactly once",
+    "No GitHub MCP, token, branch/commit/PR writer",
+    "gamecube.rival_host_tests",
+    "No paid route, billing, credits",
 ):
-    if required not in groq_fallback:
-        errors.append(f"Groq fallback must enforce its bounded text-only context: {required!r}")
-if 'if (( ${#PROMPT} > 5500 )); then' not in groq_fallback:
+    if required not in groq_agent_prompt:
+        errors.append(f"Groq fallback must enforce its proposal-only Free-tier contract: {required!r}")
+if 'prompt_length > 5500' not in groq_fallback:
     errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
-if "€0 only" not in groq_fallback or "No paid routes, billing, credits, or provider/secret/settings changes." not in groq_fallback:
+if "€0 only" not in groq_agent_prompt or "No paid route" not in groq_agent_prompt:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
-
-
-for required in (
-    "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
-):
-    if required not in groq_fallback:
-        errors.append(f"Groq direct MCP tool contract is missing {required!r}")
-for required in (
-    "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'",
-    "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.",
-):
-    if required not in openrouter_fallback:
-        errors.append(f"OpenRouter direct MCP tool contract is missing {required!r}")
-
+if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in groq_fallback:
+    errors.append("Groq fallback must keep experimental Code Mode disabled")
+for label, workflow in (("OpenRouter", openrouter_fallback), ("Groq", groq_fallback)):
+    if "tools/bounded_patch_proposal_mcp.js" not in workflow:
+        errors.append(f"{label} workflow must configure the local bounded proposal MCP server")
+    if "execute_autonomous_provider_cycle.py" not in workflow:
+        errors.append(f"{label} workflow must use the separate workflow-owned verify/test/delivery process")
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
 for label, content in (
