@@ -202,38 +202,32 @@ for required in (
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
 provider_model_visible_tools = (
     ("OpenRouter", openrouter, (
-        "github_get_file_contents",
-        "github_create_branch",
-        "github_push_files",
-        "github_create_pull_request",
+        "boonta_read_approved_sources",
+        "boonta_submit_patch_proposal",
     )),
     ("Groq", groq, (
-        "github_create_branch",
-        "github_get_file_contents",
-        "github_push_files",
-        "github_create_pull_request",
+        "boonta_read_approved_sources",
+        "boonta_submit_patch_proposal",
     )),
 )
 for label, content, tool_names in provider_model_visible_tools:
     missing = [name for name in tool_names if name not in content]
     if missing:
-        errors.append(f"{label} prompt is missing OpenCode model-visible GitHub tools: {missing!r}")
+        errors.append(f"{label} prompt is missing bounded local MCP tools: {missing!r}")
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
-
 # OpenRouter's eight-step ceiling is a hard safety bound, not a discovery budget.
 # The preflight performs task reservation and open-PR duplicate detection before inference.
 for required in (
-    "Do not invoke the Explore Agent, any subagent, Task agent, planning agent or repo-wide discovery.",
-    "The global preflight already completed the exact task reservation and open-PR duplicate check.",
-    "Do not spend model steps searching PR history, rereading the ledger, or rereading this budget document.",
-    "optionally read one directly relevant implementation/test file",
-    "call push_files exactly once with one coherent patch",
-    "the shared report validator re-fetches the live PR",
-    "NO PROSE OR MARKDOWN FENCES",
+    "Only two local tools are available: boonta_read_approved_sources and boonta_submit_patch_proposal.",
+    "Call boonta_read_approved_sources exactly once.",
+    "Then call boonta_submit_patch_proposal exactly once with one coherent unified diff.",
+    "No GitHub MCP, no remote branch/PR APIs, no shell, no filesystem",
+    "The workflow-owned verifier will validate tests and publish only a verified patch.",
+    "Never claim that a branch or PR was created.",
 ):
     if required not in openrouter:
-        errors.append(f"OpenRouter direct-execution contract is missing {required!r}")
+        errors.append(f"OpenRouter bounded proposal contract is missing {required!r}")
 
 for content, needle, message in (
     (gemini, "value: ${{ jobs.plan-execute.outputs.invocation_outcome }}", "Gemini must expose its invocation result"),
@@ -863,7 +857,7 @@ for content, needle, message in (
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
-    (openrouter, "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request.", "OpenRouter must document the exact OpenCode 1.19.5 model-visible GitHub tool names"),
+    (openrouter, "Only two local tools are available: boonta_read_approved_sources and boonta_submit_patch_proposal.", "OpenRouter must document only its bounded local MCP tools"),
     (groq, "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.", "Groq normal mode must expose one optional exact read plus branch, push and PR tools"),
 
 ):
@@ -914,8 +908,10 @@ if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSP
     errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
-if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
-    errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
+if "Call boonta_read_approved_sources exactly once" not in actual_openrouter_prompt:
+    errors.append("OpenRouter prompt must request exactly one batch read of task-approved source ranges")
+if "Then call boonta_submit_patch_proposal exactly once" not in actual_openrouter_prompt:
+    errors.append("OpenRouter prompt must submit one bounded patch proposal instead of writing to GitHub directly")
 if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
