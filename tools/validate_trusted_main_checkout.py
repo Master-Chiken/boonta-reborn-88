@@ -35,7 +35,7 @@ def _git(root: Path, *args: str) -> str:
         raise TrustedMainCheckoutError("Could not verify trusted main Git state") from exc
     if result.returncode != 0:
         raise TrustedMainCheckoutError("Trusted main Git verification failed")
-    return result.stdout.strip()
+    return result.stdout.rstrip("\r\n")
 
 
 def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
