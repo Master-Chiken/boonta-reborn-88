@@ -93,6 +93,12 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASSED")
         self.assertEqual(report["results"][0]["stdout"], "fixed test ran\n")
 
+    def test_gamecube_rival_host_profile_is_a_fixed_repository_script(self):
+        self.assertEqual(
+            dispatcher.TEST_REGISTRY.get("gamecube.rival_host_tests"),
+            ("tools/run_gamecube_rival_host_tests.py",),
+        )
+
     def test_registered_script_symlink_is_rejected(self):
         outside = Path(self.temp.name).parent / (Path(self.temp.name).name + "-outside.py")
         outside.write_text("print('outside')\n", encoding="utf-8")
