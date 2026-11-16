@@ -212,6 +212,13 @@ def _build_source_excerpt(
     read_ranges: Any,
     max_source_chars: int,
 ) -> str:
+    if (
+        not isinstance(read_paths, list)
+        or not 1 <= len(read_paths) <= MAX_SOURCE_PATHS
+        or any(not isinstance(path, str) or not _safe_source_path(path) for path in read_paths)
+        or len(set(read_paths)) != len(read_paths)
+    ):
+        raise ContextBuildError("Selected task source paths must contain 1-5 unique exact repository-relative paths")
     if not isinstance(read_ranges, list) or not read_ranges:
         raise ContextBuildError(
             "A non-empty exact source-range allow-list is required when source excerpts are enabled"
