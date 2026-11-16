@@ -784,13 +784,15 @@ jobs:
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
           PROMPT="$(cat <<'PROMPT'
           Groq Free (€0). Implement only the selected task from the verified context.
-          Use VERIFIED CONTEXT and APPROVED SOURCE EXCERPTS below; those are the full owner-reviewed source scope.
-          One tool is available: boonta_submit_patch_proposal. Call it exactly once with one complete unified diff.
-          Change only exact owner-approved write paths. All changed files must be exact owner-reviewed write paths.
-          Bind task_id and base_sha to the selected task and target checkout. Preserve deterministic finite-value guards, update ordering and collision/overtake behavior; use only GameCube/Wii evidence.
-          Use registered test ID gamecube.rival_host_tests. No GitHub writer, GitHub MCP, shell, filesystem or network. No paid route, billing, credits or provider/secret/permission changes.
-          Do not ask the owner for code or clarification. Never claim tests, PR, branch, commit or merge; the separate workflow verifier handles these.
-          Do not submit a partial or fabricated diff if the output budget is insufficient. Return one precise blocker.
+          Use VERIFIED CONTEXT and APPROVED SOURCE EXCERPTS below; these are the complete owner-approved source ranges.
+          boonta_read_approved_sources is intentionally not exposed: the exact sources are preloaded and the local MCP rereads and hashes them against the target checkout before accepting a proposal.
+          One local proposal tool is available: boonta_submit_patch_proposal. Call it exactly once with one complete unified diff.
+          Change only exact owner-approved write paths. All changed files must be exact owner-reviewed write paths. Bind task_id and base_sha to the selected task and target checkout.
+          For gameplay tasks, reuse the merged PR #327 implementation at 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Never reopen, replay or recreate that chain.
+          Preserve deterministic finite-value guards, update ordering and collision/overtake behavior; use only GameCube/Wii evidence. Use registered test ID gamecube.rival_host_tests.
+          No GitHub writer, GitHub MCP, shell, filesystem or network. No paid route, billing, credits, provider/secret/settings changes. Do not ask the owner for code or clarification.
+          Global preflight is authoritative. Do not search PR history or substitute older merged automation PRs for the selected task.
+          Never claim tests, PR, branch, commit or merge; the separate workflow verifier handles these. Do not submit a partial or fabricated diff if the output budget is insufficient. Return one precise blocker.
           Proposal fields: schema_version, task_id, base_sha, summary, unified_diff, test_ids, limitations.
           PROMPT
           )"
@@ -807,10 +809,6 @@ jobs:
           fi
           PROMPT+=$'\n\n'
           PROMPT+="$(cat "$SOURCE_CONTEXT_FILE")"
-          PROMPT+=$'\n\nSAME-RUN EXECUTION FACTS:\n'
-          PROMPT+="- Groq Free/owner preflight: ${GROQ_PREFLIGHT_ALLOWED:-unknown}"$'\n'
-          PROMPT+="- Workflow-owned scoped GitHub writer token minted: ${GITHUB_APP_TOKEN_OUTCOME:-unknown}"$'\n'
-          PROMPT+="- The writer token is not available to the model process; it is reserved for a separate workflow-owned step after patch verification."
           prompt_length="$(printf '%s' "$PROMPT" | wc -m | tr -d ' ')"
           if (( prompt_length > 10400 )); then
             echo "::error::Groq preloaded prompt exceeds the 10,400-character safety ceiling; no model request was sent."
