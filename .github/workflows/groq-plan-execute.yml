@@ -651,7 +651,7 @@ jobs:
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           TASK_ID: ${{ steps.bounded_inputs.outputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
-          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          TASK_DESCRIPTION: ${{ steps.prepare_context.outputs.context }}
           TASK_TARGET_BRANCH: ${{ steps.bounded_inputs.outputs.target_branch }}
           VERIFIED_CONTEXT: ${{ steps.prepare_context.outputs.context }}
         run: |
