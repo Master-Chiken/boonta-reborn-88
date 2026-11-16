@@ -253,9 +253,11 @@ def verify_in_isolated_worktree(
             )
             applied_snapshot = _snapshot_verified_paths(worktree, list(changed_paths))
 
+            trusted_test_root = policy_root.resolve() if policy_root is not None else root
             test_report = run_autonomous_patch_tests.run_test_ids(
                 worktree,
                 executed_tests,
+                script_root=trusted_test_root,
             )
             if test_report.get("status") != "PASSED":
                 return {
