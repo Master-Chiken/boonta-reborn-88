@@ -10,6 +10,17 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/boonta-autonomous-loop.yml"
 
+PROVIDER_WORKFLOWS = (
+    ROOT / ".github/workflows/gemini-plan-execute.yml",
+    ROOT / ".github/workflows/openrouter-plan-execute.yml",
+    ROOT / ".github/workflows/groq-plan-execute.yml",
+)
+for provider_workflow in PROVIDER_WORKFLOWS:
+    provider_source = provider_workflow.read_text(encoding="utf-8")
+    five_path_gate = "task.read_paths.length < 1 || task.read_paths.length > 5 ||"
+    if provider_source.count(five_path_gate) != 1 or "task.read_paths.length > 4" in provider_source:
+        fail(f"{provider_workflow.name} must accept the same 1-5 exact read paths as the context builder")
+
 
 def fail(message: str) -> None:
     raise SystemExit(f"Autonomous task preflight test failed: {message}")
