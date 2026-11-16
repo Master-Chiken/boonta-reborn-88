@@ -39,6 +39,10 @@ class DispatcherTests(unittest.TestCase):
             "from pathlib import Path\nPath('second-test-ran').write_text('bad')\n",
             encoding="utf-8",
         )
+        (self.root / "tools/run_gamecube_rival_host_tests.py").write_text(
+            "print('fixed GameCube host profile')\n",
+            encoding="utf-8",
+        )
         self.original_registry = dispatcher.TEST_REGISTRY.copy()
 
     def tearDown(self) -> None:
@@ -95,6 +99,36 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASSED")
         self.assertEqual(report["results"][0]["stdout"], "fixed test ran\n")
 
+    def test_workflow_test_script_is_loaded_from_trusted_main_but_runs_in_target_worktree(self):
+        trusted = Path(self.temp.name) / "trusted-main"
+        trusted.mkdir()
+        git(trusted, "init", "-q")
+        git(trusted, "config", "user.name", "Boonta Trusted Tests")
+        git(trusted, "config", "user.email", "trusted-tests@example.invalid")
+        (trusted / "tools").mkdir()
+        (trusted / "tools/trusted_probe.py").write_text(
+            "from pathlib import Path\n"
+            "Path('executed-in-target.txt').write_text(str(Path.cwd()), encoding='utf-8')\n",
+            encoding="utf-8",
+        )
+        git(trusted, "add", "tools")
+        git(trusted, "commit", "-qm", "trusted test script")
+        dispatcher.TEST_REGISTRY["test.trusted"] = ("tools/trusted_probe.py",)
+
+        report = dispatcher.run_test_ids(
+            self.root,
+            ["test.trusted"],
+            script_root=trusted,
+        )
+
+        self.assertEqual(report["status"], "PASSED")
+        self.assertEqual(
+            (self.root / "executed-in-target.txt").read_text(encoding="utf-8"),
+            str(self.root),
+        )
+        self.assertFalse((trusted / "executed-in-target.txt").exists())
+        self.assertEqual(git(self.root, "status", "--porcelain"), "?? executed-in-target.txt")
+
     def test_gamecube_rival_host_profile_is_a_fixed_repository_script(self):
         self.assertEqual(
             dispatcher.TEST_REGISTRY.get("gamecube.rival_host_tests"),
@@ -117,7 +151,7 @@ class DispatcherTests(unittest.TestCase):
         self.assertEqual(report["status"], "PASSED")
         self.assertEqual(len(observed), 1)
         command, cwd = observed[0]
-        self.assertEqual(command[:2], [sys.executable, str(Path(dispatcher.__file__).resolve().with_name("run_gamecube_rival_host_tests.py"))])
+        self.assertEqual(command[:2], [sys.executable, str((self.root / "tools/run_gamecube_rival_host_tests.py").resolve())])
         self.assertEqual(command[2:], ["--source-root", str(self.root)])
         self.assertEqual(Path(cwd).resolve(), self.root)
 
