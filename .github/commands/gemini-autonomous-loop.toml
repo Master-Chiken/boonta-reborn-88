@@ -16,6 +16,7 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 - Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read historical comments except a compact inventory of directly related open PRs, which remains workflow-owned.
 - Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Never repeat the same provider request after an error.
 - Facts established before this prompt can run: the owner/free-tier preflight passed, the Gemini API key and GitHub App credentials were present, and the bounded task context and exact-path policy were validated. Never claim `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling; never claim `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset.
+- Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling.
 - Preflight cannot prove Google billing state, Free-tier capacity/quota or branch-rule correctness. Never claim those external facts are verified.
 
 ## Reuse-first engineering and CI policy
@@ -53,6 +54,7 @@ Use exactly these Gemini MCP fully qualified names:
 - `mcp_boonta_submit_patch_proposal`
 
 Execution order is mandatory:
+0. No Explore/subagents/planning or repo-wide discovery.
 1. Call `mcp_boonta_read_approved_sources` exactly once. It returns all task-approved source ranges in one response; do not retry or request another path.
 2. Implement one coherent change only within the exact owner-approved write paths shown by the trusted context.
 3. Call `mcp_boonta_submit_patch_proposal` exactly once with the complete unified diff and the exact selected task ID and base SHA.
