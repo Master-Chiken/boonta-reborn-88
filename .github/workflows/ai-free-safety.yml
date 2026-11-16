@@ -27,6 +27,33 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # pinned actions/checkout v7.0.1
 
+      - name: Validate branch automation self-test YAML and execute its governance contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          ruby -e 'require "yaml"; YAML.parse_file(".github/workflows/branch-automation-selftest.yml"); puts "Branch automation self-test YAML OK"'
+          python3 - <<'PY'
+          import textwrap
+          from pathlib import Path
+
+          path = Path(".github/workflows/branch-automation-selftest.yml")
+          source = path.read_text(encoding="utf-8")
+          step_marker = "      - name: Enforce conservative branch budget and lifecycle policy"
+          run_marker = "          python3 - <<'PY'\\n"
+          start_step = source.find(step_marker)
+          if start_step < 0:
+              raise SystemExit("Branch governance contract step is missing")
+          start = source.find(run_marker, start_step)
+          if start < 0:
+              raise SystemExit("Branch governance Python heredoc is missing")
+          start += len(run_marker)
+          end = source.find("\\n          PY", start)
+          if end < 0:
+              raise SystemExit("Branch governance Python heredoc terminator is missing")
+
+          code = textwrap.dedent(source[start:end])
+          exec(compile(code, str(path) + ":governance-contract", "exec"), {"__name__": "__main__"})
+          PY
       - name: Run static AI safety checks (no API calls)
         run: python3 tools/check_ai_free_safety.py
 
