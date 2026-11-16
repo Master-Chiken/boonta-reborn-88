@@ -112,6 +112,10 @@ jobs:
         shell: bash
         run: python3 tools/test_autonomous_path_allowlist.py
 
+      - name: Validate disposable exact-path agent workspaces with isolated Git fixtures (offline)
+        shell: bash
+        run: python3 tools/test_prepare_autonomous_patch_workspace.py
+
       - name: Verify patch application and mandatory tests in disposable worktrees (offline)
         shell: bash
         run: python3 tools/test_verify_autonomous_patch.py
