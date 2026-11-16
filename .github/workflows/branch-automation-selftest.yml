@@ -383,14 +383,28 @@ jobs:
                   and "_write_cycle_report" in provider_cycle_source
                   and "expected_task_id" in provider_cycle_source
               ),
-              "Groq keeps a four-step Free token budget and bounds prompt/context": (
-                  '"steps": 4' in groq_agent_step
-                  and '"context": 1550' in groq_agent_step
+              "Groq keeps a two-step Free token budget and bounds prompt/source context": (
+                  '"steps": 2' in groq_agent_step
+                  and '"context": 3700' in groq_agent_step
                   and '"output": 256' in groq_agent_step
                   and '"temperature": 0.2' in groq_agent_step
                   and "--max-chars 3000 --max-task-context 1100" in groq
+                  and "SOURCE_READ_CHARS" in groq_agent_step
+                  and "estimated_input_tokens > 3650" in groq_agent_step
                   and "if (( prompt_length > 5500 )); then" in groq_agent_step
                   and '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq_agent_step
+              ),
+              "Groq prepares and cleans its task-bound MCP context after preflight": (
+                  "name: Write verified MCP context for Groq" in groq
+                  and "steps.write_mcp_context.outcome == 'success'" in groq
+                  and "Remove ephemeral MCP context" in groq
+                  and "tools/write_autonomous_provider_context.py" in groq
+              ),
+              "new-task PR cap is applied independently to main and dev": (
+                  "const MAX_OPEN_PRS_FOR_NEW_TASK = 3" in loop
+                  and "openPullRequestCountForTarget" in loop
+                  and "canStartNewTaskOnTarget" in loop
+                  and "pull.base?.ref === targetBranch" in loop
               ),
               "Groq tool-call generation uses an explicitly supported low temperature": '"temperature": 0.2' in groq and '"temperature": true' in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
