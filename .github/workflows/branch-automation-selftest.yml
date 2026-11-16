@@ -270,11 +270,39 @@ jobs:
           openrouter_validator_require = openrouter_validator.find("const { findBlockedReportContradictions, validateAutonomousCycleReport } =")
           openrouter_validator_require_call = openrouter_validator.find("require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');")
           openrouter_validator_call = openrouter_validator.find("findBlockedReportContradictions(blockedText")
+          openrouter_agent_start = openrouter.find("      - name: Run OpenCode through the OpenRouter Free route")
+          openrouter_agent_end = openrouter.find("      - name: Verify, test and publish the OpenRouter patch proposal", openrouter_agent_start + 1)
+          openrouter_agent_step = openrouter[openrouter_agent_start:openrouter_agent_end] if openrouter_agent_start >= 0 and openrouter_agent_end > openrouter_agent_start else ""
+          openrouter_delivery_start = openrouter.find("      - name: Verify, test and publish the OpenRouter patch proposal")
+          openrouter_delivery_end = openrouter.find("      - name: Validate OpenRouter autonomous cycle report", openrouter_delivery_start + 1)
+          openrouter_delivery_step = openrouter[openrouter_delivery_start:openrouter_delivery_end] if openrouter_delivery_start >= 0 and openrouter_delivery_end > openrouter_delivery_start else ""
+          groq_agent_start = groq.find("      - name: Run OpenCode through the Groq Free route")
+          groq_agent_end = groq.find("      - name: Verify, test and publish the Groq patch proposal", groq_agent_start + 1)
+          groq_agent_step = groq[groq_agent_start:groq_agent_end] if groq_agent_start >= 0 and groq_agent_end > groq_agent_start else ""
+          groq_delivery_start = groq.find("      - name: Verify, test and publish the Groq patch proposal")
+          groq_delivery_end = groq.find("      - name: Validate Groq autonomous cycle report", groq_delivery_start + 1)
+          groq_delivery_step = groq[groq_delivery_start:groq_delivery_end] if groq_delivery_start >= 0 and groq_delivery_end > groq_delivery_start else ""
+          provider_cycle_source = Path("tools/execute_autonomous_provider_cycle.py").read_text(encoding="utf-8")
+          delivery_plan_source = Path("tools/build_autonomous_delivery_plan.py").read_text(encoding="utf-8")
+          gemini_agent_start = gemini_execute.find("      - name: Run Gemini CLI through bounded local proposal MCP")
+          gemini_agent_end = gemini_execute.find("      - name: Verify, test and publish the Gemini patch proposal", gemini_agent_start + 1)
+          gemini_agent_step = gemini_execute[gemini_agent_start:gemini_agent_end] if gemini_agent_start >= 0 and gemini_agent_end > gemini_agent_start else ""
+          gemini_delivery_start = gemini_execute.find("      - name: Verify, test and publish the Gemini patch proposal")
+          gemini_delivery_end = gemini_execute.find("      - name: Validate autonomous cycle report contract", gemini_delivery_start + 1)
+          gemini_delivery_step = gemini_execute[gemini_delivery_start:gemini_delivery_end] if gemini_delivery_start >= 0 and gemini_delivery_end > gemini_delivery_start else ""
           autonomous_loop = Path(".github/workflows/boonta-autonomous-loop.yml").read_text(encoding="utf-8")
           readiness = Path(".github/workflows/boonta-autonomous-readiness.yml").read_text(encoding="utf-8")
           checks = {
               "Readiness GitHub App token uses GET-only permissions": "permission-contents: read" in readiness and "permission-issues: read" in readiness and "permission-pull-requests: read" in readiness and "permission-contents: write" not in readiness and "permission-issues: write" not in readiness and "permission-pull-requests: write" not in readiness,
-          "OpenRouter keeps mode-scoped raw server tools and OpenCode-prefixed model tools": '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,push_files"' in openrouter and "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request." in openrouter and "Only github_get_file_contents and github_push_files are exposed." in openrouter and "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" in openrouter,
+              "OpenRouter agent has no GitHub writer; workflow-owned executor publishes verified proposals": (
+                  "Only two local tools are available: boonta_read_approved_sources and boonta_submit_patch_proposal." in openrouter_agent_step
+                  and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in openrouter_agent_step
+                  and all(item in openrouter_agent_step for item in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"))
+                  and all(forbidden not in openrouter_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"))
+                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in openrouter_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in openrouter_delivery_step
+                  and "steps.execute_provider_cycle.outcome == 'success'" in openrouter
+              ),
               "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
               "OpenRouter cooldown remains fail-closed before inference": "id: openrouter_cooldown" in openrouter and openrouter.index("id: openrouter_cooldown") < openrouter.index("id: openrouter_auth_check") < openrouter.index("name: Mint scoped GitHub App token"),
               "OpenRouter checks UTC free-model quota before minting or inference": "free_model_daily_requests.remaining" in openrouter and "outputs.quota_available == 'true'" in openrouter and "model inference is blocked before any provider request" in openrouter,
@@ -287,20 +315,78 @@ jobs:
               "Autonomous loop serializes all writers": "group: boonta-autonomous-loop" in autonomous_loop and "cancel-in-progress: false" in autonomous_loop,
               "Provider fallback advances only when predecessor cooldowns were active at cycle start": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.provider-cooldowns.outputs.groq_active != 'true'" in autonomous_loop and "needs.openrouter-fallback.outputs.invocation_outcome" not in autonomous_loop.split("  groq-fallback:", 1)[1].split("  cycle-summary:", 1)[0] and "needs.openrouter-fallback.result ==" not in autonomous_loop.split("  groq-fallback:", 1)[1].split("  cycle-summary:", 1)[0],
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
-              "Groq fallback exposes only the reviewed mode-specific GitHub MCP allowlists": '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' in groq and 'export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"' in groq and 'export GITHUB_TOOLS="get_file_contents,push_files"' in groq,
-              "Groq resume reads only a preflight-whitelisted changed file before writing": "pulls.listFiles({" in autonomous_loop and "resume_file_paths: ${{ needs.provider-cooldowns.outputs.resume_file_paths }}" in autonomous_loop and "Only github_get_file_contents and github_push_files are exposed." in groq,
-              "Groq prompt uses OpenCode-prefixed direct GitHub tools": "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request." in groq and "Only github_get_file_contents and github_push_files are exposed." in groq and "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" in groq,
-              "Groq passes a selected base and unique working branch into the normal task": "TASK_BRANCH_NAME: autonomous-" in groq and "inputs.task_id" in groq and "github.run_id" in groq and "Selected base: " in groq and "New branch: " in groq and "At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR." in groq and 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' in groq and 'REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"' in groq,
-              "OpenRouter exposes only the reviewed normal/resume GitHub MCP allowlists": '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,create_branch,push_files,create_pull_request"' in openrouter and 'export GITHUB_TOOLS="get_file_contents,push_files"' in openrouter,
+              "Groq agent has no GitHub writer; workflow-owned executor publishes verified proposals": (
+                  "Only boonta_read_approved_sources and boonta_submit_patch_proposal are available." in groq_agent_step
+                  and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in groq_agent_step
+                  and all(item in groq_agent_step for item in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"))
+                  and all(forbidden not in groq_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"))
+                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in groq_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in groq_delivery_step
+                  and "steps.execute_provider_cycle.outcome == 'success'" in groq
+              ),
+              "Groq model invocation is disabled for resume mode and requires fresh bounded inputs": (
+                  "inputs.resume_mode != true" in groq_agent_step
+                  and "steps.bounded_inputs.outcome == 'success'" in groq_agent_step
+                  and "BOONTA_TARGET_ROOT" in groq_agent_step
+                  and "BOONTA_BASE_SHA" in groq_agent_step
+                  and "tools/prepare_autonomous_agent_inputs.py" in groq
+              ),
+              "Groq prompt permits one bounded read and one local patch proposal only": (
+                  "Only boonta_read_approved_sources and boonta_submit_patch_proposal are available." in groq_agent_step
+                  and "Call boonta_read_approved_sources exactly once" in groq_agent_step
+                  and "Call boonta_submit_patch_proposal exactly once" in groq_agent_step
+                  and '"bash": "deny"' in groq_agent_step
+                  and '"read": "deny"' in groq_agent_step
+              ),
+              "Groq proposal is bound to selected target base and deterministic task branch": (
+                  "BOONTA_BASE_SHA" in groq_agent_step
+                  and "BOONTA_TARGET_BRANCH" in groq_agent_step
+                  and "BOONTA_TARGET_ROOT" in groq_agent_step
+                  and "branch_name = f\"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}\"" in delivery_plan_source
+                  and '"base": target_branch' in delivery_plan_source
+                  and "target_branch" in groq_delivery_step
+              ),
+              "OpenRouter model configuration exposes the local Boonta MCP and no GitHub MCP": (
+                  '"github"' not in openrouter_agent_step
+                  and '"boonta": {' in openrouter_agent_step
+                  and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in openrouter_agent_step
+                  and "Only two local tools are available: boonta_read_approved_sources and boonta_submit_patch_proposal." in openrouter_agent_step
+              ),
               "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require >= 0 and openrouter_validator_require_call > openrouter_validator_require and openrouter_validator_call > openrouter_validator_require_call,
-              "OpenRouter prompt uses OpenCode-prefixed direct GitHub tools": "Model-visible top-level tools: github_get_file_contents, github_create_branch, github_push_files and github_create_pull_request." in openrouter,
-              "Groq invocation has a 90-second hard stop": '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq and "sys.exit(invocation_status)" in groq,
+              "OpenRouter prompt requires one bounded source read then one patch proposal": (
+                  "Call boonta_read_approved_sources exactly once." in openrouter_agent_step
+                  and "Call boonta_submit_patch_proposal exactly once" in openrouter_agent_step
+                  and "No GitHub MCP, no remote branch/PR APIs" in openrouter_agent_step
+                  and "Never claim that a branch or PR was created." in openrouter_agent_step
+              ),
+              "Groq invocation has a 90-second hard stop and reports the actual process exit": (
+                  '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq_agent_step
+                  and "process.wait()" in groq_agent_step
+                  and "sys.exit(status)" in groq_agent_step
+              ),
               "Groq quota refusal terminates the process group on first TPM error": "terminal_quota_error = re.compile(" in groq and "tokens per minute" in groq and "os.killpg(process.pid, signal.SIGTERM)" in groq and "sys.exit(75)" in groq,
               "Groq timeout/failure enters its daily cooldown": "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in groq and "BOONTA_GROQ_FAILURE_COOLDOWN" in groq,
-              "Groq prompt explicitly stops on provider quota errors": "Stop after the first quota, TPM, rate-limit, context or auth error; never retry." in groq,
+              "Groq watchdog stops on first quota/auth error and kills the process group": (
+                  "terminal_quota_error = re.compile(" in groq_agent_step
+                  and "terminal_quota_error.search(line)" in groq_agent_step
+                  and "os.killpg(process.pid, signal.SIGTERM)" in groq_agent_step
+                  and "sys.exit(75)" in groq_agent_step
+              ),
               "OpenRouter and Groq deny Task subagents to preserve direct execution": all(re.search(r'"task"\s*:\s*\{\s*"\*"\s*:\s*"deny"\s*\}', workflow) for workflow in (openrouter, groq)),
-              "OpenRouter and Groq inject the reserved task ID into final reports": all("BOONTA_CYCLE_TASK_ID: " in workflow and "TASK_ID}" in workflow for workflow in (openrouter, groq)),
-              "Groq preserves a compact four-step TPM-safe read/write/PR/report budget": '"steps": 4' in groq and '"context": 1550' in groq and '"output": 256' in groq and "1,550/256 limits; max 4 steps (7,224 nominal tokens)" in groq and "Source excerpt budget: 1,800 characters." in groq and "--max-chars 3000 --max-task-context 1100 --max-criteria 4 --max-next-action 100 --max-source-chars 1800" in groq and "if (( ${#PROMPT} > 5500 )); then" in groq,
+              "Workflow-owned cycle reporter binds task ID, status, evidence and target branch": (
+                  all(item in provider_cycle_source for item in ("BOONTA_CYCLE_TASK_ID", "BOONTA_CYCLE_STATUS", "BOONTA_CYCLE_EVIDENCE", "BOONTA_CYCLE_EVIDENCE_BASE"))
+                  and "_write_cycle_report" in provider_cycle_source
+                  and "expected_task_id" in provider_cycle_source
+              ),
+              "Groq keeps a four-step Free token budget and bounds prompt/context": (
+                  '"steps": 4' in groq_agent_step
+                  and '"context": 1550' in groq_agent_step
+                  and '"output": 256' in groq_agent_step
+                  and '"temperature": 0.2' in groq_agent_step
+                  and "--max-chars 3000 --max-task-context 1100" in groq
+                  and "if (( prompt_length > 5500 )); then" in groq_agent_step
+                  and '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq_agent_step
+              ),
               "Groq tool-call generation uses an explicitly supported low temperature": '"temperature": 0.2' in groq and '"temperature": true' in groq,
               "warning threshold is 10 branches": "BRANCH_WARNING_THRESHOLD = 10" in governance,
               "branch tip-date lookups are bounded and fail conservatively": "timeout=20" in governance and "subprocess.TimeoutExpired" in governance and "unknown dates count active" in governance,
@@ -349,7 +435,19 @@ jobs:
               "AI coordinator model action is gated": "name: Run Gemini read-only coordinator\n        id: coordinator\n        if: steps.key.outputs.available == 'true'" in coordinator,
               "AI coordinator report publication is gated": "if: always() && steps.key.outputs.available == 'true' && steps.coordinator.outcome != 'skipped'" in coordinator,
               "read-only Gemini invocation blocks setup and uses direct prompt": "id: free_tier_guard" in gemini_invoke and gemini_invoke.index("id: free_tier_guard") < gemini_invoke.index("name: 'Mint identity token'") < gemini_invoke.index("name: 'Checkout Code'") < gemini_invoke.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_invoke and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_invoke and "prompt: |-" in gemini_invoke and "${{ inputs.additional_context }}" in gemini_invoke and "name: 'Prepare prompt context'" not in gemini_invoke and "add_issue_comment" not in gemini_invoke and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_invoke,
-              "write-capable Gemini invocation blocks setup before model calls": "id: free_tier_guard" in gemini_execute and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint identity token'") < gemini_execute.index("name: 'Checkout Code'") < gemini_execute.index("name: 'Prepare prompt context'") < gemini_execute.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_execute and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_execute and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_execute,
+              "Autonomous Gemini gate precedes its bounded MCP agent and workflow-owned publisher": (
+                  "id: free_tier_guard" in gemini_execute
+                  and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint scoped GitHub App token'")
+                  and gemini_execute.index("name: Prepare bounded provider inputs") < gemini_execute.index("name: Run Gemini CLI through bounded local proposal MCP")
+                  and "id: run_gemini_autonomous" in gemini_agent_step
+                  and "inputs.autonomous_mode == true" in gemini_agent_step
+                  and "read_approved_sources" in gemini_agent_step
+                  and "submit_patch_proposal" in gemini_agent_step
+                  and all(forbidden not in gemini_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", "push_files"))
+                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in gemini_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in gemini_delivery_step
+                  and "steps.execute_provider_cycle.outcome == 'success'" in gemini_execute
+              ),
               "owner attestation is documented as not an automated billing check": "GEMINI_FREE_TIER_CONFIRMED" in setup and "not an automated billing-status check" in setup,
               "AI coordinator collects live branches and open PR metadata": 'repos/$GH_REPO/branches?per_page=100' in coordinator and 'repos/$GH_REPO/pulls?state=open&per_page=100' in coordinator and '"LIVE SNAPSHOT (JSON):\\n" + json.dumps(snapshot, indent=2)' in coordinator,
               "AI snapshot includes tip SHAs and protected flags": '"tip_sha": sha' in coordinator and '"protected": bool(branch.get("protected", False))' in coordinator,
