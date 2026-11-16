@@ -238,6 +238,48 @@ function validateDiff(diff, allowedPaths) {
   return changed.sort();
 }
 
+function compactCSourceLines(lines) {
+  // Drop comments and blank lines from C/C++ excerpts to keep free-model context
+  // bounded. String and character literals are preserved byte-for-byte.
+  const state = { inBlockComment: false };
+  return lines.map((raw) => {
+    let output = '';
+    let quote = '';
+    let escaped = false;
+    for (let index = 0; index < raw.length; index += 1) {
+      const ch = raw[index];
+      const next = raw[index + 1];
+      if (state.inBlockComment) {
+        if (ch === '*' && next === '/') {
+          state.inBlockComment = false;
+          index += 1;
+        }
+        continue;
+      }
+      if (quote) {
+        output += ch;
+        if (escaped) escaped = false;
+        else if (ch === '\\') escaped = true;
+        else if (ch === quote) quote = '';
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        quote = ch;
+        output += ch;
+        continue;
+      }
+      if (ch === '/' && next === '/') break;
+      if (ch === '/' && next === '*') {
+        state.inBlockComment = true;
+        index += 1;
+        continue;
+      }
+      output += ch;
+    }
+    return output.trim();
+  });
+}
+
 function readApprovedSources(state, args) {
   if (args !== undefined && (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).length !== 0)) {
     reject('read_approved_sources accepts no arguments; source scope is fixed by preflight');
@@ -261,17 +303,24 @@ function readApprovedSources(state, args) {
       .sort((a, b) => a.start_line - b.start_line || a.end_line - b.end_line);
     if (!ranges.length) reject('approved source path has no exact source ranges: ' + filePath);
 
+    const isCSource = /\\.(?:c|h|cc|cpp|hpp)$/i.test(filePath);
+    const renderedLines = isCSource ? compactCSourceLines(lines) : lines;
     const rangeResults = [];
     for (const item of ranges) {
       if (item.end_line > lines.length) reject('approved line range exceeds source file length: ' + filePath);
       const requestedLines = item.end_line - item.start_line + 1;
       totalLines += requestedLines;
+      const selectedLines = renderedLines.slice(item.start_line - 1, item.end_line);
+      const content = isCSource
+        ? selectedLines.filter(Boolean).join('\n')
+        : selectedLines.map((line, index) => String(item.start_line + index) + ': ' + line).join('\n');
+      if (!content.trim()) reject('approved source range contains no usable source text: ' + filePath);
       rangeResults.push({
         start_line: item.start_line,
         end_line: item.end_line,
-        content: lines.slice(item.start_line - 1, item.end_line)
-          .map((line, index) => String(item.start_line + index) + ': ' + line)
-          .join('\n')
+        content,
+        rendered_lines: isCSource ? selectedLines.filter(Boolean).length : requestedLines,
+        comments_and_blank_lines_omitted: isCSource
       });
     }
     totalBytes += bytes.length;
@@ -294,7 +343,10 @@ function readApprovedSources(state, args) {
     task_context: state.taskContext,
     files,
     aggregate_bytes_read: totalBytes,
-    aggregate_lines_read: totalLines
+    aggregate_lines_read: totalLines,
+    aggregate_rendered_chars: files.reduce((total, file) =>
+      total + file.ranges.reduce((sum, range) => sum + range.content.length, 0), 0),
+    source_format: 'C/C++ comments and blank lines omitted; original range boundaries retained'
   };
 }
 
