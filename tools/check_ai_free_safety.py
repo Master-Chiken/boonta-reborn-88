@@ -1763,10 +1763,13 @@ else:
             .get("openai/gpt-oss-20b", {})
         )
         groq_limits = groq_model.get("limit", {})
-        if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
+        groq_steps = groq_config.get("agent", {}).get("build", {}).get("steps")
+        if groq_limits.get("context") != 3700 or groq_limits.get("output") != 256:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 1550 context / 256 output tokens so four preloaded-context delivery steps stay below the observed TPM refusal"
+                "Groq GPT-OSS 20B must remain capped at 3700 context / 256 output tokens for its two-step bounded proposal cycle"
             )
+        if groq_steps != 2:
+            errors.append("Groq Free must use exactly two model tool steps: one bounded source read and one patch proposal")
         if groq_model.get("temperature") is not True:
             errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
         if groq_config.get("agent", {}).get("build", {}).get("temperature") != 0.2:
@@ -1790,6 +1793,14 @@ for required in (
         errors.append(f"Groq fallback must enforce its proposal-only Free-tier contract: {required!r}")
 if 'prompt_length > 5500' not in groq_fallback:
     errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
+if "SOURCE_READ_CHARS" not in groq_fallback or "estimated_input_tokens > 3650" not in groq_fallback:
+    errors.append("Groq fallback must budget prompt plus one-shot source result before inference")
+if (
+    "name: Write verified MCP context for Groq" not in groq_fallback
+    or "steps.write_mcp_context.outcome == 'success'" not in groq_fallback
+    or "Remove ephemeral MCP context" not in groq_fallback
+):
+    errors.append("Groq must create the task-bound MCP context after preflight and remove it before workflow-owned delivery")
 if "€0 only" not in groq_agent_prompt or "No paid route" not in groq_agent_prompt:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in groq_fallback:
@@ -1799,6 +1810,12 @@ for label, workflow in (("OpenRouter", openrouter_fallback), ("Groq", groq_fallb
         errors.append(f"{label} workflow must configure the local bounded proposal MCP server")
     if "execute_autonomous_provider_cycle.py" not in workflow:
         errors.append(f"{label} workflow must use the separate workflow-owned verify/test/delivery process")
+    if (
+        f"name: Write verified MCP context for {label}" not in workflow
+        or "steps.write_mcp_context.outcome == 'success'" not in workflow
+        or "Remove ephemeral MCP context" not in workflow
+    ):
+        errors.append(f"{label} must prepare, gate on and clean up its exact task-bound local MCP context file")
 # Enforce the mandatory reverse-engineering-first reuse gate in project and provider instructions.
 reverse_engineering_policy = read("docs/REVERSE_ENGINEERING_FIRST.md")
 for label, content in (
