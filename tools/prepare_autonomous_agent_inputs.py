@@ -52,13 +52,13 @@ def _compact_c_source_lines(lines: list[str]) -> list[str]:
                 output.append(char)
                 if escaped:
                     escaped = False
-                elif char == "\\\\":
+                elif char == "\\":
                     escaped = True
                 elif char == quote:
                     quote = None
                 index += 1
                 continue
-            if char in {"\\\"", "'"}:
+            if char in {'"', "'"}:
                 quote = char
                 output.append(char)
                 index += 1
