@@ -1009,8 +1009,8 @@ if "Then call boonta_submit_patch_proposal exactly once" not in actual_openroute
     errors.append("OpenRouter prompt must submit one bounded patch proposal instead of writing to GitHub directly")
 if "--max-source-chars 500" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
-if "--max-criteria 4 --max-next-action 100" not in groq:
-    errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
+if "--max-criteria 3 --max-next-action 80" not in groq:
+    errors.append("Groq must use the compact three-criteria/80-character next-action handoff needed to fit the measured source payload")
 if "Call boonta_read_approved_sources exactly once" not in actual_groq_prompt or "boonta_submit_patch_proposal exactly once" not in actual_groq_prompt:
     errors.append("Groq normal prompt must use one batched trusted-source read and one bounded patch proposal")
 if "Change only exact owner-reviewed write paths from the trusted context" not in actual_groq_prompt:
