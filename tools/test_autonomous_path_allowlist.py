@@ -220,6 +220,9 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
             "tools/execute_autonomous_github_delivery.py",
             "tools/test_execute_autonomous_github_delivery.py",
             "tools/build_autonomous_delivery_plan.py",
+            "tools/validate_trusted_main_checkout.py",
+            "tools/prepare_autonomous_agent_inputs.py",
+            "tools/execute_autonomous_provider_cycle.py",
         ):
             with self.subTest(path=path):
                 self.policy["tasks"][0]["allowed_paths"] = [path]
