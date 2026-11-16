@@ -134,7 +134,7 @@ if (
 
 cases = [
     {
-        "name": "real GC-RIVAL-ROUTE-PROGRESSION task is selectable only with all five approved paths",
+        "name": "real GC-RIVAL-ROUTE-PROGRESSION passes exact-path gate when PR budget permits",
         "tasks": [rival_task_fixture],
         "completed_task_ids": SUMMARY.get("completed_task_ids", []),
         "owner_paths": rival_policy_fixture,
@@ -144,6 +144,24 @@ cases = [
         "expected_task_id": "GC-RIVAL-ROUTE-PROGRESSION",
         "expected_blocked": False,
         "expected_queue_state": "READY",
+    },
+    {
+        "name": "real rival task stays blocked when four unrelated PRs exceed the new-task budget",
+        "tasks": [rival_task_fixture],
+        "completed_task_ids": SUMMARY.get("completed_task_ids", []),
+        "owner_paths": rival_policy_fixture,
+        "open_task_prs": [
+            {"number": 501, "body": "BOONTA_TASK_ID: UNRELATED-TASK-501"},
+            {"number": 502, "body": "BOONTA_TASK_ID: UNRELATED-TASK-502"},
+            {"number": 503, "body": "BOONTA_TASK_ID: UNRELATED-TASK-503"},
+            {"number": 504, "body": "BOONTA_TASK_ID: UNRELATED-TASK-504"},
+        ],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
+        "reason_contains": "open PR budget reached (4/3)",
     },
     {
         "name": "empty canonical ledger reports EMPTY_QUEUE",
