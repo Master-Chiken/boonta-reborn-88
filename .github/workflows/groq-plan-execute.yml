@@ -592,6 +592,54 @@ jobs:
             printf '%s\n' "$context"
             echo 'BOONTA_CONTEXT_EOF'
           } >> "$GITHUB_OUTPUT"
+      - name: Prepare bounded provider inputs
+        id: bounded_inputs
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && inputs.resume_mode != true
+        shell: bash
+        env:
+          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
+          TASK_ID: ${{ inputs.task_id }}
+        run: |
+          set -euo pipefail
+          source_root="$GITHUB_WORKSPACE/.boonta-target-source"
+          policy_root="$REPO_ROOT"
+          base_sha="$(git -C "$source_root" rev-parse HEAD)"
+          policy_sha="$(git -C "$policy_root" rev-parse HEAD)"
+          proposal_path="$RUNNER_TEMP/boonta-proposal.json"
+          allowlist_path="$RUNNER_TEMP/boonta-allowlist.json"
+          [[ ! -e "$proposal_path" && ! -L "$proposal_path" ]]
+          [[ ! -e "$allowlist_path" && ! -L "$allowlist_path" ]]
+          python3 "$REPO_ROOT/tools/prepare_autonomous_agent_inputs.py" \
+            --source-root "$source_root" \
+            --policy-root "$policy_root" \
+            --expected-base-sha "$base_sha" \
+            --expected-policy-sha "$policy_sha" \
+            --task-id "$TASK_ID" \
+            --allowlist-output "$allowlist_path" > "$RUNNER_TEMP/boonta-agent-inputs.json"
+          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$GITHUB_OUTPUT" "$source_root" "$policy_root" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          values = {
+              "task_id": payload["task_id"],
+              "target_branch": payload["target_branch"],
+              "base_sha": payload["base_sha"],
+              "policy_sha": payload["policy_sha"],
+              "source_root": sys.argv[4],
+              "policy_root": sys.argv[5],
+              "read_paths": json.dumps(payload["read_paths"], separators=(",", ":")),
+              "read_ranges": json.dumps(payload["read_ranges"], separators=(",", ":")),
+              "allowed_paths": json.dumps(payload["allowed_paths"], separators=(",", ":")),
+              "allowlist_report": payload["allowlist_report"],
+              "proposal_path": sys.argv[2],
+          }
+          with Path(sys.argv[3]).open("a", encoding="utf-8") as stream:
+              for key, value in values.items():
+                  stream.write(f"{key}={value}\n")
+          PY
+
       - name: Run OpenCode through the Groq Free route
         if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success'
         id: run_opencode
