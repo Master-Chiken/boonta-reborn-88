@@ -680,13 +680,12 @@ for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     for required in (
         "tools/write_autonomous_provider_context.py",
         "--verified-context-stdin",
-        "context.json",
-        "task_context",
+        "--workspace \\"$GITHUB_WORKSPACE\\"",
+        "--task-id \\"$TASK_ID\\"",
+        "--target-branch \\"$TASK_TARGET_BRANCH\\"",
     ):
-        if required not in prepare_step and required != "task_context":
+        if required not in prepare_step:
             errors.append(f"{label} must create the exact verified MCP context file before inference: missing {required!r}")
-    if "tools/write_autonomous_provider_context.py" not in prepare_step:
-        errors.append(f"{label} provider preparation does not create the MCP context file")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
