@@ -167,8 +167,17 @@ def build_delivery_plan(
         raise DeliveryPlanError("Expected task ID is invalid")
     if not isinstance(expected_base_sha, str) or not SHA_RE.fullmatch(expected_base_sha):
         raise DeliveryPlanError("Expected base SHA is invalid")
+    trusted_root = root if policy_root is None else policy_root.resolve()
+    if not trusted_root.is_dir():
+        raise DeliveryPlanError("Trusted main policy checkout does not exist")
     try:
         validate_checkout(root, expected_base_sha)
+        if policy_root is not None:
+            if not isinstance(expected_policy_sha, str) or not SHA_RE.fullmatch(expected_policy_sha):
+                raise DeliveryPlanError("Trusted main policy checkout requires its exact expected SHA")
+            validate_checkout(trusted_root, expected_policy_sha)
+        elif expected_policy_sha is not None:
+            raise DeliveryPlanError("expected_policy_sha requires a trusted policy checkout")
         allowed_paths = load_allowlist_report(
             allowlist_report_path,
             expected_task_id=expected_task_id,
@@ -356,7 +365,7 @@ def build_delivery_plan(
     if bundle_paths != sorted(changed_paths) or len(set(bundle_paths)) != len(bundle_paths):
         raise DeliveryPlanError("Delivery bundle paths do not exactly match the sorted changed_paths list")
 
-    task = _load_canonical_task(root, expected_task_id)
+    task = _load_canonical_task(trusted_root, expected_task_id)
     target_branch = task["target_branch"]
     branch_name = f"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}"
     commit_subject = f"chore(automation): deliver {expected_task_id}"
