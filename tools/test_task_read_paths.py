@@ -3,7 +3,12 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import sys
 from pathlib import Path
+
+# Make the sibling checker importable both as a script and via
+# "python3 -m unittest tools/test_task_read_paths.py" from the repo root.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from check_task_read_paths import (
     MAX_READ_PATH_BYTES,
