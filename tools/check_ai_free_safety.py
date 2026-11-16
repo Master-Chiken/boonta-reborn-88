@@ -903,23 +903,20 @@ for required_phrase in (
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
 
-# Enforce a reuse-first engineering method and efficient evidence-based validation.
+# The proposal-only model follows the repository's engineering/provenance rules;
+# exact-head PR/CI inspection and delivery evidence remain workflow-owned.
 for required_phrase in (
     "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST",
     "Extend canonical code",
     "never hand-edit generated headers/artifacts",
     "optimize only measured hot paths",
-    "Reuse a successful check for an unchanged exact SHA",
-    "Group related file edits into one logical commit/push",
-    "do not read historical comments except",
+    "Do not read historical comments except",
     "compact inventory of directly related open PRs",
-    "Deep-inspect changed files and exact-head CI only for PRs",
-    "read logs only for failed jobs",
-    "Reuse a successful check for an unchanged exact SHA",
-    "without duplicate runs",
+    "Budget €0",
+    "Never merge or write protected branches",
 ):
     if required_phrase not in autonomous_prompt:
-        errors.append(f"Autonomous prompt is missing reuse/performance rule: {required_phrase!r}")
+        errors.append(f"Autonomous prompt is missing reuse/provenance safety rule: {required_phrase!r}")
 if "MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST" not in instructions:
     errors.append("GEMINI.md must preserve the owner's make-it-work/good/fast engineering sequence")
 if "contents: write" not in autonomous or "issues: write" not in autonomous or "pull-requests: write" not in autonomous:
