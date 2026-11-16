@@ -440,7 +440,7 @@ jobs:
               "read-only Gemini invocation blocks setup and uses direct prompt": "id: free_tier_guard" in gemini_invoke and gemini_invoke.index("id: free_tier_guard") < gemini_invoke.index("name: 'Mint identity token'") < gemini_invoke.index("name: 'Checkout Code'") < gemini_invoke.index("name: 'Run Gemini CLI'") and "steps.free_tier_guard.outputs.allowed == 'true' && vars.APP_ID" in gemini_invoke and "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'" in gemini_invoke and "prompt: |-" in gemini_invoke and "${{ inputs.additional_context }}" in gemini_invoke and "name: 'Prepare prompt context'" not in gemini_invoke and "add_issue_comment" not in gemini_invoke and "if: steps.free_tier_guard.outputs.allowed == 'true'\n        id: 'run_gemini'" in gemini_invoke,
               "Autonomous Gemini gate precedes its bounded MCP agent and workflow-owned publisher": (
                   "id: free_tier_guard" in gemini_execute
-                  and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint scoped GitHub App token'")
+                  and gemini_execute.index("id: free_tier_guard") < gemini_execute.index("name: 'Mint identity token'")
                   and gemini_execute.index("name: Prepare bounded provider inputs") < gemini_execute.index("name: Run Gemini CLI through bounded local proposal MCP")
                   and "id: run_gemini_autonomous" in gemini_agent_step
                   and "inputs.autonomous_mode == true" in gemini_agent_step
