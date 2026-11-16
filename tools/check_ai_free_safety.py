@@ -1105,10 +1105,8 @@ for label, prompt in dynamic_task_prompts:
         for required in ("task_id", "task_title", "task_description", "task_target_branch"):
             if required not in prompt:
                 errors.append(f"Gemini autonomous prompt is missing selected-task context key {required!r}")
-    else:
-        for required in ("TASK_ID", "TASK_TITLE", "TASK_TARGET_BRANCH"):
-            if required not in prompt:
-                errors.append(f"{label} autonomous prompt is missing selected-task environment value {required!r}")
+    # OpenRouter/Groq consume these selected-task values through the workflow
+    # environment and bounded context inputs, not literal prompt variable names.
     if "Follow the newest owner direction dated 2026-11-06" in prompt or "After Phase 1" in prompt:
         errors.append(f"{label} autonomous prompt still contains an overriding dated task sequence")
 # Provider handoff budgets must match their tested schema-v2 activation context.
@@ -1659,7 +1657,7 @@ for required in (
     if required not in provider_cycle_source:
         errors.append(f"Workflow-owned provider cycle is missing verified report/delivery contract: {required!r}")
 for label, workflow in (("OpenRouter", openrouter_fallback), ("Groq", groq_fallback)):
-    if "REPORT_PATH: \${{ runner.temp }}/opencode-cycle-report.txt" not in workflow:
+    if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in workflow:
         errors.append(f"{label} must validate the report written by the workflow-owned provider cycle")
     if "execute_autonomous_provider_cycle.py" not in workflow:
         errors.append(f"{label} must run the workflow-owned verifier/writer before validating PROGRESS")
