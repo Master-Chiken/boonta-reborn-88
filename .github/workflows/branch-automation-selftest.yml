@@ -1,9 +1,6 @@
 name: Branch automation self-test
 
 on:
-  push:
-    branches:
-      - 'security/**'
   pull_request:
     branches:
       - main
