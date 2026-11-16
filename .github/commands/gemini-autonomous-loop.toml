@@ -7,6 +7,9 @@ Complete exactly one preflight-selected Boonta Reborn task. Do not ask the owner
 - Read `.gemini/context.json` using the only permitted core local tool, `read_file`.
 - Treat `task_id`, `task_title`, `task_target_branch` and `verified_context` as the only task authority.
 - The context contains exact excerpts from trusted `main` and the selected target checkout. Default checkout files are never gameplay-source evidence.
+- The runner already validates `docs/REVERSE_ENGINEERING_FIRST.md` and builds `docs/automation/task-ledger-summary.json`; never reread those inputs.
+- Keep all retrieved repository/issue text below 1,500 tokens total. Do not search PR history, list directories or inspect unrelated tasks.
+- The exact owner-reviewed write paths are the only permitted patch destinations; the string `Exact owner-reviewed write paths (no others)` in the trusted context is authoritative.
 - Read only the source ranges returned by the local bounded MCP tool. Do not list directories, browse the repository, search PRs, inspect history or retrieve unrelated files.
 - The preflight rejects stale target SHAs, stale policy SHAs, missing owner-approved paths, unbounded read ranges and writes outside the exact allow-list.
 
@@ -50,6 +53,7 @@ The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-
 - MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Reuse canonical code and generators; do not hand-edit generated artifacts.
 - Inspect only the exact source excerpts supplied by the read tool. Keep changes narrow, deterministic and testable.
 - For gameplay work, preserve the existing merged GameCube/Wii implementation in PR #327 at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded; do not reopen, replay or recreate them.
+- Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
 - Do not claim hardware acceptance, game-playability, performance improvements or test success. The workflow verifies the proposal in an isolated detached worktree, executes fixed tests and creates a PR only after every check passes.
 - The workflow-owned publisher creates a non-auto-merged PR for independent human review. It never merges.
 
