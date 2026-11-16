@@ -506,8 +506,8 @@ for required in (
         errors.append(f"Bounded local MCP server is missing security invariant ${required!r}")
 for forbidden in ("GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", "fetch(", "https.request"):
     if forbidden in bounded_mcp or forbidden in openrouter_model_step:
-        errors.append(f"Model-facing OpenRouter process/MCP must not expose remote GitHub access: ${required!r}")
-if "node tools/bounded_patch_proposal_mcp.js" not in openrouter_model_step:
+        errors.append(f"Model-facing OpenRouter process/MCP must not expose remote GitHub access: {forbidden!r}")
+if "tools/bounded_patch_proposal_mcp.js" not in openrouter_model_step:
     errors.append("OpenRouter model must use the bounded local proposal-only MCP server")
 if "GITHUB_TOKEN:" in openrouter_model_step or "GITHUB_PERSONAL_ACCESS_TOKEN" in openrouter_model_step:
     errors.append("OpenRouter model process must not receive a GitHub writer token")
@@ -597,9 +597,13 @@ for required in (
     if required not in execute and required not in autonomous:
         errors.append(f"Gemini cooldown/fallback handoff is missing required behavior {required!r}")
 
-# Keep the OpenRouter report validator to one unambiguous successful invocation guard.
-if openrouter_fallback.count("steps.run_opencode.outcome == 'success'") != 1:
-    errors.append("OpenRouter report validation must check the successful invocation outcome exactly once")
+# Both the model invocation and workflow-owned verification/delivery must
+# complete before the provider report can be accepted.
+report_start = openrouter_fallback.find("      - name: Validate OpenRouter autonomous cycle report")
+report_end = openrouter_fallback.find("\n      - name:", report_start + 1)
+report_contract_step = openrouter_fallback[report_start:report_end]
+if report_contract_step.count("steps.run_opencode.outcome == 'success'") != 1 or "steps.execute_provider_cycle.outcome == 'success'" not in report_contract_step:
+    errors.append("OpenRouter report validation must require one successful model invocation and one successful workflow-owned verification/delivery step")
 
 # Public issue comments cannot spoof provider cooldowns; only bot-authored markers are trusted.
 for label, workflow, marker in (
@@ -633,7 +637,7 @@ for label, workflow, provider_name in (
     for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server"):
         if forbidden in model_step:
             errors.append(f"{label} model step exposes forbidden GitHub writer surface {forbidden!r}")
-    if "node tools/bounded_patch_proposal_mcp.js" not in model_step:
+    if "tools/bounded_patch_proposal_mcp.js" not in model_step:
         errors.append(f"{label} model step must use only the bounded local proposal MCP server")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
