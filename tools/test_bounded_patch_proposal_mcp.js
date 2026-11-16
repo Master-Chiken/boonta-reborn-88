@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -168,6 +169,50 @@ function cleanup(fx) {
       assert.equal(saved.base_sha, fx.baseSha);
       assert.deepEqual(saved.changed_paths, [SOURCE_A]);
       assert.equal(saved.remote_repository_write_performed, undefined);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const discovery = fixture();
+    const fx = fixture();
+    try {
+      const discoveryRun = runServer(discovery, [call('read_approved_sources', {}, 2)]);
+      assert.equal(discoveryRun.status, 0, discoveryRun.stderr);
+      const readPayload = JSON.parse(toolText(toolResult(discoveryRun, 2)));
+      const expectedDigest = crypto.createHash('sha256')
+        .update(JSON.stringify(readPayload.files), 'utf8')
+        .digest('hex');
+      fx.env.BOONTA_PRELOADED_SOURCES = 'true';
+      fx.env.BOONTA_PRELOADED_SOURCE_SHA256 = expectedDigest;
+      const result = runServer(fx, [
+        rpc('tools/list', undefined, 2),
+        call('submit_patch_proposal', validProposal(fx.baseSha), 3)
+      ]);
+      assert.equal(result.status, 0, result.stderr);
+      const listed = toolResult(result, 2);
+      assert.deepEqual(listed.tools.map((item) => item.name), ['submit_patch_proposal']);
+      const submitted = toolResult(result, 3);
+      assert.equal(submitted.isError, false);
+      const payload = JSON.parse(toolText(submitted));
+      assert.equal(payload.status, 'PROPOSAL_STAGED');
+      assert.equal(payload.source_snapshot_preloaded_before_inference, true);
+      assert.equal(payload.source_snapshot_sha256, expectedDigest);
+    } finally {
+      cleanup(discovery);
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      fx.env.BOONTA_PRELOADED_SOURCES = 'true';
+      fx.env.BOONTA_PRELOADED_SOURCE_SHA256 = '0'.repeat(64);
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /preloaded source context does not match/);
     } finally {
       cleanup(fx);
     }
