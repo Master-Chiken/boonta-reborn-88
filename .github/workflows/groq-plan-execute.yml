@@ -787,7 +787,7 @@ jobs:
           Use VERIFIED CONTEXT and APPROVED SOURCE EXCERPTS below; these are the complete owner-approved target-branch ranges. boonta_read_approved_sources is not exposed; the local MCP rereads the exact ranges and verifies their SHA-256 against the target checkout.
           One tool is available: boonta_submit_patch_proposal. Call it once with one complete unified diff.
           Change only exact owner-approved write paths; bind task_id and base_sha to the selected task and target checkout.
-          For gameplay, reuse merged PR #327 at 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Never reopen or recreate that chain.
+          For gameplay, reuse merged PR #327 at 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           Preserve finite-value guards, update order and collision/overtake behavior. Use GameCube/Wii evidence only and test ID gamecube.rival_host_tests.
           No GitHub writer, GitHub MCP, shell, filesystem or network. No paid route, billing, credits, provider/secret/settings changes. Do not ask the owner for code or clarification.
           Global preflight is authoritative. Do not search PR history or substitute older merged automation PRs for this task.
