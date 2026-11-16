@@ -11,17 +11,18 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 - Treat `task_context.task_id`, `task_context.task_title`, `task_context.task_target_branch`, `task_context.task_description` and `task_context.verified_context` as the only task authority.
 - The task summary is derived by the runner from the canonical task ledger. Never read or modify the task ledger or its summary.
 - The runner validates `docs/REVERSE_ENGINEERING_FIRST.md` at startup.
+- Follow `docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md` for the shared provider and context limits.
 - runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup
 - No Explore/subagents/planning or repo-wide discovery. Do not list directories, search PR history or inspect unrelated tasks.
 
 ## Context and provenance limits
 - Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read historical comments except a compact inventory of directly related open PRs, which remains workflow-owned.
-- Keep all retrieved repository/issue text below 1,500 tokens total.
+- Keep retrieved repo/issue text below 1,500 tokens total.
 - Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Never repeat the same request after an error.
 - Failure rule: never repeat the same request after an error.
 - Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue; it does not authorize gameplay changes.
 - The context contains bounded excerpts from trusted `main` and the selected target checkout. Default-branch files are not gameplay-source evidence.
-- The exact owner-reviewed write paths are the only permitted patch destinations. Do not add paths, rename files, create files or widen the owner allow-list.
+- Exact owner-reviewed write paths (no others): the only permitted patch destinations are supplied by the bounded task context. Do not add paths, rename files, create files or widen the owner allow-list.
 
 ## €0 / execution safety
 - Budget €0. Never enable billing, buy credits, use paid routes, edit provider secrets/settings, or change owner attestations.
@@ -66,7 +67,7 @@ The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-
 ## Engineering and delivery
 - MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
 - Reuse a successful check for an unchanged exact SHA without duplicate runs. Group related file edits into one logical patch proposal.
-- For gameplay work, preserve the existing merged GameCube/Wii implementation in PR #327 at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded; do not reopen, replay or recreate them.
+- For gameplay work, preserve the existing merged GameCube/Wii implementation in PR #327 at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded; never reopen/replay/recreate superseded #317/#318/#319.
 - Inspect only the exact source excerpts supplied by the read tool. Keep changes narrow, deterministic and testable.
 - This agent intentionally has no general-purpose local shell. Never claim the exact PR head SHA, tests or merge; the workflow verifies the exact PR head SHA after submission.
 - Deep-inspect changed files and exact-head CI only for PRs; read logs only for failed jobs.
@@ -76,7 +77,7 @@ The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-
 
 ## Workflow-owned evidence
 - Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
-- The model must not emit that report or invent a PR URL, head SHA, branch, test result or merge.
+- The model must not emit that report or invent a PR URL, head SHA, branch, test result or merge. Never fabricate workflow-owned PR or test evidence.
 - The workflow-owned publisher verifies the proposal in an isolated detached worktree, executes fixed tests, and creates a non-auto-merged PR for independent human review. It never merges.
 
 ## Final response
