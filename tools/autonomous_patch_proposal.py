@@ -94,6 +94,8 @@ PROTECTED_EXACT = {
     "tools/test_autonomous_task_preflight.py",
     "tools/check_autonomous_provider_handoff.py",
     "tools/check_task_ledger.py",
+    "tools/prepare_autonomous_agent_inputs.py",
+    "tools/test_prepare_autonomous_agent_inputs.py",
 }
 PROTECTED_PREFIXES = (
     ".github/",
