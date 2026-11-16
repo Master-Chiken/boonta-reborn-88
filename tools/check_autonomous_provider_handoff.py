@@ -921,8 +921,8 @@ for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     writer_marker = "id: execute_provider_cycle"
     writer_pos = workflow.find(writer_marker)
     writer_window = workflow[max(0, writer_pos - 500):writer_pos + 300] if writer_pos >= 0 else ""
-    if "inputs.resume_mode != true" not in writer_window:
-        errors.append(f"{label} workflow-owned writer must skip legacy resume mode")
+    if "steps.run_opencode.outcome == 'success'" not in writer_window or "steps.bounded_inputs.outcome == 'success'" not in writer_window:
+        errors.append(f"{label} workflow-owned writer must require successful non-resume model output and bounded preflight inputs")
 if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
