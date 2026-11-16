@@ -29,6 +29,89 @@ class AgentInputError(ValueError):
     """Raised when a selected task cannot be turned into a bounded tool contract."""
 
 
+def _compact_c_source_lines(lines: list[str]) -> list[str]:
+    """Mirror the local MCP's comment/blank-line compaction for C and C++ excerpts."""
+    compacted: list[str] = []
+    in_block_comment = False
+    for raw in lines:
+        output: list[str] = []
+        quote: str | None = None
+        escaped = False
+        index = 0
+        while index < len(raw):
+            char = raw[index]
+            next_char = raw[index + 1] if index + 1 < len(raw) else ""
+            if in_block_comment:
+                if char == "*" and next_char == "/":
+                    in_block_comment = False
+                    index += 2
+                    continue
+                index += 1
+                continue
+            if quote:
+                output.append(char)
+                if escaped:
+                    escaped = False
+                elif char == "\\\\":
+                    escaped = True
+                elif char == quote:
+                    quote = None
+                index += 1
+                continue
+            if char in {"\\\"", "'"}:
+                quote = char
+                output.append(char)
+                index += 1
+                continue
+            if char == "/" and next_char == "/":
+                break
+            if char == "/" and next_char == "*":
+                in_block_comment = True
+                index += 2
+                continue
+            output.append(char)
+            index += 1
+        value = "".join(output).strip()
+        if value:
+            compacted.append(value)
+        else:
+            compacted.append("")
+    return compacted
+
+
+def _estimate_source_read_chars(
+    source_root: Path,
+    read_paths: list[str],
+    read_ranges: list[dict[str, int | str]],
+) -> int:
+    """Estimate the actual one-shot MCP read result plus conservative JSON overhead."""
+    total = 1200  # task identity, context object, file/range metadata and JSON framing
+    for file_path in read_paths:
+        payload = (source_root / file_path).read_bytes()
+        try:
+            source_text = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise AgentInputError("Approved source path is not valid UTF-8: " + file_path) from exc
+        lines = source_text.splitlines()
+        is_c_source = file_path.lower().endswith((".c", ".h", ".cc", ".cpp", ".hpp"))
+        rendered = _compact_c_source_lines(lines) if is_c_source else lines
+        ranges = [item for item in read_ranges if item["path"] == file_path]
+        if not ranges:
+            raise AgentInputError("Approved source path has no ranges to estimate: " + file_path)
+        for item in ranges:
+            start, end = int(item["start_line"]), int(item["end_line"])
+            selected = rendered[start - 1:end]
+            content = (
+                "\\n".join(line for line in selected if line)
+                if is_c_source
+                else "\\n".join(f"{start + offset}: {line}" for offset, line in enumerate(selected))
+            )
+            if not content.strip():
+                raise AgentInputError("Approved source range contains no usable source text: " + file_path)
+            total += len(content) + 96  # per-range JSON keys and path metadata
+    return total
+
+
 def _git(root: Path, *args: str) -> str:
     try:
         result = subprocess.run(
@@ -201,6 +284,9 @@ def prepare_agent_inputs(
             ", ".join(unreadable_write_paths)
         )
 
+    source_read_chars = _estimate_source_read_chars(source_root, read_paths, read_ranges)
+    source_read_tokens_estimate = (source_read_chars + 3) // 4
+
     if allowlist_output.is_symlink() or allowlist_output.exists():
         raise AgentInputError("Allowlist report output must be a new non-symlink file")
     allowlist_output.parent.mkdir(parents=True, exist_ok=True)
@@ -223,6 +309,8 @@ def prepare_agent_inputs(
         "policy_sha": expected_policy_sha,
         "read_paths": read_paths,
         "read_ranges": read_ranges,
+        "source_read_chars": source_read_chars,
+        "source_read_tokens_estimate": source_read_tokens_estimate,
         "allowed_paths": allowlist["allowed_paths"],
         "approval_ref": allowlist["approval_ref"],
         "allowlist_report": str(allowlist_output.resolve()),
