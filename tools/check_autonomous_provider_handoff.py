@@ -917,10 +917,12 @@ if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.
     errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
-if "Use preloaded source excerpts first" not in actual_groq_prompt or "call github_get_file_contents at most once" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must use trusted excerpts first and permit only one exact owner-approved file read")
-if "write only the exact owner-reviewed paths listed in context" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must restrict every write to explicit owner-reviewed paths")
+if "Call boonta_read_approved_sources exactly once" not in actual_groq_prompt or "boonta_submit_patch_proposal exactly once" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must use one batched trusted-source read and one bounded patch proposal")
+if "Change only exact owner-reviewed write paths from the trusted context" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must restrict every patch to explicit owner-reviewed paths")
+if "No GitHub MCP" not in actual_groq_prompt or "No paid route" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must deny GitHub writer tools and paid routes")
 if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
