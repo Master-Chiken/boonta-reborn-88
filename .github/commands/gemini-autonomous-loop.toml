@@ -31,9 +31,9 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 - Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
 - The model must not emit that report or invent a PR URL, head SHA, branch, tests or merge. Submit only the patch proposal.
 
-- Read `.gemini/context.json` using the only permitted core local tool, `read_file`.
-- Treat `task_id`, `task_title`, `task_target_branch` and `verified_context` as the only task authority.
-- The context contains exact excerpts from trusted `main` and the selected target checkout. Default checkout files are never gameplay-source evidence.
+- The single `mcp_boonta_read_approved_sources` response includes the validated `task_context` from the exact runner-owned `.gemini/context.json`, plus only the approved target-source ranges.
+- Treat `task_context.task_id`, `task_context.task_title`, `task_context.task_target_branch`, `task_context.task_description` and `task_context.verified_context` as the only task authority.
+- The context contains bounded excerpts from trusted `main`; the same MCP response contains the task-scoped target source ranges. Default checkout files are never gameplay-source evidence.
 - The runner already validates `docs/REVERSE_ENGINEERING_FIRST.md` and builds `docs/automation/task-ledger-summary.json`; never reread those inputs.
 - The runner verifies reverse-engineering policy before model invocation.
 - Keep all retrieved repository/issue text below 1,500 tokens total. Do not search PR history, list directories or inspect unrelated tasks.
@@ -44,7 +44,7 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 ## Safety
 - €0 only. Never enable billing, buy credits, use paid routes, edit provider secrets/settings, or change owner attestations.
 - Preserve clean-room provenance. Never upload commercial ROMs, disc images, BIOS files, binaries, extracted game assets or held material.
-- Do not use GitHub MCP, GitHub APIs, shell, filesystem edit tools, subagents, repo-wide discovery or network research.
+- Do not use GitHub MCP, GitHub APIs, shell, general-purpose filesystem tools, subagents, repo-wide discovery or network research. Gemini core tools are disabled; the bounded local MCP is the only repository/context interface.
 - Never create branches, commits, refs, pull requests, comments, merges or auto-merges. The workflow-owned publisher is the only GitHub writer and runs only after patch verification.
 - Do not ask the owner for code or clarification. Implement a bounded coherent patch or submit nothing and report the precise blocker.
 
