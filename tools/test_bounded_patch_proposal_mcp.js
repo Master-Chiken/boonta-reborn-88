@@ -132,15 +132,18 @@ function cleanup(fx) {
     try {
       const result = runServer(fx, [
         rpc('tools/list', undefined, 2),
-        call('read_approved_file', { file_path: SOURCE_A, start_line: 1, end_line: 3 }, 3),
+        call('read_approved_sources', {}, 3),
         call('submit_patch_proposal', validProposal(fx.baseSha), 4)
       ]);
       assert.equal(result.status, 0, result.stderr);
       const listed = toolResult(result, 2);
-      assert.deepEqual(listed.tools.map((item) => item.name), ['read_approved_file', 'submit_patch_proposal']);
+      assert.deepEqual(listed.tools.map((item) => item.name), ['read_approved_sources', 'submit_patch_proposal']);
       const read = toolResult(result, 3);
       assert.equal(read.isError, false);
       assert.match(toolText(read), /return 1;/);
+      const readPayload = JSON.parse(toolText(read));
+      assert.deepEqual(readPayload.files.map((item) => item.file_path), [SOURCE_B, SOURCE_A].sort());
+      assert.equal(readPayload.aggregate_lines_read, 6);
       const submitted = toolResult(result, 4);
       assert.equal(submitted.isError, false);
       assert.match(toolText(submitted), /PROPOSAL_STAGED/);
@@ -158,9 +161,9 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const result = runServer(fx, [
-        call('read_approved_file', { file_path: 'src/other.h', start_line: 1, end_line: 3 }, 2)
+        call('read_approved_sources', { file_path: 'src/other.h', start_line: 1, end_line: 3 }, 2)
       ]);
-      expectToolError(toolResult(result, 2), /not in the selected task read allow-list/);
+      expectToolError(toolResult(result, 2), /accepts no arguments/);
       assert.equal(fs.existsSync(fx.env.BOONTA_PROPOSAL_PATH), false);
     } finally {
       cleanup(fx);
@@ -168,12 +171,17 @@ function cleanup(fx) {
   }
 
   {
-    const fx = fixture();
+    const fx = fixture({
+      BOONTA_READ_RANGES: JSON.stringify([
+        { path: SOURCE_A, start_line: 1, end_line: 300 },
+        { path: SOURCE_B, start_line: 1, end_line: 3 }
+      ])
+    });
     try {
       const result = runServer(fx, [
-        call('read_approved_file', { file_path: SOURCE_A, start_line: 1, end_line: 2 }, 2)
+        call('read_approved_sources', {}, 2)
       ]);
-      expectToolError(toolResult(result, 2), /not an exact owner-approved range/);
+      expectToolError(toolResult(result, 2), /exceeds source file length/);
     } finally {
       cleanup(fx);
     }
@@ -183,11 +191,22 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const result = runServer(fx, [
-        call('read_approved_file', { file_path: SOURCE_A, start_line: 1, end_line: 3 }, 2),
-        call('read_approved_file', { file_path: SOURCE_A, start_line: 1, end_line: 3 }, 3)
+        call('read_approved_sources', {}, 2),
+        call('read_approved_sources', {}, 3)
       ]);
       assert.equal(toolResult(result, 2).isError, false);
-      expectToolError(toolResult(result, 3), /already been read once/);
+      expectToolError(toolResult(result, 3), /may be read only once/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture({ BOONTA_READ_PATHS: JSON.stringify(['../outside.txt']) });
+    try {
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject traversal paths during startup');
+      assert.match(result.stderr, /safe repository paths/);
     } finally {
       cleanup(fx);
     }
@@ -197,9 +216,10 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const result = runServer(fx, [
-        call('read_approved_file', { file_path: '../outside.txt', start_line: 1, end_line: 1 }, 2)
+        call('submit_patch_proposal', validProposal(fx.baseSha), 2)
       ]);
-      expectToolError(toolResult(result, 2), /not in the selected task read allow-list/);
+      expectToolError(toolResult(result, 2), /read_approved_sources must succeed/);
+      assert.equal(fs.existsSync(fx.env.BOONTA_PROPOSAL_PATH), false);
     } finally {
       cleanup(fx);
     }
@@ -316,7 +336,7 @@ function cleanup(fx) {
     }
   }
 
-  process.stdout.write('Bounded patch proposal MCP tests passed: exact reads, one-use ranges, exact write scope, stale-base rejection and no remote writer surface.\n');
+  process.stdout.write('Bounded patch proposal MCP tests passed: batched one-use source reads, exact write scope, stale-base rejection and no remote writer surface.\n');
 })().catch((error) => {
   process.stderr.write(String(error.stack || error) + '\n');
   process.exitCode = 1;
