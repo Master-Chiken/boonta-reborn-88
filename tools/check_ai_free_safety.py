@@ -157,8 +157,10 @@ def normal_agent_prompt(workflow: str) -> str:
 openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
 groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
 for required in (
-    "No source-read tool is exposed in new-task mode.",
+    "New-task mode has no source-read tools.",
     "Never ask owner for code or file contents.",
+    "canonical ledger/summary JSON are intentionally not model-readable",
+    "never cite them as a blocker/next action",
 ):
     if required not in openrouter_agent_prompt:
         errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
