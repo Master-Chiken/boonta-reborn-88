@@ -121,6 +121,21 @@ class TaskReadPathTests(unittest.TestCase):
             errors = validate_read_paths(data, root)
             self.assertTrue(any("cover every exact read_paths entry" in error for error in errors))
 
+    def test_dev_target_range_is_checked_against_target_checkout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("main snapshot is shorter\\n", encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["target_branch"] = "dev"
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/example.py", "start_line": 700, "end_line": 720}
+            ]
+            # The main-checkout validator must not reject dev-only line ranges.
+            # The target-branch context builder still checks the real dev file's EOF
+            # before the provider can receive a context or submit a proposal.
+            self.assertEqual(validate_read_paths(data, root), [])
+
     def test_rejects_range_past_end_of_file(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
