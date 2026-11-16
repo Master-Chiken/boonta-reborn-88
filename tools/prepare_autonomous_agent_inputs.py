@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -77,6 +78,65 @@ def _compact_c_source_lines(lines: list[str]) -> list[str]:
         else:
             compacted.append("")
     return compacted
+
+
+def _build_preloaded_source_context(
+    source_root: Path,
+    read_paths: list[str],
+    read_ranges: list[dict[str, int | str]],
+) -> tuple[str, str, int]:
+    """Render the exact bounded target sources and a canonical digest for MCP verification."""
+    files: list[dict[str, Any]] = []
+    rendered: list[str] = [
+        "APPROVED SOURCE EXCERPTS (exact owner-approved target-branch ranges; read-only):"
+    ]
+    for file_path in sorted(read_paths):
+        payload = (source_root / file_path).read_bytes()
+        try:
+            source_text = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise AgentInputError("Approved source path is not valid UTF-8: " + file_path) from exc
+        lines = source_text.splitlines()
+        is_c_source = file_path.lower().endswith((".c", ".h", ".cc", ".cpp", ".hpp"))
+        source_lines = _compact_c_source_lines(lines) if is_c_source else lines
+        ranges = sorted(
+            (item for item in read_ranges if item["path"] == file_path),
+            key=lambda item: (int(item["start_line"]), int(item["end_line"])),
+        )
+        if not ranges:
+            raise AgentInputError("Approved source path has no exact ranges: " + file_path)
+        range_results: list[dict[str, Any]] = []
+        rendered.append("FILE: " + file_path)
+        for item in ranges:
+            start, end = int(item["start_line"]), int(item["end_line"])
+            if end > len(lines):
+                raise AgentInputError("Approved source range exceeds file length: " + file_path)
+            selected = source_lines[start - 1:end]
+            content = (
+                "\n".join(line for line in selected if line)
+                if is_c_source
+                else "\n".join(f"{start + offset}: {line}" for offset, line in enumerate(selected))
+            )
+            if not content.strip():
+                raise AgentInputError("Approved source range contains no usable text: " + file_path)
+            range_results.append({
+                "start_line": start,
+                "end_line": end,
+                "content": content,
+                "rendered_lines": sum(1 for line in selected if line) if is_c_source else len(selected),
+                "comments_and_blank_lines_omitted": is_c_source,
+            })
+            rendered.append(f"[{start}-{end}]")
+            rendered.append(content)
+        files.append({
+            "file_path": file_path,
+            "file_bytes": len(payload),
+            "ranges": range_results,
+        })
+    canonical = json.dumps(files, ensure_ascii=False, separators=(",", ":"))
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    context = "\n".join(rendered)
+    return context, digest, len(context)
 
 
 def _estimate_source_read_chars(
@@ -286,6 +346,10 @@ def prepare_agent_inputs(
 
     source_read_chars = _estimate_source_read_chars(source_root, read_paths, read_ranges)
     source_read_tokens_estimate = (source_read_chars + 3) // 4
+    source_context, source_context_sha256, source_context_chars = _build_preloaded_source_context(
+        source_root, read_paths, read_ranges
+    )
+    source_context_tokens_estimate = (source_context_chars + 3) // 4
 
     if allowlist_output.is_symlink() or allowlist_output.exists():
         raise AgentInputError("Allowlist report output must be a new non-symlink file")
@@ -311,6 +375,10 @@ def prepare_agent_inputs(
         "read_ranges": read_ranges,
         "source_read_chars": source_read_chars,
         "source_read_tokens_estimate": source_read_tokens_estimate,
+        "source_context": source_context,
+        "source_context_sha256": source_context_sha256,
+        "source_context_chars": source_context_chars,
+        "source_context_tokens_estimate": source_context_tokens_estimate,
         "allowed_paths": allowlist["allowed_paths"],
         "approval_ref": allowlist["approval_ref"],
         "allowlist_report": str(allowlist_output.resolve()),
