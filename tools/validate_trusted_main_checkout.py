@@ -95,9 +95,9 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
     summary_status = _git(
         root, "status", "--porcelain=v1", "--untracked-files=all", "--", SUMMARY
     )
-    if summary_status and summary_status.splitlines() != [f"M {SUMMARY}"]:
+    if summary_status and summary_status.splitlines() != [f" M {SUMMARY}"]:
         raise TrustedMainCheckoutError(
-            "Trusted main derived summary has an unexpected staged, added, deleted or renamed state"
+            "Trusted main derived summary has an unexpected staged, added, deleted or renamed state: " + repr(summary_status)
         )
 
     if summary != expected_summary:
