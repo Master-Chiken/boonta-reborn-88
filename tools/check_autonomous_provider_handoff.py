@@ -397,16 +397,13 @@ for required in (
     "resume_branch:",
     "resume_head_sha:",
     "resume_file_paths:",
-    "pull.head?.sha !== expectedHeadSha",
-    "bodyLines.filter((line) => line === targetMarker).length !== 1",
-    'export GITHUB_TOOLS="get_file_contents,push_files"',
-    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
-    "Groq Free, €0 only. Resume exactly one existing task PR.",
-    "Only github_get_file_contents and github_push_files are exposed.",
-    "Read exactly one listed path using the supplied existing branch as the ref",
+    "inputs.resume_mode != true",
+    "steps.run_opencode.outcome == 'success' && steps.bounded_inputs.outcome == 'success'",
+    "id: execute_provider_cycle",
 ):
     if required not in groq:
-        errors.append(f"Groq exact-PR resume guard is missing {required!r}")
+        errors.append(f"Groq proposal-only provider must preserve its fail-closed no-resume contract: {required!r}")
+
 # The cooldown read path must use GitHub's updated-since filter so every
 # six-hour run does not paginate the full append-only #226 comment history.
 cooldown_readers = (
