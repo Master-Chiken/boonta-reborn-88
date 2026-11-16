@@ -1300,21 +1300,17 @@ for required in (
     if required not in cycle_validator_tests:
         errors.append(f"Shared exact-head regression suite is missing {required!r}")
 
-for label, prompt in (
-    ("Gemini", gemini_prompt),
-    ("OpenRouter", openrouter),
-    ("Groq", groq),
-):
-    if label == "Groq":
-        if "copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim." not in prompt or 'REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"' not in prompt:
-            errors.append("Groq report instructions must require the exact selected task ID")
-        if "PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH." not in prompt:
-            errors.append("Groq PR instructions must require exact task/target markers in the PR body")
-    else:
-        if "BOONTA_CYCLE_TASK_ID: <exact" not in prompt and "The shell appends the exact reserved task ID" not in prompt and "literal reserved value appended below" not in prompt:
-            errors.append(f"{label} report instructions must require the exact selected task ID")
-        if "BOONTA_TASK_ID: <exact" not in prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in prompt:
-            errors.append(f"{label} PR instructions must require exact task/target markers in the PR body")
+# Gemini retains direct report/PR marker instructions. OpenRouter/Groq
+# evidence and PR-body markers are added only by the workflow-owned writer.
+if "BOONTA_CYCLE_TASK_ID: <exact" not in gemini_prompt and "The shell appends the exact reserved task ID" not in gemini_prompt and "literal reserved value appended below" not in gemini_prompt:
+    errors.append("Gemini report instructions must require the exact selected task ID")
+if "BOONTA_TASK_ID: <exact" not in gemini_prompt or "BOONTA_TASK_TARGET_BRANCH: <exact" not in gemini_prompt:
+    errors.append("Gemini PR instructions must require exact task/target markers in the PR body")
+for label in ("OpenRouter", "Groq"):
+    if 'f"BOONTA_CYCLE_TASK_ID: {task_id}"' not in provider_cycle_source or 'f"BOONTA_CYCLE_EVIDENCE_BASE: {target_branch}"' not in provider_cycle_source:
+        errors.append(f"{label} workflow-owned report must include exact task ID and target branch")
+    if 'f"BOONTA_TASK_ID: {expected_task_id}"' not in delivery_plan_source or 'f"BOONTA_TASK_TARGET_BRANCH: {target_branch}"' not in delivery_plan_source:
+        errors.append(f"{label} workflow-owned PR must contain exact task/target markers")
 
 # Reject doubled shell escapes in fallback prompt construction.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
