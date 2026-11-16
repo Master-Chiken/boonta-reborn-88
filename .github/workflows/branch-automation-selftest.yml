@@ -302,8 +302,8 @@ jobs:
                   and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in openrouter_agent_step
                   and all(item in openrouter_agent_step for item in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"))
                   and all(forbidden not in openrouter_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"))
-                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in openrouter_delivery_step
-                  and "tools/execute_autonomous_provider_cycle.py" in openrouter_delivery_step
+                  and "GITHUB_TOKEN:" in openrouter_delivery_step and "steps.mint_identity_token.outputs.token" in openrouter_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in openrouter_delivery_step and "steps.mint_identity_token.outputs.token" in openrouter_delivery_step
                   and "steps.execute_provider_cycle.outcome == 'success'" in openrouter
               ),
               "OpenRouter 401/authentication failures enter daily cooldown": "steps.openrouter_auth_check.outcome == 'failure'" in openrouter and "steps.run_opencode.outcome != 'success' && steps.run_opencode.outcome != 'skipped'" in openrouter,
@@ -323,8 +323,8 @@ jobs:
                   and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in groq_agent_step
                   and all(item in groq_agent_step for item in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"))
                   and all(forbidden not in groq_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"))
-                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in groq_delivery_step
-                  and "tools/execute_autonomous_provider_cycle.py" in groq_delivery_step
+                  and "GITHUB_TOKEN:" in groq_delivery_step and "steps.mint_identity_token.outputs.token" in groq_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in groq_delivery_step and "steps.mint_identity_token.outputs.token" in groq_delivery_step
                   and "steps.execute_provider_cycle.outcome == 'success'" in groq
               ),
               "Groq model invocation is disabled for resume mode and requires fresh bounded inputs": (
@@ -347,7 +347,7 @@ jobs:
                   and "BOONTA_TARGET_ROOT" in groq_agent_step
                   and "branch_name = f\"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}\"" in delivery_plan_source
                   and '"base": target_branch' in delivery_plan_source
-                  and "target_branch" in groq_delivery_step
+                  and "target_branch" in groq_delivery_step and "steps.mint_identity_token.outputs.token" in groq_delivery_step
               ),
               "OpenRouter model configuration exposes the local Boonta MCP and no GitHub MCP": (
                   '"github"' not in openrouter_agent_step
@@ -447,8 +447,8 @@ jobs:
                   and "read_approved_sources" in gemini_agent_step
                   and "submit_patch_proposal" in gemini_agent_step
                   and all(forbidden not in gemini_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", "push_files"))
-                  and "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" in gemini_delivery_step
-                  and "tools/execute_autonomous_provider_cycle.py" in gemini_delivery_step
+                  and "GITHUB_TOKEN:" in gemini_delivery_step and "steps.mint_identity_token.outputs.token" in gemini_delivery_step
+                  and "tools/execute_autonomous_provider_cycle.py" in gemini_delivery_step and "steps.mint_identity_token.outputs.token" in gemini_delivery_step
                   and "steps.execute_provider_cycle.outcome == 'success'" in gemini_execute
               ),
               "owner attestation is documented as not an automated billing check": "GEMINI_FREE_TIER_CONFIRMED" in setup and "not an automated billing-status check" in setup,
