@@ -194,6 +194,37 @@ class AgentInputTests(AgentInputFixture):
         with self.assertRaisesRegex(AgentInputError, "exact bounded source contract"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
+    def test_read_path_traversal_is_rejected_before_filesystem_walk(self):
+        self.full_ledger["tasks"][1]["read_paths"] = ["../outside.txt"]
+        self.full_ledger["tasks"][1]["read_ranges"] = [{
+            "path": "../outside.txt", "start_line": 1, "end_line": 1,
+        }]
+        self.commit_ledger_change("reject traversal read path")
+        with self.assertRaisesRegex(AgentInputError, "traversal"):
+            self.prepare(expected_policy_sha=self.policy_sha)
+        self.assertFalse(self.output.exists())
+
+    def test_absolute_and_ambiguous_read_paths_are_rejected(self):
+        for unsafe in ("/etc/passwd", "src\\\\main.c", "src//main.c", "src/./main.c"):
+            with self.subTest(path=unsafe):
+                self.full_ledger["tasks"][1]["read_paths"] = [unsafe]
+                self.full_ledger["tasks"][1]["read_ranges"] = [{
+                    "path": unsafe, "start_line": 1, "end_line": 1,
+                }]
+                self.commit_ledger_change("reject unsafe read path")
+                with self.assertRaisesRegex(AgentInputError, "read path|Read path"):
+                    self.prepare(expected_policy_sha=self.policy_sha)
+                self.output.unlink(missing_ok=True)
+
+    def test_non_string_read_path_is_rejected_without_type_error(self):
+        self.full_ledger["tasks"][1]["read_paths"] = [{"path": SOURCE_PATH}]
+        self.full_ledger["tasks"][1]["read_ranges"] = [{
+            "path": {"path": SOURCE_PATH}, "start_line": 1, "end_line": 1,
+        }]
+        self.commit_ledger_change("reject non-string read path")
+        with self.assertRaisesRegex(AgentInputError, "read_paths"):
+            self.prepare(expected_policy_sha=self.policy_sha)
+
     def test_range_budget_is_bounded(self):
         self.full_ledger["tasks"][1]["read_ranges"] = [
             {"path": SOURCE_PATH, "start_line": start, "end_line": start + 79}
