@@ -71,6 +71,31 @@ class TaskReadPathTests(unittest.TestCase):
             errors = validate_read_paths(data, root)
             self.assertTrue(any("read_ranges must contain" in error for error in errors))
 
+    def test_accepts_nine_bounded_ranges(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("\\n".join([f"line {i}" for i in range(1, 12)]), encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/example.py", "start_line": index, "end_line": index}
+                for index in range(1, 10)
+            ]
+            self.assertEqual(validate_read_paths(data, root), [])
+
+    def test_rejects_more_than_ten_ranges(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tools").mkdir()
+            (root / "tools/example.py").write_text("\\n".join([f"line {i}" for i in range(1, 13)]), encoding="utf-8")
+            data = ledger_with_paths(["tools/example.py"])
+            data["tasks"][0]["read_ranges"] = [
+                {"path": "tools/example.py", "start_line": index, "end_line": index}
+                for index in range(1, 12)
+            ]
+            errors = validate_read_paths(data, root)
+            self.assertTrue(any("1-10 exact ranges" in error for error in errors))
+
     def test_rejects_range_outside_exact_path_allowlist(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
