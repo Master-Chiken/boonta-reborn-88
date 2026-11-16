@@ -146,22 +146,39 @@ cases = [
         "expected_queue_state": "READY",
     },
     {
-        "name": "real rival task stays blocked when four unrelated PRs exceed the new-task budget",
+        "name": "real rival task on dev is ready when other main PRs fill only the main-branch budget",
         "tasks": [rival_task_fixture],
         "completed_task_ids": SUMMARY.get("completed_task_ids", []),
         "owner_paths": rival_policy_fixture,
         "open_task_prs": [
-            {"number": 501, "body": "BOONTA_TASK_ID: UNRELATED-TASK-501"},
-            {"number": 502, "body": "BOONTA_TASK_ID: UNRELATED-TASK-502"},
-            {"number": 503, "body": "BOONTA_TASK_ID: UNRELATED-TASK-503"},
-            {"number": 504, "body": "BOONTA_TASK_ID: UNRELATED-TASK-504"},
+            {"number": 501, "body": "BOONTA_TASK_ID: MAIN-501", "base": {"ref": "main"}},
+            {"number": 502, "body": "BOONTA_TASK_ID: MAIN-502", "base": {"ref": "main"}},
+            {"number": 503, "body": "BOONTA_TASK_ID: MAIN-503", "base": {"ref": "main"}},
+            {"number": 504, "body": "BOONTA_TASK_ID: DEV-504", "base": {"ref": "dev"}},
+        ],
+        "marker_day_offset": None,
+        "expected_ready": True,
+        "expected_task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+        "expected_blocked": False,
+        "expected_queue_state": "READY",
+    },
+    {
+        "name": "real rival task stays blocked when three open PRs already target dev",
+        "tasks": [rival_task_fixture],
+        "completed_task_ids": SUMMARY.get("completed_task_ids", []),
+        "owner_paths": rival_policy_fixture,
+        "open_task_prs": [
+            {"number": 511, "body": "BOONTA_TASK_ID: DEV-511", "base": {"ref": "dev"}},
+            {"number": 512, "body": "BOONTA_TASK_ID: DEV-512", "base": {"ref": "dev"}},
+            {"number": 513, "body": "BOONTA_TASK_ID: DEV-513", "base": {"ref": "dev"}},
+            {"number": 514, "body": "BOONTA_TASK_ID: MAIN-514", "base": {"ref": "main"}},
         ],
         "marker_day_offset": None,
         "expected_ready": False,
         "expected_task_id": "",
         "expected_blocked": False,
         "expected_queue_state": "QUEUED_TASKS_WAITING_FOR_PROMOTION",
-        "reason_contains": "open PR budget reached (4/3)",
+        "reason_contains": "open PR budget reached for target branch dev (3/3)",
     },
     {
         "name": "empty canonical ledger reports EMPTY_QUEUE",
@@ -792,7 +809,10 @@ async function runCase(testCase) {{
           if (options.state !== "open" || options.per_page !== 100 || options.page !== 1) {{
             throw new Error("unexpected open-PR query");
           }}
-          return {{ data: testCase.open_task_prs || [] }};
+          return {{ data: (testCase.open_task_prs || []).map((pull) => ({{
+            ...pull,
+            base: pull.base || {{ ref: "main" }}
+          }})) }};
         }},
         listFiles: async (options) => {{
           if (options.pull_number !== 388 || options.per_page !== 100 || options.page !== 1) {{
