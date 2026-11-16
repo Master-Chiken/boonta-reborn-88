@@ -150,6 +150,7 @@ cases = [
         "tasks": [rival_task_fixture],
         "completed_task_ids": SUMMARY.get("completed_task_ids", []),
         "owner_paths": rival_policy_fixture,
+        "expected_write_paths": rival_allowed_paths,
         "open_task_prs": [
             {"number": 501, "body": "BOONTA_TASK_ID: MAIN-501", "base": {"ref": "main"}},
             {"number": 502, "body": "BOONTA_TASK_ID: MAIN-502", "base": {"ref": "main"}},
@@ -167,6 +168,7 @@ cases = [
         "tasks": [rival_task_fixture],
         "completed_task_ids": SUMMARY.get("completed_task_ids", []),
         "owner_paths": rival_policy_fixture,
+        "expected_write_paths": rival_allowed_paths,
         "open_task_prs": [
             {"number": 511, "body": "BOONTA_TASK_ID: DEV-511", "base": {"ref": "dev"}},
             {"number": 512, "body": "BOONTA_TASK_ID: DEV-512", "base": {"ref": "dev"}},
