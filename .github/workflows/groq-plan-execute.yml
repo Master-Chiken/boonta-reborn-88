@@ -653,8 +653,11 @@ jobs:
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
           GROQ_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
+          BOONTA_TARGET_BRANCH: ${{ steps.bounded_inputs.outputs.target_branch }}
           BOONTA_BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
           BOONTA_TARGET_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          BOONTA_CONTEXT_PATH: ${{ github.workspace }}/.gemini/context.json
+          GITHUB_WORKSPACE: ${{ github.workspace }}
           BOONTA_PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
           BOONTA_READ_PATHS: ${{ steps.bounded_inputs.outputs.read_paths }}
           BOONTA_READ_RANGES: ${{ steps.bounded_inputs.outputs.read_ranges }}
@@ -705,8 +708,11 @@ jobs:
                 "command": ["node", "tools/bounded_patch_proposal_mcp.js"],
                 "environment": {
                   "BOONTA_TASK_ID": "{env:TASK_ID}",
+                  "BOONTA_TARGET_BRANCH": "{env:BOONTA_TARGET_BRANCH}",
                   "BOONTA_BASE_SHA": "{env:BOONTA_BASE_SHA}",
                   "BOONTA_TARGET_ROOT": "{env:BOONTA_TARGET_ROOT}",
+                  "BOONTA_CONTEXT_PATH": "{env:BOONTA_CONTEXT_PATH}",
+                  "GITHUB_WORKSPACE": "{env:GITHUB_WORKSPACE}",
                   "BOONTA_PROPOSAL_PATH": "{env:BOONTA_PROPOSAL_PATH}",
                   "RUNNER_TEMP": "{env:RUNNER_TEMP}",
                   "BOONTA_READ_PATHS": "{env:BOONTA_READ_PATHS}",
