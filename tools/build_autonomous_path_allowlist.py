@@ -12,6 +12,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_trusted_main_checkout
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -175,7 +177,10 @@ def build_allowlist(
     else:
         if not isinstance(expected_policy_sha, str) or not SHA_RE.fullmatch(expected_policy_sha):
             raise AllowlistError("A trusted policy checkout requires its exact 40-character policy SHA")
-        trusted_root = _verify_checkout(policy_root, expected_policy_sha)
+        try:
+            trusted_root = validate_trusted_main_checkout(policy_root, expected_policy_sha)
+        except TrustedMainCheckoutError as exc:
+            raise AllowlistError(str(exc)) from exc
     ledger_file = trusted_root / ledger_path
     policy_file = trusted_root / policy_path
     if ledger_file.is_symlink() or policy_file.is_symlink():
