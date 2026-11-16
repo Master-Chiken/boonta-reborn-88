@@ -18,6 +18,7 @@ from typing import Any
 
 from autonomous_patch_proposal import ProposalError, load_allowlist_report, validate_checkout
 from build_autonomous_path_allowlist import AllowlistError, build_allowlist
+from validate_trusted_main_checkout import validate_trusted_main_checkout
 from run_autonomous_patch_tests import TEST_REGISTRY
 from verify_autonomous_patch import MANDATORY_TEST_IDS
 
@@ -175,7 +176,7 @@ def build_delivery_plan(
         if policy_root is not None:
             if not isinstance(expected_policy_sha, str) or not SHA_RE.fullmatch(expected_policy_sha):
                 raise DeliveryPlanError("Trusted main policy checkout requires its exact expected SHA")
-            validate_checkout(trusted_root, expected_policy_sha)
+            validate_trusted_main_checkout(trusted_root, expected_policy_sha)
         elif expected_policy_sha is not None:
             raise DeliveryPlanError("expected_policy_sha requires a trusted policy checkout")
         allowed_paths = load_allowlist_report(
