@@ -98,7 +98,9 @@ PROTECTED_EXACT = {
     "tools/test_prepare_autonomous_agent_inputs.py",
     "tools/execute_autonomous_provider_cycle.py",
     "tools/test_execute_autonomous_provider_cycle.py",
-}
+    "tools/validate_trusted_main_checkout.py",
+    "tools/test_validate_trusted_main_checkout.py",
+    "tools/run_gamecube_rival_host_tests.py",}
 PROTECTED_PREFIXES = (
     ".github/",
     ".git/",
