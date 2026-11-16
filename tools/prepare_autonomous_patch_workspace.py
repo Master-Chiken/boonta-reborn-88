@@ -202,9 +202,11 @@ def prepare_workspace(
 
     try:
         owner_scope = build_allowlist(
-            policy_root,
-            expected_base_sha=policy_base_sha,
+            source_root,
+            expected_base_sha=target_base_sha,
             requested_task_id=task_id,
+            policy_root=policy_root,
+            policy_base_sha=policy_base_sha,
         )
     except AllowlistError as exc:
         raise WorkspaceError(f"Owner-reviewed exact write scope cannot be validated: {exc}") from exc

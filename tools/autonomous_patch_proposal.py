@@ -313,6 +313,7 @@ def load_allowlist_report(
     *,
     expected_task_id: str,
     expected_base_sha: str,
+    expected_policy_base_sha: str | None = None,
 ) -> set[str]:
     """Load a trusted report from the repository-owned path-policy generator."""
     if path.is_symlink():
@@ -333,12 +334,22 @@ def load_allowlist_report(
     if report.get("status") != "READY":
         raise ProposalError("Allowlist report is not READY; no write paths are authorized")
     required = {"status", "task_id", "base_sha", "approval_ref", "purpose", "allowed_paths"}
-    if set(report) != required:
-        raise ProposalError("READY allowlist report must contain exactly the six generated fields")
+    extended = required | {"policy_base_sha"}
+    if set(report) not in (required, extended):
+        raise ProposalError("READY allowlist report must contain exactly the generated policy and path fields")
     if report.get("task_id") != expected_task_id:
         raise ProposalError("Allowlist report task ID does not match the trusted preflight task")
     if report.get("base_sha") != expected_base_sha:
-        raise ProposalError("Allowlist report base SHA does not match the trusted checkout")
+        raise ProposalError("Allowlist report base SHA does not match the trusted target checkout")
+    report_policy_sha = report.get("policy_base_sha")
+    if report_policy_sha is not None and (not isinstance(report_policy_sha, str) or not SHA_RE.fullmatch(report_policy_sha)):
+        raise ProposalError("Allowlist report policy_base_sha is invalid")
+    if expected_policy_base_sha is not None:
+        if report_policy_sha != expected_policy_base_sha:
+            # Older same-checkout reports remain valid only when policy and target
+            # are deliberately pinned to the exact same commit.
+            if not (report_policy_sha is None and expected_policy_base_sha == expected_base_sha):
+                raise ProposalError("Allowlist report policy SHA does not match the trusted owner-policy checkout")
     if (
         not isinstance(report.get("approval_ref"), str)
         or not APPROVAL_RE.fullmatch(report["approval_ref"])
