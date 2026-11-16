@@ -32,6 +32,17 @@ MANDATORY_TEST_IDS = (
     "automation.provider_handoff",
     "automation.task_ledger",
 )
+
+TASK_REQUIRED_TEST_IDS = {
+    # A gameplay cycle must prove the native rival/route/state helpers before
+    # its patch can be packaged for a PR.
+    "GC-RIVAL-ROUTE-PROGRESSION": ("gamecube.rival_host_tests",),
+}
+
+
+def required_test_ids_for_task(task_id: str, requested_test_ids: list[str]) -> list[str]:
+    required = [*MANDATORY_TEST_IDS, *TASK_REQUIRED_TEST_IDS.get(task_id, ())]
+    return list(dict.fromkeys([*required, *requested_test_ids]))
 MAX_BUNDLE_FILE_BYTES = 128 * 1024
 MAX_BUNDLE_TOTAL_BYTES = 256 * 1024
 
@@ -200,10 +211,12 @@ def verify_in_isolated_worktree(
     )
 
     available_tests = set(run_autonomous_patch_tests.TEST_REGISTRY)
-    if not set(MANDATORY_TEST_IDS).issubset(available_tests):
-        raise PipelineError("The fixed mandatory test registry is incomplete")
+    task_required_tests = TASK_REQUIRED_TEST_IDS.get(expected_task_id, ())
+    required_tests = [*MANDATORY_TEST_IDS, *task_required_tests]
+    if not set(required_tests).issubset(available_tests):
+        raise PipelineError("The fixed mandatory/task test registry is incomplete")
     requested_tests = proposal["test_ids"]
-    executed_tests = list(dict.fromkeys([*MANDATORY_TEST_IDS, *requested_tests]))
+    executed_tests = required_test_ids_for_task(expected_task_id, requested_tests)
     if len(executed_tests) > run_autonomous_patch_tests.MAX_TESTS:
         raise PipelineError("Merged mandatory/requested test set exceeds the fixed runner limit")
 
