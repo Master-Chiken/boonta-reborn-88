@@ -724,55 +724,47 @@ jobs:
           export OPENCODE_AUTH_CONTENT
           OPENCODE_AUTH_CONTENT="$(jq -cn --arg key "$OPENROUTER_API_KEY" '{openrouter: {type: "api", key: $key}}')"
 
-          jq -n \
-            --arg script "$REPO_ROOT/tools/bounded_patch_proposal_mcp.js" \
-            --arg task_id "$TASK_ID" \
-            --arg base_sha "$BOONTA_BASE_SHA" \
-            --arg source_root "$BOONTA_TARGET_ROOT" \
-            --arg proposal_path "$BOONTA_PROPOSAL_PATH" \
-            --arg runner_temp "$RUNNER_TEMP" \
-            --arg read_paths "$BOONTA_READ_PATHS" \
-            --arg read_ranges "$BOONTA_READ_RANGES" \
-            --arg allowed_paths "$BOONTA_ALLOWED_PATHS" \
-            '{
-              "$schema": "https://opencode.ai/config.json",
-              "model": "openrouter/openrouter/free",
-              "small_model": "openrouter/openrouter/free",
-              "enabled_providers": ["openrouter"],
-              "agent": {
-                "build": {
-                  "steps": 8,
-                  "permission": {"task": {"*": "deny"}}
-                }
-              },
-              "mcp": {
-                "boonta": {
-                  "type": "local",
-                  "command": ["node", $script],
-                  "environment": {
-                    "BOONTA_TASK_ID": $task_id,
-                    "BOONTA_BASE_SHA": $base_sha,
-                    "BOONTA_TARGET_ROOT": $source_root,
-                    "BOONTA_PROPOSAL_PATH": $proposal_path,
-                    "RUNNER_TEMP": $runner_temp,
-                    "BOONTA_READ_PATHS": $read_paths,
-                    "BOONTA_READ_RANGES": $read_ranges,
-                    "BOONTA_ALLOWED_PATHS": $allowed_paths
-                  },
-                  "enabled": true,
-                  "timeout": 60000
-                }
-              },
-              "permission": {
-                "*": "allow",
-                "bash": "deny",
-                "read": "deny",
-                "edit": "deny",
-                "glob": "deny",
-                "grep": "deny",
-                "list": "deny"
+          cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
+          {
+            "$schema": "https://opencode.ai/config.json",
+            "model": "openrouter/openrouter/free",
+            "small_model": "openrouter/openrouter/free",
+            "enabled_providers": ["openrouter"],
+            "agent": {
+              "build": {
+                "steps": 8,
+                "permission": {"task": {"*": "deny"}}
               }
-            }' > "$RUNNER_TEMP/opencode.json"
+            },
+            "mcp": {
+              "boonta": {
+                "type": "local",
+                "command": ["node", "tools/bounded_patch_proposal_mcp.js"],
+                "environment": {
+                  "BOONTA_TASK_ID": "{env:TASK_ID}",
+                  "BOONTA_BASE_SHA": "{env:BOONTA_BASE_SHA}",
+                  "BOONTA_TARGET_ROOT": "{env:BOONTA_TARGET_ROOT}",
+                  "BOONTA_PROPOSAL_PATH": "{env:BOONTA_PROPOSAL_PATH}",
+                  "RUNNER_TEMP": "{env:RUNNER_TEMP}",
+                  "BOONTA_READ_PATHS": "{env:BOONTA_READ_PATHS}",
+                  "BOONTA_READ_RANGES": "{env:BOONTA_READ_RANGES}",
+                  "BOONTA_ALLOWED_PATHS": "{env:BOONTA_ALLOWED_PATHS}"
+                },
+                "enabled": true,
+                "timeout": 60000
+              }
+            },
+            "permission": {
+              "*": "allow",
+              "bash": "deny",
+              "read": "deny",
+              "edit": "deny",
+              "glob": "deny",
+              "grep": "deny",
+              "list": "deny"
+            }
+          }
+          JSON
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
           PROMPT="$(cat <<'PROMPT'
