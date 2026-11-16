@@ -83,7 +83,7 @@ function safeOwnerApprovedWritePath(value) {
       value.startsWith('.github/') || value.startsWith('.git/') ||
       value.startsWith('docs/automation/') ||
       value.split('/').some((part) => !part || part === '.' || part === '..')) return false;
-  return /\\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(value);
+  return /\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(value);
 }
 
 async function validatePullRequestTaskWriteScope(github, { owner, repo, pullNumber, pullRequest, taskId }) {
@@ -127,7 +127,7 @@ async function validatePullRequestTaskWriteScope(github, { owner, repo, pullNumb
   if (
     typeof entry.purpose !== 'string' || !entry.purpose.trim() || entry.purpose.length > 240 ||
     typeof entry.approval_ref !== 'string' ||
-    !/^https:\/\/github\\.com\/Master-Chiken\/boonta-reborn-88\/pull\/[1-9][0-9]*$/.test(entry.approval_ref) ||
+    !/^https:\/\/github\.com\/Master-Chiken\/boonta-reborn-88\/pull\/[1-9][0-9]*$/.test(entry.approval_ref) ||
     !Array.isArray(entry.allowed_paths) ||
     entry.allowed_paths.length < 1 || entry.allowed_paths.length > 20 ||
     entry.allowed_paths.some((path) => !safeOwnerApprovedWritePath(path)) ||
