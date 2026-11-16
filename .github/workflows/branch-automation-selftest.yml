@@ -217,6 +217,14 @@ jobs:
         shell: bash
         run: node tools/test_autonomous_cycle_report.js
 
+      - name: Validate bounded local patch-proposal MCP server (offline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tools/bounded_patch_proposal_mcp.js
+          node --check tools/test_bounded_patch_proposal_mcp.js
+          node tools/test_bounded_patch_proposal_mcp.js
+
       - name: Exercise OpenRouter and Groq watchdog process termination with local fakes
         shell: bash
         run: python3 tools/test_openrouter_watchdog.py
