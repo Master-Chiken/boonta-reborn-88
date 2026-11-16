@@ -39,7 +39,7 @@ jobs:
           path = Path(".github/workflows/branch-automation-selftest.yml")
           source = path.read_text(encoding="utf-8")
           step_marker = "      - name: Enforce conservative branch budget and lifecycle policy"
-          run_marker = "          python3 - <<'PY'\\n"
+          run_marker = "          python3 - <<'PY'\n"
           start_step = source.find(step_marker)
           if start_step < 0:
               raise SystemExit("Branch governance contract step is missing")
@@ -47,7 +47,7 @@ jobs:
           if start < 0:
               raise SystemExit("Branch governance Python heredoc is missing")
           start += len(run_marker)
-          end = source.find("\\n          PY", start)
+          end = source.find("\n          PY", start)
           if end < 0:
               raise SystemExit("Branch governance Python heredoc terminator is missing")
 
