@@ -63,6 +63,7 @@ def run_test_ids(
     root: Path,
     test_ids: list[str],
     *,
+    script_root: Path | None = None,
     timeout_seconds: int = MAX_TEST_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     if not isinstance(test_ids, list) or not 1 <= len(test_ids) <= MAX_TESTS:
@@ -78,40 +79,36 @@ def run_test_ids(
         raise TestDispatchError("Test timeout must be an integer between one and 120 seconds")
 
     root = resolve_checkout(root)
+    trusted_root = resolve_checkout(script_root) if script_root is not None else root
     env = _test_environment()
     results: list[dict[str, Any]] = []
 
     for test_id in test_ids:
         script = TEST_REGISTRY[test_id][0]
+        script_path = trusted_root / script
+        if script_path.is_symlink():
+            raise TestDispatchError(f"Trusted registered test script must not be a symlink: {script}")
+        resolved_script = script_path.resolve()
+        try:
+            resolved_script.relative_to(trusted_root)
+        except ValueError as exc:
+            raise TestDispatchError(f"Trusted registered test script escapes its checkout: {script}") from exc
+        if not resolved_script.is_file():
+            raise TestDispatchError(f"Trusted registered test script is missing: {script}")
+        parent = script_path.parent
+        while parent != trusted_root:
+            if parent.is_symlink():
+                raise TestDispatchError(f"Trusted registered test script has a symlink parent: {script}")
+            parent = parent.parent
+
         if test_id == "gamecube.rival_host_tests":
-            # This fixed runner lives in the trusted workflow checkout, while
-            # its immutable C test sources are read from the selected target
-            # worktree. Do not require workflow tools to be merged into dev.
-            script_path = Path(__file__).resolve().with_name("run_gamecube_rival_host_tests.py")
-            trusted_tools_root = Path(__file__).resolve().parent
-            if script_path.is_symlink() or script_path.resolve().parent != trusted_tools_root:
-                raise TestDispatchError("Trusted GameCube host-test runner must be a regular repository-owned file")
-            resolved_script = script_path.resolve()
+            # The runner is trusted code from main, but compiles and executes
+            # source/tests from the selected target worktree (for example dev).
             command = [sys.executable, str(resolved_script), "--source-root", str(root)]
         else:
-            script_path = root / script
-            if script_path.is_symlink():
-                raise TestDispatchError(f"Registered test script must not be a symlink: {script}")
-            resolved_script = script_path.resolve()
-            try:
-                resolved_script.relative_to(root)
-            except ValueError as exc:
-                raise TestDispatchError(f"Registered test script escapes the checkout: {script}") from exc
-            if not resolved_script.is_file():
-                raise TestDispatchError(f"Registered test script is missing: {script}")
-            parent = script_path.parent
-            while parent != root:
-                if parent.is_symlink():
-                    raise TestDispatchError(f"Registered test script has a symlink parent: {script}")
-                parent = parent.parent
-            command = [sys.executable, script]
-        if not resolved_script.is_file():
-            raise TestDispatchError(f"Registered test script is missing: {script}")
+            # Test implementation comes from trusted main; its cwd remains the
+            # disposable target worktree so target-specific fixtures are tested.
+            command = [sys.executable, str(resolved_script)]
         started = time.monotonic()
         try:
             completed = subprocess.run(
