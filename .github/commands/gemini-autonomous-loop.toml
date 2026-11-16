@@ -77,7 +77,7 @@ The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-
 
 ## Workflow-owned evidence
 - Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
-- The model must not emit that report or invent a PR URL, head SHA, branch, test result or merge. Never fabricate workflow-owned PR or test evidence.
+- The model must not emit that report or invent a PR URL, head SHA, branch, test result or merge. Never fabricate workflow-owned PR or test evidence. Never report a PR URL, branch, commit SHA, test success or merge.
 - The workflow-owned publisher verifies the proposal in an isolated detached worktree, executes fixed tests, and creates a non-auto-merged PR for independent human review. It never merges.
 
 ## Final response
