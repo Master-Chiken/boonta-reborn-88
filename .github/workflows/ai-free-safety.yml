@@ -127,6 +127,11 @@ jobs:
           python3 tools/check_task_ledger.py
           python3 -m unittest tools/test_check_task_ledger.py
 
+      - name: Validate bounded task read paths and target-branch ranges
+        run: |
+          python3 tools/check_task_read_paths.py
+          python3 -m unittest tools/test_task_read_paths.py
+
       - name: Validate declarative agent hierarchy and governance invariants
         run: |
           python3 tools/check_agent_roles.py
