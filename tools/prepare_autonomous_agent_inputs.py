@@ -67,6 +67,7 @@ def _validate_read_contract(
     if (
         not isinstance(read_paths, list)
         or not 1 <= len(read_paths) <= MAX_READ_PATHS
+        or any(not isinstance(item, str) for item in read_paths)
         or len(set(read_paths)) != len(read_paths)
     ):
         raise AgentInputError("Selected task must have 1-5 unique exact read_paths")
@@ -122,9 +123,7 @@ def _validate_read_contract(
         for component in Path(item).parts[:-1]:
             current = current / component
             if current.is_symlink() or not current.is_dir():
-                raise AgentInputError("Approved read path has a symlink or non-directory parent: " + item
-        if target.resolve(strict=True).is_symlink():
-            raise AgentInputError("Approved read path resolves through a symlink: " + item)
+                raise AgentInputError("Approved read path has a symlink or non-directory parent: " + item)
     return read_paths, clean_ranges
 
 
