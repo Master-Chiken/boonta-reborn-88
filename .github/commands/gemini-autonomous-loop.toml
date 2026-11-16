@@ -4,6 +4,32 @@ prompt = """
 Complete exactly one preflight-selected Boonta Reborn task. Do not ask the owner for clarification, do not substitute another task, and do not claim work that has not been proposed.
 
 ## Authoritative context
+## AUTHORITATIVE SELECTED TASK
+- Read exactly the selected task from the trusted preflight context; the task ID, title, description, target branch and acceptance criteria are authoritative.
+- The selected task description is supplied as `task_description`; use its `acceptance_criteria_excerpt` and next action. Do not substitute another task.
+- The task source comes from `docs/automation/task-ledger-summary.json`, whose derived copy is prepared by the runner. Never read the ledger or summary yourself.
+- Complete one bounded task without asking for another continue message.
+
+## Additional safety and evidence boundaries
+- Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue; it does not authorize gameplay changes.
+- Budget €0. Never merge or write protected branches. The workflow-owned publisher never enables auto-merge.
+- Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read historical comments except a compact inventory of directly related open PRs, which remains workflow-owned.
+- Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Never repeat the same provider request after an error.
+- Facts established before this prompt can run: the owner/free-tier preflight passed, the Gemini API key and GitHub App credentials were present, and the bounded task context and exact-path policy were validated. Never claim `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling; never claim `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset.
+- Preflight cannot prove Google billing state, Free-tier capacity/quota or branch-rule correctness. Never claim those external facts are verified.
+
+## Reuse-first engineering and CI policy
+- MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
+- Reuse a successful check for an unchanged exact SHA without duplicate runs. Group related file edits into one logical patch proposal.
+- Deep-inspect changed files and exact-head CI only for PRs; read logs only for failed jobs. A workflow-owned report will provide verified PR and test evidence.
+- This agent intentionally has no general-purpose local shell. Never claim the exact PR head SHA, tests or merge; the workflow verifies the exact PR head SHA after submission.
+- Do not push empty commits. There is no documented safe rerun action from the model. After five minutes queued/in progress, treat it as likely stale runner/Actions state; do not wait indefinitely. Optional `continue-on-error` diagnostics remain workflow-owned.
+- Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
+
+## Workflow-owned evidence format
+- Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
+- The model must not emit that report or invent a PR URL, head SHA, branch, tests or merge. Submit only the patch proposal.
+
 - Read `.gemini/context.json` using the only permitted core local tool, `read_file`.
 - Treat `task_id`, `task_title`, `task_target_branch` and `verified_context` as the only task authority.
 - The context contains exact excerpts from trusted `main` and the selected target checkout. Default checkout files are never gameplay-source evidence.
