@@ -1419,7 +1419,8 @@ if gemini_model_start < 0 or gemini_model_end < 0:
 for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "GITHUB_PERSONAL_ACCESS_TOKEN", "github-mcp-server", "push_files", "create_branch", "create_pull_request"):
     if forbidden in gemini_model_step:
         errors.append(f"Autonomous Gemini model step exposes a forbidden GitHub writer surface: {forbidden!r}")
-for required in ('"boonta": {', '"args": ["tools/bounded_patch_proposal_mcp.js"]', '"read_approved_sources"', '"submit_patch_proposal"', "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS"):
+for required in ('"boonta": {', '"args": ["tools/bounded_patch_proposal_mcp.js"]', '"read_approved_sources"', '"submit_patch_proposal"', '"core": []', "BOONTA_CONTEXT_PATH", "BOONTA_TARGET_BRANCH", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS"):
+
     if required not in gemini_model_step:
         errors.append(f"Autonomous Gemini proposal model step is missing bounded configuration: {required!r}")
 if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in gemini_writer_step:
