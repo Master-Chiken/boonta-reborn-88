@@ -62,6 +62,7 @@ ALLOWED_TEST_IDS = {
     "automation.task_preflight",
     "automation.provider_handoff",
     "automation.task_ledger",
+    "gamecube.rival_host_tests",
 }
 MAX_DIFF_BYTES = 32 * 1024
 MAX_PROPOSAL_BYTES = 96 * 1024
