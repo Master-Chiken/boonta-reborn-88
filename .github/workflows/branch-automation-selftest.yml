@@ -334,7 +334,7 @@ jobs:
               "Groq prompt uses preloaded exact sources and one local proposal tool only": (
                   "APPROVED SOURCE EXCERPTS" in groq_agent_step
                   and "One tool is available: boonta_submit_patch_proposal." in groq_agent_step
-                  and "Call it exactly once with one complete unified diff." in groq_agent_step
+                  and "Call it once with one complete unified diff." in groq_agent_step
                   and "BOONTA_PRELOADED_SOURCE_SHA256" in groq_agent_step
                   and '"bash": "deny"' in groq_agent_step
                   and '"read": "deny"' in groq_agent_step
