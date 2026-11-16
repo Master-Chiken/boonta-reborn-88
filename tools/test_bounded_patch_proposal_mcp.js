@@ -234,12 +234,33 @@ function cleanup(fx) {
   {
     const fx = fixture();
     try {
-      const link = fx.env.BOONTA_CONTEXT_PATH + '.link';
-      fs.symlinkSync(fx.env.BOONTA_CONTEXT_PATH, link);
-      fx.env.BOONTA_CONTEXT_PATH = link;
+      const contextPath = fx.env.BOONTA_CONTEXT_PATH;
+      const actual = fs.readFileSync(contextPath);
+      const external = path.join(fx.temp, 'external-context.json');
+      fs.writeFileSync(external, actual);
+      fs.unlinkSync(contextPath);
+      fs.symlinkSync(external, contextPath);
       const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
-      assert.notEqual(result.status, 0, 'server must reject a symlinked task context');
-      assert.match(result.stderr, /must be exactly GITHUB_WORKSPACE/);
+      assert.notEqual(result.status, 0, 'server must reject a symlink at the exact authorized context path');
+      assert.match(result.stderr, /symbolic links are not allowed/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      fs.writeFileSync(fx.env.BOONTA_CONTEXT_PATH, JSON.stringify({
+        task_id: TASK_ID,
+        task_title: 'Rival route progress fixture',
+        task_description: 'x',
+        task_target_branch: 'dev',
+        verified_context: 'x'.repeat(17 * 1024)
+      }), 'utf8');
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject an oversized task context');
+      assert.match(result.stderr, /no larger than 16 KiB/);
     } finally {
       cleanup(fx);
     }
