@@ -271,6 +271,24 @@ function makeGithub(options = {}) {
     }));
   let polls = 0;
   let prFetches = 0;
+  const approvedPolicy = options.policy || {
+    schema_version: 1,
+    policy: {
+      owner_review_required: true,
+      path_mode: 'exact',
+      max_paths_per_task: 20
+    },
+    tasks: [{
+      task_id: taskId,
+      purpose: 'Owner-approved bounded activation fixture',
+      approval_ref: 'https://github.com/Master-Chiken/boonta-reborn-88/pull/408',
+      allowed_paths: ['tools/check_task_ledger_summary.py', 'tools/test_check_task_ledger.py']
+    }]
+  };
+  const inventory = options.changedFiles || [
+    { filename: 'tools/check_task_ledger_summary.py', status: 'modified' },
+    { filename: 'tools/test_check_task_ledger.py', status: 'modified' }
+  ];
   const github = {
     rest: {
       pulls: {
@@ -279,9 +297,16 @@ function makeGithub(options = {}) {
           const current = sequence[Math.min(prFetches, sequence.length - 1)];
           prFetches += 1;
           return { data: current };
-        }
+        },
+        listFiles: async () => ({ data: inventory })
       },
       repos: {
+        getContent: async () => ({
+          data: options.policyFile || {
+            encoding: 'base64',
+            content: Buffer.from(JSON.stringify(approvedPolicy), 'utf8').toString('base64')
+          }
+        }),
         getCommit: async ({ ref }) => {
           if (ref === previousHead) {
             return {
@@ -507,6 +532,68 @@ async function run(name, options = {}) {
   const valid = await run('new main PR with exact checks');
   assert.equal(valid.core.outputs.cycle_status, 'progress');
   assert.equal(valid.core.outputs.evidence_pr_number, '501');
+
+  await run('PR changes a path outside the selected task exact write scope', {
+    changedFiles: [
+      { filename: 'tools/check_task_ledger_summary.py', status: 'modified' },
+      { filename: '.github/workflows/boonta-autonomous-loop.yml', status: 'modified' }
+    ],
+    expectFailure: 'outside the exact task write-path allowlist'
+  });
+  await run('PR renames an owner-approved file', {
+    changedFiles: [
+      { filename: 'tools/check_task_ledger_summary.py', status: 'renamed', previous_filename: 'tools/check_task_ledger.py' },
+      { filename: 'tools/test_check_task_ledger.py', status: 'modified' }
+    ],
+    expectFailure: 'added, removed, renamed or copied'
+  });
+  await run('PR adds a new file even when its path resembles the task scope', {
+    changedFiles: [
+      { filename: 'tools/check_task_ledger_summary.py', status: 'modified' },
+      { filename: 'tools/test_check_task_ledger.py', status: 'added' }
+    ],
+    expectFailure: 'added, removed, renamed or copied'
+  });
+  await run('PR changed-file inventory is incomplete', {
+    changedFiles: [{ filename: 'tools/check_task_ledger_summary.py', status: 'modified' }],
+    expectFailure: 'inventory is empty, incomplete or exceeds'
+  });
+  await run('duplicate filenames in PR changed-file inventory fail closed', {
+    changedFiles: [
+      { filename: 'tools/check_task_ledger_summary.py', status: 'modified' },
+      { filename: 'tools/check_task_ledger_summary.py', status: 'modified' }
+    ],
+    expectFailure: 'duplicate path'
+  });
+  await run('task without one owner-approved exact-path entry fails closed', {
+    policy: {
+      schema_version: 1,
+      policy: { owner_review_required: true, path_mode: 'exact', max_paths_per_task: 20 },
+      tasks: []
+    },
+    expectFailure: 'exactly one entry for the selected task'
+  });
+  await run('malformed trusted exact-path policy fails closed', {
+    policy: {
+      schema_version: 1,
+      policy: { owner_review_required: false, path_mode: 'exact', max_paths_per_task: 20 },
+      tasks: []
+    },
+    expectFailure: 'policy schema is invalid'
+  });
+  await run('untracked path cannot be smuggled into owner-approved task scope', {
+    policy: {
+      schema_version: 1,
+      policy: { owner_review_required: true, path_mode: 'exact', max_paths_per_task: 20 },
+      tasks: [{
+        task_id: taskId,
+        purpose: 'Unsafe fixture',
+        approval_ref: 'https://github.com/Master-Chiken/boonta-reborn-88/pull/408',
+        allowed_paths: ['.github/workflows/boonta-autonomous-loop.yml']
+      }]
+    },
+    expectFailure: 'owner-approved exact-path entry is invalid'
+  });
 
   await run('task mismatch', { reportTaskId: 'AUTOMATION-OTHER', expectFailure: 'task ID' });
   await run('duplicate status fields', {
