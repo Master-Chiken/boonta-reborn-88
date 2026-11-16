@@ -684,7 +684,9 @@ for required in (
     "os.killpg(process.pid, signal.SIGTERM)",
     "signal.signal(signal.SIGTERM, handle_shutdown)",
     '"timeout", "--signal=TERM", "--kill-after=5s", "180s"',
-    "daily cooldown will be recorded",
+    "github.rest.issues.createComment",
+    "BOONTA_OPENROUTER_FAILURE_COOLDOWN:",
+    "name: Record same-day OpenRouter cooldown after quota, authentication or invocation failure",
 ):
     if required not in openrouter:
         errors.append(f"OpenRouter first-refusal watchdog is missing required behavior: {required!r}")
@@ -826,9 +828,12 @@ if "Blocked activation must not reach inference without owner-reviewed write pat
     errors.append("Schema-v2 context tests must reject blocked activation without explicit write paths")
 if "blocked activation without an owner-reviewed write scope is not sent to a provider" not in task_preflight_tests:
     errors.append("Production task preflight tests must prove missing write scope blocks provider selection")
-for label, prompt in (("Gemini", gemini_prompt), ("OpenRouter", openrouter), ("Groq", groq)):
-    if "Exact owner-reviewed write paths (no others)" not in prompt:
-        errors.append(f"{label} prompt must restrict every model write to the owner-reviewed exact-path list")
+if "Exact owner-reviewed write paths (no others)" not in gemini_prompt:
+    errors.append("Gemini prompt must restrict every model write to the owner-reviewed exact-path list")
+if 'Change only exact paths listed under "Exact owner-reviewed write paths"' not in actual_openrouter_prompt:
+    errors.append("OpenRouter prompt must restrict the patch to the owner-reviewed exact-path list")
+if "Change only exact owner-reviewed write paths from the trusted context" not in actual_groq_prompt:
+    errors.append("Groq prompt must restrict the patch to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
 groq_limits = (
@@ -864,10 +869,12 @@ for required in (
     "signal.signal(signal.SIGTERM, handle_shutdown)",
     "signal.signal(signal.SIGINT, handle_shutdown)",
     "sys.exit(75)",
-    "report.flush()",
 ):
     if required not in groq:
         errors.append(f"Groq must stop on the first provider quota refusal: missing {required!r}")
+for required in ("_write_cycle_report", "stream.flush()", "os.fsync(stream.fileno())", "BOONTA_CYCLE_BLOCKER"):
+    if required not in provider_cycle_source:
+        errors.append(f"Workflow-owned Groq cycle report must be durably written: missing {required!r}")
 for content, needle, message in (
     (groq, "prompt_length > 5500", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
