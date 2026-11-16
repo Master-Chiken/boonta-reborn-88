@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import subprocess
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -154,13 +155,15 @@ class PipelineFixture(unittest.TestCase):
         }
         self.allowlist_path.write_text(json.dumps(report), encoding="utf-8")
 
-    def run_pipeline(self):
+    def run_pipeline(self, *, policy_root=None, expected_policy_sha=None):
         return verify_in_isolated_worktree(
             self.root,
             proposal_path=self.proposal_path,
             allowlist_report_path=self.allowlist_path,
             expected_task_id=TASK_ID,
             expected_base_sha=self.base_sha,
+            policy_root=policy_root,
+            expected_policy_sha=expected_policy_sha,
         )
 
     def assert_source_checkout_untouched(self):
@@ -168,6 +171,33 @@ class PipelineFixture(unittest.TestCase):
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
         worktrees = git(self.root, "worktree", "list", "--porcelain").splitlines()
         self.assertEqual(len([line for line in worktrees if line.startswith("worktree ")]), 1)
+
+
+class TrustedPolicyCheckoutTests(PipelineFixture):
+    def test_target_checkout_without_ledger_uses_exact_trusted_main_policy(self):
+        trusted = self.parent / "trusted-main"
+        cloned = subprocess.run(
+            ["git", "clone", "-q", str(self.root), str(trusted)],
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        trusted_sha = git(trusted, "rev-parse", "HEAD")
+
+        shutil.rmtree(self.root / "docs/automation")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-qm", "target dev checkout omits main-only task policy")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.write_proposal()
+        self.write_allowlist(base_sha=self.base_sha)
+
+        report = self.run_pipeline(policy_root=trusted, expected_policy_sha=trusted_sha)
+        self.assertEqual(report["status"], "VERIFIED")
+        self.assertEqual(report["base_sha"], self.base_sha)
+        self.assertEqual(report["changed_paths"], [SOURCE_PATH])
+        self.assert_source_checkout_untouched()
 
 
 class TaskTestProfileTests(unittest.TestCase):
