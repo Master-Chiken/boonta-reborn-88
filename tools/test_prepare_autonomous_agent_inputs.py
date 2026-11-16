@@ -8,9 +8,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from check_task_ledger_summary import build_summary
 from prepare_autonomous_agent_inputs import AgentInputError, prepare_agent_inputs
 
 TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
+PREREQUISITE_ID = "GC-RACE-PROGRESSION"
 APPROVAL = "https://github.com/Master-Chiken/boonta-reborn-88/pull/400"
 SOURCE_PATH = "src/main.c"
 
@@ -51,21 +53,49 @@ class AgentInputFixture(unittest.TestCase):
 
         docs = self.policy / "docs/automation"
         docs.mkdir(parents=True)
-        self.summary = {
-            "schema_version": 2,
-            "source": "docs/automation/task-ledger.json",
-            "completed_task_ids": ["GC-RACE-PROGRESSION"],
-            "tasks": [{
-                "task_id": TASK_ID,
-                "title": "Rival route progress",
-                "status": "queued",
-                "owner_approved": True,
-                "target_branch": "dev",
-                "depends_on": ["GC-RACE-PROGRESSION"],
-                "read_paths": [SOURCE_PATH],
-                "read_ranges": [{"path": SOURCE_PATH, "start_line": 1, "end_line": 3}],
-            }],
+        prerequisite = {
+            "task_id": PREREQUISITE_ID,
+            "title": "Race progression",
+            "owner_role_id": "gameplay",
+            "parent_objective_id": "BOONTA-COMPLETE-GAME",
+            "depends_on": [],
+            "owner_approved": True,
+            "queue": "#226",
+            "platform_scope": ["GameCube", "Wii"],
+            "status": "completed",
+            "target_branch": "dev",
+            "read_paths": [],
+            "read_ranges": [],
+            "question": "Completed prerequisite",
+            "acceptance_criteria": ["Race loop works"],
+            "next_action": "Completed",
         }
+        selected = {
+            "task_id": TASK_ID,
+            "title": "Rival route progress",
+            "owner_role_id": "gameplay",
+            "parent_objective_id": "BOONTA-COMPLETE-GAME",
+            "status": "queued",
+            "owner_approved": True,
+            "target_branch": "dev",
+            "depends_on": [PREREQUISITE_ID],
+            "queue": "#226",
+            "platform_scope": ["GameCube", "Wii"],
+            "read_paths": [SOURCE_PATH],
+            "read_ranges": [{"path": SOURCE_PATH, "start_line": 1, "end_line": 3}],
+            "question": "Can rivals use native route progress?",
+            "acceptance_criteria": ["Rivals finish deterministically"],
+            "next_action": "Trace the current route cursor and implement bounded progress",
+        }
+        self.full_ledger = {
+            "schema_version": 1,
+            "updated_at": "2026-11-16",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [prerequisite, selected],
+        }
+        self.summary_path = docs / "task-ledger-summary.json"
+        self.ledger_path = docs / "task-ledger.json"
+        self.policy_path = docs / "patch-path-allowlist.json"
         self.policy_doc = {
             "schema_version": 1,
             "policy": {
@@ -80,15 +110,25 @@ class AgentInputFixture(unittest.TestCase):
                 "allowed_paths": [SOURCE_PATH],
             }],
         }
-        (docs / "task-ledger-summary.json").write_text(json.dumps(self.summary), encoding="utf-8")
-        (docs / "patch-path-allowlist.json").write_text(json.dumps(self.policy_doc), encoding="utf-8")
-        (docs / "task-ledger.json").write_text(json.dumps({"schema_version": 1, "tasks": []}), encoding="utf-8")
+        self._write_trusted_files()
         git(self.policy, "add", "docs/automation")
         git(self.policy, "commit", "-qm", "trusted main task and path policy")
         self.policy_sha = git(self.policy, "rev-parse", "HEAD")
 
-    def tearDown(self) -> None:
-        self.temp.cleanup()
+    def _write_trusted_files(self) -> None:
+        self.ledger_path.write_text(json.dumps(self.full_ledger), encoding="utf-8")
+        self.summary = build_summary(self.full_ledger)
+        self.summary_path.write_text(
+            json.dumps(self.summary, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        self.policy_path.write_text(json.dumps(self.policy_doc), encoding="utf-8")
+
+    def commit_ledger_change(self, message: str) -> None:
+        self._write_trusted_files()
+        git(self.policy, "add", "docs/automation")
+        git(self.policy, "commit", "-qm", message)
+        self.policy_sha = git(self.policy, "rev-parse", "HEAD")
 
     def prepare(self, **overrides):
         return prepare_agent_inputs(
@@ -100,6 +140,9 @@ class AgentInputFixture(unittest.TestCase):
             allowlist_output=overrides.pop("allowlist_output", self.output),
             **overrides,
         )
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
 
 
 class AgentInputTests(AgentInputFixture):
@@ -133,45 +176,30 @@ class AgentInputTests(AgentInputFixture):
             self.prepare(task_id="GC-NOT-IN-LEDGER")
 
     def test_incomplete_task_dependency_does_not_grant_write_paths(self):
-        self.summary["completed_task_ids"] = []
-        summary_path = self.policy / "docs/automation/task-ledger-summary.json"
-        summary_path.write_text(json.dumps(self.summary), encoding="utf-8")
-        git(self.policy, "add", "docs/automation/task-ledger-summary.json")
-        git(self.policy, "commit", "-qm", "remove completed prerequisite")
-        self.policy_sha = git(self.policy, "rev-parse", "HEAD")
+        self.full_ledger["tasks"][0]["status"] = "queued"
+        self.full_ledger["tasks"][0]["owner_approved"] = False
+        self.commit_ledger_change("remove completed prerequisite")
         with self.assertRaisesRegex(AgentInputError, "not READY|dependency"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
     def test_missing_exact_line_ranges_are_rejected(self):
-        self.summary["tasks"][0]["read_ranges"] = []
-        summary_path = self.policy / "docs/automation/task-ledger-summary.json"
-        summary_path.write_text(json.dumps(self.summary), encoding="utf-8")
-        git(self.policy, "add", "docs/automation/task-ledger-summary.json")
-        git(self.policy, "commit", "-qm", "remove source ranges")
-        self.policy_sha = git(self.policy, "rev-parse", "HEAD")
+        self.full_ledger["tasks"][1]["read_ranges"] = []
+        self.commit_ledger_change("remove source ranges")
         with self.assertRaisesRegex(AgentInputError, "1-10 exact read_ranges"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
     def test_range_cannot_escape_exact_read_paths(self):
-        self.summary["tasks"][0]["read_ranges"][0]["path"] = "src/other.c"
-        summary_path = self.policy / "docs/automation/task-ledger-summary.json"
-        summary_path.write_text(json.dumps(self.summary), encoding="utf-8")
-        git(self.policy, "add", "docs/automation/task-ledger-summary.json")
-        git(self.policy, "commit", "-qm", "widen source range")
-        self.policy_sha = git(self.policy, "rev-parse", "HEAD")
+        self.full_ledger["tasks"][1]["read_ranges"][0]["path"] = "src/other.c"
+        self.commit_ledger_change("widen source range")
         with self.assertRaisesRegex(AgentInputError, "exact bounded source contract"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
     def test_range_budget_is_bounded(self):
-        self.summary["tasks"][0]["read_ranges"] = [
-            {"path": SOURCE_PATH, "start_line": i, "end_line": i + 79}
-            for i in (1, 81, 161, 241)
+        self.full_ledger["tasks"][1]["read_ranges"] = [
+            {"path": SOURCE_PATH, "start_line": start, "end_line": start + 79}
+            for start in (1, 81, 161, 241)
         ]
-        summary_path = self.policy / "docs/automation/task-ledger-summary.json"
-        summary_path.write_text(json.dumps(self.summary), encoding="utf-8")
-        git(self.policy, "add", "docs/automation/task-ledger-summary.json")
-        git(self.policy, "commit", "-qm", "exceed range budget")
-        self.policy_sha = git(self.policy, "rev-parse", "HEAD")
+        self.commit_ledger_change("exceed range budget")
         with self.assertRaisesRegex(AgentInputError, "240-line aggregate cap"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
@@ -182,8 +210,7 @@ class AgentInputTests(AgentInputFixture):
 
     def test_modified_canonical_policy_is_rejected(self):
         self.policy_doc["tasks"][0]["purpose"] = "tampered"
-        policy_file = self.policy / "docs/automation/patch-path-allowlist.json"
-        policy_file.write_text(json.dumps(self.policy_doc), encoding="utf-8")
+        self.policy_path.write_text(json.dumps(self.policy_doc), encoding="utf-8")
         with self.assertRaisesRegex(AgentInputError, "local changes"):
             self.prepare()
 
@@ -195,8 +222,7 @@ class AgentInputTests(AgentInputFixture):
 
     def test_write_paths_must_exist_on_the_target_branch(self):
         self.policy_doc["tasks"][0]["allowed_paths"] = ["src/not-tracked.c"]
-        policy_path = self.policy / "docs/automation/patch-path-allowlist.json"
-        policy_path.write_text(json.dumps(self.policy_doc), encoding="utf-8")
+        self.policy_path.write_text(json.dumps(self.policy_doc), encoding="utf-8")
         git(self.policy, "add", "docs/automation/patch-path-allowlist.json")
         git(self.policy, "commit", "-qm", "approve unavailable target path")
         self.policy_sha = git(self.policy, "rev-parse", "HEAD")
