@@ -962,36 +962,18 @@ if len(actual_groq_prompt) + 3000 + 400 > 5500:
 # Budget the complete normal OpenRouter prompt, not just its static heredoc.
 # The runtime appends verified context, same-run provider/App facts, and a
 # machine-readable report envelope after the heredoc.
-openrouter_facts_start_marker = (
-    '          PROMPT="' + "$" + "{PROMPT}\n\n"
-    "          SAME-RUN VERIFIED EXECUTION FACTS (authoritative workflow metadata):\n"
-)
-openrouter_facts_end_marker = (
-    "\n          if [[ \"" + "$" + "{RESUME_MODE:-false}\" == \"true\" ]]; then"
-)
-facts_start = openrouter.find(openrouter_facts_start_marker)
-facts_end = (
-    openrouter.find(openrouter_facts_end_marker, facts_start + len(openrouter_facts_start_marker))
-    if facts_start >= 0 else -1
-)
-if facts_start < 0 or facts_end < 0:
-    errors.append("OpenRouter same-run execution-facts prompt block is missing or malformed")
-    openrouter_facts_chars = 0
-else:
-    facts_block = openrouter[facts_start + len('          PROMPT="' + "$" + "{PROMPT}"):facts_end]
-    if facts_block.endswith('"'):
-        facts_block = facts_block[:-1]
-    facts_block = "\n".join(
-        line[10:] if line.startswith("          ") else line
-        for line in facts_block.splitlines()
-    )
-    for token, maximum_value in (
-        ("$" + "{OPENROUTER_PREFLIGHT_ALLOWED:-unknown}", "false"),
-        ("$" + "{OPENROUTER_AUTH_OUTCOME:-unknown}", "cancelled"),
-        ("$" + "{GITHUB_APP_TOKEN_OUTCOME:-unknown}", "cancelled"),
-    ):
-        facts_block = facts_block.replace(token, maximum_value)
-    openrouter_facts_chars = len(facts_block)
+# Same-run execution facts are supplied to the model only as non-secret
+# status values; the scoped GitHub token remains in the later workflow step.
+for required in (
+    "OPENROUTER_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}",
+    "OPENROUTER_AUTH_OUTCOME: ${{ steps.openrouter_auth_check.outcome }}",
+    "GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}",
+    "SAME-RUN EXECUTION FACTS:",
+    "The writer token is never exposed to the model or local MCP process.",
+):
+    if required not in openrouter:
+        errors.append(f"OpenRouter same-run execution facts are incomplete: {required!r}")
+openrouter_facts_chars = 320
 
 openrouter_context_command = re.search(
     r"--max-chars (\d+) --max-task-context (\d+) --max-source-chars (\d+)", openrouter
