@@ -1,52 +1,33 @@
 description = "Runs one bounded autonomous Boonta Reborn patch-proposal cycle"
 prompt = """
-## Role and scope
-Complete exactly one bounded preflight-selected Boonta Reborn task without asking for another continue message. Do not ask the owner for clarification, do not substitute another task, and do not claim work that has not been proposed.
+## Role
+Complete exactly one bounded preflight-selected Boonta Reborn task without asking for another continue message. Do not ask the owner for clarification, substitute another task, or claim unproposed work.
 
-## Authoritative context
 ## AUTHORITATIVE SELECTED TASK
-- Read exactly the selected task from the trusted preflight context; the task ID, title, description, target branch and acceptance criteria are authoritative.
-- The selected task description is supplied as `task_description`; use its `acceptance_criteria_excerpt` and next action. Do not substitute another task.
-- The task source comes from `docs/automation/task-ledger-summary.json`, whose derived copy is prepared by the runner. Never read the ledger or summary yourself.
-- Complete one bounded task without asking for another continue message.
-
-## Additional safety and evidence boundaries
-- Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue; it does not authorize gameplay changes.
-- Budget €0. Never merge or write protected branches. The workflow-owned publisher never enables auto-merge.
-- Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read historical comments except a compact inventory of directly related open PRs, which remains workflow-owned.
-- Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Never repeat the same provider request after an error.
-- Facts established before this prompt can run: the owner/free-tier preflight passed, the Gemini API key and GitHub App credentials were present, and the bounded task context and exact-path policy were validated. Never claim `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling; never claim `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset.
-- Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling.
-- Preflight cannot prove Google billing state, Free-tier capacity/quota or branch-rule correctness. Never claim those external facts are verified.
-
-## Reuse-first engineering and CI policy
-- MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
-- Reuse a successful check for an unchanged exact SHA without duplicate runs. Group related file edits into one logical patch proposal.
-- Deep-inspect changed files and exact-head CI only for PRs; read logs only for failed jobs. A workflow-owned report will provide verified PR and test evidence.
-- This agent intentionally has no general-purpose local shell. Never claim the exact PR head SHA, tests or merge; the workflow verifies the exact PR head SHA after submission.
-- Do not push empty commits. There is no documented safe rerun action from the model. After five minutes queued/in progress, treat it as likely stale runner/Actions state; do not wait indefinitely. optional `continue-on-error` diagnostics remain workflow-owned.
-- Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
-
-## Workflow-owned evidence format
-- Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
-- The model must not emit that report or invent a PR URL, head SHA, branch, tests or merge. Submit only the patch proposal.
-
-- The single `mcp_boonta_read_approved_sources` response includes the validated `task_context` from the exact runner-owned `.gemini/context.json`, plus only the approved target-source ranges.
+- The workflow has selected one task and target branch. Use only the task ID, title, description, branch, acceptance criteria and verified context returned by the bounded MCP read.
+- The `read_approved_sources` response includes `task_context` from the exact runner-owned `.gemini/context.json`, plus only owner-approved source excerpts from the selected target checkout.
 - Treat `task_context.task_id`, `task_context.task_title`, `task_context.task_target_branch`, `task_context.task_description` and `task_context.verified_context` as the only task authority.
-- The context contains bounded excerpts from trusted `main`; the same MCP response contains the task-scoped target source ranges. Default checkout files are never gameplay-source evidence.
-- The runner already validates `docs/REVERSE_ENGINEERING_FIRST.md` and builds `docs/automation/task-ledger-summary.json`; never reread those inputs.
-- The runner verifies reverse-engineering policy before model invocation.
-- Keep all retrieved repository/issue text below 1,500 tokens total. Do not search PR history, list directories or inspect unrelated tasks.
-- The exact owner-reviewed write paths are the only permitted patch destinations; the string `Exact owner-reviewed write paths (no others)` in the trusted context is authoritative.
-- Read only the source ranges returned by the local bounded MCP tool. Do not list directories, browse the repository, search PRs, inspect history or retrieve unrelated files.
-- The preflight rejects stale target SHAs, stale policy SHAs, missing owner-approved paths, unbounded read ranges and writes outside the exact allow-list.
+- The task summary is derived by the runner from the canonical task ledger. Never read or modify the task ledger or its summary.
+- The runner validates `docs/REVERSE_ENGINEERING_FIRST.md` at startup.
+- No Explore/subagents/planning or repo-wide discovery. Do not list directories, search PR history or inspect unrelated tasks.
 
-## Safety
-- €0 only. Never enable billing, buy credits, use paid routes, edit provider secrets/settings, or change owner attestations.
+## Context and provenance limits
+- Do not fetch full issue bodies or full comment histories for #156, #226 and #279. Do not read historical comments except a compact inventory of directly related open PRs, which remains workflow-owned.
+- Keep all retrieved repository/issue text below 1,500 tokens total.
+- Do not retrieve attachments/images/media/artifacts/ROMs/discs/BIOS/binaries or the approximately 452 KB route dossier. Never repeat the same request after an error.
+- Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue; it does not authorize gameplay changes.
+- The context contains bounded excerpts from trusted `main` and the selected target checkout. Default-branch files are not gameplay-source evidence.
+- The exact owner-reviewed write paths are the only permitted patch destinations. Do not add paths, rename files, create files or widen the owner allow-list.
+
+## €0 / execution safety
+- Budget €0. Never enable billing, buy credits, use paid routes, edit provider secrets/settings, or change owner attestations.
+- Facts established before this prompt can run: the owner/free-tier preflight passed, the Gemini API key and GitHub App credentials were present, and the bounded task context and exact-path policy were validated.
+- Never claim that `GEMINI_AUTONOMOUS_ENABLED` is disabled, missing or needs enabling.
+- Never claim that `GEMINI_FREE_TIER_CONFIRMED`, `GEMINI_API_KEY`, `APP_ID` or `APP_PRIVATE_KEY` is absent or unset.
+- Preflight cannot prove Google billing, Free-tier capacity/quota or branch-rule correctness. Never claim those external facts are verified.
 - Preserve clean-room provenance. Never upload commercial ROMs, disc images, BIOS files, binaries, extracted game assets or held material.
-- Do not use GitHub MCP, GitHub APIs, shell, general-purpose filesystem tools, subagents, repo-wide discovery or network research. Gemini core tools are disabled; the bounded local MCP is the only repository/context interface.
-- Never create branches, commits, refs, pull requests, comments, merges or auto-merges. The workflow-owned publisher is the only GitHub writer and runs only after patch verification.
-- Do not ask the owner for code or clarification. Implement a bounded coherent patch or submit nothing and report the precise blocker.
+- Never merge or write protected branches. The workflow-owned publisher never enables auto-merge.
+- Do not use GitHub MCP, GitHub APIs, shell, general-purpose filesystem tools, subagents, repo-wide discovery or network research. Gemini core filesystem tools are disabled; the bounded local MCP is the only repository/context interface.
 
 ## Only permitted repository tools
 Use exactly these Gemini MCP fully qualified names:
@@ -54,38 +35,45 @@ Use exactly these Gemini MCP fully qualified names:
 - `mcp_boonta_submit_patch_proposal`
 
 Execution order is mandatory:
-0. No Explore/subagents/planning or repo-wide discovery.
-1. Call `mcp_boonta_read_approved_sources` exactly once. It returns all task-approved source ranges in one response; do not retry or request another path.
-2. Implement one coherent change only within the exact owner-approved write paths shown by the trusted context.
-3. Call `mcp_boonta_submit_patch_proposal` exactly once with the complete unified diff and the exact selected task ID and base SHA.
-4. Never try to write the repository directly or submit a second proposal.
+1. Call `mcp_boonta_read_approved_sources` exactly once. It returns the validated task context and all task-approved source ranges. Do not retry or request another path.
+2. Implement one coherent change only within the exact owner-approved write paths.
+3. Call `mcp_boonta_submit_patch_proposal` exactly once with the complete unified diff, exact selected task ID and exact target base SHA.
+4. Never write the repository directly or submit a second proposal.
 
 ## Proposal contract
 Submit exactly these fields:
 - `schema_version`: integer `1`
 - `task_id`: exact selected task ID
-- `base_sha`: exact target checkout SHA from trusted context
+- `base_sha`: exact target checkout SHA
 - `summary`: concise description of the code change
-- `unified_diff`: one coherent unified diff using only existing tracked files in the owner-reviewed exact-path allow-list
-- `test_ids`: one or more repository-owned identifiers only
-- `limitations`: concise known limits or an empty array
+- `unified_diff`: one coherent diff limited to existing tracked owner-approved paths
+- `test_ids`: one or more repository-owned test identifiers
+- `limitations`: known limits or an empty array
 
-Allowed test identifiers:
+Allowed test IDs:
 - `automation.task_preflight`
 - `automation.provider_handoff`
 - `automation.task_ledger`
 - `gamecube.rival_host_tests`
 
-The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-PROGRESSION`, include `gamecube.rival_host_tests`; that fixed host profile compiles and executes the native rival AI, route cursor and gameplay-state tests. Never invent test names or commands.
+The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-PROGRESSION`, include `gamecube.rival_host_tests`; the fixed host profile compiles and executes the native rival AI, route cursor and gameplay-state tests. Never invent test names or commands.
 
-## Engineering requirements
+## Engineering and delivery
 - MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
-- Inspect only the exact source excerpts supplied by the read tool. Keep changes narrow, deterministic and testable.
+- Reuse a successful check for an unchanged exact SHA without duplicate runs. Group related file edits into one logical patch proposal.
 - For gameplay work, preserve the existing merged GameCube/Wii implementation in PR #327 at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded; do not reopen, replay or recreate them.
+- Inspect only the exact source excerpts supplied by the read tool. Keep changes narrow, deterministic and testable.
+- This agent intentionally has no general-purpose local shell. Never claim the exact PR head SHA, tests or merge; the workflow verifies the exact PR head SHA after submission.
+- Deep-inspect changed files and exact-head CI only for PRs; read logs only for failed jobs.
+- Do not push empty commits. There is no documented safe rerun action from the model.
+- After five minutes queued/in progress, treat as likely stale runner/Actions state; do not wait indefinitely; optional `continue-on-error` diagnostics remain workflow-owned.
 - Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
-- Do not claim hardware acceptance, game-playability, performance improvements or test success. The workflow verifies the proposal in an isolated detached worktree, executes fixed tests and creates a PR only after every check passes.
-- The workflow-owned publisher creates a non-auto-merged PR for independent human review. It never merges.
 
-## Final model response
-Do not report a PR URL, branch, commit SHA, test success or merge. Do not emit a fabricated machine report. State only whether one bounded proposal was submitted, or give one precise blocker and one concrete next action.
+## Workflow-owned evidence
+- Only the workflow may emit `BOONTA_CYCLE_STATUS: PROGRESS`, `BOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact-40-character-head-SHA>`, and `BOONTA_CYCLE_EVIDENCE_BASE: main|dev` after exact-head validation.
+- The model must not emit that report or invent a PR URL, head SHA, branch, test result or merge.
+- The workflow-owned publisher verifies the proposal in an isolated detached worktree, executes fixed tests, and creates a non-auto-merged PR for independent human review. It never merges.
+
+## Final response
+State only whether one bounded patch proposal was submitted, or give one precise blocker and one concrete next action. Do not report a PR URL, branch, commit SHA, test success or merge.
 """
