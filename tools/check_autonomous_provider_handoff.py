@@ -672,6 +672,22 @@ for required in (
     if required not in delivery_plan_source:
         errors.append(f"Workflow-owned PR body must contain its exact task marker: {required!r}")
 
+# Both proposal-only providers need the exact context file their local MCP validates.
+for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
+    prepare_start = workflow.find("      - name: Prepare the exact selected task and compact repository context")
+    prepare_end = workflow.find("\\n      - name:", prepare_start + 1)
+    prepare_step = workflow[prepare_start:prepare_end] if prepare_start >= 0 and prepare_end >= 0 else ""
+    for required in (
+        "tools/write_autonomous_provider_context.py",
+        "--verified-context-stdin",
+        "context.json",
+        "task_context",
+    ):
+        if required not in prepare_step and required != "task_context":
+            errors.append(f"{label} must create the exact verified MCP context file before inference: missing {required!r}")
+    if "tools/write_autonomous_provider_context.py" not in prepare_step:
+        errors.append(f"{label} provider preparation does not create the MCP context file")
+
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
 reserve_match = re.search(r"(?m)^\s*MIN_REQUESTS_PER_CYCLE=(\d+)\s*$", openrouter)
