@@ -617,28 +617,45 @@ jobs:
             --expected-policy-sha "$policy_sha" \
             --task-id "$TASK_ID" \
             --allowlist-output "$allowlist_path" > "$RUNNER_TEMP/boonta-agent-inputs.json"
-          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$GITHUB_OUTPUT" "$source_root" "$policy_root" <<'PY'
+          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$RUNNER_TEMP/boonta-approved-source-context.txt" "$GITHUB_OUTPUT" "$source_root" "$policy_root" <<'PY'
           import json
+          import os
+          import stat
           import sys
           from pathlib import Path
 
           payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          source_context_path = Path(sys.argv[3])
+          if source_context_path.exists() or source_context_path.is_symlink():
+              raise SystemExit("Approved source-context output already exists; refusing overwrite")
+          fd = os.open(source_context_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, stat.S_IRUSR | stat.S_IWUSR)
+          try:
+              with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                  stream.write(payload["source_context"])
+                  stream.flush()
+                  os.fsync(stream.fileno())
+          except Exception:
+              source_context_path.unlink(missing_ok=True)
+              raise
           values = {
               "task_id": payload["task_id"],
               "target_branch": payload["target_branch"],
               "base_sha": payload["base_sha"],
               "policy_sha": payload["policy_sha"],
-              "source_root": sys.argv[4],
-              "policy_root": sys.argv[5],
+              "source_root": sys.argv[5],
+              "policy_root": sys.argv[6],
               "read_paths": json.dumps(payload["read_paths"], separators=(",", ":")),
               "read_ranges": json.dumps(payload["read_ranges"], separators=(",", ":")),
               "source_read_chars": str(payload["source_read_chars"]),
               "source_read_tokens_estimate": str(payload["source_read_tokens_estimate"]),
+              "source_context_file": str(source_context_path),
+              "source_context_sha256": payload["source_context_sha256"],
+              "source_context_chars": str(payload["source_context_chars"]),
               "allowed_paths": json.dumps(payload["allowed_paths"], separators=(",", ":")),
               "allowlist_report": payload["allowlist_report"],
               "proposal_path": sys.argv[2],
           }
-          with Path(sys.argv[3]).open("a", encoding="utf-8") as stream:
+          with Path(sys.argv[4]).open("a", encoding="utf-8") as stream:
               for key, value in values.items():
                   stream.write(f"{key}={value}\n")
           PY
