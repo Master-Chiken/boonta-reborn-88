@@ -20,9 +20,18 @@ function git(root, ...args) {
 function fixture(overrides = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'boonta-bounded-mcp-'));
   const root = path.join(temp, 'repo');
+  const workspace = path.join(temp, 'workspace');
   const runnerTemp = path.join(temp, 'runner-temp');
   fs.mkdirSync(path.join(root, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(workspace, '.gemini'), { recursive: true });
   fs.mkdirSync(runnerTemp, { recursive: true });
+  fs.writeFileSync(path.join(workspace, '.gemini', 'context.json'), JSON.stringify({
+    task_id: TASK_ID,
+    task_title: 'Rival route progress fixture',
+    task_description: 'Trace player and rival route progress',
+    task_target_branch: 'dev',
+    verified_context: 'Owner-approved exact-path context and task acceptance criteria'
+  }), 'utf8');
   fs.writeFileSync(path.join(root, SOURCE_A), 'int gameplay_value(void) {\n    return 1;\n}\n', 'utf8');
   fs.writeFileSync(path.join(root, SOURCE_B), 'int test_value(void) {\n    return 1;\n}\n', 'utf8');
   git(root, 'init', '-q');
@@ -36,9 +45,12 @@ function fixture(overrides = {}) {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
     BOONTA_TASK_ID: TASK_ID,
+    BOONTA_TARGET_BRANCH: 'dev',
     BOONTA_BASE_SHA: baseSha,
     BOONTA_TARGET_ROOT: root,
+    BOONTA_CONTEXT_PATH: path.join(workspace, '.gemini', 'context.json'),
     BOONTA_PROPOSAL_PATH: path.join(runnerTemp, 'proposal.json'),
+    GITHUB_WORKSPACE: workspace,
     RUNNER_TEMP: runnerTemp,
     BOONTA_READ_PATHS: JSON.stringify([SOURCE_A, SOURCE_B]),
     BOONTA_READ_RANGES: JSON.stringify([
@@ -48,7 +60,7 @@ function fixture(overrides = {}) {
     BOONTA_ALLOWED_PATHS: JSON.stringify([SOURCE_A, SOURCE_B]),
     ...overrides
   };
-  return { temp, root, runnerTemp, baseSha, env };
+  return { temp, root, workspace, runnerTemp, baseSha, env };
 }
 
 function validDiff(filePath = SOURCE_A) {
@@ -144,6 +156,9 @@ function cleanup(fx) {
       const readPayload = JSON.parse(toolText(read));
       assert.deepEqual(readPayload.files.map((item) => item.file_path), [SOURCE_B, SOURCE_A].sort());
       assert.equal(readPayload.aggregate_lines_read, 6);
+      assert.equal(readPayload.task_context.task_id, TASK_ID);
+      assert.equal(readPayload.task_context.task_target_branch, 'dev');
+      assert.match(readPayload.task_context.verified_context, /owner-approved exact-path context/);
       const submitted = toolResult(result, 4);
       assert.equal(submitted.isError, false);
       assert.match(toolText(submitted), /PROPOSAL_STAGED/);
@@ -196,6 +211,48 @@ function cleanup(fx) {
       ]);
       assert.equal(toolResult(result, 2).isError, false);
       expectToolError(toolResult(result, 3), /may be read only once/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const contextPath = fx.env.BOONTA_CONTEXT_PATH;
+      const context = JSON.parse(fs.readFileSync(contextPath, 'utf8'));
+      context.task_id = 'OTHER-TASK';
+      fs.writeFileSync(contextPath, JSON.stringify(context), 'utf8');
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject a context for another task');
+      assert.match(result.stderr, /does not match the trusted task ID/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const link = fx.env.BOONTA_CONTEXT_PATH + '.link';
+      fs.symlinkSync(fx.env.BOONTA_CONTEXT_PATH, link);
+      fx.env.BOONTA_CONTEXT_PATH = link;
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject a symlinked task context');
+      assert.match(result.stderr, /must be exactly GITHUB_WORKSPACE/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      fx.env.BOONTA_CONTEXT_PATH = path.join(fx.runnerTemp, 'context.json');
+      fs.writeFileSync(fx.env.BOONTA_CONTEXT_PATH, '{}', 'utf8');
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject a task context outside the one exact workspace path');
+      assert.match(result.stderr, /must be exactly GITHUB_WORKSPACE/);
     } finally {
       cleanup(fx);
     }
@@ -336,7 +393,7 @@ function cleanup(fx) {
     }
   }
 
-  process.stdout.write('Bounded patch proposal MCP tests passed: batched one-use source reads, exact write scope, stale-base rejection and no remote writer surface.\n');
+  process.stdout.write('Bounded patch proposal MCP tests passed: one-use bounded task/source context, exact write scope, stale-base rejection and no remote writer surface.\n');
 })().catch((error) => {
   process.stderr.write(String(error.stack || error) + '\n');
   process.exitCode = 1;
