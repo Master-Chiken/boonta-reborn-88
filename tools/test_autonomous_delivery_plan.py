@@ -187,6 +187,8 @@ class SeparateTrustedPolicyPlanTests(DeliveryPlanFixture):
             check=False,
         )
         self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        git(trusted, "config", "user.name", "Boonta Trusted Main Test")
+        git(trusted, "config", "user.email", "trusted-main@example.invalid")
         trusted_docs = trusted / "docs/automation"
         trusted_task = {
             "task_id": TASK_ID,
