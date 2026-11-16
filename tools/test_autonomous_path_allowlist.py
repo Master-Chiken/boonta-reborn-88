@@ -391,7 +391,7 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         self.assertEqual(report["base_sha"], target_sha)
         self.assertEqual(report["allowed_paths"], ["gamecube-demo/source/main.c"])
 
-        with self.assertRaisesRegex(AllowlistError, "Checkout HEAD differs"):
+        with self.assertRaisesRegex(AllowlistError, "trusted main checkout HEAD differs"):
             build_allowlist(
                 target,
                 expected_base_sha=target_sha,
