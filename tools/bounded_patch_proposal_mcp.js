@@ -179,7 +179,7 @@ function makeState() {
   }
   if (fs.existsSync(proposalPathRaw)) reject('proposal output already exists; refusing to overwrite it');
 
-  return {
+  const state = {
     taskId,
     baseSha,
     targetBranch,
@@ -190,10 +190,29 @@ function makeState() {
     readRanges,
     allowedPaths: new Set(allowedPaths),
     sourcesRead: false,
+    preloadedSources: false,
+    preloadedSourceSha256: '',
     totalBytesRead: 0,
     totalLinesRead: 0,
     submitted: false
   };
+
+  if (process.env.BOONTA_PRELOADED_SOURCES === 'true') {
+    const expectedDigest = process.env.BOONTA_PRELOADED_SOURCE_SHA256 || '';
+    if (!/^[a-f0-9]{64}$/.test(expectedDigest)) {
+      reject('preloaded source context digest is missing or invalid');
+    }
+    const snapshot = readApprovedSources(state, {});
+    const actualDigest = crypto.createHash('sha256')
+      .update(JSON.stringify(snapshot.files), 'utf8')
+      .digest('hex');
+    if (actualDigest !== expectedDigest) {
+      reject('preloaded source context does not match the exact target checkout/ranges');
+    }
+    state.preloadedSources = true;
+    state.preloadedSourceSha256 = actualDigest;
+  }
+  return state;
 }
 
 function validateDiff(diff, allowedPaths) {
@@ -408,6 +427,8 @@ function submitProposal(state, args) {
     changed_paths: changedPaths,
     test_ids: args.test_ids,
     proposal_bytes: Buffer.byteLength(raw, 'utf8'),
+    source_snapshot_sha256: state.preloadedSourceSha256 || null,
+    source_snapshot_preloaded_before_inference: state.preloadedSources,
     remote_repository_write_performed: false
   };
 }
@@ -480,7 +501,10 @@ async function handle(message) {
   }
   if (message.method === 'ping') return { jsonrpc: '2.0', id: message.id, result: {} };
   if (message.method === 'tools/list') {
-    return { jsonrpc: '2.0', id: message.id, result: { tools: TOOL_DEFINITIONS } };
+    const tools = state.preloadedSources
+      ? TOOL_DEFINITIONS.filter((item) => item.name === 'submit_patch_proposal')
+      : TOOL_DEFINITIONS;
+    return { jsonrpc: '2.0', id: message.id, result: { tools } };
   }
   if (message.method === 'tools/call') {
     const name = message.params?.name;
