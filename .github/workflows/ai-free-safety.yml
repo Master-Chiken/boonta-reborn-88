@@ -153,6 +153,7 @@ jobs:
           python3 tools/test_verify_autonomous_patch.py
           python3 tools/test_validate_trusted_main_checkout.py
           python3 tools/test_prepare_autonomous_agent_inputs.py
+          python3 -m unittest tools/test_write_autonomous_provider_context.py
           python3 tools/test_autonomous_delivery_plan.py
           python3 tools/test_execute_autonomous_github_delivery.py
           python3 tools/test_execute_autonomous_provider_cycle.py
