@@ -249,13 +249,8 @@ for label, content, tool_names in provider_model_visible_tools:
         errors.append(f"{label} prompt is missing bounded local MCP tools: {missing!r}")
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
-if (
-    "preloadedSources" not in bounded_mcp_source
-    or "BOONTA_PRELOADED_SOURCE_SHA256" not in groq
-    or "preloaded source context does not match" not in bounded_mcp_source
-    or "TOOL_DEFINITIONS.filter((item) => item.name === 'submit_patch_proposal')" not in bounded_mcp_source
-):
-    errors.append("Groq must verify the preloaded source snapshot before exposing only the proposal tool")
+if "BOONTA_PRELOADED_SOURCE_SHA256" not in groq:
+    errors.append("Groq must pass the trusted preloaded-source digest to its local MCP")
 # OpenRouter's eight-step ceiling is a hard safety bound, not a discovery budget.
 # The preflight performs task reservation and open-PR duplicate detection before inference.
 for required in (
@@ -625,6 +620,13 @@ for required in (
     if required not in gemini_prompt:
         errors.append(f"Gemini prompt must reference {required!r}")
 bounded_mcp_source = read("bounded_patch_mcp")
+if (
+    "preloadedSources" not in bounded_mcp_source
+    or "preloadedSourceSha256" not in bounded_mcp_source
+    or "preloaded source context does not match" not in bounded_mcp_source
+    or "TOOL_DEFINITIONS.filter((item) => item.name === 'submit_patch_proposal')" not in bounded_mcp_source
+):
+    errors.append("Groq must verify the preloaded source snapshot before exposing only the proposal tool")
 for required in ("MAX_FILE_BYTES", "MAX_TOTAL_BYTES", "MAX_TOTAL_LINES", "MAX_DIFF_BYTES", "MAX_PROPOSAL_BYTES", "preloadedSources", "preloadedSourceSha256", "preloaded source context does not match"):
     if required not in bounded_mcp_source:
         errors.append(f"Bounded provider MCP must enforce {required!r}")
