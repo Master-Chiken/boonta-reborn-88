@@ -40,6 +40,7 @@ SCHEMA: dict[str, Any] = {
                     "automation.task_preflight",
                     "automation.provider_handoff",
                     "automation.task_ledger",
+                    "gamecube.rival_host_tests",
                 ],
             },
         },
