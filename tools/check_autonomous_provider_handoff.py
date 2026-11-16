@@ -144,63 +144,80 @@ for label, workflow, refresh_command, builder_command in provider_context_refres
         errors.append(f"{label} must refresh the compact task summary before building provider context")
 
 
-# Gemini CLI exposes MCP tools as mcp_{serverName}_{toolName}. Derive the
-# model-facing FQNs from the actual server alias and includeTools configuration.
-gemini_settings_marker = "          settings: |-\n"
-gemini_settings_end = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
+# Gemini exposes the older GitHub MCP only for interactive, non-autonomous requests.
+# Autonomous runs use the same bounded proposal-only local MCP as OpenRouter/Groq.
+gemini_settings_marker = "          settings: |-\\n"
+gemini_settings_end = "          prompt: '/gemini-plan-execute'"
 if gemini_settings_marker not in gemini or gemini_settings_end not in gemini:
-    errors.append("Gemini MCP settings block is missing; cannot verify model-visible tool names")
+    errors.append("Gemini interactive settings block is missing; cannot verify its bounded non-autonomous tools")
 else:
     try:
         gemini_settings_text = gemini.split(gemini_settings_marker, 1)[1].split(gemini_settings_end, 1)[0]
         gemini_settings = json.loads(gemini_settings_text)
         gemini_server_name, gemini_server = next(iter(gemini_settings.get("mcpServers", {}).items()))
         raw_gemini_tools = gemini_server.get("includeTools", [])
-        expected_gemini_tools = {f"mcp_{gemini_server_name}_{tool}" for tool in raw_gemini_tools}
-        missing_gemini_tools = sorted(name for name in expected_gemini_tools if name not in gemini_prompt)
-        if gemini_server_name != "github":
-            errors.append(f"Gemini GitHub MCP server alias must remain 'github'; found {gemini_server_name!r}")
-        if len(raw_gemini_tools) != 11:
-            errors.append(f"Gemini GitHub MCP allow-list must remain at 11 tools; found {len(raw_gemini_tools)}")
-        if missing_gemini_tools:
-            errors.append(f"Gemini autonomous prompt is missing model-visible MCP FQNs: {missing_gemini_tools!r}")
-        if "Use GitHub MCP FQNs only:" not in gemini_prompt:
-            errors.append("Gemini autonomous prompt must explicitly identify MCP fully qualified names")
-
-        core_tools = gemini_settings.get("tools", {}).get("core", [])
-        if core_tools != ["read_file"]:
-            errors.append("Gemini autonomous local tools must be limited to read_file for the injected context file")
-
-        for required in (
-            "name: 'Checkout selected task target for bounded source context'",
-            "ref: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}",
-            "path: .boonta-target-source",
-            "tools/build_autonomous_context.py",
-            "--source-root \"$TARGET_ROOT\"",
-            "--max-source-chars 1600",
-            "--arg verified_context",
-            "verified_context: $verified_context",
-        ):
-            if required not in gemini:
-                errors.append(f"Gemini must preload bounded excerpts from the exact task target: missing {required!r}")
-        for required in (
-            "use its `verified_context` as the authoritative task handoff",
-            "The only local file read permitted is `.gemini/context.json`",
-            "default checkout is never gameplay source evidence",
-        ):
-            if required not in gemini_prompt:
-                errors.append(f"Gemini target-branch context rule is missing {required!r}")
+        if gemini_server_name != "github" or len(raw_gemini_tools) != 11:
+            errors.append("Gemini interactive GitHub MCP must retain its reviewed 11-tool allow-list")
+        if gemini_settings.get("tools", {}).get("core", []) != ["read_file"]:
+            errors.append("Gemini core local tools must remain limited to read_file")
     except (json.JSONDecodeError, StopIteration, AttributeError, TypeError) as exc:
-        errors.append(f"Gemini MCP tool-name contract is invalid: {exc}")
+        errors.append(f"Gemini interactive MCP settings are invalid: {exc}")
+
+gemini_auto_start = gemini.find("      - name: Run Gemini CLI through bounded local proposal MCP")
+gemini_auto_end = gemini.find("      - name: Verify, test and publish the Gemini patch proposal", gemini_auto_start + 1)
+gemini_auto_step = gemini[gemini_auto_start:gemini_auto_end] if gemini_auto_start >= 0 and gemini_auto_end > gemini_auto_start else ""
+gemini_auto_prompt = gemini_prompt
+if gemini_auto_start < 0 or gemini_auto_end < 0:
+    errors.append("Gemini autonomous bounded proposal model step is missing")
+else:
+    try:
+        auto_settings_text = gemini_auto_step.split(gemini_settings_marker, 1)[1].split("          prompt: '/gemini-autonomous-loop'", 1)[0]
+        auto_settings = json.loads(auto_settings_text)
+        auto_servers = auto_settings.get("mcpServers", {})
+        if set(auto_servers) != {"boonta"}:
+            errors.append("Gemini autonomous MCP must expose only the local boonta server")
+        else:
+            auto_server = auto_servers["boonta"]
+            auto_tools = auto_server.get("includeTools", [])
+            if auto_server.get("command") != "node" or auto_server.get("args") != ["tools/bounded_patch_proposal_mcp.js"]:
+                errors.append("Gemini autonomous MCP must run the bounded local proposal server")
+            if auto_tools != ["read_approved_sources", "submit_patch_proposal"]:
+                errors.append("Gemini autonomous MCP must expose exactly the two bounded proposal tools")
+            expected_tools = {f"mcp_boonta_{tool}" for tool in auto_tools}
+            missing_tools = sorted(name for name in expected_tools if name not in gemini_prompt)
+            if missing_tools:
+                errors.append(f"Gemini autonomous prompt is missing local MCP FQNs: {missing_tools!r}")
+        if auto_settings.get("tools", {}).get("core", []) != ["read_file"]:
+            errors.append("Gemini autonomous local tools must be limited to read_file for .gemini/context.json")
+    except (json.JSONDecodeError, IndexError, TypeError) as exc:
+        errors.append(f"Gemini autonomous bounded MCP settings are invalid: {exc}")
+
+for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"):
+    if forbidden in gemini_auto_step:
+        errors.append(f"Gemini autonomous model step exposes a forbidden GitHub writer surface: {forbidden!r}")
+for required in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"):
+    if required not in gemini_auto_step:
+        errors.append(f"Gemini autonomous model step lacks bounded input {required!r}")
+if "inputs.autonomous_mode != true" not in gemini:
+    errors.append("Interactive Gemini GitHub MCP step must be disabled in autonomous mode")
+gemini_writer_start = gemini.find("      - name: Verify, test and publish the Gemini patch proposal")
+gemini_writer = gemini[gemini_writer_start:] if gemini_writer_start >= 0 else ""
+if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in gemini_writer:
+    errors.append("Only the workflow-owned Gemini verifier/publisher may receive the scoped GitHub token")
+if "execute_autonomous_provider_cycle.py" not in gemini_writer:
+    errors.append("Gemini autonomous delivery must use the workflow-owned verification/delivery orchestrator")
+if "steps.execute_provider_cycle.outcome == 'success'" not in gemini:
+    errors.append("Gemini report validation must follow successful workflow-owned proposal verification and delivery")
 
 for required in (
-    "No Explore/subagents/planning or repo-wide discovery; exact task-marker PR search only.",
-    "Normal: reconcile, create branch, push one coherent change and open one marked PR.",
-    "Resume exposes only `mcp_github_get_file_contents` and `mcp_github_push_files`",
-    "Never create a branch/PR",
+    "No Explore/subagents/planning or repo-wide discovery",
+    "Call `mcp_boonta_read_approved_sources` exactly once",
+    "Call `mcp_boonta_submit_patch_proposal` exactly once",
+    "Never create branches, commits, refs, pull requests, comments, merges or auto-merges",
+    "Post-merge reconciliation is workflow-owned from trusted `main`",
 ):
     if required not in gemini_prompt:
-        errors.append(f"Gemini direct-execution contract is missing {required!r}")
+        errors.append(f"Gemini autonomous proposal contract is missing {required!r}")
 
 # OpenCode 1.19.5 exposes MCP tools as top-level names prefixed with the
 # sanitized server name. Keep direct mode explicit; do not request Code Mode.
