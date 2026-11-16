@@ -9,7 +9,11 @@ import unittest
 from pathlib import Path
 
 from check_task_ledger_summary import build_summary
-from prepare_autonomous_agent_inputs import AgentInputError, prepare_agent_inputs
+from prepare_autonomous_agent_inputs import (
+    AgentInputError,
+    _compact_c_source_lines,
+    prepare_agent_inputs,
+)
 
 TASK_ID = "GC-RIVAL-ROUTE-PROGRESSION"
 PREREQUISITE_ID = "GC-RACE-PROGRESSION"
@@ -162,6 +166,33 @@ class AgentInputTests(AgentInputFixture):
         self.assertEqual(json.loads(Path(report["allowlist_report"]).read_text())["allowed_paths"], [SOURCE_PATH])
         self.assertEqual(git(self.source, "status", "--porcelain"), "")
         self.assertEqual(git(self.policy, "status", "--porcelain"), "")
+
+    def test_source_read_budget_estimate_is_returned(self):
+        report = self.prepare()
+        self.assertGreater(report["source_read_chars"], 1200)
+        self.assertEqual(
+            report["source_read_tokens_estimate"],
+            (report["source_read_chars"] + 3) // 4,
+        )
+
+    def test_c_source_compaction_drops_comments_but_preserves_quoted_urls(self):
+        compacted = _compact_c_source_lines([
+            "/* block comment starts",
+            " * model context should omit this",
+            " */",
+            'const char *url = "https://example.invalid/a//b"; // trailing note',
+            "return 1;",
+        ])
+        self.assertEqual(
+            compacted,
+            [
+                "",
+                "",
+                "",
+                'const char *url = "https://example.invalid/a//b";',
+                "return 1;",
+            ],
+        )
 
     def test_stale_target_sha_is_rejected(self):
         with self.assertRaisesRegex(AgentInputError, "selected task base SHA"):
