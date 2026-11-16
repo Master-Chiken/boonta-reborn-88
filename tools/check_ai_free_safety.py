@@ -150,7 +150,7 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
 def normal_agent_prompt(workflow: str) -> str:
     markers = (
         "You are the €0-only OpenRouter Free coding agent for Boonta Reborn.",
-        "Groq Free, €0 only. Execute exactly the selected task from the trusted context.",
+        "Groq Free (€0). Implement only the selected task.",
     )
     starts = [position for position in (workflow.find(marker) for marker in markers) if position >= 0]
     if not starts:
@@ -170,14 +170,15 @@ for required in (
     if required not in openrouter_agent_prompt:
         errors.append(f"OpenRouter agent must preserve its proposal-only bounded contract: {required!r}")
 for required in (
-    "Call boonta_read_approved_sources exactly once",
-    "boonta_submit_patch_proposal exactly once",
-    "No GitHub MCP",
-    "No agents, subagents, repo-wide discovery",
-    "Do not ask the owner for code or clarification",
+    "APPROVED SOURCE EXCERPTS",
+    "One tool is available: boonta_submit_patch_proposal",
+    "Change only exact owner-approved write paths",
+    "No GitHub writer",
+    "No paid route",
+    "Do not submit a partial or fabricated patch",
 ):
     if required not in groq_agent_prompt:
-        errors.append(f"Groq agent must preserve its proposal-only bounded contract: {required!r}")
+        errors.append(f"Groq agent must preserve its preloaded-source proposal-only contract: {required!r}")
 
 
 # A single read-only cooldown preflight avoids starting three provider runners
@@ -1116,7 +1117,7 @@ for label, prompt in dynamic_task_prompts:
 # reject truncation of required question, acceptance-criteria or next-action excerpts.
 for label, workflow, expected_max_chars, expected_task_chars in (
     ("OpenRouter", openrouter_fallback, "2800", "1100"),
-    ("Groq", groq_fallback, "1400", "1000"),
+    ("Groq", groq_fallback, "1000", "800"),
 ):
     if f"--max-task-context {expected_task_chars}" not in workflow:
         errors.append(f"{label} context builder must preserve the reviewed {expected_task_chars}-character task handoff")
@@ -1764,12 +1765,12 @@ else:
         )
         groq_limits = groq_model.get("limit", {})
         groq_steps = groq_config.get("agent", {}).get("build", {}).get("steps")
-        if groq_limits.get("context") != 3700 or groq_limits.get("output") != 256:
+        if groq_limits.get("context") != 3600 or groq_limits.get("output") != 700:
             errors.append(
-                "Groq GPT-OSS 20B must remain capped at 3700 context / 256 output tokens for its two-step bounded proposal cycle"
+                "Groq GPT-OSS 20B must remain capped at 3600 context / 700 output tokens for the preloaded one-tool proposal cycle"
             )
         if groq_steps != 2:
-            errors.append("Groq Free must use exactly two model tool steps: one bounded source read and one patch proposal")
+            errors.append("Groq Free must use one preloaded-source proposal tool step followed by a final text-only response")
         if groq_model.get("temperature") is not True:
             errors.append("Groq GPT-OSS 20B must explicitly declare temperature support for deterministic tool-call settings")
         if groq_config.get("agent", {}).get("build", {}).get("temperature") != 0.2:
@@ -1783,18 +1784,24 @@ else:
 if "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter_fallback or "--max-source-chars 950" not in openrouter_fallback:
     errors.append("OpenRouter must preload exact target-branch source ranges within its bounded excerpt budget")
 for required in (
-    "Call boonta_read_approved_sources exactly once",
-    "boonta_submit_patch_proposal exactly once",
-    "No GitHub MCP, token, branch/commit/PR writer",
+    "APPROVED SOURCE EXCERPTS",
+    "One tool is available: boonta_submit_patch_proposal",
+    "No GitHub writer",
     "gamecube.rival_host_tests",
-    "No paid route, billing, credits",
+    "No paid route",
 ):
     if required not in groq_agent_prompt:
-        errors.append(f"Groq fallback must enforce its proposal-only Free-tier contract: {required!r}")
-if 'prompt_length > 5500' not in groq_fallback:
-    errors.append("Groq fallback must enforce the 5,500-character TPM prompt ceiling before inference")
-if "SOURCE_READ_CHARS" not in groq_fallback or "estimated_input_tokens > 3650" not in groq_fallback:
-    errors.append("Groq fallback must budget prompt plus one-shot source result before inference")
+        errors.append(f"Groq fallback must enforce its preloaded-source proposal-only contract: {required!r}")
+if "prompt_length > 10400" not in groq_fallback:
+    errors.append("Groq fallback must enforce the 10,400-character preloaded prompt ceiling before inference")
+if (
+    "SOURCE_CONTEXT_FILE" not in groq_fallback
+    or "BOONTA_PRELOADED_SOURCE_SHA256" not in groq_fallback
+    or "estimated_input_tokens > 2750" not in groq_fallback
+    or "final_input_estimate > 3600" not in groq_fallback
+    or "combined_tpm_estimate > 8000" not in groq_fallback
+):
+    errors.append("Groq fallback must verify and budget its preloaded exact source snapshot before inference")
 if (
     "name: Write verified MCP context for Groq" not in groq_fallback
     or "steps.write_mcp_context.outcome == 'success'" not in groq_fallback
