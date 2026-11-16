@@ -174,6 +174,13 @@ def prepare_agent_inputs(
         )
 
     read_paths, read_ranges = _validate_read_contract(source_root, task)
+    unreadable_write_paths = sorted(set(allowlist.get("allowed_paths", [])) - set(read_paths))
+    if unreadable_write_paths:
+        raise AgentInputError(
+            "Owner-approved write paths are not covered by the task's exact read_paths/read_ranges; "
+            "no provider invocation is allowed until the owner-approved read contract is updated: " +
+            ", ".join(unreadable_write_paths)
+        )
 
     if allowlist_output.is_symlink() or allowlist_output.exists():
         raise AgentInputError("Allowlist report output must be a new non-symlink file")
