@@ -158,7 +158,8 @@ function cleanup(fx) {
       assert.equal(readPayload.aggregate_lines_read, 6);
       assert.equal(readPayload.task_context.task_id, TASK_ID);
       assert.equal(readPayload.task_context.task_target_branch, 'dev');
-      assert.match(readPayload.task_context.verified_context, /[Oo]wner-approved exact-path context/);
+      assert.match(readPayload.task_context.verified_context_sha256, /^[a-f0-9]{64}$/);
+      assert.equal(readPayload.task_context.verified_context, undefined);
       const submitted = toolResult(result, 4);
       assert.equal(submitted.isError, false);
       assert.match(toolText(submitted), /PROPOSAL_STAGED/);
@@ -196,7 +197,7 @@ function cleanup(fx) {
       const source = payload.files.find((item) => item.file_path === SOURCE_A);
       assert.equal(source.ranges[0].comments_and_blank_lines_omitted, true);
       assert.equal(source.ranges[0].rendered_lines, 3);
-      assert.match(source.ranges[0].content, /https:\\/\\/example\\.invalid\\/path/);
+      assert.ok(source.ranges[0].content.includes('https://example.invalid/path'));
       assert.match(source.ranges[0].content, /return 1;/);
       assert.doesNotMatch(source.ranges[0].content, /long block comment|trailing comment/);
       assert.equal(payload.source_format.includes('original range boundaries retained'), true);
