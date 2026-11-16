@@ -631,6 +631,8 @@ jobs:
               "policy_root": sys.argv[5],
               "read_paths": json.dumps(payload["read_paths"], separators=(",", ":")),
               "read_ranges": json.dumps(payload["read_ranges"], separators=(",", ":")),
+              "source_read_chars": str(payload["source_read_chars"]),
+              "source_read_tokens_estimate": str(payload["source_read_tokens_estimate"]),
               "allowed_paths": json.dumps(payload["allowed_paths"], separators=(",", ":")),
               "allowlist_report": payload["allowlist_report"],
               "proposal_path": sys.argv[2],
@@ -648,6 +650,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
+          SOURCE_READ_CHARS: ${{ steps.bounded_inputs.outputs.source_read_chars }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
@@ -687,7 +690,7 @@ jobs:
             "enabled_providers": ["groq"],
             "agent": {
               "build": {
-                "steps": 4,
+                "steps": 2,
                 "temperature": 0.2,
                 "permission": {"task": {"*": "deny"}}
               }
@@ -697,7 +700,7 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "temperature": true,
-                    "limit": {"context": 1550, "output": 256}
+                    "limit": {"context": 3700, "output": 256}
                   }
                 }
               }
@@ -776,7 +779,17 @@ jobs:
             echo "::error::Groq prompt exceeds the 5,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
-          echo "Groq prompt size: $prompt_length characters."
+          source_read_chars="${SOURCE_READ_CHARS:-}"
+          if [[ ! "$source_read_chars" =~ ^[0-9]+$ ]]; then
+            echo "::error::Groq exact source-read size is missing or invalid; no model request was sent."
+            exit 2
+          fi
+          estimated_input_tokens=$(((prompt_length + source_read_chars + 3) / 4))
+          if (( estimated_input_tokens > 3650 )); then
+            echo "::error::Groq prompt plus one-shot source result is estimated at $estimated_input_tokens tokens; the 3,700-token context ceiling leaves insufficient safety margin, so no model request was sent."
+            exit 2
+          fi
+          echo "Groq prompt size: $prompt_length characters; bounded source result: $source_read_chars characters; estimated combined input: $estimated_input_tokens tokens."
           echo "provider_request_started=true" >> "$GITHUB_OUTPUT"
 
           python3 - "$PROMPT" "$RUNNER_TEMP/groq-provider-output.txt" "$REPO_ROOT" <<'PY'
