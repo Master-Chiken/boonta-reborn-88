@@ -675,14 +675,14 @@ for required in (
 # Both proposal-only providers need the exact context file their local MCP validates.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
     prepare_start = workflow.find("      - name: Prepare the exact selected task and compact repository context")
-    prepare_end = workflow.find("\\n      - name:", prepare_start + 1)
+    prepare_end = workflow.find("\n      - name:", prepare_start + 1)
     prepare_step = workflow[prepare_start:prepare_end] if prepare_start >= 0 and prepare_end >= 0 else ""
     for required in (
         "tools/write_autonomous_provider_context.py",
         "--verified-context-stdin",
-        "--workspace \\"$GITHUB_WORKSPACE\\"",
-        "--task-id \\"$TASK_ID\\"",
-        "--target-branch \\"$TASK_TARGET_BRANCH\\"",
+        '--workspace "$GITHUB_WORKSPACE"',
+        '--task-id "$TASK_ID"',
+        '--target-branch "$TASK_TARGET_BRANCH"',
     ):
         if required not in prepare_step:
             errors.append(f"{label} must create the exact verified MCP context file before inference: missing {required!r}")
