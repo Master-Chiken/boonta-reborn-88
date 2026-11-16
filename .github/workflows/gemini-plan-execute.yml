@@ -743,7 +743,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": []
+                "core": ["read_file"]
               }
             }
           prompt: '/gemini-plan-execute'
@@ -806,7 +806,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["read_file"]
+                "core": []
               }
             }
           prompt: '/gemini-autonomous-loop'
