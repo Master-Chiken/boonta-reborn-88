@@ -105,7 +105,6 @@ function makeState() {
   const taskContext = {
     task_id: rawContext.task_id,
     task_title: rawContext.task_title,
-    task_description: rawContext.task_description,
     task_target_branch: rawContext.task_target_branch,
     // The full verified context is already in the provider prompt. Return only
     // its digest here so the MCP round-trip does not duplicate thousands of tokens.
@@ -114,8 +113,8 @@ function makeState() {
   if (taskContext.task_id !== taskId || taskContext.task_target_branch !== targetBranch ||
       typeof taskContext.task_title !== 'string' || !taskContext.task_title.trim() ||
       taskContext.task_title.length > 240 ||
-      typeof taskContext.task_description !== 'string' || !taskContext.task_description.trim() ||
-      taskContext.task_description.length > 6000) {
+      typeof rawContext.task_description !== 'string' || !rawContext.task_description.trim() ||
+      rawContext.task_description.length > 6000) {
     reject('bounded task context does not match the trusted task ID/target branch or exceeds its size limits');
   }
   const sourceRoot = fs.realpathSync(sourceRootRaw);
