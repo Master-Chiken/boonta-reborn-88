@@ -153,19 +153,32 @@ def build_allowlist(
     *,
     expected_base_sha: str,
     requested_task_id: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
     ledger_path: Path = DEFAULT_LEDGER,
     policy_path: Path = DEFAULT_POLICY,
 ) -> dict[str, Any]:
     if not isinstance(requested_task_id, str) or not TASK_ID_RE.fullmatch(requested_task_id):
         raise AllowlistError("Requested task ID is invalid")
+    # Source checkout is the task's exact target branch (main or dev). The
+    # canonical ledger and owner policy may be newer and are read from a
+    # separate trusted main checkout.
     root = _verify_checkout(root, expected_base_sha)
-    ledger_file = root / ledger_path
-    policy_file = root / policy_path
+    if policy_root is None:
+        trusted_root = root
+        if expected_policy_sha is not None:
+            raise AllowlistError("expected_policy_sha requires an explicit trusted policy_root")
+    else:
+        if not isinstance(expected_policy_sha, str) or not SHA_RE.fullmatch(expected_policy_sha):
+            raise AllowlistError("A trusted policy checkout requires its exact 40-character policy SHA")
+        trusted_root = _verify_checkout(policy_root, expected_policy_sha)
+    ledger_file = trusted_root / ledger_path
+    policy_file = trusted_root / policy_path
     if ledger_file.is_symlink() or policy_file.is_symlink():
         raise AllowlistError("Ledger and path policy must not be symlinks")
 
-    _validate_tracked_regular_file(root, ledger_path.as_posix())
-    _validate_tracked_regular_file(root, policy_path.as_posix())
+    _validate_tracked_regular_file(trusted_root, ledger_path.as_posix())
+    _validate_tracked_regular_file(trusted_root, policy_path.as_posix())
     ledger = load_json(ledger_file)
     policy = load_json(policy_file)
     if not isinstance(ledger, dict) or type(ledger.get("schema_version")) is not int or ledger["schema_version"] != 2:
@@ -332,7 +345,9 @@ def build_allowlist(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=ROOT)
+    parser.add_argument("--repo-root", type=Path, default=ROOT, help="exact target-branch checkout")
+    parser.add_argument("--policy-root", type=Path, help="optional trusted checkout containing the canonical main ledger and path policy")
+    parser.add_argument("--expected-policy-sha", help="exact SHA of the trusted policy checkout")
     parser.add_argument("--expected-base-sha", required=True)
     parser.add_argument("--task-id", required=True)
     args = parser.parse_args()
@@ -341,6 +356,8 @@ def main() -> int:
             args.repo_root,
             expected_base_sha=args.expected_base_sha,
             requested_task_id=args.task_id,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except AllowlistError as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
