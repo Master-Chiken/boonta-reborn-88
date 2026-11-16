@@ -165,7 +165,7 @@ class TaskReadPathTests(unittest.TestCase):
             self.assertGreater(4 * 70000, MAX_TOTAL_READ_BYTES)
             self.assertEqual(validate_read_paths(data, root), [])
 
-    def test_rejects_too_many_paths(self):
+    def test_accepts_five_bounded_paths(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "source").mkdir()
@@ -174,8 +174,19 @@ class TaskReadPathTests(unittest.TestCase):
                 path = f"source/file{index}.c"
                 (root / path).write_text("x", encoding="utf-8")
                 paths.append(path)
+            self.assertEqual(validate_read_paths(ledger_with_paths(paths), root), [])
+
+    def test_rejects_too_many_paths(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "source").mkdir()
+            paths = []
+            for index in range(6):
+                path = f"source/file{index}.c"
+                (root / path).write_text("x", encoding="utf-8")
+                paths.append(path)
             errors = validate_read_paths(ledger_with_paths(paths), root)
-            self.assertTrue(any("1-4 unique safe repository text paths" in error for error in errors))
+            self.assertTrue(any("1-5 unique safe repository text paths" in error for error in errors))
 
     def test_rejects_symlink_outside_repository(self):
         with tempfile.TemporaryDirectory() as temp, tempfile.TemporaryDirectory() as outside:
