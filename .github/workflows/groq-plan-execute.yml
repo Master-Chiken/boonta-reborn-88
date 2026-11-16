@@ -641,44 +641,41 @@ jobs:
           PY
 
       - name: Run OpenCode through the Groq Free route
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && steps.bounded_inputs.outcome == 'success' && inputs.resume_mode != true
         id: run_opencode
         shell: bash
         env:
           GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
-          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
-          OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
           TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}
-          TASK_BRANCH_NAME: autonomous-${{ inputs.task_id }}-${{ github.run_id }}
-          RESUME_TASK_ID: ${{ inputs.resume_task_id }}
-          RESUME_TASK_TITLE: ${{ inputs.resume_task_title }}
-          RESUME_TASK_TARGET_BRANCH: ${{ inputs.resume_task_target_branch }}
           REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
           AUTONOMOUS_CONTEXT: ${{ steps.prepare_context.outputs.context }}
-          RESUME_MODE: ${{ inputs.resume_mode }}
-          RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}
-          RESUME_PR_URL: ${{ inputs.resume_pr_url }}
-          RESUME_BRANCH: ${{ inputs.resume_branch }}
-          RESUME_HEAD_SHA: ${{ inputs.resume_head_sha }}
-          RESUME_FILE_PATHS: ${{ inputs.resume_file_paths }}
+          GROQ_PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+          GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
+          BOONTA_BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
+          BOONTA_TARGET_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          BOONTA_PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
+          BOONTA_READ_PATHS: ${{ steps.bounded_inputs.outputs.read_paths }}
+          BOONTA_READ_RANGES: ${{ steps.bounded_inputs.outputs.read_ranges }}
+          BOONTA_ALLOWED_PATHS: ${{ steps.bounded_inputs.outputs.allowed_paths }}
+          OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'
         run: |
           set -euo pipefail
           set +x
 
-          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
-            TASK_ID="${RESUME_TASK_ID}"
-            TASK_TITLE="${RESUME_TASK_TITLE}"
-            TASK_TARGET_BRANCH="${RESUME_TASK_TARGET_BRANCH}"
-            export GITHUB_TOOLS="get_file_contents,push_files"
-          else
-            export GITHUB_TOOLS="create_branch,create_pull_request,get_file_contents,push_files"
+          if [[ -z "$TASK_ID" || -z "$TASK_TITLE" || -z "$AUTONOMOUS_CONTEXT" || -z "$REPO_ROOT" || ! "$TASK_TARGET_BRANCH" =~ ^(main|dev)$ || -z "$BOONTA_BASE_SHA" ]]; then
+            echo "::error::Global preflight or bounded task inputs are incomplete; no Groq request was sent."
+            exit 2
+          fi
+          if [[ -f "$BOONTA_PROPOSAL_PATH" || -L "$BOONTA_PROPOSAL_PATH" ]]; then
+            echo "::error::A provider proposal already exists at the workflow-owned output path."
+            exit 2
           fi
 
-          # This config exposes only the explicitly allow-listed GitHub MCP tools.
-          # 1,550/256 limits; max 4 steps (7,224 nominal tokens). Preloaded excerpts first; at most one exact approved file read.
-          # Shell execution is denied; repository changes must use branch/PR MCP tools.
+          export OPENCODE_AUTH_CONTENT
+          OPENCODE_AUTH_CONTENT="$(jq -cn --arg key "$GROQ_API_KEY" '{groq: {type: "api", key: $key}}')"
+
           cat > "$RUNNER_TEMP/opencode.json" <<'JSON'
           {
             "$schema": "https://opencode.ai/config.json",
@@ -689,11 +686,7 @@ jobs:
               "build": {
                 "steps": 4,
                 "temperature": 0.2,
-                "permission": {
-                  "task": {
-                    "*": "deny"
-                  }
-                }
+                "permission": {"task": {"*": "deny"}}
               }
             },
             "provider": {
@@ -701,26 +694,24 @@ jobs:
                 "models": {
                   "openai/gpt-oss-20b": {
                     "temperature": true,
-                    "limit": {
-                      "context": 1550,
-                      "output": 256
-                    }
+                    "limit": {"context": 1550, "output": 256}
                   }
                 }
               }
             },
             "mcp": {
-              "github": {
+              "boonta": {
                 "type": "local",
-                "command": [
-                  "docker", "run", "-i", "--rm",
-                  "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
-                  "-e", "GITHUB_TOOLS",
-                  "ghcr.io/github/github-mcp-server:v0.27.0"
-                ],
+                "command": ["node", "tools/bounded_patch_proposal_mcp.js"],
                 "environment": {
-                  "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}",
-                  "GITHUB_TOOLS": "{env:GITHUB_TOOLS}"
+                  "BOONTA_TASK_ID": "{env:TASK_ID}",
+                  "BOONTA_BASE_SHA": "{env:BOONTA_BASE_SHA}",
+                  "BOONTA_TARGET_ROOT": "{env:BOONTA_TARGET_ROOT}",
+                  "BOONTA_PROPOSAL_PATH": "{env:BOONTA_PROPOSAL_PATH}",
+                  "RUNNER_TEMP": "{env:RUNNER_TEMP}",
+                  "BOONTA_READ_PATHS": "{env:BOONTA_READ_PATHS}",
+                  "BOONTA_READ_RANGES": "{env:BOONTA_READ_RANGES}",
+                  "BOONTA_ALLOWED_PATHS": "{env:BOONTA_ALLOWED_PATHS}"
                 },
                 "enabled": true,
                 "timeout": 60000
@@ -739,118 +730,55 @@ jobs:
           JSON
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
-
           PROMPT="$(cat <<'PROMPT'
-          Groq Free, €0 only. Execute exactly the preflight-reserved task.
-
-          TASK
-          - The preloaded schema-v2 context is authoritative. Global preflight is authoritative: no task PR exists. Do not search PR history or trust older merged automation PRs.
-          - No issue bodies/comments; exact source excerpts are preloaded.
-          - Source excerpt budget: 1,800 characters. Use preloaded source excerpts first; report BLOCKED if a full patch exceeds 256 output tokens.
-          - No broad model-side reads or repo discovery; one exact approved file read at most. If needed, call github_get_file_contents at most once for a listed path at ref TASK_TARGET_BRANCH.
-          - write only the exact owner-reviewed paths listed in context ("Exact owner-reviewed write paths (no others)"); if absent, BLOCKED with no branch/PR.
-          - Preserve provenance. Reuse PR #327 at 69deb6778f9383887118803428e7014686865a83. Do not reopen, replay or recreate that chain. PRs #317/#318/#319 are superseded.
+          Groq Free, €0 only. Execute exactly the selected task from the trusted context.
 
           SAFETY
-          - No paid routes, billing, credits, or provider/secret/settings changes.
-          - Stop after the first quota, TPM, rate-limit, context or auth error; never retry.
-          - Never upload commercial ROM/assets. Never write main/dev, merge, force-push or delete refs. No shell, filesystem or subagents.
-          - Never ask the owner for code or clarification; report one precise blocker instead.
+          - No paid route, billing, credits, provider/secret/settings changes or shell.
+          - Preserve clean-room provenance. Never upload commercial ROMs, disc images, binaries or extracted game assets.
+          - No agents, subagents, repo-wide discovery, PR searches, directory listings or network research.
+          - Do not ask the owner for code or clarification. Implement a bounded patch or stop with one precise blocker.
 
-          TOOLS / DELIVERY
-          - Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.
-          - At most four calls: optional exact read; create one branch from TASK_TARGET_BRANCH; push one coherent patch once; create one non-draft PR.
-          - Only listed paths may change. PR body has standalone BOONTA_TASK_ID and BOONTA_TASK_TARGET_BRANCH.
-          - Use returned PR URL/head_sha; do not read the PR back.
+          APPROVED TOOLS
+          - Only boonta_read_approved_sources and boonta_submit_patch_proposal are available.
+          - Call boonta_read_approved_sources exactly once to inspect the exact selected source ranges.
+          - Call boonta_submit_patch_proposal exactly once with one coherent unified diff.
+          - No GitHub MCP, token, branch/commit/PR writer, shell, filesystem or other repository write API is available.
+          - The workflow-owned verifier, not the model, runs tests and creates a PR only after successful verification.
 
-          REPORT
-          - copy reserved BOONTA_CYCLE_TASK_ID and EVIDENCE_BASE verbatim. Output machine-readable lines only.
-          - PROGRESS needs PR URL and exact 40-character head SHA; otherwise BLOCKED needs one concrete blocker and next action.
+          PATCH
+          - Change only exact owner-reviewed write paths from the trusted context.
+          - Bind the proposal to the exact task ID and base SHA.
+          - Use only registered test identifiers. GC-RIVAL-ROUTE-PROGRESSION requires gamecube.rival_host_tests.
+          - If the patch cannot be completed within the Free output/context limit, do not submit incomplete or fabricated code. Report the exact blocker.
+          - Proposal schema: schema_version, task_id, base_sha, summary, unified_diff, test_ids, limitations.
+
+          FINAL
+          - Never claim a PR, branch, commit, successful tests or merge. The workflow will create its machine report from verified GitHub evidence.
           PROMPT
           )"
 
-          if [[ -z "${TASK_ID:-}" || -z "${TASK_TITLE:-}" || -z "${AUTONOMOUS_CONTEXT:-}" || -z "${REPO_ROOT:-}" || ! "${TASK_TARGET_BRANCH:-}" =~ ^(main|dev)$ ]]; then
-            echo "::error::Global preflight or schema-v2 context builder did not pass; no Groq request was sent."
-            exit 2
-          fi
-          PROMPT="${PROMPT}"$'\n\n'
-          PROMPT+="${AUTONOMOUS_CONTEXT}"
-          if [[ "${RESUME_MODE:-false}" != "true" ]]; then
-            PROMPT+=$'\nSelected base: '"${TASK_TARGET_BRANCH}"$'\nNew branch: '"${TASK_BRANCH_NAME}"
-          fi
-          REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
-          REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
-          PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
-          PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
-          PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: https://github.com/Master-Chiken/boonta-reborn-88/pull/<number> @ <exact 40-character head SHA>'
-          PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
-          PROMPT+=$'\nFor BLOCKED, omit the two evidence lines and output exactly one BOONTA_CYCLE_BLOCKER and one BOONTA_CYCLE_NEXT_ACTION.'
-
-          if [[ "${RESUME_MODE:-false}" == "true" ]]; then
-            if [[ ! "${RESUME_PR_NUMBER:-}" =~ ^[1-9][0-9]*$ || -z "${RESUME_PR_URL:-}" || -z "${RESUME_BRANCH:-}" || ! "${RESUME_HEAD_SHA:-}" =~ ^[0-9a-f]{40}$ ]]; then
-              echo "::error::Verified resume metadata is incomplete; no Groq request was sent."
-              exit 2
-            fi
-            if ! jq -e 'type == "array" and length >= 1 and length <= 4 and all(.[]; type == "string" and length > 0 and length <= 120 and test("^[A-Za-z0-9._/-]+$") and (split("/") | all(.[]; . != "" and . != "." and . != "..")))' <<<"${RESUME_FILE_PATHS:-}" >/dev/null; then
-              echo "::error::Resume path allow-list is missing or invalid; no Groq request was sent."
-              exit 2
-            fi
-            RESUME_ALLOWED_PATHS="$(jq -r '.[] | "- " + .' <<<"$RESUME_FILE_PATHS")"
-            PROMPT="$(cat <<'RESUME_PROMPT'
-          Groq Free, €0 only. Resume exactly one existing task PR.
-          
-          AUTHORITY
-          - The preloaded task context and exact existing-PR metadata are authoritative. The workflow revalidated owner, same repository, open/non-draft, task/target markers, branch, URL and prior head SHA.
-          - Do not search history, use agents, or inspect unrelated PRs. Read exactly one file from the preflight-verified changed-path allow-list appended below.
-          
-          WRITE
-          - Only github_get_file_contents and github_push_files are exposed. Read exactly one listed path using the supplied existing branch as the ref, then call github_push_files once with the full updated file content on that same branch.
-          - Never create a branch or PR; never write main/dev, merge, force-push, delete refs, change secrets or edit the canonical ledger.
-          - Preserve provenance and licenses. Stop rather than guess.
-          
-          EVIDENCE
-          - PROGRESS requires the existing PR URL and exact new SHA returned by github_push_files. The shared validator checks freshness and exact-head CI.
-          - Otherwise report BLOCKED with one verified blocker and next action.
-          
-          REPORT
-          - Output only machine-readable lines; copy the task ID and target branch appended below. No prose or fences.
-          RESUME_PROMPT
-          )"
-            PROMPT="${PROMPT}"$'\n\n'
-            PROMPT+="${AUTONOMOUS_CONTEXT}"
-            PROMPT+=$'\nPR: '"${RESUME_PR_URL}"
-            PROMPT+=$'\nBranch: '"${RESUME_BRANCH}"
-            PROMPT+=$'\nPrior HEAD: '"${RESUME_HEAD_SHA}"
-            PROMPT+=$'\nPreflight-verified changed paths (read at most one):\n'"${RESUME_ALLOWED_PATHS}"
-            PROMPT+=$'\nRead no other paths. Preserve the existing branch and PR; do not create a new one.'
-            REPORT_TASK_ID="BOONTA_CYCLE_TASK_ID: ${TASK_ID}"
-            REPORT_TARGET_BRANCH="BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}"
-            PROMPT+=$'\n\n'"${REPORT_TASK_ID}"
-            PROMPT+=$'\nBOONTA_CYCLE_STATUS: PROGRESS or BLOCKED'
-            PROMPT+=$'\nBOONTA_CYCLE_EVIDENCE: '"${RESUME_PR_URL}"' @ <exact new 40-character SHA returned by github_push_files>'
-            PROMPT+=$'\n'"${REPORT_TARGET_BRANCH}"
-            PROMPT+=$'\nFor BLOCKED omit evidence and include one BOONTA_CYCLE_BLOCKER and BOONTA_CYCLE_NEXT_ACTION.'
-          fi
-
-          # Refuse accidental prompt growth before any provider request.
-          if (( ${#PROMPT} > 5500 )); then
+          PROMPT="$PROMPT"$'\n\n'"$AUTONOMOUS_CONTEXT"
+          PROMPT="$PROMPT"$'\n\n'SAME-RUN EXECUTION FACTS:
+          - Groq Free/owner preflight: $GROQ_PREFLIGHT_ALLOWED
+          - Workflow-owned scoped writer token minted: $GITHUB_APP_TOKEN_OUTCOME
+          - The token is not available to the model process; it is reserved for a separate workflow-owned step after patch verification.
+          prompt_length="$(printf '%s' "$PROMPT" | wc -m | tr -d ' ')"
+          if (( prompt_length > 5500 )); then
             echo "::error::Groq prompt exceeds the 5,500-character TPM safety ceiling; no model request was sent."
             exit 2
           fi
-          echo "Groq prompt size: ${#PROMPT} characters."
-          # Local prompt/context guards must never create a provider cooldown.
+          echo "Groq prompt size: $prompt_length characters."
           echo "provider_request_started=true" >> "$GITHUB_OUTPUT"
-          # OpenCode 1.19.5 retries retryable 429/TPM failures internally. Stop
-          # the process group on the first terminal Free-quota/TPM response so
-          # one agent invocation cannot consume the provider limit repeatedly.
-          python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" "$REPO_ROOT" <<'PY'
+
+          python3 - "$PROMPT" "$RUNNER_TEMP/groq-provider-output.txt" "$REPO_ROOT" <<'PY'
           import os
           import re
           import signal
           import subprocess
           import sys
 
-          prompt, report_path, workspace = sys.argv[1:]
+          prompt, output_path, workspace = sys.argv[1:]
           command = [
               "timeout", "--signal=TERM", "--kill-after=5s", "90s",
               "opencode", "run", "--model", "groq/openai/gpt-oss-20b",
@@ -893,36 +821,58 @@ jobs:
               stop_process_group()
               raise SystemExit(128 + signum)
 
-          # Match OpenRouter: runner cancellation must not orphan the timeout,
-          # OpenCode process, or any descendant in the provider process group.
           signal.signal(signal.SIGTERM, handle_shutdown)
           signal.signal(signal.SIGINT, handle_shutdown)
 
-          with open(report_path, "w", encoding="utf-8") as report:
+          with open(output_path, "w", encoding="utf-8") as output:
               assert process.stdout is not None
               for line in process.stdout:
                   sys.stdout.write(line)
                   sys.stdout.flush()
-                  report.write(line)
-                  report.flush()
+                  output.write(line)
+                  output.flush()
                   if terminal_quota_error.search(line):
-                      print(
-                          "Groq provider quota/auth refusal detected; terminating OpenCode "
-                          "immediately after the first refusal. Daily cooldown will be recorded.",
-                          flush=True,
-                      )
+                      print("Groq quota/auth refusal detected; terminating OpenCode after the first refusal.", flush=True)
                       stop_process_group()
                       sys.exit(75)
 
-          invocation_status = process.wait()
-          if invocation_status in (124, 137):
-              print(
-                  "Groq invocation reached its 90-second hard limit; daily cooldown will be recorded.",
-                  flush=True,
-              )
-          sys.exit(invocation_status)
+          status = process.wait()
+          if status in (124, 137):
+              print("Groq invocation reached its 90-second hard limit.", flush=True)
+          sys.exit(status)
           PY
 
+      - name: Verify, test and publish the Groq patch proposal
+        id: execute_provider_cycle
+        if: steps.run_opencode.outcome == 'success' && steps.bounded_inputs.outcome == 'success'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
+          SOURCE_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          POLICY_ROOT: ${{ steps.bounded_inputs.outputs.policy_root }}
+          PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
+          ALLOWLIST_REPORT: ${{ steps.bounded_inputs.outputs.allowlist_report }}
+          TASK_ID: ${{ inputs.task_id }}
+          BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
+          POLICY_SHA: ${{ steps.bounded_inputs.outputs.policy_sha }}
+          PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+        run: |
+          set -euo pipefail
+          python3 "$REPO_ROOT/tools/execute_autonomous_provider_cycle.py" \
+            --source-root "$SOURCE_ROOT" \
+            --policy-root "$POLICY_ROOT" \
+            --proposal "$PROPOSAL_PATH" \
+            --allowlist-report "$ALLOWLIST_REPORT" \
+            --verified-report "$RUNNER_TEMP/boonta-verified-report.json" \
+            --plan "$RUNNER_TEMP/boonta-delivery-plan.json" \
+            --cycle-report "$RUNNER_TEMP/opencode-cycle-report.txt" \
+            --task-id "$TASK_ID" \
+            --base-sha "$BASE_SHA" \
+            --policy-sha "$POLICY_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --preflight-allowed "$PREFLIGHT_ALLOWED"
 
       - name: Validate Groq autonomous cycle report
         id: validate_report
