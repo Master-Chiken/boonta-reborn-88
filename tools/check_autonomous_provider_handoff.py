@@ -910,17 +910,19 @@ def context_limits(label: str, workflow: str, expected_chars: int, expected_task
 
 actual_groq_prompt = actual_provider_prompt("Groq", groq)
 actual_openrouter_prompt = actual_provider_prompt("OpenRouter", openrouter)
-resume_start_marker = "          PROMPT=\"$(cat <<'RESUME_PROMPT'\n"
-resume_end_marker = "\n          RESUME_PROMPT\n          )\""
-resume_start = groq.find(resume_start_marker)
-resume_end = groq.find(resume_end_marker, resume_start + len(resume_start_marker)) if resume_start >= 0 else -1
-if resume_start < 0 or resume_end < 0:
-    errors.append("Groq compact resume-only prompt is missing")
-else:
-    resume_body = groq[resume_start + len(resume_start_marker):resume_end]
-    resume_body = "\n".join(line[10:] if line.startswith("          ") else line for line in resume_body.splitlines())
-    if len(resume_body) > 1400:
-        errors.append(f"Groq resume prompt leaves insufficient room under the 5,500-character TPM cap: {len(resume_body)}")
+# Legacy resume-mode direct GitHub editing is intentionally disabled for
+# proposal-only OpenRouter/Groq cycles; existing PR repair is not a provider path.
+for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
+    model_start = workflow.find("      - name: Run OpenCode through the " + label + " Free route")
+    model_end = workflow.find("\n      - name:", model_start + 1)
+    model_step = workflow[model_start:model_end]
+    if "inputs.resume_mode != true" not in model_step:
+        errors.append(f"{label} model invocation must skip legacy resume mode")
+    writer_marker = "id: execute_provider_cycle"
+    writer_pos = workflow.find(writer_marker)
+    writer_window = workflow[max(0, writer_pos - 500):writer_pos + 300] if writer_pos >= 0 else ""
+    if "inputs.resume_mode != true" not in writer_window:
+        errors.append(f"{label} workflow-owned writer must skip legacy resume mode")
 if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
@@ -948,8 +950,11 @@ if "No GitHub MCP" not in actual_groq_prompt or "No paid route" not in actual_gr
     errors.append("Groq normal prompt must deny GitHub writer tools and paid routes")
 if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
-if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder or "unreadable_write_paths" not in context_builder or "no provider invocation is allowed until the owner-approved read contract is updated" not in context_builder:
-    errors.append("Provider preflight must require an explicit exact-path owner policy entry and fail before inference when writable files are outside the read contract")
+if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
+    errors.append("Schema-v2 context builder must require an explicit exact-path owner policy entry")
+agent_inputs_source = read("tools/prepare_autonomous_agent_inputs.py")
+if "unreadable_write_paths" not in agent_inputs_source or "no provider invocation is allowed until the owner-approved read contract is updated" not in agent_inputs_source:
+    errors.append("Provider preflight must block before inference when writable files are outside the exact read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
