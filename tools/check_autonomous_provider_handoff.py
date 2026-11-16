@@ -647,9 +647,9 @@ groq_config = load_opencode_config("Groq", groq)
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
 if groq_config.get("agent", {}).get("build", {}).get("steps") != 2:
-    errors.append("Groq must use exactly two bounded tool steps: one source read and one patch proposal")
-elif 2 * (3700 + 256) >= 8000:
-    errors.append("Groq two-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
+    errors.append("Groq must use two model steps: one preloaded-source patch proposal followed by the final text-only response")
+elif 2 * 2750 + 2 * 700 + 50 > 8000:
+    errors.append("Groq guarded worst-case two-step request budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
     if task_permissions.get("*") != "deny":
@@ -728,8 +728,8 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "3,700 context tokens and 256 output tokens" not in budget or "two bounded tool steps" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
-    errors.append("Groq shared budget documentation must match its bounded multi-file context, two-step TPM budget and handoff ceilings")
+if "3,600 context tokens and 700 output tokens" not in budget or "one local proposal tool" not in budget or "APPROVED SOURCE EXCERPTS" not in budget:
+    errors.append("Groq shared budget documentation must match its preloaded-source, one-tool, two-step request budget")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
@@ -899,7 +899,7 @@ if "Exact owner-reviewed write paths (no others)" not in gemini_prompt:
     errors.append("Gemini prompt must restrict every model write to the owner-reviewed exact-path list")
 if 'Change only exact paths listed under "Exact owner-reviewed write paths"' not in openrouter_agent_step:
     errors.append("OpenRouter prompt must restrict the patch to the owner-reviewed exact-path list")
-if "Change only exact owner-reviewed write paths from the trusted context" not in groq_agent_step:
+if "Change only exact owner-approved write paths" not in groq_agent_step:
     errors.append("Groq prompt must restrict the patch to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
@@ -910,8 +910,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 3700 or groq_limits.get("output") != 256:
-    errors.append("Groq must remain capped at 3700 context / 256 output tokens; two invocations reserve 7,912 nominal tokens below the observed 8k TPM ceiling")
+if groq_limits.get("context") != 3600 or groq_limits.get("output") != 700:
+    errors.append("Groq must remain capped at 3600 context / 700 output tokens for the preloaded one-tool/two-step proposal cycle")
 groq_model_config = (
     groq_config.get("provider", {})
     .get("groq", {})
@@ -943,16 +943,19 @@ for required in ("_write_cycle_report", "stream.flush()", "os.fsync(stream.filen
     if required not in provider_cycle_source:
         errors.append(f"Workflow-owned Groq cycle report must be durably written: missing {required!r}")
 for content, needle, message in (
-    (groq, "prompt_length > 5500", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
-    (groq, "SOURCE_READ_CHARS", "Groq must receive the pre-inference estimate of the one-shot bounded source result"),
-    (groq, "estimated_input_tokens > 3650", "Groq must fail closed before inference when prompt plus bounded source result exceeds its context safety margin"),
+    (groq, "prompt_length > 10400", "Groq must enforce the 10,400-character preloaded prompt ceiling before inference"),
+    (groq, "SOURCE_CONTEXT_FILE", "Groq must receive the exact preloaded source-context file"),
+    (groq, "BOONTA_PRELOADED_SOURCE_SHA256", "Groq MCP must verify the source snapshot digest before exposing the proposal tool"),
+    (groq, "estimated_input_tokens > 2750", "Groq must fail closed when the first preloaded input exceeds its request budget"),
+    (groq, "final_input_estimate > 3600", "Groq must reserve context for the tool result and final text-only step"),
+    (groq, "combined_tpm_estimate > 8000", "Groq must fail closed when the two-step request budget exceeds the observed TPM ceiling"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "prompt_length > 7000", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "No paid route, billing, credits, provider/secret/settings changes", "Groq must preserve the €0/no-paid-route rule"),
     (openrouter, "No paid model/provider fallback is available", "OpenRouter must preserve the €0/no-paid-route rule"),
     (openrouter, "Only two local tools are available: boonta_read_approved_sources and boonta_submit_patch_proposal.", "OpenRouter must document only its bounded local MCP tools"),
-    (groq, "Only boonta_read_approved_sources and boonta_submit_patch_proposal are available.", "Groq must document only its bounded local MCP tools"),
+    (groq, "One tool is available: boonta_submit_patch_proposal.", "Groq must expose only the single bounded proposal tool after the source snapshot is verified"),
 ):
     if needle not in content:
         errors.append(message)
@@ -996,7 +999,7 @@ if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 1400, 1000)
+context_limits("Groq", groq, 1000, 800)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
 if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
@@ -1007,15 +1010,15 @@ if "Call boonta_read_approved_sources exactly once" not in actual_openrouter_pro
     errors.append("OpenRouter prompt must request exactly one batch read of task-approved source ranges")
 if "Then call boonta_submit_patch_proposal exactly once" not in actual_openrouter_prompt:
     errors.append("OpenRouter prompt must submit one bounded patch proposal instead of writing to GitHub directly")
-if "--max-source-chars 500" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
-    errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
+if "--max-source-chars 0" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
+    errors.append("Groq task summary context must not duplicate the separately preloaded exact target-branch source ranges")
 if "--max-criteria 3 --max-next-action 80" not in groq:
     errors.append("Groq must use the compact three-criteria/80-character next-action handoff needed to fit the measured source payload")
-if "Call boonta_read_approved_sources exactly once" not in actual_groq_prompt or "boonta_submit_patch_proposal exactly once" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must use one batched trusted-source read and one bounded patch proposal")
-if "Change only exact owner-reviewed write paths from the trusted context" not in actual_groq_prompt:
-    errors.append("Groq normal prompt must restrict every patch to explicit owner-reviewed paths")
-if "No GitHub MCP" not in actual_groq_prompt or "No paid route" not in actual_groq_prompt:
+if "APPROVED SOURCE EXCERPTS" not in actual_groq_prompt or "One tool is available: boonta_submit_patch_proposal" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must use the exact preloaded source snapshot and one bounded proposal tool")
+if "Change only exact owner-approved write paths" not in actual_groq_prompt:
+    errors.append("Groq normal prompt must restrict every patch to explicit owner-approved paths")
+if "No GitHub writer" not in actual_groq_prompt or "No paid route" not in actual_groq_prompt:
     errors.append("Groq normal prompt must deny GitHub writer tools and paid routes")
 if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
@@ -1025,8 +1028,8 @@ agent_inputs_source = read("agent_inputs")
 if "unreadable_write_paths" not in agent_inputs_source or "no provider invocation is allowed until the owner-approved read contract is updated" not in agent_inputs_source:
     errors.append("Provider preflight must block before inference when writable files are outside the exact read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
-if len(actual_groq_prompt) + 3000 + 400 > 5500:
-    errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
+if len(actual_groq_prompt) + 1000 + 10000 + 255 > 10400:
+    errors.append("Groq worst-case static prompt, verified task context, preloaded sources and same-run facts exceed the 10,400-character ceiling")
 
 # Budget the complete normal OpenRouter prompt, not just its static heredoc.
 # The runtime appends verified context, same-run provider/App facts, and a
