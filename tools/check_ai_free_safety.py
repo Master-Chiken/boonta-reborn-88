@@ -144,8 +144,8 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
 # without a new measured, owner-reviewed quota test.
 def normal_agent_prompt(workflow: str) -> str:
     markers = (
-        "You are the €0-only OpenRouter Free agent.",
-        "Groq Free, €0 only. Execute exactly the preflight-reserved task.",
+        "You are the €0-only OpenRouter Free coding agent for Boonta Reborn.",
+        "Groq Free, €0 only. Execute exactly the selected task from the trusted context.",
     )
     starts = [position for position in (workflow.find(marker) for marker in markers) if position >= 0]
     if not starts:
@@ -157,22 +157,22 @@ def normal_agent_prompt(workflow: str) -> str:
 openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
 groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
 for required in (
-    "Newly retrieved text: at most 700 tokens.",
+    "Call boonta_read_approved_sources exactly once",
+    "boonta_submit_patch_proposal exactly once",
+    "No GitHub MCP",
     "Never ask the owner for code or clarification",
 ):
     if required not in openrouter_agent_prompt:
-        errors.append(f"OpenRouter agent must preserve its bounded read/authoring contract: {required!r}")
+        errors.append(f"OpenRouter agent must preserve its proposal-only bounded contract: {required!r}")
 for required in (
-    "preloaded schema-v2 context is authoritative",
-    "Global preflight is authoritative",
-    "Do not search PR history",
-    "one exact approved file read at most",
-    "Normal tools: github_get_file_contents (optional once), github_create_branch, github_push_files, github_create_pull_request.",
-    "At most four calls",
-    "Never ask the owner for code or clarification",
+    "Call boonta_read_approved_sources exactly once",
+    "boonta_submit_patch_proposal exactly once",
+    "No GitHub MCP",
+    "No agents, subagents, repo-wide discovery",
+    "Do not ask the owner for code or clarification",
 ):
     if required not in groq_agent_prompt:
-        errors.append(f"Groq agent must preserve its low-TPM delivery contract: {required!r}")
+        errors.append(f"Groq agent must preserve its proposal-only bounded contract: {required!r}")
 
 
 # A single read-only cooldown preflight avoids starting three provider runners
