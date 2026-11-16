@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -98,6 +99,26 @@ class DispatcherTests(unittest.TestCase):
             dispatcher.TEST_REGISTRY.get("gamecube.rival_host_tests"),
             ("tools/run_gamecube_rival_host_tests.py",),
         )
+
+    def test_gamecube_host_runner_uses_trusted_script_on_selected_target_checkout(self):
+        real_run = subprocess.run
+        observed = []
+
+        def fake_run(command, **kwargs):
+            if command[:2] == ["git", "rev-parse"]:
+                return real_run(command, **kwargs)
+            observed.append((command, kwargs.get("cwd")))
+            return subprocess.CompletedProcess(command, 0, "GameCube host tests passed\n", "")
+
+        with patch("run_autonomous_patch_tests.subprocess.run", side_effect=fake_run):
+            report = dispatcher.run_test_ids(self.root, ["gamecube.rival_host_tests"])
+
+        self.assertEqual(report["status"], "PASSED")
+        self.assertEqual(len(observed), 1)
+        command, cwd = observed[0]
+        self.assertEqual(command[:2], [sys.executable, str(Path(dispatcher.__file__).resolve().with_name("run_gamecube_rival_host_tests.py"))])
+        self.assertEqual(command[2:], ["--source-root", str(self.root)])
+        self.assertEqual(Path(cwd).resolve(), self.root)
 
     def test_registered_script_symlink_is_rejected(self):
         outside = Path(self.temp.name).parent / (Path(self.temp.name).name + "-outside.py")
