@@ -575,7 +575,7 @@ for label, workflow, marker in (
 for required in (
     '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
     "No PR/branch enumeration or media/binary retrieval.",
-    "No source-read tool is exposed in new-task mode.",
+    "New-task mode has no source-read tools.",
     "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
 ):
     if required not in openrouter_fallback:
