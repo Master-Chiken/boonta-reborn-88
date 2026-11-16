@@ -15,6 +15,7 @@ from autonomous_patch_proposal import ProposalError
 from verify_autonomous_patch import (
     MANDATORY_TEST_IDS,
     PipelineError,
+    required_test_ids_for_task,
     verify_in_isolated_worktree,
 )
 
@@ -167,6 +168,23 @@ class PipelineFixture(unittest.TestCase):
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
         worktrees = git(self.root, "worktree", "list", "--porcelain").splitlines()
         self.assertEqual(len([line for line in worktrees if line.startswith("worktree ")]), 1)
+
+
+class TaskTestProfileTests(unittest.TestCase):
+    def test_rival_gameplay_task_always_requires_native_host_profile(self):
+        actual = required_test_ids_for_task(
+            "GC-RIVAL-ROUTE-PROGRESSION",
+            ["automation.task_preflight"]
+        )
+        self.assertIn("gamecube.rival_host_tests", actual)
+        self.assertEqual(actual[:len(MANDATORY_TEST_IDS)], list(MANDATORY_TEST_IDS))
+
+    def test_non_gameplay_task_does_not_receive_gamecube_host_profile(self):
+        actual = required_test_ids_for_task(
+            "AUTOMATION-LEDGER-ACTIVATION",
+            ["automation.task_preflight"]
+        )
+        self.assertNotIn("gamecube.rival_host_tests", actual)
 
 
 class IsolatedPatchPipelineTests(PipelineFixture):
