@@ -646,10 +646,10 @@ openrouter_config = load_opencode_config("OpenRouter", openrouter)
 groq_config = load_opencode_config("Groq", groq)
 if openrouter_config.get("agent", {}).get("build", {}).get("steps") != 8:
     errors.append("OpenRouter must have eight bounded build steps to complete read/branch/push/PR work")
-if groq_config.get("agent", {}).get("build", {}).get("steps") != 4:
-    errors.append("Groq must have four bounded write/PR/report steps")
-elif 4 * (1550 + 256) >= 8000:
-    errors.append("Groq four-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
+if groq_config.get("agent", {}).get("build", {}).get("steps") != 2:
+    errors.append("Groq must use exactly two bounded tool steps: one source read and one patch proposal")
+elif 2 * (3700 + 256) >= 8000:
+    errors.append("Groq two-step nominal input/output budget must remain below the observed 8,000 TPM ceiling")
 for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
     if task_permissions.get("*") != "deny":
@@ -695,8 +695,8 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,550 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
-    errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
+if "3,700 context tokens and 256 output tokens" not in budget or "two bounded tool steps" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
+    errors.append("Groq shared budget documentation must match its bounded multi-file context, two-step TPM budget and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
 # the remainder of its 180-second window in internal retries.
@@ -877,8 +877,8 @@ groq_limits = (
     .get("openai/gpt-oss-20b", {})
     .get("limit", {})
 )
-if groq_limits.get("context") != 1550 or groq_limits.get("output") != 256:
-    errors.append("Groq must remain capped at 1550 context / 256 output tokens; four invocations reserve 7,224 nominal tokens below the observed 8k TPM ceiling")
+if groq_limits.get("context") != 3700 or groq_limits.get("output") != 256:
+    errors.append("Groq must remain capped at 3700 context / 256 output tokens; two invocations reserve 7,912 nominal tokens below the observed 8k TPM ceiling")
 groq_model_config = (
     groq_config.get("provider", {})
     .get("groq", {})
@@ -911,6 +911,8 @@ for required in ("_write_cycle_report", "stream.flush()", "os.fsync(stream.filen
         errors.append(f"Workflow-owned Groq cycle report must be durably written: missing {required!r}")
 for content, needle, message in (
     (groq, "prompt_length > 5500", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
+    (groq, "SOURCE_READ_CHARS", "Groq must receive the pre-inference estimate of the one-shot bounded source result"),
+    (groq, "estimated_input_tokens > 3650", "Groq must fail closed before inference when prompt plus bounded source result exceeds its context safety margin"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
     (openrouter, "prompt_length > 7000", "OpenRouter must enforce its final-prompt-size guard before inference"),
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
