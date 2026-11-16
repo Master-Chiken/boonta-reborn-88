@@ -123,7 +123,7 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
             raise TrustedMainCheckoutError("Trusted main summary refresh temporary file already exists")
         try:
             with temporary.open("x", encoding="utf-8") as stream:
-                stream.write(json.dumps(expected_summary, indent=2, ensure_ascii=False) + "\\n")
+                stream.write(json.dumps(expected_summary, indent=2, ensure_ascii=False) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, root / SUMMARY)
