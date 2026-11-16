@@ -83,25 +83,39 @@ def run_test_ids(
 
     for test_id in test_ids:
         script = TEST_REGISTRY[test_id][0]
-        script_path = root / script
-        if script_path.is_symlink():
-            raise TestDispatchError(f"Registered test script must not be a symlink: {script}")
-        resolved_script = script_path.resolve()
-        try:
-            resolved_script.relative_to(root)
-        except ValueError as exc:
-            raise TestDispatchError(f"Registered test script escapes the checkout: {script}") from exc
+        if test_id == "gamecube.rival_host_tests":
+            # This fixed runner lives in the trusted workflow checkout, while
+            # its immutable C test sources are read from the selected target
+            # worktree. Do not require workflow tools to be merged into dev.
+            script_path = Path(__file__).resolve().with_name("run_gamecube_rival_host_tests.py")
+            trusted_tools_root = Path(__file__).resolve().parent
+            if script_path.is_symlink() or script_path.resolve().parent != trusted_tools_root:
+                raise TestDispatchError("Trusted GameCube host-test runner must be a regular repository-owned file")
+            resolved_script = script_path.resolve()
+            command = [sys.executable, str(resolved_script), "--source-root", str(root)]
+        else:
+            script_path = root / script
+            if script_path.is_symlink():
+                raise TestDispatchError(f"Registered test script must not be a symlink: {script}")
+            resolved_script = script_path.resolve()
+            try:
+                resolved_script.relative_to(root)
+            except ValueError as exc:
+                raise TestDispatchError(f"Registered test script escapes the checkout: {script}") from exc
+            if not resolved_script.is_file():
+                raise TestDispatchError(f"Registered test script is missing: {script}")
+            parent = script_path.parent
+            while parent != root:
+                if parent.is_symlink():
+                    raise TestDispatchError(f"Registered test script has a symlink parent: {script}")
+                parent = parent.parent
+            command = [sys.executable, script]
         if not resolved_script.is_file():
             raise TestDispatchError(f"Registered test script is missing: {script}")
-        parent = script_path.parent
-        while parent != root:
-            if parent.is_symlink():
-                raise TestDispatchError(f"Registered test script has a symlink parent: {script}")
-            parent = parent.parent
         started = time.monotonic()
         try:
             completed = subprocess.run(
-                [sys.executable, script],
+                command,
                 cwd=root,
                 env=env,
                 stdin=subprocess.DEVNULL,
