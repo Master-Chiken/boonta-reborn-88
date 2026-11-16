@@ -347,7 +347,12 @@ jobs:
                   and "BOONTA_TARGET_ROOT" in groq_agent_step
                   and "branch_name = f\"autonomous/{expected_task_id.lower()}-{expected_base_sha[:12]}\"" in delivery_plan_source
                   and '"base": target_branch' in delivery_plan_source
-                  and "target_branch" in groq_delivery_step and "steps.mint_identity_token.outputs.token" in groq_delivery_step
+                  and all(item in groq_delivery_step for item in (
+                      "--source-root", "--policy-root", "--task-id \"$TASK_ID\"",
+                      "--base-sha \"$BASE_SHA\"", "--policy-sha \"$POLICY_SHA\"",
+                      "--preflight-allowed \"$PREFLIGHT_ALLOWED\"",
+                  ))
+                  and "steps.mint_identity_token.outputs.token" in groq_delivery_step
               ),
               "OpenRouter model configuration exposes the local Boonta MCP and no GitHub MCP": (
                   '"github"' not in openrouter_agent_step
@@ -358,7 +363,7 @@ jobs:
               "OpenRouter validator imports the contradiction guard before the BLOCKED path uses it": openrouter_validator_require >= 0 and openrouter_validator_require_call > openrouter_validator_require and openrouter_validator_call > openrouter_validator_require_call,
               "OpenRouter prompt requires one bounded source read then one patch proposal": (
                   "Call boonta_read_approved_sources exactly once." in openrouter_agent_step
-                  and "Call boonta_submit_patch_proposal exactly once" in openrouter_agent_step
+                  and "call boonta_submit_patch_proposal exactly once" in openrouter_agent_step
                   and "No GitHub MCP, no remote branch/PR APIs" in openrouter_agent_step
                   and "Never claim that a branch or PR was created." in openrouter_agent_step
               ),
