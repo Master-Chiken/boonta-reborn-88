@@ -775,6 +775,8 @@ jobs:
           - The task excerpts and trusted exact-path grants are authoritative.
           - Never ask the owner for code or clarification. Implement the smallest useful patch, or report a precise blocker.
           - Preserve clean-room provenance. Never upload commercial ROMs, disc images, binaries or extracted game assets.
+          - Global preflight is authoritative. Do not search PR history or treat older merged automation PRs as current task evidence; the selected task's pr_url and head_sha are checked before inference.
+          - For gameplay tasks, reuse the merged PR #327 implementation at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
           - No paid route, billing, credits, provider/secret/settings changes, subagents, agents, repo-wide discovery, or network research.
 
           AVAILABLE TOOLS
