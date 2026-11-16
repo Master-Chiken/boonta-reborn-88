@@ -175,6 +175,39 @@ function cleanup(fx) {
   {
     const fx = fixture();
     try {
+      fs.writeFileSync(path.join(fx.root, SOURCE_A), [
+        '/* long block comment begins',
+        ' * this line must not consume model context',
+        ' */',
+        'int gameplay_value(void) { // trailing comment is omitted',
+        '  const char *source_url = "https://example.invalid/path"; // URL string survives',
+        '  return 1;',
+        '}',
+        ''
+      ].join('\n'), 'utf8');
+      fx.env.BOONTA_READ_RANGES = JSON.stringify([
+        { path: SOURCE_A, start_line: 1, end_line: 7 },
+        { path: SOURCE_B, start_line: 1, end_line: 3 }
+      ]);
+      const result = runServer(fx, [call('read_approved_sources', {}, 2)]);
+      const read = toolResult(result, 2);
+      assert.equal(read.isError, false);
+      const payload = JSON.parse(toolText(read));
+      const source = payload.files.find((item) => item.file_path === SOURCE_A);
+      assert.equal(source.ranges[0].comments_and_blank_lines_omitted, true);
+      assert.equal(source.ranges[0].rendered_lines, 3);
+      assert.match(source.ranges[0].content, /https:\\/\\/example\\.invalid\\/path/);
+      assert.match(source.ranges[0].content, /return 1;/);
+      assert.doesNotMatch(source.ranges[0].content, /long block comment|trailing comment/);
+      assert.equal(payload.source_format.includes('original range boundaries retained'), true);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
       const result = runServer(fx, [
         call('read_approved_sources', { file_path: 'src/other.h', start_line: 1, end_line: 3 }, 2)
       ]);
