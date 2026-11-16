@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline tests for the guarded deterministic GitHub draft-PR writer."""
+"""Offline tests for the guarded deterministic GitHub PR writer."""
 from __future__ import annotations
 
 import base64
@@ -250,7 +250,7 @@ class WriterFixture(unittest.TestCase):
                     "html_url": f"https://github.com/{REPOSITORY}/pull/456",
                     "title": self.plan["pr_title"],
                     "state": "open",
-                    "draft": not wrong_draft_response,
+                    "draft": wrong_draft_response,
                     "head": {
                         "ref": self.plan["branch_name"],
                         "sha": ("c" if wrong_pr_head_sha else "b") * 40,
@@ -344,13 +344,13 @@ class DeterministicGitHubWriterTests(WriterFixture):
             )
         self.assert_repo_clean()
 
-    def test_success_creates_only_draft_pr_and_never_merges(self):
+    def test_success_creates_only_verified_pr_and_never_merges(self):
         request, calls = self.fake_api()
         with patch.dict(os.environ, self.env, clear=False):
             result = self.execute_with_fake(request)
-        self.assertEqual(result["status"], "DRAFT_PR_CREATED")
+        self.assertEqual(result["status"], "PULL_REQUEST_CREATED")
         self.assertEqual(result["pull_request_number"], 456)
-        self.assertTrue(result["draft"])
+        self.assertFalse(result["draft"])
         self.assertFalse(result["auto_merge"])
         self.assertFalse(result["merge_performed"])
         self.assertEqual(
@@ -378,7 +378,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
         ref_payload = next(payload for method, path, payload, _ in calls if method == "POST" and path.endswith("/refs"))
         self.assertEqual(ref_payload["sha"], "b" * 40)
         pr_payload = next(payload for method, path, payload, _ in calls if method == "POST" and path.endswith("/pulls"))
-        self.assertIs(pr_payload["draft"], True)
+        self.assertIs(pr_payload["draft"], False)
         self.assertNotIn("auto_merge", pr_payload)
         self.assert_repo_clean()
 
@@ -429,10 +429,10 @@ class DeterministicGitHubWriterTests(WriterFixture):
         self.assertFalse(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
 
-    def test_writer_rejects_non_draft_api_confirmation(self):
+    def test_writer_rejects_draft_api_confirmation(self):
         request, calls = self.fake_api(wrong_draft_response=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
@@ -440,7 +440,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
     def test_writer_rejects_pr_response_with_wrong_head_sha(self):
         request, calls = self.fake_api(wrong_pr_head_sha=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
@@ -448,7 +448,7 @@ class DeterministicGitHubWriterTests(WriterFixture):
     def test_writer_rejects_pr_response_with_wrong_base_sha(self):
         request, calls = self.fake_api(wrong_pr_base_sha=True)
         with patch.dict(os.environ, self.env, clear=False):
-            with self.assertRaisesRegex(DeliveryExecutionError, "exact draft PR head, base"):
+            with self.assertRaisesRegex(DeliveryExecutionError, "exact PR head, base"):
                 self.execute_with_fake(request)
         self.assertTrue(any(method == "POST" and path.endswith("/pulls") for method, path, *_ in calls))
         self.assert_repo_clean()
