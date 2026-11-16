@@ -13,6 +13,7 @@ from pathlib import Path
 
 import run_autonomous_patch_tests
 from autonomous_patch_proposal import ProposalError
+from check_task_ledger_summary import build_summary
 from verify_autonomous_patch import (
     MANDATORY_TEST_IDS,
     PipelineError,
@@ -184,6 +185,37 @@ class TrustedPolicyCheckoutTests(PipelineFixture):
             check=False,
         )
         self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        trusted_task = {
+            "task_id": TASK_ID,
+            "title": "Synthetic pipeline fixture",
+            "owner_role_id": "test",
+            "parent_objective_id": "fixture",
+            "depends_on": [],
+            "owner_approved": True,
+            "queue": "#999",
+            "platform_scope": ["GameCube"],
+            "status": "active",
+            "target_branch": "main",
+            "read_paths": [SOURCE_PATH],
+            "read_ranges": [{"path": SOURCE_PATH, "start_line": 1, "end_line": 3}],
+            "question": "Test the verified source pipeline",
+            "acceptance_criteria": ["The fixture is verified"],
+            "next_action": "Continue tests",
+        }
+        full_ledger = {
+            "schema_version": 1,
+            "updated_at": "2026-11-16",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [trusted_task],
+        }
+        trusted_docs = trusted / "docs/automation"
+        (trusted_docs / "task-ledger.json").write_text(json.dumps(full_ledger), encoding="utf-8")
+        (trusted_docs / "task-ledger-summary.json").write_text(
+            json.dumps(build_summary(full_ledger), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        git(trusted, "add", "docs/automation")
+        git(trusted, "commit", "-qm", "add canonical trusted task ledger")
         trusted_sha = git(trusted, "rev-parse", "HEAD")
 
         shutil.rmtree(self.root / "docs/automation")
