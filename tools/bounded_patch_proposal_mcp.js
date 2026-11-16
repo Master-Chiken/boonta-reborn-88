@@ -3,6 +3,7 @@
 
 // Local stdio MCP server. It has no GitHub token, network client or repository write API.
 // The only writable output is one workflow-owned proposal file outside the source checkout.
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const readline = require('node:readline');
@@ -96,20 +97,25 @@ function makeState() {
   if (!rawContext || typeof rawContext !== 'object' || Array.isArray(rawContext)) {
     reject('bounded task context must be a JSON object');
   }
+  const verifiedContext = rawContext.verified_context;
+  if (typeof verifiedContext !== 'string' || !verifiedContext.trim() ||
+      Buffer.byteLength(verifiedContext, 'utf8') > 12 * 1024) {
+    reject('bounded verified context is missing or exceeds its 12 KiB size limit');
+  }
   const taskContext = {
     task_id: rawContext.task_id,
     task_title: rawContext.task_title,
     task_description: rawContext.task_description,
     task_target_branch: rawContext.task_target_branch,
-    verified_context: rawContext.verified_context
+    // The full verified context is already in the provider prompt. Return only
+    // its digest here so the MCP round-trip does not duplicate thousands of tokens.
+    verified_context_sha256: crypto.createHash('sha256').update(verifiedContext, 'utf8').digest('hex')
   };
   if (taskContext.task_id !== taskId || taskContext.task_target_branch !== targetBranch ||
       typeof taskContext.task_title !== 'string' || !taskContext.task_title.trim() ||
       taskContext.task_title.length > 240 ||
       typeof taskContext.task_description !== 'string' || !taskContext.task_description.trim() ||
-      taskContext.task_description.length > 6000 ||
-      typeof taskContext.verified_context !== 'string' || !taskContext.verified_context.trim() ||
-      Buffer.byteLength(taskContext.verified_context, 'utf8') > 12 * 1024) {
+      taskContext.task_description.length > 6000) {
     reject('bounded task context does not match the trusted task ID/target branch or exceeds its size limits');
   }
   const sourceRoot = fs.realpathSync(sourceRootRaw);
@@ -303,7 +309,7 @@ function readApprovedSources(state, args) {
       .sort((a, b) => a.start_line - b.start_line || a.end_line - b.end_line);
     if (!ranges.length) reject('approved source path has no exact source ranges: ' + filePath);
 
-    const isCSource = /\\.(?:c|h|cc|cpp|hpp)$/i.test(filePath);
+    const isCSource = /\.(?:c|h|cc|cpp|hpp)$/i.test(filePath);
     const renderedLines = isCSource ? compactCSourceLines(lines) : lines;
     const rangeResults = [];
     for (const item of ranges) {
