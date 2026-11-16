@@ -51,6 +51,8 @@ PROTECTED_EXACT = {
     "tools/check_task_ledger.py",
     "tools/prepare_autonomous_agent_inputs.py",
     "tools/test_prepare_autonomous_agent_inputs.py",
+    "tools/execute_autonomous_provider_cycle.py",
+    "tools/test_execute_autonomous_provider_cycle.py",
 }
 PROTECTED_PREFIXES = (".github/", ".git/")
 
