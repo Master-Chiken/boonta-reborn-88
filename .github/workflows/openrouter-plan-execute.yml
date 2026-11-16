@@ -659,7 +659,7 @@ jobs:
             --expected-policy-sha "$policy_sha" \
             --task-id "$TASK_ID" \
             --allowlist-output "$allowlist_path" > "$RUNNER_TEMP/boonta-agent-inputs.json"
-          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$GITHUB_OUTPUT" <<'PY'
+          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$GITHUB_OUTPUT" "$source_root" "$policy_root" <<'PY'
           import json
           import sys
           from pathlib import Path
@@ -667,13 +667,15 @@ jobs:
           payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
           proposal_path = sys.argv[2]
           output = Path(sys.argv[3])
+          source_root = sys.argv[4]
+          policy_root = sys.argv[5]
           values = {
               "task_id": payload["task_id"],
               "target_branch": payload["target_branch"],
               "base_sha": payload["base_sha"],
               "policy_sha": payload["policy_sha"],
-              "source_root": str(Path(payload["allowlist_report"]).parent.parent / ".boonta-target-source"),
-              "policy_root": str(Path(payload["allowlist_report"]).parent.parent),
+              "source_root": source_root,
+              "policy_root": policy_root,
               "read_paths": json.dumps(payload["read_paths"], separators=(",", ":")),
               "read_ranges": json.dumps(payload["read_ranges"], separators=(",", ":")),
               "allowed_paths": json.dumps(payload["allowed_paths"], separators=(",", ":")),
