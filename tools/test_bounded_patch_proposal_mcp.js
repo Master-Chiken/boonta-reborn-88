@@ -158,7 +158,7 @@ function cleanup(fx) {
       assert.equal(readPayload.aggregate_lines_read, 6);
       assert.equal(readPayload.task_context.task_id, TASK_ID);
       assert.equal(readPayload.task_context.task_target_branch, 'dev');
-      assert.match(readPayload.task_context.verified_context, /owner-approved exact-path context/);
+      assert.match(readPayload.task_context.verified_context, /[Oo]wner-approved exact-path context/);
       const submitted = toolResult(result, 4);
       assert.equal(submitted.isError, false);
       assert.match(toolText(submitted), /PROPOSAL_STAGED/);
