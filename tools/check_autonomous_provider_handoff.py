@@ -616,7 +616,7 @@ for required in (
     if required not in gemini_prompt:
         errors.append(f"Gemini prompt must reference {required!r}")
 bounded_mcp_source = read("bounded_patch_mcp")
-for required in ("MAX_FILE_BYTES", "MAX_TOTAL_BYTES", "MAX_TOTAL_LINES", "MAX_DIFF_BYTES", "MAX_PROPOSAL_BYTES"):
+for required in ("MAX_FILE_BYTES", "MAX_TOTAL_BYTES", "MAX_TOTAL_LINES", "MAX_DIFF_BYTES", "MAX_PROPOSAL_BYTES", "preloadedSources", "preloadedSourceSha256", "preloaded source context does not match"):
     if required not in bounded_mcp_source:
         errors.append(f"Bounded provider MCP must enforce {required!r}")
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
@@ -1028,8 +1028,14 @@ agent_inputs_source = read("agent_inputs")
 if "unreadable_write_paths" not in agent_inputs_source or "no provider invocation is allowed until the owner-approved read contract is updated" not in agent_inputs_source:
     errors.append("Provider preflight must block before inference when writable files are outside the exact read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
-if len(actual_groq_prompt) + 1000 + 10000 + 255 > 10400:
-    errors.append("Groq worst-case static prompt, verified task context, preloaded sources and same-run facts exceed the 10,400-character ceiling")
+if len(actual_groq_prompt) > 950:
+    errors.append("Groq static instruction prompt leaves insufficient room for the verified task and preloaded exact source excerpts")
+if "if (( prompt_length > 10400 )); then" not in groq:
+    errors.append("Groq must enforce the combined task/source prompt size before inference")
+if "BOONTA_PRELOADED_SOURCES" not in groq_agent_step or "BOONTA_PRELOADED_SOURCE_SHA256" not in groq_agent_step:
+    errors.append("Groq MCP must verify the preloaded exact source snapshot before exposing the proposal tool")
+if "One tool is available: boonta_submit_patch_proposal" not in actual_groq_prompt:
+    errors.append("Groq must expose only the proposal tool after the source snapshot is preloaded and verified")
 
 # Budget the complete normal OpenRouter prompt, not just its static heredoc.
 # The runtime appends verified context, same-run provider/App facts, and a
