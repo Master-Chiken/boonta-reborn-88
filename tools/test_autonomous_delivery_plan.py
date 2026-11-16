@@ -186,6 +186,12 @@ class SeparateTrustedPolicyPlanTests(DeliveryPlanFixture):
             check=False,
         )
         self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        trusted_ledger = trusted / "docs/automation/task-ledger-summary.json"
+        ledger = json.loads(trusted_ledger.read_text(encoding="utf-8"))
+        ledger["tasks"][0]["target_branch"] = "dev"
+        trusted_ledger.write_text(json.dumps(ledger), encoding="utf-8")
+        git(trusted, "add", "docs/automation/task-ledger-summary.json")
+        git(trusted, "commit", "-qm", "trusted task targets dev")
         trusted_sha = git(trusted, "rev-parse", "HEAD")
 
         shutil.rmtree(self.root / "docs/automation")
@@ -198,6 +204,7 @@ class SeparateTrustedPolicyPlanTests(DeliveryPlanFixture):
         plan = self.plan(policy_root=trusted, expected_policy_sha=trusted_sha)
         self.assertEqual(plan["status"], "DELIVERY_PLAN_READY")
         self.assertEqual(plan["base_sha"], self.base_sha)
+        self.assertEqual(plan["target_branch"], "dev")
         self.assertEqual(plan["changed_paths"], [SOURCE_PATH])
         self.assertFalse(plan["auto_merge_enabled"])
 
