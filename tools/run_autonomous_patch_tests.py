@@ -19,6 +19,7 @@ TEST_REGISTRY: dict[str, tuple[str, ...]] = {
     "automation.task_preflight": ("tools/test_autonomous_task_preflight.py",),
     "automation.provider_handoff": ("tools/check_autonomous_provider_handoff.py",),
     "automation.task_ledger": ("tools/check_task_ledger.py",),
+    "gamecube.rival_host_tests": ("tools/run_gamecube_rival_host_tests.py",),
 }
 MAX_TESTS = 6
 MAX_TEST_TIMEOUT_SECONDS = 120
