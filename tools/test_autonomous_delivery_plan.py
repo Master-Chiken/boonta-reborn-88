@@ -6,6 +6,7 @@ import base64
 import hashlib
 import json
 import subprocess
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -158,18 +159,47 @@ class DeliveryPlanFixture(unittest.TestCase):
         report.update(overrides)
         self.verified_path.write_text(json.dumps(report), encoding="utf-8")
 
-    def plan(self):
+    def plan(self, *, policy_root=None, expected_policy_sha=None):
         return build_delivery_plan(
             self.root,
             verified_report_path=self.verified_path,
             allowlist_report_path=self.allowlist_path,
             expected_task_id=TASK_ID,
             expected_base_sha=self.base_sha,
+            policy_root=policy_root,
+            expected_policy_sha=expected_policy_sha,
         )
 
     def assert_source_clean(self):
         self.assertEqual(git(self.root, "rev-parse", "HEAD"), self.base_sha)
         self.assertEqual(git(self.root, "status", "--porcelain"), "")
+
+
+class SeparateTrustedPolicyPlanTests(DeliveryPlanFixture):
+    def test_delivery_plan_uses_trusted_main_policy_for_dev_target_checkout(self):
+        trusted = self.parent / "trusted-main"
+        cloned = subprocess.run(
+            ["git", "clone", "-q", str(self.root), str(trusted)],
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        trusted_sha = git(trusted, "rev-parse", "HEAD")
+
+        shutil.rmtree(self.root / "docs/automation")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-qm", "dev target checkout omits main policy")
+        self.base_sha = git(self.root, "rev-parse", "HEAD")
+        self.write_allowlist(base_sha=self.base_sha)
+        self.write_verified()
+
+        plan = self.plan(policy_root=trusted, expected_policy_sha=trusted_sha)
+        self.assertEqual(plan["status"], "DELIVERY_PLAN_READY")
+        self.assertEqual(plan["base_sha"], self.base_sha)
+        self.assertEqual(plan["changed_paths"], [SOURCE_PATH])
+        self.assertFalse(plan["auto_merge_enabled"])
 
 
 class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
