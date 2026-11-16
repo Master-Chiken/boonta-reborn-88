@@ -24,7 +24,7 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 - Reuse a successful check for an unchanged exact SHA without duplicate runs. Group related file edits into one logical patch proposal.
 - Deep-inspect changed files and exact-head CI only for PRs; read logs only for failed jobs. A workflow-owned report will provide verified PR and test evidence.
 - This agent intentionally has no general-purpose local shell. Never claim the exact PR head SHA, tests or merge; the workflow verifies the exact PR head SHA after submission.
-- Do not push empty commits. There is no documented safe rerun action from the model. After five minutes queued/in progress, treat it as likely stale runner/Actions state; do not wait indefinitely. Optional `continue-on-error` diagnostics remain workflow-owned.
+- Do not push empty commits. There is no documented safe rerun action from the model. After five minutes queued/in progress, treat it as likely stale runner/Actions state; do not wait indefinitely. optional `continue-on-error` diagnostics remain workflow-owned.
 - Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
 
 ## Workflow-owned evidence format
