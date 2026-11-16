@@ -17,6 +17,7 @@ from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_tr
 
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+REPO_PATH_RE = re.compile(r"^[A-Za-z0-9._/-]+$")
 MAX_READ_PATHS = 5
 MAX_READ_RANGES = 10
 MAX_RANGE_LINES = 80
@@ -46,6 +47,17 @@ def _git(root: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _safe_repo_path(value: Any) -> str:
+    if not isinstance(value, str) or not value or len(value) > 120 or not REPO_PATH_RE.fullmatch(value):
+        raise AgentInputError("Every read path must be a simple exact repository-relative path")
+    if value.startswith("/") or "\\" in value:
+        raise AgentInputError("Absolute read paths and backslashes are forbidden")
+    parts = value.split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise AgentInputError("Read path traversal and ambiguous path components are forbidden")
+    return value
+
+
 def _validate_read_contract(
     source_root: Path,
     task: dict[str, Any],
@@ -55,10 +67,10 @@ def _validate_read_contract(
     if (
         not isinstance(read_paths, list)
         or not 1 <= len(read_paths) <= MAX_READ_PATHS
-        or any(not isinstance(item, str) or not item for item in read_paths)
         or len(set(read_paths)) != len(read_paths)
     ):
         raise AgentInputError("Selected task must have 1-5 unique exact read_paths")
+    read_paths = [_safe_repo_path(item) for item in read_paths]
 
     if not isinstance(read_ranges, list) or not 1 <= len(read_ranges) <= MAX_READ_RANGES:
         raise AgentInputError("Selected task must have 1-10 exact read_ranges")
@@ -96,15 +108,23 @@ def _validate_read_contract(
 
     for item in read_paths:
         target = source_root / item
+        # Resolve containment before walking parents. The path has already
+        # rejected absolute roots, backslashes and dot/traversal components.
+        try:
+            target.resolve(strict=True).relative_to(source_root)
+        except (OSError, ValueError) as exc:
+            raise AgentInputError("Approved read path escapes the target checkout or is missing: " + item) from exc
         if target.is_symlink() or not target.is_file():
             raise AgentInputError("Approved read path is missing or not a regular file: " + item)
         if target.stat().st_size > MAX_SOURCE_FILE_BYTES:
             raise AgentInputError("Approved read path exceeds the 96 KiB cap: " + item)
-        parent = target.parent
-        while parent != source_root:
-            if parent.is_symlink():
-                raise AgentInputError("Approved read path has a symlink parent: " + item)
-            parent = parent.parent
+        current = source_root
+        for component in Path(item).parts[:-1]:
+            current = current / component
+            if current.is_symlink() or not current.is_dir():
+                raise AgentInputError("Approved read path has a symlink or non-directory parent: " + item
+        if target.resolve(strict=True).is_symlink():
+            raise AgentInputError("Approved read path resolves through a symlink: " + item)
     return read_paths, clean_ranges
 
 
