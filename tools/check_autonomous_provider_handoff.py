@@ -187,8 +187,8 @@ else:
             missing_tools = sorted(name for name in expected_tools if name not in gemini_prompt)
             if missing_tools:
                 errors.append(f"Gemini autonomous prompt is missing local MCP FQNs: {missing_tools!r}")
-        if auto_settings.get("tools", {}).get("core", []) != ["read_file"]:
-            errors.append("Gemini autonomous local tools must be limited to read_file for .gemini/context.json")
+        if auto_settings.get("tools", {}).get("core", []) != []:
+            errors.append("Gemini autonomous generic local filesystem tools must be disabled")
     except (json.JSONDecodeError, IndexError, TypeError) as exc:
         errors.append(f"Gemini autonomous bounded MCP settings are invalid: {exc}")
 
