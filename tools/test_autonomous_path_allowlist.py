@@ -292,6 +292,80 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
         with self.assertRaisesRegex(AllowlistError, "require owner review"):
             self.call_allowlist()
 
+    def test_target_branch_uses_separate_trusted_main_policy_checkout(self):
+        target = self.root.parent / "target-source"
+        trusted = self.root.parent / "trusted-main"
+        target.mkdir()
+        trusted.mkdir()
+        git(target, "init", "-q")
+        git(target, "config", "user.name", "Boonta Target")
+        git(target, "config", "user.email", "boonta-target@example.invalid")
+        target_file = target / "gamecube-demo/source/main.c"
+        target_file.parent.mkdir(parents=True)
+        target_file.write_text("int target_source(void) { return 1; }\n", encoding="utf-8")
+        git(target, "add", "gamecube-demo")
+        git(target, "commit", "-qm", "target dev fixture")
+        target_sha = git(target, "rev-parse", "HEAD")
+
+        trusted_docs = trusted / "docs/automation"
+        trusted_docs.mkdir(parents=True)
+        trusted_task = {
+            "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+            "status": "queued",
+            "owner_approved": True,
+            "target_branch": "dev",
+            "depends_on": ["GC-RACE-PROGRESSION"],
+            "title": "Rival route progress",
+        }
+        ledger = {
+            "schema_version": 2,
+            "source": "docs/automation/task-ledger.json",
+            "completed_task_ids": ["GC-RACE-PROGRESSION"],
+            "tasks": [trusted_task],
+        }
+        policy = {
+            "schema_version": 1,
+            "policy": {
+                "owner_review_required": True,
+                "path_mode": "exact",
+                "max_paths_per_task": 20,
+            },
+            "tasks": [{
+                "task_id": trusted_task["task_id"],
+                "purpose": "Reviewed GameCube rival task scope",
+                "approval_ref": APPROVAL,
+                "allowed_paths": ["gamecube-demo/source/main.c"],
+            }],
+        }
+        (trusted_docs / "task-ledger-summary.json").write_text(json.dumps(ledger), encoding="utf-8")
+        (trusted_docs / "patch-path-allowlist.json").write_text(json.dumps(policy), encoding="utf-8")
+        git(trusted, "init", "-q")
+        git(trusted, "config", "user.name", "Boonta Trusted Policy")
+        git(trusted, "config", "user.email", "boonta-policy@example.invalid")
+        git(trusted, "add", "docs/automation")
+        git(trusted, "commit", "-qm", "trusted main policy fixture")
+        policy_sha = git(trusted, "rev-parse", "HEAD")
+
+        report = build_allowlist(
+            target,
+            expected_base_sha=target_sha,
+            requested_task_id=trusted_task["task_id"],
+            policy_root=trusted,
+            expected_policy_sha=policy_sha,
+        )
+        self.assertEqual(report["status"], "READY")
+        self.assertEqual(report["base_sha"], target_sha)
+        self.assertEqual(report["allowed_paths"], ["gamecube-demo/source/main.c"])
+
+        with self.assertRaisesRegex(AllowlistError, "Checkout HEAD differs"):
+            build_allowlist(
+                target,
+                expected_base_sha=target_sha,
+                requested_task_id=trusted_task["task_id"],
+                policy_root=trusted,
+                expected_policy_sha="0" * 40,
+            )
+
     def test_duplicate_json_properties_are_rejected(self):
         (self.root / self.policy_path).write_text(
             '{"schema_version":1,"schema_version":1}', encoding="utf-8",
