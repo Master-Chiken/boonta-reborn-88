@@ -21,6 +21,10 @@ FILES = {
     "context_builder": ROOT / "tools/build_autonomous_context.py",
     "context_builder_tests": ROOT / "tools/test_autonomous_context.py",
     "task_preflight_tests": ROOT / "tools/test_autonomous_task_preflight.py",
+    "bounded_patch_mcp": ROOT / "tools/bounded_patch_proposal_mcp.js",
+    "agent_inputs": ROOT / "tools/prepare_autonomous_agent_inputs.py",
+    "provider_cycle": ROOT / "tools/execute_autonomous_provider_cycle.py",
+    "delivery_plan": ROOT / "tools/build_autonomous_delivery_plan.py",
 }
 
 
@@ -584,7 +588,7 @@ for required in (
 ):
     if required not in gemini_prompt:
         errors.append(f"Gemini prompt must reference {required!r}")
-bounded_mcp_source = read("tools/bounded_patch_proposal_mcp.js")
+bounded_mcp_source = read("bounded_patch_mcp")
 for required in ("MAX_FILE_BYTES", "MAX_TOTAL_BYTES", "MAX_TOTAL_LINES", "MAX_DIFF_BYTES", "MAX_PROPOSAL_BYTES"):
     if required not in bounded_mcp_source:
         errors.append(f"Bounded provider MCP must enforce {required!r}")
@@ -625,7 +629,7 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
         errors.append(f"{label} build agent must deny Task subagents to preserve bounded direct MCP execution")
 # Exact task identity and target markers are produced by workflow-owned code,
 # not by model-authored report text.
-provider_cycle_source = read("tools/execute_autonomous_provider_cycle.py")
+provider_cycle_source = read("provider_cycle")
 for required in (
     'f"BOONTA_CYCLE_TASK_ID: {task_id}"',
     'f"BOONTA_CYCLE_EVIDENCE_BASE: {target_branch}"',
@@ -633,7 +637,7 @@ for required in (
 ):
     if required not in provider_cycle_source:
         errors.append(f"Workflow-owned cycle report must include exact task evidence: {required!r}")
-delivery_plan_source = read("tools/build_autonomous_delivery_plan.py")
+delivery_plan_source = read("delivery_plan")
 for required in (
     'f"BOONTA_TASK_ID: {expected_task_id}"',
     'f"BOONTA_TASK_TARGET_BRANCH: {target_branch}"',
@@ -952,7 +956,7 @@ if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-all
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
     errors.append("Schema-v2 context builder must require an explicit exact-path owner policy entry")
-agent_inputs_source = read("tools/prepare_autonomous_agent_inputs.py")
+agent_inputs_source = read("agent_inputs")
 if "unreadable_write_paths" not in agent_inputs_source or "no provider invocation is allowed until the owner-approved read contract is updated" not in agent_inputs_source:
     errors.append("Provider preflight must block before inference when writable files are outside the exact read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
