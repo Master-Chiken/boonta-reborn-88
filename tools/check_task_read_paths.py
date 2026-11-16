@@ -129,7 +129,16 @@ def validate_read_paths(
                 seen_ranges.add(identity)
                 covered_paths.add(path)
                 actual_line_count = line_counts.get(path)
-                if actual_line_count is not None and end > actual_line_count:
+                # This static checker runs against the workflow's current checkout
+                # (main). For dev-target tasks, exact EOF validation is performed
+                # later against the selected dev checkout by build_autonomous_context
+                # and the proposal MCP, before any patch can be submitted.
+                target_branch = task.get("target_branch", "main")
+                if (
+                    target_branch == "main"
+                    and actual_line_count is not None
+                    and end > actual_line_count
+                ):
                     errors.append(
                         f"{prefix} ends at line {end}, beyond {path}'s {actual_line_count} lines"
                     )
