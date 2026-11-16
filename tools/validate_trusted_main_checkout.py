@@ -58,14 +58,8 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
     if _git(root, "rev-parse", "HEAD") != expected_sha:
         raise TrustedMainCheckoutError("Trusted main checkout HEAD differs from the policy SHA")
 
-    status = _git(root, "status", "--porcelain=v1", "--untracked-files=all", "--", *TRUSTED_PATHS)
-    if status:
-        changes = status.splitlines()
-        if changes != [f" M {SUMMARY}"]:
-            raise TrustedMainCheckoutError(
-                "Trusted main task ledger/path policy has local changes; only the derived summary cache may be regenerated"
-            )
-
+    # Check object type and tracking before status so a missing/symlinked path
+    # is reported as such, not hidden behind Git's generic modified-path state.
     for relative in TRUSTED_PATHS:
         target = root / relative
         if target.is_symlink() or not target.is_file():
@@ -73,6 +67,17 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
         entries = _git(root, "ls-files", "-s", "--", relative).splitlines()
         if len(entries) != 1 or entries[0].split()[0] not in {"100644", "100755"}:
             raise TrustedMainCheckoutError("Trusted main authority file must be one regular tracked file: " + relative)
+
+    # The compact summary is a derived cache and may be regenerated in the
+    # runner checkout. The canonical ledger and owner path policy may never
+    # have working-tree changes, staged changes or untracked replacements.
+    authority_status = _git(
+        root, "status", "--porcelain=v1", "--untracked-files=all", "--", LEDGER, POLICY
+    )
+    if authority_status:
+        raise TrustedMainCheckoutError(
+            "Trusted main task ledger/path policy has local changes; only the derived summary cache may be regenerated"
+        )
 
     try:
         ledger = json.loads((root / LEDGER).read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
@@ -88,5 +93,15 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
     if summary != expected_summary:
         raise TrustedMainCheckoutError(
             "Trusted main compact task summary does not match the committed canonical task ledger"
+        )
+
+    # A changed summary is permitted only after the content above proves it is
+    # byte-for-byte the deterministic projection of the committed ledger.
+    summary_status = _git(
+        root, "status", "--porcelain=v1", "--untracked-files=all", "--", SUMMARY
+    )
+    if summary_status and summary_status.splitlines() != [f" M {SUMMARY}"]:
+        raise TrustedMainCheckoutError(
+            "Trusted main derived summary has an unexpected staged, added, deleted or renamed state"
         )
     return root
