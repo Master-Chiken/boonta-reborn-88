@@ -84,8 +84,8 @@ class ProviderCycleTests(unittest.TestCase):
         self.assertFalse(writer.called)
         report = self.report.read_text(encoding="utf-8")
         self.assertIn("BOONTA_CYCLE_STATUS: BLOCKED", report)
-        self.assertIn("BOONTA_CYCLE_BLOCKER: ", report)
-        self.assertIn("BOONTA_CYCLE_NEXT_ACTION: ", report)
+        self.assertIn("BOONTA_CYCLE_BLOCKER: The provider did not submit one bounded patch proposal.", report)
+        self.assertIn("BOONTA_CYCLE_NEXT_ACTION: Review the provider invocation log and exact source excerpts, then retry once through the next eligible free route.", report)
         self.assertNotIn("{_safe_line", report)
 
     def test_verified_patch_creates_exact_progress_report_only_after_writer_success(self):
