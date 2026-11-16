@@ -705,36 +705,43 @@ else:
         except re.error as exc:
             errors.append(f"OpenRouter watchdog regex must compile: {exc}")
 
-openrouter_config_tools = openrouter_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
+openrouter_config_mcp = openrouter_config.get("mcp", {}).get("boonta", {})
+if openrouter_config_mcp.get("type") != "local" or openrouter_config_mcp.get("enabled") is not True:
+    errors.append("OpenRouter must expose only the local bounded Boonta proposal MCP")
+if "github" in openrouter_config.get("mcp", {}):
+    errors.append("OpenRouter model configuration must not expose a GitHub MCP server")
+openrouter_step_start = openrouter.find("      - name: Run OpenCode through the OpenRouter Free route")
+openrouter_step_end = openrouter.find("      - name: Verify, test and publish the OpenRouter patch proposal", openrouter_step_start + 1)
+openrouter_agent_step = openrouter[openrouter_step_start:openrouter_step_end] if openrouter_step_start >= 0 and openrouter_step_end > openrouter_step_start else ""
+for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "github-mcp-server", '"github": {', "github_push_files", "github_create_branch", "github_create_pull_request"):
+    if forbidden in openrouter_agent_step:
+        errors.append(f"OpenRouter model step exposes a forbidden GitHub writer surface: {forbidden!r}")
+for required in ('"boonta": {', '"command": ["node", $script]', "BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"):
+    if required not in openrouter_agent_step:
+        errors.append(f"OpenRouter model step lacks bounded local MCP configuration: {required!r}")
+openrouter_delivery_start = openrouter.find("      - name: Verify, test and publish the OpenRouter patch proposal")
+openrouter_delivery = openrouter[openrouter_delivery_start:] if openrouter_delivery_start >= 0 else ""
+if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in openrouter_delivery:
+    errors.append("OpenRouter workflow-owned delivery step must receive the scoped GitHub token")
+if "steps.execute_provider_cycle.outcome == 'success'" not in openrouter:
+    errors.append("OpenRouter report validation must follow successful workflow-owned delivery orchestration")
+if "steps.bounded_inputs.outcome == 'success'" not in openrouter_agent_step or "inputs.resume_mode != true" not in openrouter_agent_step:
+    errors.append("OpenRouter provider invocation must require bounded inputs and fail closed for resume mode")
+
 groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
-required_openrouter_normal = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
 required_resume_tools = {"get_file_contents", "push_files"}
 required_groq_tools = {"get_file_contents", "create_branch", "create_pull_request", "push_files"}
-required_writer_tools = {
-    "get_file_contents", "search_pull_requests", "create_branch",
-    "push_files", "create_pull_request",
-}
-for label, config_tools, workflow in (
-    ("OpenRouter", openrouter_config_tools, openrouter),
-    ("Groq", groq_config_tools, groq),
-):
-    if config_tools != "{env:GITHUB_TOOLS}":
-        errors.append(f"{label} must bind its MCP tool list to the explicit mode-specific GITHUB_TOOLS environment")
-    else:
-        modes = {frozenset(item.split(",")) for item in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', workflow)}
-        expected = {frozenset(required_resume_tools), frozenset(required_openrouter_normal if label == "OpenRouter" else required_groq_tools)}
-        if modes != expected:
-            errors.append(f"{label} must expose its normal delivery tools and only targeted read plus push for existing-PR resume")
-    if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in workflow:
-        errors.append(f"{label} container must inherit the exact workflow-selected tool allow-list")
+if groq_config_tools != "{env:GITHUB_TOOLS}":
+    errors.append("Groq legacy direct writer must retain its explicit mode-specific tool allow-list until it is migrated")
+else:
+    modes = {frozenset(item.split(",")) for item in re.findall(r'(?m)^\\s*export GITHUB_TOOLS="([^"]+)"$', groq)}
+    expected = {frozenset(required_resume_tools), frozenset(required_groq_tools)}
+    if modes != expected:
+        errors.append("Groq legacy writer tool modes differ from the reviewed direct-execution allow-list")
+if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
+    errors.append("Groq legacy container must inherit its explicit tool allow-list")
 
-for label, workflow in (("Gemini", gemini),):
-    if "GITHUB_TOOLS: ${{ inputs.resume_mode == true && 'get_file_contents,push_files'" not in workflow:
-        errors.append("Gemini must reduce its MCP server to targeted read plus push during existing-PR resume")
-    if '"GITHUB_TOOLS": "${GITHUB_TOOLS}"' not in workflow or '"-e",\n                    "GITHUB_TOOLS"' not in workflow:
-        errors.append("Gemini container must inherit the exact workflow-selected tool allow-list")
-
-for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, required_resume_tools)), ("Groq", set().union(required_groq_tools, required_resume_tools))):
+for label, toolset in (("Groq", set().union(required_groq_tools, required_resume_tools)),):
     forbidden = {
         "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
         "list_branches", "list_commits", "merge_pull_request", "delete_branch",
@@ -747,7 +754,7 @@ for label, toolset in (("OpenRouter", set().union(required_openrouter_normal, re
 required_gemini_ci_tools = {
     "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
 }
-gemini_settings_match = re.search(r'"includeTools":\s*\[(.*?)\]', gemini, re.DOTALL)
+gemini_settings_match = re.search(r'"includeTools":\\s*\\[(.*?)\\]', gemini, re.DOTALL)
 if not gemini_settings_match:
     errors.append("Gemini MCP allow-list is missing")
 else:
@@ -758,7 +765,6 @@ else:
         errors.append("Gemini must retain bounded read-only PR/Actions CI diagnostic tools")
     if {"merge_pull_request", "delete_branch", "update_pull_request", "list_pull_requests"}.intersection(gemini_tools):
         errors.append("Gemini MCP allow-list exposes an unsafe or unavailable repository mutation/list tool")
-
 # Both OpenCode providers must resolve the actual checked-out repository root,
 # validate the selected task against schema v2, and preload policy/context before
 # spending provider inference or scarce agent tool steps.
