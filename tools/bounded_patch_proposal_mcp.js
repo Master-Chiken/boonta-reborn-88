@@ -20,6 +20,7 @@ const TEST_IDS = new Set([
 const MAX_FILE_BYTES = 96 * 1024;
 const MAX_TOTAL_BYTES = 256 * 1024;
 const MAX_TOTAL_LINES = 240;
+const MAX_READ_RANGES = 10;
 const MAX_DIFF_BYTES = 32 * 1024;
 const MAX_PROPOSAL_BYTES = 96 * 1024;
 
@@ -93,8 +94,8 @@ function makeState() {
   if (allowedPaths.some((item) => !readPaths.includes(item))) {
     reject('every owner-approved write path must also be in the task read-path allow-list');
   }
-  if (!Array.isArray(readRanges) || readRanges.length < 1 || readRanges.length > 8) {
-    reject('BOONTA_READ_RANGES must contain 1-8 exact source ranges');
+  if (!Array.isArray(readRanges) || readRanges.length < 1 || readRanges.length > MAX_READ_RANGES) {
+    reject('BOONTA_READ_RANGES must contain 1-' + MAX_READ_RANGES + ' exact source ranges');
   }
   let totalRangeLines = 0;
   const seenRanges = new Set();
@@ -111,6 +112,8 @@ function makeState() {
     totalRangeLines += item.end_line - item.start_line + 1;
   }
   if (totalRangeLines > MAX_TOTAL_LINES) reject('approved source ranges exceed the 240-line aggregate cap');
+  const coveredPaths = new Set(readRanges.map((item) => item.path));
+  if (readPaths.some((item) => !coveredPaths.has(item))) reject('every approved read path must have at least one exact line range');
   for (const item of readPaths) {
     const full = path.resolve(sourceRoot, item);
     ensureNoSymlinkParents(sourceRoot, full);
@@ -137,7 +140,7 @@ function makeState() {
     readPaths: new Set(readPaths),
     readRanges,
     allowedPaths: new Set(allowedPaths),
-    successfulReads: new Set(),
+    sourcesRead: false,
     totalBytesRead: 0,
     totalLinesRead: 0,
     submitted: false
@@ -191,54 +194,67 @@ function validateDiff(diff, allowedPaths) {
   return changed.sort();
 }
 
-function readApprovedFile(state, args) {
-  if (!args || typeof args !== 'object' || Array.isArray(args) ||
-      Object.keys(args).sort().join(',') !== 'end_line,file_path,start_line') {
-    reject('read_approved_file requires exactly file_path, start_line and end_line');
+function readApprovedSources(state, args) {
+  if (args !== undefined && (!args || typeof args !== 'object' || Array.isArray(args) || Object.keys(args).length !== 0)) {
+    reject('read_approved_sources accepts no arguments; source scope is fixed by preflight');
   }
-  const filePath = args.file_path;
-  const start = args.start_line;
-  const end = args.end_line;
-  if (!state.readPaths.has(filePath)) reject('file path is not in the selected task read allow-list');
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end - start + 1 > 80) {
-    reject('requested source range must be positive and contain at most 80 lines');
+  if (state.sourcesRead) reject('approved task sources may be read only once in this cycle');
+
+  let totalBytes = 0;
+  let totalLines = 0;
+  const files = [];
+  for (const filePath of [...state.readPaths].sort()) {
+    const fullPath = path.resolve(state.sourceRoot, filePath);
+    ensureNoSymlinkParents(state.sourceRoot, fullPath);
+    const stat = fs.lstatSync(fullPath);
+    if (!stat.isFile() || stat.size > MAX_FILE_BYTES) reject('source file is not a regular file within the 96 KiB cap: ' + filePath);
+    const bytes = fs.readFileSync(fullPath);
+    if (bytes.includes(0)) reject('binary source files are not readable: ' + filePath);
+    const sourceText = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const lines = sourceText.split(/\r?\n/);
+    const ranges = state.readRanges
+      .filter((item) => item.path === filePath)
+      .sort((a, b) => a.start_line - b.start_line || a.end_line - b.end_line);
+    if (!ranges.length) reject('approved source path has no exact source ranges: ' + filePath);
+
+    const rangeResults = [];
+    for (const item of ranges) {
+      if (item.end_line > lines.length) reject('approved line range exceeds source file length: ' + filePath);
+      const requestedLines = item.end_line - item.start_line + 1;
+      totalLines += requestedLines;
+      rangeResults.push({
+        start_line: item.start_line,
+        end_line: item.end_line,
+        content: lines.slice(item.start_line - 1, item.end_line)
+          .map((line, index) => String(item.start_line + index) + ': ' + line)
+          .join('\n')
+      });
+    }
+    totalBytes += bytes.length;
+    files.push({
+      file_path: filePath,
+      file_bytes: bytes.length,
+      ranges: rangeResults
+    });
   }
-  const range = state.readRanges.find((item) =>
-    item.path === filePath && item.start_line === start && item.end_line === end
-  );
-  if (!range) reject('requested line range is not an exact owner-approved range');
-  const rangeKey = filePath + ':' + start + ':' + end;
-  if (state.successfulReads.has(rangeKey)) reject('this exact source range has already been read once');
-  const fullPath = path.resolve(state.sourceRoot, filePath);
-  ensureNoSymlinkParents(state.sourceRoot, fullPath);
-  const stat = fs.lstatSync(fullPath);
-  if (!stat.isFile() || stat.size > MAX_FILE_BYTES) reject('source file is not a regular file within the 96 KiB cap');
-  const bytes = fs.readFileSync(fullPath);
-  if (bytes.includes(0)) reject('binary source files are not readable');
-  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  const lines = text.split(/\r?\n/);
-  if (end > lines.length) reject('approved line range exceeds the source file length');
-  const requestedLineCount = end - start + 1;
-  if (state.totalBytesRead + bytes.length > MAX_TOTAL_BYTES ||
-      state.totalLinesRead + requestedLineCount > MAX_TOTAL_LINES) {
+  if (totalBytes > MAX_TOTAL_BYTES || totalLines > MAX_TOTAL_LINES) {
     reject('aggregate source-read budget is exhausted');
   }
-  state.successfulReads.add(rangeKey);
-  state.totalBytesRead += bytes.length;
-  state.totalLinesRead += requestedLineCount;
+  state.sourcesRead = true;
+  state.totalBytesRead = totalBytes;
+  state.totalLinesRead = totalLines;
   return {
-    file_path: filePath,
-    start_line: start,
-    end_line: end,
-    content: lines.slice(start - 1, end).map((line, index) => String(start + index) + ': ' + line).join('\n'),
-    file_bytes: bytes.length,
-    aggregate_bytes_read: state.totalBytesRead,
-    aggregate_lines_read: state.totalLinesRead
+    task_id: state.taskId,
+    base_sha: state.baseSha,
+    files,
+    aggregate_bytes_read: totalBytes,
+    aggregate_lines_read: totalLines
   };
 }
 
 function submitProposal(state, args) {
   if (state.submitted) reject('only one patch proposal may be submitted in this cycle');
+  if (!state.sourcesRead) reject('read_approved_sources must succeed before a patch proposal can be submitted');
   const required = ['schema_version', 'task_id', 'base_sha', 'summary', 'unified_diff', 'test_ids', 'limitations'];
   if (!args || typeof args !== 'object' || Array.isArray(args) ||
       Object.keys(args).sort().join(',') !== required.slice().sort().join(',')) {
@@ -295,17 +311,12 @@ function submitProposal(state, args) {
 
 const TOOL_DEFINITIONS = [
   {
-    name: 'read_approved_file',
-    description: 'Read one exact owner-approved line range from a task-scoped source file. Directories, other paths, other ranges and repeated reads are rejected.',
+    name: 'read_approved_sources',
+    description: 'Read every exact owner-approved source range from the selected task in one bounded call. The source list and ranges are fixed by preflight; the entire set may be read only once.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
-      required: ['file_path', 'start_line', 'end_line'],
-      properties: {
-        file_path: { type: 'string' },
-        start_line: { type: 'integer', minimum: 1 },
-        end_line: { type: 'integer', minimum: 1 }
-      }
+      properties: {}
     }
   },
   {
@@ -372,7 +383,7 @@ async function handle(message) {
     const name = message.params?.name;
     const args = message.params?.arguments;
     try {
-      if (name === 'read_approved_file') return { jsonrpc: '2.0', id: message.id, result: textResult(readApprovedFile(state, args)) };
+      if (name === 'read_approved_sources') return { jsonrpc: '2.0', id: message.id, result: textResult(readApprovedSources(state, args)) };
       if (name === 'submit_patch_proposal') return { jsonrpc: '2.0', id: message.id, result: textResult(submitProposal(state, args)) };
       return { jsonrpc: '2.0', id: message.id, result: errorResult(new Error('unknown Boonta proposal tool')) };
     } catch (error) {
