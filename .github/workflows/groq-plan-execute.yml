@@ -585,7 +585,7 @@ jobs:
           # Refresh only the runner's derived summary; the global preflight's
           # task handoff is verified as a subset of this current compact projection.
           python3 "$repo_root/tools/check_task_ledger_summary.py" --write
-          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1400 --max-task-context 1000 --max-criteria 3 --max-next-action 80 --max-source-chars 500)"
+          context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 1000 --max-task-context 800 --max-criteria 3 --max-next-action 80 --max-source-chars 0)"
 
           {
             printf 'repo_root=%s\n' "$repo_root"
@@ -689,7 +689,6 @@ jobs:
           GROQ_API_KEY: ${{ secrets.TA_CLE_GROQ }}
           TASK_ID: ${{ inputs.task_id }}
           TASK_TITLE: ${{ inputs.task_title }}
-          SOURCE_READ_CHARS: ${{ steps.bounded_inputs.outputs.source_read_chars }}
           SOURCE_CONTEXT_FILE: ${{ steps.bounded_inputs.outputs.source_context_file }}
           BOONTA_PRELOADED_SOURCES: 'true'
           BOONTA_PRELOADED_SOURCE_SHA256: ${{ steps.bounded_inputs.outputs.source_context_sha256 }}
