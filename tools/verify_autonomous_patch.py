@@ -174,6 +174,8 @@ def verify_in_isolated_worktree(
     allowlist_report_path: Path,
     expected_task_id: str,
     expected_base_sha: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     if not root.is_dir():
@@ -190,6 +192,8 @@ def verify_in_isolated_worktree(
             root,
             expected_base_sha=expected_base_sha,
             requested_task_id=expected_task_id,
+            policy_root=policy_root,
+            expected_policy_sha=expected_policy_sha,
         )
         supplied_scope = load_json(allowlist_report_path)
     except AllowlistError as exc:
@@ -324,6 +328,8 @@ def main() -> int:
     parser.add_argument("--allowlist-report", type=Path)
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     args = parser.parse_args()
     if not all((
         args.repo_root,
@@ -340,6 +346,8 @@ def main() -> int:
             allowlist_report_path=args.allowlist_report,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except (PipelineError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
