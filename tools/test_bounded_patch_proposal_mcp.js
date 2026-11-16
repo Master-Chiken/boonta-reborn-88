@@ -307,8 +307,12 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const proposal = validProposal(fx.baseSha, { unified_diff: validDiff('src/other.h') });
-      const result = runServer(fx, [call('submit_patch_proposal', proposal, 2)]);
-      expectToolError(toolResult(result, 2), /outside the exact owner-approved write-path allow-list/);
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', proposal, 3)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      expectToolError(toolResult(result, 3), /outside the exact owner-approved write-path allow-list/);
       assert.equal(fs.existsSync(fx.env.BOONTA_PROPOSAL_PATH), false);
     } finally {
       cleanup(fx);
@@ -326,8 +330,12 @@ function cleanup(fx) {
         '-old',
         '+new'
       ].join('\n');
-      const result = runServer(fx, [call('submit_patch_proposal', validProposal(fx.baseSha, { unified_diff: diff }), 2)]);
-      expectToolError(toolResult(result, 2), /renames and cross-path changes/);
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', validProposal(fx.baseSha, { unified_diff: diff }), 3)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      expectToolError(toolResult(result, 3), /renames and cross-path changes/);
     } finally {
       cleanup(fx);
     }
@@ -337,42 +345,12 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const proposal = validProposal(fx.baseSha, { unified_diff: validDiff() + '\nnew file mode 100644' });
-      const result = runServer(fx, [call('submit_patch_proposal', proposal, 2)]);
-      expectToolError(toolResult(result, 2), /binary, mode, rename, copy and submodule/);
-    } finally {
-      cleanup(fx);
-    }
-  }
-
-  {
-    const fx = fixture();
-    try {
-      const result = runServer(fx, [call('submit_patch_proposal', validProposal('b'.repeat(40)), 2)]);
-      expectToolError(toolResult(result, 2), /base_sha differs from the trusted target checkout/);
-    } finally {
-      cleanup(fx);
-    }
-  }
-
-  {
-    const fx = fixture();
-    try {
-      const result = runServer(fx, [call('submit_patch_proposal', validProposal(fx.baseSha, {
-        task_id: 'OTHER-TASK'
-      }), 2)]);
-      expectToolError(toolResult(result, 2), /task_id differs from the trusted reservation/);
-    } finally {
-      cleanup(fx);
-    }
-  }
-
-  {
-    const fx = fixture();
-    try {
-      const result = runServer(fx, [call('submit_patch_proposal', validProposal(fx.baseSha, {
-        test_ids: ['arbitrary.shell.command']
-      }), 2)]);
-      expectToolError(toolResult(result, 2), /repository-owned test identifiers/);
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', proposal, 3)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      expectToolError(toolResult(result, 3), /binary, mode, rename, copy and submodule/);
     } finally {
       cleanup(fx);
     }
@@ -382,11 +360,59 @@ function cleanup(fx) {
     const fx = fixture();
     try {
       const result = runServer(fx, [
-        call('submit_patch_proposal', validProposal(fx.baseSha), 2),
-        call('submit_patch_proposal', validProposal(fx.baseSha), 3)
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', validProposal('b'.repeat(40)), 3)
       ]);
       assert.equal(toolResult(result, 2).isError, false);
-      expectToolError(toolResult(result, 3), /only one patch proposal/);
+      expectToolError(toolResult(result, 3), /base_sha differs from the trusted target checkout/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', validProposal(fx.baseSha, {
+          task_id: 'OTHER-TASK'
+        }), 3)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      expectToolError(toolResult(result, 3), /task_id differs from the trusted reservation/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', validProposal(fx.baseSha, {
+          test_ids: ['arbitrary.shell.command']
+        }), 3)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      expectToolError(toolResult(result, 3), /repository-owned test identifiers/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
+    const fx = fixture();
+    try {
+      const result = runServer(fx, [
+        call('read_approved_sources', {}, 2),
+        call('submit_patch_proposal', validProposal(fx.baseSha), 3),
+        call('submit_patch_proposal', validProposal(fx.baseSha), 4)
+      ]);
+      assert.equal(toolResult(result, 2).isError, false);
+      assert.equal(toolResult(result, 3).isError, false);
+      expectToolError(toolResult(result, 4), /only one patch proposal/);
     } finally {
       cleanup(fx);
     }
