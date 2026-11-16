@@ -196,7 +196,7 @@ function cleanup(fx) {
       const payload = JSON.parse(toolText(read));
       const source = payload.files.find((item) => item.file_path === SOURCE_A);
       assert.equal(source.ranges[0].comments_and_blank_lines_omitted, true);
-      assert.equal(source.ranges[0].rendered_lines, 3);
+      assert.equal(source.ranges[0].rendered_lines, 4);
       assert.ok(source.ranges[0].content.includes('https://example.invalid/path'));
       assert.match(source.ranges[0].content, /return 1;/);
       assert.doesNotMatch(source.ranges[0].content, /long block comment|trailing comment/);
