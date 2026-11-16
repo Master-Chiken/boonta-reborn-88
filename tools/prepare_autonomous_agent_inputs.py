@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from build_autonomous_path_allowlist import AllowlistError, build_allowlist, load_json
+from validate_trusted_main_checkout import TrustedMainCheckoutError, validate_trusted_main_checkout
 
 TASK_ID_RE = re.compile(r"^[A-Z0-9][A-Z0-9-]{2,63}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -131,8 +132,10 @@ def prepare_agent_inputs(
         raise AgentInputError("Trusted main checkout HEAD differs from the policy SHA")
     if _git(source_root, "status", "--porcelain=v1", "--untracked-files=all"):
         raise AgentInputError("Target source checkout must be clean before provider invocation")
-    if _git(policy_root, "status", "--porcelain=v1", "--untracked-files=all"):
-        raise AgentInputError("Trusted main policy checkout must be clean before provider invocation")
+    try:
+        validate_trusted_main_checkout(policy_root, expected_policy_sha)
+    except TrustedMainCheckoutError as exc:
+        raise AgentInputError(str(exc)) from exc
 
     summary_path = policy_root / "docs/automation/task-ledger-summary.json"
     if summary_path.is_symlink() or not summary_path.is_file():
