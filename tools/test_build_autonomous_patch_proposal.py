@@ -110,7 +110,11 @@ class PatchExportFixture(unittest.TestCase):
         readme = docs_dir / "readme.md"
         readme.chmod(0o644)
         readme.write_text("changed outside scope\n", encoding="utf-8")
-        with self.assertRaisesRegex(PatchBuildError, "Read-only context file became writable"):
+        readme.chmod(0o444)
+        for current, _dirs, _files in os.walk(self.workspace, topdown=False):
+            Path(current).chmod(0o555)
+        self.workspace.chmod(0o555)
+        with self.assertRaisesRegex(PatchBuildError, "Read-only context file was modified"):
             self.proposal()
 
     def test_rejects_extra_file_created_in_workspace(self):
@@ -118,6 +122,9 @@ class PatchExportFixture(unittest.TestCase):
         self.workspace.chmod(0o755)
         tools_dir.chmod(0o755)
         (tools_dir / "new-file.c").write_text("int new_file;\n", encoding="utf-8")
+        for current, _dirs, _files in os.walk(self.workspace, topdown=False):
+            Path(current).chmod(0o555)
+        self.workspace.chmod(0o555)
         with self.assertRaisesRegex(PatchBuildError, "outside the exact read-path list"):
             self.proposal()
 
@@ -127,6 +134,9 @@ class PatchExportFixture(unittest.TestCase):
         docs_dir.chmod(0o755)
         (docs_dir / "readme.md").unlink()
         (docs_dir / "readme.md").symlink_to(self.baseline / "docs/readme.md")
+        for current, _dirs, _files in os.walk(self.workspace, topdown=False):
+            Path(current).chmod(0o555)
+        self.workspace.chmod(0o555)
         with self.assertRaisesRegex(PatchBuildError, "symlink"):
             self.proposal()
 
