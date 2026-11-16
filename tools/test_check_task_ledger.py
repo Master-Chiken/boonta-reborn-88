@@ -486,7 +486,7 @@ class CompactTaskSummaryTests(unittest.TestCase):
         ]
         self.assertEqual(len(matches), 1)
         task = matches[0]
-        task_context = "\\n".join([
+        task_context = "\n".join([
             "Task ID: " + task["task_id"],
             "Title: " + task["title"],
             "Target branch: " + task["target_branch"],
