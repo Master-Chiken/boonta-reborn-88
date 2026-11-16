@@ -672,20 +672,38 @@ for required in (
     if required not in delivery_plan_source:
         errors.append(f"Workflow-owned PR body must contain its exact task marker: {required!r}")
 
-# Both proposal-only providers need the exact context file their local MCP validates.
+# Both proposal-only providers write the task-bound MCP context only after
+# trusted source preflight, gate inference on success, then remove the file.
 for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
-    prepare_start = workflow.find("      - name: Prepare the exact selected task and compact repository context")
-    prepare_end = workflow.find("\n      - name:", prepare_start + 1)
-    prepare_step = workflow[prepare_start:prepare_end] if prepare_start >= 0 and prepare_end >= 0 else ""
-    for required in (
+    write_start = workflow.find("      - name: Write verified MCP context for " + label)
+    write_end = workflow.find("\n      - name:", write_start + 1) if write_start >= 0 else -1
+    write_step = workflow[write_start:write_end] if write_start >= 0 and write_end >= 0 else ""
+    model_start = workflow.find("      - name: Run OpenCode through the " + label + " Free route")
+    model_end = workflow.find("\n      - name:", model_start + 1) if model_start >= 0 else -1
+    model_step = workflow[model_start:model_end] if model_start >= 0 and model_end >= 0 else ""
+    cleanup_pos = workflow.find("      - name: Remove ephemeral MCP context", model_end if model_end >= 0 else 0)
+    verify_marker = "      - name: Verify, test and publish the " + label + " patch proposal"
+    verify_pos = workflow.find(verify_marker, model_end if model_end >= 0 else 0)
+    required_writer = (
         "tools/write_autonomous_provider_context.py",
         "--verified-context-stdin",
         '--workspace "$GITHUB_WORKSPACE"',
         '--task-id "$TASK_ID"',
         '--target-branch "$TASK_TARGET_BRANCH"',
+        "steps.prepare_context.outputs.context",
+        "id: write_mcp_context",
+    )
+    for required in required_writer:
+        if required not in write_step:
+            errors.append(f"{label} dedicated MCP context writer is missing {required!r}")
+    if "steps.write_mcp_context.outcome == 'success'" not in model_step:
+        errors.append(f"{label} model step must require successful MCP context creation")
+    if (
+        cleanup_pos < 0 or verify_pos < 0 or cleanup_pos > verify_pos
+        or "if: always() && steps.write_mcp_context.outcome == 'success'" not in workflow[cleanup_pos:verify_pos]
+        or 'rm -f "$GITHUB_WORKSPACE/.gemini/context.json"' not in workflow[cleanup_pos:verify_pos]
     ):
-        if required not in prepare_step:
-            errors.append(f"{label} must create the exact verified MCP context file before inference: missing {required!r}")
+        errors.append(f"{label} must remove the ephemeral MCP context before workflow-owned delivery")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
