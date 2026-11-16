@@ -210,9 +210,9 @@ class IsolatedPatchPipelineTests(PipelineFixture):
         self.assert_source_checkout_untouched()
 
     def test_test_mutating_a_validated_file_is_rejected(self):
+        for test_id in MANDATORY_TEST_IDS:
+            run_autonomous_patch_tests.TEST_REGISTRY[test_id] = ("tools/test_pass.py",)
         run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[0]] = ("tools/test_mutate.py",)
-        run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[1]] = ("tools/test_pass.py",)
-        run_autonomous_patch_tests.TEST_REGISTRY[MANDATORY_TEST_IDS[2]] = ("tools/test_pass.py",)
         with self.assertRaisesRegex(PipelineError, "modified a validated patch file"):
             self.run_pipeline()
         self.assert_source_checkout_untouched()
