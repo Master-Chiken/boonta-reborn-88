@@ -255,7 +255,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                 self.assertEqual(process.returncode, 75, output)
                 saved = report.read_text(encoding="utf-8")
                 self.assertIn(expected_report_line, saved)
-                self.assertIn("Groq provider quota/auth refusal detected", output)
+                self.assertIn("Groq quota/auth refusal detected", output)
                 self.assert_heartbeat_stopped(heartbeat)
             finally:
                 if process.poll() is None:
