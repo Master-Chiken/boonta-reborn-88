@@ -483,6 +483,42 @@ for required in (
 ):
     if required not in openrouter_fallback:
         errors.append(f"OpenRouter fallback is missing required free-only/safety setting {required!r}")
+
+# The model-facing process gets a local proposal MCP server, never the
+# workflow-owned GitHub token or a remote GitHub writer.
+openrouter_model_start = openrouter_fallback.find("      - name: Run OpenCode through the OpenRouter Free route")
+openrouter_model_end = openrouter_fallback.find("\n      - name:", openrouter_model_start + 1)
+openrouter_model_step = openrouter_fallback[openrouter_model_start:openrouter_model_end]
+openrouter_writer_start = openrouter_fallback.find("      - name: Verify, test and publish the OpenRouter patch proposal")
+openrouter_writer_end = openrouter_fallback.find("\n      - name:", openrouter_writer_start + 1)
+openrouter_writer_step = openrouter_fallback[openrouter_writer_start:openrouter_writer_end]
+bounded_mcp = read("tools/bounded_patch_proposal_mcp.js")
+for required in (
+    "name: 'read_approved_sources'",
+    "name: 'submit_patch_proposal'",
+    "BOONTA_ALLOWED_PATHS",
+    "MAX_DIFF_BYTES",
+    "MAX_PROPOSAL_BYTES",
+    "sourcesRead",
+    "remote_repository_write_performed: false",
+):
+    if required not in bounded_mcp:
+        errors.append(f"Bounded local MCP server is missing security invariant ${required!r}")
+for forbidden in ("GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", "fetch(", "https.request"):
+    if forbidden in bounded_mcp or forbidden in openrouter_model_step:
+        errors.append(f"Model-facing OpenRouter process/MCP must not expose remote GitHub access: ${required!r}")
+if "node tools/bounded_patch_proposal_mcp.js" not in openrouter_model_step:
+    errors.append("OpenRouter model must use the bounded local proposal-only MCP server")
+if "GITHUB_TOKEN:" in openrouter_model_step or "GITHUB_PERSONAL_ACCESS_TOKEN" in openrouter_model_step:
+    errors.append("OpenRouter model process must not receive a GitHub writer token")
+if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in openrouter_writer_step:
+    errors.append("Only the workflow-owned verified patch publisher may receive the scoped GitHub App token")
+if not (
+    openrouter_model_start >= 0 and openrouter_model_end > openrouter_model_start
+    and openrouter_writer_start > openrouter_model_start
+    and "execute_autonomous_provider_cycle.py" in openrouter_writer_step
+):
+    errors.append("OpenRouter must run the model first, then verify/test/deliver through its separate workflow-owned publisher")
 if 'OPENROUTER_FREE_TIER_CONFIRMED:-}" != "true"' not in openrouter_fallback:
     errors.append("OpenRouter fallback must require the owner's exact-true Free-tier attestation")
 if 'GEMINI_AUTONOMOUS_ENABLED:-}" != "true"' not in openrouter_fallback:
