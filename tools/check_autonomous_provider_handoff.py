@@ -1353,7 +1353,7 @@ for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
 
 # Gemini Free-tier TPM protection: one model attempt and three session turns.
 gemini_auto_settings_start = gemini.find("      - name: Run Gemini CLI through bounded local proposal MCP")
-gemini_settings_marker = "          settings: |-" + "\\n"
+gemini_settings_marker = "          settings: |-" + "\n"
 gemini_auto_settings_end = gemini.find("          prompt: '/gemini-autonomous-loop'", gemini_auto_settings_start)
 if gemini_auto_settings_start < 0 or gemini_auto_settings_end < 0:
     errors.append("Gemini autonomous bounded settings block is missing")
