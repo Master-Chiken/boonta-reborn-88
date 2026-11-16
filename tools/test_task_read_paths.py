@@ -75,7 +75,7 @@ class TaskReadPathTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "tools").mkdir()
-            (root / "tools/example.py").write_text("\\n".join([f"line {i}" for i in range(1, 12)]), encoding="utf-8")
+            (root / "tools/example.py").write_text("\n".join([f"line {i}" for i in range(1, 12)]), encoding="utf-8")
             data = ledger_with_paths(["tools/example.py"])
             data["tasks"][0]["read_ranges"] = [
                 {"path": "tools/example.py", "start_line": index, "end_line": index}
@@ -87,7 +87,7 @@ class TaskReadPathTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "tools").mkdir()
-            (root / "tools/example.py").write_text("\\n".join([f"line {i}" for i in range(1, 13)]), encoding="utf-8")
+            (root / "tools/example.py").write_text("\n".join([f"line {i}" for i in range(1, 13)]), encoding="utf-8")
             data = ledger_with_paths(["tools/example.py"])
             data["tasks"][0]["read_ranges"] = [
                 {"path": "tools/example.py", "start_line": index, "end_line": index}
