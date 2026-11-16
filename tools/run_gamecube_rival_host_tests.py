@@ -6,12 +6,12 @@ paths, compiler flags or output paths. Build products stay in a temporary folder
 """
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
 TESTS = (
     ("test_rival_ai", "gamecube-demo/tests/test_rival_ai.c", True),
     ("test_route_cursor", "gamecube-demo/tests/test_route_cursor.c", True),
@@ -46,8 +46,28 @@ def run(command: list[str], *, cwd: Path, env: dict[str, str]) -> tuple[int, str
 
 
 def main() -> int:
-    if not ROOT.is_dir():
-        print("GameCube host test repository root is unavailable.")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source-root", type=Path, required=True)
+    args = parser.parse_args()
+    root = args.source_root.resolve()
+    try:
+        top = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=root,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        print("Could not verify the GameCube target checkout root.")
+        return 2
+    if top.returncode != 0 or Path(top.stdout.strip()).resolve() != root:
+        print("GameCube host tests require the exact target Git checkout root.")
+        return 2
+    if not root.is_dir():
+        print("GameCube host test target root is unavailable.")
         return 2
 
     env = {
@@ -60,7 +80,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="boonta-gamecube-host-tests-") as temp:
         output_root = Path(temp)
         for name, source, link_math in TESTS:
-            source_path = ROOT / source
+            source_path = root / source
             if source_path.is_symlink() or not source_path.is_file():
                 print(f"REJECTED: fixed host test source is missing or symlinked: {source}")
                 return 2
@@ -71,13 +91,13 @@ def main() -> int:
             ]
             if link_math:
                 compile_command.append("-lm")
-            code, detail = run(compile_command, cwd=ROOT, env=env)
+            code, detail = run(compile_command, cwd=root, env=env)
             if code != 0:
                 print(f"FAILED: compile {source} (exit {code})")
                 print(detail)
                 return 1
 
-            code, detail = run([str(output)], cwd=ROOT, env=env)
+            code, detail = run([str(output)], cwd=root, env=env)
             if code != 0:
                 print(f"FAILED: execute {name} (exit {code})")
                 print(detail)
