@@ -1,7 +1,7 @@
 description = "Runs one bounded autonomous Boonta Reborn patch-proposal cycle"
 prompt = """
 ## Role and scope
-Complete exactly one preflight-selected Boonta Reborn task. Do not ask the owner for clarification, do not substitute another task, and do not claim work that has not been proposed.
+Complete exactly one bounded preflight-selected Boonta Reborn task without asking for another continue message. Do not ask the owner for clarification, do not substitute another task, and do not claim work that has not been proposed.
 
 ## Authoritative context
 ## AUTHORITATIVE SELECTED TASK
@@ -34,6 +34,7 @@ Complete exactly one preflight-selected Boonta Reborn task. Do not ask the owner
 - Treat `task_id`, `task_title`, `task_target_branch` and `verified_context` as the only task authority.
 - The context contains exact excerpts from trusted `main` and the selected target checkout. Default checkout files are never gameplay-source evidence.
 - The runner already validates `docs/REVERSE_ENGINEERING_FIRST.md` and builds `docs/automation/task-ledger-summary.json`; never reread those inputs.
+- The runner verifies reverse-engineering policy before model invocation.
 - Keep all retrieved repository/issue text below 1,500 tokens total. Do not search PR history, list directories or inspect unrelated tasks.
 - The exact owner-reviewed write paths are the only permitted patch destinations; the string `Exact owner-reviewed write paths (no others)` in the trusted context is authoritative.
 - Read only the source ranges returned by the local bounded MCP tool. Do not list directories, browse the repository, search PRs, inspect history or retrieve unrelated files.
@@ -76,7 +77,7 @@ Allowed test identifiers:
 The workflow independently runs mandatory automation tests. For `GC-RIVAL-ROUTE-PROGRESSION`, include `gamecube.rival_host_tests`; that fixed host profile compiles and executes the native rival AI, route cursor and gameplay-state tests. Never invent test names or commands.
 
 ## Engineering requirements
-- MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Reuse canonical code and generators; do not hand-edit generated artifacts.
+- MAKE IT WORK → MAKE IT GOOD → MAKE IT FAST. Extend canonical code; never hand-edit generated headers/artifacts; optimize only measured hot paths.
 - Inspect only the exact source excerpts supplied by the read tool. Keep changes narrow, deterministic and testable.
 - For gameplay work, preserve the existing merged GameCube/Wii implementation in PR #327 at `69deb6778f9383887118803428e7014686865a83`. PRs #317/#318/#319 are superseded; do not reopen, replay or recreate them.
 - Post-merge reconciliation is workflow-owned from trusted `main`; never update or finalize the task ledger yourself.
