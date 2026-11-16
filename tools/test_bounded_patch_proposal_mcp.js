@@ -173,7 +173,7 @@ function cleanup(fx) {
   {
     const fx = fixture({
       BOONTA_READ_RANGES: JSON.stringify([
-        { path: SOURCE_A, start_line: 1, end_line: 300 },
+        { path: SOURCE_A, start_line: 1, end_line: 80 },
         { path: SOURCE_B, start_line: 1, end_line: 3 }
       ])
     });
