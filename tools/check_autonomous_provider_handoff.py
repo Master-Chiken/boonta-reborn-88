@@ -837,9 +837,9 @@ if "blocked activation without an owner-reviewed write scope is not sent to a pr
     errors.append("Production task preflight tests must prove missing write scope blocks provider selection")
 if "Exact owner-reviewed write paths (no others)" not in gemini_prompt:
     errors.append("Gemini prompt must restrict every model write to the owner-reviewed exact-path list")
-if 'Change only exact paths listed under "Exact owner-reviewed write paths"' not in actual_openrouter_prompt:
+if 'Change only exact paths listed under "Exact owner-reviewed write paths"' not in openrouter_agent_step:
     errors.append("OpenRouter prompt must restrict the patch to the owner-reviewed exact-path list")
-if "Change only exact owner-reviewed write paths from the trusted context" not in actual_groq_prompt:
+if "Change only exact owner-reviewed write paths from the trusted context" not in groq_agent_step:
     errors.append("Groq prompt must restrict the patch to the owner-reviewed exact-path list")
 # Confirm the Groq cap is below the observed 8k TPM limit and its prompt has a
 # pre-inference size guard. The workflow remains €0-only.
