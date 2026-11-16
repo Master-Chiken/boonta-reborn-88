@@ -9,6 +9,7 @@ termination without making any network or provider request.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -22,9 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OPENROUTER_WORKFLOW = ROOT / ".github/workflows/openrouter-plan-execute.yml"
 GROQ_WORKFLOW = ROOT / ".github/workflows/groq-plan-execute.yml"
-HEREDOC = (
-    'python3 - "$PROMPT" "$RUNNER_TEMP/opencode-cycle-report.txt" '
-    '"$REPO_ROOT" <<\'PY\'\n'
+HEREDOC_PATTERN = re.compile(
+    r'python3 - "\$PROMPT" "\$RUNNER_TEMP/(openrouter|groq)-provider-output\.txt" '
+    r'"\$REPO_ROOT" <<\'PY\'\n'
 )
 
 FAKE_OPENCODE = r'''#!/usr/bin/env python3
@@ -77,9 +78,18 @@ time.sleep(30)
 
 def production_watchdog_source(workflow: Path) -> str:
     source = workflow.read_text(encoding="utf-8")
-    if source.count(HEREDOC) != 1:
+    matches = list(HEREDOC_PATTERN.finditer(source))
+    if len(matches) != 1:
         raise AssertionError(f"Expected exactly one production watchdog heredoc in {workflow.name}")
-    body = source.split(HEREDOC, 1)[1].split("\n          PY", 1)[0]
+    expected_output = (
+        "openrouter-provider-output.txt"
+        if workflow.name == "openrouter-plan-execute.yml"
+        else "groq-provider-output.txt"
+    )
+    actual_output = matches[0].group(1) + "-provider-output.txt"
+    if actual_output != expected_output:
+        raise AssertionError(f"Unexpected provider output target in {workflow.name}: {actual_output}")
+    body = source[matches[0].end():].split("\n          PY", 1)[0]
     return textwrap.dedent(body)
 
 
@@ -148,7 +158,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                 output, _ = process.communicate(timeout=10)
                 self.assertEqual(process.returncode, 75, output)
                 self.assertIn("HTTP 429 Too Many Requests", report.read_text(encoding="utf-8"))
-                self.assertIn("terminating OpenCode immediately", output)
+                self.assertIn("terminating OpenCode after the first refusal", output)
                 self.assert_heartbeat_stopped(heartbeat)
             finally:
                 if process.poll() is None:
@@ -170,7 +180,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
             saved = report.read_text(encoding="utf-8")
             self.assertIn("Boonta racing line", saved)
             self.assertIn("TPM is just a project note", saved)
-            self.assertNotIn("terminating OpenCode immediately", output)
+            self.assertNotIn("terminating OpenCode after the first refusal", output)
 
     def test_sigterm_terminates_process_group_and_preserves_report(self) -> None:
         with tempfile.TemporaryDirectory(prefix="boonta-watchdog-signal-") as directory:
@@ -215,7 +225,7 @@ class OpenRouterWatchdogIntegrationTests(unittest.TestCase):
                 output, _ = process.communicate(timeout=10)
                 self.assertEqual(process.returncode, 75, output)
                 self.assertIn("tokens per minute (TPM)", report.read_text(encoding="utf-8"))
-                self.assertIn("Groq provider quota/auth refusal detected", output)
+                self.assertIn("Groq quota/auth refusal detected", output)
                 self.assert_heartbeat_stopped(heartbeat)
             finally:
                 if process.poll() is None:
