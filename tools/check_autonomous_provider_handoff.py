@@ -773,6 +773,9 @@ if "steps.bounded_inputs.outcome == 'success'" not in groq_agent_step or "inputs
 required_gemini_ci_tools = {
     "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
 }
+required_writer_tools = {
+    "create_branch", "get_file_contents", "push_files", "create_pull_request",
+}
 gemini_settings_match = re.search(r'"includeTools":[ \t]*\[(.*?)\]', gemini, re.DOTALL)
 if not gemini_settings_match:
     errors.append("Gemini MCP allow-list is missing")
