@@ -147,20 +147,31 @@ for provider, workflow, job_name, invocation_step in provider_outputs:
 # Keep provider prompts within the repository's empirically tested Free-tier budgets.
 # OpenRouter and Groq have deliberately different constraints; do not widen either
 # without a new measured, owner-reviewed quota test.
-def normal_agent_prompt(workflow: str) -> str:
-    markers = (
-        "You are the €0-only OpenRouter Free coding agent for Boonta Reborn.",
-        "Groq Free (€0). Implement only the selected task.",
-    )
-    starts = [position for position in (workflow.find(marker) for marker in markers) if position >= 0]
-    if not starts:
+def normal_agent_prompt(workflow: str, provider: str) -> str:
+    # Extract the exact PROMPT heredoc from the provider's model step, not from
+    # a free-floating phrase that can drift when the prompt wording changes.
+    if provider == "Groq":
+        step_marker = "      - name: Run OpenCode through the Groq Free route"
+    elif provider == "OpenRouter":
+        step_marker = "      - name: Run OpenCode through the OpenRouter Free route"
+    else:
         return ""
-    start = min(starts)
-    end = workflow.find("\n          PROMPT\n", start)
-    return workflow[start:end] if end >= 0 else ""
+    step_start = workflow.find(step_marker)
+    if step_start < 0:
+        return ""
+    prompt_start_marker = "          PROMPT=\"$(cat <<'PROMPT'\n"
+    prompt_start = workflow.find(prompt_start_marker, step_start)
+    if prompt_start < 0:
+        return ""
+    body_start = prompt_start + len(prompt_start_marker)
+    prompt_end = workflow.find("\n          PROMPT\n          )\"", body_start)
+    if prompt_end < 0:
+        return ""
+    body = workflow[body_start:prompt_end]
+    return "\n".join(line[10:] if line.startswith("          ") else line for line in body.splitlines())
 
-openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"))
-groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"))
+openrouter_agent_prompt = normal_agent_prompt(read(".github/workflows/openrouter-plan-execute.yml"), "OpenRouter")
+groq_agent_prompt = normal_agent_prompt(read(".github/workflows/groq-plan-execute.yml"), "Groq")
 for required in (
     "Call boonta_read_approved_sources exactly once",
     "boonta_submit_patch_proposal exactly once",
@@ -170,12 +181,13 @@ for required in (
     if required not in openrouter_agent_prompt:
         errors.append(f"OpenRouter agent must preserve its proposal-only bounded contract: {required!r}")
 for required in (
-    "APPROVED SOURCE EXCERPTS",
+    "VERIFIED CONTEXT and APPROVED SOURCE EXCERPTS",
     "One tool is available: boonta_submit_patch_proposal",
     "Change only exact owner-approved write paths",
     "No GitHub writer",
     "No paid route",
-    "Do not submit a partial or fabricated patch",
+    "Do not submit a partial or fabricated diff",
+    "gamecube.rival_host_tests",
 ):
     if required not in groq_agent_prompt:
         errors.append(f"Groq agent must preserve its preloaded-source proposal-only contract: {required!r}")
@@ -1096,8 +1108,8 @@ for label, prompt in dynamic_task_prompts:
         )
     else:
         required_task_safeguards = (
-            "selected task from the trusted context",
-            "exact owner-reviewed write paths",
+            "selected task from the verified context",
+            "exact owner-approved write paths",
             "Do not ask the owner for code or clarification",
             "gamecube.rival_host_tests",
         )
@@ -1808,7 +1820,7 @@ if (
     or "Remove ephemeral MCP context" not in groq_fallback
 ):
     errors.append("Groq must create the task-bound MCP context after preflight and remove it before workflow-owned delivery")
-if "€0 only" not in groq_agent_prompt or "No paid route" not in groq_agent_prompt:
+if "Groq Free (€0)" not in groq_agent_prompt or "No paid route" not in groq_agent_prompt:
     errors.append("Groq fallback must explicitly preserve the €0/no-paid-route rule")
 if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in groq_fallback:
     errors.append("Groq fallback must keep experimental Code Mode disabled")
