@@ -77,6 +77,14 @@ def task(
 
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_queued = task("AUTOMATION-TEST-QUEUED", "queued")
+five_path_queued = task("AUTOMATION-TEST-FIVE-PATHS", "queued")
+five_path_queued["read_paths"] = [
+    "gamecube-demo/source/rival_ai.h",
+    "gamecube-demo/source/route_cursor.h",
+    "gamecube-demo/source/gameplay_state.h",
+    "gamecube-demo/source/main.c",
+    "gamecube-demo/tests/test_rival_ai.c",
+]
 valid_blocked = task("N64-COMPWOLF-PUPP-T2-PARSE-PROBE", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
 incomplete_active = task("AUTOMATION-TEST-INCOMPLETE", "active", complete=False)
@@ -112,6 +120,16 @@ cases = [
         "marker_day_offset": None,
         "expected_ready": True,
         "expected_task_id": "AUTOMATION-TEST-QUEUED",
+        "expected_blocked": False,
+        "expected_queue_state": "READY",
+    },
+    {
+        "name": "owner-approved queued task with five bounded read paths is accepted",
+        "tasks": [five_path_queued],
+        "completed_task_ids": [],
+        "marker_day_offset": None,
+        "expected_ready": True,
+        "expected_task_id": "AUTOMATION-TEST-FIVE-PATHS",
         "expected_blocked": False,
         "expected_queue_state": "READY",
     },
