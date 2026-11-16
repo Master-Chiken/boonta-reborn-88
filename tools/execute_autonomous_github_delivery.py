@@ -71,6 +71,8 @@ def validate_plan_against_sources(
     expected_task_id: str,
     expected_base_sha: str,
     repository: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> None:
     if not isinstance(repository, str) or repository != CANONICAL_REPOSITORY:
         raise DeliveryExecutionError(
@@ -88,6 +90,8 @@ def validate_plan_against_sources(
             allowlist_report_path=allowlist_report_path,
             expected_task_id=expected_task_id,
             expected_base_sha=expected_base_sha,
+            policy_root=policy_root,
+            expected_policy_sha=expected_policy_sha,
         )
     except (DeliveryPlanError, ProposalError) as exc:
         raise DeliveryExecutionError(f"Source evidence failed revalidation: {exc}") from exc
@@ -204,6 +208,8 @@ def execute_delivery(
     repository: str,
     token: str,
     request=_api_request,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> dict[str, Any]:
     # Rebuild the plan from canonical task/path policy plus exact verified
     # evidence here as well as in the CLI dry-run. Importers must not be able
@@ -216,6 +222,8 @@ def execute_delivery(
         expected_task_id=expected_task_id,
         expected_base_sha=expected_base_sha,
         repository=repository,
+        policy_root=policy_root,
+        expected_policy_sha=expected_policy_sha,
     )
     approved_token = require_execution_gates(repository)
     if token != approved_token:
@@ -400,6 +408,8 @@ def main() -> int:
     parser.add_argument("--allowlist-report", type=Path, required=True)
     parser.add_argument("--expected-task-id", required=True)
     parser.add_argument("--expected-base-sha", required=True)
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     parser.add_argument("--execute", action="store_true", help="perform GitHub writes; disabled by default")
     args = parser.parse_args()
 
@@ -413,6 +423,8 @@ def main() -> int:
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
             repository=args.repository,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
         if not args.execute:
             print(json.dumps({
@@ -436,6 +448,8 @@ def main() -> int:
             expected_base_sha=args.expected_base_sha,
             repository=args.repository,
             token=token,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except (DeliveryExecutionError, DeliveryPlanError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
