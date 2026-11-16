@@ -103,7 +103,48 @@ invalid_target = task("AUTOMATION-TEST-INVALID-TARGET", "active", target_branch=
 represented_active = task("AUTOMATION-TEST-REPRESENTED", "active")
 represented_active["pr_url"] = "https://github.com/Master-Chiken/boonta-reborn-88/pull/999"
 represented_active["head_sha"] = "0123456789abcdef0123456789abcdef01234567"
+
+# Exercise the real owner-approved GameCube/Wii queue record, not only synthetic
+# fixtures. Its read scope must match the trusted exact write-path entry.
+SUMMARY = json.loads((ROOT / "docs/automation/task-ledger-summary.json").read_text(encoding="utf-8"))
+PATH_POLICY = json.loads((ROOT / "docs/automation/patch-path-allowlist.json").read_text(encoding="utf-8"))
+rival_task_fixture = next(
+    (item for item in SUMMARY["tasks"] if item.get("task_id") == "GC-RIVAL-ROUTE-PROGRESSION"),
+    None,
+)
+rival_policy_fixture = [
+    item for item in PATH_POLICY.get("tasks", [])
+    if item.get("task_id") == "GC-RIVAL-ROUTE-PROGRESSION"
+]
+if not isinstance(rival_task_fixture, dict) or len(rival_policy_fixture) != 1:
+    fail("the canonical rival task or its unique owner-approved write-path entry is missing")
+rival_allowed_paths = rival_policy_fixture[0].get("allowed_paths", [])
+if (
+    rival_task_fixture.get("status") != "queued"
+    or rival_task_fixture.get("owner_approved") is not True
+    or rival_task_fixture.get("target_branch") != "dev"
+    or rival_task_fixture.get("read_paths") != rival_allowed_paths
+    or len(rival_task_fixture.get("read_ranges", [])) != 10
+    or sum(
+        item["end_line"] - item["start_line"] + 1
+        for item in rival_task_fixture.get("read_ranges", [])
+    ) > 240
+):
+    fail("the canonical rival task does not match its five-path/ten-range owner-approved read contract")
+
 cases = [
+    {
+        "name": "real GC-RIVAL-ROUTE-PROGRESSION task is selectable only with all five approved paths",
+        "tasks": [rival_task_fixture],
+        "completed_task_ids": SUMMARY.get("completed_task_ids", []),
+        "owner_paths": rival_policy_fixture,
+        "expected_write_paths": rival_allowed_paths,
+        "marker_day_offset": None,
+        "expected_ready": True,
+        "expected_task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+        "expected_blocked": False,
+        "expected_queue_state": "READY",
+    },
     {
         "name": "empty canonical ledger reports EMPTY_QUEUE",
         "tasks": [],
@@ -882,10 +923,11 @@ async function runCase(testCase) {{
       if (outputs.task_title !== selected.title || outputs.task_target_branch !== selected.target_branch) {{
         throw new Error(testCase.name + ": selected task title/target branch were not propagated");
       }}
+      const expectedWritePaths = testCase.expected_write_paths || [selected.read_paths[1]];
       for (const expectedText of [selected.task_id, selected.title, selected.question_excerpt,
         ...selected.acceptance_criteria_excerpt, selected.next_action_excerpt,
         "Read-only source paths (select at most one): " + selected.read_paths.join(", "),
-        "Exact owner-reviewed write paths (no others): " + selected.read_paths[1]]) {{
+        "Exact owner-reviewed write paths (no others): " + expectedWritePaths.join(", ")]) {{
         if (!String(outputs.task_context).includes(expectedText)) {{
           throw new Error(testCase.name + ": task context omitted " + expectedText);
         }}
