@@ -925,8 +925,8 @@ if "No GitHub MCP" not in actual_groq_prompt or "No paid route" not in actual_gr
     errors.append("Groq normal prompt must deny GitHub writer tools and paid routes")
 if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-allowlist.json" not in loop:
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
-if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
-    errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
+if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder or "unreadable_write_paths" not in context_builder or "no provider invocation is allowed until the owner-approved read contract is updated" not in context_builder:
+    errors.append("Provider preflight must require an explicit exact-path owner policy entry and fail before inference when writable files are outside the read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
 if len(actual_groq_prompt) + 3000 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
