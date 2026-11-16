@@ -725,28 +725,28 @@ if "steps.execute_provider_cycle.outcome == 'success'" not in openrouter:
 if "steps.bounded_inputs.outcome == 'success'" not in openrouter_agent_step or "inputs.resume_mode != true" not in openrouter_agent_step:
     errors.append("OpenRouter provider invocation must require bounded inputs and fail closed for resume mode")
 
-groq_config_tools = groq_config.get("mcp", {}).get("github", {}).get("environment", {}).get("GITHUB_TOOLS", "")
-required_resume_tools = {"get_file_contents", "push_files"}
-required_groq_tools = {"get_file_contents", "create_branch", "create_pull_request", "push_files"}
-if groq_config_tools != "{env:GITHUB_TOOLS}":
-    errors.append("Groq legacy direct writer must retain its explicit mode-specific tool allow-list until it is migrated")
-else:
-    modes = {frozenset(item.split(",")) for item in re.findall(r'(?m)^[ \\t]*export GITHUB_TOOLS="([^"]+)"}
-    expected = {frozenset(required_resume_tools), frozenset(required_groq_tools)}
-    if modes != expected:
-        errors.append("Groq legacy writer tool modes differ from the reviewed direct-execution allow-list")
-if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in groq:
-    errors.append("Groq legacy container must inherit its explicit tool allow-list")
-
-for label, toolset in (("Groq", set().union(required_groq_tools, required_resume_tools)),):
-    forbidden = {
-        "issue_read", "list_issues", "list_pull_requests", "create_or_update_file",
-        "list_branches", "list_commits", "merge_pull_request", "delete_branch",
-        "update_pull_request", "add_issue_comment", "pull_request_read",
-        "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
-    }
-    if forbidden.intersection(toolset):
-        errors.append(f"{label} MCP allow-list exposes unnecessary or unsafe tools: {sorted(forbidden.intersection(toolset))}")
+groq_config_mcp = groq_config.get("mcp", {}).get("boonta", {})
+if groq_config_mcp.get("type") != "local" or groq_config_mcp.get("enabled") is not True:
+    errors.append("Groq must expose only the local bounded Boonta proposal MCP")
+if "github" in groq_config.get("mcp", {}):
+    errors.append("Groq model configuration must not expose a GitHub MCP server")
+groq_step_start = groq.find("      - name: Run OpenCode through the Groq Free route")
+groq_step_end = groq.find("      - name: Verify, test and publish the Groq patch proposal", groq_step_start + 1)
+groq_agent_step = groq[groq_step_start:groq_step_end] if groq_step_start >= 0 and groq_step_end > groq_step_start else ""
+for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", '"github": {', "github_push_files", "github_create_branch", "github_create_pull_request"):
+    if forbidden in groq_agent_step:
+        errors.append(f"Groq model step exposes a forbidden GitHub writer surface: {forbidden!r}")
+for required in ('"boonta": {', '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]', "BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"):
+    if required not in groq_agent_step:
+        errors.append(f"Groq model step lacks bounded local MCP configuration: {required!r}")
+groq_delivery_start = groq.find("      - name: Verify, test and publish the Groq patch proposal")
+groq_delivery = groq[groq_delivery_start:] if groq_delivery_start >= 0 else ""
+if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in groq_delivery:
+    errors.append("Groq workflow-owned delivery step must receive the scoped GitHub token")
+if "steps.execute_provider_cycle.outcome == 'success'" not in groq:
+    errors.append("Groq report validation must follow successful workflow-owned delivery orchestration")
+if "steps.bounded_inputs.outcome == 'success'" not in groq_agent_step or "inputs.resume_mode != true" not in groq_agent_step:
+    errors.append("Groq provider invocation must require bounded inputs and fail closed for resume mode")
 
 required_gemini_ci_tools = {
     "list_workflow_runs", "list_workflow_jobs", "get_workflow_run", "get_job_logs",
