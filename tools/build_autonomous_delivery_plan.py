@@ -159,6 +159,8 @@ def build_delivery_plan(
     allowlist_report_path: Path,
     expected_task_id: str,
     expected_base_sha: str,
+    policy_root: Path | None = None,
+    expected_policy_sha: str | None = None,
 ) -> dict[str, Any]:
     root = repo_root.resolve()
     if not isinstance(expected_task_id, str) or not TASK_ID_RE.fullmatch(expected_task_id):
@@ -176,6 +178,8 @@ def build_delivery_plan(
             root,
             expected_base_sha=expected_base_sha,
             requested_task_id=expected_task_id,
+            policy_root=policy_root,
+            expected_policy_sha=expected_policy_sha,
         )
     except (ProposalError, AllowlistError) as exc:
         raise DeliveryPlanError(str(exc)) from exc
@@ -460,6 +464,8 @@ def main() -> int:
     parser.add_argument("--allowlist-report", type=Path)
     parser.add_argument("--expected-task-id")
     parser.add_argument("--expected-base-sha")
+    parser.add_argument("--policy-root", type=Path)
+    parser.add_argument("--expected-policy-sha")
     args = parser.parse_args()
     if not all((args.repo_root, args.verified_report, args.allowlist_report, args.expected_task_id, args.expected_base_sha)):
         parser.error("repo root, verified report, allowlist report, expected task ID and expected base SHA are required")
@@ -470,6 +476,8 @@ def main() -> int:
             allowlist_report_path=args.allowlist_report,
             expected_task_id=args.expected_task_id,
             expected_base_sha=args.expected_base_sha,
+            policy_root=args.policy_root,
+            expected_policy_sha=args.expected_policy_sha,
         )
     except (DeliveryPlanError, ProposalError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))
