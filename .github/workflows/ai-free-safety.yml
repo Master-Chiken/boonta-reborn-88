@@ -97,19 +97,36 @@ jobs:
 
           path = Path(".github/workflows/branch-automation-selftest.yml")
           source = path.read_text(encoding="utf-8")
-          step_marker = "      - name: Enforce conservative branch budget and lifecycle policy"
-          run_marker = "          python3 - <<'PY'\n"
-          start_step = source.find(step_marker)
-          if start_step < 0:
-              raise SystemExit("Branch governance contract step is missing")
-          start = source.find(run_marker, start_step)
-          if start < 0:
-              raise SystemExit("Branch governance Python heredoc is missing")
-          start += len(run_marker)
-          end = source.find("\n          PY", start)
-          if end < 0:
-              raise SystemExit("Branch governance Python heredoc terminator is missing")
+          import re
 
+          step_match = re.search(
+              r"(?m)^[ \t]*-[ \t]*name:[^\r\n]*conservative branch budget[^\r\n]*$",
+              source,
+          )
+          if step_match is None:
+              candidates = [
+                  line.strip() for line in source.splitlines()
+                  if "branch budget" in line.lower()
+              ]
+              raise SystemExit(
+                  "Branch governance contract step is missing; found candidates: " +
+                  repr(candidates[:10])
+              )
+          run_match = re.search(
+              r"(?m)^[ \t]*python3[ \t]+-[ \t]+<<'PY'[ \t]*\r?$",
+              source[step_match.end():],
+          )
+          if run_match is None:
+              raise SystemExit("Branch governance Python heredoc is missing")
+          start = step_match.end() + run_match.end()
+          if source.startswith("\r\n", start):
+              start += 2
+          elif source.startswith("\n", start):
+              start += 1
+          end_match = re.search(r"(?m)^[ \t]*PY[ \t]*$", source[start:])
+          if end_match is None:
+              raise SystemExit("Branch governance Python heredoc terminator is missing")
+          end = start + end_match.start()
           code = textwrap.dedent(source[start:end])
           exec(compile(code, str(path) + ":governance-contract", "exec"), {"__name__": "__main__"})
           PY
