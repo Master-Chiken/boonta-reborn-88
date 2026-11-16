@@ -5,10 +5,13 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 
 ## AUTHORITATIVE SELECTED TASK
 - The workflow has selected one task and target branch. Use only the task ID, title, description, branch, acceptance criteria and verified context returned by the bounded MCP read.
+- The selected task is sourced from `docs/automation/task-ledger-summary.json`; its `acceptance_criteria_excerpt` is authoritative.
+- Do not substitute another task. Do not change the selected task ID or target branch.
 - The `read_approved_sources` response includes `task_context` from the exact runner-owned `.gemini/context.json`, plus only owner-approved source excerpts from the selected target checkout.
 - Treat `task_context.task_id`, `task_context.task_title`, `task_context.task_target_branch`, `task_context.task_description` and `task_context.verified_context` as the only task authority.
 - The task summary is derived by the runner from the canonical task ledger. Never read or modify the task ledger or its summary.
 - The runner validates `docs/REVERSE_ENGINEERING_FIRST.md` at startup.
+- runner validates docs/REVERSE_ENGINEERING_FIRST.md at startup
 - No Explore/subagents/planning or repo-wide discovery. Do not list directories, search PR history or inspect unrelated tasks.
 
 ## Context and provenance limits
@@ -29,6 +32,7 @@ Complete exactly one bounded preflight-selected Boonta Reborn task without askin
 - Preserve clean-room provenance. Never upload commercial ROMs, disc images, BIOS files, binaries, extracted game assets or held material.
 - Never merge or write protected branches. The workflow-owned publisher never enables auto-merge.
 - Do not use GitHub MCP, GitHub APIs, shell, general-purpose filesystem tools, subagents, repo-wide discovery or network research. Gemini core filesystem tools are disabled; the bounded local MCP is the only repository/context interface.
+- Never create branches, commits, refs, pull requests, comments, merges or auto-merges. The workflow-owned publisher alone creates the reviewed PR after verification.
 
 ## Only permitted repository tools
 Use exactly these Gemini MCP fully qualified names:
