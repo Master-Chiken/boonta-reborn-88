@@ -788,7 +788,7 @@ jobs:
           One tool is available: boonta_submit_patch_proposal. Call it exactly once with one complete unified diff.
           Change only exact owner-approved write paths. All changed files must be exact owner-reviewed write paths.
           Bind task_id and base_sha to the selected task and target checkout. Preserve deterministic finite-value guards, update ordering and collision/overtake behavior; use only GameCube/Wii evidence.
-          Use registered test ID gamecube.rival_host_tests. No GitHub writer, GitHub MCP, shell, filesystem, network, paid route, billing, credits or provider/secret/permission changes.
+          Use registered test ID gamecube.rival_host_tests. No GitHub writer, GitHub MCP, shell, filesystem or network. No paid route, billing, credits or provider/secret/permission changes.
           Do not ask the owner for code or clarification. Never claim tests, PR, branch, commit or merge; the separate workflow verifier handles these.
           Do not submit a partial or fabricated diff if the output budget is insufficient. Return one precise blocker.
           Proposal fields: schema_version, task_id, base_sha, summary, unified_diff, test_ids, limitations.
