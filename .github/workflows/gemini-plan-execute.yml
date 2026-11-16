@@ -94,7 +94,7 @@ defaults:
 jobs:
   plan-execute:
     outputs:
-      invocation_outcome: ${{ steps.run_gemini.outcome }}
+      invocation_outcome: ${{ inputs.autonomous_mode == true && steps.run_gemini_autonomous.outcome || steps.run_gemini.outcome }}
       report_outcome: ${{ steps.validate_report.outcome }}
       cycle_status: ${{ steps.validate_report.outputs.cycle_status }}
       task_queue_state_outcome: ${{ steps.sync_task_queue_state.outcome }}
@@ -521,6 +521,7 @@ jobs:
         if: steps.free_tier_guard.outputs.allowed == 'true'
         uses: 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' # pinned actions/checkout v7.0.1
         with:
+          ref: main
           persist-credentials: 'false'
 
       - name: 'Checkout selected task target for bounded source context'
@@ -631,8 +632,54 @@ jobs:
             core.setOutput('snapshot_at', snapshotAt);
             core.info('Captured ' + pulls.length + ' open PR head(s) for cycle-fresh validation at ' + snapshotAt + '.');
 
+      - name: Prepare bounded provider inputs
+        id: bounded_inputs
+        if: inputs.autonomous_mode == true && inputs.resume_mode != true && steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success'
+        shell: bash
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+        run: |
+          set -euo pipefail
+          source_root="$GITHUB_WORKSPACE/.boonta-target-source"
+          policy_root="$GITHUB_WORKSPACE"
+          base_sha="$(git -C "$source_root" rev-parse HEAD)"
+          policy_sha="$(git -C "$policy_root" rev-parse HEAD)"
+          proposal_path="$RUNNER_TEMP/boonta-proposal.json"
+          allowlist_path="$RUNNER_TEMP/boonta-allowlist.json"
+          [[ ! -e "$proposal_path" && ! -L "$proposal_path" ]]
+          [[ ! -e "$allowlist_path" && ! -L "$allowlist_path" ]]
+          python3 "$policy_root/tools/prepare_autonomous_agent_inputs.py" \
+            --source-root "$source_root" \
+            --policy-root "$policy_root" \
+            --expected-base-sha "$base_sha" \
+            --expected-policy-sha "$policy_sha" \
+            --task-id "$TASK_ID" \
+            --allowlist-output "$allowlist_path" > "$RUNNER_TEMP/boonta-agent-inputs.json"
+          python3 - "$RUNNER_TEMP/boonta-agent-inputs.json" "$proposal_path" "$GITHUB_OUTPUT" "$source_root" "$policy_root" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          values = {
+              "task_id": payload["task_id"],
+              "target_branch": payload["target_branch"],
+              "base_sha": payload["base_sha"],
+              "policy_sha": payload["policy_sha"],
+              "source_root": sys.argv[4],
+              "policy_root": sys.argv[5],
+              "read_paths": json.dumps(payload["read_paths"], separators=(",", ":")),
+              "read_ranges": json.dumps(payload["read_ranges"], separators=(",", ":")),
+              "allowed_paths": json.dumps(payload["allowed_paths"], separators=(",", ":")),
+              "allowlist_report": payload["allowlist_report"],
+              "proposal_path": sys.argv[2],
+          }
+          with Path(sys.argv[3]).open("a", encoding="utf-8") as stream:
+              for key, value in values.items():
+                  stream.write(f"{key}={value}\n")
+          PY
       - name: 'Run Gemini CLI'
-        if: steps.free_tier_guard.outputs.allowed == 'true'
+        if: steps.free_tier_guard.outputs.allowed == 'true' && inputs.autonomous_mode != true
         id: 'run_gemini'
         uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
         env:
@@ -699,14 +746,103 @@ jobs:
                 "core": ["read_file"]
               }
             }
-          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}
+          prompt: '/gemini-plan-execute'
+
+      - name: Run Gemini CLI through bounded local proposal MCP
+        if: inputs.autonomous_mode == true && inputs.resume_mode != true && steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.bounded_inputs.outcome == 'success'
+        id: run_gemini_autonomous
+        uses: 'google-github-actions/run-gemini-cli@f77273f4c914e4bf38440cf36a0369cb64a37489' # ratchet:exclude
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
+          BOONTA_TASK_ID: ${{ steps.bounded_inputs.outputs.task_id }}
+          BOONTA_BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
+          BOONTA_TARGET_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          BOONTA_PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
+          BOONTA_READ_PATHS: ${{ steps.bounded_inputs.outputs.read_paths }}
+          BOONTA_READ_RANGES: ${{ steps.bounded_inputs.outputs.read_ranges }}
+          BOONTA_ALLOWED_PATHS: ${{ steps.bounded_inputs.outputs.allowed_paths }}
+        with:
+          gemini_api_key: '${{ secrets.GEMINI_API_KEY_DEUX || secrets.GEMINI_API_KEY }}'
+          gemini_cli_version: '0.67.0'
+          gemini_debug: 'false'
+          gemini_model: 'gemini-3.8-flash'
+          upload_artifacts: 'false'
+          workflow_name: 'gemini-plan-execute'
+          settings: |-
+            {
+              "general": {
+                "maxAttempts": 1,
+                "retryFetchErrors": false
+              },
+              "model": {
+                "maxSessionTurns": 3
+              },
+              "telemetry": {
+                "enabled": false
+              },
+              "mcpServers": {
+                "boonta": {
+                  "command": "node",
+                  "args": ["tools/bounded_patch_proposal_mcp.js"],
+                  "includeTools": [
+                    "read_approved_sources",
+                    "submit_patch_proposal"
+                  ],
+                  "env": {
+                    "BOONTA_TASK_ID": "${BOONTA_TASK_ID}",
+                    "BOONTA_BASE_SHA": "${BOONTA_BASE_SHA}",
+                    "BOONTA_TARGET_ROOT": "${BOONTA_TARGET_ROOT}",
+                    "BOONTA_PROPOSAL_PATH": "${BOONTA_PROPOSAL_PATH}",
+                    "RUNNER_TEMP": "${RUNNER_TEMP}",
+                    "BOONTA_READ_PATHS": "${BOONTA_READ_PATHS}",
+                    "BOONTA_READ_RANGES": "${BOONTA_READ_RANGES}",
+                    "BOONTA_ALLOWED_PATHS": "${BOONTA_ALLOWED_PATHS}"
+                  }
+                }
+              },
+              "tools": {
+                "core": ["read_file"]
+              }
+            }
+          prompt: '/gemini-autonomous-loop'
+
+      - name: Verify, test and publish the Gemini patch proposal
+        id: execute_provider_cycle
+        if: steps.run_gemini_autonomous.outcome == 'success' && steps.bounded_inputs.outcome == 'success'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SOURCE_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          POLICY_ROOT: ${{ steps.bounded_inputs.outputs.policy_root }}
+          PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
+          ALLOWLIST_REPORT: ${{ steps.bounded_inputs.outputs.allowlist_report }}
+          TASK_ID: ${{ steps.bounded_inputs.outputs.task_id }}
+          BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
+          POLICY_SHA: ${{ steps.bounded_inputs.outputs.policy_sha }}
+          PREFLIGHT_ALLOWED: ${{ steps.free_tier_guard.outputs.allowed }}
+        run: |
+          set -euo pipefail
+          python3 "$GITHUB_WORKSPACE/tools/execute_autonomous_provider_cycle.py" \
+            --source-root "$SOURCE_ROOT" \
+            --policy-root "$POLICY_ROOT" \
+            --proposal "$PROPOSAL_PATH" \
+            --allowlist-report "$ALLOWLIST_REPORT" \
+            --verified-report "$RUNNER_TEMP/boonta-verified-report.json" \
+            --plan "$RUNNER_TEMP/boonta-delivery-plan.json" \
+            --cycle-report "$RUNNER_TEMP/gemini-cycle-report.txt" \
+            --task-id "$TASK_ID" \
+            --base-sha "$BASE_SHA" \
+            --policy-sha "$POLICY_SHA" \
+            --repository "$GITHUB_REPOSITORY" \
+            --preflight-allowed "$PREFLIGHT_ALLOWED"
 
       - name: Validate autonomous cycle report contract
         id: validate_report
-        if: inputs.autonomous_mode == true && steps.snapshot_pr_heads.outcome == 'success' && steps.run_gemini.outcome == 'success'
+        if: inputs.autonomous_mode == true && inputs.resume_mode != true && steps.snapshot_pr_heads.outcome == 'success' && steps.run_gemini_autonomous.outcome == 'success' && steps.execute_provider_cycle.outcome == 'success'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
-          GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
+          REPORT_PATH: ${{ runner.temp }}/gemini-cycle-report.txt
           PRE_CYCLE_PR_HEADS: '${{ steps.snapshot_pr_heads.outputs.heads }}'
           PRE_CYCLE_PR_SNAPSHOT_AT: '${{ steps.snapshot_pr_heads.outputs.snapshot_at }}'
           GEMINI_PREFLIGHT_ALLOWED: '${{ steps.free_tier_guard.outputs.allowed }}'
@@ -721,9 +857,10 @@ jobs:
             const { bindCycleReportToReservedTask } = require(process.env.GITHUB_WORKSPACE + '/tools/validate_autonomous_cycle_report.js');
             const selectedTaskId = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_ID : process.env.SELECTED_TASK_ID;
             const selectedTargetBranch = process.env.RESUME_MODE === 'true' ? process.env.RESUME_TASK_TARGET_BRANCH : process.env.SELECTED_TASK_TARGET_BRANCH;
+            const fs = require('fs');
             let summary;
             try {
-              summary = bindCycleReportToReservedTask(process.env.GEMINI_SUMMARY || '', selectedTaskId, selectedTargetBranch);
+              summary = bindCycleReportToReservedTask(fs.readFileSync(process.env.REPORT_PATH, 'utf8'), selectedTaskId, selectedTargetBranch);
             } catch (error) {
               core.setFailed('Gemini report could not be bound to the reserved task: ' + error.message);
               return;
@@ -846,7 +983,7 @@ jobs:
             }
       - name: Record same-day Gemini cooldown after an autonomous model failure
         id: record_gemini_cooldown
-        if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')
+        if: always() && inputs.autonomous_mode == true && (steps.run_gemini_autonomous.outcome == 'failure' || steps.execute_provider_cycle.outcome == 'failure' || steps.validate_report.outcome == 'failure')
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # pinned GitHub Script v9
         env:
@@ -966,7 +1103,7 @@ jobs:
             );
 
       - name: 'Publish Gemini response to the issue or PR'
-        if: always() && steps.run_gemini.outcome != 'skipped'
+        if: always() && inputs.autonomous_mode != true && steps.run_gemini.outcome != 'skipped'
         uses: 'actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3' # pinned GitHub Script v9
         env:
           GEMINI_SUMMARY: '${{ steps.run_gemini.outputs.summary }}'
