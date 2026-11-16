@@ -783,16 +783,15 @@ jobs:
 
           export OPENCODE_CONFIG="$RUNNER_TEMP/opencode.json"
           PROMPT="$(cat <<'PROMPT'
-          Groq Free (€0). Implement only the selected task from the verified context.
-          Use VERIFIED CONTEXT and APPROVED SOURCE EXCERPTS below; these are the complete owner-approved source ranges.
-          boonta_read_approved_sources is intentionally not exposed: the exact sources are preloaded and the local MCP rereads and hashes them against the target checkout before accepting a proposal.
-          One local proposal tool is available: boonta_submit_patch_proposal. Call it exactly once with one complete unified diff.
-          Change only exact owner-approved write paths. All changed files must be exact owner-reviewed write paths. Bind task_id and base_sha to the selected task and target checkout.
-          For gameplay tasks, reuse the merged PR #327 implementation at 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Never reopen, replay or recreate that chain.
-          Preserve deterministic finite-value guards, update ordering and collision/overtake behavior; use only GameCube/Wii evidence. Use registered test ID gamecube.rival_host_tests.
+          Groq Free (€0): implement only the selected task from VERIFIED CONTEXT.
+          APPROVED SOURCE EXCERPTS below are the complete owner-approved target-branch ranges. boonta_read_approved_sources is not exposed; the local MCP rereads the exact ranges and verifies their SHA-256 against the target checkout.
+          One tool is available: boonta_submit_patch_proposal. Call it once with one complete unified diff.
+          Change only exact owner-approved write paths; bind task_id and base_sha to the selected task and target checkout.
+          For gameplay, reuse merged PR #327 at 69deb6778f9383887118803428e7014686865a83; PRs #317/#318/#319 are superseded. Never reopen or recreate that chain.
+          Preserve finite-value guards, update order and collision/overtake behavior. Use GameCube/Wii evidence only and test ID gamecube.rival_host_tests.
           No GitHub writer, GitHub MCP, shell, filesystem or network. No paid route, billing, credits, provider/secret/settings changes. Do not ask the owner for code or clarification.
-          Global preflight is authoritative. Do not search PR history or substitute older merged automation PRs for the selected task.
-          Never claim tests, PR, branch, commit or merge; the separate workflow verifier handles these. Do not submit a partial or fabricated diff if the output budget is insufficient. Return one precise blocker.
+          Global preflight is authoritative. Do not search PR history or substitute older merged automation PRs for this task.
+          Never claim tests, a PR, branch, commit or merge. Do not submit partial/fabricated code; return one precise blocker.
           Proposal fields: schema_version, task_id, base_sha, summary, unified_diff, test_ids, limitations.
           PROMPT
           )"
