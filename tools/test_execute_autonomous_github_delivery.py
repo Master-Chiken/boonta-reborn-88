@@ -116,6 +116,7 @@ class WriterFixture(unittest.TestCase):
             "status": "READY",
             "task_id": TASK_ID,
             "base_sha": self.base_sha,
+            "policy_base_sha": self.base_sha,
             "approval_ref": APPROVAL,
             "purpose": "Synthetic writer fixture",
             "allowed_paths": [SOURCE_PATH],
