@@ -175,6 +175,20 @@ class AgentInputTests(AgentInputFixture):
             (report["source_read_chars"] + 3) // 4,
         )
 
+    def test_preloaded_source_context_is_exact_bounded_and_digest_bound(self):
+        report = self.prepare()
+        source_context = report["source_context"]
+        self.assertIn("FILE: " + SOURCE_PATH, source_context)
+        self.assertIn("[1-3]", source_context)
+        self.assertIn("int main", source_context)
+        self.assertEqual(report["source_context_chars"], len(source_context))
+        self.assertEqual(
+            report["source_context_tokens_estimate"],
+            (len(source_context) + 3) // 4,
+        )
+        self.assertRegex(report["source_context_sha256"], r"^[a-f0-9]{64}$")
+        self.assertNotIn("comment that should be removed", source_context)
+
     def test_c_source_compaction_drops_comments_but_preserves_quoted_urls(self):
         compacted = _compact_c_source_lines([
             "/* block comment starts",
