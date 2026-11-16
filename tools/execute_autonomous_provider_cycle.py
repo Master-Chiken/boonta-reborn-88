@@ -54,7 +54,7 @@ def _write_cycle_report(report_path: Path, task_id: str, status: str, target_bra
         lines = [
             f"BOONTA_CYCLE_TASK_ID: {task_id}",
             "BOONTA_CYCLE_STATUS: BLOCKED",
-            "BOONTA_CYCLE_BLOCKER: {_safe_line(blocker, 'Patch proposal or verification was unavailable.')}",
+            f"BOONTA_CYCLE_BLOCKER: {_safe_line(blocker, 'Patch proposal or verification was unavailable.')}",
             f"BOONTA_CYCLE_NEXT_ACTION: {_safe_line(next_action, 'Inspect the blocker, correct the workflow-owned prerequisite, then start one fresh free-tier cycle.')}",
         ]
     temporary = report_path.with_name(report_path.name + ".tmp")
