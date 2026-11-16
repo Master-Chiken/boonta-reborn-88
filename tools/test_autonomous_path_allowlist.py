@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from build_autonomous_path_allowlist import AllowlistError, build_allowlist
+from check_task_ledger_summary import build_summary
 
 TASK_ID = "AUTOMATION-ALLOWLIST-TASK"
 BASE_TASK = {
@@ -312,19 +313,45 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
 
         trusted_docs = trusted / "docs/automation"
         trusted_docs.mkdir(parents=True)
+        prerequisite = {
+            "task_id": "GC-RACE-PROGRESSION",
+            "title": "Race progression",
+            "owner_role_id": "gameplay",
+            "parent_objective_id": "BOONTA-COMPLETE-GAME",
+            "depends_on": [],
+            "owner_approved": True,
+            "queue": "#226",
+            "platform_scope": ["GameCube", "Wii"],
+            "status": "completed",
+            "target_branch": "dev",
+            "read_paths": [],
+            "read_ranges": [],
+            "question": "Completed prerequisite",
+            "acceptance_criteria": ["Race loop is deterministic"],
+            "next_action": "Completed",
+        }
         trusted_task = {
             "task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+            "title": "Rival route progress",
+            "owner_role_id": "gameplay",
+            "parent_objective_id": "BOONTA-COMPLETE-GAME",
             "status": "queued",
             "owner_approved": True,
             "target_branch": "dev",
             "depends_on": ["GC-RACE-PROGRESSION"],
-            "title": "Rival route progress",
+            "queue": "#226",
+            "platform_scope": ["GameCube", "Wii"],
+            "read_paths": ["gamecube-demo/source/main.c"],
+            "read_ranges": [{"path": "gamecube-demo/source/main.c", "start_line": 1, "end_line": 1}],
+            "question": "Can rivals use route progress?",
+            "acceptance_criteria": ["Rivals finish"],
+            "next_action": "Implement route progress",
         }
-        ledger = {
-            "schema_version": 2,
-            "source": "docs/automation/task-ledger.json",
-            "completed_task_ids": ["GC-RACE-PROGRESSION"],
-            "tasks": [trusted_task],
+        full_ledger = {
+            "schema_version": 1,
+            "updated_at": "2026-11-16",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [prerequisite, trusted_task],
         }
         policy = {
             "schema_version": 1,
@@ -340,7 +367,11 @@ class OwnerApprovedAllowlistTests(AllowlistFixture):
                 "allowed_paths": ["gamecube-demo/source/main.c"],
             }],
         }
-        (trusted_docs / "task-ledger-summary.json").write_text(json.dumps(ledger), encoding="utf-8")
+        (trusted_docs / "task-ledger.json").write_text(json.dumps(full_ledger), encoding="utf-8")
+        (trusted_docs / "task-ledger-summary.json").write_text(
+            json.dumps(build_summary(full_ledger), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
         (trusted_docs / "patch-path-allowlist.json").write_text(json.dumps(policy), encoding="utf-8")
         git(trusted, "init", "-q")
         git(trusted, "config", "user.name", "Boonta Trusted Policy")
