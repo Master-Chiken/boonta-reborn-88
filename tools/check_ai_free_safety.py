@@ -1138,29 +1138,21 @@ for label, workflow in (
     ("Groq", groq_fallback),
 ):
     required_task_bindings = (
-        (
-            "task_id:",
-            "task_title:",
-            "task_target_branch:",
-            "TASK_ID: ${{ inputs.task_id }}",
-            "TASK_TITLE: ${{ inputs.task_title }}",
-            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
-            "preloaded schema-v2 context is authoritative",
-        )
-        if label == "Groq"
-        else (
-            "task_id:",
-            "task_title:",
-            "task_target_branch:",
-            "TASK_ID: ${{ inputs.task_id }}",
-            "TASK_TITLE: ${{ inputs.task_title }}",
-            "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
-            "Use exactly this task from docs/automation/task-ledger-summary.json",
-        )
+        "TASK_ID: ${{ inputs.task_id }}",
+        "TASK_TITLE: ${{ inputs.task_title }}",
+        "TASK_TARGET_BRANCH: ${{ inputs.task_target_branch }}",
+        "BOONTA_BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}",
+        "BOONTA_TARGET_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}",
+        "BOONTA_READ_PATHS: ${{ steps.bounded_inputs.outputs.read_paths }}",
+        "BOONTA_READ_RANGES: ${{ steps.bounded_inputs.outputs.read_ranges }}",
+        "BOONTA_ALLOWED_PATHS: ${{ steps.bounded_inputs.outputs.allowed_paths }}",
+        "BOONTA_PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}",
+        "POLICY_ROOT: ${{ steps.bounded_inputs.outputs.policy_root }}",
+        "POLICY_SHA: ${{ steps.bounded_inputs.outputs.policy_sha }}",
     )
     for required in required_task_bindings:
         if required not in workflow:
-            errors.append(f"{label} reusable workflow is missing selected-task binding {required!r}")
+            errors.append(f"{label} reusable workflow is missing trusted task/source binding {required!r}")
 
 # The owner-only readiness workflow checks configuration and App access without
 # calling a model or performing repository writes.
