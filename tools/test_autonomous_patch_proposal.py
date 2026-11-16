@@ -120,6 +120,11 @@ class ProposalValidationTests(PatchFixture):
         with self.assertRaisesRegex(ProposalError, "arbitrary commands"):
             self.check(proposal)
 
+    def test_gamecube_rival_host_profile_is_an_allowlisted_test_id(self):
+        proposal = dict(self.proposal, test_ids=["gamecube.rival_host_tests"])
+        report = self.check(proposal)
+        self.assertEqual(report["status"], "VALID")
+
     def test_duplicate_test_ids_are_rejected(self):
         proposal = dict(self.proposal, test_ids=["automation.task_preflight"] * 2)
         with self.assertRaisesRegex(ProposalError, "duplicates"):
