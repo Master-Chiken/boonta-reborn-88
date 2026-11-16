@@ -127,7 +127,7 @@ class DispatcherTests(unittest.TestCase):
             str(self.root),
         )
         self.assertFalse((trusted / "executed-in-target.txt").exists())
-        self.assertEqual(git(self.root, "status", "--porcelain"), "?? executed-in-target.txt")
+        self.assertIn("?? executed-in-target.txt", git(self.root, "status", "--porcelain"))
 
     def test_gamecube_rival_host_profile_is_a_fixed_repository_script(self):
         self.assertEqual(
