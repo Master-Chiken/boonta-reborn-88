@@ -120,6 +120,10 @@ jobs:
         shell: bash
         run: python3 tools/test_execute_autonomous_provider_cycle.py
 
+      - name: Validate trusted main task authority snapshot (offline)
+        shell: bash
+        run: python3 tools/test_validate_trusted_main_checkout.py
+
       - name: Validate trusted-main agent input preparation (offline)
         shell: bash
         run: python3 tools/test_prepare_autonomous_agent_inputs.py
