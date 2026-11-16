@@ -797,7 +797,14 @@ jobs:
           PROMPT
           )"
 
-          PROMPT="${PROMPT}"          if (( prompt_length > 7000 )); then
+          PROMPT="\${PROMPT}"$'\n\n'"\${AUTONOMOUS_CONTEXT}"
+          PROMPT+=$'\n\nSAME-RUN EXECUTION FACTS:\n'
+          PROMPT+="- OpenRouter owner/free-only preflight: \${OPENROUTER_PREFLIGHT_ALLOWED:-unknown}"$'\n'
+          PROMPT+="- OpenRouter bearer authentication: \${OPENROUTER_AUTH_OUTCOME:-unknown}"$'\n'
+          PROMPT+="- Workflow-owned scoped GitHub writer token minted: \${GITHUB_APP_TOKEN_OUTCOME:-unknown}"$'\n'
+          PROMPT+="- The writer token is never exposed to the model or local MCP process."
+          prompt_length="$(printf '%s' "$PROMPT" | wc -m | tr -d ' ')"
+          if (( prompt_length > 7000 )); then
             echo "::error::OpenRouter prompt exceeds the 7,000-character safety ceiling; no model request was sent."
             exit 2
           fi
