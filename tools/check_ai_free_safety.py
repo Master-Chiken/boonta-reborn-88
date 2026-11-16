@@ -101,16 +101,21 @@ groq_fallback = read(".github/workflows/groq-plan-execute.yml")
 # Every provider invocation and report validator must be visible to the parent
 # workflow so the final summary never confuses a cooldown skip with progress.
 provider_outputs = (
-    ("Gemini", execute, "plan-execute", "run_gemini"),
+    ("Gemini", execute, "plan-execute", "run_gemini_autonomous"),
     ("OpenRouter", read(".github/workflows/openrouter-plan-execute.yml"), "openrouter-plan-execute", "run_opencode"),
     ("Groq", groq_fallback, "groq-plan-execute", "run_opencode"),
 )
 for provider, workflow, job_name, invocation_step in provider_outputs:
+    invocation_binding = (
+        "invocation_outcome: ${{ inputs.autonomous_mode == true && steps.run_gemini_autonomous.outcome || steps.run_gemini.outcome }}"
+        if provider == "Gemini"
+        else f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}"
+    )
     expected_outputs = (
         f"value: ${{{{ jobs.{job_name}.outputs.invocation_outcome }}}}",
         f"value: ${{{{ jobs.{job_name}.outputs.report_outcome }}}}",
         f"value: ${{{{ jobs.{job_name}.outputs.cycle_status }}}}",
-        f"invocation_outcome: ${{{{ steps.{invocation_step}.outcome }}}}",
+        invocation_binding,
         f"report_outcome: ${{{{ steps.validate_report.outcome }}}}",
         f"cycle_status: ${{{{ steps.validate_report.outputs.cycle_status }}}}",
         "validateAutonomousCycleReport",
@@ -1393,31 +1398,50 @@ else:
         if unsupported_tool in mcp_tools:
             errors.append(f"Autonomous Gemini MCP allowlist contains unsupported or redundant tool {unsupported_tool!r}")
 
-# The autonomous agent's file-editing surface must match the actual workflow allow-list.
-editing_contract_requirements = (
-    "## Repository editing contract (mandatory)",
-    "Use only the GitHub MCP `push_files` tool for all repository file writes",
-    "Never call `replace`, `write_file`, `edit_file` or `apply_patch`",
-    "If `push_files` is unavailable or a write fails, stop modifying files",
-    "Do not create a self-referential `in_review` record",
-    "after merge, finalize from `main` using the actual merged PR head SHA",
-)
-missing_editing_contract = [item for item in editing_contract_requirements if item not in autonomous_prompt]
-if missing_editing_contract:
-    errors.append(f"Autonomous prompt is missing its supported repository-editing/ledger contract: {missing_editing_contract!r}")
+# Gemini autonomous model permissions are proposal-only; only the later
+# workflow-owned publisher receives a scoped GitHub token.
+for required in (
+    "Only permitted repository tools",
+    "mcp_boonta_read_approved_sources",
+    "mcp_boonta_submit_patch_proposal",
+    "Call mcp_boonta_read_approved_sources exactly once",
+    "Call mcp_boonta_submit_patch_proposal exactly once",
+    "Never create branches, commits, refs, pull requests, comments, merges or auto-merges",
+    "Post-merge reconciliation is workflow-owned from trusted main",
+):
+    if required not in autonomous_prompt:
+        errors.append(f"Autonomous Gemini prompt is missing its proposal-only contract: {required!r}")
 
+gemini_model_start = execute.find("      - name: Run Gemini CLI through bounded local proposal MCP")
+gemini_model_end = execute.find("\\n      - name: Verify, test and publish the Gemini patch proposal", gemini_model_start)
+gemini_model_step = execute[gemini_model_start:gemini_model_end] if gemini_model_start >= 0 and gemini_model_end > gemini_model_start else ""
+gemini_writer_start = execute.find("      - name: Verify, test and publish the Gemini patch proposal")
+gemini_writer_step = execute[gemini_writer_start:] if gemini_writer_start >= 0 else ""
+if gemini_model_start < 0 or gemini_model_end < 0:
+    errors.append("Autonomous Gemini must use a distinct bounded local proposal model step")
+for forbidden in ("GITHUB_TOKEN:", "GITHUB_TOOLS", "GITHUB_PERSONAL_ACCESS_TOKEN", "github-mcp-server", "push_files", "create_branch", "create_pull_request"):
+    if forbidden in gemini_model_step:
+        errors.append(f"Autonomous Gemini model step exposes a forbidden GitHub writer surface: {forbidden!r}")
+for required in ('"boonta": {', '"args": ["tools/bounded_patch_proposal_mcp.js"]', '"read_approved_sources"', '"submit_patch_proposal"', "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS"):
+    if required not in gemini_model_step:
+        errors.append(f"Autonomous Gemini proposal model step is missing bounded configuration: {required!r}")
+if "GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token }}" not in gemini_writer_step:
+    errors.append("Only the workflow-owned Gemini verifier/publisher may receive the scoped GitHub token")
+if "execute_autonomous_provider_cycle.py" not in gemini_writer_step:
+    errors.append("Gemini autonomous proposal must pass through the workflow-owned verifier/publisher")
 # The action must stop at the model/API boundary when the owner gates fail.
 guard_position = execute.find("id: free_tier_guard")
 mint_position = execute.find("name: 'Mint identity token'")
 checkout_position = execute.find("name: 'Checkout Code'")
-model_position = execute.find("name: 'Run Gemini CLI'")
-if not (0 <= guard_position < mint_position < checkout_position < model_position):
-    errors.append("Autonomous free-tier/owner gate must run before token mint, checkout, and model invocation")
+model_position = execute.find("name: Run Gemini CLI through bounded local proposal MCP")
+writer_position = execute.find("name: Verify, test and publish the Gemini patch proposal")
+if not (0 <= guard_position < mint_position < checkout_position < model_position < writer_position):
+    errors.append("Autonomous free-tier/owner gate must precede token mint, checkout, local proposal inference and workflow-owned publishing")
 for guarded_step in (
     "name: 'Mint identity token'\n        id: 'mint_identity_token'\n        if: |-",
     "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
     "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: 'Run Gemini CLI'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
+    "name: Run Gemini CLI through bounded local proposal MCP\n        if: inputs.autonomous_mode == true",
 ):
     if guarded_step not in execute:
         errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
