@@ -77,6 +77,102 @@ function findNextActionBranchContradictions(nextAction, expectedBase) {
     .map((branch) => 'directs the next action to ' + branch + ' although the selected task target is ' + expectedBase);
 }
 
+function safeOwnerApprovedWritePath(value) {
+  if (typeof value !== 'string' || value.length < 1 || value.length > 120 ||
+      !/^[A-Za-z0-9._/-]+$/.test(value) || value.startsWith('/') ||
+      value.startsWith('.github/') || value.startsWith('.git/') ||
+      value.startsWith('docs/automation/') ||
+      value.split('/').some((part) => !part || part === '.' || part === '..')) return false;
+  return /\\.(?:py|js|ts|tsx|json|ya?ml|toml|md|c|h|cc|cpp|hpp|cmake|sh)$/i.test(value);
+}
+
+async function validatePullRequestTaskWriteScope(github, { owner, repo, pullNumber, pullRequest, taskId }) {
+  if (!/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId || '')) {
+    throw new Error('selected task ID is invalid');
+  }
+
+  // The policy is read only from trusted main, never from the agent's PR branch.
+  const { data: policyFile } = await github.rest.repos.getContent({
+    owner,
+    repo,
+    path: 'docs/automation/patch-path-allowlist.json',
+    ref: 'main'
+  });
+  if (!policyFile || Array.isArray(policyFile) || policyFile.encoding !== 'base64' ||
+      typeof policyFile.content !== 'string') {
+    throw new Error('trusted main exact-path policy is missing or not base64 content');
+  }
+
+  let policy;
+  try {
+    policy = JSON.parse(Buffer.from(policyFile.content, 'base64').toString('utf8'));
+  } catch {
+    throw new Error('trusted main exact-path policy is not valid UTF-8 JSON');
+  }
+  if (
+    policy.schema_version !== 1 ||
+    policy.policy?.owner_review_required !== true ||
+    policy.policy?.path_mode !== 'exact' ||
+    policy.policy?.max_paths_per_task !== 20 ||
+    !Array.isArray(policy.tasks)
+  ) {
+    throw new Error('trusted main exact-path policy schema is invalid');
+  }
+
+  const entries = policy.tasks.filter((entry) => entry?.task_id === taskId);
+  if (entries.length !== 1) {
+    throw new Error('trusted main policy must contain exactly one entry for the selected task');
+  }
+  const entry = entries[0];
+  if (
+    typeof entry.purpose !== 'string' || !entry.purpose.trim() || entry.purpose.length > 240 ||
+    typeof entry.approval_ref !== 'string' ||
+    !/^https:\/\/github\\.com\/Master-Chiken\/boonta-reborn-88\/pull\/[1-9][0-9]*$/.test(entry.approval_ref) ||
+    !Array.isArray(entry.allowed_paths) ||
+    entry.allowed_paths.length < 1 || entry.allowed_paths.length > 20 ||
+    entry.allowed_paths.some((path) => !safeOwnerApprovedWritePath(path)) ||
+    new Set(entry.allowed_paths).size !== entry.allowed_paths.length
+  ) {
+    throw new Error('selected task owner-approved exact-path entry is invalid');
+  }
+
+  const { data: changedFiles } = await github.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: pullNumber,
+    per_page: 100,
+    page: 1
+  });
+  if (
+    !Array.isArray(changedFiles) ||
+    changedFiles.length < 1 ||
+    changedFiles.length >= 100 ||
+    changedFiles.length > entry.allowed_paths.length ||
+    changedFiles.length !== pullRequest.changed_files
+  ) {
+    throw new Error('PR changed-file inventory is empty, incomplete or exceeds the exact task write scope');
+  }
+
+  const allowed = new Set(entry.allowed_paths);
+  const seen = new Set();
+  for (const file of changedFiles) {
+    const path = file?.filename;
+    if (typeof path !== 'string' || !allowed.has(path)) {
+      throw new Error('PR changes a path outside the exact task write-path allowlist');
+    }
+    if (file.status !== 'modified' || file.previous_filename) {
+      throw new Error('PR contains an added, removed, renamed or copied path instead of modifying an approved existing file');
+    }
+    if (seen.has(path)) {
+      throw new Error('PR changed-file inventory contains a duplicate path');
+    }
+    seen.add(path);
+  }
+
+  return [...seen].sort();
+}
+
+
 function bindCycleReportToReservedTask(report, expectedTaskId, expectedBase) {
   const taskId = typeof expectedTaskId === 'string' ? expectedTaskId.trim() : '';
   if (!/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(taskId)) {
@@ -175,6 +271,7 @@ async function validateAutonomousCycleReport(options) {
   const exactHead = evidence[2];
   const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: pullNumber });
   const { data: headCommit } = await github.rest.repos.getCommit({ owner, repo, ref: exactHead });
+
   const existedAtStart = Object.prototype.hasOwnProperty.call(baseSnapshot, String(pullNumber));
   const createdAfterSnapshot = !existedAtStart && Date.parse(pr.created_at || '') > snapshotTime;
   const previousHeadSha = existedAtStart ? baseSnapshot[String(pullNumber)] : '';
@@ -220,6 +317,14 @@ async function validateAutonomousCycleReport(options) {
   ) {
     return fail(core, 'PROGRESS requires a non-draft, non-empty same-repository PR tied to the reserved task, targeting ' +
       expectedBase + ', at its exact current head, created or advanced during this cycle, with changed file content and a cycle-fresh commit.');
+  }
+
+  try {
+    await validatePullRequestTaskWriteScope(github, {
+      owner, repo, pullNumber, pullRequest: pr, taskId: expectedTaskId
+    });
+  } catch (error) {
+    return fail(core, 'PROGRESS exact task write-path validation failed: ' + error.message + '.');
   }
 
   const required = REQUIRED_CHECKS[expectedBase];
@@ -280,6 +385,14 @@ async function validateAutonomousCycleReport(options) {
     return fail(core, 'The cited PR changed while exact-head CI was running; refusing stale progress evidence.');
   }
 
+  try {
+    await validatePullRequestTaskWriteScope(github, {
+      owner, repo, pullNumber, pullRequest: finalPr, taskId: expectedTaskId
+    });
+  } catch (error) {
+    return fail(core, 'The final PR exact task write-path validation failed: ' + error.message + '.');
+  }
+
   core.setOutput('cycle_status', 'progress');
   core.setOutput('evidence_pr_number', String(pullNumber));
   core.setOutput('evidence_head_sha', exactHead);
@@ -294,4 +407,4 @@ async function validateAutonomousCycleReport(options) {
   };
 }
 
-module.exports = { REQUIRED_CHECKS, bindCycleReportToReservedTask, findBlockedReportContradictions, validateAutonomousCycleReport };
+module.exports = { REQUIRED_CHECKS, bindCycleReportToReservedTask, findBlockedReportContradictions, safeOwnerApprovedWritePath, validatePullRequestTaskWriteScope, validateAutonomousCycleReport };
