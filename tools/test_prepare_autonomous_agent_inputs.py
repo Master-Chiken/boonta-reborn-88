@@ -220,6 +220,19 @@ class AgentInputTests(AgentInputFixture):
             self.prepare()
         self.assertEqual(self.output.read_text(encoding="utf-8"), "keep me")
 
+    def test_every_owner_approved_write_path_must_be_in_task_read_contract(self):
+        extra_path = "src/other.c"
+        extra = self.source / extra_path
+        extra.write_text("int other(void) { return 2; }\\n", encoding="utf-8")
+        git(self.source, "add", extra_path)
+        git(self.source, "commit", "-qm", "add second writable fixture")
+        self.base_sha = git(self.source, "rev-parse", "HEAD")
+        self.policy_doc["tasks"][0]["allowed_paths"] = [SOURCE_PATH, extra_path]
+        self.commit_ledger_change("approve an unreadable writable path")
+        with self.assertRaisesRegex(AgentInputError, "not covered by the task's exact read_paths/read_ranges"):
+            self.prepare(expected_policy_sha=self.policy_sha)
+        self.assertFalse(self.output.exists())
+
     def test_write_paths_must_exist_on_the_target_branch(self):
         self.policy_doc["tasks"][0]["allowed_paths"] = ["src/not-tracked.c"]
         self.policy_path.write_text(json.dumps(self.policy_doc), encoding="utf-8")
