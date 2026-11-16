@@ -180,9 +180,11 @@ class AgentInputTests(AgentInputFixture):
         with self.assertRaisesRegex(AgentInputError, "source checkout must be clean"):
             self.prepare()
 
-    def test_dirty_policy_checkout_is_rejected(self):
-        (self.policy / "dirty.txt").write_text("not allowed", encoding="utf-8")
-        with self.assertRaisesRegex(AgentInputError, "policy checkout must be clean"):
+    def test_modified_canonical_policy_is_rejected(self):
+        self.policy_doc["tasks"][0]["purpose"] = "tampered"
+        policy_file = self.policy / "docs/automation/patch-path-allowlist.json"
+        policy_file.write_text(json.dumps(self.policy_doc), encoding="utf-8")
+        with self.assertRaisesRegex(AgentInputError, "local changes"):
             self.prepare()
 
     def test_duplicate_output_is_not_overwritten(self):
