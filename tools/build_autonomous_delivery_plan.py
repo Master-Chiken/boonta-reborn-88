@@ -400,6 +400,7 @@ def build_delivery_plan(
         "This PR is generated from a strict patch proposal and owner-reviewed exact-path scope. It is not auto-merged.",
         "",
         f"BOONTA_TASK_ID: {expected_task_id}",
+        f"BOONTA_TASK_TARGET_BRANCH: {target_branch}",
     ])
     return {
         "status": "DELIVERY_PLAN_READY",
@@ -438,7 +439,7 @@ def build_delivery_plan(
                 "head": branch_name,
                 "base": target_branch,
                 "body": pr_body,
-                "draft": True,
+                "draft": False,
             },
             "auto_merge": False,
         },
