@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-13",
+  "updated_at": "2026-11-16",
   "policy": {
     "max_active_tasks": 1,
     "completed_requires_merged_pr": true,
@@ -1017,43 +1017,60 @@
       "read_paths": [
         "gamecube-demo/source/rival_ai.h",
         "gamecube-demo/source/route_cursor.h",
-        "gamecube-demo/source/gameplay_state.h"
+        "gamecube-demo/source/gameplay_state.h",
+        "gamecube-demo/source/main.c",
+        "gamecube-demo/tests/test_rival_ai.c"
       ],
       "read_ranges": [
         {
           "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 91,
-          "end_line": 145
-        },
-        {
-          "path": "gamecube-demo/source/rival_ai.h",
-          "start_line": 203,
-          "end_line": 223
+          "start_line": 70,
+          "end_line": 83
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 56,
-          "end_line": 67
+          "start_line": 13,
+          "end_line": 20
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 228,
-          "end_line": 275
+          "start_line": 22,
+          "end_line": 66
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 400,
-          "end_line": 419
+          "start_line": 232,
+          "end_line": 236
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 14,
-          "end_line": 35
+          "start_line": 7,
+          "end_line": 18
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 435,
-          "end_line": 484
+          "start_line": 24,
+          "end_line": 55
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 579,
+          "end_line": 600
+        },
+        {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 714,
+          "end_line": 744
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1427,
+          "end_line": 1483
+        },
+        {
+          "path": "gamecube-demo/tests/test_rival_ai.c",
+          "start_line": 173,
+          "end_line": 184
         }
       ],
       "acceptance_criteria": [
@@ -1067,7 +1084,7 @@
       ],
       "evidence": [],
       "next_action": "Owner-approved 2026-11-11 as the first queued gameplay milestone after GC-RACE-PROGRESSION. Trace rival camera-space movement against the native route cursor and player lap model. Implement route-relative rival progress and deterministic finish state with host tests before adding standings to results.",
-      "updated_at": "2026-11-11",
+      "updated_at": "2026-11-16",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
       "depends_on": [
