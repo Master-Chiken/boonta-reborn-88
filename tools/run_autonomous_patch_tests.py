@@ -19,6 +19,7 @@ TEST_REGISTRY: dict[str, tuple[str, ...]] = {
     "automation.task_preflight": ("tools/test_autonomous_task_preflight.py",),
     "automation.provider_handoff": ("tools/check_autonomous_provider_handoff.py",),
     "automation.task_ledger": ("tools/check_task_ledger.py",),
+    "automation.isolated_patch_workspace": ("tools/test_autonomous_isolated_patch_pipeline.py",),
 }
 MAX_TESTS = 6
 MAX_TEST_TIMEOUT_SECONDS = 120

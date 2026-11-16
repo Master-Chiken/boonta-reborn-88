@@ -40,6 +40,7 @@ SCHEMA: dict[str, Any] = {
                     "automation.task_preflight",
                     "automation.provider_handoff",
                     "automation.task_ledger",
+                    "automation.isolated_patch_workspace",
                 ],
             },
         },
@@ -61,6 +62,7 @@ ALLOWED_TEST_IDS = {
     "automation.task_preflight",
     "automation.provider_handoff",
     "automation.task_ledger",
+    "automation.isolated_patch_workspace",
 }
 MAX_DIFF_BYTES = 32 * 1024
 MAX_PROPOSAL_BYTES = 96 * 1024
@@ -92,6 +94,11 @@ PROTECTED_EXACT = {
     "tools/test_autonomous_task_preflight.py",
     "tools/check_autonomous_provider_handoff.py",
     "tools/check_task_ledger.py",
+    "tools/prepare_autonomous_patch_workspace.py",
+    "tools/test_prepare_autonomous_patch_workspace.py",
+    "tools/build_autonomous_patch_proposal.py",
+    "tools/test_build_autonomous_patch_proposal.py",
+    "tools/test_autonomous_isolated_patch_pipeline.py",
 }
 PROTECTED_PREFIXES = (
     ".github/",

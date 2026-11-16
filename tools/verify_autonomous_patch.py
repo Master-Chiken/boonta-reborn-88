@@ -31,6 +31,7 @@ MANDATORY_TEST_IDS = (
     "automation.task_preflight",
     "automation.provider_handoff",
     "automation.task_ledger",
+    "automation.isolated_patch_workspace",
 )
 MAX_BUNDLE_FILE_BYTES = 128 * 1024
 MAX_BUNDLE_TOTAL_BYTES = 256 * 1024
