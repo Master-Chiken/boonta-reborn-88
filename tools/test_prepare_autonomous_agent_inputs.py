@@ -121,7 +121,7 @@ class AgentInputTests(AgentInputFixture):
         self.assertEqual(git(self.policy, "status", "--porcelain"), "")
 
     def test_stale_target_sha_is_rejected(self):
-        with self.assertRaisesRegex(AgentInputError, "target base SHA"):
+        with self.assertRaisesRegex(AgentInputError, "selected task base SHA"):
             self.prepare(expected_base_sha="0" * 40)
 
     def test_stale_trusted_policy_sha_is_rejected(self):
@@ -165,7 +165,7 @@ class AgentInputTests(AgentInputFixture):
     def test_range_budget_is_bounded(self):
         self.summary["tasks"][0]["read_ranges"] = [
             {"path": SOURCE_PATH, "start_line": i, "end_line": i + 79}
-            for i in (1, 81, 161)
+            for i in (1, 81, 161, 241)
         ]
         summary_path = self.policy / "docs/automation/task-ledger-summary.json"
         summary_path.write_text(json.dumps(self.summary), encoding="utf-8")
@@ -198,7 +198,7 @@ class AgentInputTests(AgentInputFixture):
         git(self.policy, "add", "docs/automation/patch-path-allowlist.json")
         git(self.policy, "commit", "-qm", "approve unavailable target path")
         self.policy_sha = git(self.policy, "rev-parse", "HEAD")
-        with self.assertRaisesRegex(AgentInputError, "not READY"):
+        with self.assertRaisesRegex(AgentInputError, "path policy is not ready|exactly one tracked file"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
 
