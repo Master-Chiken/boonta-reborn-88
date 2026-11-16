@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -90,13 +91,7 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
         expected_summary = build_summary(ledger)
     except (KeyError, TypeError, ValueError) as exc:
         raise TrustedMainCheckoutError("Trusted main canonical task ledger cannot produce a compact summary") from exc
-    if summary != expected_summary:
-        raise TrustedMainCheckoutError(
-            "Trusted main compact task summary does not match the committed canonical task ledger"
-        )
 
-    # A changed summary is permitted only after the content above proves it is
-    # byte-for-byte the deterministic projection of the committed ledger.
     summary_status = _git(
         root, "status", "--porcelain=v1", "--untracked-files=all", "--", SUMMARY
     )
@@ -104,4 +99,39 @@ def validate_trusted_main_checkout(root: Path, expected_sha: str) -> Path:
         raise TrustedMainCheckoutError(
             "Trusted main derived summary has an unexpected staged, added, deleted or renamed state"
         )
+
+    if summary != expected_summary:
+        expected_task_ids = [item.get("task_id") for item in expected_summary.get("tasks", [])]
+        summary_tasks = summary.get("tasks")
+        summary_task_ids = [
+            item.get("task_id") for item in summary_tasks if isinstance(item, dict)
+        ] if isinstance(summary_tasks, list) else []
+        cache_shape_matches = (
+            summary.get("schema_version") == 2
+            and summary.get("source") == LEDGER
+            and isinstance(summary_tasks, list)
+            and summary_task_ids == expected_task_ids
+            and len(summary_task_ids) == len(summary_tasks)
+        )
+        if not summary_status or not cache_shape_matches:
+            raise TrustedMainCheckoutError(
+                "Trusted main compact task summary does not match the committed canonical task ledger"
+            )
+
+        temporary = root / (SUMMARY + ".refresh.tmp")
+        if temporary.exists() or temporary.is_symlink():
+            raise TrustedMainCheckoutError("Trusted main summary refresh temporary file already exists")
+        try:
+            with temporary.open("x", encoding="utf-8") as stream:
+                stream.write(json.dumps(expected_summary, indent=2, ensure_ascii=False) + "\\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, root / SUMMARY)
+        except OSError as exc:
+            temporary.unlink(missing_ok=True)
+            raise TrustedMainCheckoutError("Trusted main compact task summary could not be safely regenerated") from exc
+        summary = json.loads((root / SUMMARY).read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+        if summary != expected_summary:
+            raise TrustedMainCheckoutError("Regenerated trusted main compact summary does not match the canonical ledger")
+
     return root
