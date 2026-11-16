@@ -1644,17 +1644,25 @@ if "The check runs must be from the GitHub Actions app" not in cycle_validator a
     errors.append("Autonomous exact-head checks must reject same-named runs from untrusted apps")
 if "exact-40-character-head-SHA" not in autonomous_prompt or "BOONTA_CYCLE_EVIDENCE_BASE: main|dev" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must require exact-head evidence and its main/dev target")
-if "BOONTA_CYCLE_EVIDENCE_BASE: ${TASK_TARGET_BRANCH}" not in openrouter_fallback:
-    errors.append("OpenRouter fallback prompt must append the exact main/dev target reserved by task preflight")
+# The workflow-owned publisher, not the model prompt, creates exact PR
+# evidence and the machine-readable report.
+provider_cycle_source = read("tools/execute_autonomous_provider_cycle.py")
 for required in (
-    '"$RUNNER_TEMP/opencode-cycle-report.txt"',
-    'with open(report_path, "w", encoding="utf-8") as report:',
-    'report.flush()',
+    'f"BOONTA_CYCLE_EVIDENCE: {pr_url} @ {head_sha}"',
+    'f"BOONTA_CYCLE_EVIDENCE_BASE: {target_branch}"',
+    'f"BOONTA_CYCLE_BLOCKER: {_safe_line(blocker,',
+    'delivered.get("status") != "PR_CREATED"',
+    'delivered.get("draft") is not False',
+    'delivered.get("auto_merge") is not False',
+    'delivered.get("merge_performed") is not False',
 ):
-    if required not in openrouter_fallback:
-        errors.append(f"OpenRouter fallback must persist its final report for contract validation: {required!r}")
-if "REPORT_PATH: ${{ runner.temp }}/opencode-cycle-report.txt" not in openrouter_fallback:
-    errors.append("OpenRouter fallback must validate the report it just produced")
+    if required not in provider_cycle_source:
+        errors.append(f"Workflow-owned provider cycle is missing verified report/delivery contract: {required!r}")
+for label, workflow in (("OpenRouter", openrouter_fallback), ("Groq", groq_fallback)):
+    if "REPORT_PATH: \${{ runner.temp }}/opencode-cycle-report.txt" not in workflow:
+        errors.append(f"{label} must validate the report written by the workflow-owned provider cycle")
+    if "execute_autonomous_provider_cycle.py" not in workflow:
+        errors.append(f"{label} must run the workflow-owned verifier/writer before validating PROGRESS")
 if "exact-40-character-head-SHA" not in autonomous_prompt:
     errors.append("Gemini autonomous prompt must show the exact PR-head evidence format")
 
