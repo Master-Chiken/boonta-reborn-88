@@ -1073,17 +1073,11 @@ for label, prompt in (("OpenRouter", openrouter), ("Groq", groq)):
         if required not in prompt:
             errors.append(f"{label} prompt is missing preflight-owned task-state rule {required!r}")
 for required in (
-    "Post-merge reconciliation",
-    "exact `BOONTA_TASK_ID: <task_id>` PR-body matches",
-    "including merged/closed results",
-    "closed-unmerged is not completion",
-    "verify live `merged_at`",
-    "final `head.sha`",
-    "record that original PR URL and exact head SHA as evidence",
-    "Never use the ledger-update PR's own SHA as task evidence",
+    "Post-merge reconciliation is workflow-owned from trusted `main`",
+    "never update or finalize the task ledger yourself",
 ):
     if required not in gemini_prompt:
-        errors.append(f"Gemini prompt is missing the post-merge task reconciliation rule {required!r}")
+        errors.append(f"Gemini prompt must delegate ledger reconciliation to the workflow: {required!r}")
 
 # A provider request is permitted only when the compact ledger yields one eligible task.
 for required in (
