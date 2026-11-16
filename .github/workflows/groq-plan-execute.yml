@@ -586,13 +586,7 @@ jobs:
           # task handoff is verified as a subset of this current compact projection.
           python3 "$repo_root/tools/check_task_ledger_summary.py" --write
           context="$(python3 "$repo_root/tools/build_autonomous_context.py" --root "$repo_root" --source-root "$GITHUB_WORKSPACE/.boonta-target-source" --task-id "$TASK_ID" --task-title "$TASK_TITLE" --target-branch "$TASK_TARGET_BRANCH" --task-context "$TASK_DESCRIPTION" --max-chars 3000 --max-task-context 1100 --max-criteria 4 --max-next-action 100 --max-source-chars 1800)"
-          printf '%s' "$context" | python3 "$repo_root/tools/write_autonomous_provider_context.py" \
-            --workspace "$GITHUB_WORKSPACE" \
-            --task-id "$TASK_ID" \
-            --task-title "$TASK_TITLE" \
-            --task-description "$TASK_DESCRIPTION" \
-            --target-branch "$TASK_TARGET_BRANCH" \
-            --verified-context-stdin > "$RUNNER_TEMP/boonta-mcp-context-report.json"
+
           {
             printf 'repo_root=%s\n' "$repo_root"
             echo 'context<<BOONTA_CONTEXT_EOF'
@@ -649,8 +643,29 @@ jobs:
                   stream.write(f"{key}={value}\n")
           PY
 
+      - name: Write verified MCP context for Groq
+        id: write_mcp_context
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.prepare_context.outcome == 'success' && steps.bounded_inputs.outcome == 'success' && inputs.resume_mode != true
+        shell: bash
+        env:
+          REPO_ROOT: ${{ steps.prepare_context.outputs.repo_root }}
+          TASK_ID: ${{ steps.bounded_inputs.outputs.task_id }}
+          TASK_TITLE: ${{ inputs.task_title }}
+          TASK_DESCRIPTION: ${{ inputs.task_description }}
+          TASK_TARGET_BRANCH: ${{ steps.bounded_inputs.outputs.target_branch }}
+          VERIFIED_CONTEXT: ${{ steps.prepare_context.outputs.context }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$VERIFIED_CONTEXT" | python3 "$REPO_ROOT/tools/write_autonomous_provider_context.py" \
+            --workspace "$GITHUB_WORKSPACE" \
+            --task-id "$TASK_ID" \
+            --task-title "$TASK_TITLE" \
+            --task-description "$TASK_DESCRIPTION" \
+            --target-branch "$TASK_TARGET_BRANCH" \
+            --verified-context-stdin > "$RUNNER_TEMP/boonta-mcp-context-report.json"
+
       - name: Run OpenCode through the Groq Free route
-        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && steps.bounded_inputs.outcome == 'success' && inputs.resume_mode != true
+        if: steps.free_tier_guard.outputs.allowed == 'true' && steps.snapshot_pr_heads.outcome == 'success' && steps.prepare_context.outcome == 'success' && steps.bounded_inputs.outcome == 'success' && inputs.resume_mode != true && steps.write_mcp_context.outcome == 'success'
         id: run_opencode
         shell: bash
         env:
@@ -869,6 +884,11 @@ jobs:
               print("Groq invocation reached its 90-second hard limit.", flush=True)
           sys.exit(status)
           PY
+
+      - name: Remove ephemeral MCP context
+        if: always() && steps.write_mcp_context.outcome == 'success'
+        shell: bash
+        run: rm -f "$GITHUB_WORKSPACE/.gemini/context.json"
 
       - name: Verify, test and publish the Groq patch proposal
         id: execute_provider_cycle
