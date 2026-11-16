@@ -116,6 +116,10 @@ jobs:
         shell: bash
         run: python3 tools/test_prepare_autonomous_patch_workspace.py
 
+      - name: Validate structured patch export from isolated agent workspaces (offline)
+        shell: bash
+        run: python3 tools/test_build_autonomous_patch_proposal.py
+
       - name: Verify patch application and mandatory tests in disposable worktrees (offline)
         shell: bash
         run: python3 tools/test_verify_autonomous_patch.py
