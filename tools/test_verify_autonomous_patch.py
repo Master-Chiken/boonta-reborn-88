@@ -185,6 +185,8 @@ class TrustedPolicyCheckoutTests(PipelineFixture):
             check=False,
         )
         self.assertEqual(cloned.returncode, 0, cloned.stderr)
+        git(trusted, "config", "user.name", "Boonta Trusted Policy")
+        git(trusted, "config", "user.email", "boonta-trusted@example.invalid")
         trusted_task = {
             "task_id": TASK_ID,
             "title": "Synthetic pipeline fixture",
