@@ -236,8 +236,10 @@ provider_model_visible_tools = (
         "boonta_read_approved_sources",
         "boonta_submit_patch_proposal",
     )),
+    # Groq preloads source text and verifies its hash inside the MCP on startup;
+    # the model only sees the proposal tool because OpenCode removes tools on its
+    # final text-only iteration.
     ("Groq", groq, (
-        "boonta_read_approved_sources",
         "boonta_submit_patch_proposal",
     )),
 )
@@ -247,6 +249,13 @@ for label, content, tool_names in provider_model_visible_tools:
         errors.append(f"{label} prompt is missing bounded local MCP tools: {missing!r}")
     if "OPENCODE_EXPERIMENTAL_CODE_MODE: 'false'" not in content:
         errors.append(f"{label} must explicitly select OpenCode direct MCP tool mode")
+if (
+    "preloadedSources" not in bounded_mcp_source
+    or "BOONTA_PRELOADED_SOURCE_SHA256" not in groq
+    or "preloaded source context does not match" not in bounded_mcp_source
+    or "TOOL_DEFINITIONS.filter((item) => item.name === 'submit_patch_proposal')" not in bounded_mcp_source
+):
+    errors.append("Groq must verify the preloaded source snapshot before exposing only the proposal tool")
 # OpenRouter's eight-step ceiling is a hard safety bound, not a discovery budget.
 # The preflight performs task reservation and open-PR duplicate detection before inference.
 for required in (
@@ -1028,7 +1037,7 @@ agent_inputs_source = read("agent_inputs")
 if "unreadable_write_paths" not in agent_inputs_source or "no provider invocation is allowed until the owner-approved read contract is updated" not in agent_inputs_source:
     errors.append("Provider preflight must block before inference when writable files are outside the exact read contract")
 context_limits("OpenRouter", openrouter, 2800, 1100)
-if len(actual_groq_prompt) > 950:
+if len(actual_groq_prompt) > 1400:
     errors.append("Groq static instruction prompt leaves insufficient room for the verified task and preloaded exact source excerpts")
 if "if (( prompt_length > 10400 )); then" not in groq:
     errors.append("Groq must enforce the combined task/source prompt size before inference")
