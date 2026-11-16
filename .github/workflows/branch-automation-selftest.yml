@@ -316,7 +316,7 @@ jobs:
               "Provider fallback advances only when predecessor cooldowns were active at cycle start": "needs.autonomous-cycle.result == 'skipped'" in autonomous_loop and "needs.provider-cooldowns.outputs.gemini_active == 'true'" in autonomous_loop and "needs.provider-cooldowns.outputs.openrouter_active == 'true'" in autonomous_loop and "needs.provider-cooldowns.outputs.groq_active != 'true'" in autonomous_loop and "needs.openrouter-fallback.outputs.invocation_outcome" not in autonomous_loop.split("  groq-fallback:", 1)[1].split("  cycle-summary:", 1)[0] and "needs.openrouter-fallback.result ==" not in autonomous_loop.split("  groq-fallback:", 1)[1].split("  cycle-summary:", 1)[0],
               "Autonomous loop keeps the three ordered free-only providers": all(path in autonomous_loop for path in ("gemini-plan-execute.yml", "openrouter-plan-execute.yml", "groq-plan-execute.yml")),
               "Groq agent has no GitHub writer; workflow-owned executor publishes verified proposals": (
-                  "Only boonta_read_approved_sources and boonta_submit_patch_proposal are available." in groq_agent_step
+                  "One tool is available: boonta_submit_patch_proposal." in groq_agent_step
                   and '"command": ["node", "tools/bounded_patch_proposal_mcp.js"]' in groq_agent_step
                   and all(item in groq_agent_step for item in ("BOONTA_READ_PATHS", "BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "BOONTA_PROPOSAL_PATH"))
                   and all(forbidden not in groq_agent_step for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server", "github_push_files", "github_create_branch", "github_create_pull_request"))
@@ -331,10 +331,11 @@ jobs:
                   and "BOONTA_BASE_SHA" in groq_agent_step
                   and "tools/prepare_autonomous_agent_inputs.py" in groq
               ),
-              "Groq prompt permits one bounded read and one local patch proposal only": (
-                  "Only boonta_read_approved_sources and boonta_submit_patch_proposal are available." in groq_agent_step
-                  and "Call boonta_read_approved_sources exactly once" in groq_agent_step
-                  and "Call boonta_submit_patch_proposal exactly once" in groq_agent_step
+              "Groq prompt uses preloaded exact sources and one local proposal tool only": (
+                  "APPROVED SOURCE EXCERPTS" in groq_agent_step
+                  and "One tool is available: boonta_submit_patch_proposal." in groq_agent_step
+                  and "Call it exactly once with one complete unified diff." in groq_agent_step
+                  and "BOONTA_PRELOADED_SOURCE_SHA256" in groq_agent_step
                   and '"bash": "deny"' in groq_agent_step
                   and '"read": "deny"' in groq_agent_step
               ),
@@ -383,15 +384,19 @@ jobs:
                   and "_write_cycle_report" in provider_cycle_source
                   and "expected_task_id" in provider_cycle_source
               ),
-              "Groq keeps a two-step Free token budget and bounds prompt/source context": (
+              "Groq keeps a bounded two-step preloaded-source Free budget": (
                   '"steps": 2' in groq_agent_step
-                  and '"context": 3700' in groq_agent_step
-                  and '"output": 256' in groq_agent_step
+                  and '"context": 3600' in groq_agent_step
+                  and '"output": 700' in groq_agent_step
                   and '"temperature": 0.2' in groq_agent_step
-                  and "--max-chars 1400 --max-task-context 1000" in groq
-                  and "SOURCE_READ_CHARS" in groq_agent_step
-                  and "estimated_input_tokens > 3650" in groq_agent_step
-                  and "if (( prompt_length > 5500 )); then" in groq_agent_step
+                  and "--max-chars 1000 --max-task-context 800" in groq
+                  and "--max-source-chars 0" in groq
+                  and "SOURCE_CONTEXT_FILE" in groq_agent_step
+                  and "BOONTA_PRELOADED_SOURCE_SHA256" in groq_agent_step
+                  and "estimated_input_tokens > 2750" in groq_agent_step
+                  and "final_input_estimate > 3600" in groq_agent_step
+                  and "combined_tpm_estimate > 8000" in groq_agent_step
+                  and "if (( prompt_length > 10400 )); then" in groq_agent_step
                   and '"timeout", "--signal=TERM", "--kill-after=5s", "90s"' in groq_agent_step
               ),
               "Groq prepares and cleans its task-bound MCP context after preflight": (
