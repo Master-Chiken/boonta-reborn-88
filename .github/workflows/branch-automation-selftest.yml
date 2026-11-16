@@ -388,7 +388,7 @@ jobs:
                   and '"context": 3700' in groq_agent_step
                   and '"output": 256' in groq_agent_step
                   and '"temperature": 0.2' in groq_agent_step
-                  and "--max-chars 3000 --max-task-context 1100" in groq
+                  and "--max-chars 1400 --max-task-context 1000" in groq
                   and "SOURCE_READ_CHARS" in groq_agent_step
                   and "estimated_input_tokens > 3650" in groq_agent_step
                   and "if (( prompt_length > 5500 )); then" in groq_agent_step
