@@ -189,6 +189,16 @@ else:
                 errors.append(f"Gemini autonomous prompt is missing local MCP FQNs: {missing_tools!r}")
         if auto_settings.get("tools", {}).get("core", []) != []:
             errors.append("Gemini autonomous generic local filesystem tools must be disabled")
+        for required_env in (
+            "BOONTA_CONTEXT_PATH",
+            "BOONTA_TARGET_BRANCH",
+            "GITHUB_WORKSPACE",
+            "BOONTA_READ_PATHS",
+            "BOONTA_READ_RANGES",
+            "BOONTA_ALLOWED_PATHS",
+        ):
+            if required_env not in auto_server.get("env", {}):
+                errors.append(f"Gemini autonomous local MCP lacks exact scoped environment input {required_env!r}")
     except (json.JSONDecodeError, IndexError, TypeError) as exc:
         errors.append(f"Gemini autonomous bounded MCP settings are invalid: {exc}")
 
