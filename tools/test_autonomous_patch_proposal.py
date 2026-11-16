@@ -171,6 +171,9 @@ class ProposalValidationTests(PatchFixture):
             "tools/verify_autonomous_patch.py",
             "tools/run_autonomous_patch_tests.py",
             "tools/test_autonomous_delivery_plan.py",
+            "tools/validate_trusted_main_checkout.py",
+            "tools/prepare_autonomous_agent_inputs.py",
+            "tools/execute_autonomous_provider_cycle.py",
         )
         for protected in protected_paths:
             diff = self.diff.replace("gamecube-demo/source/main.c", protected)
