@@ -1401,16 +1401,16 @@ for required in (
     "Only permitted repository tools",
     "mcp_boonta_read_approved_sources",
     "mcp_boonta_submit_patch_proposal",
-    "Call mcp_boonta_read_approved_sources exactly once",
-    "Call mcp_boonta_submit_patch_proposal exactly once",
+    "Call `mcp_boonta_read_approved_sources` exactly once",
+    "Call `mcp_boonta_submit_patch_proposal` exactly once",
     "Never create branches, commits, refs, pull requests, comments, merges or auto-merges",
-    "Post-merge reconciliation is workflow-owned from trusted main",
+    "Post-merge reconciliation is workflow-owned from trusted `main`",
 ):
     if required not in autonomous_prompt:
         errors.append(f"Autonomous Gemini prompt is missing its proposal-only contract: {required!r}")
 
 gemini_model_start = execute.find("      - name: Run Gemini CLI through bounded local proposal MCP")
-gemini_model_end = execute.find("\\n      - name: Verify, test and publish the Gemini patch proposal", gemini_model_start)
+gemini_model_end = execute.find("\n      - name: Verify, test and publish the Gemini patch proposal", gemini_model_start)
 gemini_model_step = execute[gemini_model_start:gemini_model_end] if gemini_model_start >= 0 and gemini_model_end > gemini_model_start else ""
 gemini_writer_start = execute.find("      - name: Verify, test and publish the Gemini patch proposal")
 gemini_writer_step = execute[gemini_writer_start:] if gemini_writer_start >= 0 else ""
