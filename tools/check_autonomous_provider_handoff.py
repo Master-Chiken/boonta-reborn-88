@@ -146,7 +146,7 @@ for label, workflow, refresh_command, builder_command in provider_context_refres
 
 # Gemini exposes the older GitHub MCP only for interactive, non-autonomous requests.
 # Autonomous runs use the same bounded proposal-only local MCP as OpenRouter/Groq.
-gemini_settings_marker = "          settings: |-\\n"
+gemini_settings_marker = "          settings: |-\n"
 gemini_settings_end = "          prompt: '/gemini-plan-execute'"
 if gemini_settings_marker not in gemini or gemini_settings_end not in gemini:
     errors.append("Gemini interactive settings block is missing; cannot verify its bounded non-autonomous tools")
