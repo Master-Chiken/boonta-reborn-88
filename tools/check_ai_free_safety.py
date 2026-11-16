@@ -610,28 +610,31 @@ for label, workflow, marker in (
     if workflow.count(trusted_lookup) != 2:
         errors.append(f"{label} cooldown check and marker update must trust exactly bot-authored markers")
 for required in (
-    '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"',
-    "No PR/branch enumeration or media/binary retrieval.",
-    "Newly retrieved text: at most 700 tokens.",
-    "Stop on context, TPM, rate-limit, quota or authentication errors; never retry the same request",
+    "Only two local tools are available",
+    "Call boonta_read_approved_sources exactly once",
+    "boonta_submit_patch_proposal exactly once",
+    "No GitHub MCP, no remote branch/PR APIs",
+    "No paid route, billing, credits",
 ):
-    if required not in openrouter_fallback:
-        errors.append(f"OpenRouter prompt must enforce bounded text-only context: {required!r}")
+    if required not in openrouter_agent_prompt:
+        errors.append(f"OpenRouter prompt must enforce bounded proposal-only execution: {required!r}")
 
-openrouter_normal_tools = {"get_file_contents", "create_branch", "push_files", "create_pull_request"}
-openrouter_resume_tools = {"get_file_contents", "push_files"}
-openrouter_modes = {frozenset(value.split(",")) for value in re.findall(r'(?m)^\s*export GITHUB_TOOLS="([^"]+)"$', openrouter_fallback)}
-if openrouter_modes != {frozenset(openrouter_normal_tools), frozenset(openrouter_resume_tools)}:
-    errors.append("OpenRouter must expose four normal-delivery tools and only targeted read plus push in resume mode")
-if '"GITHUB_TOOLS": "{env:GITHUB_TOOLS}"' not in openrouter_fallback:
-    errors.append("OpenRouter MCP container must inherit the explicitly selected mode-specific tool allow-list")
-forbidden_github_tools = {
-    "merge_pull_request", "delete_branch", "delete_file", "create_or_update_file",
-    "update_pull_request", "issue_read", "list_issues", "list_pull_requests",
-    "list_branches", "list_commits", "repository_settings", "repository_ruleset",
-}
-if forbidden_github_tools.intersection(openrouter_normal_tools.union(openrouter_resume_tools)):
-    errors.append("OpenRouter GitHub MCP mode lists must not expose merge, deletion, settings or unrelated enumeration tools")
+# Neither provider may expose a GitHub MCP server, token or direct writer to
+# the model process; GitHub access is reserved for the later workflow step.
+for label, workflow, provider_name in (
+    ("OpenRouter", openrouter_fallback, "OpenRouter"),
+    ("Groq", groq_fallback, "Groq"),
+):
+    model_start = workflow.find("      - name: Run OpenCode through the " + provider_name + " Free route")
+    model_end = workflow.find("\n      - name:", model_start + 1)
+    model_step = workflow[model_start:model_end]
+    if model_start < 0 or model_end < 0:
+        errors.append(f"{label} provider model step is missing")
+    for forbidden in ("GITHUB_TOKEN:", "GITHUB_PERSONAL_ACCESS_TOKEN", "GITHUB_TOOLS", "github-mcp-server"):
+        if forbidden in model_step:
+            errors.append(f"{label} model step exposes forbidden GitHub writer surface {forbidden!r}")
+    if "node tools/bounded_patch_proposal_mcp.js" not in model_step:
+        errors.append(f"{label} model step must use only the bounded local proposal MCP server")
 fallback_call_position = autonomous.find("openrouter-fallback:")
 if fallback_call_position < 0:
     errors.append("Boonta Autonomous Loop is missing the OpenRouter fallback job")
