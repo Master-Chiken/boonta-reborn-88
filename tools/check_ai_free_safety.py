@@ -1071,36 +1071,33 @@ if "RE-002 is active only as read-only comparative evidence" not in read("docs/P
 # Every autonomous provider must consume the one exact task selected by the global preflight.
 dynamic_task_prompts = (
     ("Gemini", autonomous_prompt),
-    ("OpenRouter", openrouter_fallback),
-    ("Groq", groq_fallback),
+    ("OpenRouter", openrouter_agent_prompt),
+    ("Groq", groq_agent_prompt),
 )
 for label, prompt in dynamic_task_prompts:
-    required_task_safeguards = (
-        (
-            "preloaded schema-v2 context is authoritative",
-            "Global preflight is authoritative",
-            "Do not search PR history",
-            "€0 only",
+    if label == "Gemini":
+        required_task_safeguards = (
+            "AUTHORITATIVE SELECTED TASK",
+            "task-ledger-summary.json",
+            "acceptance_criteria_excerpt",
+            "Do not substitute another task",
+            "€0",
         )
-        if label == "Groq"
-        else (
-            (
-                "AUTHORITATIVE SELECTED TASK",
-                "Use exactly this task from docs/automation/task-ledger-summary.json",
-                "acceptance_criteria_excerpt",
-                "Do not substitute another task",
-                "€0",
-            )
-            if label == "OpenRouter"
-            else (
-                "AUTHORITATIVE SELECTED TASK",
-                "task-ledger-summary.json",
-                "acceptance_criteria_excerpt",
-                "Do not substitute another task",
-                "€0",
-            )
+    elif label == "OpenRouter":
+        required_task_safeguards = (
+            "exact task and target branch in the preloaded context",
+            "trusted exact-path grants",
+            "No paid route",
+            "boonta_read_approved_sources",
+            "boonta_submit_patch_proposal",
         )
-    )
+    else:
+        required_task_safeguards = (
+            "selected task from the trusted context",
+            "exact owner-reviewed write paths",
+            "Do not ask the owner for code or clarification",
+            "gamecube.rival_host_tests",
+        )
     for required in required_task_safeguards:
         if required not in prompt:
             errors.append(f"{label} autonomous prompt is missing dynamic selected-task safeguard {required!r}")
