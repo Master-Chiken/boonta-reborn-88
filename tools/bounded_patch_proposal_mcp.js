@@ -65,11 +65,53 @@ function ensureNoSymlinkParents(root, target) {
 function makeState() {
   const taskId = process.env.BOONTA_TASK_ID || '';
   const baseSha = process.env.BOONTA_BASE_SHA || '';
+  const targetBranch = process.env.BOONTA_TARGET_BRANCH || '';
   const sourceRootRaw = process.env.BOONTA_TARGET_ROOT || '';
   const proposalPathRaw = process.env.BOONTA_PROPOSAL_PATH || '';
+  const workspaceRaw = process.env.GITHUB_WORKSPACE || '';
+  const contextPathRaw = process.env.BOONTA_CONTEXT_PATH || '';
   if (!TASK_ID_RE.test(taskId)) reject('BOONTA_TASK_ID is missing or invalid');
   if (!SHA_RE.test(baseSha)) reject('BOONTA_BASE_SHA is missing or invalid');
-  if (!path.isAbsolute(sourceRootRaw) || !path.isAbsolute(proposalPathRaw)) reject('source root and proposal path must be absolute');
+  if (!['main', 'dev'].includes(targetBranch)) reject('BOONTA_TARGET_BRANCH must be main or dev');
+  if (!path.isAbsolute(sourceRootRaw) || !path.isAbsolute(proposalPathRaw) ||
+      !path.isAbsolute(workspaceRaw) || !path.isAbsolute(contextPathRaw)) {
+    reject('source root, workspace, context and proposal paths must be absolute');
+  }
+  const workspaceRoot = fs.realpathSync(workspaceRaw);
+  const expectedContextPath = path.join(workspaceRoot, '.gemini', 'context.json');
+  if (path.resolve(contextPathRaw) !== expectedContextPath) {
+    reject('BOONTA_CONTEXT_PATH must be exactly GITHUB_WORKSPACE/.gemini/context.json');
+  }
+  ensureNoSymlinkParents(workspaceRoot, expectedContextPath);
+  const contextStat = fs.lstatSync(expectedContextPath);
+  if (!contextStat.isFile() || contextStat.isSymbolicLink() || contextStat.size > 16 * 1024) {
+    reject('bounded task context must be a regular non-symlink file no larger than 16 KiB');
+  }
+  let rawContext;
+  try {
+    rawContext = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(fs.readFileSync(expectedContextPath)));
+  } catch {
+    reject('bounded task context is not valid UTF-8 JSON');
+  }
+  if (!rawContext || typeof rawContext !== 'object' || Array.isArray(rawContext)) {
+    reject('bounded task context must be a JSON object');
+  }
+  const taskContext = {
+    task_id: rawContext.task_id,
+    task_title: rawContext.task_title,
+    task_description: rawContext.task_description,
+    task_target_branch: rawContext.task_target_branch,
+    verified_context: rawContext.verified_context
+  };
+  if (taskContext.task_id !== taskId || taskContext.task_target_branch !== targetBranch ||
+      typeof taskContext.task_title !== 'string' || !taskContext.task_title.trim() ||
+      taskContext.task_title.length > 240 ||
+      typeof taskContext.task_description !== 'string' || !taskContext.task_description.trim() ||
+      taskContext.task_description.length > 6000 ||
+      typeof taskContext.verified_context !== 'string' || !taskContext.verified_context.trim() ||
+      Buffer.byteLength(taskContext.verified_context, 'utf8') > 12 * 1024) {
+    reject('bounded task context does not match the trusted task ID/target branch or exceeds its size limits');
+  }
   const sourceRoot = fs.realpathSync(sourceRootRaw);
   const rootStat = fs.lstatSync(sourceRoot);
   if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) reject('target source root must be a real directory');
@@ -132,6 +174,8 @@ function makeState() {
   return {
     taskId,
     baseSha,
+    targetBranch,
+    taskContext,
     sourceRoot,
     proposalPath: proposalPathRaw,
     readPaths: new Set(readPaths),
@@ -242,7 +286,9 @@ function readApprovedSources(state, args) {
   state.totalLinesRead = totalLines;
   return {
     task_id: state.taskId,
+    target_branch: state.targetBranch,
     base_sha: state.baseSha,
+    task_context: state.taskContext,
     files,
     aggregate_bytes_read: totalBytes,
     aggregate_lines_read: totalLines
