@@ -220,6 +220,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
         self.assertEqual(first["commit_subject"], f"chore(automation): deliver {TASK_ID}")
         self.assertEqual(first["pr_title"], f"Boonta automation: {TASK_ID}")
         self.assertIn(f"BOONTA_TASK_ID: {TASK_ID}", first["pr_body"])
+        self.assertIn("BOONTA_TASK_TARGET_BRANCH: main", first["pr_body"])
         self.assertEqual(first["changed_paths"], [SOURCE_PATH])
         self.assertEqual(first["executed_test_ids"], list(MANDATORY_TEST_IDS))
         self.assertFalse(first["remote_write_performed"])
@@ -255,7 +256,7 @@ class DeterministicDeliveryPlanTests(DeliveryPlanFixture):
             write_plan["create_ref"]["sha"],
             "COMMIT_SHA_FROM_CREATE_COMMIT",
         )
-        self.assertTrue(write_plan["create_pull_request"]["draft"])
+        self.assertFalse(write_plan["create_pull_request"]["draft"])
         self.assertFalse(write_plan["auto_merge"])
         self.assert_source_clean()
 
