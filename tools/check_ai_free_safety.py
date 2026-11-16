@@ -894,11 +894,11 @@ if "inputs.autonomous_mode != true" not in execute or "prompt: '/gemini-autonomo
     errors.append("Reusable writer must route autonomous mode only through the separate bounded proposal action")
 for required_phrase in (
     "without asking for another",
-    "one bounded task",
+    "one bounded preflight-selected Boonta Reborn task",
     "Treat #279 as a separate read-only PC/N64/Dreamcast comparative evidence queue",
     "Never merge or write protected branches",
     "Budget €0",
-    "Never merge or write protected branches",
+    "The workflow-owned publisher never enables auto-merge",
 ):
     if required_phrase not in autonomous_prompt:
         errors.append(f"Autonomous prompt is missing required safety/continuity rule: {required_phrase!r}")
@@ -1441,7 +1441,7 @@ for guarded_step in (
     "name: 'Mint identity token'\n        id: 'mint_identity_token'\n        if: |-",
     "name: 'Checkout Code'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
     "name: 'Prepare prompt context'\n        if: steps.free_tier_guard.outputs.allowed == 'true'",
-    "name: Run Gemini CLI through bounded local proposal MCP\n        if: inputs.autonomous_mode == true",
+    "name: Run Gemini CLI through bounded local proposal MCP\n        if: inputs.autonomous_mode == true && inputs.resume_mode != true",
 ):
     if guarded_step not in execute:
         errors.append(f"Reusable writer is missing a fail-closed condition on step: {guarded_step.splitlines()[0]!r}")
