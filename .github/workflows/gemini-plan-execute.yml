@@ -743,7 +743,7 @@ jobs:
                 }
               },
               "tools": {
-                "core": ["read_file"]
+                "core": []
               }
             }
           prompt: '/gemini-plan-execute'
@@ -755,8 +755,10 @@ jobs:
         env:
           GEMINI_CLI_TRUST_WORKSPACE: 'true'
           BOONTA_TASK_ID: ${{ steps.bounded_inputs.outputs.task_id }}
+          BOONTA_TARGET_BRANCH: ${{ steps.bounded_inputs.outputs.target_branch }}
           BOONTA_BASE_SHA: ${{ steps.bounded_inputs.outputs.base_sha }}
           BOONTA_TARGET_ROOT: ${{ steps.bounded_inputs.outputs.source_root }}
+          BOONTA_CONTEXT_PATH: ${{ github.workspace }}/.gemini/context.json
           BOONTA_PROPOSAL_PATH: ${{ steps.bounded_inputs.outputs.proposal_path }}
           BOONTA_READ_PATHS: ${{ steps.bounded_inputs.outputs.read_paths }}
           BOONTA_READ_RANGES: ${{ steps.bounded_inputs.outputs.read_ranges }}
@@ -790,8 +792,11 @@ jobs:
                   ],
                   "env": {
                     "BOONTA_TASK_ID": "${BOONTA_TASK_ID}",
+                    "BOONTA_TARGET_BRANCH": "${BOONTA_TARGET_BRANCH}",
                     "BOONTA_BASE_SHA": "${BOONTA_BASE_SHA}",
                     "BOONTA_TARGET_ROOT": "${BOONTA_TARGET_ROOT}",
+                    "BOONTA_CONTEXT_PATH": "${BOONTA_CONTEXT_PATH}",
+                    "GITHUB_WORKSPACE": "${GITHUB_WORKSPACE}",
                     "BOONTA_PROPOSAL_PATH": "${BOONTA_PROPOSAL_PATH}",
                     "RUNNER_TEMP": "${RUNNER_TEMP}",
                     "BOONTA_READ_PATHS": "${BOONTA_READ_PATHS}",
