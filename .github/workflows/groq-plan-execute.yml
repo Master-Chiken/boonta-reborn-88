@@ -738,6 +738,8 @@ jobs:
           - Preserve clean-room provenance. Never upload commercial ROMs, disc images, binaries or extracted game assets.
           - No agents, subagents, repo-wide discovery, PR searches, directory listings or network research.
           - Do not ask the owner for code or clarification. Implement a bounded patch or stop with one precise blocker.
+          - Global preflight is authoritative. Do not search PR history or treat older merged automation PRs as current task evidence; the selected task's pr_url and head_sha are checked before inference.
+          - For gameplay tasks, reuse the merged PR #327 implementation at 69deb6778f9383887118803428e7014686865a83. PRs #317/#318/#319 are superseded. Do not reopen, replay or recreate that chain.
 
           APPROVED TOOLS
           - Only boonta_read_approved_sources and boonta_submit_patch_proposal are available.
