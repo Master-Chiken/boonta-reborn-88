@@ -574,20 +574,24 @@ if "if (taskReady && taskContext.length > 2500)" not in loop:
 if "task context exceeds the 2,500-character provider handoff budget" not in task_preflight_tests:
     errors.append("Mocked task preflight must test the 2,500-character context ceiling")
 
-# Keep all agents bounded to compact text-only context and the common policy.
-for label, content, retrieval_budget in (
-    ("Gemini", gemini_prompt, "1,500 tokens"),
-    ("OpenRouter", openrouter, "at most 700 tokens"),
-    ("Groq", groq, "1,800 characters"),
+# Provider context is preloaded by the workflow. Gemini retains its own
+# retrieval cap; OpenRouter/Groq source reads are bounded by the local MCP.
+for required in (
+    "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
+    "docs/automation/task-ledger-summary.json",
+    "1,500 tokens",
+    "docs/REVERSE_ENGINEERING_FIRST.md",
 ):
-    for required in (
-        "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
-        "docs/automation/task-ledger-summary.json",
-        retrieval_budget,
-        "docs/REVERSE_ENGINEERING_FIRST.md",
-    ):
-        if required not in content:
-            errors.append(f"{label} prompt must reference {required!r}")
+    if required not in gemini_prompt:
+        errors.append(f"Gemini prompt must reference {required!r}")
+bounded_mcp_source = read("tools/bounded_patch_proposal_mcp.js")
+for required in ("MAX_FILE_BYTES", "MAX_TOTAL_BYTES", "MAX_TOTAL_LINES", "MAX_DIFF_BYTES", "MAX_PROPOSAL_BYTES"):
+    if required not in bounded_mcp_source:
+        errors.append(f"Bounded provider MCP must enforce {required!r}")
+for label, workflow in (("OpenRouter", openrouter), ("Groq", groq)):
+    for required in ("BOONTA_READ_RANGES", "BOONTA_ALLOWED_PATHS", "tools/bounded_patch_proposal_mcp.js"):
+        if required not in workflow:
+            errors.append(f"{label} workflow must pass the bounded task source/write contract: {required!r}")
 
 # Parse the actual OpenCode configuration rather than relying on comment text.
 def load_opencode_config(label: str, source: str) -> dict:
@@ -619,11 +623,23 @@ for label, config in (("OpenRouter", openrouter_config), ("Groq", groq_config)):
     task_permissions = config.get("agent", {}).get("build", {}).get("permission", {}).get("task", {})
     if task_permissions.get("*") != "deny":
         errors.append(f"{label} build agent must deny Task subagents to preserve bounded direct MCP execution")
-for label, content in (("OpenRouter", openrouter), ("Groq", groq)):
-    if "BOONTA_CYCLE_TASK_ID: " not in content or "TASK_ID}" not in content:
-        errors.append(f"{label} must inject the literal preflight-reserved task ID into the final machine report")
-    if "BOONTA_CYCLE_EVIDENCE_BASE: " not in content or "TASK_TARGET_BRANCH}" not in content:
-        errors.append(f"{label} must inject the literal reserved target branch into the final machine report")
+# Exact task identity and target markers are produced by workflow-owned code,
+# not by model-authored report text.
+provider_cycle_source = read("tools/execute_autonomous_provider_cycle.py")
+for required in (
+    'f"BOONTA_CYCLE_TASK_ID: {task_id}"',
+    'f"BOONTA_CYCLE_EVIDENCE_BASE: {target_branch}"',
+    "def _write_cycle_report",
+):
+    if required not in provider_cycle_source:
+        errors.append(f"Workflow-owned cycle report must include exact task evidence: {required!r}")
+delivery_plan_source = read("tools/build_autonomous_delivery_plan.py")
+for required in (
+    'f"BOONTA_TASK_ID: {expected_task_id}"',
+    'f"BOONTA_TASK_TARGET_BRANCH: {target_branch}"',
+):
+    if required not in delivery_plan_source:
+        errors.append(f"Workflow-owned PR body must contain its exact task marker: {required!r}")
 
 # OpenRouter must reserve enough daily Free requests for its complete bounded cycle.
 openrouter_steps = openrouter_config.get("agent", {}).get("build", {}).get("steps")
