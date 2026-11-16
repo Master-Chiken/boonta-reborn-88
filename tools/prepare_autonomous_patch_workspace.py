@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Prepare a disposable, path-scoped workspace for one autonomous patch.
+"""Prepare an exact-path model workspace and a separate trusted Git baseline.
 
-The provider receives only this scratch directory, never the repository checkout
-or a GitHub credential. The model's editable paths must be a subset of the
-owner-approved exact write allow-list; all other copied files are read-only.
+The provider receives only the model workspace: it contains no .git metadata,
+credentials or files outside the task's read-path list. Approved write files
+are writable; all other files and all directories are read-only. The matching
+Git baseline is stored elsewhere for trusted post-inference patch extraction.
 """
 from __future__ import annotations
 
@@ -63,10 +64,41 @@ def _git(root: Path, args: list[str]) -> str:
             timeout=20,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise WorkspaceError("Git verification or scratch repository setup failed") from exc
+        raise WorkspaceError("Git verification or trusted baseline setup failed") from exc
     if result.returncode != 0:
         raise WorkspaceError("Git command failed: " + " ".join(args[:2]))
     return result.stdout.strip()
+
+
+def _remove_tree(path: Path) -> None:
+    """Remove a partially-created tree even after its directories were locked."""
+    if not path.exists() or path.is_symlink():
+        return
+    for current, dirs, files in os.walk(path, topdown=False, followlinks=False):
+        current_path = Path(current)
+        for filename in files:
+            item = current_path / filename
+            if item.is_symlink():
+                item.unlink(missing_ok=True)
+            else:
+                try:
+                    item.chmod(0o600)
+                except OSError:
+                    pass
+        for dirname in dirs:
+            item = current_path / dirname
+            if item.is_symlink():
+                item.unlink(missing_ok=True)
+            else:
+                try:
+                    item.chmod(0o700)
+                except OSError:
+                    pass
+        try:
+            current_path.chmod(0o700)
+        except OSError:
+            pass
+    shutil.rmtree(path, ignore_errors=True)
 
 
 def _validate_checkout(root: Path, expected_sha: str, expected_branch: str) -> Path:
@@ -89,8 +121,7 @@ def _validate_checkout(root: Path, expected_sha: str, expected_branch: str) -> P
     branch = _git(root, ["branch", "--show-current"])
     if branch and branch != expected_branch:
         raise WorkspaceError("Checkout branch differs from the trusted task target branch")
-    status = _git(root, ["status", "--porcelain=v1", "--untracked-files=all"])
-    if status:
+    if _git(root, ["status", "--porcelain=v1", "--untracked-files=all"]):
         raise WorkspaceError("Checkout must be clean before scratch workspace preparation")
     return root
 
@@ -140,7 +171,49 @@ def _tracked_regular_file(root: Path, relative: str) -> tuple[Path, str]:
     return resolved, mode
 
 
-def _load_selected_task(policy_root: Path, task_id: str) -> dict[str, Any]:
+def _outside_roots(path: Path, roots: tuple[Path, ...]) -> None:
+    for root in roots:
+        try:
+            path.relative_to(root)
+        except ValueError:
+            continue
+        raise WorkspaceError("Scratch directories must be outside both trusted checkouts")
+
+
+def prepare_workspace(
+    *,
+    policy_root: Path,
+    policy_base_sha: str,
+    source_root: Path,
+    target_base_sha: str,
+    task_id: str,
+    target_branch: str,
+    workspace: Path,
+    baseline_root: Path,
+) -> dict[str, Any]:
+    """Validate policy/source checkouts; build a locked model view and private Git baseline."""
+    if not isinstance(task_id, str) or not TASK_ID_RE.fullmatch(task_id):
+        raise WorkspaceError("Selected task ID is invalid")
+    if target_branch not in {"main", "dev"}:
+        raise WorkspaceError("Selected task target branch must be main or dev")
+
+    policy_root = _validate_checkout(policy_root, policy_base_sha, "main")
+    source_root = _validate_checkout(source_root, target_base_sha, target_branch)
+
+    try:
+        owner_scope = build_allowlist(
+            policy_root,
+            expected_base_sha=policy_base_sha,
+            requested_task_id=task_id,
+        )
+    except AllowlistError as exc:
+        raise WorkspaceError(f"Owner-reviewed exact write scope cannot be validated: {exc}") from exc
+    if owner_scope.get("status") != "READY":
+        raise WorkspaceError(
+            "Owner-reviewed exact write scope is not READY: "
+            + str(owner_scope.get("status", "UNKNOWN"))
+        )
+
     summary_path = policy_root / "docs/automation/task-ledger-summary.json"
     if summary_path.is_symlink() or not summary_path.is_file():
         raise WorkspaceError("Canonical compact task summary is missing or unsafe")
@@ -161,46 +234,7 @@ def _load_selected_task(policy_root: Path, task_id: str) -> dict[str, Any]:
     ]
     if len(matches) != 1:
         raise WorkspaceError("Selected task is missing or duplicated in the canonical compact summary")
-    return matches[0]
-
-
-def prepare_workspace(
-    *,
-    policy_root: Path,
-    policy_base_sha: str,
-    source_root: Path,
-    target_base_sha: str,
-    task_id: str,
-    target_branch: str,
-    workspace: Path,
-) -> dict[str, Any]:
-    """Validate policy and source checkouts, then copy only exact read paths."""
-    if not isinstance(task_id, str) or not TASK_ID_RE.fullmatch(task_id):
-        raise WorkspaceError("Selected task ID is invalid")
-    if target_branch not in {"main", "dev"}:
-        raise WorkspaceError("Selected task target branch must be main or dev")
-
-    policy_root = _validate_checkout(policy_root, policy_base_sha, "main")
-    source_root = _validate_checkout(source_root, target_base_sha, target_branch)
-    if policy_root == source_root:
-        # Main tasks legitimately use the same checkout for policy and source.
-        pass
-
-    try:
-        owner_scope = build_allowlist(
-            policy_root,
-            expected_base_sha=policy_base_sha,
-            requested_task_id=task_id,
-        )
-    except AllowlistError as exc:
-        raise WorkspaceError(f"Owner-reviewed exact write scope cannot be validated: {exc}") from exc
-    if owner_scope.get("status") != "READY":
-        raise WorkspaceError(
-            "Owner-reviewed exact write scope is not READY: "
-            + str(owner_scope.get("status", "UNKNOWN"))
-        )
-
-    task = _load_selected_task(policy_root, task_id)
+    task = matches[0]
     if task.get("target_branch") != target_branch:
         raise WorkspaceError("Selected target branch differs from the canonical task summary")
     read_values = task.get("read_paths")
@@ -225,20 +259,33 @@ def prepare_workspace(
             "missing: " + ", ".join(missing)
         )
 
-    destination = workspace.expanduser()
-    if destination.exists() or destination.is_symlink():
-        raise WorkspaceError("Scratch workspace path must not already exist")
-    destination_parent = destination.parent.resolve(strict=True)
-    destination = destination_parent / destination.name
-    for root in (policy_root, source_root):
-        try:
-            destination.relative_to(root)
-        except ValueError:
-            pass
-        else:
-            raise WorkspaceError("Scratch workspace must be outside both trusted checkouts")
-    if destination == Path(destination.anchor):
-        raise WorkspaceError("Scratch workspace path is invalid")
+    workspace_path = workspace.expanduser()
+    baseline_path = baseline_root.expanduser()
+    if workspace_path.exists() or workspace_path.is_symlink():
+        raise WorkspaceError("Model workspace path must not already exist")
+    if baseline_path.exists() or baseline_path.is_symlink():
+        raise WorkspaceError("Trusted baseline path must not already exist")
+    if workspace_path.absolute() == baseline_path.absolute():
+        raise WorkspaceError("Model workspace and trusted baseline must be separate directories")
+    try:
+        workspace_parent = workspace_path.parent.resolve(strict=True)
+        baseline_parent = baseline_path.parent.resolve(strict=True)
+    except OSError as exc:
+        raise WorkspaceError("Scratch directory parent must already exist") from exc
+    workspace_path = workspace_parent / workspace_path.name
+    baseline_path = baseline_parent / baseline_path.name
+    _outside_roots(workspace_path, (policy_root, source_root))
+    _outside_roots(baseline_path, (policy_root, source_root))
+    try:
+        workspace_path.relative_to(baseline_path)
+        raise WorkspaceError("Model workspace must not be inside the trusted baseline")
+    except ValueError:
+        pass
+    try:
+        baseline_path.relative_to(workspace_path)
+        raise WorkspaceError("Trusted baseline must not be inside the model workspace")
+    except ValueError:
+        pass
 
     selected_files: list[tuple[str, bytes, str]] = []
     total_bytes = 0
@@ -256,34 +303,69 @@ def prepare_workspace(
             raise WorkspaceError("Task read sources exceed the 256 KiB aggregate budget")
         selected_files.append((relative, payload, mode))
 
-    created = False
+    workspace_created = False
+    baseline_created = False
     try:
-        destination.mkdir(mode=0o700)
-        created = True
+        baseline_path.mkdir(mode=0o700)
+        baseline_created = True
+        workspace_path.mkdir(mode=0o700)
+        workspace_created = True
+
+        # The trusted baseline is the only directory containing Git metadata.
         for relative, payload, mode in selected_files:
-            target = destination / relative
+            target = baseline_path / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            if target.is_symlink():
-                raise WorkspaceError(f"Scratch target unexpectedly became a symlink: {relative}")
             target.write_bytes(payload)
             target.chmod(0o755 if mode == "100755" else 0o644)
 
-        _git(destination, ["init", "-q", "-b", "agent-work"])
-        _git(destination, ["config", "user.name", "Boonta Autonomous Workspace"])
-        _git(destination, ["config", "user.email", "boonta-workspace@example.invalid"])
-        _git(destination, ["config", "core.autocrlf", "false"])
-        _git(destination, ["add", "--", *read_paths])
-        _git(destination, ["commit", "-q", "-m", "Create isolated task source workspace"])
-        scratch_sha = _git(destination, ["rev-parse", "HEAD"])
-        tracked = _git(destination, ["ls-files", "-z"]).split("\x00")
-        tracked = sorted(item for item in tracked if item)
-        if tracked != sorted(read_paths):
-            raise WorkspaceError("Scratch repository contains files outside the exact read-path list")
-        if _git(destination, ["status", "--porcelain=v1", "--untracked-files=all"]):
-            raise WorkspaceError("Scratch repository is not clean after its baseline commit")
+        _git(baseline_path, ["init", "-q", "-b", "agent-work"])
+        _git(baseline_path, ["config", "user.name", "Boonta Trusted Patch Baseline"])
+        _git(baseline_path, ["config", "user.email", "boonta-baseline@example.invalid"])
+        _git(baseline_path, ["config", "core.autocrlf", "false"])
+        _git(baseline_path, ["add", "--", *read_paths])
+        _git(baseline_path, ["commit", "-q", "-m", "Create trusted task patch baseline"])
+        scratch_sha = _git(baseline_path, ["rev-parse", "HEAD"])
+        if _git(baseline_path, ["status", "--porcelain=v1", "--untracked-files=all"]):
+            raise WorkspaceError("Trusted baseline is not clean after its initial commit")
+
+        # The model-facing directory contains only exact task source files and
+        # no .git directory. Write paths are writable; context-only paths are
+        # read-only. All directories are non-writable so the model cannot add
+        # new files or directories through file tools.
+        for relative, payload, _mode in selected_files:
+            target = workspace_path / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(payload)
+            target.chmod(0o644 if relative in allowed_paths else 0o444)
+
+        directories = [
+            Path(current)
+            for current, dirs, _files in os.walk(workspace_path, topdown=True, followlinks=False)
+            for _ in [0]
+        ]
+        for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
+            directory.chmod(0o555)
+        workspace_path.chmod(0o555)
+
+        actual_files: list[str] = []
+        for current, dirs, files in os.walk(workspace_path, followlinks=False):
+            for name in dirs:
+                if (Path(current) / name).is_symlink():
+                    raise WorkspaceError("Model workspace contains a symlink directory")
+            for name in files:
+                candidate = Path(current) / name
+                if candidate.is_symlink() or not candidate.is_file():
+                    raise WorkspaceError("Model workspace contains a non-regular file")
+                actual_files.append(candidate.relative_to(workspace_path).as_posix())
+        if sorted(actual_files) != sorted(read_paths):
+            raise WorkspaceError("Model workspace inventory differs from the exact read-path allow-list")
+        if (workspace_path / ".git").exists():
+            raise WorkspaceError("Model workspace must not contain Git metadata")
     except Exception:
-        if created and destination.exists() and not destination.is_symlink():
-            shutil.rmtree(destination, ignore_errors=True)
+        if workspace_created:
+            _remove_tree(workspace_path)
+        if baseline_created:
+            _remove_tree(baseline_path)
         raise
 
     return {
@@ -293,13 +375,20 @@ def prepare_workspace(
         "policy_base_sha": policy_base_sha,
         "target_base_sha": target_base_sha,
         "scratch_base_sha": scratch_sha,
-        "workspace": str(destination),
+        "workspace": str(workspace_path),
+        "baseline_root": str(baseline_path),
         "read_paths": read_paths,
         "allowed_write_paths": allowed_paths,
         "source_files": [
-            {"path": relative, "bytes": len(payload), "mode": mode}
+            {
+                "path": relative,
+                "bytes": len(payload),
+                "mode": mode,
+                "model_writable": relative in allowed_paths,
+            }
             for relative, payload, mode in selected_files
         ],
+        "git_metadata_exposed_to_model": False,
         "github_credentials_copied": False,
         "repository_metadata_copied": False,
     }
@@ -314,6 +403,7 @@ def main() -> int:
     parser.add_argument("--task-id", required=True)
     parser.add_argument("--target-branch", required=True, choices=("main", "dev"))
     parser.add_argument("--workspace", type=Path, required=True)
+    parser.add_argument("--baseline-root", type=Path, required=True)
     args = parser.parse_args()
 
     try:
@@ -325,6 +415,7 @@ def main() -> int:
             task_id=args.task_id,
             target_branch=args.target_branch,
             workspace=args.workspace,
+            baseline_root=args.baseline_root,
         )
     except (WorkspaceError, AllowlistError) as exc:
         print(json.dumps({"status": "REJECTED", "reason": str(exc)}, sort_keys=True))

@@ -123,7 +123,7 @@ class WorkspaceFixture(unittest.TestCase):
         git(self.policy_root, "commit", "-qm", "update owner scope fixture")
         self.policy_sha = git(self.policy_root, "rev-parse", "HEAD")
 
-    def prepare(self, workspace: Path, **overrides):
+    def prepare(self, workspace: Path, baseline: Path, **overrides):
         return prepare_workspace(
             policy_root=overrides.get("policy_root", self.policy_root),
             policy_base_sha=overrides.get("policy_base_sha", self.policy_sha),
@@ -132,13 +132,15 @@ class WorkspaceFixture(unittest.TestCase):
             task_id=overrides.get("task_id", TASK_ID),
             target_branch=overrides.get("target_branch", "dev"),
             workspace=workspace,
+            baseline_root=baseline,
         )
 
 
 class PrepareAutonomousWorkspaceTests(WorkspaceFixture):
-    def test_copies_only_exact_read_paths_and_preserves_owner_write_scope(self):
+    def test_copies_only_exact_read_paths_and_locks_non_write_files(self):
         workspace = self.parent / "agent-workspace"
-        report = self.prepare(workspace)
+        baseline = self.parent / "trusted-baseline"
+        report = self.prepare(workspace, baseline)
 
         self.assertEqual(report["status"], "READY")
         self.assertEqual(report["task_id"], TASK_ID)
@@ -147,16 +149,41 @@ class PrepareAutonomousWorkspaceTests(WorkspaceFixture):
         self.assertEqual(report["allowed_write_paths"], WRITE_PATHS)
         self.assertFalse(report["github_credentials_copied"])
         self.assertFalse(report["repository_metadata_copied"])
+        self.assertFalse(report["git_metadata_exposed_to_model"])
+        self.assertFalse((workspace / ".git").exists())
         self.assertEqual(
-            git(workspace, "ls-files").splitlines(),
+            sorted(path.relative_to(workspace).as_posix()
+                   for path in workspace.rglob("*") if path.is_file()),
             sorted(READ_PATHS),
         )
         self.assertEqual(
-            git(workspace, "status", "--porcelain=v1", "--untracked-files=all"),
+            git(baseline, "ls-files").splitlines(),
+            sorted(READ_PATHS),
+        )
+        self.assertEqual(
+            git(baseline, "status", "--porcelain=v1", "--untracked-files=all"),
             "",
         )
         for relative, content in self.payloads.items():
-            self.assertEqual((workspace / relative).read_text(encoding="utf-8"), content)
+            target = workspace / relative
+            self.assertEqual(target.read_text(encoding="utf-8"), content)
+            expected_mode = 0o644 if relative in WRITE_PATHS else 0o444
+            self.assertEqual(target.stat().st_mode & 0o777, expected_mode)
+        self.assertEqual(workspace.stat().st_mode & 0o777, 0o555)
+        self.assertEqual((workspace / "tools").stat().st_mode & 0o777, 0o555)
+
+    def test_model_workspace_cannot_create_new_files_or_write_read_only_context(self):
+        workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
+        self.prepare(workspace, baseline)
+        with self.assertRaises(PermissionError):
+            (workspace / "tools/new.py").write_text("new\n", encoding="utf-8")
+        with self.assertRaises(PermissionError):
+            (workspace / "tools/checker.py").write_text("changed\n", encoding="utf-8")
+        (workspace / "tools/summary.py").write_text(
+            "def build_summary(value):\n    return value + 2\n",
+            encoding="utf-8",
+        )
 
     def test_rejects_owner_write_path_missing_from_read_allowlist(self):
         self.write_policy_inputs(
@@ -165,58 +192,74 @@ class PrepareAutonomousWorkspaceTests(WorkspaceFixture):
         )
         self.recommit_policy()
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "must also be in the exact task read allow-list"):
-            self.prepare(workspace)
+            self.prepare(workspace, baseline)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
     def test_rejects_source_checkout_with_stale_head(self):
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "differs from the trusted preflight SHA"):
-            self.prepare(workspace, target_base_sha="0" * 40)
+            self.prepare(workspace, baseline, target_base_sha="0" * 40)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
     def test_rejects_dirty_source_checkout(self):
         (self.source_root / "tools/summary.py").write_text("modified\n", encoding="utf-8")
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "must be clean"):
-            self.prepare(workspace)
+            self.prepare(workspace, baseline)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
     def test_rejects_wrong_target_branch(self):
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "target branch"):
-            self.prepare(workspace, target_branch="main")
+            self.prepare(workspace, baseline, target_branch="main")
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
     def test_rejects_read_path_missing_from_target_checkout(self):
         self.write_policy_inputs(read_paths=READ_PATHS + ["tools/missing.py"])
         self.recommit_policy()
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "not one tracked file"):
-            self.prepare(workspace)
+            self.prepare(workspace, baseline)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
-    def test_rejects_preexisting_workspace(self):
+    def test_rejects_preexisting_workspace_or_baseline(self):
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         workspace.mkdir()
         (workspace / "keep.txt").write_text("keep", encoding="utf-8")
-        with self.assertRaisesRegex(WorkspaceError, "must not already exist"):
-            self.prepare(workspace)
+        with self.assertRaisesRegex(WorkspaceError, "workspace path must not already exist"):
+            self.prepare(workspace, baseline)
         self.assertEqual((workspace / "keep.txt").read_text(encoding="utf-8"), "keep")
+        self.assertFalse(baseline.exists())
 
-    def test_rejects_workspace_nested_inside_source_checkout(self):
+    def test_rejects_scratch_directories_nested_inside_source_checkout(self):
         workspace = self.source_root / ".agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "outside both trusted checkouts"):
-            self.prepare(workspace)
+            self.prepare(workspace, baseline)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
     def test_rejects_nonexistent_or_duplicate_read_path(self):
         self.write_policy_inputs(read_paths=["tools/summary.py", "tools/summary.py"])
         self.recommit_policy()
         workspace = self.parent / "agent-workspace"
+        baseline = self.parent / "trusted-baseline"
         with self.assertRaisesRegex(WorkspaceError, "duplicates"):
-            self.prepare(workspace)
+            self.prepare(workspace, baseline)
         self.assertFalse(workspace.exists())
+        self.assertFalse(baseline.exists())
 
 
 if __name__ == "__main__":
