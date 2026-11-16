@@ -116,6 +116,14 @@ jobs:
         shell: bash
         run: python3 tools/test_verify_autonomous_patch.py
 
+      - name: Validate trusted-main agent input preparation (offline)
+        shell: bash
+        run: python3 tools/test_prepare_autonomous_agent_inputs.py
+
+      - name: Run GameCube/Wii rival progression host regression profile
+        shell: bash
+        run: python3 tools/run_gamecube_rival_host_tests.py
+
       - name: Validate deterministic delivery plans with offline Git fixtures
         shell: bash
         run: python3 tools/test_autonomous_delivery_plan.py
