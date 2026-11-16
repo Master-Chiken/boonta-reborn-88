@@ -846,7 +846,7 @@ if "group: boonta-single-writer" not in execute or "cancel-in-progress: false" n
 # Every autonomous provider must refresh its selected task after acquiring the
 # shared non-cancelling writer slot, before checkout/setup or model invocation.
 fresh_guard_providers = (
-    ("Gemini", execute, "name: 'Mint identity token'", "name: 'Run Gemini CLI'"),
+    ("Gemini", execute, "name: 'Mint identity token'", "name: Run Gemini CLI through bounded local proposal MCP"),
     ("OpenRouter", openrouter_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the OpenRouter Free route"),
     ("Groq", groq_fallback, "name: Mint scoped GitHub App token", "name: Run OpenCode through the Groq Free route"),
 )
@@ -890,8 +890,8 @@ if (
     errors.append("Autonomous writer must require its separate gate, approved caller on protected main, and GitHub App identity")
 if "permission-actions: 'read'" not in execute or '"list_workflow_runs"' not in execute or '"get_job_logs"' not in execute:
     errors.append("Autonomous writer must be able to inspect CI runs and failed-job logs using Actions read permission")
-if "inputs.autonomous_mode && '/gemini-autonomous-loop'" not in execute:
-    errors.append("Reusable writer must select the autonomous prompt only for the explicit autonomous input")
+if "inputs.autonomous_mode != true" not in execute or "prompt: '/gemini-autonomous-loop'" not in execute or "inputs.autonomous_mode == true && inputs.resume_mode != true" not in execute:
+    errors.append("Reusable writer must route autonomous mode only through the separate bounded proposal action")
 for required_phrase in (
     "without asking for another",
     "one bounded task",
@@ -1454,24 +1454,25 @@ if "upload_artifacts: 'false'" not in execute:
 if "gemini_cli_version: '0.67.0'" not in execute:
     errors.append("Autonomous Gemini CLI must remain pinned to the version verified with retry controls")
 settings_marker = "          settings: |-\n"
-settings_end_marker = "          prompt: ${{ inputs.autonomous_mode && '/gemini-autonomous-loop' || '/gemini-plan-execute' }}"
-if settings_marker not in execute or settings_end_marker not in execute:
-    errors.append("Autonomous Gemini workflow is missing its explicit CLI settings block")
+auto_step_start = execute.find("      - name: Run Gemini CLI through bounded local proposal MCP")
+auto_step_end = execute.find("          prompt: '/gemini-autonomous-loop'", auto_step_start)
+if settings_marker not in execute or auto_step_start < 0 or auto_step_end < 0:
+    errors.append("Autonomous Gemini proposal CLI settings block is missing")
 else:
-    settings_text = execute.split(settings_marker, 1)[1].split(settings_end_marker, 1)[0]
+    settings_text = execute[execute.find(settings_marker, auto_step_start):auto_step_end]
+    settings_text = settings_text.split(settings_marker, 1)[1]
     try:
         gemini_settings = json.loads(textwrap.dedent(settings_text))
         general_settings = gemini_settings.get("general", {})
         if general_settings.get("maxAttempts") != 1:
-            errors.append("Gemini CLI must make only one model attempt so terminal 503/TPM failures are not repeated")
+            errors.append("Gemini autonomous CLI must make only one model attempt")
         if general_settings.get("retryFetchErrors") is not False:
-            errors.append("Gemini CLI must disable automatic retries for failed fetch requests")
+            errors.append("Gemini autonomous CLI must disable automatic failed-fetch retries")
         if gemini_settings.get("model", {}).get("maxSessionTurns") != 3:
-            errors.append("Gemini CLI must retain the three-turn TPM safety ceiling")
+            errors.append("Gemini autonomous CLI must retain the three-turn TPM safety ceiling")
     except (json.JSONDecodeError, TypeError) as exc:
-        errors.append(f"Autonomous Gemini CLI settings must be valid JSON: {exc}")
+        errors.append(f"Autonomous Gemini proposal CLI settings must be valid JSON: {exc}")
 
-# Scheduled autonomous runs must not stream verbose model output into public Actions logs.
 if '"maxSessionTurns": 3' not in execute:
     errors.append("Autonomous Gemini writer must cap its session at three turns to bound Free-tier token use")
 for label, content in (("gemini-invoke.yml", invoke), ("gemini-plan-execute.yml", execute)):
@@ -1488,7 +1489,7 @@ if expected_gemini_debug not in execute:
 # Failed autonomous Gemini invocations create one persistent same-day cooldown marker.
 cooldown_check_position = execute.find("id: gemini_cooldown")
 cooldown_guard_position = execute.find("id: free_tier_guard")
-cooldown_model_position = execute.find("name: 'Run Gemini CLI'")
+cooldown_model_position = execute.find("name: Run Gemini CLI through bounded local proposal MCP")
 cooldown_validate_position = execute.find("name: Validate autonomous cycle report contract")
 cooldown_record_position = execute.find("name: Record same-day Gemini cooldown after an autonomous model failure")
 if not (0 <= cooldown_check_position < cooldown_guard_position < cooldown_model_position < cooldown_validate_position < cooldown_record_position):
@@ -1500,7 +1501,7 @@ for required in (
     "GEMINI_COOLDOWN_ACTIVE",
     "GEMINI_COOLDOWN_DATE",
     "steps.gemini_cooldown.outputs.active != 'true'",
-    "if: always() && inputs.autonomous_mode == true && (steps.run_gemini.outcome == 'failure' || steps.validate_report.outcome == 'failure')",
+    "if: always() && inputs.autonomous_mode == true && (steps.run_gemini_autonomous.outcome == 'failure' || steps.execute_provider_cycle.outcome == 'failure' || steps.validate_report.outcome == 'failure')",
     "github.rest.issues.updateComment",
     "github.rest.issues.createComment",
     "continue-on-error: true",
