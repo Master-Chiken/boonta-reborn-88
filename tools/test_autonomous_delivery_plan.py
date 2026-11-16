@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from check_task_ledger_summary import build_summary
 from build_autonomous_delivery_plan import (
     DeliveryPlanError,
     build_delivery_plan,
@@ -186,11 +187,36 @@ class SeparateTrustedPolicyPlanTests(DeliveryPlanFixture):
             check=False,
         )
         self.assertEqual(cloned.returncode, 0, cloned.stderr)
-        trusted_ledger = trusted / "docs/automation/task-ledger-summary.json"
-        ledger = json.loads(trusted_ledger.read_text(encoding="utf-8"))
-        ledger["tasks"][0]["target_branch"] = "dev"
-        trusted_ledger.write_text(json.dumps(ledger), encoding="utf-8")
-        git(trusted, "add", "docs/automation/task-ledger-summary.json")
+        trusted_docs = trusted / "docs/automation"
+        trusted_task = {
+            "task_id": TASK_ID,
+            "title": "Offline delivery fixture",
+            "owner_role_id": "test",
+            "parent_objective_id": "fixture",
+            "depends_on": [],
+            "owner_approved": True,
+            "queue": "#999",
+            "platform_scope": ["GameCube"],
+            "status": "active",
+            "target_branch": "dev",
+            "read_paths": [SOURCE_PATH],
+            "read_ranges": [{"path": SOURCE_PATH, "start_line": 1, "end_line": 1}],
+            "question": "Run isolated delivery",
+            "acceptance_criteria": ["The target patch is verified"],
+            "next_action": "Create the verified task PR",
+        }
+        full_ledger = {
+            "schema_version": 1,
+            "updated_at": "2026-11-16",
+            "policy": {"max_active_tasks": 1},
+            "tasks": [trusted_task],
+        }
+        (trusted_docs / "task-ledger.json").write_text(json.dumps(full_ledger), encoding="utf-8")
+        (trusted_docs / "task-ledger-summary.json").write_text(
+            json.dumps(build_summary(full_ledger), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        git(trusted, "add", "docs/automation")
         git(trusted, "commit", "-qm", "trusted task targets dev")
         trusted_sha = git(trusted, "rev-parse", "HEAD")
 
