@@ -389,7 +389,7 @@ jobs:
                   and '"context": 3600' in groq_agent_step
                   and '"output": 700' in groq_agent_step
                   and '"temperature": 0.2' in groq_agent_step
-                  and "--max-chars 1000 --max-task-context 800" in groq
+                  and "--max-chars 550 --max-task-context 450" in groq
                   and "--max-source-chars 0" in groq
                   and "SOURCE_CONTEXT_FILE" in groq_agent_step
                   and "BOONTA_PRELOADED_SOURCE_SHA256" in groq_agent_step
