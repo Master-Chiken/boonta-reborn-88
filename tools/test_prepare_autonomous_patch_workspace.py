@@ -192,7 +192,7 @@ class PrepareAutonomousWorkspaceTests(WorkspaceFixture):
         self.write_policy_inputs(read_paths=READ_PATHS + ["tools/missing.py"])
         self.recommit_policy()
         workspace = self.parent / "agent-workspace"
-        with self.assertRaisesRegex(WorkspaceError, "1-4 exact read paths"):
+        with self.assertRaisesRegex(WorkspaceError, "not one tracked file"):
             self.prepare(workspace)
         self.assertFalse(workspace.exists())
 
