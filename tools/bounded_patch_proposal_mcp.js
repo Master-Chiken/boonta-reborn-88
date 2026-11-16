@@ -91,9 +91,6 @@ function makeState() {
       allowedPaths.some((item) => !safePath(item)) || new Set(allowedPaths).size !== allowedPaths.length) {
     reject('BOONTA_ALLOWED_PATHS must contain 1-20 unique safe repository paths');
   }
-  if (allowedPaths.some((item) => !readPaths.includes(item))) {
-    reject('every owner-approved write path must also be in the task read-path allow-list');
-  }
   if (!Array.isArray(readRanges) || readRanges.length < 1 || readRanges.length > MAX_READ_RANGES) {
     reject('BOONTA_READ_RANGES must contain 1-' + MAX_READ_RANGES + ' exact source ranges');
   }
