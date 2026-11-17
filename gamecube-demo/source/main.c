@@ -174,10 +174,11 @@ static int reset_rival_route_cursors(void)
                     ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
                 g_rival_route_cursor_ready[rival_index] = 0;
             } else if (boonta_route_cursor_lap_progress(
-                           cursor, &lap_progress) == BOONTA_ROUTE_CURSOR_OK) {
-                g_rival_progress[rival_index] =
-                    ((float)cursor->completed_laps + lap_progress) *
-                    g_current_course->lap_distance;
+                           cursor, &lap_progress) == BOONTA_ROUTE_CURSOR_OK &&
+                       boonta_rival_progress_from_cursor_state(
+                           cursor->completed_laps, lap_progress,
+                           g_current_course->lap_distance,
+                           &g_rival_progress[rival_index])) {
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                     g_distance, g_rival_progress[rival_index]);
             } else {
@@ -211,16 +212,26 @@ static int advance_rival_route_cursor(unsigned int rival_index,
             return 0;
         }
     }
-    if (boonta_route_cursor_move(cursor, distance_delta, NULL, 0U) !=
-            BOONTA_ROUTE_CURSOR_OK ||
-        boonta_route_cursor_lap_progress(cursor, &lap_progress) !=
-            BOONTA_ROUTE_CURSOR_OK) return 0;
-    g_rival_route_distance[rival_index] += distance_delta;
-    g_rival_progress[rival_index] =
-        ((float)cursor->completed_laps + lap_progress) *
-        g_current_course->lap_distance;
-    return isfinite(g_rival_route_distance[rival_index]) &&
-        isfinite(g_rival_progress[rival_index]);
+    {
+        float next_route_distance;
+        float next_progress;
+        if (g_current_course == NULL ||
+            !isfinite(g_rival_route_distance[rival_index])) return 0;
+        next_route_distance = g_rival_route_distance[rival_index] + distance_delta;
+        if (!isfinite(next_route_distance) ||
+            !isfinite(g_current_course->lap_distance) ||
+            g_current_course->lap_distance <= 0.0f) return 0;
+        if (boonta_route_cursor_move(cursor, distance_delta, NULL, 0U) !=
+                BOONTA_ROUTE_CURSOR_OK ||
+            boonta_route_cursor_lap_progress(cursor, &lap_progress) !=
+                BOONTA_ROUTE_CURSOR_OK ||
+            !boonta_rival_progress_from_cursor_state(
+                cursor->completed_laps, lap_progress,
+                g_current_course->lap_distance, &next_progress)) return 0;
+        g_rival_route_distance[rival_index] = next_route_distance;
+        g_rival_progress[rival_index] = next_progress;
+    }
+    return 1;
 }
 
 static int rival_route_sample_at(unsigned int rival_index, float target_distance,
@@ -1629,7 +1640,7 @@ int main(int argc, char **argv)
                     rival_target_lateral[rival_index], frame_scale);
                 g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
                     g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
-                                {
+                {
                     const float next_progress = boonta_rival_progress_after_frame(
                         g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
                     const float distance_delta = next_progress - g_rival_progress[rival_index];
