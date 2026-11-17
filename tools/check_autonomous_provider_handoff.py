@@ -271,7 +271,7 @@ for label, workflow, guard_marker, mint_marker, run_marker in resume_guard_specs
         "RESUME_PR_NUMBER: ${{ inputs.resume_pr_number }}",
         "pull.head?.sha !== expectedHeadSha",
         "pull.user?.login !== context.repo.owner",
-        "pull.draft !== false",
+        "typeof pull.draft !== 'boolean'",
         "task.pr_url || task.head_sha",
         "bodyLines.filter((line) => line === targetMarker).length !== 1",
     ):
