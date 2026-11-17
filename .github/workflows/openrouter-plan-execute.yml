@@ -995,6 +995,7 @@ jobs:
           GITHUB_APP_TOKEN_OUTCOME: ${{ steps.mint_identity_token.outcome }}
           SELECTED_TASK_ID: ${{ inputs.resume_mode == true && inputs.resume_task_id || inputs.task_id }}
           SELECTED_TASK_TARGET_BRANCH: ${{ inputs.resume_mode == true && inputs.resume_task_target_branch || inputs.task_target_branch }}
+          RESUME_MODE: ${{ inputs.resume_mode }}
         with:
           script: |
             const fs = require('fs');
@@ -1036,7 +1037,8 @@ jobs:
               snapshotAt: process.env.PRE_CYCLE_PR_SNAPSHOT_AT,
               expectedTaskId: process.env.SELECTED_TASK_ID,
               expectedBase: process.env.SELECTED_TASK_TARGET_BRANCH,
-              provider: 'OpenRouter'
+              provider: 'OpenRouter',
+              allowDraftResume: process.env.RESUME_MODE === 'true'
             });
 
       - name: Sync the single-task daily backoff marker
