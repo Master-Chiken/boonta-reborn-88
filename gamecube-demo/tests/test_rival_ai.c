@@ -251,6 +251,7 @@ static void nemesis_bonus_yields_to_player_and_close_traffic(void)
     assert(nearf_ai(nemesis_traffic, base_traffic));
 }
 
+/* Shared geometry is immutable; each opponent must own its traversal history. */
 static void rival_route_cursors_are_independent_and_order_invariant(void)
 {
     BoontaRouteGraphSampler sampler = {0};
