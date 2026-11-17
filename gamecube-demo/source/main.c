@@ -77,6 +77,7 @@ static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
 /* Rivals share one immutable arc-length sampler but own independent route history. */
 static BoontaRouteGraphSampler g_rival_route_sampler;
 static BoontaRouteCursor g_rival_route_cursors[BOONTA_RIVAL_COUNT];
+static float g_rival_route_distance[BOONTA_RIVAL_COUNT];
 static int g_rival_route_cursor_ready[BOONTA_RIVAL_COUNT];
 static const BoontaRouteCursorGraph g_rival_route_cursor_graph = {
     boonta_runtime_route_topology_edges,
@@ -107,6 +108,7 @@ static int reset_rival_route_cursors(void)
 
     for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
         const float grid_offset = boonta_rival_initial_progress(rival_index);
+        g_rival_route_distance[rival_index] = grid_offset;
         g_rival_route_cursor_ready[rival_index] =
             boonta_route_cursor_init(&g_rival_route_cursors[rival_index],
                 &g_rival_route_cursor_graph, g_rival_route_sampler.edge_lengths,
@@ -167,10 +169,12 @@ static int advance_rival_route_cursor(unsigned int rival_index,
             BOONTA_ROUTE_CURSOR_OK ||
         boonta_route_cursor_lap_progress(cursor, &lap_progress) !=
             BOONTA_ROUTE_CURSOR_OK) return 0;
+    g_rival_route_distance[rival_index] += distance_delta;
     g_rival_progress[rival_index] =
         ((float)cursor->completed_laps + lap_progress) *
         g_current_course->lap_distance;
-    return isfinite(g_rival_progress[rival_index]);
+    return isfinite(g_rival_route_distance[rival_index]) &&
+        isfinite(g_rival_progress[rival_index]);
 }
 
 static int rival_route_sample_at(unsigned int rival_index, float target_distance,
@@ -181,7 +185,7 @@ static int rival_route_sample_at(unsigned int rival_index, float target_distance
         !isfinite(g_rival_progress[rival_index])) return BOONTA_ROUTE_CURSOR_INVALID;
     return boonta_route_graph_sampler_sample_relative_to_cursor(
         &g_rival_route_sampler, &g_rival_route_cursors[rival_index],
-        g_rival_progress[rival_index], target_distance,
+        g_rival_route_distance[rival_index], target_distance,
         g_current_course != NULL ? g_current_course->road_half_width :
             BOONTA_REFERENCE_ROAD_HALF_WIDTH,
         x, y, z, width);
@@ -1590,8 +1594,7 @@ int main(int argc, char **argv)
             /* Decide from one shared snapshot so rival update order cannot bias AI. */
             for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
                 const float lookahead_offset = boonta_rival_route_lookahead_sample(
-                    g_distance, g_rival_progress[rival_index], 4.0f,
-                    g_current_course != NULL && g_current_course->has_branches);
+                    0.0f, g_rival_route_distance[rival_index], 4.0f, 0);
                 const float lookahead_curvature = rival_route_curvature_at(
                     rival_index, lookahead_offset);
                 const float signed_lookahead_curvature =
