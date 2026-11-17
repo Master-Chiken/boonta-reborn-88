@@ -401,8 +401,9 @@ static void rival_route_progress_finishes_independently_and_resets(void)
             const float finish_distance = boonta_rival_finish_distance(
                 rival, sampler.total_length, BOONTA_RACE_LAP_CAPACITY);
             if ((race.rival_finished_mask & finish_bit) != 0U) continue;
-            assert(boonta_route_cursor_move(&cursors[rival], 0.5f,
-                NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+            assert(boonta_route_cursor_move(&cursors[rival],
+                0.4f + (float)rival * 0.1f, NULL, 0U) ==
+                BOONTA_ROUTE_CURSOR_OK);
             assert(boonta_route_cursor_lap_progress(&cursors[rival],
                 &lap_progress) == BOONTA_ROUTE_CURSOR_OK);
             assert(boonta_rival_progress_from_cursor_state(
@@ -415,6 +416,21 @@ static void rival_route_progress_finishes_independently_and_resets(void)
     }
 
     assert(race.rival_finished_mask == all_finished);
+    /* Faster rivals finish first; equal player/rival times do not outrank a rival. */
+    assert(race.rival_finish_seconds[2] < race.rival_finish_seconds[1]);
+    assert(race.rival_finish_seconds[1] < race.rival_finish_seconds[0]);
+    assert(boonta_race_finish_position_at(
+        &race, race.rival_finish_seconds[1]) == 2U);
+    assert(boonta_race_finish_position_at(
+        &race, race.rival_finish_seconds[0] + 1.0f) ==
+        BOONTA_RIVAL_COUNT + 1U);
+    race.lap_count = BOONTA_RACE_LAP_CAPACITY;
+    race.race_seconds = race.rival_finish_seconds[1];
+    boonta_race_session_finish_if_complete(&race, BOONTA_RACE_LAP_CAPACITY);
+    assert(race.session_phase == BOONTA_RACE_SESSION_RESULTS);
+    assert(race.finish_position == 2U);
+    assert(nearf_ai(race.player_finish_seconds,
+        race.rival_finish_seconds[1]));
     for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
         const float recorded = race.rival_finish_seconds[rival];
         assert(recorded > 0.0f);
