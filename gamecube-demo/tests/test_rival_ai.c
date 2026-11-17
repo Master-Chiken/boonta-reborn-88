@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdio.h>
 #include "../source/rival_ai.h"
+#include "../source/gameplay_state.h"
+#include "../source/route_graph_sampling.h"
 
 static int nearf_ai(float a, float b)
 {
@@ -249,6 +251,90 @@ static void nemesis_bonus_yields_to_player_and_close_traffic(void)
     assert(nearf_ai(nemesis_traffic, base_traffic));
 }
 
+static void rival_route_cursors_are_independent_and_order_invariant(void)
+{
+    BoontaRouteGraphSampler sampler = {0};
+    BoontaRouteCursor forward[BOONTA_RIVAL_COUNT];
+    BoontaRouteCursor reverse[BOONTA_RIVAL_COUNT];
+    const BoontaRouteCursorGraph graph = {
+        boonta_runtime_route_topology_edges,
+        BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+        BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+        BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+        BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+    };
+    unsigned int start_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    unsigned int edge, rival, frame;
+
+    assert(boonta_route_graph_sampler_prepare(&sampler));
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        if (boonta_runtime_route_topology_edges[edge].from_node ==
+            BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) {
+            start_edge = edge;
+            break;
+        }
+    }
+    assert(start_edge != BOONTA_ROUTE_CURSOR_NO_EDGE);
+
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        assert(boonta_route_cursor_init(&forward[rival], &graph,
+            sampler.edge_lengths, start_edge) == BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_cursor_move(&forward[rival],
+            boonta_rival_initial_progress(rival), NULL, 0U) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        reverse[rival] = forward[rival];
+    }
+
+    /* Different per-rival deltas must not leak between cursor histories. */
+    for (frame = 0U; frame < 240U; ++frame) {
+        for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+            const float delta = (0.08f + (float)rival * 0.025f);
+            assert(boonta_route_cursor_move(&forward[rival], delta,
+                NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+        }
+        for (rival = BOONTA_RIVAL_COUNT; rival > 0U; --rival) {
+            const unsigned int index = rival - 1U;
+            const float delta = (0.08f + (float)index * 0.025f);
+            assert(boonta_route_cursor_move(&reverse[index], delta,
+                NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+        }
+    }
+
+    for (rival = 0U; rival < BOONTA_RIVAL_COUNT; ++rival) {
+        float forward_lap = 0.0f, reverse_lap = 0.0f;
+        BoontaRouteCursorState a, b;
+        assert(boonta_route_cursor_get_state(&forward[rival], &a) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_cursor_get_state(&reverse[rival], &b) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(a.edge == b.edge);
+        assert(a.completed_laps == b.completed_laps);
+        assert(nearf_ai(forward[rival].distance_on_edge,
+            reverse[rival].distance_on_edge));
+        assert(boonta_route_cursor_lap_progress(&forward[rival],
+            &forward_lap) == BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_cursor_lap_progress(&reverse[rival],
+            &reverse_lap) == BOONTA_ROUTE_CURSOR_OK);
+        assert(nearf_ai(forward_lap, reverse_lap));
+        assert(forward[rival].edge_lengths == sampler.edge_lengths);
+        assert(reverse[rival].edge_lengths == sampler.edge_lengths);
+    }
+
+    /* Advancing one cursor to the finish must not mark another rival finished. */
+    assert(boonta_route_cursor_move(&forward[0],
+        sampler.total_length * 3.0f, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK);
+    {
+        BoontaRouteCursorState finished, still_racing;
+        assert(boonta_route_cursor_get_state(&forward[0], &finished) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(boonta_route_cursor_get_state(&forward[1], &still_racing) ==
+            BOONTA_ROUTE_CURSOR_OK);
+        assert(finished.completed_laps >= 3U);
+        assert(still_racing.completed_laps < 3U);
+        assert(!still_racing.finished);
+    }
+}
+
 int main(void)
 {
     lane_preference_is_deterministic();
@@ -267,6 +353,7 @@ int main(void)
     closest_rival_conflict_wins_independent_of_array_order();
     speed_response_is_bounded_and_asymmetric();
     relative_progress_uses_player_and_rival_pace();
+    rival_route_cursors_are_independent_and_order_invariant();
     puts("rival AI tests: PASS");
     return 0;
 }

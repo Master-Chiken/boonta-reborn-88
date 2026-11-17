@@ -16,6 +16,7 @@
 #include "gameplay_state.h"
 #include "rival_ai.h"
 #include "course_catalog.h"
+#include "route_graph_sampling.h"
 #include "generated_mesh_player_pod.h"
 #include "generated_texture_player_pod.h"
 
@@ -72,6 +73,163 @@ static BoontaCameraState g_camera_state;
 static const BoontaCourseDefinition *g_current_course;
 static int g_course_ready;
 static BoontaInputStatus g_input_status = BOONTA_INPUT_STATUS_UNKNOWN;
+
+/* Rivals share one immutable arc-length sampler but own independent route history. */
+static BoontaRouteGraphSampler g_rival_route_sampler;
+static BoontaRouteCursor g_rival_route_cursors[BOONTA_RIVAL_COUNT];
+static int g_rival_route_cursor_ready[BOONTA_RIVAL_COUNT];
+static const BoontaRouteCursorGraph g_rival_route_cursor_graph = {
+    boonta_runtime_route_topology_edges,
+    BOONTA_RUNTIME_ROUTE_EDGE_COUNT,
+    BOONTA_RUNTIME_ROUTE_NODE_COUNT,
+    BOONTA_RUNTIME_ROUTE_START_NODE_INDEX,
+    BOONTA_RUNTIME_ROUTE_CLOSED_LOOP
+};
+
+static int reset_rival_route_cursors(void)
+{
+    unsigned int start_edge = BOONTA_ROUTE_CURSOR_NO_EDGE;
+    unsigned int edge;
+    unsigned int rival_index;
+
+    if (!g_rival_route_sampler.lengths_ready) {
+        memset(&g_rival_route_sampler, 0, sizeof(g_rival_route_sampler));
+        if (!boonta_route_graph_sampler_prepare(&g_rival_route_sampler)) return 0;
+    }
+    for (edge = 0U; edge < BOONTA_RUNTIME_ROUTE_EDGE_COUNT; ++edge) {
+        if (boonta_runtime_route_topology_edges[edge].from_node ==
+            BOONTA_RUNTIME_ROUTE_START_NODE_INDEX) {
+            start_edge = edge;
+            break;
+        }
+    }
+    if (start_edge == BOONTA_ROUTE_CURSOR_NO_EDGE) return 0;
+
+    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+        const float grid_offset = boonta_rival_initial_progress(rival_index);
+        g_rival_route_cursor_ready[rival_index] =
+            boonta_route_cursor_init(&g_rival_route_cursors[rival_index],
+                &g_rival_route_cursor_graph, g_rival_route_sampler.edge_lengths,
+                start_edge) == BOONTA_ROUTE_CURSOR_OK;
+        if (g_rival_route_cursor_ready[rival_index] && grid_offset > 0.0f) {
+            g_rival_route_cursor_ready[rival_index] =
+                boonta_route_cursor_move(&g_rival_route_cursors[rival_index],
+                    grid_offset, NULL, 0U) == BOONTA_ROUTE_CURSOR_OK;
+        }
+        if (g_rival_route_cursor_ready[rival_index]) {
+            float lap_progress = 0.0f;
+            BoontaRouteCursor *cursor = &g_rival_route_cursors[rival_index];
+            if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES &&
+                boonta_route_graph_sampler_prime_lookahead(
+                    &g_rival_route_sampler, cursor, 0,
+                    ROUTE_BRANCH_SELECTION_DISTANCE,
+                    ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
+                g_rival_route_cursor_ready[rival_index] = 0;
+            } else if (boonta_route_cursor_lap_progress(
+                           cursor, &lap_progress) == BOONTA_ROUTE_CURSOR_OK) {
+                g_rival_progress[rival_index] =
+                    ((float)cursor->completed_laps + lap_progress) *
+                    g_current_course->lap_distance;
+                g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
+                    g_distance, g_rival_progress[rival_index]);
+            } else {
+                g_rival_route_cursor_ready[rival_index] = 0;
+            }
+        }
+    }
+    for (rival_index = 0U; rival_index < BOONTA_RIVAL_COUNT; ++rival_index) {
+        if (!g_rival_route_cursor_ready[rival_index]) return 0;
+    }
+    return 1;
+}
+
+static int advance_rival_route_cursor(unsigned int rival_index,
+                                      float distance_delta, float steering)
+{
+    BoontaRouteCursor *cursor;
+    float lap_progress = 0.0f;
+    int branch_direction = 0;
+    if (rival_index >= BOONTA_RIVAL_COUNT ||
+        !g_rival_route_cursor_ready[rival_index] ||
+        !isfinite(distance_delta) || distance_delta < 0.0f) return 0;
+    cursor = &g_rival_route_cursors[rival_index];
+    if (BOONTA_RUNTIME_ROUTE_HAS_BRANCHES) {
+        branch_direction = steering < -ROUTE_BRANCH_STEERING_DEADZONE ? -1 :
+            steering > ROUTE_BRANCH_STEERING_DEADZONE ? 1 : 0;
+        if (boonta_route_graph_sampler_prime_lookahead(
+                &g_rival_route_sampler, cursor, branch_direction,
+                ROUTE_BRANCH_SELECTION_DISTANCE,
+                ROUTE_RENDER_LOOKAHEAD_DISTANCE) != BOONTA_ROUTE_CURSOR_OK) {
+            return 0;
+        }
+    }
+    if (boonta_route_cursor_move(cursor, distance_delta, NULL, 0U) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        boonta_route_cursor_lap_progress(cursor, &lap_progress) !=
+            BOONTA_ROUTE_CURSOR_OK) return 0;
+    g_rival_progress[rival_index] =
+        ((float)cursor->completed_laps + lap_progress) *
+        g_current_course->lap_distance;
+    return isfinite(g_rival_progress[rival_index]);
+}
+
+static int rival_route_sample_at(unsigned int rival_index, float target_distance,
+    float *x, float *y, float *z, float *width)
+{
+    if (rival_index >= BOONTA_RIVAL_COUNT ||
+        !g_rival_route_cursor_ready[rival_index] ||
+        !isfinite(g_rival_progress[rival_index])) return BOONTA_ROUTE_CURSOR_INVALID;
+    return boonta_route_graph_sampler_sample_relative_to_cursor(
+        &g_rival_route_sampler, &g_rival_route_cursors[rival_index],
+        g_rival_progress[rival_index], target_distance,
+        g_current_course != NULL ? g_current_course->road_half_width :
+            BOONTA_REFERENCE_ROAD_HALF_WIDTH,
+        x, y, z, width);
+}
+
+static float rival_route_curvature_at(unsigned int rival_index, float travelled)
+{
+    float before_x = 0.0f, before_z = 0.0f;
+    float middle_x = 0.0f, middle_z = 0.0f;
+    float after_x = 0.0f, after_z = 0.0f;
+    if (!isfinite(travelled) ||
+        rival_route_sample_at(rival_index, travelled - 2.0f,
+            &before_x, NULL, &before_z, NULL) != BOONTA_ROUTE_CURSOR_OK ||
+        rival_route_sample_at(rival_index, travelled,
+            &middle_x, NULL, &middle_z, NULL) != BOONTA_ROUTE_CURSOR_OK ||
+        rival_route_sample_at(rival_index, travelled + 2.0f,
+            &after_x, NULL, &after_z, NULL) != BOONTA_ROUTE_CURSOR_OK) return 0.0f;
+    return fabsf(boonta_rival_ai_signed_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z));
+}
+
+static float rival_route_signed_curvature_at(unsigned int rival_index, float travelled)
+{
+    float before_x = 0.0f, before_z = 0.0f;
+    float middle_x = 0.0f, middle_z = 0.0f;
+    float after_x = 0.0f, after_z = 0.0f;
+    if (!isfinite(travelled) ||
+        rival_route_sample_at(rival_index, travelled - 2.0f,
+            &before_x, NULL, &before_z, NULL) != BOONTA_ROUTE_CURSOR_OK ||
+        rival_route_sample_at(rival_index, travelled,
+            &middle_x, NULL, &middle_z, NULL) != BOONTA_ROUTE_CURSOR_OK ||
+        rival_route_sample_at(rival_index, travelled + 2.0f,
+            &after_x, NULL, &after_z, NULL) != BOONTA_ROUTE_CURSOR_OK) return 0.0f;
+    return boonta_rival_ai_signed_curvature_from_samples(
+        before_x, before_z, middle_x, middle_z, after_x, after_z);
+}
+
+static float rival_route_half_width_at(unsigned int rival_index, float travelled)
+{
+    float width = g_current_course != NULL
+        ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    if (rival_route_sample_at(rival_index, travelled,
+            NULL, NULL, NULL, &width) != BOONTA_ROUTE_CURSOR_OK) {
+        return g_current_course != NULL
+            ? g_current_course->road_half_width : BOONTA_REFERENCE_ROAD_HALF_WIDTH;
+    }
+    return width;
+}
 
 /* The source-authored panel texture is exported to GX's 4x4-tiled RGB565 layout. */
 #define POD_TEXTURE_WIDTH BOONTA_GENERATED_TEXTURE_ORIGINAL_TWIN_ENGINE_PANEL_WIDTH
@@ -1281,6 +1439,7 @@ int main(int argc, char **argv)
     boonta_race_state_reset(&g_race_state);
     boonta_camera_state_reset(&g_camera_state);
     (void)reset_runtime_route_cursor();
+    (void)reset_rival_route_cursors();
     previous_tick = gettime();
 
     for (;;) {
@@ -1311,6 +1470,7 @@ int main(int argc, char **argv)
             boonta_race_state_reset(&g_race_state);
             boonta_camera_state_reset(&g_camera_state);
             (void)reset_runtime_route_cursor();
+            (void)reset_rival_route_cursors();
             /* Render the clean start state before any input advances the race. */
             draw_frame(frame_delta_seconds);
             continue;
@@ -1432,10 +1592,12 @@ int main(int argc, char **argv)
                 const float lookahead_offset = boonta_rival_route_lookahead_sample(
                     g_distance, g_rival_progress[rival_index], 4.0f,
                     g_current_course != NULL && g_current_course->has_branches);
-                const float lookahead_curvature = track_curvature_at(lookahead_offset);
+                const float lookahead_curvature = rival_route_curvature_at(
+                    rival_index, lookahead_offset);
                 const float signed_lookahead_curvature =
-                    track_signed_curvature_at(lookahead_offset);
-                const float lookahead_half_width = track_half_width_at(lookahead_offset);
+                    rival_route_signed_curvature_at(rival_index, lookahead_offset);
+                const float lookahead_half_width = rival_route_half_width_at(
+                    rival_index, lookahead_offset);
                 rival_target_lateral[rival_index] = boonta_rival_ai_target_lateral_with_rivalry(
                     rival_index, g_rival_z[rival_index],
                     g_rival_lateral[rival_index], g_player_lateral,
@@ -1460,8 +1622,15 @@ int main(int argc, char **argv)
                     rival_target_lateral[rival_index], frame_scale);
                 g_rival_speed[rival_index] = boonta_rival_ai_speed_after_frame(
                     g_rival_speed[rival_index], rival_target_speed[rival_index], frame_scale);
-                g_rival_progress[rival_index] = boonta_rival_progress_after_frame(
-                    g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
+                                {
+                    const float next_progress = boonta_rival_progress_after_frame(
+                        g_rival_progress[rival_index], g_rival_speed[rival_index], frame_scale);
+                    const float distance_delta = next_progress - g_rival_progress[rival_index];
+                    if (!advance_rival_route_cursor(rival_index, distance_delta,
+                            rival_target_lateral[rival_index] - g_rival_lateral[rival_index])) {
+                        continue;
+                    }
+                }
                 g_rival_z[rival_index] = boonta_rival_relative_z_from_progress(
                     g_distance, g_rival_progress[rival_index]);
                 (void)boonta_rival_record_finish(
