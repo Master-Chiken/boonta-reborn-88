@@ -127,7 +127,7 @@ rival_draft_pr = {
     },
     "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
     "body": (
-        "BOONTA_TASK_ID: GC-RIVAL-ROUTE-PROGRESSION\\n"
+        "BOONTA_TASK_ID: GC-RIVAL-ROUTE-PROGRESSION\n"
         "BOONTA_TASK_TARGET_BRANCH: dev"
     ),
 }
