@@ -103,6 +103,34 @@ queued_draft_pr = {
     "draft": True,
     "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/458",
 }
+rival_queued_task = task("GC-RIVAL-ROUTE-PROGRESSION", "queued", target_branch="dev")
+rival_queued_task.update({
+    "title": "Make rival racers progress through the native route and complete the race",
+    "depends_on": ["GC-RACE-PROGRESSION"],
+    "read_paths": [
+        "gamecube-demo/source/rival_ai.h",
+        "gamecube-demo/source/route_cursor.h",
+        "gamecube-demo/source/gameplay_state.h",
+    ],
+})
+rival_draft_pr = {
+    **queued_draft_pr,
+    "number": 439,
+    "head": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "gameplay/rival-route-cursors-20261117",
+        "sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
+    },
+    "base": {
+        "repo": {"full_name": "Master-Chiken/boonta-reborn-88"},
+        "ref": "dev",
+    },
+    "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+    "body": (
+        "BOONTA_TASK_ID: GC-RIVAL-ROUTE-PROGRESSION\\n"
+        "BOONTA_TASK_TARGET_BRANCH: dev"
+    ),
+}
 activation_ready_pr = {
     **queued_ready_pr,
     "number": 456,
@@ -312,6 +340,37 @@ cases = [
         "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
         "expected_resume_candidate": False,
         "expected_resume_ready": False,
+    },
+    {
+        "name": "real owner-approved GC rival Draft PR resumes after its canonical dependency completes",
+        "tasks": [rival_queued_task],
+        "completed_task_ids": ["GC-RACE-PROGRESSION"],
+        "open_task_prs": [rival_draft_pr],
+        "pr_files": [
+            {"filename": "gamecube-demo/source/gameplay_state.h", "status": "modified"},
+            {"filename": "gamecube-demo/source/main.c", "status": "modified"},
+            {"filename": "gamecube-demo/source/rival_ai.h", "status": "modified"},
+            {"filename": "gamecube-demo/tests/test_rival_ai.c", "status": "modified"}
+        ],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "WAITING_FOR_OPEN_TASK_PR",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": True,
+        "expected_resume_pr_number": "439",
+        "expected_resume_task_id": "GC-RIVAL-ROUTE-PROGRESSION",
+        "expected_resume_file_paths": [
+            "gamecube-demo/source/gameplay_state.h",
+            "gamecube-demo/source/main.c",
+            "gamecube-demo/source/rival_ai.h",
+            "gamecube-demo/tests/test_rival_ai.c"
+        ],
+        "expected_resume_target_branch": "dev",
+        "expected_resume_pr_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/439",
+        "expected_resume_branch": "gameplay/rival-route-cursors-20261117",
+        "expected_resume_head_sha": "194a323a8a822143c5c83737b8c966c2ee8db5ff",
     },
     {
         "name": "multiple queued task PRs fail closed instead of selecting one writer",
