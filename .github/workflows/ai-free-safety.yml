@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - ai/gemini-agent-hardening
+      - security/opencode-default-deny-20261117
+      - security/enforce-task-write-scope-20261116
   pull_request:
     branches:
       - main

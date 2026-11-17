@@ -1,6 +1,10 @@
 name: Branch automation self-test
 
 on:
+  push:
+    branches:
+      - security/opencode-default-deny-20261117
+      - security/enforce-task-write-scope-20261116
   pull_request:
     branches:
       - main
