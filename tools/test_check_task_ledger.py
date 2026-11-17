@@ -151,7 +151,7 @@ class TaskLedgerTests(unittest.TestCase):
         data["tasks"] = [active]
         self.assertEqual(ledger.validate_ledger(data), [])
 
-    def test_active_task_accepts_five_bounded_read_paths(self):
+    def test_active_task_accepts_six_bounded_read_paths(self):
         data = valid_ledger()
         active = valid_task(status="active")
         active["read_paths"] = [
@@ -160,16 +160,17 @@ class TaskLedgerTests(unittest.TestCase):
             "gamecube-demo/source/gameplay_state.h",
             "gamecube-demo/source/main.c",
             "gamecube-demo/tests/test_rival_ai.c",
+            "gamecube-demo/source/generated_route_graph.h",
         ]
         data["tasks"] = [active]
         self.assertEqual(ledger.validate_ledger(data), [])
 
-    def test_active_task_rejects_six_read_paths(self):
+    def test_active_task_rejects_seven_read_paths(self):
         data = valid_ledger()
         active = valid_task(status="active")
-        active["read_paths"] = [f"source/file{index}.c" for index in range(6)]
+        active["read_paths"] = [f"source/file{index}.c" for index in range(7)]
         data["tasks"] = [active]
-        self.assertTrue(any("1-5 unique safe repository text paths" in error
+        self.assertTrue(any("1-6 unique safe repository text paths" in error
                             for error in ledger.validate_ledger(data)))
 
     def test_active_task_rejects_unsafe_read_paths(self):
