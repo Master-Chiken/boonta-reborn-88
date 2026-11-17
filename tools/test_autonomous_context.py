@@ -414,10 +414,10 @@ with tempfile.TemporaryDirectory() as temp:
         raise AssertionError("Queued context must fail closed without explicit owner approval")
 
 
-# The reader accepts exactly six paths and ten bounded source ranges,
+# The reader accepts exactly six paths and thirteen bounded source ranges,
 # matching the provider input preflight and local proposal MCP.
 assert MODULE.MAX_SOURCE_PATHS == 6
-assert MODULE.MAX_SOURCE_RANGES == 10
+assert MODULE.MAX_SOURCE_RANGES == 13
 with tempfile.TemporaryDirectory() as temp:
     source_root = Path(temp)
     seven_paths = [f"source/file{index}.h" for index in range(7)]
