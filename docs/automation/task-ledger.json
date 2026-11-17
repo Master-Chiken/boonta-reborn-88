@@ -1054,6 +1054,11 @@
           "end_line": 42
         },
         {
+          "path": "gamecube-demo/source/gameplay_state.h",
+          "start_line": 419,
+          "end_line": 429
+        },
+        {
           "path": "gamecube-demo/source/main.c",
           "start_line": 166,
           "end_line": 180
@@ -1066,7 +1071,7 @@
         {
           "path": "gamecube-demo/tests/test_rival_ai.c",
           "start_line": 173,
-          "end_line": 184
+          "end_line": 181
         }
       ],
       "acceptance_criteria": [
