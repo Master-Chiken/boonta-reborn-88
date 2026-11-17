@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <stddef.h>
+#include "route_cursor.h"
 
 #define BOONTA_RIVAL_COUNT 3U
 #define BOONTA_RACE_LAP_CAPACITY 3U
@@ -731,6 +732,51 @@ static inline int boonta_rival_progress_from_cursor_state(
     progress = ((float)completed_laps + lap_progress) * lap_distance;
     if (!isfinite(progress) || progress < 0.0f) return 0;
     *progress_out = progress;
+    return 1;
+}
+
+/*
+ * Advance a route cursor and its two race-space coordinates as one transaction.
+ * Work on a private cursor copy; neither the cursor nor output coordinates are
+ * committed unless movement, lap conversion and cumulative-distance checks pass.
+ */
+static inline int boonta_rival_advance_cursor_transaction(
+    BoontaRouteCursor *cursor, float distance_delta,
+    float current_route_distance, float lap_distance,
+    float *next_route_distance_out, float *next_progress_out)
+{
+    BoontaRouteCursor candidate;
+    float lap_progress = 0.0f;
+    float next_route_distance;
+    float next_progress = 0.0f;
+
+    if (next_route_distance_out != NULL) *next_route_distance_out = 0.0f;
+    if (next_progress_out != NULL) *next_progress_out = 0.0f;
+    if (cursor == NULL || next_route_distance_out == NULL ||
+        next_progress_out == NULL || !isfinite(distance_delta) ||
+        distance_delta < 0.0f || !isfinite(current_route_distance) ||
+        current_route_distance < 0.0f || !isfinite(lap_distance) ||
+        lap_distance <= 0.0f) {
+        return 0;
+    }
+
+    next_route_distance = current_route_distance + distance_delta;
+    if (!isfinite(next_route_distance)) return 0;
+
+    candidate = *cursor;
+    if (boonta_route_cursor_move(&candidate, distance_delta, NULL, 0U) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        boonta_route_cursor_lap_progress(&candidate, &lap_progress) !=
+            BOONTA_ROUTE_CURSOR_OK ||
+        !boonta_rival_progress_from_cursor_state(
+            candidate.completed_laps, lap_progress, lap_distance,
+            &next_progress)) {
+        return 0;
+    }
+
+    *cursor = candidate;
+    *next_route_distance_out = next_route_distance;
+    *next_progress_out = next_progress;
     return 1;
 }
 
