@@ -278,7 +278,8 @@ jobs:
               : activeTasks.length === 1 &&
                 activeTasks[0].task_id === resumeCandidateTask?.task_id &&
                 resumeCandidateTask?.status === 'active' &&
-                queuedTaskPrEntries.length === 0;
+                queuedTaskPrEntries.length === 0 &&
+                !activationTaskOpenPr;
             const resumeCandidateReady = Boolean(
               resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask)
             );
@@ -346,8 +347,8 @@ jobs:
             }
             let selectedTask = null;
             let taskReason = '';
-            if (activeTasks.length === 1 && queuedTaskPrEntries.length > 0) {
-              taskReason = 'an active ledger task and a separate queued task PR both reserve the single writer slot; reconcile the existing PR before any provider invocation';
+            if (activeTasks.length === 1 && (queuedTaskPrEntries.length > 0 || activationTaskOpenPr)) {
+              taskReason = 'an active ledger task and a separate activation/queued task PR both reserve the single writer slot; reconcile the existing PR before any provider invocation';
             } else if (canStartNewTask && activeTasks.length === 1 && usableTask(activeTasks[0]) && !activeTasks[0].pr_url && !activeTasks[0].head_sha && !activeTaskOpenPr) {
               selectedTask = activeTasks[0];
               taskReason = 'one complete active ledger task with no existing PR, head or open task PR';
