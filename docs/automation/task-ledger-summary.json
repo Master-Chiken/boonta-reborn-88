@@ -138,17 +138,7 @@
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 232,
-          "end_line": 260
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 261,
-          "end_line": 275
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 276,
-          "end_line": 300
+          "end_line": 282
         },
         {
           "path": "gamecube-demo/source/route_graph_sampling.h",
@@ -162,8 +152,8 @@
         },
         {
           "path": "gamecube-demo/source/gameplay_state.h",
-          "start_line": 393,
-          "end_line": 421
+          "start_line": 419,
+          "end_line": 429
         },
         {
           "path": "gamecube-demo/source/main.c",
@@ -179,6 +169,16 @@
           "path": "gamecube-demo/tests/test_rival_ai.c",
           "start_line": 173,
           "end_line": 184
+        },
+        {
+          "path": "gamecube-demo/source/generated_route_graph.h",
+          "start_line": 7,
+          "end_line": 17
+        },
+        {
+          "path": "gamecube-demo/source/generated_route_graph.h",
+          "start_line": 26,
+          "end_line": 42
         }
       ],
       "question_excerpt": "Can each rival be advanced and evaluated on the same native route/lap model as the player instead of only using camera-relative Z, while preserving deterministic behavior and clean separation from PC/N64/Dreamcast evidence?",
