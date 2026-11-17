@@ -270,7 +270,7 @@ jobs:
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
             const dependenciesSatisfied = Array.isArray(task.depends_on) &&
               task.depends_on.every((dependencyId) =>
-                typeof dependencyId === 'string' && sourceTaskIdsSet.has(dependencyId) && completedTaskIds.has(dependencyId)
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
               );
             const activeReservation = task.status === 'active' &&
               activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
