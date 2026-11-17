@@ -421,6 +421,9 @@ jobs:
               failClosed('canonical task ledger violates the one-active-task policy');
               return;
             }
+            const completedTaskIds = new Set(
+              summary.tasks.filter((candidate) => candidate.status === 'completed').map((candidate) => candidate.task_id)
+            );
             const matches = summary.tasks.filter((task) => task.task_id === taskId);
             if (matches.length !== 1) {
               failClosed('resume task is not present exactly once in the canonical ledger');
@@ -428,9 +431,18 @@ jobs:
             }
             const task = matches[0];
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
+            const dependenciesCompleted = Array.isArray(task.depends_on) &&
+              task.depends_on.every((dependencyId) =>
+                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+              );
             const eligibleStatus = activationBootstrap
               ? task.status === 'blocked' && activeTasks.length === 0
-              : task.status === 'active' && activeTasks.length === 1 && activeTasks[0].task_id === taskId;
+              : task.status === 'active'
+                ? activeTasks.length === 1 && activeTasks[0].task_id === taskId
+                : task.status === 'queued' &&
+                  task.owner_approved === true &&
+                  activeTasks.length === 0 &&
+                  dependenciesCompleted;
             if (
               !eligibleStatus ||
               task.target_branch !== targetBranch ||
