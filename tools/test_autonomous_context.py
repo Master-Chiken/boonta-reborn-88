@@ -583,4 +583,40 @@ elif len(activation_entries) == 0:
 else:
     raise AssertionError("Activation policy contains duplicate task entries; exactly one is allowed")
 
+# Regression for the actual queued gameplay task that previously exceeded
+# the 1,100-character provider handoff ceiling before inference.
+with (ROOT / "docs/automation/task-ledger-summary.json").open(encoding="utf-8") as handle:
+    current_summary = json.load(handle)
+rival = next(
+    task for task in current_summary["tasks"]
+    if task["task_id"] == "GC-RIVAL-ROUTE-PROGRESSION"
+)
+rival_handoff = "\\n".join([
+    "Task ID: " + rival["task_id"],
+    "Title: " + rival["title"],
+    "Target branch: " + rival["target_branch"],
+    "Read-only source paths (select at most one): " + ", ".join(rival["read_paths"]),
+    "Question: " + rival["question_excerpt"],
+    f"Acceptance criteria ({rival['acceptance_criteria_total']}; first 5):",
+    *("- " + item for item in rival["acceptance_criteria_excerpt"][:5]),
+    "Next: " + rival["next_action_excerpt"],
+])
+rival_context = MODULE.build_context(
+    ROOT,
+    rival["task_id"],
+    rival["title"],
+    rival["target_branch"],
+    rival_handoff,
+    max_chars=3100,
+    max_task_context=1600,
+    max_criteria=4,
+    max_next_action=100,
+    source_root=ROOT,
+    max_source_chars=1350,
+)
+assert len(rival_context) <= 3100
+assert "Task ID: GC-RIVAL-ROUTE-PROGRESSION" in rival_context
+assert all(f"[{path}:" in rival_context for path in rival["read_paths"])
+assert "Exact owner-reviewed write paths (no others):" in rival_context
+
 print("PASS: schema-v2 identity, bounded multi-file excerpts and fail-closed cases")
