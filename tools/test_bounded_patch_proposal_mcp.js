@@ -400,6 +400,23 @@ function cleanup(fx) {
   }
 
   {
+    const fx = fixture({
+      BOONTA_READ_RANGES: JSON.stringify(Array.from({ length: 14 }, (_, index) => ({
+        path: index % 2 === 0 ? SOURCE_A : SOURCE_B,
+        start_line: 1,
+        end_line: 3
+      })))
+    });
+    try {
+      const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
+      assert.notEqual(result.status, 0, 'server must reject fourteen exact source ranges');
+      assert.match(result.stderr, /1-13 exact source ranges/);
+    } finally {
+      cleanup(fx);
+    }
+  }
+
+  {
     const fx = fixture({ BOONTA_READ_PATHS: JSON.stringify(['../outside.txt']) });
     try {
       const result = runServer(fx, [rpc('tools/list', undefined, 2)]);
