@@ -227,8 +227,9 @@ jobs:
             );
             const queuedTaskPrEntries = queuedTasks
               .map((task) => ({ task, pull: openTaskPullRequest(task) }))
-              .filter((entry) => Boolean(entry.pull));
+              .filter((entry) => Boolean(entry.pull) || Boolean(entry.task.pr_url) || Boolean(entry.task.head_sha));
             const queuedTaskPrInventorySafe = queuedTaskPrEntries.length === 1 &&
+              Boolean(queuedTaskPrEntries[0].pull) &&
               !queuedTaskPrEntries[0].pull.unsafe_duplicate_markers;
             const queuedResumeTask = activeTasks.length === 0 &&
               !activationTaskOpenPr &&
@@ -376,11 +377,13 @@ jobs:
             } else if (activeTasks.length === 0 && queuedTaskPrEntries.length > 0) {
               const queuedPr = queuedTaskPrEntries[0];
               taskReason = queuedTaskPrEntries.length > 1
-                ? 'multiple queued tasks already carry open PR markers; reconcile all of them before any provider invocation'
-                : queuedPr.pull.unsafe_duplicate_markers
-                  ? 'queued task ' + queuedPr.task.task_id + ' has duplicate open PR markers; owner reconciliation is required'
-                  : 'queued task ' + queuedPr.task.task_id + ' already has open PR #' + queuedPr.pull.number +
-                    ' but it is not eligible for unattended resume; check owner approval, dependencies, PR draft status and repository identity';
+                ? 'multiple queued tasks already carry PR or head metadata; reconcile all of them before any provider invocation'
+                : !queuedPr.pull
+                  ? 'queued task ' + queuedPr.task.task_id + ' has recorded PR/head metadata without one exact matching open PR marker; owner reconciliation is required'
+                  : queuedPr.pull.unsafe_duplicate_markers
+                    ? 'queued task ' + queuedPr.task.task_id + ' has duplicate open PR markers; owner reconciliation is required'
+                    : 'queued task ' + queuedPr.task.task_id + ' already has open PR #' + queuedPr.pull.number +
+                      ' but it is not eligible for unattended resume; check owner approval, dependencies, PR draft status and repository identity';
             } else if (activeTasks.length === 0 && eligibleQueuedTask) {
               selectedTask = eligibleQueuedTask;
               taskReason = 'first owner-approved queued task whose complete dependency set is completed and whose bounded execution scope is valid';
@@ -577,7 +580,7 @@ jobs:
                 ['Queued / active / blocked', queuedTasks.length + ' / ' + activeTasks.length + ' / ' + blockedTasks.length],
                 ['Eligible task', taskReady ? selectedTask.task_id : 'none'],
                 ['Task target branch', taskReady ? selectedTask.target_branch : 'none'],
-                ['Queued task PR reconciliation', queuedTaskPrEntries.length === 0 ? 'none' : queuedTaskPrEntries.map((entry) => entry.task.task_id + ' → #' + (entry.pull.number || 'ambiguous')).join('; ')],
+                ['Queued task PR reconciliation', queuedTaskPrEntries.length === 0 ? 'none' : queuedTaskPrEntries.map((entry) => entry.task.task_id + ' → ' + (entry.pull?.number ? '#' + entry.pull.number : 'recorded PR/head')).join('; ')],
                 ['Trusted existing PR resume', resumeReady ? 'PR #' + resumeCandidatePr.number + ' (eligible provider selected by cooldown order)' : 'none'],
               ])
               .addRaw('Read-only checks: issue #226 cooldown comments, open PR task-identity markers and the compact main-branch task ledger. Queue states distinguish EMPTY_QUEUE, blocked work, queued-but-not-promoted work, open-PR reconciliation, active-task reconciliation and READY. A queued task with an existing PR owns the single writer slot: a trusted, non-draft, owner-approved PR with completed dependencies may resume on its exact branch; otherwise all provider invocation is blocked pending owner reconciliation.')
