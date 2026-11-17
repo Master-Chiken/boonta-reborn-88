@@ -270,13 +270,15 @@ jobs:
             const resumeSlotValid = activeTasks.length === 0
               ? (
                   (resumeCandidateTask?.task_id === 'AUTOMATION-LEDGER-ACTIVATION' &&
-                    resumeCandidateTask?.status === 'blocked') ||
+                    resumeCandidateTask?.status === 'blocked' &&
+                    queuedTaskPrEntries.length === 0) ||
                   (queuedResumeTask?.task_id === resumeCandidateTask?.task_id &&
                     resumeCandidateTask?.status === 'queued')
                 )
               : activeTasks.length === 1 &&
                 activeTasks[0].task_id === resumeCandidateTask?.task_id &&
-                resumeCandidateTask?.status === 'active';
+                resumeCandidateTask?.status === 'active' &&
+                queuedTaskPrEntries.length === 0;
             const resumeCandidateReady = Boolean(
               resumeCandidateTrusted && resumeSlotValid && usableTask(resumeCandidateTask)
             );
