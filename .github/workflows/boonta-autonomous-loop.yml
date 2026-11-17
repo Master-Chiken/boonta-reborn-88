@@ -832,7 +832,7 @@ jobs:
             echo "- Autonomous writer gate: **${WRITER_STATE:-unknown}**"
             echo "- Cooldown precheck: **${COOLDOWN_CHECK_RESULT:-unknown}**"
             echo "- Queue state: **${QUEUE_STATE:-NOT_EVALUATED}** (queued=${QUEUED_COUNT:-unknown}, active=${ACTIVE_COUNT:-unknown}, blocked=${BLOCKED_COUNT:-unknown})"
-            if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; owner-dispatch only."; fi
+            if [[ "${RESUME_READY:-false}" == "true" ]]; then echo "- Safe resume candidate: **PR #${RESUME_PR_NUMBER}**; eligible for the scheduled loop or an owner-authorized manual dispatch after provider cooldown and free-tier gates."; fi
             case "${QUEUE_STATE:-NOT_EVALUATED}" in
               EMPTY_QUEUE)
                 echo
