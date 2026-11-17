@@ -258,7 +258,7 @@ class AgentInputTests(AgentInputFixture):
     def test_missing_exact_line_ranges_are_rejected(self):
         self.full_ledger["tasks"][1]["read_ranges"] = []
         self.commit_ledger_change("remove source ranges")
-        with self.assertRaisesRegex(AgentInputError, "1-10 exact read_ranges"):
+        with self.assertRaisesRegex(AgentInputError, "1-13 exact read_ranges"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
     def test_range_cannot_escape_exact_read_paths(self):
@@ -301,10 +301,19 @@ class AgentInputTests(AgentInputFixture):
     def test_range_budget_is_bounded(self):
         self.full_ledger["tasks"][1]["read_ranges"] = [
             {"path": SOURCE_PATH, "start_line": start, "end_line": start + 79}
-            for start in (1, 81, 161, 241)
+            for start in (1, 81, 161, 241, 321, 401)
         ]
-        self.commit_ledger_change("exceed range budget")
-        with self.assertRaisesRegex(AgentInputError, "240-line aggregate cap"):
+        self.commit_ledger_change("exceed 432-line aggregate budget")
+        with self.assertRaisesRegex(AgentInputError, "432-line aggregate cap"):
+            self.prepare(expected_policy_sha=self.policy_sha)
+
+    def test_read_range_count_above_thirteen_is_rejected(self):
+        self.full_ledger["tasks"][1]["read_ranges"] = [
+            {"path": SOURCE_PATH, "start_line": index, "end_line": index}
+            for index in range(1, 15)
+        ]
+        self.commit_ledger_change("reject excessive range count")
+        with self.assertRaisesRegex(AgentInputError, "1-13 exact read_ranges"):
             self.prepare(expected_policy_sha=self.policy_sha)
 
     def test_dirty_source_checkout_is_rejected(self):
