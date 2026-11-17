@@ -282,7 +282,7 @@ jobs:
             const activationBootstrap = taskId === 'AUTOMATION-LEDGER-ACTIVATION';
             const dependenciesSatisfied = Array.isArray(task.depends_on) &&
               task.depends_on.every((dependencyId) =>
-                typeof dependencyId === 'string' && completedTaskIds.has(dependencyId)
+                typeof dependencyId === 'string' && sourceTaskIdsSet.has(dependencyId) && completedTaskIds.has(dependencyId)
               );
             const activeReservation = task.status === 'active' &&
               activeTasks.length === 1 && activeTasks[0].task_id === taskId &&
@@ -433,8 +433,40 @@ jobs:
               failClosed('canonical task ledger violates the one-active-task policy');
               return;
             }
+            // The compact summary intentionally omits completed tasks; resolve dependency
+            // state from the canonical full ledger rather than treating missing IDs as incomplete.
+            const { data: sourceLedgerFile } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'docs/automation/task-ledger.json',
+              ref: 'main'
+            });
+            if (!sourceLedgerFile || Array.isArray(sourceLedgerFile) || sourceLedgerFile.encoding !== 'base64') {
+              failClosed('canonical full task ledger is missing or not a base64 file');
+              return;
+            }
+            let sourceLedger;
+            try {
+              sourceLedger = JSON.parse(Buffer.from(sourceLedgerFile.content, 'base64').toString('utf8'));
+            } catch (_error) {
+              failClosed('canonical full task ledger is not valid JSON');
+              return;
+            }
+            if (sourceLedger.schema_version !== 1 || !Array.isArray(sourceLedger.tasks)) {
+              failClosed('canonical full task ledger schema is invalid');
+              return;
+            }
+            const sourceTaskIds = sourceLedger.tasks.map((candidate) => candidate?.task_id);
+            if (
+              sourceTaskIds.some((id) => typeof id !== 'string' || !/^[A-Z0-9][A-Z0-9-]{2,63}$/.test(id)) ||
+              new Set(sourceTaskIds).size !== sourceTaskIds.length
+            ) {
+              failClosed('canonical full task ledger contains invalid or duplicate task IDs');
+              return;
+            }
+            const sourceTaskIdsSet = new Set(sourceTaskIds);
             const completedTaskIds = new Set(
-              summary.tasks.filter((candidate) => candidate.status === 'completed').map((candidate) => candidate.task_id)
+              sourceLedger.tasks.filter((candidate) => candidate.status === 'completed').map((candidate) => candidate.task_id)
             );
             const matches = summary.tasks.filter((task) => task.task_id === taskId);
             if (matches.length !== 1) {
