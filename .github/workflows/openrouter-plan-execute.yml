@@ -338,7 +338,7 @@ jobs:
               !Array.isArray(task.platform_scope) ||
               task.platform_scope.length === 0 ||
               !Array.isArray(task.read_paths) ||
-              task.read_paths.length < 1 || task.read_paths.length > 5 ||
+              task.read_paths.length < 1 || task.read_paths.length > 6 ||
               task.read_paths.some((path) =>
                 typeof path !== 'string' || path.length > 120 ||
                 !/^[A-Za-z0-9._/-]+$/.test(path) || path.startsWith('/') ||
