@@ -592,7 +592,7 @@ if "task context exceeds the 2,500-character provider handoff budget" not in tas
 for label, content, retrieval_budget in (
     ("Gemini", gemini_prompt, "1,500 tokens"),
     ("OpenRouter", openrouter, "at most 700 tokens"),
-    ("Groq", groq, "1,800 characters"),
+    ("Groq", groq, "1,350 characters"),
 ):
     for required in (
         "docs/automation/AUTONOMOUS_CONTEXT_BUDGET.md",
