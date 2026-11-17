@@ -987,7 +987,7 @@ async function runCase(testCase) {{
       if (!result.error.includes(testCase.expected_error)) {{
         throw new Error(testCase.name + ": expected error containing " + testCase.expected_error + ", got " + result.error);
       }}
-      process.stdout.write("PASS: " + testCase.name + "\n");
+      process.stdout.write("PASS: " + testCase.name + "\\n");
       continue;
     }}
     if (result.error) throw new Error(testCase.name + ": unexpected preflight error: " + result.error);
@@ -1090,10 +1090,10 @@ async function runCase(testCase) {{
         throw new Error(testCase.name + ": expected " + provider + "_active=" + expected + ", got " + outputs[provider + "_active"]);
       }}
     }}
-    process.stdout.write("PASS: " + testCase.name + "\n");
+    process.stdout.write("PASS: " + testCase.name + "\\n");
   }}
 }})().catch((error) => {{
-  process.stderr.write(String(error.stack || error) + "\n");
+  process.stderr.write(String(error.stack || error) + "\\n");
   process.exitCode = 1;
 }});
 """
