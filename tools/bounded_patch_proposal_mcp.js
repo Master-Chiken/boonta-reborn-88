@@ -130,9 +130,9 @@ function makeState() {
   const readPaths = parseEnvJson('BOONTA_READ_PATHS', []);
   const readRanges = parseEnvJson('BOONTA_READ_RANGES', []);
   const allowedPaths = parseEnvJson('BOONTA_ALLOWED_PATHS', []);
-  if (!Array.isArray(readPaths) || readPaths.length < 1 || readPaths.length > 5 ||
+  if (!Array.isArray(readPaths) || readPaths.length < 1 || readPaths.length > 6 ||
       readPaths.some((item) => !safePath(item)) || new Set(readPaths).size !== readPaths.length) {
-    reject('BOONTA_READ_PATHS must contain 1-5 unique safe repository paths');
+    reject('BOONTA_READ_PATHS must contain 1-6 unique safe repository paths');
   }
   if (!Array.isArray(allowedPaths) || allowedPaths.length < 1 || allowedPaths.length > 20 ||
       allowedPaths.some((item) => !safePath(item)) || new Set(allowedPaths).size !== allowedPaths.length) {
