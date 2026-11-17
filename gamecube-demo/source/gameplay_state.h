@@ -716,6 +716,24 @@ static inline float boonta_rival_initial_progress(unsigned int rival_index)
     return 4.0f - boonta_rival_initial_z(rival_index);
 }
 
+/* Convert normalized route-cursor state into the race's cumulative distance axis. */
+static inline int boonta_rival_progress_from_cursor_state(
+    unsigned int completed_laps, float lap_progress, float lap_distance,
+    float *progress_out)
+{
+    float progress;
+    if (progress_out != NULL) *progress_out = 0.0f;
+    if (progress_out == NULL || !isfinite(lap_progress) ||
+        lap_progress < 0.0f || lap_progress > 1.0f ||
+        !isfinite(lap_distance) || lap_distance <= 0.0f) {
+        return 0;
+    }
+    progress = ((float)completed_laps + lap_progress) * lap_distance;
+    if (!isfinite(progress) || progress < 0.0f) return 0;
+    *progress_out = progress;
+    return 1;
+}
+
 /* Race target preserves each opponent's staggered start-grid offset. */
 static inline float boonta_rival_finish_distance(unsigned int rival_index,
                                                   float lap_distance,
