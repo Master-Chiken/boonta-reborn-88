@@ -219,7 +219,7 @@ async function validateAutonomousCycleReport(options) {
     !contentChangedDuringCycle ||
     !commitCreatedDuringCycle
   ) {
-    return fail(core, 'PROGRESS requires a non-draft PR for new work; a draft is allowed only for an explicitly resumed task, with exact same-repository task and head evidence, targeting ' +
+    return fail(core, 'PROGRESS requires a non-draft PR for new work tied to the reserved task; a draft is allowed only for an explicitly resumed task, with exact same-repository task and head evidence, targeting ' +
       expectedBase + ', at its exact current head, created or advanced during this cycle, with changed file content and a cycle-fresh commit.');
   }
 
