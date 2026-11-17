@@ -17,9 +17,9 @@ PROVIDER_WORKFLOWS = (
 )
 for provider_workflow in PROVIDER_WORKFLOWS:
     provider_source = provider_workflow.read_text(encoding="utf-8")
-    five_path_gate = "task.read_paths.length < 1 || task.read_paths.length > 5 ||"
-    if provider_source.count(five_path_gate) != 1 or "task.read_paths.length > 4" in provider_source:
-        fail(f"{provider_workflow.name} must accept the same 1-5 exact read paths as the context builder")
+    six_path_gate = "task.read_paths.length < 1 || task.read_paths.length > 6 ||"
+    if provider_source.count(six_path_gate) != 1 or "task.read_paths.length > 4" in provider_source:
+        fail(f"{provider_workflow.name} must accept the same 1-6 exact read paths as the context builder")
 
 
 def fail(message: str) -> None:
@@ -88,13 +88,14 @@ def task(
 
 activation = task("AUTOMATION-LEDGER-ACTIVATION", "blocked")
 valid_queued = task("AUTOMATION-TEST-QUEUED", "queued")
-five_path_queued = task("AUTOMATION-TEST-FIVE-PATHS", "queued")
-five_path_queued["read_paths"] = [
+six_path_queued = task("AUTOMATION-TEST-SIX-PATHS", "queued")
+six_path_queued["read_paths"] = [
     "gamecube-demo/source/rival_ai.h",
     "gamecube-demo/source/route_cursor.h",
     "gamecube-demo/source/gameplay_state.h",
     "gamecube-demo/source/main.c",
     "gamecube-demo/tests/test_rival_ai.c",
+    "gamecube-demo/source/generated_route_graph.h",
 ]
 valid_blocked = task("N64-COMPWOLF-PUPP-T2-PARSE-PROBE", "blocked")
 valid_active = task("AUTOMATION-TEST-ACTIVE", "active")
@@ -124,17 +125,18 @@ if (
     rival_task_fixture.get("status") != "queued"
     or rival_task_fixture.get("owner_approved") is not True
     or rival_task_fixture.get("target_branch") != "dev"
-    or len(rival_read_paths) != 5
-    or len(set(rival_read_paths)) != 5
+    or len(rival_read_paths) != 6
+    or len(set(rival_read_paths)) != 6
     or not set(rival_allowed_paths).issubset(set(rival_read_paths))
     or "gamecube-demo/source/route_graph_sampling.h" not in rival_read_paths
+    or "gamecube-demo/source/generated_route_graph.h" not in rival_read_paths
     or len(rival_task_fixture.get("read_ranges", [])) != 10
     or sum(
         item["end_line"] - item["start_line"] + 1
         for item in rival_task_fixture.get("read_ranges", [])
     ) > 240
 ):
-    fail("the canonical rival task does not match its five-path/ten-range owner-approved read contract")
+    fail("the canonical rival task does not match its six-path/ten-range owner-approved read contract")
 
 cases = [
     {
@@ -217,12 +219,12 @@ cases = [
         "expected_queue_state": "READY",
     },
     {
-        "name": "owner-approved queued task with five bounded read paths is accepted",
-        "tasks": [five_path_queued],
+        "name": "owner-approved queued task with six bounded read paths is accepted",
+        "tasks": [six_path_queued],
         "completed_task_ids": [],
         "marker_day_offset": None,
         "expected_ready": True,
-        "expected_task_id": "AUTOMATION-TEST-FIVE-PATHS",
+        "expected_task_id": "AUTOMATION-TEST-SIX-PATHS",
         "expected_blocked": False,
         "expected_queue_state": "READY",
     },
