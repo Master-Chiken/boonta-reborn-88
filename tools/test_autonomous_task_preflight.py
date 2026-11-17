@@ -765,6 +765,20 @@ cases = [
         "expected_queue_state": "READY",
     },
     {
+            {
+        "name": "activation PR blocks an unrelated active task from becoming a second writer",
+        "tasks": [valid_active, activation],
+        "open_task_prs": [activation_ready_pr],
+        "marker_day_offset": None,
+        "expected_ready": False,
+        "expected_task_id": "",
+        "expected_blocked": False,
+        "expected_queue_state": "ACTIVE_TASK_REQUIRES_RECONCILIATION",
+        "expected_resume_candidate": True,
+        "expected_resume_ready": False,
+        "reason_contains": "an active ledger task and a separate activation/queued task PR both reserve the single writer slot",
+    },
+    {
         "name": "queued task PR blocks a separate active task from becoming a second writer",
         "tasks": [valid_active, {
             **valid_queued,
