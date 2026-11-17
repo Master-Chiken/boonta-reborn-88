@@ -126,7 +126,8 @@
         "gamecube-demo/source/route_graph_sampling.h",
         "gamecube-demo/source/gameplay_state.h",
         "gamecube-demo/source/main.c",
-        "gamecube-demo/tests/test_rival_ai.c"
+        "gamecube-demo/tests/test_rival_ai.c",
+        "gamecube-demo/source/generated_route_graph.h"
       ],
       "read_ranges": [
         {
@@ -190,7 +191,7 @@
       ],
       "pr_url": null,
       "head_sha": null,
-      "next_action_excerpt": "Owner-approved 2026-11-17 refinement: preserve rival AI helpers; use shared native route sampler and independent per-rival cursors. Bounded reads cover cursor init/movement/lap transitions, sampler prepare/sample, lap/finish helpers, rival update loop and regression tests."
+      "next_action_excerpt": "Owner-approved: one shared native sampler, independent rival cursors; read scope now includes generated route topology and forward lap transitions."
     },
     {
       "task_id": "GC-RACE-FRONTEND-FLOW",
