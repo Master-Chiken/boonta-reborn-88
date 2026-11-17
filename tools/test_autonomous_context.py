@@ -516,9 +516,9 @@ with tempfile.TemporaryDirectory() as temp:
             source_root, paths, [*ranges, dict(ranges[-1], start_line=1, end_line=1)], 1800
         )
     except MODULE.ContextBuildError as exc:
-        assert "1-10 exact ranges" in str(exc)
+        assert "1-13 exact ranges" in str(exc)
     else:
-        raise AssertionError("Eleven source ranges must fail closed")
+        raise AssertionError("Fourteen source ranges must fail closed")
 
 
 # End-to-end context assembly reads the selected target checkout, not the
