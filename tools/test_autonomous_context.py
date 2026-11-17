@@ -505,7 +505,7 @@ with tempfile.TemporaryDirectory() as temp:
         "main",
         task_context,
         max_chars=2800,
-        max_task_context=1100,
+        max_task_context=1600,
         max_criteria=2,
         max_next_action=100,
         source_root=source_root,
@@ -550,14 +550,14 @@ if len(activation_entries) == 1:
         activation["title"],
         activation["target_branch"],
         production_handoff,
-        max_chars=3000,
-        max_task_context=1100,
+        max_chars=3100,
+        max_task_context=1600,
         max_criteria=4,
         max_next_action=100,
         source_root=ROOT,
-        max_source_chars=1800,
+        max_source_chars=1350,
     )
-    assert len(production_context) <= 3000
+    assert len(production_context) <= 3100
     assert "Read-only source excerpts: exact task path/range excerpts are included below" in production_context
     assert all(f"[{path}:" in production_context for path in activation["read_paths"])
     assert "Exact owner-reviewed write paths (no others):" in production_context
@@ -569,12 +569,12 @@ elif len(activation_entries) == 0:
             activation["title"],
             activation["target_branch"],
             production_handoff,
-            max_chars=3000,
-            max_task_context=1100,
+            max_chars=3100,
+            max_task_context=1600,
             max_criteria=4,
             max_next_action=100,
             source_root=ROOT,
-            max_source_chars=1800,
+            max_source_chars=1350,
         )
     except MODULE.ContextBuildError as exc:
         assert "no unique owner-reviewed exact-path entry" in str(exc)
