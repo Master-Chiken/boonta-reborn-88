@@ -1030,11 +1030,6 @@
         },
         {
           "path": "gamecube-demo/source/route_cursor.h",
-          "start_line": 98,
-          "end_line": 118
-        },
-        {
-          "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 276,
           "end_line": 288
         },
@@ -1057,6 +1052,11 @@
           "path": "gamecube-demo/source/gameplay_state.h",
           "start_line": 419,
           "end_line": 429
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1,
+          "end_line": 20
         },
         {
           "path": "gamecube-demo/source/main.c",
@@ -1084,7 +1084,7 @@
         "Run relevant host tests, GameCube build and exact-head CI; record remaining gameplay and emulator/hardware verification gaps."
       ],
       "evidence": [],
-      "next_action": "Owner-approved 2026-11-17 implementation refinement: use one shared BoontaRouteGraphSampler and one independent BoontaRouteCursor per rival on the generated 8-edge closed loop. Add a rival-cursor reset helper called by reset_runtime_route_cursor (boot and restart); prepare the sampler once with boonta_route_graph_sampler_prepare, initialize each cursor at the generated start edge with boonta_route_cursor_init, advance by the delta from the existing boonta_rival_progress_after_frame, derive cumulative route distance from completed_laps + edge_start_distances + distance_on_edge, and sample with boonta_route_graph_sampler_sample_cursor_at. Preserve the shared-snapshot AI decisions and existing collision/finish helpers. No branch-choice changes.",
+      "next_action": "Owner-approved 2026-11-17 implementation refinement: include route_graph_sampling.h in main.c; use one shared BoontaRouteGraphSampler and one independent BoontaRouteCursor per rival on the generated 8-edge closed loop. Add a rival-cursor reset helper called by reset_runtime_route_cursor (boot and restart); prepare the sampler once with boonta_route_graph_sampler_prepare, find the generated start edge, initialize each cursor with boonta_route_cursor_init(&cursor, &graph, sampler.edge_lengths, start_edge), advance by the delta from boonta_rival_progress_after_frame using boonta_route_cursor_move(&cursor, delta, NULL, 0U), derive cumulative route distance from completed_laps + edge_start_distances + distance_on_edge, and sample with boonta_route_graph_sampler_sample_cursor_at. Preserve shared-snapshot AI decisions and existing collision/finish helpers. No branch-choice changes.",
       "updated_at": "2026-11-17",
       "owner_role_id": "gameplay",
       "parent_objective_id": "BOONTA-COMPLETE-GAME",
