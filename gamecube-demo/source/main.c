@@ -362,23 +362,6 @@ static void track_sample_at(float travelled, float *x_out, float *y_out,
         g_current_course->road_half_width, x_out, y_out, z_out, width_out);
 }
 
-/*
- * Estimate horizontal route curvature with two 2 m track chords. This provides
- * a deterministic look-ahead signal for the prototype rivals' speed controller.
- */
-static float track_signed_curvature_at(float travelled)
-{
-    float before_x = 0.0f, before_z = 0.0f;
-    float middle_x = 0.0f, middle_z = 0.0f;
-    float after_x = 0.0f, after_z = 0.0f;
-    if (!isfinite(travelled)) return 0.0f;
-    track_sample_at(travelled - 2.0f, &before_x, NULL, &before_z, NULL);
-    track_sample_at(travelled, &middle_x, NULL, &middle_z, NULL);
-    track_sample_at(travelled + 2.0f, &after_x, NULL, &after_z, NULL);
-    return boonta_rival_ai_signed_curvature_from_samples(
-        before_x, before_z, middle_x, middle_z, after_x, after_z);
-}
-
 static float track_center_x_at(float travelled)
 {
     float x = 0.0f;
