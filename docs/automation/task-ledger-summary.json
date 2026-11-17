@@ -137,6 +137,11 @@
         {
           "path": "gamecube-demo/source/route_cursor.h",
           "start_line": 232,
+          "end_line": 260
+        },
+        {
+          "path": "gamecube-demo/source/route_cursor.h",
+          "start_line": 261,
           "end_line": 275
         },
         {
@@ -162,6 +167,11 @@
         {
           "path": "gamecube-demo/source/main.c",
           "start_line": 1427,
+          "end_line": 1452
+        },
+        {
+          "path": "gamecube-demo/source/main.c",
+          "start_line": 1453,
           "end_line": 1477
         },
         {
