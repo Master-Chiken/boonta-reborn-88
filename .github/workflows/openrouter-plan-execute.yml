@@ -572,7 +572,7 @@ jobs:
             if (
               pull.number !== prNumber ||
               pull.state !== 'open' ||
-              pull.draft !== false ||
+              typeof pull.draft !== 'boolean' ||
               pull.user?.login !== context.repo.owner ||
               pull.head?.repo?.full_name !== canonicalRepo ||
               pull.base?.repo?.full_name !== canonicalRepo ||
@@ -585,7 +585,7 @@ jobs:
               bodyLines.filter((line) => line === taskMarker).length !== 1 ||
               bodyLines.filter((line) => line === targetMarker).length !== 1
             ) {
-              failClosed('live PR does not match owner, same repository, non-draft state, task/target markers, base, branch, URL and reserved exact head SHA');
+              failClosed('live PR does not match owner, same repository, known draft state, task/target markers, base, branch, URL and reserved exact head SHA');
               return;
             }
             core.setOutput('allowed', 'true');
