@@ -214,7 +214,7 @@ cases = [
             **queued_ready_pr,
             "number": 459,
             "body": (
-                "BOONTA_TASK_ID: AUTOMATION-TEST-SECOND-QUEUED\\n"
+                "BOONTA_TASK_ID: AUTOMATION-TEST-SECOND-QUEUED\n"
                 "BOONTA_TASK_TARGET_BRANCH: main"
             ),
             "html_url": "https://github.com/Master-Chiken/boonta-reborn-88/pull/459",
