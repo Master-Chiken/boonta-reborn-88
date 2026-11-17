@@ -173,7 +173,7 @@ else:
             "path: .boonta-target-source",
             "tools/build_autonomous_context.py",
             "--source-root \"$TARGET_ROOT\"",
-            "--max-source-chars 1600",
+            "--max-source-chars 1200",
             "--arg verified_context",
             "verified_context: $verified_context",
         ):
@@ -662,7 +662,7 @@ if "quota reserve is not a guarantee of cycle completion" not in budget:
     errors.append("OpenRouter documentation must distinguish the minimum reserve guard from guaranteed cycle completion")
 if "watchdog stops on the first explicit" not in budget:
     errors.append("OpenRouter documentation must describe first-refusal process termination and hard-timeout cleanup")
-if "1,550 context tokens and 256 output tokens" not in budget or "caps verified context at 3,000 characters and task handoff at 1,100 characters" not in budget:
+if "1,550 context tokens and 256 output tokens" not in budget or "caps verified context at 3,100 characters and task handoff at 1,600 characters" not in budget:
     errors.append("Groq shared budget documentation must match its bounded multi-file context and handoff ceilings")
 
 # OpenRouter must stop on the first terminal provider refusal, not consume
@@ -863,7 +863,7 @@ for required in (
 for content, needle, message in (
     (groq, "if (( ${#PROMPT} > 5500 )); then", "Groq must enforce its 5,500-character TPM prompt-size guard before inference"),
     (groq, '"timeout", "--signal=TERM", "--kill-after=5s", "90s"', "Groq must enforce the 90-second invocation timeout"),
-    (openrouter, "if (( ${#PROMPT} > 7000 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
+    (openrouter, "if (( ${#PROMPT} > 7600 )); then", "OpenRouter must enforce its final-prompt-size guard before inference"),
 
     (openrouter, '"timeout", "--signal=TERM", "--kill-after=5s", "180s"', "OpenRouter must enforce the 180-second invocation timeout"),
     (groq, "No paid routes, billing, credits, or provider/secret/settings changes.", "Groq must preserve the €0/no-paid-route rule"),
@@ -912,17 +912,17 @@ if len(actual_groq_prompt) > 2100:
     errors.append(f"Groq static prompt leaves insufficient room under its 5,500-character TPM cap: {len(actual_groq_prompt)}")
 if len(actual_openrouter_prompt) > 3600:
     errors.append(f"OpenRouter static prompt leaves insufficient room under its 7,000-character cap: {len(actual_openrouter_prompt)}")
-context_limits("Groq", groq, 3000, 1100)
+context_limits("Groq", groq, 3100, 1600)
 if "_build_source_excerpt" not in context_builder or "MAX_TOTAL_RANGE_LINES" not in context_builder:
     errors.append("Schema-v2 context builder must validate and preload exact bounded multi-file source ranges")
-if "--max-source-chars 950" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
-    errors.append("OpenRouter must preload exact target-branch source ranges within its 950-character source excerpt budget")
+if "--max-source-chars 800" not in openrouter or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in openrouter:
+    errors.append("OpenRouter must preload exact target-branch source ranges within its 800-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in openrouter:
     errors.append("OpenRouter must retain four bounded acceptance criteria in the compact handoff")
 if "Use preloaded excerpts from every exact task path before the one permitted full-file read" not in actual_openrouter_prompt:
     errors.append("OpenRouter prompt must use the trusted multi-file excerpts before its one optional full-file read")
-if "--max-source-chars 1800" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
-    errors.append("Groq must preload exact target-branch source ranges within the 1,800-character source excerpt budget")
+if "--max-source-chars 1350" not in groq or "--source-root \"$GITHUB_WORKSPACE/.boonta-target-source\"" not in groq:
+    errors.append("Groq must preload exact target-branch source ranges within the 1,350-character source excerpt budget")
 if "--max-criteria 4 --max-next-action 100" not in groq:
     errors.append("Groq must use the reviewed compact four-criteria/100-character next-action handoff")
 if "Use preloaded source excerpts first" not in actual_groq_prompt or "call github_get_file_contents at most once" not in actual_groq_prompt:
@@ -933,8 +933,8 @@ if "waitingForOwnerApprovedPaths" not in loop or "docs/automation/patch-path-all
     errors.append("Global task preflight must block provider launch until exact owner-reviewed write paths exist")
 if "_owner_approved_write_paths(root, task_id)" not in context_builder or "blocked activation bootstrap receives write scope" not in context_builder:
     errors.append("Blocked activation context must require an explicit exact-path owner policy entry")
-context_limits("OpenRouter", openrouter, 2800, 1100)
-if len(actual_groq_prompt) + 3000 + 400 > 5500:
+context_limits("OpenRouter", openrouter, 2800, 1600)
+if len(actual_groq_prompt) + 3100 + 400 > 5500:
     errors.append("Groq worst-case prompt plus bounded multi-file context and report exceeds its 5,500-character cap")
 
 # Budget the complete normal OpenRouter prompt, not just its static heredoc.
@@ -1005,10 +1005,10 @@ openrouter_total_worst_case = (
     + openrouter_context_chars
     + openrouter_report_reserve
 )
-if openrouter_total_worst_case > 6950:
+if openrouter_total_worst_case > 7550:
     errors.append(
         "OpenRouter worst-case complete prompt exceeds the 6,950-character design budget "
-        "(7,000-character runtime ceiling with at least 50 characters of headroom): "
+        "(7,600-character runtime ceiling with at least 50 characters of headroom): "
         + str(openrouter_total_worst_case)
     )
 
