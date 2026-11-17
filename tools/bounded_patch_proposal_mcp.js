@@ -20,8 +20,8 @@ const TEST_IDS = new Set([
 ]);
 const MAX_FILE_BYTES = 96 * 1024;
 const MAX_TOTAL_BYTES = 256 * 1024;
-const MAX_TOTAL_LINES = 240;
-const MAX_READ_RANGES = 10;
+const MAX_TOTAL_LINES = 432;
+const MAX_READ_RANGES = 13;
 const MAX_DIFF_BYTES = 32 * 1024;
 const MAX_PROPOSAL_BYTES = 96 * 1024;
 
@@ -158,7 +158,7 @@ function makeState() {
     seenRanges.add(key);
     totalRangeLines += item.end_line - item.start_line + 1;
   }
-  if (totalRangeLines > MAX_TOTAL_LINES) reject('approved source ranges exceed the 240-line aggregate cap');
+  if (totalRangeLines > MAX_TOTAL_LINES) reject('approved source ranges exceed the 432-line aggregate cap');
   const coveredPaths = new Set(readRanges.map((item) => item.path));
   if (readPaths.some((item) => !coveredPaths.has(item))) reject('every approved read path must have at least one exact line range');
   for (const item of readPaths) {
